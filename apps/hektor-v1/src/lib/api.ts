@@ -88,6 +88,7 @@ const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accept
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
 const localDiffusionRequestsKey = 'hektor-v1-diffusion-requests'
 const localDiffusionRequestEventsKey = 'hektor-v1-diffusion-request-events'
+const backendApiBaseUrl = (import.meta.env.VITE_BACKEND_API_URL ?? '').trim().replace(/\/+$/, '')
 const defaultDiffusionAgencyTargets = [
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'bienicidirect', hektor_broadcast_id: '2' },
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
@@ -183,6 +184,10 @@ function canUseLocalDiffusionDevApi() {
   return host === 'localhost' || host === '127.0.0.1'
 }
 
+function canUseBackendApi() {
+  return !canUseLocalDiffusionDevApi() && Boolean(backendApiBaseUrl)
+}
+
 function isInvalidDiffusionRequestEventIdTypeError(message: string | undefined) {
   const text = (message ?? '').toLowerCase()
   return text.includes('invalid input syntax for type bigint')
@@ -230,6 +235,55 @@ async function invokeSupabaseFunction<T>(name: string, body: Record<string, unkn
     throw new Error(payload.error ?? `Supabase function ${name} failed`)
   }
   return data as T
+}
+
+async function getFreshSupabaseAccessToken() {
+  if (!supabase) {
+    throw new Error('Supabase session is not available')
+  }
+  const refreshResult = await supabase.auth.refreshSession()
+  let accessToken = refreshResult.data.session?.access_token ?? null
+  if (!accessToken) {
+    const currentSession = await supabase.auth.getSession()
+    accessToken = currentSession.data.session?.access_token ?? null
+  }
+  if (!accessToken) {
+    throw new Error('Session Supabase introuvable')
+  }
+  return accessToken
+}
+
+async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST'; body?: Record<string, unknown> }) {
+  if (!backendApiBaseUrl) {
+    throw new Error('Backend API is not configured')
+  }
+  const headers: Record<string, string> = {}
+  if (hasSupabaseEnv && supabase) {
+    const accessToken = await getFreshSupabaseAccessToken()
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+  if (init?.body) {
+    headers['Content-Type'] = 'application/json'
+  }
+  const response = await fetch(`${backendApiBaseUrl}${path}`, {
+    method: init?.method ?? 'POST',
+    headers,
+    body: init?.body ? JSON.stringify(init.body) : undefined,
+  })
+  const text = await response.text().catch(() => '')
+  const payload = text
+    ? (() => {
+        try {
+          return JSON.parse(text)
+        } catch {
+          return { error: text }
+        }
+      })()
+    : {}
+  if (!response.ok || payload?.ok === false) {
+    throw new Error((payload as { detail?: string; error?: string })?.detail ?? (payload as { error?: string })?.error ?? `Backend API failed: ${path}`)
+  }
+  return payload as T
 }
 
 function normalizeHektorApplyMessage(message: string | undefined) {
@@ -1913,6 +1967,38 @@ export async function saveDiffusionTargets(input: {
 }
 
 export async function applyDiffusionTargetsOnHektor(input: { appDossierId: number; dryRun?: boolean; ensureDiffusable?: boolean }) {
+  if (canUseBackendApi()) {
+    const payload = await invokeBackendApi<{
+      ok: true
+      payload: {
+        app_dossier_id: number
+        hektor_annonce_id: string
+        dry_run: boolean
+        diffusable_changed: boolean
+        diffusable_result: string
+        observed_diffusable?: string | null
+        validation_state?: string | null
+        validation_approved?: boolean
+        waiting_on_hektor?: boolean
+        waiting_message?: string | null
+        current_enabled_count: number
+        targets_count: number
+        to_add_count: number
+        to_remove_count: number
+        applied: Array<Record<string, unknown>>
+        failed: Array<Record<string, unknown>>
+        pending?: Array<Record<string, unknown>>
+      }
+    }>('/hektor-diffusion/apply', {
+      method: 'POST',
+      body: {
+        appDossierId: input.appDossierId,
+        dryRun: Boolean(input.dryRun),
+        ensureDiffusable: Boolean(input.ensureDiffusable),
+      },
+    })
+    return payload.payload
+  }
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{
       ok: true
@@ -1985,6 +2071,37 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
 }
 
 export async function acceptDiffusionRequestOnHektor(input: { appDossierId: number; dryRun?: boolean }) {
+  if (canUseBackendApi()) {
+    const payload = await invokeBackendApi<{
+      ok: true
+      payload: {
+        app_dossier_id: number
+        hektor_annonce_id: string
+        dry_run: boolean
+        diffusable_changed: boolean
+        diffusable_result: string
+        observed_diffusable?: string | null
+        validation_state?: string | null
+        validation_approved?: boolean
+        waiting_on_hektor?: boolean
+        waiting_message?: string | null
+        current_enabled_count: number
+        targets_count: number
+        to_add_count: number
+        to_remove_count: number
+        applied: Array<Record<string, unknown>>
+        failed: Array<Record<string, unknown>>
+        pending?: Array<Record<string, unknown>>
+      }
+    }>('/hektor-diffusion/accept', {
+      method: 'POST',
+      body: {
+        appDossierId: input.appDossierId,
+        dryRun: Boolean(input.dryRun),
+      },
+    })
+    return payload.payload
+  }
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{
       ok: true
@@ -2084,6 +2201,12 @@ export async function createAppUser(input: {
   displayName: string
   isActive: boolean
 }) {
+  if (canUseBackendApi()) {
+    return invokeBackendApi<{ ok: true; userId: string; email: string }>('/admin/users/create', {
+      method: 'POST',
+      body: input,
+    })
+  }
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     return invokeSupabaseFunction<{ ok: true; userId: string; email: string }>('admin-users', {
       action: 'create',
@@ -2103,6 +2226,12 @@ export async function createAppUser(input: {
 }
 
 export async function loadAppUsers() {
+  if (canUseBackendApi()) {
+    const payload = await invokeBackendApi<{ ok: true; users: UserProfile[] }>('/admin/users/list', {
+      method: 'GET',
+    })
+    return payload.users ?? []
+  }
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{ ok: true; users: UserProfile[] }>('admin-users', { action: 'list' })
     return payload.users ?? []
@@ -2124,6 +2253,12 @@ export async function updateAppUser(input: {
   displayName: string
   isActive: boolean
 }) {
+  if (canUseBackendApi()) {
+    return invokeBackendApi<{ ok: true }>('/admin/users/update', {
+      method: 'POST',
+      body: input,
+    })
+  }
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
       action: 'update',
@@ -2144,6 +2279,12 @@ export async function updateAppUser(input: {
 }
 
 export async function sendPasswordResetEmail(input: { email: string }) {
+  if (canUseBackendApi()) {
+    return invokeBackendApi<{ ok: true }>('/admin/users/send-reset', {
+      method: 'POST',
+      body: input,
+    })
+  }
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
       action: 'send-reset',

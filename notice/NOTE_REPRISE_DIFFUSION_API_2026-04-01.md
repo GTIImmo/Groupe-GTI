@@ -1179,3 +1179,190 @@ Extension retenue ensuite :
   - retour `waiting_on_hektor = true`
   - message explicite
   - pas de `500` brutal cote app
+
+## Mise a jour 07/04/2026 - cible backend Python dedie
+
+Apres comparaison complete entre le mode local Vite et la prod Vercel/Supabase, la cible retenue pour la suite n'est plus de pousser toute la logique serveur dans des `Supabase Edge Functions`.
+
+Constat :
+
+- le projet local sous Vite expose aujourd'hui trois familles de routes serveur :
+  - diffusion Hektor
+  - administration utilisateurs
+  - notifications email
+- toutes les routes locales ne doivent pas devenir un backend public complet
+- les vraies actions metier sensibles sont seulement :
+  - administration utilisateurs
+  - application Hektor depuis la console `Diffusion`
+  - acceptation d'une `Demande de validation`
+
+Architecture retenue pour la suite :
+
+- `Phase 1`
+  - reste le flux de lecture / sync Hektor
+- `Phase 2`
+  - reste le flux de consolidation / enrichissement / push vers Supabase
+- `Supabase`
+  - reste la source de donnees prod
+  - auth
+  - tables app
+  - profils utilisateurs
+- `Vercel`
+  - reste le front React public
+- `Backend Python dedie`
+  - prend seulement les actions serveur sensibles
+  - remplace les routes Vite locales qui ne peuvent pas vivre durablement en prod
+
+Endpoints cibles a porter dans ce backend Python :
+
+- `POST /admin/users/create`
+- `GET /admin/users/list`
+- `POST /admin/users/update`
+- `POST /admin/users/send-reset`
+- `POST /hektor-diffusion/apply`
+- `POST /hektor-diffusion/accept`
+
+Endpoint optionnel ensuite si besoin de parite totale :
+
+- `POST /notifications/diffusion-decision`
+
+Routes locales Vite qui ne seront pas portees telles quelles :
+
+- `/api/hektor-diffusion/targets`
+- `/api/hektor-diffusion/preview-targets`
+- `/api/hektor-diffusion/seed`
+- `/api/hektor-diffusion/broadcasts`
+
+Regle retenue pour ces cas :
+
+- `targets`
+  - restent dans Supabase
+- `preview-targets`
+  - doit etre calculable depuis Supabase + mapping agence
+- `broadcasts`
+  - doit venir de la donnee synchronisee `Phase 1 / Phase 2`
+- `seed`
+  - reste un outil de debug / maintenance local si besoin
+
+But :
+
+- ne pas refondre tout le projet
+- conserver `Phase 1` et `Phase 2` comme moteurs de data
+- sortir seulement les commandes serveur qui cassent en prod
+- rester au plus proche de la logique Python locale deja stabilisee
+
+## Mise a jour 07/04/2026 - difference `apply` / `accept`
+
+Les deux routes Hektor ne sont pas des doublons. Elles correspondent a deux entrees metier distinctes.
+
+### `POST /hektor-diffusion/apply`
+
+Origine :
+
+- bouton principal de la console `Diffusion`
+
+Regle :
+
+- utilise les cibles actuellement visibles / sauvegardees dans `app_diffusion_target`
+- tente `diffusable = 1` si necessaire
+- applique ensuite exactement les coches choisies :
+  - `enabled` => `PUT`
+  - `disabled` => `DELETE`
+
+Interpretation :
+
+- action manuelle issue de la console
+- suit le choix explicite de l'utilisateur au moment du clic
+
+### `POST /hektor-diffusion/accept`
+
+Origine :
+
+- acceptation d'une `Demande de validation`
+
+Regle :
+
+- ne depend pas d'un choix manuel en console a cet instant
+- recharge d'abord les cibles par defaut de l'agence
+- applique ensuite le flux d'acceptation avec ces passerelles par defaut
+
+Interpretation :
+
+- action issue du workflow de validation
+- suit la politique agence par defaut
+- pas la selection manuelle courante de la console
+
+Conclusion retenue :
+
+- `apply`
+  - console manuelle
+- `accept`
+  - workflow d'acceptation Pauline
+
+Les deux endpoints doivent donc exister dans le futur backend Python.
+
+## Mise a jour 07/04/2026 - squelette backend Python et branchement front
+
+Le squelette du backend Python a ete cree dans :
+
+- `backend/`
+
+Structure posee :
+
+- `backend/app/main.py`
+- `backend/app/settings.py`
+- `backend/app/auth.py`
+- `backend/app/models.py`
+- `backend/app/services/supabase_admin.py`
+- `backend/app/services/hektor_bridge.py`
+- `backend/app/routers/admin_users.py`
+- `backend/app/routers/hektor_diffusion.py`
+- `backend/requirements.txt`
+- `backend/README.md`
+
+Principes retenus :
+
+- `admin-users`
+  - passe par Supabase REST / Auth Admin avec la `service role`
+- `hektor-diffusion/apply`
+  - reutilise `phase2/sync/hektor_diffusion_writeback.py apply-targets`
+- `hektor-diffusion/accept`
+  - reutilise `phase2/sync/hektor_diffusion_writeback.py accept-request`
+- apres `apply` ou `accept`
+  - appel automatique de `phase2/sync/refresh_single_annonce.py` si un `hektor_annonce_id` est retourne
+
+But :
+
+- ne pas reecrire la logique Hektor stable
+- garder le comportement local comme reference
+
+Branchement front pose ensuite dans :
+
+- `apps/hektor-v1/src/lib/api.ts`
+
+Regle du front :
+
+- si `localhost`
+  - conserver les routes Vite locales
+- si `VITE_BACKEND_API_URL` est renseignee
+  - utiliser le backend Python pour :
+    - `POST /admin/users/create`
+    - `GET /admin/users/list`
+    - `POST /admin/users/update`
+    - `POST /admin/users/send-reset`
+    - `POST /hektor-diffusion/apply`
+    - `POST /hektor-diffusion/accept`
+- sinon
+  - garder provisoirement le fallback `Supabase Functions`
+
+Variable a ajouter cote front prod quand le backend sera heberge :
+
+- `VITE_BACKEND_API_URL`
+  - exemple futur :
+    - `https://gti-backend.onrender.com`
+
+Conclusion :
+
+- le projet peut maintenant migrer progressivement
+- sans casser le local
+- sans bloquer le front tant que le backend Python n'est pas encore heberge
