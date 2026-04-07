@@ -1002,3 +1002,106 @@ But :
 
 - retrouver les cases a cocher en console meme quand rien n'est encore actif
 - rester coherent avec le mapping agence deja porte par les scripts locaux
+
+## Mise a jour 07/04/2026 - limite Vercel actuelle et piste cible Supabase Functions
+
+Constat de production sur `https://groupe-gti.vercel.app/` :
+
+- la sauvegarde simple des cibles diffusion peut vivre cote Supabase
+- mais le bouton :
+  - `Activer la diffusion et appliquer`
+  depend encore du flux local historique
+- ce flux appelle aujourd'hui des routes de dev :
+  - `/api/hektor-diffusion/apply`
+  - `/api/hektor-diffusion/accept`
+- ces routes sont alimentees localement par :
+  - `apps/hektor-v1/vite.config.ts`
+  - `phase2/sync/hektor_diffusion_writeback.py`
+
+Conclusion technique :
+
+- GitHub heberge le code
+- Vercel heberge le front
+- Supabase heberge la data
+- mais l'automatisation Hektor reelle vit encore seulement sur le poste local
+
+Effet concret en prod :
+
+- un clic sur `Activer la diffusion et appliquer` ne peut pas executer le writeback Hektor complet
+- sans backend serveur, Vercel ne sait ni lancer les scripts Python locaux ni exposer les routes Vite de dev
+
+Decision de reprise retenue :
+
+- garder en prod :
+  - lecture / ecriture des cibles diffusion via Supabase
+- ne plus considerer les routes Vite locales comme solution prod
+- cible architecture a moyen terme :
+  - remplacer le writeback Hektor local par une vraie fonction serveur
+  - piste privilegiee : `Supabase Edge Functions`
+
+Pourquoi cette piste est retenue :
+
+- l'app est deja branchee a Supabase
+- les secrets Hektor pourront rester cote serveur
+- Vercel pourra appeler une fonction prod stable
+- cela evitera de dependre du poste local pour :
+  - `diffusable`
+  - `PUT/DELETE` passerelles
+  - relecture de retour Hektor
+
+Ordre de reprise recommande :
+
+1. stabiliser la lecture / sauvegarde des targets en prod
+2. figer le contrat attendu pour :
+   - `apply`
+   - `accept`
+3. porter ensuite la logique utile de `hektor_diffusion_writeback.py` vers une `Supabase Edge Function`
+
+## Mise a jour 07/04/2026 - premier branchement `Supabase Edge Function`
+
+Implementation posee :
+
+- nouvelle fonction :
+  - `supabase/functions/hektor-diffusion/index.ts`
+- le front prod appelle maintenant cette fonction pour :
+  - `apply`
+  - `accept`
+- en local, le projet garde les routes Vite de dev existantes
+
+Principe retenu :
+
+- prod :
+  - `apps/hektor-v1/src/lib/api.ts`
+  - `applyDiffusionTargetsOnHektor(...)`
+    - `supabase.functions.invoke('hektor-diffusion', { action: 'apply', ... })`
+  - `acceptDiffusionRequestOnHektor(...)`
+    - `supabase.functions.invoke('hektor-diffusion', { action: 'accept', ... })`
+- local :
+  - conservation des routes :
+    - `/api/hektor-diffusion/apply`
+    - `/api/hektor-diffusion/accept`
+
+Ce que fait deja la fonction :
+
+- charge le dossier depuis `app_dossiers_current`
+- lit les cibles depuis `app_diffusion_target`
+- si `accept` ou si aucune cible existe :
+  - recharge les passerelles par defaut depuis `app_diffusion_agency_target`
+- tente `diffusable`
+- applique les `PUT/DELETE` de passerelles
+- renvoie un payload compatible avec le front actuel
+
+Variables d'environnement a prevoir cote Supabase Function :
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `HEKTOR_API_BASE_URL`
+- `HEKTOR_API_TOKEN`
+- `HEKTOR_API_VERSION`
+
+Point de vigilance :
+
+- cette premiere version remplace l'appel prod aux routes Vite locales
+- elle doit encore etre deployee cote Supabase Functions
+- l'auth Hektor exacte doit etre alignee avec l'instance GTI au moment du branchement final
