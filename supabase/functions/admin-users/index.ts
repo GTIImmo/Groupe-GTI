@@ -40,12 +40,25 @@ async function createClients(authHeader: string | null) {
 async function assertAdmin(userClient: ReturnType<typeof createClient>, adminClient: ReturnType<typeof createClient>) {
   const { data, error } = await userClient.auth.getUser()
   if (error || !data.user) throw new Error('Utilisateur non authentifie')
-  const { data: profile, error: profileError } = await adminClient
+  let profileQuery = await adminClient
     .from('app_user_profile')
-    .select('role,is_active')
+    .select('id,email,role,is_active')
     .eq('id', data.user.id)
     .maybeSingle()
-  if (profileError || !profile) throw new Error(profileError?.message ?? 'Profil introuvable')
+
+  if (!profileQuery.data && data.user.email) {
+    profileQuery = await adminClient
+      .from('app_user_profile')
+      .select('id,email,role,is_active')
+      .ilike('email', data.user.email)
+      .maybeSingle()
+  }
+
+  const profile = profileQuery.data
+  const profileError = profileQuery.error
+  if (profileError || !profile) {
+    throw new Error(profileError?.message ?? `Profil admin introuvable pour ${data.user.email ?? data.user.id}`)
+  }
   if (!profile.is_active || !['admin', 'manager'].includes(String(profile.role ?? ''))) {
     throw new Error('Acces admin refuse')
   }
