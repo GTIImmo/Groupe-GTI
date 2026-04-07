@@ -1366,3 +1366,45 @@ Conclusion :
 - le projet peut maintenant migrer progressivement
 - sans casser le local
 - sans bloquer le front tant que le backend Python n'est pas encore heberge
+
+## Mise a jour 08/04/2026 - backend Python diffusion sans SQLite locale
+
+Constat apres premier hebergement Render :
+
+- `admin-users` etait portable sur Render
+- mais `hektor-diffusion/apply` et `accept` ne pouvaient pas marcher tant que le backend Python reutilisait :
+  - `phase2/phase2.sqlite`
+  - `data/hektor.sqlite`
+  via les scripts locaux
+
+Decision retenue :
+
+- le backend Python ne doit plus appeler les scripts locaux pour `apply` / `accept`
+- il doit refaire directement la logique utile en parlant a :
+  - `Supabase`
+  - puis `Hektor`
+
+Implementation retenue dans :
+
+- `backend/app/services/hektor_bridge.py`
+
+Ce service fait maintenant directement :
+
+- lecture du dossier depuis `app_dossiers_current`
+- lecture des cibles depuis `app_diffusion_target`
+- lecture du mapping agence depuis `app_diffusion_agency_target`
+- seed par defaut depuis l'agence pour `accept` ou pour les dossiers sans cible
+- auth Hektor :
+  - `Authenticate`
+  - `Sso`
+  - header `jwt`
+- tentative `Diffuse`
+- relecture `AnnonceById`
+- `PUT addAnnonceToPasserelle`
+- `DELETE removeAnnonceToPasserelle`
+
+But :
+
+- rendre `Activer la diffusion et appliquer` portable sur Render
+- rendre `Acceptée` de la demande de validation portable sur Render
+- supprimer la dependance aux SQLite locales pour ces deux actions

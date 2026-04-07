@@ -30,7 +30,7 @@ def apply_diffusion(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.apply(payload.appDossierId, payload.dryRun, payload.ensureDiffusable)}
+    return {"ok": True, "payload": bridge.apply(payload.appDossierId, payload.dryRun, payload.ensureDiffusable, user.email or user.id)}
 
 
 @router.post("/accept")
@@ -43,4 +43,4 @@ def accept_diffusion(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.accept(payload.appDossierId, payload.dryRun)}
+    return {"ok": True, "payload": bridge.accept(payload.appDossierId, payload.dryRun, user.email or user.id)}
