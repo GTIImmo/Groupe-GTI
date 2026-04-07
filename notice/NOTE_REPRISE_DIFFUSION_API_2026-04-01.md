@@ -1134,3 +1134,14 @@ But :
 
 - rester aligne avec le comportement deja observe localement
 - eviter les faux echecs quand Hektor agit mais repond mal
+
+Extension retenue ensuite :
+
+- la tolerance ne doit pas concerner seulement `Diffuse`
+- plus generalement, la function ne doit plus remonter un echec bloquant si :
+  - Hektor a probablement execute l'action
+  - mais la confirmation technique est sale ou incomplete
+- dans ce cas :
+  - retour `waiting_on_hektor = true`
+  - message explicite
+  - pas de `500` brutal cote app

@@ -296,34 +296,61 @@ async function runApply(adminClient: ReturnType<typeof createClient>, dossier: D
   let diffusableResult = 'not_managed_in_console'
   let observedDiffusable = null as string | null
   if (ensureDiffusableFlag) {
-    const ensureResult = await ensureDiffusable(String(dossier.hektor_annonce_id), dryRun)
-    diffusableChanged = ensureResult.changed
-    diffusableResult = normalizeHektorMessage(ensureResult.result)
-    if (!dryRun) {
-      const detailAfter = await fetchAnnonceDetail(String(dossier.hektor_annonce_id))
-      observedDiffusable = extractDiffusable(detailAfter)
-      if (observedDiffusable !== '1') {
-        return {
-          app_dossier_id: dossier.app_dossier_id,
-          hektor_annonce_id: String(dossier.hektor_annonce_id),
-          dry_run: dryRun,
-          diffusable_changed: diffusableChanged,
-          diffusable_result: diffusableResult,
-          observed_diffusable: observedDiffusable,
-          validation_state: dossier.validation_diffusion_state,
-          validation_approved: isValidationApproved(dossier.validation_diffusion_state),
-          waiting_on_hektor: true,
-          waiting_message: isValidationApproved(dossier.validation_diffusion_state)
-            ? "En attente de mise a jour Hektor. Le bien n'est pas encore confirme en diffusable."
-            : "Action Hektor non appliquee : l'annonce est encore en validation = non. Ouvre Hektor pour corriger la validation, puis relance.",
-          current_enabled_count: 0,
-          targets_count: targets.length,
-          to_add_count: 0,
-          to_remove_count: 0,
-          applied: [],
-          failed: [],
-          pending: [],
+    try {
+      const ensureResult = await ensureDiffusable(String(dossier.hektor_annonce_id), dryRun)
+      diffusableChanged = ensureResult.changed
+      diffusableResult = normalizeHektorMessage(ensureResult.result)
+      if (!dryRun) {
+        try {
+          const detailAfter = await fetchAnnonceDetail(String(dossier.hektor_annonce_id))
+          observedDiffusable = extractDiffusable(detailAfter)
+        } catch (error) {
+          observedDiffusable = null
+          diffusableResult = normalizeHektorMessage(`${diffusableResult} | detail_read_error: ${error instanceof Error ? error.message : 'Erreur detail'}`)
         }
+        if (observedDiffusable !== '1') {
+          return {
+            app_dossier_id: dossier.app_dossier_id,
+            hektor_annonce_id: String(dossier.hektor_annonce_id),
+            dry_run: dryRun,
+            diffusable_changed: diffusableChanged,
+            diffusable_result: diffusableResult,
+            observed_diffusable: observedDiffusable,
+            validation_state: dossier.validation_diffusion_state,
+            validation_approved: isValidationApproved(dossier.validation_diffusion_state),
+            waiting_on_hektor: true,
+            waiting_message: isValidationApproved(dossier.validation_diffusion_state)
+              ? "En attente de mise a jour Hektor. Le bien n'est pas encore confirme en diffusable."
+              : "Action Hektor non appliquee : l'annonce est encore en validation = non. Ouvre Hektor pour corriger la validation, puis relance.",
+            current_enabled_count: 0,
+            targets_count: targets.length,
+            to_add_count: 0,
+            to_remove_count: 0,
+            applied: [],
+            failed: [],
+            pending: [],
+          }
+        }
+      }
+    } catch (error) {
+      return {
+        app_dossier_id: dossier.app_dossier_id,
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        dry_run: dryRun,
+        diffusable_changed: diffusableChanged,
+        diffusable_result: normalizeHektorMessage(error instanceof Error ? error.message : 'Erreur diffusable'),
+        observed_diffusable: observedDiffusable,
+        validation_state: dossier.validation_diffusion_state,
+        validation_approved: isValidationApproved(dossier.validation_diffusion_state),
+        waiting_on_hektor: true,
+        waiting_message: "Action Hektor envoyee, mais le retour serveur n'est pas assez propre pour confirmer automatiquement le resultat.",
+        current_enabled_count: 0,
+        targets_count: targets.length,
+        to_add_count: 0,
+        to_remove_count: 0,
+        applied: [],
+        failed: [],
+        pending: [],
       }
     }
   }
