@@ -221,6 +221,26 @@ class HektorBridgeService:
                     return str(candidate.get("diffusable"))
         return None
 
+    def _fetch_annonce_broadcasts(self, annonce_id: str) -> list[dict[str, Any]]:
+        parsed, _ = self._call_hektor(
+            f"/Api/Annonce/ListPasserelles/?idAnnonce={requests.utils.quote(annonce_id, safe='')}",
+            method="GET",
+        )
+        if isinstance(parsed, dict) and isinstance(parsed.get("data"), list):
+            return [item for item in parsed["data"] if isinstance(item, dict)]
+        if isinstance(parsed, list):
+            return [item for item in parsed if isinstance(item, dict)]
+        return []
+
+    def _portal_is_enabled(self, row: dict[str, Any]) -> bool:
+        for key in ("enabled", "is_enabled", "actif", "active", "selected", "checked"):
+            value = row.get(key)
+            if isinstance(value, bool):
+                return value
+            if value is not None and str(value).strip().lower() in {"1", "true", "oui", "yes", "active", "enabled"}:
+                return True
+        return False
+
     def _try_diffuse_request(self, annonce_id: str) -> str:
         attempts = [
             ("POST", {"idAnnonce": annonce_id, "version": self.settings.hektor_api_version}),
@@ -360,6 +380,18 @@ class HektorBridgeService:
             except Exception as error:
                 failed.append({"action": "remove", "portal_key": target.get("portal_key"), "broadcast_id": target.get("hektor_broadcast_id"), "error": self._normalize_hektor_message(str(error))})
 
+        observed_broadcasts: list[dict[str, Any]] = []
+        if not dry_run:
+            try:
+                detail_after = self._fetch_annonce_detail(str(dossier["hektor_annonce_id"]))
+                observed_diffusable = self._extract_diffusable(detail_after)
+            except Exception as error:
+                failed.append({"action": "read-detail", "error": self._normalize_hektor_message(str(error))})
+            try:
+                observed_broadcasts = self._fetch_annonce_broadcasts(str(dossier["hektor_annonce_id"]))
+            except Exception as error:
+                failed.append({"action": "read-broadcasts", "error": self._normalize_hektor_message(str(error))})
+
         return {
             "app_dossier_id": dossier["app_dossier_id"],
             "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
@@ -377,6 +409,8 @@ class HektorBridgeService:
             "to_remove_count": len(to_remove),
             "applied": applied,
             "failed": failed,
+            "observed_broadcast_count": sum(1 for item in observed_broadcasts if self._portal_is_enabled(item)),
+            "observed_broadcasts": observed_broadcasts,
             "pending": [],
         }
 
