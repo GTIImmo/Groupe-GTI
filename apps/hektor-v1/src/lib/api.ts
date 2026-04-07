@@ -188,6 +188,15 @@ function canUseBackendApi() {
   return !canUseLocalDiffusionDevApi() && Boolean(backendApiBaseUrl)
 }
 
+if (typeof window !== 'undefined') {
+  ;(window as typeof window & { __gtiBackendDebug?: Record<string, unknown> }).__gtiBackendDebug = {
+    host: window.location.hostname,
+    backendApiBaseUrl,
+    canUseLocalDiffusionDevApi: canUseLocalDiffusionDevApi(),
+    canUseBackendApi: canUseBackendApi(),
+  }
+}
+
 function assertBackendApiConfigured() {
   if (!canUseLocalDiffusionDevApi() && !backendApiBaseUrl) {
     throw new Error("Backend Python non configure en production. Verifie VITE_BACKEND_API_URL dans Vercel puis redeploie l'application.")
