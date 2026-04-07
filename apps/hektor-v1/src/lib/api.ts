@@ -1,5 +1,5 @@
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
-import { hasSupabaseEnv, supabase } from './supabase'
+import { hasSupabaseEnv, supabase, supabaseAnonKey, supabaseUrl } from './supabase'
 import type { DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
@@ -185,6 +185,32 @@ function canUseLocalDiffusionDevApi() {
 function isInvalidDiffusionRequestEventIdTypeError(message: string | undefined) {
   const text = (message ?? '').toLowerCase()
   return text.includes('invalid input syntax for type bigint')
+}
+
+async function invokeSupabaseFunction<T>(name: string, body: Record<string, unknown>) {
+  if (!supabase || !supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase function is not available')
+  }
+  const { data } = await supabase.auth.getSession()
+  const accessToken = data.session?.access_token
+  if (!accessToken) {
+    throw new Error('Session Supabase introuvable')
+  }
+  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await response.text()
+  const payload = text ? JSON.parse(text) : {}
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(payload?.error ?? `Supabase function ${name} failed`)
+  }
+  return payload as T
 }
 
 function normalizeHektorApplyMessage(message: string | undefined) {
@@ -1869,36 +1895,34 @@ export async function saveDiffusionTargets(input: {
 
 export async function applyDiffusionTargetsOnHektor(input: { appDossierId: number; dryRun?: boolean; ensureDiffusable?: boolean }) {
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
-    const { data, error } = await supabase.functions.invoke('hektor-diffusion', {
-      body: {
+    const payload = await invokeSupabaseFunction<{
+      ok: true
+      payload: {
+        app_dossier_id: number
+        hektor_annonce_id: string
+        dry_run: boolean
+        diffusable_changed: boolean
+        diffusable_result: string
+        observed_diffusable?: string | null
+        validation_state?: string | null
+        validation_approved?: boolean
+        waiting_on_hektor?: boolean
+        waiting_message?: string | null
+        current_enabled_count: number
+        targets_count: number
+        to_add_count: number
+        to_remove_count: number
+        applied: Array<Record<string, unknown>>
+        failed: Array<Record<string, unknown>>
+        pending?: Array<Record<string, unknown>>
+      }
+    }>('hektor-diffusion', {
         action: 'apply',
         appDossierId: input.appDossierId,
         dryRun: Boolean(input.dryRun),
         ensureDiffusable: Boolean(input.ensureDiffusable),
-      },
     })
-    if (error || !data || data.ok === false) {
-      throw new Error(data?.error ?? error?.message ?? "L'application Hektor n'est pas disponible en production.")
-    }
-    return data.payload as {
-      app_dossier_id: number
-      hektor_annonce_id: string
-      dry_run: boolean
-      diffusable_changed: boolean
-      diffusable_result: string
-      observed_diffusable?: string | null
-      validation_state?: string | null
-      validation_approved?: boolean
-      waiting_on_hektor?: boolean
-      waiting_message?: string | null
-      current_enabled_count: number
-      targets_count: number
-      to_add_count: number
-      to_remove_count: number
-      applied: Array<Record<string, unknown>>
-      failed: Array<Record<string, unknown>>
-      pending?: Array<Record<string, unknown>>
-    }
+    return payload.payload
   }
   if (!canUseLocalDiffusionDevApi()) {
     throw new Error("L'application Hektor n'est disponible qu'en local pour l'instant. En production, enregistre d'abord les cibles puis utilise Hektor ou le poste local pour appliquer la diffusion.")
@@ -1943,35 +1967,33 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
 
 export async function acceptDiffusionRequestOnHektor(input: { appDossierId: number; dryRun?: boolean }) {
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
-    const { data, error } = await supabase.functions.invoke('hektor-diffusion', {
-      body: {
+    const payload = await invokeSupabaseFunction<{
+      ok: true
+      payload: {
+        app_dossier_id: number
+        hektor_annonce_id: string
+        dry_run: boolean
+        diffusable_changed: boolean
+        diffusable_result: string
+        observed_diffusable?: string | null
+        validation_state?: string | null
+        validation_approved?: boolean
+        waiting_on_hektor?: boolean
+        waiting_message?: string | null
+        current_enabled_count: number
+        targets_count: number
+        to_add_count: number
+        to_remove_count: number
+        applied: Array<Record<string, unknown>>
+        failed: Array<Record<string, unknown>>
+        pending?: Array<Record<string, unknown>>
+      }
+    }>('hektor-diffusion', {
         action: 'accept',
         appDossierId: input.appDossierId,
         dryRun: Boolean(input.dryRun),
-      },
     })
-    if (error || !data || data.ok === false) {
-      throw new Error(data?.error ?? error?.message ?? "L'acceptation Hektor automatique n'est pas disponible en production.")
-    }
-    return data.payload as {
-      app_dossier_id: number
-      hektor_annonce_id: string
-      dry_run: boolean
-      diffusable_changed: boolean
-      diffusable_result: string
-      observed_diffusable?: string | null
-      validation_state?: string | null
-      validation_approved?: boolean
-      waiting_on_hektor?: boolean
-      waiting_message?: string | null
-      current_enabled_count: number
-      targets_count: number
-      to_add_count: number
-      to_remove_count: number
-      applied: Array<Record<string, unknown>>
-      failed: Array<Record<string, unknown>>
-      pending?: Array<Record<string, unknown>>
-    }
+    return payload.payload
   }
   if (!canUseLocalDiffusionDevApi()) {
     throw new Error("L'acceptation Hektor automatique n'est disponible qu'en local pour l'instant.")
