@@ -194,7 +194,8 @@ function formatDate(value: string | null | undefined) {
 function parseJson<T>(value: string | null | undefined, fallback: T): T {
   if (!value) return fallback
   try {
-    return JSON.parse(value) as T
+    const parsed = JSON.parse(value) as T | null
+    return parsed == null ? fallback : parsed
   } catch {
     return fallback
   }
