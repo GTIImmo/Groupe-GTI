@@ -89,8 +89,20 @@ class SupabaseAdminService:
             timeout=30,
         )
         self._raise_for_response(auth_response, "Unable to create auth user")
-        auth_user = auth_response.json().get("user") or {}
+        auth_payload = auth_response.json()
+        auth_user = auth_payload.get("user") or auth_payload
         user_id = auth_user.get("id")
+        if not user_id:
+            lookup_response = requests.get(
+                f"{self.settings.supabase_url}/auth/v1/admin/users",
+                headers=self._admin_headers(),
+                params={"page": 1, "per_page": 1000},
+                timeout=30,
+            )
+            self._raise_for_response(lookup_response, "Unable to read auth users after create")
+            users = lookup_response.json().get("users") or []
+            matched = next((item for item in users if str(item.get("email") or "").strip().lower() == payload["email"].strip().lower()), None)
+            user_id = matched.get("id") if matched else None
         if not user_id:
             raise HTTPException(status_code=500, detail="Supabase auth user id missing")
 
