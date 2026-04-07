@@ -231,11 +231,47 @@ function extractDiffusable(detailPayload: Record<string, unknown>) {
   return null
 }
 
-async function ensureDiffusable(annonceId: string, dryRun: boolean) {
-  if (dryRun) return { changed: true, result: 'dry_run' }
+async function tryDiffuseRequest(annonceId: string) {
   const version = Deno.env.get('HEKTOR_API_VERSION')?.trim() || 'v2'
-  const { parsed } = await callHektor(`/Api/Annonce/Diffuse/?idAnnonce=${encodeURIComponent(annonceId)}&version=${encodeURIComponent(version)}`)
-  return { changed: true, result: typeof parsed === 'string' ? parsed : JSON.stringify(parsed) }
+  const attempts: Array<{ method: 'POST' | 'GET'; params: Record<string, string> }> = [
+    { method: 'POST', params: { idAnnonce: annonceId, version } },
+    { method: 'GET', params: { idAnnonce: annonceId, version } },
+    { method: 'POST', params: { id: annonceId, version } },
+    { method: 'GET', params: { id: annonceId, version } },
+  ]
+  const errors: string[] = []
+  for (const attempt of attempts) {
+    const query = new URLSearchParams(attempt.params)
+    try {
+      const { rawText } = await callHektor(`/Api/Annonce/Diffuse/?${query.toString()}`, { method: attempt.method })
+      return rawText.slice(0, 500) || `${attempt.method} ok`
+    } catch (error) {
+      errors.push(`${attempt.method} ${JSON.stringify(attempt.params)} => ${normalizeHektorMessage(error instanceof Error ? error.message : 'Erreur Hektor')}`)
+    }
+  }
+  throw new Error(errors.join(' | '))
+}
+
+async function ensureDiffusable(annonceId: string, dryRun: boolean) {
+  const detail = await fetchAnnonceDetail(annonceId)
+  const current = extractDiffusable(detail)
+  if (current === '1') return { changed: false, result: 'already_diffusable' }
+  if (dryRun) return { changed: true, result: 'dry_run' }
+  try {
+    const responsePreview = await tryDiffuseRequest(annonceId)
+    return { changed: true, result: responsePreview }
+  } catch (error) {
+    const message = normalizeHektorMessage(error instanceof Error ? error.message : 'Erreur Hektor')
+    try {
+      const detailAfterError = await fetchAnnonceDetail(annonceId)
+      if (extractDiffusable(detailAfterError) === '1') {
+        return { changed: true, result: `confirmed_after_diffuse_error: ${message}` }
+      }
+    } catch {
+      // no-op
+    }
+    return { changed: true, result: `diffuse_unconfirmed: ${message}` }
+  }
 }
 
 async function applyPortalChange(action: 'add' | 'remove', annonceId: string, broadcastId: string) {

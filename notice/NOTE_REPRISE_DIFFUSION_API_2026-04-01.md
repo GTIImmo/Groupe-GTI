@@ -1109,3 +1109,28 @@ Point de vigilance :
   - OAuth `Authenticate`
   - puis `Sso`
   - puis header `jwt`
+
+Etat de debug atteint apres premier branchement :
+
+- le front prod n'appelle plus la route locale Vite
+- la function Supabase `hektor-diffusion` est bien invoquee
+- le message remonte maintenant :
+  - `Edge Function returned a non-2xx status code`
+
+Conclusion :
+
+- le crash est maintenant bien dans la function serveur ou dans la reponse Hektor
+- plus dans Vercel ni dans les anciennes routes locales
+
+Correction retenue ensuite :
+
+- la function Supabase doit reprendre la logique locale sur `Diffuse`
+- en pratique :
+  - un retour HTTP `500` ou un message d'erreur Hektor ne doit pas suffire a conclure a un echec
+  - il faut relire ensuite `AnnonceById`
+  - si `diffusable = 1`, alors l'action est consideree comme reussie malgre l'erreur HTTP
+
+But :
+
+- rester aligne avec le comportement deja observe localement
+- eviter les faux echecs quand Hektor agit mais repond mal
