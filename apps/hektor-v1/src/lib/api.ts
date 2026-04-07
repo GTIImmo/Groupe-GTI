@@ -1,5 +1,6 @@
+import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
-import { hasSupabaseEnv, supabase, supabaseAnonKey, supabaseUrl } from './supabase'
+import { hasSupabaseEnv, supabase } from './supabase'
 import type { DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
@@ -188,33 +189,47 @@ function isInvalidDiffusionRequestEventIdTypeError(message: string | undefined) 
 }
 
 async function invokeSupabaseFunction<T>(name: string, body: Record<string, unknown>) {
-  if (!supabase || !supabaseUrl || !supabaseAnonKey) {
+  if (!supabase) {
     throw new Error('Supabase function is not available')
   }
-  const refreshed = await supabase.auth.refreshSession()
-  let accessToken = refreshed.data.session?.access_token ?? null
-  if (!accessToken) {
+  const refreshResult = await supabase.auth.refreshSession()
+  if (refreshResult.error) {
     const currentSession = await supabase.auth.getSession()
-    accessToken = currentSession.data.session?.access_token ?? null
+    if (!currentSession.data.session) {
+      throw new Error(refreshResult.error.message || 'Session Supabase introuvable')
+    }
   }
-  if (!accessToken) {
-    throw new Error('Session Supabase introuvable')
-  }
-  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(body),
+
+  const { data, error } = await supabase.functions.invoke(name, {
+    body,
   })
-  const text = await response.text()
-  const payload = text ? JSON.parse(text) : {}
-  if (!response.ok || payload?.ok === false) {
-    throw new Error(payload?.error ?? `Supabase function ${name} failed`)
+
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const response = error.context
+      const text = await response.text().catch(() => '')
+      const payload = text
+        ? (() => {
+            try {
+              return JSON.parse(text)
+            } catch {
+              return { error: text }
+            }
+          })()
+        : {}
+      throw new Error((payload as { error?: string })?.error ?? `Supabase function ${name} failed`)
+    }
+    if (error instanceof FunctionsRelayError || error instanceof FunctionsFetchError) {
+      throw new Error(error.message || `Supabase function ${name} failed`)
+    }
+    throw new Error(`Supabase function ${name} failed`)
   }
-  return payload as T
+
+  const payload = (data ?? {}) as { ok?: boolean; error?: string }
+  if (payload?.ok === false) {
+    throw new Error(payload.error ?? `Supabase function ${name} failed`)
+  }
+  return data as T
 }
 
 function normalizeHektorApplyMessage(message: string | undefined) {
