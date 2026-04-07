@@ -962,3 +962,43 @@ Rollback :
 - remettre le KPI courant `accepted`
 - retirer l'action `Ouvrir Hektor`
 - remettre l'entete descriptive du popup si besoin
+
+## Mise a jour 07/04/2026 - console Diffusion sur Vercel / Supabase
+
+Cas constate en production sur `https://groupe-gti.vercel.app/` :
+
+- si une annonce n'a encore aucune ligne dans `app_diffusion_target`
+- la console `Diffusion` pouvait afficher :
+  - `Aucune passerelle n'est configuree pour ce mandat. Le mapping agence n'a pas ete trouve.`
+- alors meme que le mapping agence existe dans les scripts locaux
+
+Cause retenue :
+
+- en local, la console pouvait faire un `preview` via les routes Vite :
+  - `/api/hektor-diffusion/preview-targets`
+- en production Vercel, cette route locale n'existe pas
+- de plus, la table `app_diffusion_agency_target` n'est pas garantie dans le schema Supabase actuel
+
+Correctif retenu :
+
+- `apps/hektor-v1/src/lib/api.ts`
+- la fonction `previewDefaultDiffusionTargets(...)` suit maintenant cette logique :
+  1. si Supabase est disponible, charger le dossier depuis `app_dossiers_current`
+  2. tenter de lire `app_diffusion_agency_target` si la table existe
+  3. sinon retomber sur le mapping agence integre, aligne sur `phase2/sync/hektor_diffusion_writeback.py`
+  4. retourner des cibles par defaut en `disabled`
+- la fonction `loadDiffusionTargets(...)` n'essaie plus de tomber sur les routes Vite de dev en production quand `app_diffusion_target` manque
+- la fonction `saveDiffusionTargets(...)` garde aussi un fallback navigateur propre si la table n'existe pas, au lieu d'exiger les endpoints locaux
+
+Principe conserve :
+
+- local / dev :
+  - les routes Vite de dev restent utilisables
+- production / Vercel :
+  - la console doit privilegier Supabase
+  - et ne plus dependre des routes Python locales pour simplement afficher les passerelles
+
+But :
+
+- retrouver les cases a cocher en console meme quand rien n'est encore actif
+- rester coherent avec le mapping agence deja porte par les scripts locaux

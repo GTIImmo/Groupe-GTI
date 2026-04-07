@@ -87,6 +87,42 @@ const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accept
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
 const localDiffusionRequestsKey = 'hektor-v1-diffusion-requests'
 const localDiffusionRequestEventsKey = 'hektor-v1-diffusion-request-events'
+const defaultDiffusionAgencyTargets = [
+  { agence_nom: 'Groupe GTI Ambert', portal_key: 'bienicidirect', hektor_broadcast_id: '2' },
+  { agence_nom: 'Groupe GTI Ambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
+  { agence_nom: 'Groupe GTI ANNONAY', portal_key: 'bienicidirect', hektor_broadcast_id: '3' },
+  { agence_nom: 'Groupe GTI ANNONAY', portal_key: 'leboncoinDirect', hektor_broadcast_id: '36' },
+  { agence_nom: 'Groupe GTI BRIOUDE', portal_key: 'bienicidirect', hektor_broadcast_id: '4' },
+  { agence_nom: 'Groupe GTI BRIOUDE', portal_key: 'leboncoinDirect', hektor_broadcast_id: '41' },
+  { agence_nom: 'Groupe GTI Craponne-sur-Arzon', portal_key: 'bienicidirect', hektor_broadcast_id: '5' },
+  { agence_nom: 'Groupe GTI Craponne-sur-Arzon', portal_key: 'leboncoinDirect', hektor_broadcast_id: '42' },
+  { agence_nom: 'Groupe GTI Yssingeaux', portal_key: 'bienicidirect', hektor_broadcast_id: '6' },
+  { agence_nom: 'Groupe GTI Yssingeaux', portal_key: 'leboncoinDirect', hektor_broadcast_id: '38' },
+  { agence_nom: 'Groupe GTI Montbrison', portal_key: 'bienicidirect', hektor_broadcast_id: '7' },
+  { agence_nom: 'Groupe GTI Montbrison', portal_key: 'leboncoinDirect', hektor_broadcast_id: '37' },
+  { agence_nom: 'Groupe GTI Saint-Just-Saint-Rambert', portal_key: 'bienicidirect', hektor_broadcast_id: '8' },
+  { agence_nom: 'Groupe GTI Saint-Just-Saint-Rambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '37' },
+  { agence_nom: 'Groupe GTI Issoire', portal_key: 'bienicidirect', hektor_broadcast_id: '9' },
+  { agence_nom: 'Groupe GTI Issoire', portal_key: 'leboncoinDirect', hektor_broadcast_id: '41' },
+  { agence_nom: 'Groupe GTI Saint-Bonnet-le-Château', portal_key: 'bienicidirect', hektor_broadcast_id: '10' },
+  { agence_nom: 'Groupe GTI Saint-Bonnet-le-Château', portal_key: 'leboncoinDirect', hektor_broadcast_id: '42' },
+  { agence_nom: 'Groupe GTI COURPIERE', portal_key: 'bienicidirect', hektor_broadcast_id: '11' },
+  { agence_nom: 'Groupe GTI COURPIERE', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
+  { agence_nom: 'Groupe GTI Monistrol sur Loire', portal_key: 'bienicidirect', hektor_broadcast_id: '13' },
+  { agence_nom: 'Groupe GTI Monistrol sur Loire', portal_key: 'leboncoinDirect', hektor_broadcast_id: '40' },
+  { agence_nom: 'Groupe GTI Saint-Didier-en-Velay', portal_key: 'bienicidirect', hektor_broadcast_id: '14' },
+  { agence_nom: 'Groupe GTI Saint-Didier-en-Velay', portal_key: 'leboncoinDirect', hektor_broadcast_id: '40' },
+  { agence_nom: 'Groupe GTI Firminy', portal_key: 'bienicidirect', hektor_broadcast_id: '15' },
+  { agence_nom: 'Groupe GTI Firminy', portal_key: 'leboncoinDirect', hektor_broadcast_id: '39' },
+  { agence_nom: 'Groupe GTI Saint-Etienne', portal_key: 'bienicidirect', hektor_broadcast_id: '16' },
+  { agence_nom: 'Groupe GTI Saint-Etienne', portal_key: 'leboncoinDirect', hektor_broadcast_id: '39' },
+  { agence_nom: 'Groupe GTI Dunières', portal_key: 'bienicidirect', hektor_broadcast_id: '17' },
+  { agence_nom: 'Groupe GTI Dunières', portal_key: 'leboncoinDirect', hektor_broadcast_id: '43' },
+  { agence_nom: 'Groupe GTI Tence', portal_key: 'bienicidirect', hektor_broadcast_id: '22' },
+  { agence_nom: 'Groupe GTI Tence', portal_key: 'leboncoinDirect', hektor_broadcast_id: '43' },
+  { agence_nom: 'Groupe Gti Le Puy en Velay', portal_key: 'bienicidirect', hektor_broadcast_id: '23' },
+  { agence_nom: 'Groupe Gti Le Puy en Velay', portal_key: 'leboncoinDirect', hektor_broadcast_id: '38' },
+] as const
 
 function displayCommercialLabel(value: { commercial_nom?: string | null; agence_nom?: string | null }) {
   return (value.commercial_nom ?? '').trim() || (value.agence_nom ?? '').trim()
@@ -102,6 +138,15 @@ function quoteFilterLiteral(value: string) {
 
 function normalizeEmail(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase()
+}
+
+function normalizeAgencyName(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
 }
 
 function normalizeScope(scope?: DataScope | null) {
@@ -124,6 +169,17 @@ function isMissingDiffusionTargetTableError(message: string | undefined) {
 function isMissingDiffusionRequestEventTableError(message: string | undefined) {
   const text = (message ?? '').toLowerCase()
   return text.includes('app_diffusion_request_event') && (text.includes('schema cache') || text.includes('could not find the table') || text.includes('does not exist'))
+}
+
+function isMissingDiffusionAgencyTargetTableError(message: string | undefined) {
+  const text = (message ?? '').toLowerCase()
+  return text.includes('app_diffusion_agency_target') && (text.includes('schema cache') || text.includes('could not find the table') || text.includes('does not exist'))
+}
+
+function canUseLocalDiffusionDevApi() {
+  if (typeof window === 'undefined') return true
+  const host = window.location.hostname.toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1'
 }
 
 function isInvalidDiffusionRequestEventIdTypeError(message: string | undefined) {
@@ -1622,7 +1678,8 @@ export async function loadDiffusionTargets(appDossierId: number): Promise<Diffus
     .eq('app_dossier_id', appDossierId)
     .order('portal_key', { ascending: true })
   if (error && isMissingDiffusionTargetTableError(error.message)) {
-    return loadViaLocalDevApi()
+    if (canUseLocalDiffusionDevApi()) return loadViaLocalDevApi()
+    return readLocalDiffusionTargets().filter((item) => item.app_dossier_id === appDossierId)
   }
   if (error || !data) throw new Error(error?.message ?? 'Unable to load diffusion targets')
   return data as DiffusionTarget[]
@@ -1652,20 +1709,81 @@ export async function seedDefaultDiffusionTargetsOnHektor(input: { appDossierId:
 }
 
 export async function previewDefaultDiffusionTargets(input: { appDossierId: number }) {
-  const response = await fetch(`/api/hektor-diffusion/preview-targets?appDossierId=${encodeURIComponent(String(input.appDossierId))}`)
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok || payload?.ok === false) {
-    throw new Error(payload?.error ?? payload?.stderr ?? payload?.stdout ?? 'Unable to preview diffusion targets')
+  const loadViaLocalDevApi = async () => {
+    const response = await fetch(`/api/hektor-diffusion/preview-targets?appDossierId=${encodeURIComponent(String(input.appDossierId))}`)
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error ?? payload?.stderr ?? payload?.stdout ?? 'Unable to preview diffusion targets')
+    }
+    return payload.payload as {
+      app_dossier_id?: number
+      targets?: Array<{
+        app_dossier_id: number
+        hektor_annonce_id: string
+        hektor_broadcast_id: string
+        portal_key: string | null
+        target_state: 'enabled' | 'disabled'
+      }>
+    }
   }
-  return payload.payload as {
-    app_dossier_id?: number
-    targets?: Array<{
-      app_dossier_id: number
-      hektor_annonce_id: string
-      hektor_broadcast_id: string
-      portal_key: string | null
-      target_state: 'enabled' | 'disabled'
-    }>
+
+  if (!hasSupabaseEnv || !supabase) {
+    return loadViaLocalDevApi()
+  }
+
+  const { data: dossier, error: dossierError } = await supabase
+    .from('app_dossiers_current')
+    .select('app_dossier_id,hektor_annonce_id,agence_nom')
+    .eq('app_dossier_id', input.appDossierId)
+    .maybeSingle()
+
+  if (dossierError || !dossier) {
+    throw new Error(dossierError?.message ?? 'Unable to load dossier for diffusion preview')
+  }
+
+  const normalizedAgency = normalizeAgencyName(dossier.agence_nom)
+  if (!normalizedAgency) {
+    throw new Error(`Agence vide pour app_dossier_id=${input.appDossierId}`)
+  }
+
+  let mappingRows: Array<{ agence_nom: string; portal_key: string | null; hektor_broadcast_id: string }> = []
+  const { data: agencyTargets, error: agencyError } = await supabase
+    .from('app_diffusion_agency_target')
+    .select('agence_nom,portal_key,hektor_broadcast_id,is_active')
+    .eq('is_active', 1)
+
+  if (agencyError && !isMissingDiffusionAgencyTargetTableError(agencyError.message)) {
+    throw new Error(agencyError.message)
+  }
+
+  if (!agencyError && agencyTargets) {
+    mappingRows = (agencyTargets as Array<{ agence_nom: string; portal_key: string | null; hektor_broadcast_id: string }>)
+      .filter((item) => normalizeAgencyName(item.agence_nom) === normalizedAgency)
+  }
+
+  if (mappingRows.length === 0) {
+    mappingRows = defaultDiffusionAgencyTargets
+      .filter((item) => normalizeAgencyName(item.agence_nom) === normalizedAgency)
+      .map((item) => ({
+        agence_nom: item.agence_nom,
+        portal_key: item.portal_key,
+        hektor_broadcast_id: item.hektor_broadcast_id,
+      }))
+  }
+
+  if (mappingRows.length === 0 && canUseLocalDiffusionDevApi()) {
+    return loadViaLocalDevApi()
+  }
+
+  return {
+    app_dossier_id: dossier.app_dossier_id,
+    targets: mappingRows.map((item) => ({
+      app_dossier_id: dossier.app_dossier_id,
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      hektor_broadcast_id: String(item.hektor_broadcast_id),
+      portal_key: item.portal_key,
+      target_state: 'disabled' as const,
+    })),
   }
 }
 
@@ -1724,13 +1842,23 @@ export async function saveDiffusionTargets(input: {
 
   const { error: deleteError } = await supabase.from('app_diffusion_target').delete().eq('app_dossier_id', input.mandat.app_dossier_id)
   if (deleteError && isMissingDiffusionTargetTableError(deleteError.message)) {
-    return saveViaLocalDevApi()
+    if (canUseLocalDiffusionDevApi()) return saveViaLocalDevApi()
+    writeLocalDiffusionTargets([
+      ...readLocalDiffusionTargets().filter((item) => item.app_dossier_id !== input.mandat.app_dossier_id),
+      ...payload,
+    ])
+    return payload
   }
   if (deleteError) throw new Error(deleteError.message)
   if (payload.length === 0) return []
   const { data, error } = await supabase.from('app_diffusion_target').insert(payload).select('*')
   if (error && isMissingDiffusionTargetTableError(error.message)) {
-    return saveViaLocalDevApi()
+    if (canUseLocalDiffusionDevApi()) return saveViaLocalDevApi()
+    writeLocalDiffusionTargets([
+      ...readLocalDiffusionTargets().filter((item) => item.app_dossier_id !== input.mandat.app_dossier_id),
+      ...payload,
+    ])
+    return payload
   }
   if (error || !data) throw new Error(error?.message ?? 'Unable to save diffusion targets')
   return data as DiffusionTarget[]
