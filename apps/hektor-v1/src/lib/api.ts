@@ -2069,6 +2069,12 @@ export async function createAppUser(input: {
   displayName: string
   isActive: boolean
 }) {
+  if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
+    return invokeSupabaseFunction<{ ok: true; userId: string; email: string }>('admin-users', {
+      action: 'create',
+      ...input,
+    })
+  }
   const response = await fetch('/api/admin/users/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2082,6 +2088,10 @@ export async function createAppUser(input: {
 }
 
 export async function loadAppUsers() {
+  if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
+    const payload = await invokeSupabaseFunction<{ ok: true; users: UserProfile[] }>('admin-users', { action: 'list' })
+    return payload.users ?? []
+  }
   const response = await fetch('/api/admin/users/list')
   const payload = await response.json().catch(() => ({}))
   if (!response.ok || payload?.ok === false) {
@@ -2099,6 +2109,13 @@ export async function updateAppUser(input: {
   displayName: string
   isActive: boolean
 }) {
+  if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
+    const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
+      action: 'update',
+      ...input,
+    })
+    return payload
+  }
   const response = await fetch('/api/admin/users/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2112,6 +2129,13 @@ export async function updateAppUser(input: {
 }
 
 export async function sendPasswordResetEmail(input: { email: string }) {
+  if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
+    const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
+      action: 'send-reset',
+      ...input,
+    })
+    return payload
+  }
   const response = await fetch('/api/admin/users/send-reset', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

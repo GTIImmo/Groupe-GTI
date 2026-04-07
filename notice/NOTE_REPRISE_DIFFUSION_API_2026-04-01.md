@@ -1110,6 +1110,40 @@ Point de vigilance :
   - puis `Sso`
   - puis header `jwt`
 
+## Mise a jour 07/04/2026 - migration admin utilisateurs vers Supabase Function
+
+Constat :
+
+- les fonctions d'administration utilisateurs restaient branchees sur les routes locales Vite :
+  - `/api/admin/users/create`
+  - `/api/admin/users/list`
+  - `/api/admin/users/update`
+  - `/api/admin/users/send-reset`
+- en production Vercel, ces routes n'existent pas
+
+Correctif retenu :
+
+- nouvelle function :
+  - `supabase/functions/admin-users/index.ts`
+- le front prod appelle maintenant cette function pour :
+  - creer un utilisateur
+  - lister les utilisateurs
+  - modifier un utilisateur
+  - envoyer un reset password
+- le mode local conserve les endpoints Vite existants
+
+Regle d'acces retenue :
+
+- seul un profil `admin` ou `manager` actif peut utiliser cette function
+- le controle se fait en lisant `app_user_profile`
+
+Variables attendues cote function :
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APP_BASE_URL` pour le lien de reset si besoin
+
 Etat de debug atteint apres premier branchement :
 
 - le front prod n'appelle plus la route locale Vite
