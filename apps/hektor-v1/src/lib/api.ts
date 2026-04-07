@@ -296,7 +296,31 @@ async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST
       })()
     : {}
   if (!response.ok || payload?.ok === false) {
-    throw new Error((payload as { detail?: string; error?: string })?.detail ?? (payload as { error?: string })?.error ?? `Backend API failed: ${path}`)
+    let message = `Backend API failed: ${path}`
+    if (typeof payload === 'string' && payload.trim()) {
+      message = payload.trim()
+    } else if (payload && typeof payload === 'object') {
+      const record = payload as Record<string, unknown>
+      if (typeof record.detail === 'string' && record.detail.trim()) {
+        message = record.detail.trim()
+      } else if (record.detail && typeof record.detail === 'object') {
+        const nested = record.detail as Record<string, unknown>
+        if (typeof nested.error === 'string' && nested.error.trim()) {
+          message = nested.error.trim()
+        } else if (typeof nested.message === 'string' && nested.message.trim()) {
+          message = nested.message.trim()
+        } else {
+          message = JSON.stringify(record.detail)
+        }
+      } else if (typeof record.error === 'string' && record.error.trim()) {
+        message = record.error.trim()
+      } else if (typeof record.message === 'string' && record.message.trim()) {
+        message = record.message.trim()
+      } else {
+        message = JSON.stringify(payload)
+      }
+    }
+    throw new Error(message)
   }
   return payload as T
 }
