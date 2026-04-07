@@ -1,0 +1,19 @@
+Bonjour Frédéric,
+
+
+
+Une erreur s’est glissée dans mon mail précédent : merci pour votre diligence et toutes mes excuses pour la confusion.
+
+
+
+Pour le tri sur GET /Api/Contact/ListContacts/, il faut utiliser :
+
+sort : dateLastTraitement
+way : ASC ou DESC
+
+
+Les combinaisons sort=datemaj + way=ASC|DESC ne sont pas prises en charge pour ce tri côté API, ce qui explique le metadata.total cohérent mais un data vide que vous observiez.
+
+
+
+Le champ datemaj reste présent dans le contenu des fiches contact pour votre exploitation ; pour ordonner la liste, il faut par contre utiliser dateLastTraitement comme expliqué ci-dessus (par ex. way=DESC pour les plus récents en premier).

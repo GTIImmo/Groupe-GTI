@@ -1,0 +1,117 @@
+Bonjour Frédéric,
+
+
+
+Voici mon retour détaillé sur l’ensemble des points que vous avez soulevés (synchronisation incrémentale, AnnonceById, leads / estimation en ligne, interprétation des statuts, passerelles).
+
+1. Synchronisation quotidienne — quels objets rejouer en ById ?
+
+Contact
+Comme vous l’avez identifié, le champ datemaj reste le levier pour piloter les appels ContactById.
+
+sort : datemaj
+way : DESC
+
+Annonce — ListAnnonces
+
+sort : datemaj
+way : DESC
+→ Annonces triées de la mise à jour la plus récente à la plus ancienne, pour prioriser les AnnonceById.
+
+
+
+Mandat — ListMandat
+Nous n’exposons pas aujourd’hui une date de « dernière modification » dédiée du mandat. En revanche, vous pouvez filtrer par fenêtre :
+
+beginDate (ex. 2026-03-18)
+endDate (ex. 2026-03-19)
+→ Mandats concernés sur la période (à caler sur votre run quotidien).
+
+
+
+Offre
+Nous reprenons le sujet : l’approche évoluera pour mieux s’appuyer sur les propositions (plutôt que sur l’offre seule), afin de coller au cycle de vie métier. Je vous tiendrai informé dès que ce sera cadré / livré.
+
+
+
+Compromis
+Pas de datemaj équivalente. Approche recommandée : trier sur les compromis les plus récents pour limiter les ById aux dossiers encore pertinents.
+
+
+
+Vente
+Même logique : tri sur les ventes les plus récentes. Une vente saisie reflète en principe l’acte chez le notaire et ne devrait normalement plus être modifiée ensuite.
+
+2. Paramètre type updated_since / modified_since
+Il n’existe pas aujourd’hui de paramètre unique de ce type sur toutes ces ressources. La méthode recommandée est de combiner : datemaj + DESC pour les annonces, beginDate / endDate pour les mandats, récence pour compromis / ventes, et la future logique propositions pour les offres.
+
+3. AnnonceById — date de dernière modification
+Un bloc dataKey a été ajouté et sera livré prochainement : il regroupe les données clés du bien et inclut les éléments utiles pour suivre l’actualisation de la fiche annonce (dont la dimension « dernière mise à jour » selon ce que nous y exposons). Vous pourrez vous en servir pour affiner votre synchro.
+
+4. Leads — estimation en ligne (ListLeads)
+
+
+Questions 1, 2, 3 et 4 — Évolution en cours de notre côté. Je reviendrai vers vous dès que ce sera implémenté et déployé sur votre instance.
+
+
+
+Orientation : la structure globale de la réponse reste la même ; nous ajouterons un ou deux champs (type de lead : estimation / demande, et le cas échéant les données d’estimation si le visiteur les renseigne).
+
+5. Interprétation des statuts (compromis, offres, ventes)
+
+Compromis — status 1 et 2
+
+1 : compromis en cours
+2 : compromis annulé
+
+Offres
+Oui : en l’état de l’API, le cycle de vie se lit surtout via les propositions (type = proposition, acceptée, etc.) plutôt que via un champ « statut » unique et systématiquement renseigné sur l’offre. Votre interprétation à partir de ces éléments est la bonne direction.
+
+
+
+Ventes
+Oui : une vente se caractérise par sa présence dans ListVentes / VenteById et par ses dates (dont date_vente / champs date associés). Il n’y a pas aujourd’hui de statut métier dédié supplémentaire côté API pour qualifier autrement une vente « valide ».
+
+6. Passerelles — lecture et écriture (diffusion / retrait d’annonces)
+
+Reporting (lecture)
+Les endpoints exportReporting et DetailedBroadcastList sont en lecture : ils permettent de consulter l’état de diffusion et le détail par portail.
+
+
+
+Diffusion / retrait d’annonces (écriture)
+Si votre besoin est d’ajouter ou retirer une annonce sur une passerelle (ex. Diffuser sur Leboncoin, Bien’ici, etc.) via l’API, c’est possible avec les endpoints suivants :
+
+Action
+Endpoint
+Paramètres
+Ajouter une annonce à une passerelle
+GET /Api/Passerelle/addAnnonceToPasserelle/
+idPasserelle, idAnnonce, version
+Retirer une annonce d’une passerelle
+GET /Api/Passerelle/removeAnnonceToPasserelle/
+idPasserelle, idAnnonce, version
+Vérifier les passerelles d’une annonce
+GET /Api/Annonce/ListPasserelles/
+idAnnonce, version
+Diffuser / dé-diffuser une annonce
+GET /Api/Annonce/Diffuse/
+idAnnonce, version
+
+
+Exemples d’URL (base {{url}}) :
+
+Ajout : {{url}}/Api/Passerelle/addAnnonceToPasserelle/?idPasserelle={{idPasserelle}}&idAnnonce={{idAnnonce}}&version={{version}}
+Retrait : {{url}}/Api/Passerelle/removeAnnonceToPasserelle/?idPasserelle={{idPasserelle}}&idAnnonce={{idAnnonce}}&version={{version}}
+Liste des passerelles d’une annonce : {{url}}/Api/Annonce/ListPasserelles/?idAnnonce={{idAnnonce}}&version={{version}}
+Diffusion / dé-diffusion : {{url}}/Api/Annonce/Diffuse/?idAnnonce={{idAnnonce}}&version={{version}}
+
+En résumé : reporting = lecture ; diffusion / retrait d’annonces par passerelle = écriture possible via ces endpoints.
+
+
+
+J’espère avoir répondu à toutes vos questions, je reste disponible si besoin.
+
+
+
+Cordialement,

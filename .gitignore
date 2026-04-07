@@ -1,0 +1,43 @@
+.env
+.env.*
+!.env.example
+!.env.smtp.example
+
+.venv/
+.tmp/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+node_modules/
+dist/
+coverage/
+
+apps/hektor-v1/.env
+apps/hektor-v1/node_modules/
+apps/hektor-v1/dist/
+apps/hektor-v1/*.tsbuildinfo
+apps/hektor-v1/vite-dev.log
+
+data/*.sqlite
+phase2/*.sqlite
+*.sqlite
+
+Ecrans Android/
+exports_hektor_phase1/
+phase2/app_metier_detail_data/
+phase2/app_metier.html
+phase2/app_metier_details.js
+phase2/vue_generale.html
+Capture d’écran*.png
+*.pdf
+*.xlsx
+notice/Hektor API v2 - Documentation *.html
+
+storage_state.json
+playwright/.auth/
+
+.DS_Store
+Thumbs.db
+~$*

@@ -1,0 +1,569 @@
+
+Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+mar. 3 mars 12:16 (il y a 4 jours)
+À Romain, Maud
+
+Bonjour Romain,
+Suite à l’exploitation des éléments que vous m’avez transmis (documentation API v2, collection Postman et credentials), je souhaite vous faire un retour précis sur le périmètre actuellement accessible.
+
+Nous parvenons bien à :
+
+Nous authentifier via OAuth / SSO
+
+Interroger les endpoints Annonce (ListAnnonces, AnnonceById)
+
+Extraire les données principales d’un bien
+
+En revanche, la documentation fournie ne contient pas les endpoints nécessaires pour exploiter la partie transactionnelle complète du CRM.
+
+Il nous manque notamment :
+
+Les endpoints relatifs aux offres d’achat (date, montant, acquéreur, statut)
+
+Les endpoints permettant de récupérer les compromis rattachés à une annonce (Date / etc...)
+
+Les endpoints permettant d’obtenir le détail des ventes liées aux biens (Date / etc...)
+
+Si possible, les endpoints relatifs aux passerelles de diffusion (état précis par portail : Leboncoin, Bien’ici, SeLoger, etc.)
+
+Ces informations sont bien visibles dans l’interface Hektor, mais elles ne figurent pas dans la documentation API qui nous a été transmise.
+
+Pouvez-vous nous préciser :
+
+Si ces endpoints existent dans un autre périmètre d’API ?
+
+Si un scope ou un droit supplémentaire est nécessaire ?
+
+Si la documentation transmise correspond bien à l’intégralité de l’API disponible ?
+
+Ou si certaines parties utilisées par l’interface admin ne sont pas exposées publiquement ?
+
+
+Merci d'avance 
+
+Frédéric Gerphagnon
+
+
+--
+   
+       Frédéric GERPHAGNON
+          22, rue Jean Jaurès 42700 FIRMINY
+          04.77.06.20.20 / 06.58.77.08.93
+   
+
+Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+mar. 3 mars 13:25 (il y a 4 jours)
+À Romain, Maud
+
+Bonjour,
+
+Après vérification, je suis désolé, je n’avais pas vu la partie concernant les compromis et les ventes.  côté.
+
+En revanche, je ne trouve toujours pas les endpoints permettant de récupérer les offres d’achat (date, montant, acquéreur, statut…).
+
+Pouvez-vous m’indiquer où elles se trouvent dans l’API ou si un accès spécifique est nécessaire ?
+
+Merci d’avance pour votre aide.
+
+Bien cordialement,
+Frédéric GERPHAGNON
+
+
+Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+Pièces jointes
+mar. 3 mars 15:07 (il y a 4 jours)
+À Romain, Maud
+
+Bonjour,
+
+Je me permets de vous contacter concernant la récupération des compromis et ventes via l’API.
+
+En suivant la notice et en utilisant l’endpoint ListCompromis, je n’obtiens qu’un total de 74 compromis, ce qui me paraît très faible par rapport aux données réellement présentes dans le CRM.
+
+Je me demande donc si :
+
+un filtre est appliqué par défaut
+
+un paramètre spécifique doit être ajouté pour récupérer l’ensemble des compromis
+
+ou si je n’utilise pas la bonne méthode
+
+Par ailleurs, pour le bien id = 35885, je retrouve bien le compromis via l’API (je joins le JSON extrait), mais je constate que certaines informations visibles dans le CRM — notamment les dates du compromis — ne sont pas présentes dans la réponse API ( exemple json ci-joint avec son script d'extract)
+
+Pouvez-vous m’indiquer :
+
+la méthode correcte pour récupérer l’ensemble des compromis et ventes,
+
+et comment accéder aux dates de compromis visibles dans l’interface CRM ?
+
+Merci par avance pour votre aide étant pas expert j'ai un peu de mal ....
+
+Frédéric Gerphagnon
+GTI Immobilier
+
+ 3 pièces jointes
+  •  Analysé par Gmail
+
+Romain Valy
+mer. 4 mars 10:22 (il y a 3 jours)
+À moi, Maud
+
+Bonjour M. GERPHAGNON,
+
+Merci pour votre retour détaillé.
+
+Je vais reprendre vos différents mails et vous faire un retour dans la journée afin de vous apporter plus de visibilité sur les points suivants :
+
+Endpoint ListCompromis — Vérification du nombre de résultats (74) et des éventuels filtres appliqués par défaut
+Données manquantes dans la réponse API — Notamment les dates de compromis visibles dans l'interface CRM mais absentes du JSON
+Offres d'achat — Disponibilité d'un endpoint pour récupérer les offres (date, montant, acquéreur, statut)
+Détail des ventes — Accès aux informations de vente liées aux biens
+Passerelles de diffusion — État de diffusion par portail (Leboncoin, Bien'ici, SeLoger, etc.)
+
+Je reviens vers vous au plus vite avec des réponses précises sur chacun de ces points.
+
+Cordialement,
+
+La Boite Immo
+
+Romain VALY
+
+Responsable Production
+
++33(0) 812 05 00 11
+
+r.valy@la-boite-immo.com
+
+www.la-boite-immo.com
+
+
+
+facebook.com/Laboiteimmo
+
+twitter.com/Laboiteimmo
+
+la-boite-immo.com/blog
+
+youtube.com/Laboiteimmo
+
+ 
+
+De : Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+Date : mardi, 3 mars 2026 à 15:07
+À : Romain Valy <r.valy@la-boite-immo.com>, Maud JURADO <m.jurado@la-boite-immo.com>
+Objet : Re: Question API ?
+
+…
+
+[Message tronqué]  Afficher l'intégralité du message
+
+Romain Valy
+mer. 4 mars 15:45 (il y a 3 jours)
+À moi, Maud
+
+Bonjour M. GERPHAGNON,
+
+Comme promis, voici mon retour détaillé sur chacun des points que vous avez soulevés. Les corrections et ajouts ont été livrés sur votre instance.
+1. Endpoint ListCompromis — Nombre de résultats limité (74)
+Explication : Par défaut, l'endpoint ListCompromis ne retourne que les compromis des biens actuellement sous compromis. C'est pourquoi vous n'obtenez que 74 résultats.
+Solution : Nous avons ajouté un nouveau paramètre optionnel :
+withCompromisStatus (bool) : true / false
+En passant withCompromisStatus=true, vous récupérerez l'ensemble des compromis, quel que soit le statut actuel du bien.
+
+2. Données manquantes (dates de compromis)
+Correction effectuée : La réponse de l'endpoint a été enrichie avec les champs manquants, notamment les dates de compromis.
+
+3. Offres d'achat
+Nouveaux endpoints disponibles :
+
+Endpoint
+Méthode
+URL
+Paramètres
+Liste des offres
+GET
+/Api/Offre/ListOffres/
+page, sort, way, version
+Détail d'une offre
+GET
+/Api/Offre/OffreById/
+id, version
+
+4. Détail des ventes
+Correction effectuée : Les clés/valeurs manquantes ont été ajoutées pour vous donner accès aux informations de vente complètes.
+
+5. Passerelles de diffusion
+Nouvel endpoint disponible :
+
+Endpoint
+Méthode
+URL
+Paramètres
+Reporting passerelles
+GET
+/Api/Passerelle/exportReporting/
+iduser (optionnel), version
+
+Cet endpoint liste l'état de diffusion par portail. Le paramètre iduser est optionnel : s'il n'est pas spécifié, l'utilisateur défini par le token sera utilisé.
+
+L'ensemble est désormais disponible sur votre instance. La collection Postman sera mise à jour prochainement.
+
+N'hésitez pas si vous avez des questions.
+
+Cordialement,
+
+ 
+
+La Boite Immo
+
+Romain VALY
+
+Responsable Production
+
++33(0) 812 05 00 11
+
+r.valy@la-boite-immo.com
+
+www.la-boite-immo.com
+
+
+
+facebook.com/Laboiteimmo
+
+twitter.com/Laboiteimmo
+
+la-boite-immo.com/blog
+
+youtube.com/Laboiteimmo
+
+ 
+
+De : Romain Valy <r.valy@la-boite-immo.com>
+Date : mercredi, 4 mars 2026 à 10:22
+À : Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+Cc : Maud JURADO <m.jurado@la-boite-immo.com>
+Objet : Re: Question API ?
+
+Bonjour M. GERPHAGNON,
+
+Merci pour votre retour détaillé.
+
+Je vais reprendre vos différents mails et vous faire un retour dans la journée afin de vous apporter plus de visibilité sur les points suivants :
+
+Endpoint ListCompromis — Vérification du nombre de résultats (74) et des éventuels filtres appliqués par défaut
+Données manquantes dans la réponse API — Notamment les dates de compromis visibles dans l'interface CRM mais absentes du JSON
+Offres d'achat — Disponibilité d'un endpoint pour récupérer les offres (date, montant, acquéreur, statut)
+Détail des ventes — Accès aux informations de vente liées aux biens
+Passerelles de diffusion — État de diffusion par portail (Leboncoin, Bien'ici, SeLoger, etc.)
+
+Je reviens vers vous au plus vite avec des réponses précises sur chacun de ces points.
+
+Cordialement,
+
+La Boite Immo
+
+Romain VALY
+
+Responsable Production
+
++33(0) 812 05 00 11
+
+r.valy@la-boite-immo.com
+
+www.la-boite-immo.com
+
+
+
+facebook.com/Laboiteimmo
+
+twitter.com/Laboiteimmo
+
+la-boite-immo.com/blog
+
+youtube.com/Laboiteimmo
+
+ 
+
+De : Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+Date : mardi, 3 mars 2026 à 15:07
+À : Romain Valy <r.valy@la-boite-immo.com>, Maud JURADO <m.jurado@la-boite-immo.com>
+Objet : Re: Question API ?
+
+Bonjour,
+
+Je me permets de vous contacter concernant la récupération des compromis et ventes via l’API.
+
+En suivant la notice et en utilisant l’endpoint ListCompromis, je n’obtiens qu’un total de 74 compromis, ce qui me paraît très faible par rapport aux données réellement présentes dans le CRM.
+
+Je me demande donc si :
+
+un filtre est appliqué par défaut
+
+un paramètre spécifique doit être ajouté pour récupérer l’ensemble des compromis
+
+ou si je n’utilise pas la bonne méthode
+
+Par ailleurs, pour le bien id = 35885, je retrouve bien le compromis via l’API (je joins le JSON extrait), mais je constate que certaines informations visibles dans le CRM — notamment les dates du compromis — ne sont pas présentes dans la réponse API ( exemple json ci-joint avec son script d'extract)
+
+Pouvez-vous m’indiquer :
+
+la méthode correcte pour récupérer l’ensemble des compromis et ventes,
+
+et comment accéder aux dates de compromis visibles dans l’interface CRM ?
+
+Merci par avance pour votre aide étant pas expert j'ai un peu de mal ....
+
+Frédéric Gerphagnon
+GTI Immobilier
+
+
+Le mar. 3 mars 2026 à 13:25, Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr> a écrit :
+Bonjour,
+
+Après vérification, je suis désolé, je n’avais pas vu la partie concernant les compromis et les ventes.  côté.
+
+En revanche, je ne trouve toujours pas les endpoints permettant de récupérer les offres d’achat (date, montant, acquéreur, statut…).
+
+Pouvez-vous m’indiquer où elles se trouvent dans l’API ou si un accès spécifique est nécessaire ?
+
+Merci d’avance pour votre aide.
+
+Bien cordialement,
+Frédéric GERPHAGNON
+
+
+Le mar. 3 mars 2026 à 12:16, Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr> a écrit :
+Bonjour Romain,
+Suite à l’exploitation des éléments que vous m’avez transmis (documentation API v2, collection Postman et credentials), je souhaite vous faire un retour précis sur le périmètre actuellement accessible.
+
+Nous parvenons bien à :
+
+Nous authentifier via OAuth / SSO
+
+Interroger les endpoints Annonce (ListAnnonces, AnnonceById)
+
+Extraire les données principales d’un bien
+
+En revanche, la documentation fournie ne contient pas les endpoints nécessaires pour exploiter la partie transactionnelle complète du CRM.
+
+Il nous manque notamment :
+
+Les endpoints relatifs aux offres d’achat (date, montant, acquéreur, statut)
+
+Les endpoints permettant de récupérer les compromis rattachés à une annonce (Date / etc...)
+
+Les endpoints permettant d’obtenir le détail des ventes liées aux biens (Date / etc...)
+
+Si possible, les endpoints relatifs aux passerelles de diffusion (état précis par portail : Leboncoin, Bien’ici, SeLoger, etc.)
+
+Ces informations sont bien visibles dans l’interface Hektor, mais elles ne figurent pas dans la documentation API qui nous a été transmise.
+
+Pouvez-vous nous préciser :
+
+Si ces endpoints existent dans un autre périmètre d’API ?
+
+Si un scope ou un droit supplémentaire est nécessaire ?
+
+Si la documentation transmise correspond bien à l’intégralité de l’API disponible ?
+
+Ou si certaines parties utilisées par l’interface admin ne sont pas exposées publiquement ?
+
+
+Merci d'avance 
+
+Frédéric Gerphagnon
+
+
+--
+   
+       Frédéric GERPHAGNON
+          22, rue Jean Jaurès 42700 FIRMINY
+          04.77.06.20.20 / 06.58.77.08.93
+   
+
+
+--
+   
+       Frédéric GERPHAGNON
+          22, rue Jean Jaurès 42700 FIRMINY
+          04.77.06.20.20 / 06.58.77.08.93
+   
+
+
+--
+   
+       Frédéric GERPHAGNON
+          22, rue Jean Jaurès 42700 FIRMINY
+          04.77.06.20.20 / 06.58.77.08.93
+   
+…
+
+[Message tronqué]  Afficher l'intégralité du message
+
+Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+mer. 4 mars 15:53 (il y a 3 jours)
+À Romain
+
+Bonjour,
+
+Merci ! cela me semble très bien. Je vais tenter de me débrouiller.
+
+Encore merci
+
+Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+mer. 4 mars 22:38 (il y a 3 jours)
+À Maud, Romain
+
+Bonjour Romain,
+
+Merci beaucoup pour les ajustements apportés sur l’API et pour votre retour rapide.
+
+Suite à vos corrections, nous arrivons désormais à récupérer correctement l’ensemble des compromis (10 428) via ListCompromis avec le paramètre withCompromisStatus=false, ainsi que les ventes.
+De ce côté l’exploitation fonctionne désormais très bien, merci pour votre intervention.
+
+En revanche, concernant les offres d’achat, l’endpoint : 
+
+/Api/Offre/ListOffres/
+
+nous retourne uniquement 35 offres au total, ce qui semble correspondre aux offres actuellement actives dans le CRM.
+
+De notre côté, nous avons essayé d’identifier un paramètre équivalent à withCompromisStatus (tests de plusieurs variantes de filtres et booléens), mais dans tous les cas le metadata.total reste bloqué à 35.
+
+Pour notre utilisation de l’API, il est important de pouvoir récupérer l’intégralité des offres (y compris historiques) afin de reconstituer le cycle transactionnel complet d’un dossier : offre → compromis → vente.
+
+Savez-vous s’il existe :
+
+un paramètre équivalent à withCompromisStatus permettant de récupérer toutes les offres quel que soit leur statut,
+
+ou éventuellement un endpoint alternatif permettant d’accéder à l’historique complet des offres ?
+
+Par ailleurs, concernant les passerelles de diffusion, vous m’avez transmis l’endpoint :
+
+/Api/Passerelle/exportReporting/
+
+qui permet d’obtenir un reporting agrégé, ce qui est déjà très utile.
+
+Cependant, en raison de problèmes d’affichage que nous rencontrons actuellement dans le CRM sur l’état des diffusions, j’aurais besoin de pouvoir extraire la liste détaillée des biens diffusés, idéalement avec les informations suivantes :
+
+le bien concerné
+
+la passerelle de diffusion (Leboncoin, Bien’ici, SeLoger, etc.)
+
+le commercial en charge
+
+L’objectif est de pouvoir fournir à nos collaborateurs une vision fiable des biens effectivement diffusés sur chaque portail, indépendamment de l’affichage actuel du CRM.
+
+Existe-t-il une possibilité d’obtenir ces informations via l’API (au niveau des annonces ou via un endpoint dédié) ?
+
+Merci encore pour votre aide et pour les améliorations déjà apportées.
+
+Bien cordialement,
+
+Frédéric Gerphagnon
+
+
+
+Romain Valy
+jeu. 5 mars 09:52 (il y a 2 jours)
+À moi, Maud
+
+Bonjour M. Frédéric,
+
+
+
+Merci pour votre retour positif concernant les compromis et ventes. 
+
+Je suis ravi que l'exploitation fonctionne désormais correctement de ce côté.
+
+Voici les ajustements apportés pour répondre à vos deux nouvelles demandes :
+
+1. Offres d'achat — Historique complet
+Solution : Nous avons ajouté un paramètre équivalent à withCompromisStatus sur l'endpoint ListOffres :
+withOfferStatus (bool) : true / false
+
+En passant withOfferStatus=true, vous récupérerez l'ensemble des offres, y compris les offres historiques (refusées, expirées, etc.), et non plus uniquement les offres actuellement actives.
+Exemple :
+GET /Api/Offre/ListOffres/?withOfferStatus=true&page=0&version=v2
+
+2. Passerelles de diffusion — Liste détaillée
+Nouvel endpoint disponible :
+Endpoint
+Méthode
+URL
+Paramètres
+Liste détaillée des diffusions
+GET
+/Api/Passerelle/DetailedBroadcastList/
+iduser (optionnel), page, version
+Cet endpoint vous permet d'obtenir un reporting détaillé par passerelle, incluant :
+Le bien concerné (annonce_id)
+La passerelle de diffusion (Leboncoin, Bien'ici, SeLoger, etc.)
+Le commercial en charge (id, type, nom, prénom)
+Le statut d'export (exported ou message d'erreur détaillé)
+Exemple de réponse :
+{
+    "data": {
+        "id": 5,
+        "nom": "Leboncoin",
+        "count": 42,
+        "listings": [
+            {
+                "annonce_id": 123,
+                "commercial": { "id": 42, "type": "NEGO", "nom": "DUPONT", "prenom": "Jean" },
+                "export_status": "exported"
+            },
+            {
+                "annonce_id": 456,
+                "commercial": { "id": 7, "type": "AGENCE", "nom": "MARTIN", "prenom": "Sophie" },
+                "export_status": "Unable to send listing 456 error: Invalid photo format"
+            }
+        ]
+    },
+    "metadata": {
+        "total": 30,
+        "perPage": 30,
+        "currentPage": 1,
+        "prevPage": null,
+        "nextPage": null,
+        "from": 1,
+        "to": 1
+    }
+}
+
+
+Cela vous permettra de fournir à vos collaborateurs une vision fiable et détaillée des biens effectivement diffusés sur chaque portail.
+
+Ces modifications sont disponibles sur votre instance.
+
+N'hésitez pas si vous avez d'autres questions.
+
+Cordialement,
+La Boite Immo
+
+Romain VALY
+
+Responsable Production
+
++33(0) 812 05 00 11
+
+r.valy@la-boite-immo.com
+
+www.la-boite-immo.com
+
+
+
+facebook.com/Laboiteimmo
+
+twitter.com/Laboiteimmo
+
+la-boite-immo.com/blog
+
+youtube.com/Laboiteimmo
+
+ 
+
+De : Frederic GERPHAGNON <frederic.gerphagnon@gti-immobilier.fr>
+Date : mercredi, 4 mars 2026 à 22:39
+
+
+

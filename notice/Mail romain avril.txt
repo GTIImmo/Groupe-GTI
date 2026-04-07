@@ -1,0 +1,59 @@
+Bonjour Frédéric,
+
+
+
+Merci pour vos retours détaillés. Vous trouverez ci-dessous les réponses point par point.
+
+1. Endpoints passerelle — erreur 405 (Method Not Allowed)
+La cause est la méthode HTTP utilisée : ces routes n’acceptent pas GET.
+
+Action
+Route
+Méthode HTTP
+Ajouter une annonce à une passerelle
+/Api/Passerelle/addAnnonceToPasserelle/
+PUT
+Retirer une annonce d’une passerelle
+/Api/Passerelle/removeAnnonceToPasserelle/
+DELETE
+Paramètres attendus : idPasserelle et idAnnonce. Le paramètre version n’est pas pris en compte par ces routes.
+
+Authentification : en-tête JWT, ou OAuth (client_id + token).
+
+Prérequis côté annonce : diffusable = 1 et annonce non archivée. Sinon, réponse 403.
+
+Rectification de notre documentation / mail précédent : nous vous avions indiqué un appel en GET sur ces endpoints — c’était incorrect ; merci de vous appuyer sur PUT et DELETE comme ci-dessus. Toutes mes excuses pour la confusion.
+
+
+
+2. Validation avant diffusion (mandat / annonce)
+Il n’existe pas aujourd’hui d’endpoint REST dédié pour valider ou invalider une annonce au sens « validation mandat » (équivalent au contrôle métier type checkValid côté interface).
+
+Point important : pour l’ajout à une passerelle via l’API REST, la condition contrôlée est uniquement que l’annonce soit diffusable et non archivée. La validation du mandat est une notion distincte et n’est pas un prérequis technique pour ces endpoints passerelle.
+
+Évolution possible : nous étudions côté produit la mise à disposition d’un endpoint permettant de valider / invalider les annonces par API ; je vous tiendrai informé en cas de livraison.
+
+
+
+3. IDs négociateurs absents de listNegos
+C’est un comportement attendu : listNegos ne retourne que les négociateurs dont le compte est actif et non expiré. 
+
+Les IDs 23 et 93 peuvent correspondre à des comptes désactivés ou expirés, tout en restant référencés sur des annonces créées ou liées avant cette évolution.
+
+Pour obtenir la fiche d’un négociateur même s’il n’apparaît pas dans la liste, vous pouvez appeler :
+
+GET /Api/Negociateur/getNegoById?id=23
+
+(cet appel ne filtre pas sur le statut « actif ».)
+
+Pour le rattachement négociateur ↔ annonce, la référence fiable reste le champ negociateur présent sur la donnée annonce.
+
+
+
+
+
+N’hésitez pas si vous constatez d’autres anomalies ou si vous avez des questions complémentaires.
+
+
+
+Cordialement, 

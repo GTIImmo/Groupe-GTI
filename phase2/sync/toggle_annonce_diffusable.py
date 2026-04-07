@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+import requests
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from hektor_pipeline.common import Settings
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Tente le toggle diffusable d'une annonce Hektor.")
+    parser.add_argument("--id-annonce", required=True, help="ID Hektor de l'annonce")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    settings = Settings.from_env()
+    session = requests.Session()
+
+    auth_response = session.post(
+        f"{settings.base_url}/Api/OAuth/Authenticate/",
+        params={
+            "client_id": settings.client_id,
+            "client_secret": settings.client_secret,
+            "grant_type": "client_credentials",
+        },
+        timeout=settings.timeout,
+    )
+    auth_response.raise_for_status()
+    access_token = auth_response.json()["access_token"]
+
+    sso_response = session.post(
+        f"{settings.base_url}/Api/OAuth/Sso/",
+        params={
+            "token": access_token,
+            "scope": "sso",
+            "client_id": settings.client_id,
+        },
+        timeout=settings.timeout,
+    )
+    sso_response.raise_for_status()
+    jwt = sso_response.json()["jwt"]
+
+    response = session.get(
+        f"{settings.base_url}/Api/Annonce/Diffuse/",
+        headers={"jwt": jwt},
+        params={"idAnnonce": str(args.id_annonce), "version": settings.api_version},
+        timeout=settings.timeout,
+    )
+
+    print(
+        json.dumps(
+            {
+                "method": "GET",
+                "url": f"{settings.base_url}/Api/Annonce/Diffuse/",
+                "params": {"idAnnonce": str(args.id_annonce), "version": settings.api_version},
+                "status_code": response.status_code,
+                "body": response.text,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
