@@ -152,25 +152,59 @@ async function replaceTargetsFromAgencyDefaults(
   return (data ?? []) as DiffusionTargetRow[]
 }
 
-function hektorHeaders() {
-  const token = requireEnv('HEKTOR_API_TOKEN')
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: 'application/json',
+let cachedHektorJwt: string | null = null
+
+async function authenticateHektor() {
+  const baseUrl = requireEnv('HEKTOR_API_BASE_URL').replace(/\/+$/, '')
+  const clientId = requireEnv('HEKTOR_CLIENT_ID')
+  const clientSecret = requireEnv('HEKTOR_CLIENT_SECRET')
+
+  const authResponse = await fetch(
+    `${baseUrl}/Api/OAuth/Authenticate/?client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&grant_type=client_credentials`,
+    { method: 'POST' },
+  )
+  const authText = await authResponse.text()
+  const authParsed = parseMaybeJson(authText) as Record<string, unknown>
+  if (!authResponse.ok || !authParsed || typeof authParsed !== 'object' || !authParsed.access_token) {
+    throw new Error(typeof authParsed === 'string' ? authParsed : JSON.stringify(authParsed))
   }
+
+  const ssoResponse = await fetch(
+    `${baseUrl}/Api/OAuth/Sso/?token=${encodeURIComponent(String(authParsed.access_token))}&scope=sso&client_id=${encodeURIComponent(clientId)}`,
+    { method: 'POST' },
+  )
+  const ssoText = await ssoResponse.text()
+  const ssoParsed = parseMaybeJson(ssoText) as Record<string, unknown>
+  if (!ssoResponse.ok || !ssoParsed || typeof ssoParsed !== 'object' || !ssoParsed.jwt) {
+    throw new Error(typeof ssoParsed === 'string' ? ssoParsed : JSON.stringify(ssoParsed))
+  }
+
+  cachedHektorJwt = String(ssoParsed.jwt)
+  return cachedHektorJwt
 }
 
-async function callHektor(path: string, init: RequestInit = {}) {
+async function callHektor(path: string, init: RequestInit = {}, retry = true) {
   const baseUrl = requireEnv('HEKTOR_API_BASE_URL').replace(/\/+$/, '')
+  if (!cachedHektorJwt) {
+    await authenticateHektor()
+  }
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
-      ...hektorHeaders(),
+      Accept: 'application/json',
+      jwt: cachedHektorJwt ?? '',
       ...(init.headers ?? {}),
     },
   })
+  const refresh = response.headers.get('x-refresh-token')
+  if (refresh) cachedHektorJwt = refresh
   const text = await response.text()
   const parsed = parseMaybeJson(text)
+  if (response.status === 403 && typeof parsed === 'string' && parsed.toLowerCase().includes('expired token') && retry) {
+    cachedHektorJwt = null
+    await authenticateHektor()
+    return callHektor(path, init, false)
+  }
   if (!response.ok) {
     throw new Error(typeof parsed === 'string' ? parsed : JSON.stringify(parsed))
   }

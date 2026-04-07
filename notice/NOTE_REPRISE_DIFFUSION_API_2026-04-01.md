@@ -1097,11 +1097,15 @@ Variables d'environnement a prevoir cote Supabase Function :
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `HEKTOR_API_BASE_URL`
-- `HEKTOR_API_TOKEN`
+- `HEKTOR_CLIENT_ID`
+- `HEKTOR_CLIENT_SECRET`
 - `HEKTOR_API_VERSION`
 
 Point de vigilance :
 
 - cette premiere version remplace l'appel prod aux routes Vite locales
 - elle doit encore etre deployee cote Supabase Functions
-- l'auth Hektor exacte doit etre alignee avec l'instance GTI au moment du branchement final
+- l'auth Hektor retenue doit rester alignee avec `hektor_pipeline.common` :
+  - OAuth `Authenticate`
+  - puis `Sso`
+  - puis header `jwt`
