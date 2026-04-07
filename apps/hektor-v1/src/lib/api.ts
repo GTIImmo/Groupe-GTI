@@ -188,6 +188,12 @@ function canUseBackendApi() {
   return !canUseLocalDiffusionDevApi() && Boolean(backendApiBaseUrl)
 }
 
+function assertBackendApiConfigured() {
+  if (!canUseLocalDiffusionDevApi() && !backendApiBaseUrl) {
+    throw new Error("Backend Python non configure en production. Verifie VITE_BACKEND_API_URL dans Vercel puis redeploie l'application.")
+  }
+}
+
 function isInvalidDiffusionRequestEventIdTypeError(message: string | undefined) {
   const text = (message ?? '').toLowerCase()
   return text.includes('invalid input syntax for type bigint')
@@ -1999,6 +2005,7 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
     })
     return payload.payload
   }
+  assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{
       ok: true
@@ -2102,6 +2109,7 @@ export async function acceptDiffusionRequestOnHektor(input: { appDossierId: numb
     })
     return payload.payload
   }
+  assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{
       ok: true
@@ -2207,6 +2215,7 @@ export async function createAppUser(input: {
       body: input,
     })
   }
+  assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     return invokeSupabaseFunction<{ ok: true; userId: string; email: string }>('admin-users', {
       action: 'create',
@@ -2232,6 +2241,7 @@ export async function loadAppUsers() {
     })
     return payload.users ?? []
   }
+  assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{ ok: true; users: UserProfile[] }>('admin-users', { action: 'list' })
     return payload.users ?? []
@@ -2259,6 +2269,7 @@ export async function updateAppUser(input: {
       body: input,
     })
   }
+  assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
       action: 'update',
@@ -2285,6 +2296,7 @@ export async function sendPasswordResetEmail(input: { email: string }) {
       body: input,
     })
   }
+  assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
     const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
       action: 'send-reset',
