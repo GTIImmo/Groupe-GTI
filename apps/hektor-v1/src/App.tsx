@@ -309,7 +309,7 @@ function requestCreateLabel(value: string | null | undefined) {
 }
 
 function requestAcceptedLabel(value: string | null | undefined) {
-  return isPriceDropRequest(value) ? 'Baisse de prix acceptee' : 'Demande acceptee'
+  return isPriceDropRequest(value) ? 'Baisse de prix acceptée' : 'Demande acceptée'
 }
 
 function requestRefusedLabel(value: string | null | undefined) {
@@ -317,7 +317,7 @@ function requestRefusedLabel(value: string | null | undefined) {
 }
 
 function requestPendingLabel(value: string | null | undefined) {
-  return isPriceDropRequest(value) ? 'Baisse de prix envoyee' : 'Demande envoyee'
+  return isPriceDropRequest(value) ? 'Baisse de prix envoyée' : 'Demande envoyée'
 }
 
 function normalizeRequestType(value: string | null | undefined) {
@@ -378,7 +378,7 @@ function paulineActionLabel(request: DiffusionRequest | null) {
   if (request.request_status === 'pending' || request.request_status === 'in_progress') return 'A traiter'
   if (request.request_status === 'waiting_commercial') return 'A corriger'
   if (request.request_status === 'refused') return isPriceDropRequest(request.request_type) ? 'Rejetee' : 'Refusee'
-  if (request.request_status === 'accepted') return 'Acceptee'
+  if (request.request_status === 'accepted') return 'Acceptée'
   return 'A traiter'
 }
 
@@ -393,14 +393,14 @@ function negociateurDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'va
     return { label: requestPendingLabel(request?.request_type), tone: 'pending', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isPriceDropRequest(request?.request_type)) {
-    return { label: 'Baisse de prix acceptee', tone: 'ready', opens: 'request' as const }
+    return { label: 'Baisse de prix acceptée', tone: 'ready', opens: 'request' as const }
   }
   return { label: 'Demande de validation', tone: 'idle', opens: 'request' as const }
 }
 
 function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'validation_diffusion_state'>, request: DiffusionRequest | null) {
   if (!isPriceDropRequest(request?.request_type) && isValidationApproved(mandat.validation_diffusion_state)) {
-    return { label: 'Acceptee', tone: 'ready', opens: 'diffusion' as const }
+    return { label: 'Acceptée', tone: 'ready', opens: 'diffusion' as const }
   }
   if (request?.request_status === 'waiting_commercial') {
     return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a corriger' : 'A corriger', tone: 'warning', opens: 'request' as const }
@@ -412,7 +412,7 @@ function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'valida
     return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a traiter' : 'A traiter', tone: 'pending', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isPriceDropRequest(request?.request_type)) {
-    return { label: 'Baisse de prix acceptee', tone: 'ready', opens: 'request' as const }
+    return { label: 'Baisse de prix acceptée', tone: 'ready', opens: 'request' as const }
   }
   return { label: 'Aucune demande', tone: 'idle', opens: 'request' as const }
 }
@@ -490,7 +490,7 @@ function actionMenuHelperText(typeLabel: string, stateLabel: string) {
   if (stateLabel === 'Envoyee' || stateLabel === 'En cours') return 'Consulter la demande deja envoyee'
   if (stateLabel === 'Modifier') return 'Ajuster les reglages et portails de diffusion'
   if (stateLabel === 'Refusee' || stateLabel === 'Rejetee') return 'Consulter le refus et le motif'
-  if (stateLabel === 'Acceptee') return 'Consulter la demande acceptee'
+  if (stateLabel === 'Acceptée') return 'Consulter la demande acceptée'
   return 'Ouvrir cette action'
 }
 
@@ -992,7 +992,7 @@ function MandatActionMenu(props: {
     const label = requestActionLabel(activeDiffusionRequest, 'demande_diffusion')
     if (label === 'Demande de validation') return 'Ajouter'
     if (label === 'A corriger') return 'Corriger'
-    if (label === 'Demande envoyee') return 'Envoyee'
+    if (label === 'Demande envoyée') return 'Envoyée'
     if (label === 'Demande en traitement') return 'En cours'
     return label
   })()
@@ -1000,7 +1000,7 @@ function MandatActionMenu(props: {
     const label = requestActionLabel(activePriceDropRequest, 'demande_baisse_prix')
     if (label === 'Demande de baisse de prix') return 'Ajouter'
     if (label === 'Baisse de prix a corriger') return 'Corriger'
-    if (label === 'Baisse de prix envoyee') return 'Envoyee'
+    if (label === 'Baisse de prix envoyée') return 'Envoyée'
     if (label === 'Baisse de prix en traitement') return 'En cours'
     return label
   })()
@@ -1631,10 +1631,10 @@ export default function App() {
                 : 'refused'
       const nextSuiviLabel =
         action === 'suivi_a_traiter'
-          ? { eyebrow: 'Lecture KPI', title: 'Demandes a traiter' }
+          ? { eyebrow: '', title: 'Demandes à traiter' }
           : action === 'suivi_acceptees'
-            ? { eyebrow: 'Lecture KPI', title: 'Demandes acceptees' }
-            : { eyebrow: 'Lecture KPI', title: 'Demandes rejetees' }
+            ? { eyebrow: '', title: 'Demandes acceptées' }
+            : { eyebrow: '', title: 'Demandes rejetées' }
       setScreen('suivi')
       setFiltersOpen(false)
       setDossierPage(1)
@@ -1668,31 +1668,31 @@ export default function App() {
       action === 'all_annonces'
         ? null
         : action === 'offres_en_cours'
-          ? { eyebrow: 'Lecture KPI', title: "Annonces avec offre d'achat en cours" }
+          ? { eyebrow: '', title: "Offres d'achat en cours" }
           : action === 'offres_refusees'
-            ? { eyebrow: 'Lecture KPI', title: "Annonces avec offre d'achat refusee" }
+            ? { eyebrow: '', title: "Offres d'achat refusées" }
             : action === 'compromis_en_cours'
-              ? { eyebrow: 'Lecture KPI', title: 'Annonces avec compromis en cours' }
+              ? { eyebrow: '', title: 'Compromis en cours' }
               : action === 'compromis_annules'
-                ? { eyebrow: 'Lecture KPI', title: 'Annonces avec compromis annule' }
+                ? { eyebrow: '', title: 'Compromis annulés' }
                 : action === 'demandes_envoyees'
-                  ? { eyebrow: 'Lecture KPI', title: 'Annonces avec demande envoyee' }
+                  ? { eyebrow: '', title: 'Demandes envoyées' }
                   : action === 'correction_attente'
-                    ? { eyebrow: 'Lecture KPI', title: 'Annonces en attente de correction' }
+                    ? { eyebrow: '', title: 'Corrections en attente' }
                 : action === 'mandat_diffuse'
-                  ? { eyebrow: 'Lecture KPI', title: 'Annonces avec mandat diffuse' }
+                  ? { eyebrow: '', title: 'Mandats diffusés' }
                   : action === 'mandat_valide'
-                    ? { eyebrow: 'Lecture KPI', title: 'Annonces avec mandat valide' }
+                    ? { eyebrow: '', title: 'Mandats validés' }
                     : action === 'mandat_non_valide'
-                      ? { eyebrow: 'Lecture KPI', title: 'Annonces avec mandat non valide' }
+                      ? { eyebrow: '', title: 'Mandats non validés' }
                   : action === 'mandat_non_diffuse'
-                    ? { eyebrow: 'Lecture KPI', title: 'Annonces avec mandat non diffuse' }
+                    ? { eyebrow: '', title: 'Mandats non diffusés' }
                     : action === 'sans_mandat'
-                      ? { eyebrow: 'Lecture KPI', title: 'Annonces sans mandat' }
+                      ? { eyebrow: '', title: 'Sans mandat' }
                       : action === 'leboncoin'
-                        ? { eyebrow: 'Lecture KPI', title: 'Annonces diffusees sur LeBonCoin' }
+                        ? { eyebrow: '', title: 'Diffusées sur LeBonCoin' }
                         : action === 'bienici'
-                          ? { eyebrow: 'Lecture KPI', title: "Annonces diffusees sur Bien'ici" }
+                          ? { eyebrow: '', title: "Diffusées sur Bien'ici" }
                           : null
     setScreen('mandats')
     setFiltersOpen(false)
@@ -2235,15 +2235,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
-      return { title: 'Annonces', copy: 'Recherche, filtres et listing centralise' }
+      return { title: 'Annonces', copy: '' }
     }
     if (screen === 'mandats') {
       return {
         title: mandatDrilldownLabel?.title ?? 'Liste des annonces',
-        copy: mandatDrilldownLabel ? 'Lecture ciblee issue d un KPI cliquable' : 'Vue commerciale legere annonce / diffusion',
+        copy: '',
       }
     }
-    return { title: 'Suivi des mandats', copy: 'Vue administrative Pauline et parc mandat' }
+    return { title: 'Suivi des mandats', copy: '' }
   }, [screen, mandatDrilldownLabel])
   const dossierCountLabel = activeFilters.length > 0 ? 'Dossiers apres filtres' : 'Tous les dossiers'
   const address = [detail.adresse_privee_listing || detail.adresse_detail, detail.code_postal_public_listing || detail.code_postal_prive_detail || detail.code_postal, detail.ville_publique_listing || detail.ville_privee_detail || selectedDossier?.ville]
@@ -2430,24 +2430,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return [
         { label: 'Annonces', value: new Intl.NumberFormat('fr-FR').format(mandatStats.total), tone: 'volume', action: 'all_annonces' },
         { label: 'Offres en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresEnCours), tone: 'affaires', action: 'offres_en_cours' },
-        { label: 'Offres refusees', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresRefusees), tone: 'affaires', action: 'offres_refusees' },
+        { label: 'Offres refusées', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresRefusees), tone: 'affaires', action: 'offres_refusees' },
         { label: 'Compromis en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisEnCours), tone: 'affaires', action: 'compromis_en_cours' },
-        { label: 'Compromis annules', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisAnnules), tone: 'affaires', action: 'compromis_annules' },
+        { label: 'Compromis annulés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisAnnules), tone: 'affaires', action: 'compromis_annules' },
         { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide' },
         { label: 'Mandats non valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'diffusion', action: 'mandat_non_valide' },
-        { label: 'Mandat diffuse', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
-        { label: 'Mandat non diffuse', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
+        { label: 'Mandat diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
+        { label: 'Mandat non diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
         { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'diffusion', action: 'sans_mandat' },
-        { label: 'Demande envoyee', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.sent), tone: 'demandes', action: 'demandes_envoyees' },
+        { label: 'Demande envoyée', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.sent), tone: 'demandes', action: 'demandes_envoyees' },
         { label: 'Correction en attente', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.waitingCorrection), tone: 'demandes', action: 'correction_attente' },
         { label: 'Diffuse sur LeBonCoin', value: new Intl.NumberFormat('fr-FR').format(mandatStats.leboncoin), tone: 'diffusion', action: 'leboncoin' },
         { label: "Diffuse sur Bien'ici", value: new Intl.NumberFormat('fr-FR').format(mandatStats.bienici), tone: 'diffusion', action: 'bienici' },
       ]
     }
     return [
-      { label: 'Demandes a traiter', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.pendingOrInProgress), tone: 'demandes', action: 'suivi_a_traiter' },
-      { label: 'Demandes acceptees', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.acceptedHistorical), tone: 'demandes', action: 'suivi_acceptees' },
-      { label: 'Demandes rejetees', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.refused), tone: 'demandes', action: 'suivi_rejetees' },
+      { label: 'Demandes à traiter', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.pendingOrInProgress), tone: 'demandes', action: 'suivi_a_traiter' },
+      { label: 'Demandes acceptées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.acceptedHistorical), tone: 'demandes', action: 'suivi_acceptees' },
+      { label: 'Demandes rejetées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.refused), tone: 'demandes', action: 'suivi_rejetees' },
       { label: 'Affaires en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.affairesEnCours), tone: 'affaires', action: null },
     ]
   }, [screen, visibleDossiersCount, workItemsTotal, workItems.length, mandatStats, commercialRequestStats, suiviRequestStats])
@@ -2598,13 +2598,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return (
       <div className="login-shell">
         <section className="login-panel">
-          <p className="eyebrow">Recuperation</p>
-          <h1>Definir un nouveau mot de passe</h1>
-          <p className="hero-copy">Choisissez un nouveau mot de passe pour finaliser la recuperation de votre compte.</p>
+          <p className="eyebrow">Récupération</p>
+          <h1>Définir un nouveau mot de passe</h1>
+          <p className="hero-copy">Choisissez un nouveau mot de passe pour finaliser la récupération de votre compte.</p>
           <form className="login-form" onSubmit={handleResetRecoveredPassword}>
             <label><span>Nouveau mot de passe</span><input type="password" value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} required /></label>
             <label><span>Confirmation</span><input type="password" value={recoveryPasswordConfirm} onChange={(event) => setRecoveryPasswordConfirm(event.target.value)} required /></label>
-            <button type="submit" disabled={recoveryPending}>{recoveryPending ? 'Mise a jour...' : 'Mettre a jour le mot de passe'}</button>
+            <button type="submit" disabled={recoveryPending}>{recoveryPending ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}</button>
           </form>
           {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
         </section>
@@ -2616,9 +2616,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return (
       <div className="login-shell">
         <section className="login-panel">
-          <p className="eyebrow">Acces securise</p>
-          <h1>Connexion a l'outil metier</h1>
-          <p className="hero-copy">Les vues Supabase sont protegees par RLS. Connecte-toi avec un utilisateur actif pour lire les donnees.</p>
+          <p className="eyebrow">Accès sécurisé</p>
+          <h1>Connexion à l'outil métier</h1>
+          <p className="hero-copy">Les vues Supabase sont protégées par RLS. Connecte-toi avec un utilisateur actif pour lire les données.</p>
           <form className="login-form" onSubmit={handleSignIn}>
             <label><span>Email</span><input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required /></label>
             <label><span>Mot de passe</span><input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required /></label>
@@ -2626,7 +2626,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </form>
           <div className="hero-actions">
             <button className="ghost-button" type="button" onClick={() => setForgotPasswordOpen((open) => !open)}>
-              {forgotPasswordOpen ? 'Masquer la reinitialisation' : 'Mot de passe oublie ?'}
+              {forgotPasswordOpen ? 'Masquer la réinitialisation' : 'Mot de passe oublié ?'}
             </button>
           </div>
           {forgotPasswordOpen ? (
@@ -2647,7 +2647,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         <div className="brand-block">
           <p className="eyebrow">GTI Immobilier</p>
           <h1>{screenHeader.title}</h1>
-          <p>{screenHeader.copy}</p>
+          {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
         </div>
         <nav className="screen-nav">
           <button className={`nav-button ${screen === 'annonces' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('annonces')}>Annonces</button>
@@ -2660,11 +2660,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="user-avatar">{userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}</div>
               <div className="user-meta">
                 <strong>{resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}</strong>
-                <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non detectee'}</span>
+                <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non détectée'}</span>
               </div>
               <div className="user-card-actions">
                 {isAdmin ? <button className="signout-button-inline" type="button" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
-                {session ? <button className="signout-button-inline" type="button" onClick={handleSignOut}>Se deconnecter</button> : null}
+                {session ? <button className="signout-button-inline" type="button" onClick={handleSignOut}>Se déconnecter</button> : null}
               </div>
             </div>
           </div>
@@ -2685,7 +2685,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </section>
               <div className="hero-actions">
                 <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
-                <button className="ghost-button" type="button" onClick={resetFilters}>Reinitialiser</button>
+                <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
               </div>
             </div>
             {screen === 'mandats' ? (
@@ -2773,7 +2773,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <div className="filters-head">
               <div>
                 <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres mandats' : 'Filtres suivi administratif'}</p>
-                <strong>{screen === 'annonces' ? 'Appliques cote serveur' : screen === 'mandats' ? 'Mandats et diffusion' : 'Demandes et parc mandat'}</strong>
+                <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Mandats et diffusion' : 'Demandes et parc mandat'}</strong>
               </div>
               <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
             </div>
