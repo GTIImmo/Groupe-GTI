@@ -14,6 +14,13 @@ class Settings:
     supabase_anon_key: str
     supabase_service_role_key: str
     app_base_url: str | None
+    smtp_host: str | None
+    smtp_port: int
+    smtp_user: str | None
+    smtp_pass: str | None
+    smtp_secure: bool
+    smtp_from: str | None
+    smtp_allow_user_from: bool
     hektor_api_base_url: str | None
     hektor_client_id: str | None
     hektor_client_secret: str | None
@@ -38,6 +45,13 @@ def get_settings() -> Settings:
         supabase_anon_key=_require_env("SUPABASE_ANON_KEY"),
         supabase_service_role_key=_require_env("SUPABASE_SERVICE_ROLE_KEY"),
         app_base_url=os.getenv("APP_BASE_URL", "").strip() or None,
+        smtp_host=os.getenv("SMTP_HOST", "").strip() or None,
+        smtp_port=int(os.getenv("SMTP_PORT", "587").strip() or "587"),
+        smtp_user=os.getenv("SMTP_USER", "").strip() or None,
+        smtp_pass=os.getenv("SMTP_PASS", "").strip() or None,
+        smtp_secure=(os.getenv("SMTP_SECURE", "").strip().lower() == "true" or (os.getenv("SMTP_PORT", "").strip() == "465")),
+        smtp_from=os.getenv("SMTP_FROM", "").strip() or None,
+        smtp_allow_user_from=os.getenv("SMTP_ALLOW_USER_FROM", "").strip().lower() == "true",
         hektor_api_base_url=os.getenv("HEKTOR_API_BASE_URL", "").strip() or None,
         hektor_client_id=os.getenv("HEKTOR_CLIENT_ID", "").strip() or None,
         hektor_client_secret=os.getenv("HEKTOR_CLIENT_SECRET", "").strip() or None,

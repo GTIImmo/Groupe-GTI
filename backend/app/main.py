@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.admin_users import router as admin_users_router
 from .routers.hektor_diffusion import router as hektor_diffusion_router
+from .routers.notifications import router as notifications_router
 
 
 app = FastAPI(title="GTI Backend", version="0.1.0")
@@ -29,3 +30,4 @@ def health() -> dict[str, object]:
 
 app.include_router(admin_users_router)
 app.include_router(hektor_diffusion_router)
+app.include_router(notifications_router)

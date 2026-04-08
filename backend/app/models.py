@@ -32,6 +32,16 @@ class SendResetPayload(BaseModel):
     email: EmailStr
 
 
+class DiffusionDecisionEmailPayload(BaseModel):
+    to: EmailStr
+    subject: str = Field(min_length=1)
+    bodyText: str = Field(min_length=1)
+    bodyHtml: str | None = None
+    fromEmail: EmailStr | None = None
+    fromName: str | None = None
+    replyTo: EmailStr | None = None
+
+
 class ApplyDiffusionPayload(BaseModel):
     appDossierId: int = Field(gt=0)
     dryRun: bool = False
