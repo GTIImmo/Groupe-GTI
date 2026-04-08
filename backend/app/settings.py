@@ -14,6 +14,10 @@ class Settings:
     supabase_anon_key: str
     supabase_service_role_key: str
     app_base_url: str | None
+    google_client_id: str | None
+    google_client_secret: str | None
+    google_refresh_token: str | None
+    google_sender_email: str | None
     smtp_host: str | None
     smtp_port: int
     smtp_user: str | None
@@ -45,6 +49,10 @@ def get_settings() -> Settings:
         supabase_anon_key=_require_env("SUPABASE_ANON_KEY"),
         supabase_service_role_key=_require_env("SUPABASE_SERVICE_ROLE_KEY"),
         app_base_url=os.getenv("APP_BASE_URL", "").strip() or None,
+        google_client_id=os.getenv("GOOGLE_CLIENT_ID", "").strip() or None,
+        google_client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "").strip() or None,
+        google_refresh_token=os.getenv("GOOGLE_REFRESH_TOKEN", "").strip() or None,
+        google_sender_email=os.getenv("GOOGLE_SENDER_EMAIL", "").strip() or None,
         smtp_host=os.getenv("SMTP_HOST", "").strip() or None,
         smtp_port=int(os.getenv("SMTP_PORT", "587").strip() or "587"),
         smtp_user=os.getenv("SMTP_USER", "").strip() or None,
