@@ -1408,3 +1408,48 @@ But :
 - rendre `Activer la diffusion et appliquer` portable sur Render
 - rendre `Acceptée` de la demande de validation portable sur Render
 - supprimer la dependance aux SQLite locales pour ces deux actions
+
+## Mise a jour 08/04/2026 - email de decision migre vers Render
+
+Le flux email de decision diffusion / validation n'est plus limite au serveur Vite local.
+
+Ce qui existait en local :
+
+- `buildDiffusionDecisionEmail(...)` dans le front
+- `sendDiffusionDecisionEmail(...)` vers `/api/notifications/diffusion-decision`
+- route Vite locale SMTP via `nodemailer`
+
+Ce qui a ete ajoute dans le backend Python Render :
+
+- route `POST /notifications/diffusion-decision`
+- service SMTP backend `backend/app/services/notification_service.py`
+- reutilisation du meme payload :
+  - `to`
+  - `subject`
+  - `bodyText`
+  - `bodyHtml`
+  - `fromEmail`
+  - `fromName`
+  - `replyTo`
+
+Branchement front :
+
+- si `VITE_BACKEND_API_URL` est defini, `sendDiffusionDecisionEmail(...)` appelle Render
+- sinon, le fallback local Vite reste present
+
+Variables Render requises pour ce flux :
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_SECURE`
+- `SMTP_FROM`
+- `SMTP_ALLOW_USER_FROM`
+
+Cas couverts :
+
+- validation acceptee
+- validation refusee
+- baisse de prix acceptee
+- baisse de prix refusee

@@ -2221,6 +2221,12 @@ export async function sendDiffusionDecisionEmail(input: {
   fromName?: string | null
   replyTo?: string | null
 }) {
+  if (canUseBackendApi()) {
+    return invokeBackendApi<{ ok: true; messageId?: string | null }>('/notifications/diffusion-decision', {
+      method: 'POST',
+      body: input,
+    })
+  }
   const response = await fetch('/api/notifications/diffusion-decision', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
