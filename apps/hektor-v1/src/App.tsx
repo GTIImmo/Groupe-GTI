@@ -1202,7 +1202,7 @@ function activeFilterEntries(filters: AppFilters) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'annonces' | 'mandats' | 'suivi'>('annonces')
+  const [screen, setScreen] = useState<'annonces' | 'mandats' | 'suivi'>('mandats')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
   const [filters, setFilters] = useState<AppFilters>(emptyFilters)
   const [dossiers, setDossiers] = useState<Dossier[]>([])
@@ -1608,7 +1608,7 @@ export default function App() {
   }
 
   function openScreen(nextScreen: 'annonces' | 'mandats' | 'suivi') {
-    setScreen(nextScreen)
+    setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(null)
@@ -2650,7 +2650,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
         </div>
         <nav className="screen-nav">
-          <button className={`nav-button ${screen === 'annonces' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('annonces')}>Annonces</button>
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Liste des annonces</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi des mandats</button> : null}
         </nav>
