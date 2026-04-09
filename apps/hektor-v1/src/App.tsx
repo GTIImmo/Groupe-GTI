@@ -530,13 +530,18 @@ function buildHektorAnnonceUrl(hektorAnnonceId: number | string | null | undefin
   return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(id)}`
 }
 
-function buildAppRequestUrl(appDossierId: number | null | undefined, role: 'nego' | 'pauline' = 'nego') {
+function buildAppRequestUrl(
+  appDossierId: number | null | undefined,
+  role: 'nego' | 'pauline' = 'nego',
+  requestType?: 'demande_diffusion' | 'demande_baisse_prix' | null,
+) {
   if (typeof window === 'undefined' || appDossierId == null) return null
   const url = new URL(window.location.origin + window.location.pathname)
   url.searchParams.set('screen', 'mandats')
   url.searchParams.set('app_dossier_id', String(appDossierId))
   url.searchParams.set('open', 'request')
   url.searchParams.set('role', role)
+  if (requestType) url.searchParams.set('request_type', requestType)
   return url.toString()
 }
 
@@ -563,7 +568,11 @@ function buildDiffusionDecisionEmail(input: {
   const actorEmail = input.processorEmail?.trim() || null
   const trimmedResponse = input.response.trim()
   const trimmedRefusalReason = refusalReasonLabel(input.refusalReason)
-  const appRequestUrl = buildAppRequestUrl(input.appDossierId, 'nego')
+  const appRequestUrl = buildAppRequestUrl(
+    input.appDossierId,
+    'nego',
+    isPriceDrop ? 'demande_baisse_prix' : 'demande_diffusion',
+  )
 
   const subject = input.status === 'accepted'
     ? `${isPriceDrop ? 'Baisse de prix acceptee' : 'Validation acceptee'} · ${dossierLabel}`
@@ -1508,13 +1517,21 @@ export default function App() {
     }
     const roleParam = params.get('role')
     const modalRole: 'nego' | 'pauline' = roleParam === 'pauline' ? 'pauline' : 'nego'
+    const requestTypeParam = params.get('request_type')
+    const deepLinkRequestType: 'demande_diffusion' | 'demande_baisse_prix' | undefined =
+      requestTypeParam === 'demande_baisse_prix'
+        ? 'demande_baisse_prix'
+        : requestTypeParam === 'demande_diffusion'
+          ? 'demande_diffusion'
+          : undefined
     setScreen('mandats')
     setSelectedMandatId(appDossierId)
     setSelectedDossierId(appDossierId)
-    openRequestModal(appDossierId, modalRole)
+    openRequestModal(appDossierId, modalRole, deepLinkRequestType)
     params.delete('open')
     params.delete('app_dossier_id')
     params.delete('role')
+    params.delete('request_type')
     const requestedScreen = params.get('screen')
     if (requestedScreen === 'mandats') params.delete('screen')
     const nextSearch = params.toString()
