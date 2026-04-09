@@ -3737,7 +3737,7 @@ function MandatsScreen(props: {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Statut</th><th>Bien</th><th>Mandat</th><th>Negociateur</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Photo</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Mandat</th><th>Bien</th><th>Negociateur</th><th>Statut</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Photo</th><th>Actions</th></tr></thead>
             <tbody>
               {props.mandats.map((item) => {
                 const isSelected = item.app_dossier_id === props.selectedMandat?.app_dossier_id
@@ -3754,10 +3754,10 @@ function MandatsScreen(props: {
                         props.onOpenDetailPage(item.app_dossier_id)
                       }}
                     >
-                      <td><StatusPill value={item.statut_annonce} /></td>
-                      <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
                       <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
+                      <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
                       <td><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
+                      <td><StatusPill value={item.statut_annonce} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
@@ -4108,7 +4108,7 @@ function SuiviMandatsScreenV2(props: {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Statut</th><th>Bien</th><th>Mandat</th><th>Negociateur</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Derniere action</th><th>Photo</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Mandat</th><th>Bien</th><th>Negociateur</th><th>Statut</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Derniere action</th><th>Photo</th><th>Actions</th></tr></thead>
             <tbody>
               {suiviRequestRows.map(({ mandat: item, request: activeRequest }) => {
                 const hasLeboncoin = hasPortalEnabled(item, ['leboncoin'])
@@ -4119,10 +4119,10 @@ function SuiviMandatsScreenV2(props: {
                     <tr onClick={() => {
                       props.onOpenDetailPage(item.app_dossier_id)
                     }}>
-                      <td><StatusPill value={item.statut_annonce} /></td>
-                      <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
                       <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
+                      <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
                       <td><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
+                      <td><StatusPill value={item.statut_annonce} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>

@@ -1453,3 +1453,123 @@ Cas couverts :
 - validation refusee
 - baisse de prix acceptee
 - baisse de prix refusee
+
+## Mise a jour 09/04/2026 - correction creation utilisateurs Render
+
+Incident constate en production :
+
+- creation d'un utilisateur `admin` depuis l'app
+- connexion possible avec le nouveau compte
+- mais aucun listing visible
+- message utilisateur du type :
+  - `Utilisateur non identifie`
+  - ou compte sans parc annonces
+
+Diagnostic exact :
+
+- le compte etait bien cree dans `auth.users`
+- mais aucune ligne correspondante n'etait creee dans `public.app_user_profile`
+- dans ce cas, le RLS ne reconnait pas l'utilisateur comme `admin` global
+- resultat :
+  - connexion OK
+  - lecture des annonces KO
+
+Cas reel identifie pendant le debug :
+
+- `auth.users.id = a5dea560-00bd-42b9-8de9-a1708f102482`
+- aucun `app_user_profile` rattache
+
+Un second cas parasite a aussi ete trouve :
+
+- une ancienne ligne `app_user_profile` existait avec une faute de frappe sur l'email :
+  - `franck.gerphagnon@gmail.ccom`
+- ce faux profil ne correspondait pas au compte Auth reel
+- il a du etre supprime avant recreation propre
+
+Controle SQL utile pour diagnostiquer ce cas :
+
+```sql
+select
+  u.id as auth_id,
+  u.email as auth_email,
+  p.id as profile_id,
+  p.email as profile_email,
+  p.role,
+  p.is_active,
+  p.display_name
+from auth.users u
+left join public.app_user_profile p on p.id = u.id
+where lower(u.email) = lower('franck.gerphagnon@gmail.com');
+```
+
+Resultat attendu apres correctif :
+
+- `auth_id = profile_id`
+- `auth_email = profile_email`
+- `role = admin`
+- `is_active = true`
+
+Correction backend appliquee dans :
+
+- `backend/app/services/supabase_admin.py`
+
+Correctif retenu :
+
+- ajout d'une lecture explicite `app_user_profile` par `id`
+- remplacement de l'ancien `POST` de profil par un vrai `upsert` REST sur :
+  - `app_user_profile`
+  - avec `on_conflict=id`
+  - et `Prefer: resolution=merge-duplicates,return=representation`
+- envoi du payload sous forme de liste JSON
+- relecture du profil par `id` juste apres creation si Supabase ne retourne rien
+- echec explicite si le profil n'existe toujours pas :
+  - `Profil utilisateur non cree dans app_user_profile`
+- verification finale de coherence :
+  - l'`id` du profil doit etre exactement l'`id` Auth cree
+
+Commit de correction :
+
+- `8dcc7ac`
+- `Harden backend admin user profile creation`
+
+Conclusion retenue :
+
+- le backend Render doit etre considere comme correct seulement si la creation utilisateur produit :
+  - une ligne `auth.users`
+  - et une ligne `app_user_profile`
+  - avec le meme `id`
+
+Validation finale obtenue :
+
+```sql
+select
+  u.id as auth_id,
+  u.email as auth_email,
+  p.id as profile_id,
+  p.email as profile_email,
+  p.role,
+  p.is_active,
+  p.display_name
+from auth.users u
+left join public.app_user_profile p on p.id = u.id
+where lower(u.email) = lower('franck.gerphagnon@gmail.com');
+```
+
+Resultat valide :
+
+- `auth_id = 0b500395-91ea-4488-95f4-15582eef6c10`
+- `profile_id = 0b500395-91ea-4488-95f4-15582eef6c10`
+- `auth_email = franck.gerphagnon@gmail.com`
+- `profile_email = franck.gerphagnon@gmail.com`
+- `role = admin`
+- `is_active = true`
+
+Regle de reprise si le bug revient :
+
+1. verifier d'abord `auth.users`
+2. verifier ensuite `app_user_profile`
+3. confirmer que les deux lignes existent avec le meme `id`
+4. si `auth.users` existe sans `app_user_profile` :
+   - le bug est dans le flux `create_user(...)`
+5. si l'email du profil ne matche pas l'email Auth :
+   - supprimer la ligne parasite et recreer proprement
