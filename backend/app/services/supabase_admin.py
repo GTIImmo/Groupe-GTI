@@ -71,6 +71,34 @@ class SupabaseAdminService:
         self._raise_for_response(response, "Unable to list users")
         return response.json() or []
 
+    def _load_profile_by_id(self, user_id: str) -> dict[str, Any]:
+        response = requests.get(
+            f"{self.settings.supabase_url}/rest/v1/app_user_profile",
+            headers=self._rest_headers(),
+            params={"select": "*", "id": f"eq.{user_id}", "limit": 1},
+            timeout=30,
+        )
+        self._raise_for_response(response, "Unable to read user profile by id")
+        rows = response.json() or []
+        return rows[0] if rows else {}
+
+    def _upsert_profile(self, profile_payload: dict[str, Any]) -> dict[str, Any]:
+        response = requests.post(
+            f"{self.settings.supabase_url}/rest/v1/app_user_profile",
+            headers={**self._rest_headers(), "Prefer": "resolution=merge-duplicates,return=representation"},
+            params={"on_conflict": "id"},
+            json=[profile_payload],
+            timeout=30,
+        )
+        self._raise_for_response(response, "Unable to upsert user profile")
+        rows = response.json() or []
+        if rows:
+            return rows[0]
+        profile = self._load_profile_by_id(str(profile_payload["id"]))
+        if not profile:
+            raise HTTPException(status_code=500, detail="Profil utilisateur non cree dans app_user_profile")
+        return profile
+
     def create_user(self, payload: dict[str, Any]) -> dict[str, Any]:
         display_name = payload.get("displayName") or " ".join(filter(None, [payload.get("firstName"), payload.get("lastName")])).strip() or payload["email"]
         auth_response = requests.post(
@@ -115,13 +143,9 @@ class SupabaseAdminService:
             "display_name": display_name,
             "is_active": payload.get("isActive", True),
         }
-        rest_response = requests.post(
-            f"{self.settings.supabase_url}/rest/v1/app_user_profile",
-            headers={**self._rest_headers(), "Prefer": "resolution=merge-duplicates,return=representation"},
-            json=profile_payload,
-            timeout=30,
-        )
-        self._raise_for_response(rest_response, "Unable to upsert user profile")
+        profile = self._upsert_profile(profile_payload)
+        if str(profile.get("id") or "") != str(user_id):
+            raise HTTPException(status_code=500, detail="Profil utilisateur incoherent apres creation")
         return {"ok": True, "userId": user_id, "email": payload["email"]}
 
     def update_user(self, payload: dict[str, Any]) -> dict[str, Any]:
