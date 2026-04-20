@@ -919,6 +919,10 @@ function uniquePortalKeys(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map((value) => safeText(value)).filter(Boolean)))
 }
 
+function buildPortalsResume(values: Array<string | null | undefined>) {
+  return uniquePortalKeys(values).join(', ')
+}
+
 type HeaderMetricItem = {
   label: string
   value: string
@@ -1910,10 +1914,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
         setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, diffusable: diffusableValue, validation_diffusion_state: validationValue } : current)
         const acceptedBroadcasts = await loadMandatBroadcasts(currentRequest.app_dossier_id).catch(() => [])
-        const acceptedPortailsResume = uniquePortalKeys([
+        const acceptedPortailsResume = buildPortalsResume([
           ...acceptedBroadcasts.map((item) => item.passerelle_key),
           ...acceptanceResult.applied.map((item) => safeText(item.portal_key)),
-        ]).join(', ')
+        ])
         setDossiers((current) =>
           current.map((item) =>
             item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, portails_resume: acceptedPortailsResume } : item,
@@ -1927,6 +1931,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setSelectedDossier((current) =>
           current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, portails_resume: acceptedPortailsResume } : current,
         )
+        await setDossierHektorState(currentRequest.app_dossier_id, {
+          portailsResume: acceptedPortailsResume,
+          nbPortailsActifs: uniquePortalKeys(acceptedPortailsResume.split(',')).length,
+        })
         if (currentMandat && diffusionModalMandatId === currentRequest.app_dossier_id) {
           setMandatBroadcasts(acceptedBroadcasts)
           const reloadedTargets = await loadDiffusionTargets(currentRequest.app_dossier_id).catch(() => [])
@@ -2190,6 +2198,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       })
       setDiffusionApplyResult(result)
       if (!dryRun) {
+        const appliedPortalsResume = buildPortalsResume(
+          result.applied
+            .filter((item) => item.action === 'add')
+            .map((item) => safeText(item.portal_key)),
+        )
         const validationValue =
           result.observed_validation && isValidationApproved(result.observed_validation)
             ? result.observed_validation
@@ -2205,10 +2218,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         await setDossierHektorState(diffusionModalMandat.app_dossier_id, {
           validationDiffusionState: validationValue,
           diffusable: diffusableValue === '1',
+          portailsResume: appliedPortalsResume,
+          nbPortailsActifs: uniquePortalKeys(appliedPortalsResume.split(',')).length,
         })
-        setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
-        setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
-        setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue } : current)
+        setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: appliedPortalsResume, nb_portails_actifs: uniquePortalKeys(appliedPortalsResume.split(',')).length } : item))
+        setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: appliedPortalsResume, nb_portails_actifs: uniquePortalKeys(appliedPortalsResume.split(',')).length } : item))
+        setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: appliedPortalsResume, nb_portails_actifs: uniquePortalKeys(appliedPortalsResume.split(',')).length } : current)
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Erreur d application Hektor')
@@ -2263,17 +2278,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           : result.observed_diffusable === '0'
             ? '0'
             : diffusionModalMandat.diffusable ?? '0'
+      const persistedPortalsResume = buildPortalsResume(
+        rows
+          .filter((item) => item.target_state === 'enabled')
+          .map((item) => item.portal_key ?? item.hektor_broadcast_id),
+      )
       await setDossierHektorState(diffusionModalMandat.app_dossier_id, {
         validationDiffusionState: validationValue,
         diffusable: diffusableValue === '1',
+        portailsResume: persistedPortalsResume,
+        nbPortailsActifs: uniquePortalKeys(persistedPortalsResume.split(',')).length,
       })
-      setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
-      setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
-      setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue } : current)
+      setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: persistedPortalsResume, nb_portails_actifs: uniquePortalKeys(persistedPortalsResume.split(',')).length } : item))
+      setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: persistedPortalsResume, nb_portails_actifs: uniquePortalKeys(persistedPortalsResume.split(',')).length } : item))
+      setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: persistedPortalsResume, nb_portails_actifs: uniquePortalKeys(persistedPortalsResume.split(',')).length } : current)
       const refreshedBroadcasts = await loadMandatBroadcasts(diffusionModalMandat.app_dossier_id).catch(() => null)
       if (refreshedBroadcasts) {
         setMandatBroadcasts(refreshedBroadcasts)
-        const refreshedPortalsResume = uniquePortalKeys(refreshedBroadcasts.map((item) => item.passerelle_key)).join(', ')
+        const refreshedPortalsResume = buildPortalsResume(refreshedBroadcasts.map((item) => item.passerelle_key))
         setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, portails_resume: refreshedPortalsResume } : item))
         setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, portails_resume: refreshedPortalsResume } : item))
         setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, portails_resume: refreshedPortalsResume } : current)

@@ -75,6 +75,8 @@ def persist_hektor_state(
             payload.appDossierId,
             validation_diffusion_state=payload.validationDiffusionState,
             diffusable=payload.diffusable,
+            portails_resume=payload.portailsResume,
+            nb_portails_actifs=payload.nbPortailsActifs,
         ),
     }
 

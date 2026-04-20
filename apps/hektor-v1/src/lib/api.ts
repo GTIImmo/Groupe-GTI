@@ -1021,7 +1021,7 @@ export async function setDossierDiffusable(appDossierId: number, diffusable: boo
 
 export async function setDossierHektorState(
   appDossierId: number,
-  input: { validationDiffusionState?: string | null; diffusable?: boolean | null },
+  input: { validationDiffusionState?: string | null; diffusable?: boolean | null; portailsResume?: string | null; nbPortailsActifs?: number | null },
 ): Promise<void> {
   if (canUseBackendApi()) {
     await invokeBackendApi<{ ok: true; payload: { app_dossier_id: number } }>('/hektor-diffusion/persist-state', {
@@ -1029,6 +1029,8 @@ export async function setDossierHektorState(
         appDossierId,
         validationDiffusionState: typeof input.validationDiffusionState !== 'undefined' ? input.validationDiffusionState : undefined,
         diffusable: typeof input.diffusable !== 'undefined' ? input.diffusable : undefined,
+        portailsResume: typeof input.portailsResume !== 'undefined' ? input.portailsResume : undefined,
+        nbPortailsActifs: typeof input.nbPortailsActifs !== 'undefined' ? input.nbPortailsActifs : undefined,
       },
     })
     return
@@ -1043,6 +1045,12 @@ export async function setDossierHektorState(
   }
   if (typeof input.diffusable !== 'undefined' && input.diffusable !== null) {
     patch.diffusable = input.diffusable ? '1' : '0'
+  }
+  if (typeof input.portailsResume !== 'undefined') {
+    patch.portails_resume = input.portailsResume ?? ''
+  }
+  if (typeof input.nbPortailsActifs !== 'undefined' && input.nbPortailsActifs !== null) {
+    patch.nb_portails_actifs = String(input.nbPortailsActifs)
   }
   const { error } = await supabase
     .from('app_dossier_current')

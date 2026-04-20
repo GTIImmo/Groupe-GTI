@@ -64,6 +64,8 @@ class PersistHektorStatePayload(BaseModel):
     appDossierId: int = Field(gt=0)
     validationDiffusionState: str | None = None
     diffusable: bool | None = None
+    portailsResume: str | None = None
+    nbPortailsActifs: int | None = Field(default=None, ge=0)
 
 
 class AcceptDiffusionPayload(BaseModel):

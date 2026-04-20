@@ -95,6 +95,8 @@ class HektorBridgeService:
         *,
         validation_diffusion_state: str | None = None,
         diffusable: bool | None = None,
+        portails_resume: str | None = None,
+        nb_portails_actifs: int | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "refreshed_at": datetime.now(timezone.utc).isoformat(),
@@ -103,6 +105,10 @@ class HektorBridgeService:
             payload["validation_diffusion_state"] = validation_diffusion_state
         if diffusable is not None:
             payload["diffusable"] = "1" if diffusable else "0"
+        if portails_resume is not None:
+            payload["portails_resume"] = portails_resume
+        if nb_portails_actifs is not None:
+            payload["nb_portails_actifs"] = int(nb_portails_actifs)
         rows = self._supabase_patch_rows(
             "app_dossier_current",
             payload,
@@ -115,6 +121,8 @@ class HektorBridgeService:
             "app_dossier_id": row.get("app_dossier_id", app_dossier_id),
             "validation_diffusion_state": row.get("validation_diffusion_state"),
             "diffusable": row.get("diffusable"),
+            "portails_resume": row.get("portails_resume"),
+            "nb_portails_actifs": row.get("nb_portails_actifs"),
             "refreshed_at": row.get("refreshed_at"),
         }
 
