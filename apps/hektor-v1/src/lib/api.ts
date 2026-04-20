@@ -1018,6 +1018,28 @@ export async function setDossierDiffusable(appDossierId: number, diffusable: boo
   if (error) throw new Error(error.message)
 }
 
+export async function setDossierHektorState(
+  appDossierId: number,
+  input: { validationDiffusionState?: string | null; diffusable?: boolean | null },
+): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const now = new Date().toISOString()
+  const patch: Record<string, string> = {
+    refreshed_at: now,
+  }
+  if (typeof input.validationDiffusionState !== 'undefined') {
+    patch.validation_diffusion_state = input.validationDiffusionState ?? ''
+  }
+  if (typeof input.diffusable !== 'undefined' && input.diffusable !== null) {
+    patch.diffusable = input.diffusable ? '1' : '0'
+  }
+  const { error } = await supabase
+    .from('app_dossier_current')
+    .update(patch)
+    .eq('app_dossier_id', appDossierId)
+  if (error) throw new Error(error.message)
+}
+
 export type HektorDiffusableResult = {
   app_dossier_id: number
   hektor_annonce_id: string
@@ -2233,6 +2255,8 @@ export async function acceptDiffusionRequestOnHektor(input: { appDossierId: numb
         app_dossier_id: number
         hektor_annonce_id: string
         dry_run: boolean
+        validation_result?: string | null
+        observed_validation?: string | null
         diffusable_changed: boolean
         diffusable_result: string
         observed_diffusable?: string | null
@@ -2265,6 +2289,8 @@ export async function acceptDiffusionRequestOnHektor(input: { appDossierId: numb
         app_dossier_id: number
         hektor_annonce_id: string
         dry_run: boolean
+        validation_result?: string | null
+        observed_validation?: string | null
         diffusable_changed: boolean
         diffusable_result: string
         observed_diffusable?: string | null
@@ -2310,6 +2336,8 @@ export async function acceptDiffusionRequestOnHektor(input: { appDossierId: numb
     app_dossier_id: number
     hektor_annonce_id: string
     dry_run: boolean
+    validation_result?: string | null
+    observed_validation?: string | null
     diffusable_changed: boolean
     diffusable_result: string
     observed_diffusable?: string | null

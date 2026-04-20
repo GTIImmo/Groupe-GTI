@@ -23,6 +23,7 @@ import {
   loadFilterCatalog,
   loadMandatFilterCatalog,
   loadMandatBroadcasts,
+  setDossierHektorState,
   setDossierValidationOnHektor,
   setDossierDiffusable,
   setDossierDiffusableOnHektor,
@@ -1896,11 +1897,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (input.status === 'accepted' && currentRequest && acceptanceResult && !acceptanceResult.waiting_on_hektor) {
         const diffusableValue = acceptanceResult.observed_diffusable === '1' ? '1' : '0'
         const validationValue =
-          currentMandat?.validation_diffusion_state && isValidationApproved(currentMandat.validation_diffusion_state)
-            ? currentMandat.validation_diffusion_state
+          acceptanceResult.observed_validation && isValidationApproved(acceptanceResult.observed_validation)
+            ? acceptanceResult.observed_validation
             : acceptanceResult.validation_state && isValidationApproved(acceptanceResult.validation_state)
               ? acceptanceResult.validation_state
               : currentMandat?.validation_diffusion_state ?? null
+        await setDossierHektorState(currentRequest.app_dossier_id, {
+          validationDiffusionState: validationValue,
+          diffusable: diffusableValue === '1',
+        })
         setDossiers((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
         setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
         setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, diffusable: diffusableValue, validation_diffusion_state: validationValue } : current)
@@ -1939,6 +1944,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         }
       }
       if (input.status === 'accepted' && acceptanceResult?.waiting_on_hektor) {
+        await setDossierHektorState(currentRequest.app_dossier_id, {
+          validationDiffusionState: acceptanceResult.observed_validation ?? acceptanceResult.validation_state ?? currentMandat?.validation_diffusion_state ?? null,
+          diffusable:
+            acceptanceResult.observed_diffusable === '1'
+              ? true
+              : acceptanceResult.observed_diffusable === '0'
+                ? false
+                : null,
+        })
         acceptanceInfoMessage = acceptanceResult.waiting_message ?? "Demande acceptee. Hektor n'a pas encore confirme le passage du bien en diffusable."
       }
       setDiffusionRequests(await loadDiffusionRequests())
@@ -2278,6 +2292,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         validation_diffusion_state: validationValue,
         diffusable: diffusableValue,
       }
+      await setDossierHektorState(selectedDossier.app_dossier_id, {
+        validationDiffusionState: validationValue,
+        diffusable: diffusableValue === '1',
+      })
       setDetailValidationDraft(validationValue)
       setDetailValidationObserved(validationValue)
       setDetailValidationSaved(validationValue)
