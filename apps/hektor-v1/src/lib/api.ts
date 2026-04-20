@@ -1018,6 +1018,36 @@ export async function setDossierDiffusable(appDossierId: number, diffusable: boo
   if (error) throw new Error(error.message)
 }
 
+export type HektorDiffusableResult = {
+  app_dossier_id: number
+  hektor_annonce_id: string
+  dry_run: boolean
+  requested_diffusable: boolean
+  changed: boolean
+  result: string
+  observed_diffusable?: string | null
+  error?: string | null
+}
+
+export async function setDossierDiffusableOnHektor(input: { appDossierId: number; diffusable: boolean; dryRun?: boolean }): Promise<HektorDiffusableResult> {
+  if (!input.diffusable) {
+    throw new Error("La desactivation diffusable Hektor n'a pas d'endpoint API confirme.")
+  }
+  if (canUseBackendApi()) {
+    const payload = await invokeBackendApi<{ ok: true; payload: HektorDiffusableResult }>('/hektor-diffusion/diffusable', {
+      method: 'POST',
+      body: {
+        appDossierId: input.appDossierId,
+        diffusable: input.diffusable,
+        dryRun: Boolean(input.dryRun),
+      },
+    })
+    if (payload.payload?.error) throw new Error(payload.payload.error)
+    return payload.payload
+  }
+  throw new Error("Le passage diffusable Hektor reel nécessite le backend Render.")
+}
+
 export type HektorValidationResult = {
   app_dossier_id: number
   hektor_annonce_id: string

@@ -25,6 +25,7 @@ import {
   loadMandatBroadcasts,
   setDossierValidationOnHektor,
   setDossierDiffusable,
+  setDossierDiffusableOnHektor,
   saveDiffusionTargets,
   loadMandatsPage,
   loadMandatStats,
@@ -2227,10 +2228,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDetailDiffusablePending(true)
     setErrorMessage(null)
     try {
-      await setDossierDiffusable(selectedDossier.app_dossier_id, nextValue)
-      const diffusableValue = nextValue ? '1' : '0'
-      setDetailDiffusableObserved(nextValue)
-      setDetailDiffusableSaved(nextValue)
+      let observedValue = nextValue
+      if (nextValue) {
+        const result = await setDossierDiffusableOnHektor({
+          appDossierId: selectedDossier.app_dossier_id,
+          diffusable: true,
+        })
+        observedValue = result.observed_diffusable === '1'
+      }
+      await setDossierDiffusable(selectedDossier.app_dossier_id, observedValue)
+      const diffusableValue = observedValue ? '1' : '0'
+      setDetailDiffusableDraft(observedValue)
+      setDetailDiffusableObserved(observedValue)
+      setDetailDiffusableSaved(observedValue)
       setSelectedDossier((current) => (current ? { ...current, diffusable: diffusableValue } : current))
       setDossiers((current) => current.map((item) => item.app_dossier_id === selectedDossier.app_dossier_id ? { ...item, diffusable: diffusableValue } : item))
       setMandats((current) => current.map((item) => item.app_dossier_id === selectedDossier.app_dossier_id ? { ...item, diffusable: diffusableValue } : item))

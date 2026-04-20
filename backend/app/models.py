@@ -48,6 +48,12 @@ class ApplyDiffusionPayload(BaseModel):
     ensureDiffusable: bool = False
 
 
+class SetDiffusablePayload(BaseModel):
+    appDossierId: int = Field(gt=0)
+    diffusable: bool = True
+    dryRun: bool = False
+
+
 class AcceptDiffusionPayload(BaseModel):
     appDossierId: int = Field(gt=0)
     dryRun: bool = False

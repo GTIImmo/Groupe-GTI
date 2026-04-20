@@ -312,6 +312,43 @@ class HektorBridgeService:
         parsed, _ = self._call_hektor(f"{path}?{query}", method=method)
         return parsed
 
+    def set_diffusable(self, app_dossier_id: int, diffusable: bool, dry_run: bool) -> dict[str, Any]:
+        dossier = self._load_dossier(app_dossier_id)
+        if not diffusable:
+            return {
+                "app_dossier_id": dossier["app_dossier_id"],
+                "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
+                "dry_run": dry_run,
+                "requested_diffusable": False,
+                "changed": False,
+                "result": "not_supported_by_hektor_api",
+                "observed_diffusable": self._read_observed_diffusable(dossier),
+                "error": "La desactivation diffusable Hektor n'a pas d'endpoint API confirme.",
+            }
+        if dry_run:
+            return {
+                "app_dossier_id": dossier["app_dossier_id"],
+                "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
+                "dry_run": True,
+                "requested_diffusable": True,
+                "changed": True,
+                "result": "would_patch_diffuse",
+                "observed_diffusable": self._read_observed_diffusable(dossier),
+                "error": None,
+            }
+        ensure_result = self._ensure_diffusable(dossier, dry_run=False)
+        observed_diffusable = self._read_observed_diffusable(dossier)
+        return {
+            "app_dossier_id": dossier["app_dossier_id"],
+            "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
+            "dry_run": False,
+            "requested_diffusable": True,
+            "changed": bool(ensure_result["changed"]),
+            "result": self._normalize_hektor_message(str(ensure_result["result"])),
+            "observed_diffusable": observed_diffusable,
+            "error": None if observed_diffusable == "1" else "Hektor n'a pas confirme diffusable = 1 apres PATCH Diffuse.",
+        }
+
     def _run_apply(self, dossier: dict[str, Any], requested_by: str | None, dry_run: bool, ensure_diffusable_flag: bool, reset_to_agency_defaults: bool) -> dict[str, Any]:
         targets = self._load_targets(int(dossier["app_dossier_id"]))
         if (reset_to_agency_defaults or not targets) and dossier.get("agence_nom"):
