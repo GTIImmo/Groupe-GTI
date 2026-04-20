@@ -1543,9 +1543,9 @@ body {
   text-transform: uppercase;
 }
 .row-actions .action-menu-type-validation {
-  background: #fbf5e6 !important;
-  border-color: #ecd9b3 !important;
-  color: #7a5a23;
+  background: #e7f4e8 !important;
+  border-color: #b9dbbf !important;
+  color: #2d6a39;
 }
 .row-actions .action-menu-type-price-drop {
   background: #eef5e4 !important;
@@ -2240,6 +2240,70 @@ tbody tr.is-selected { background: #e9f1f4; }
 }
 .detail-contact-card {
   gap: 10px;
+}
+.detail-contact-card-primary {
+  background: linear-gradient(180deg, rgba(252, 254, 255, 0.99) 0%, rgba(243, 248, 252, 0.98) 100%);
+  border-color: rgba(187, 206, 218, 0.9);
+  box-shadow: 0 16px 28px rgba(22, 46, 60, 0.08);
+}
+.detail-contact-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.detail-contact-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #124d5f 0%, #2a7d8f 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 12px 24px rgba(17, 76, 93, 0.18);
+}
+.detail-contact-avatar.is-secondary {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #dfeef4 0%, #cadfe8 100%);
+  color: #1b4d62;
+  box-shadow: none;
+}
+.detail-contact-identity {
+  display: grid;
+  gap: 3px;
+}
+.detail-contact-identity strong {
+  color: #17384c;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+.detail-contact-identity span {
+  color: #5d7581;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.detail-contact-lines {
+  gap: 12px;
+}
+.detail-contact-link {
+  color: #0f5870;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(15, 88, 112, 0.18);
+}
+.detail-contact-link:hover {
+  color: #0a4356;
+  border-bottom-color: rgba(10, 67, 86, 0.35);
+}
+.detail-contact-note {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(251, 247, 238, 0.98) 0%, rgba(245, 238, 225, 0.98) 100%);
+  border: 1px solid rgba(225, 210, 179, 0.9);
 }
 .detail-secondary-contacts {
   display: grid;
