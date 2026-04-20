@@ -1874,6 +1874,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (!profile) return
     setRequestLoading(true)
     setErrorMessage(null)
+    let mutationCommitted = false
     try {
       const currentRequest = diffusionRequests.find((item) => item.id === input.requestId) ?? null
       const currentMandat = currentRequest ? mandats.find((item) => item.app_dossier_id === currentRequest.app_dossier_id) ?? null : null
@@ -1898,6 +1899,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         processorId: profile.id,
         processorLabel: profile.display_name ?? profile.email,
       })
+      mutationCommitted = true
       if (input.status === 'accepted' && currentRequest && acceptanceResult && !acceptanceResult.waiting_on_hektor) {
         const diffusableValue = acceptanceResult.observed_diffusable === '1' ? '1' : '0'
         const validationValue =
@@ -1963,9 +1965,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         })
         acceptanceInfoMessage = acceptanceResult.waiting_message ?? "Demande acceptee. Hektor n'a pas encore confirme le passage du bien en diffusable."
       }
-      setDiffusionRequests(await loadDiffusionRequests())
-      setDiffusionRequestEvents(await loadDiffusionRequestEvents().catch(() => []))
       closeRequestModal()
+      try {
+        setDiffusionRequests(await loadDiffusionRequests())
+      } catch (error) {
+        const refreshError = error instanceof Error ? error.message : 'rafraichissement des demandes impossible'
+        acceptanceInfoMessage = acceptanceInfoMessage
+          ? `${acceptanceInfoMessage} Rafraichissement des demandes impossible : ${refreshError}`
+          : `Decision enregistree, mais rafraichissement des demandes impossible : ${refreshError}`
+      }
+      try {
+        setDiffusionRequestEvents(await loadDiffusionRequestEvents().catch(() => []))
+      } catch (error) {
+        const eventsError = error instanceof Error ? error.message : 'rafraichissement de l historique impossible'
+        acceptanceInfoMessage = acceptanceInfoMessage
+          ? `${acceptanceInfoMessage} Historique non recharge : ${eventsError}`
+          : `Decision enregistree, mais historique non recharge : ${eventsError}`
+      }
       const decisionEmail = currentRequest
         ? buildDiffusionDecisionEmail({
             status: input.status,
@@ -1993,7 +2009,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setErrorMessage(acceptanceInfoMessage)
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour de demande')
+      if (mutationCommitted) {
+        const lateError = error instanceof Error ? error.message : 'Erreur reseau apres validation'
+        setErrorMessage(`Decision enregistree, mais une relecture secondaire a echoue : ${lateError}`)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour de demande')
+      }
     } finally {
       setRequestLoading(false)
     }
