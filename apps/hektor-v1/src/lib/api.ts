@@ -2110,6 +2110,8 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
         app_dossier_id: number
         hektor_annonce_id: string
         dry_run: boolean
+        validation_result?: string | null
+        observed_validation?: string | null
         diffusable_changed: boolean
         diffusable_result: string
         observed_diffusable?: string | null
@@ -2143,6 +2145,8 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
         app_dossier_id: number
         hektor_annonce_id: string
         dry_run: boolean
+        validation_result?: string | null
+        observed_validation?: string | null
         diffusable_changed: boolean
         diffusable_result: string
         observed_diffusable?: string | null
@@ -2190,6 +2194,8 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
     app_dossier_id: number
     hektor_annonce_id: string
     dry_run: boolean
+    validation_result?: string | null
+    observed_validation?: string | null
     diffusable_changed: boolean
     diffusable_result: string
     observed_diffusable?: string | null

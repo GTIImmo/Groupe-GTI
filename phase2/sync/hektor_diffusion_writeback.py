@@ -431,6 +431,8 @@ def fetch_annonce_search_row(
     )
     rows = payload.get("liste")
     if not isinstance(rows, list):
+        rows = payload.get("data")
+    if not isinstance(rows, list):
         return None
     for row in rows:
         if isinstance(row, dict) and str(row.get("id") or "") == annonce_id:
@@ -465,6 +467,17 @@ def read_observed_diffusable(client: HektorClient, settings: Settings, dossier: 
 
 
 def extract_validation_state(detail_payload: dict[str, Any]) -> str | None:
+    def normalize_validation_value(value: Any) -> str | None:
+        text = str(value).strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if lowered in {"1", "true", "oui", "ok", "valide", "validee", "validation ok"}:
+            return "oui"
+        if lowered in {"0", "false", "non", "invalide"}:
+            return "non"
+        return text
+
     validation_keys = (
         "validation",
         "valide",
@@ -476,6 +489,10 @@ def extract_validation_state(detail_payload: dict[str, Any]) -> str | None:
         "validationMandat",
         "validation_mandat",
     )
+    for key in validation_keys:
+        value = detail_payload.get(key)
+        if value is not None:
+            return normalize_validation_value(value)
     data = detail_payload.get("data")
     if isinstance(data, dict):
         for candidate in (data.get("annonce"), data.get("keyData"), data):
@@ -484,7 +501,7 @@ def extract_validation_state(detail_payload: dict[str, Any]) -> str | None:
             for key in validation_keys:
                 value = candidate.get(key)
                 if value is not None:
-                    return str(value)
+                    return normalize_validation_value(value)
     return None
 
 
@@ -699,7 +716,11 @@ def set_property_validation(client: HektorClient, settings: Settings, annonce_id
 
     after, after_error = fetch_annonce_detail_optional(client, settings, annonce_id)
     observed_validation = extract_validation_state(after) if after else None
+    if observed_validation is None and isinstance(response_payload, dict):
+        observed_validation = extract_validation_state(response_payload)
     observed_diffusable = extract_diffusable(after) if after else None
+    if observed_diffusable is None and isinstance(response_payload, dict):
+        observed_diffusable = extract_diffusable(response_payload)
     return {
         "hektor_annonce_id": annonce_id,
         "dry_run": False,
@@ -851,6 +872,7 @@ def apply_targets(
     dry_run: bool,
     manage_diffusable: bool = False,
     reset_to_agency_defaults: bool = False,
+    validation_state_override: str | None = None,
 ) -> dict[str, Any]:
     dossier = load_dossier(phase2_conn, app_dossier_id)
     annonce_id = str(dossier["hektor_annonce_id"])
@@ -872,7 +894,7 @@ def apply_targets(
 
     settings = Settings.from_env()
     client = HektorClient(settings)
-    validation_state = str(dossier["validation_diffusion_state"] or "").strip() or None
+    validation_state = validation_state_override or (str(dossier["validation_diffusion_state"] or "").strip() or None)
     validation_approved = is_validation_state_approved(validation_state)
 
     diffusable_changed = False
@@ -1024,6 +1046,73 @@ def apply_targets(
         failed=failed,
         pending=pending,
     )
+
+
+def accept_request(
+    *,
+    phase2_conn: sqlite3.Connection,
+    hektor_conn: sqlite3.Connection,
+    app_dossier_id: int,
+    requested_by: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    validation = set_validation_for_dossier(
+        phase2_conn=phase2_conn,
+        app_dossier_id=app_dossier_id,
+        state=1,
+        dry_run=dry_run,
+    )
+    observed_validation = str(validation.get("observed_validation") or "").strip() or None
+    validation_approved = is_validation_state_approved(observed_validation)
+    observed_diffusable = str(validation.get("observed_diffusable") or "").strip() or None
+    if not validation_approved:
+        waiting_message = (
+            "En attente de validation Hektor. La demande est acceptee, "
+            "mais Hektor n'a pas encore confirme validation = oui."
+        )
+        return {
+            "app_dossier_id": app_dossier_id,
+            "hektor_annonce_id": validation.get("hektor_annonce_id"),
+            "dry_run": dry_run,
+            "validation_result": validation.get("validation_result"),
+            "observed_validation": observed_validation,
+            "diffusable_changed": False,
+            "diffusable_result": "skipped_until_validation_confirmed",
+            "observed_diffusable": observed_diffusable,
+            "validation_state": observed_validation,
+            "validation_approved": False,
+            "waiting_on_hektor": True,
+            "waiting_message": waiting_message,
+            "current_enabled_count": 0,
+            "targets_count": 0,
+            "to_add_count": 0,
+            "to_remove_count": 0,
+            "applied": [],
+            "failed": [],
+            "pending": [],
+            "validation_response_status": validation.get("response_status"),
+            "validation_error": validation.get("error"),
+        }
+
+    apply_result = apply_targets(
+        phase2_conn=phase2_conn,
+        hektor_conn=hektor_conn,
+        app_dossier_id=app_dossier_id,
+        requested_by=requested_by,
+        dry_run=dry_run,
+        manage_diffusable=True,
+        reset_to_agency_defaults=True,
+        validation_state_override=observed_validation,
+    )
+    return {
+        **apply_result,
+        "validation_result": validation.get("validation_result"),
+        "observed_validation": observed_validation,
+        "validation_state": observed_validation,
+        "validation_approved": True,
+        "validation_response_status": validation.get("response_status"),
+        "validation_error": validation.get("error"),
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1210,14 +1299,12 @@ def main() -> None:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
         if args.command == "accept-request":
-            result = apply_targets(
+            result = accept_request(
                 phase2_conn=phase2_conn,
                 hektor_conn=hektor_conn,
                 app_dossier_id=args.app_dossier_id,
                 requested_by=args.requested_by,
                 dry_run=bool(args.dry_run),
-                manage_diffusable=True,
-                reset_to_agency_defaults=True,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return

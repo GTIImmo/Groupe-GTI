@@ -227,6 +227,8 @@ class HektorBridgeService:
         annonce_id = str(dossier.get("hektor_annonce_id") or "").strip()
         rows = parsed.get("liste")
         if not isinstance(rows, list):
+            rows = parsed.get("data")
+        if not isinstance(rows, list):
             return None
         for row in rows:
             if isinstance(row, dict) and str(row.get("id") or "") == annonce_id:
@@ -244,6 +246,44 @@ class HektorBridgeService:
                     return str(candidate.get("diffusable"))
         return None
 
+    def _extract_validation_state(self, detail_payload: dict[str, Any]) -> str | None:
+        def normalize_validation_value(value: Any) -> str | None:
+            text = str(value).strip()
+            if not text:
+                return None
+            lowered = text.lower()
+            if lowered in {"1", "true", "oui", "ok", "valide", "validee", "validation ok"}:
+                return "oui"
+            if lowered in {"0", "false", "non", "invalide"}:
+                return "non"
+            return text
+
+        validation_keys = (
+            "validation",
+            "valide",
+            "validated",
+            "isValid",
+            "is_valid",
+            "checkValid",
+            "check_valid",
+            "validationMandat",
+            "validation_mandat",
+        )
+        for key in validation_keys:
+            value = detail_payload.get(key)
+            if value is not None:
+                return normalize_validation_value(value)
+        data = detail_payload.get("data")
+        if isinstance(data, dict):
+            for candidate in (data.get("annonce"), data.get("keyData"), data):
+                if not isinstance(candidate, dict):
+                    continue
+                for key in validation_keys:
+                    value = candidate.get(key)
+                    if value is not None:
+                        return normalize_validation_value(value)
+        return None
+
     def _read_observed_diffusable(self, dossier: dict[str, Any]) -> str | None:
         annonce_id = str(dossier["hektor_annonce_id"])
         try:
@@ -251,6 +291,68 @@ class HektorBridgeService:
         except Exception:
             search_row = self._fetch_annonce_search_result(dossier)
             return self._extract_diffusable(search_row or {})
+
+    def _set_property_validation(self, dossier: dict[str, Any], state: int, dry_run: bool) -> dict[str, Any]:
+        annonce_id = str(dossier["hektor_annonce_id"])
+        before_payload: dict[str, Any] | None = None
+        before_error: str | None = None
+        try:
+            before_payload = self._fetch_annonce_detail(annonce_id)
+        except Exception as error:
+            before_error = self._normalize_hektor_message(str(error))
+        before_validation = self._extract_validation_state(before_payload or {}) if before_payload else None
+        before_diffusable = self._extract_diffusable(before_payload or {}) if before_payload else None
+        if dry_run:
+            return {
+                "hektor_annonce_id": annonce_id,
+                "dry_run": True,
+                "requested_state": state,
+                "validation_result": "would_patch_property_validation",
+                "observed_validation_before": before_validation,
+                "observed_validation": before_validation,
+                "observed_diffusable_before": before_diffusable,
+                "observed_diffusable": before_diffusable,
+                "read_before_error": before_error,
+                "read_after_error": None,
+                "error": None,
+            }
+
+        query = f"idAnnonce={requests.utils.quote(annonce_id, safe='')}&state={state}&version={requests.utils.quote(self.settings.hektor_api_version, safe='')}"
+        parsed, raw_text = self._call_hektor(f"/Api/Annonce/PropertyValidation/?{query}", method="PATCH")
+        response_payload = parsed if isinstance(parsed, dict) else None
+        response_error = None
+        if isinstance(response_payload, dict):
+            raw_error = response_payload.get("error")
+            response_error = self._normalize_hektor_message(str(raw_error)) if raw_error not in (None, "", False) else None
+
+        after_payload: dict[str, Any] | None = None
+        after_error: str | None = None
+        try:
+            after_payload = self._fetch_annonce_detail(annonce_id)
+        except Exception as error:
+            after_error = self._normalize_hektor_message(str(error))
+        observed_validation = self._extract_validation_state(after_payload or {}) if after_payload else None
+        if observed_validation is None and isinstance(response_payload, dict):
+            observed_validation = self._extract_validation_state(response_payload)
+        observed_diffusable = self._extract_diffusable(after_payload or {}) if after_payload else None
+        if observed_diffusable is None and isinstance(response_payload, dict):
+            observed_diffusable = self._extract_diffusable(response_payload)
+        return {
+            "hektor_annonce_id": annonce_id,
+            "dry_run": False,
+            "requested_state": state,
+            "validation_result": "patched",
+            "response_status": 200,
+            "response_payload": response_payload,
+            "response_preview": raw_text[:1000] if raw_text else "",
+            "error": response_error,
+            "observed_validation_before": before_validation,
+            "observed_validation": observed_validation,
+            "observed_diffusable_before": before_diffusable,
+            "observed_diffusable": observed_diffusable,
+            "read_before_error": before_error,
+            "read_after_error": after_error,
+        }
 
     def _fetch_annonce_broadcasts(self, annonce_id: str) -> list[dict[str, Any]]:
         parsed, _ = self._call_hektor(
@@ -473,10 +575,60 @@ class HektorBridgeService:
             "pending": [],
         }
 
+    def _accept_validation_first(self, dossier: dict[str, Any], requested_by: str | None, dry_run: bool) -> dict[str, Any]:
+        validation = self._set_property_validation(dossier, 1, dry_run)
+        observed_validation = str(validation.get("observed_validation") or "").strip() or None
+        observed_diffusable = str(validation.get("observed_diffusable") or "").strip() or None
+        validation_approved = self._is_validation_approved(observed_validation)
+        if not validation_approved:
+            return {
+                "app_dossier_id": dossier["app_dossier_id"],
+                "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
+                "dry_run": dry_run,
+                "validation_result": validation.get("validation_result"),
+                "observed_validation": observed_validation,
+                "diffusable_changed": False,
+                "diffusable_result": "skipped_until_validation_confirmed",
+                "observed_diffusable": observed_diffusable,
+                "validation_state": observed_validation,
+                "validation_approved": False,
+                "waiting_on_hektor": True,
+                "waiting_message": "En attente de validation Hektor. La demande est acceptee, mais Hektor n'a pas encore confirme validation = oui.",
+                "current_enabled_count": 0,
+                "targets_count": 0,
+                "to_add_count": 0,
+                "to_remove_count": 0,
+                "applied": [],
+                "failed": [],
+                "pending": [],
+                "validation_response_status": validation.get("response_status"),
+                "validation_error": validation.get("error"),
+            }
+
+        apply_result = self._run_apply(
+            {
+                **dossier,
+                "validation_diffusion_state": observed_validation,
+            },
+            requested_by,
+            dry_run,
+            True,
+            True,
+        )
+        return {
+            **apply_result,
+            "validation_result": validation.get("validation_result"),
+            "observed_validation": observed_validation,
+            "validation_state": observed_validation,
+            "validation_approved": True,
+            "validation_response_status": validation.get("response_status"),
+            "validation_error": validation.get("error"),
+        }
+
     def apply(self, app_dossier_id: int, dry_run: bool, ensure_diffusable: bool, requested_by: str | None = None) -> dict[str, Any]:
         dossier = self._load_dossier(app_dossier_id)
         return self._run_apply(dossier, requested_by, dry_run, ensure_diffusable, False)
 
     def accept(self, app_dossier_id: int, dry_run: bool, requested_by: str | None = None) -> dict[str, Any]:
         dossier = self._load_dossier(app_dossier_id)
-        return self._run_apply(dossier, requested_by, dry_run, True, True)
+        return self._accept_validation_first(dossier, requested_by, dry_run)
