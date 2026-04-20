@@ -30,7 +30,16 @@ def apply_diffusion(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.apply(payload.appDossierId, payload.dryRun, payload.ensureDiffusable, user.email or user.id)}
+    result = bridge.apply(payload.appDossierId, payload.dryRun, payload.ensureDiffusable, user.email or user.id)
+    if not payload.dryRun and result.get("hektor_annonce_id"):
+        result["refresh_queue"] = admin_service.enqueue_annonce_refresh(
+            app_dossier_id=payload.appDossierId,
+            hektor_annonce_id=str(result.get("hektor_annonce_id") or ""),
+            reason="apply_diffusion_targets",
+            requested_by=user.email or user.id,
+            payload={"ensure_diffusable": payload.ensureDiffusable},
+        )
+    return {"ok": True, "payload": result}
 
 
 @router.post("/diffusable")
@@ -43,7 +52,16 @@ def set_diffusable(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.set_diffusable(payload.appDossierId, payload.diffusable, payload.dryRun)}
+    result = bridge.set_diffusable(payload.appDossierId, payload.diffusable, payload.dryRun)
+    if not payload.dryRun and result.get("hektor_annonce_id"):
+        result["refresh_queue"] = admin_service.enqueue_annonce_refresh(
+            app_dossier_id=payload.appDossierId,
+            hektor_annonce_id=str(result.get("hektor_annonce_id") or ""),
+            reason="set_diffusable",
+            requested_by=user.email or user.id,
+            payload={"requested_diffusable": payload.diffusable},
+        )
+    return {"ok": True, "payload": result}
 
 
 @router.post("/validation")
@@ -56,7 +74,16 @@ def set_validation(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.set_validation(payload.appDossierId, payload.state, payload.dryRun)}
+    result = bridge.set_validation(payload.appDossierId, payload.state, payload.dryRun)
+    if not payload.dryRun and result.get("hektor_annonce_id"):
+        result["refresh_queue"] = admin_service.enqueue_annonce_refresh(
+            app_dossier_id=payload.appDossierId,
+            hektor_annonce_id=str(result.get("hektor_annonce_id") or ""),
+            reason="set_validation",
+            requested_by=user.email or user.id,
+            payload={"requested_state": payload.state},
+        )
+    return {"ok": True, "payload": result}
 
 
 @router.post("/persist-state")
@@ -89,4 +116,12 @@ def accept_diffusion(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.accept(payload.appDossierId, payload.dryRun, user.email or user.id)}
+    result = bridge.accept(payload.appDossierId, payload.dryRun, user.email or user.id)
+    if not payload.dryRun and result.get("hektor_annonce_id"):
+        result["refresh_queue"] = admin_service.enqueue_annonce_refresh(
+            app_dossier_id=payload.appDossierId,
+            hektor_annonce_id=str(result.get("hektor_annonce_id") or ""),
+            reason="accept_validation_request",
+            requested_by=user.email or user.id,
+        )
+    return {"ok": True, "payload": result}

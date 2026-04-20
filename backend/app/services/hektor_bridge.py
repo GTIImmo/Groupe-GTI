@@ -125,7 +125,7 @@ class HektorBridgeService:
             return {"ok": False, "error": f"Script introuvable: {script_path}"}
         try:
             completed = subprocess.run(
-                [self.settings.python_executable, str(script_path), "--id-annonce", str(annonce_id).trim()],
+                [self.settings.python_executable, str(script_path), "--id-annonce", str(annonce_id).strip()],
                 cwd=str(self.settings.project_root),
                 capture_output=True,
                 text=True,
