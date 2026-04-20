@@ -25,7 +25,6 @@ import {
   loadMandatBroadcasts,
   setDossierHektorState,
   setDossierValidationOnHektor,
-  setDossierDiffusable,
   setDossierDiffusableOnHektor,
   saveDiffusionTargets,
   loadMandatsPage,
@@ -2189,6 +2188,27 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ensureDiffusable: true,
       })
       setDiffusionApplyResult(result)
+      if (!dryRun) {
+        const validationValue =
+          result.observed_validation && isValidationApproved(result.observed_validation)
+            ? result.observed_validation
+            : result.validation_state && isValidationApproved(result.validation_state)
+              ? result.validation_state
+              : diffusionModalMandat.validation_diffusion_state ?? null
+        const diffusableValue =
+          result.observed_diffusable === '1'
+            ? '1'
+            : result.observed_diffusable === '0'
+              ? '0'
+              : diffusionModalMandat.diffusable ?? '0'
+        await setDossierHektorState(diffusionModalMandat.app_dossier_id, {
+          validationDiffusionState: validationValue,
+          diffusable: diffusableValue === '1',
+        })
+        setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
+        setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
+        setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue } : current)
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Erreur d application Hektor')
     } finally {
@@ -2230,9 +2250,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ensureDiffusable: true,
       })
       setDiffusionApplyResult(result)
+      const validationValue =
+        result.observed_validation && isValidationApproved(result.observed_validation)
+          ? result.observed_validation
+          : result.validation_state && isValidationApproved(result.validation_state)
+            ? result.validation_state
+            : diffusionModalMandat.validation_diffusion_state ?? null
+      const diffusableValue =
+        result.observed_diffusable === '1'
+          ? '1'
+          : result.observed_diffusable === '0'
+            ? '0'
+            : diffusionModalMandat.diffusable ?? '0'
+      await setDossierHektorState(diffusionModalMandat.app_dossier_id, {
+        validationDiffusionState: validationValue,
+        diffusable: diffusableValue === '1',
+      })
+      setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
+      setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue } : item))
+      setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue } : current)
       const refreshedBroadcasts = await loadMandatBroadcasts(diffusionModalMandat.app_dossier_id).catch(() => null)
       if (refreshedBroadcasts) {
         setMandatBroadcasts(refreshedBroadcasts)
+        const refreshedPortalsResume = uniquePortalKeys(refreshedBroadcasts.map((item) => item.passerelle_key)).join(', ')
+        setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, portails_resume: refreshedPortalsResume } : item))
+        setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, portails_resume: refreshedPortalsResume } : item))
+        setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, portails_resume: refreshedPortalsResume } : current)
       }
       const refreshedTargets = await loadDiffusionTargets(diffusionModalMandat.app_dossier_id).catch(() => null)
       if (refreshedTargets) {
@@ -2257,8 +2300,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         diffusable: nextValue,
       })
       const observedValue = result.observed_diffusable === '1'
-      await setDossierDiffusable(selectedDossier.app_dossier_id, observedValue)
       const diffusableValue = observedValue ? '1' : '0'
+      await setDossierHektorState(selectedDossier.app_dossier_id, {
+        diffusable: observedValue,
+      })
       setDetailDiffusableDraft(observedValue)
       setDetailDiffusableObserved(observedValue)
       setDetailDiffusableSaved(observedValue)
@@ -4426,27 +4471,33 @@ function DossierDetailLayout(props: {
                   </div>
                   {primaryContact ? (
                     <div className="detail-entity-list detail-contact-list">
-                      <article className="detail-entity-card detail-contact-card">
-                        <strong>{primaryContact.name}</strong>
-                        <div className="detail-entity-lines">
+                      <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
+                        <div className="detail-contact-head">
+                          <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
+                          <div className="detail-contact-identity">
+                            <strong>{primaryContact.name}</strong>
+                            <span>{primaryContact.role || 'Contact principal'}</span>
+                          </div>
+                        </div>
+                        <div className="detail-entity-lines detail-contact-lines">
                           <div className="detail-entity-line">
                             <span>Role</span>
                             <strong>{primaryContact.role || '-'}</strong>
                           </div>
                           <div className="detail-entity-line">
                             <span>Telephone</span>
-                            <strong>{primaryContact.phone || '-'}</strong>
+                            <strong>{primaryContact.phone ? <a href={`tel:${primaryContact.phone}`} className="detail-contact-link">{primaryContact.phone}</a> : '-'}</strong>
                           </div>
                           <div className="detail-entity-line">
                             <span>Email</span>
-                            <strong>{primaryContact.email || '-'}</strong>
+                            <strong>{primaryContact.email ? <a href={`mailto:${primaryContact.email}`} className="detail-contact-link">{primaryContact.email}</a> : '-'}</strong>
                           </div>
                           <div className="detail-entity-line detail-entity-line-full">
                             <span>Adresse</span>
                             <strong>{primaryContact.address || '-'}</strong>
                           </div>
                           {primaryContact.comment ? (
-                            <div className="detail-entity-line detail-entity-line-full">
+                            <div className="detail-entity-line detail-entity-line-full detail-contact-note">
                               <span>Commentaire</span>
                               <strong>{primaryContact.comment}</strong>
                             </div>
@@ -4457,26 +4508,32 @@ function DossierDetailLayout(props: {
                         <div className="detail-secondary-contacts">
                           {secondaryContacts.map((contact) => (
                             <article key={contact.id} className="detail-entity-card detail-contact-card">
-                              <strong>{contact.name}</strong>
-                              <div className="detail-entity-lines">
+                              <div className="detail-contact-head">
+                                <div className="detail-contact-avatar is-secondary">{userInitials(contact.name, contact.email)}</div>
+                                <div className="detail-contact-identity">
+                                  <strong>{contact.name}</strong>
+                                  <span>{contact.role || 'Mandant'}</span>
+                                </div>
+                              </div>
+                              <div className="detail-entity-lines detail-contact-lines">
                                 <div className="detail-entity-line">
                                   <span>Role</span>
                                   <strong>{contact.role || '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line">
                                   <span>Telephone</span>
-                                  <strong>{contact.phone || '-'}</strong>
+                                  <strong>{contact.phone ? <a href={`tel:${contact.phone}`} className="detail-contact-link">{contact.phone}</a> : '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line">
                                   <span>Email</span>
-                                  <strong>{contact.email || '-'}</strong>
+                                  <strong>{contact.email ? <a href={`mailto:${contact.email}`} className="detail-contact-link">{contact.email}</a> : '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line detail-entity-line-full">
                                   <span>Adresse</span>
                                   <strong>{contact.address || '-'}</strong>
                                 </div>
                                 {contact.comment ? (
-                                  <div className="detail-entity-line detail-entity-line-full">
+                                  <div className="detail-entity-line detail-entity-line-full detail-contact-note">
                                     <span>Commentaire</span>
                                     <strong>{contact.comment}</strong>
                                   </div>
