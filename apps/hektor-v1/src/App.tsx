@@ -3193,7 +3193,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 eyebrow="Detail annonce"
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
-                allowMarkValidation={screen === 'suivi' && isAdmin && canUseLocalDiffusionDevApi()}
+                allowMarkValidation={screen === 'suivi' && isAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
                 validationObserved={detailValidationObserved}
