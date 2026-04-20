@@ -54,6 +54,12 @@ class SetDiffusablePayload(BaseModel):
     dryRun: bool = False
 
 
+class SetValidationPayload(BaseModel):
+    appDossierId: int = Field(gt=0)
+    state: Literal[0, 1]
+    dryRun: bool = False
+
+
 class AcceptDiffusionPayload(BaseModel):
     appDossierId: int = Field(gt=0)
     dryRun: bool = False

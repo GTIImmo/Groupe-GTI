@@ -448,6 +448,14 @@ class HektorBridgeService:
             "error": None if observed_diffusable == expected else f"Hektor n'a pas confirme diffusable = {expected} apres PATCH Diffuse.",
         }
 
+    def set_validation(self, app_dossier_id: int, state: int, dry_run: bool) -> dict[str, Any]:
+        dossier = self._load_dossier(app_dossier_id)
+        result = self._set_property_validation(dossier, state, dry_run)
+        return {
+            "app_dossier_id": dossier["app_dossier_id"],
+            **result,
+        }
+
     def _run_apply(self, dossier: dict[str, Any], requested_by: str | None, dry_run: bool, ensure_diffusable_flag: bool, reset_to_agency_defaults: bool) -> dict[str, Any]:
         targets = self._load_targets(int(dossier["app_dossier_id"]))
         if (reset_to_agency_defaults or not targets) and dossier.get("agence_nom"):

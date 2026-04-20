@@ -1077,23 +1077,35 @@ export type HektorValidationResult = {
 }
 
 export async function setDossierValidationOnHektor(input: { appDossierId: number; state: 0 | 1; dryRun?: boolean }): Promise<HektorValidationResult> {
-  if (!canUseLocalDiffusionDevApi()) {
-    throw new Error("Le pilotage Validation Oui/Non est limite au local tant que le nouveau chemin Hektor n'est pas valide puis porte sur Render.")
+  if (canUseLocalDiffusionDevApi()) {
+    const response = await fetch('/api/hektor-diffusion/set-validation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(extractApiErrorMessage(payload) || 'Erreur de mise a jour validation Hektor')
+    }
+    const result = payload?.payload as HektorValidationResult
+    if (result?.error) {
+      throw new Error(result.error)
+    }
+    return result
   }
-  const response = await fetch('/api/hektor-diffusion/set-validation', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok || payload?.ok === false) {
-    throw new Error(extractApiErrorMessage(payload) || 'Erreur de mise a jour validation Hektor')
+  if (canUseBackendApi()) {
+    const payload = await invokeBackendApi<{ ok: true; payload: HektorValidationResult }>('/hektor-diffusion/validation', {
+      method: 'POST',
+      body: {
+        appDossierId: input.appDossierId,
+        state: input.state,
+        dryRun: Boolean(input.dryRun),
+      },
+    })
+    if (payload.payload?.error) throw new Error(payload.payload.error)
+    return payload.payload
   }
-  const result = payload?.payload as HektorValidationResult
-  if (result?.error) {
-    throw new Error(result.error)
-  }
-  return result
+  throw new Error("Le pilotage Validation Oui/Non necessite le backend Render.")
 }
 
 export async function loadFilterCatalog(scope?: DataScope | null): Promise<FilterCatalog> {
