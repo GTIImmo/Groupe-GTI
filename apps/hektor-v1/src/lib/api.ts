@@ -1030,8 +1030,19 @@ export type HektorDiffusableResult = {
 }
 
 export async function setDossierDiffusableOnHektor(input: { appDossierId: number; diffusable: boolean; dryRun?: boolean }): Promise<HektorDiffusableResult> {
-  if (!input.diffusable) {
-    throw new Error("La desactivation diffusable Hektor n'a pas d'endpoint API confirme.")
+  if (canUseLocalDiffusionDevApi()) {
+    const response = await fetch('/api/hektor-diffusion/set-diffusable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(extractApiErrorMessage(payload) || 'Erreur de mise a jour diffusable Hektor')
+    }
+    const result = payload?.payload as HektorDiffusableResult
+    if (result?.error) throw new Error(result.error)
+    return result
   }
   if (canUseBackendApi()) {
     const payload = await invokeBackendApi<{ ok: true; payload: HektorDiffusableResult }>('/hektor-diffusion/diffusable', {

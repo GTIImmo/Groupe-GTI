@@ -224,6 +224,84 @@ function hektorDiffusionDevApi() {
             }
         });
     };
+    var handleDiffusableCommand = function (req, res) {
+        if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Method not allowed' }));
+            return;
+        }
+        var chunks = [];
+        req.on('data', function (chunk) { return chunks.push(Buffer.from(chunk)); });
+        req.on('end', function () {
+            try {
+                var raw = Buffer.concat(chunks).toString('utf-8') || '{}';
+                var body_3 = JSON.parse(raw);
+                var appDossierId = Number(body_3.appDossierId);
+                var state = body_3.diffusable ? 1 : 0;
+                if (!Number.isFinite(appDossierId) || appDossierId <= 0) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Invalid appDossierId' }));
+                    return;
+                }
+                var args = [scriptPath, 'set-diffusable', '--app-dossier-id', String(appDossierId), '--state', String(state)];
+                if (body_3.dryRun)
+                    args.push('--dry-run');
+                execFile(pythonPath, args, { cwd: projectRoot, timeout: 120000 }, function (error, stdout, stderr) {
+                    res.setHeader('Content-Type', 'application/json');
+                    if (error) {
+                        res.statusCode = 500;
+                        res.end(JSON.stringify({
+                            ok: false,
+                            error: error.message,
+                            stderr: stderr.trim() || null,
+                            stdout: stdout.trim() || null,
+                        }));
+                        return;
+                    }
+                    try {
+                        var payload_3 = JSON.parse(stdout);
+                        if (!body_3.dryRun && typeof (payload_3 === null || payload_3 === void 0 ? void 0 : payload_3.hektor_annonce_id) === 'string' && payload_3.hektor_annonce_id.trim().length > 0) {
+                            execFile(pythonPath, [refreshScriptPath, '--id-annonce', String(payload_3.hektor_annonce_id).trim()], { cwd: projectRoot, timeout: 120000 }, function (refreshError, refreshStdout, refreshStderr) {
+                                var refreshPayload = { stdout: refreshStdout.trim() || null, stderr: refreshStderr.trim() || null };
+                                try {
+                                    refreshPayload = JSON.parse(refreshStdout);
+                                }
+                                catch (_a) {
+                                    // no-op
+                                }
+                                res.statusCode = 200;
+                                res.end(JSON.stringify({
+                                    ok: true,
+                                    payload: __assign(__assign({}, payload_3), { refresh_single_annonce: refreshError
+                                            ? {
+                                                ok: false,
+                                                error: refreshError.message,
+                                                stdout: refreshStdout.trim() || null,
+                                                stderr: refreshStderr.trim() || null,
+                                            }
+                                            : refreshPayload }),
+                                }));
+                            });
+                            return;
+                        }
+                        res.statusCode = 200;
+                        res.end(JSON.stringify({ ok: true, payload: payload_3 }));
+                    }
+                    catch (_a) {
+                        res.statusCode = 200;
+                        res.end(JSON.stringify({ ok: true, payload: { stdout: stdout.trim() || null, stderr: stderr.trim() || null } }));
+                    }
+                });
+            }
+            catch (error) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : 'Unexpected error' }));
+            }
+        });
+    };
     return {
         name: 'hektor-diffusion-dev-api',
         configureServer: function (server) {
@@ -454,6 +532,9 @@ function hektorDiffusionDevApi() {
             });
             server.middlewares.use('/api/hektor-diffusion/set-validation', function (req, res) {
                 handleValidationCommand(req, res);
+            });
+            server.middlewares.use('/api/hektor-diffusion/set-diffusable', function (req, res) {
+                handleDiffusableCommand(req, res);
             });
         },
     };

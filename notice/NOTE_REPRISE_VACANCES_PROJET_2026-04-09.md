@@ -523,3 +523,33 @@ Correctifs faits :
 Point restant ouvert :
 
 - le flux peut rendre diffusable et ajouter des portails, mais il ne sait toujours pas passer officiellement `valide = 1`
+
+## Correctif 20/04/2026 - boutons fiche detail `Diffusable : Oui / Non`
+
+Probleme constate :
+
+- dans la fiche detail, les boutons `Diffusable : Oui` et `Diffusable : Non` ne pilotaient pas correctement Hektor
+- en local, le bouton detail n'avait pas de route Vite dediee
+- le bouton `Diffusable : Non` mettait surtout a jour l'etat app/Supabase sans passer par l'appel Hektor reel
+
+Correctif applique :
+
+- `Diffusable : Oui` et `Diffusable : Non` passent maintenant tous les deux par `setDossierDiffusableOnHektor`
+- ajout d'une route locale :
+  - `POST /api/hektor-diffusion/set-diffusable`
+- ajout d'une commande Python locale :
+  - `set-diffusable --app-dossier-id <id> --state 0|1`
+- le backend Render accepte aussi `diffusable=true` et `diffusable=false` dans le meme chemin
+- l'action utilise `PATCH /Api/Annonce/Diffuse/`, puis relit Hektor pour verifier la valeur observee
+
+Verification faite :
+
+- `npx.cmd tsc -b` OK
+- `python -m py_compile` OK
+- serveur local Vite demarre sur :
+  - `http://127.0.0.1:5173`
+
+Point a verifier au test reel :
+
+- confirmer si `PATCH /Api/Annonce/Diffuse/` permet bien aussi de passer de `diffusable = 1` a `diffusable = 0`
+- si Hektor ne confirme pas `diffusable = 0`, l'app remontera explicitement l'erreur de confirmation

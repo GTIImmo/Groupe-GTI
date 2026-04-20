@@ -2228,14 +2228,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDetailDiffusablePending(true)
     setErrorMessage(null)
     try {
-      let observedValue = nextValue
-      if (nextValue) {
-        const result = await setDossierDiffusableOnHektor({
-          appDossierId: selectedDossier.app_dossier_id,
-          diffusable: true,
-        })
-        observedValue = result.observed_diffusable === '1'
-      }
+      const result = await setDossierDiffusableOnHektor({
+        appDossierId: selectedDossier.app_dossier_id,
+        diffusable: nextValue,
+      })
+      const observedValue = result.observed_diffusable === '1'
       await setDossierDiffusable(selectedDossier.app_dossier_id, observedValue)
       const diffusableValue = observedValue ? '1' : '0'
       setDetailDiffusableDraft(observedValue)

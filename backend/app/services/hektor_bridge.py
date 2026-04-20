@@ -286,24 +286,31 @@ class HektorBridgeService:
                 errors.append(f"{method} {params} => {self._normalize_hektor_message(str(error.detail))}")
         raise HTTPException(status_code=500, detail=" | ".join(errors))
 
-    def _ensure_diffusable(self, dossier: dict[str, Any], dry_run: bool) -> dict[str, Any]:
+    def _set_diffusable_state(self, dossier: dict[str, Any], requested: bool, dry_run: bool) -> dict[str, Any]:
         annonce_id = str(dossier["hektor_annonce_id"])
         current = self._read_observed_diffusable(dossier)
-        if current == "1":
-            return {"changed": False, "result": "already_diffusable"}
+        requested_value = "1" if requested else "0"
+        if current == requested_value:
+            return {"changed": False, "result": "already_diffusable" if requested else "already_not_diffusable"}
         if dry_run:
-            return {"changed": True, "result": "dry_run"}
+            return {"changed": True, "result": "would_patch_diffuse"}
         try:
             response_preview = self._try_diffuse_request(annonce_id)
-            return {"changed": True, "result": response_preview}
+            observed = self._read_observed_diffusable(dossier)
+            if observed == requested_value:
+                return {"changed": True, "result": response_preview}
+            return {"changed": True, "result": f"diffuse_unconfirmed: observed_diffusable={observed}; response={response_preview}"}
         except HTTPException as error:
             message = self._normalize_hektor_message(str(error.detail))
             try:
-                if self._read_observed_diffusable(dossier) == "1":
+                if self._read_observed_diffusable(dossier) == requested_value:
                     return {"changed": True, "result": f"confirmed_after_diffuse_error: {message}"}
             except Exception:
                 pass
             return {"changed": True, "result": f"diffuse_unconfirmed: {message}"}
+
+    def _ensure_diffusable(self, dossier: dict[str, Any], dry_run: bool) -> dict[str, Any]:
+        return self._set_diffusable_state(dossier, True, dry_run)
 
     def _apply_portal_change(self, action: str, annonce_id: str, broadcast_id: str) -> Any:
         path = "/Api/Passerelle/addAnnonceToPasserelle/" if action == "add" else "/Api/Passerelle/removeAnnonceToPasserelle/"
@@ -314,39 +321,29 @@ class HektorBridgeService:
 
     def set_diffusable(self, app_dossier_id: int, diffusable: bool, dry_run: bool) -> dict[str, Any]:
         dossier = self._load_dossier(app_dossier_id)
-        if not diffusable:
-            return {
-                "app_dossier_id": dossier["app_dossier_id"],
-                "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
-                "dry_run": dry_run,
-                "requested_diffusable": False,
-                "changed": False,
-                "result": "not_supported_by_hektor_api",
-                "observed_diffusable": self._read_observed_diffusable(dossier),
-                "error": "La desactivation diffusable Hektor n'a pas d'endpoint API confirme.",
-            }
         if dry_run:
             return {
                 "app_dossier_id": dossier["app_dossier_id"],
                 "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
                 "dry_run": True,
-                "requested_diffusable": True,
+                "requested_diffusable": diffusable,
                 "changed": True,
                 "result": "would_patch_diffuse",
                 "observed_diffusable": self._read_observed_diffusable(dossier),
                 "error": None,
             }
-        ensure_result = self._ensure_diffusable(dossier, dry_run=False)
+        ensure_result = self._set_diffusable_state(dossier, diffusable, dry_run=False)
         observed_diffusable = self._read_observed_diffusable(dossier)
+        expected = "1" if diffusable else "0"
         return {
             "app_dossier_id": dossier["app_dossier_id"],
             "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
             "dry_run": False,
-            "requested_diffusable": True,
+            "requested_diffusable": diffusable,
             "changed": bool(ensure_result["changed"]),
             "result": self._normalize_hektor_message(str(ensure_result["result"])),
             "observed_diffusable": observed_diffusable,
-            "error": None if observed_diffusable == "1" else "Hektor n'a pas confirme diffusable = 1 apres PATCH Diffuse.",
+            "error": None if observed_diffusable == expected else f"Hektor n'a pas confirme diffusable = {expected} apres PATCH Diffuse.",
         }
 
     def _run_apply(self, dossier: dict[str, Any], requested_by: str | None, dry_run: bool, ensure_diffusable_flag: bool, reset_to_agency_defaults: bool) -> dict[str, Any]:

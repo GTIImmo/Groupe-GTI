@@ -738,23 +738,67 @@ def set_validation_for_dossier(
     }
 
 
-def ensure_diffusable(client: HektorClient, settings: Settings, dossier: sqlite3.Row, annonce_id: str, *, dry_run: bool) -> tuple[bool, str]:
+def set_diffusable_state(client: HektorClient, settings: Settings, dossier: sqlite3.Row, annonce_id: str, *, requested: bool, dry_run: bool) -> tuple[bool, str, str | None]:
     current = read_observed_diffusable(client, settings, dossier, annonce_id)
-    if current == "1":
-        return False, "already_diffusable"
+    requested_value = "1" if requested else "0"
+    if current == requested_value:
+        return False, "already_diffusable" if requested else "already_not_diffusable", current
     if dry_run:
-        return True, "would_toggle_diffusable"
+        return True, "would_patch_diffuse", current
     try:
         response_preview = try_diffuse_request(client, settings, annonce_id)
-        return True, response_preview
+        observed = read_observed_diffusable(client, settings, dossier, annonce_id)
+        if observed == requested_value:
+            return True, response_preview, observed
+        return True, f"diffuse_unconfirmed: observed_diffusable={observed}; response={response_preview}", observed
     except Exception as exc:
         message = normalize_hektor_message(str(exc))
         try:
-            if read_observed_diffusable(client, settings, dossier, annonce_id) == "1":
-                return True, f"confirmed_after_diffuse_error: {message}"
+            observed = read_observed_diffusable(client, settings, dossier, annonce_id)
+            if observed == requested_value:
+                return True, f"confirmed_after_diffuse_error: {message}", observed
         except Exception:
             pass
-        return True, f"diffuse_unconfirmed: {message}"
+        return True, f"diffuse_unconfirmed: {message}", current
+
+
+def ensure_diffusable(client: HektorClient, settings: Settings, dossier: sqlite3.Row, annonce_id: str, *, dry_run: bool) -> tuple[bool, str]:
+    changed, result, _ = set_diffusable_state(client, settings, dossier, annonce_id, requested=True, dry_run=dry_run)
+    return changed, result
+
+
+def set_diffusable_for_dossier(
+    *,
+    phase2_conn: sqlite3.Connection,
+    app_dossier_id: int,
+    diffusable: bool,
+    dry_run: bool,
+) -> dict[str, Any]:
+    dossier = load_dossier(phase2_conn, app_dossier_id)
+    annonce_id = str(dossier["hektor_annonce_id"])
+    settings = Settings.from_env()
+    client = HektorClient(settings)
+    changed, result, observed = set_diffusable_state(
+        client,
+        settings,
+        dossier,
+        annonce_id,
+        requested=diffusable,
+        dry_run=dry_run,
+    )
+    if not dry_run:
+        observed = read_observed_diffusable(client, settings, dossier, annonce_id)
+    expected = "1" if diffusable else "0"
+    return {
+        "app_dossier_id": app_dossier_id,
+        "hektor_annonce_id": annonce_id,
+        "dry_run": dry_run,
+        "requested_diffusable": diffusable,
+        "changed": changed,
+        "result": result,
+        "observed_diffusable": observed,
+        "error": None if dry_run or observed == expected else f"Hektor n'a pas confirme diffusable = {expected} apres PATCH Diffuse.",
+    }
 
 
 def build_apply_result(
@@ -1020,6 +1064,11 @@ def build_parser() -> argparse.ArgumentParser:
     validation.add_argument("--state", type=int, choices=[0, 1], required=True)
     validation.add_argument("--dry-run", action="store_true")
 
+    diffusable = sub.add_parser("set-diffusable", help="Active ou desactive diffusable via PATCH Diffuse puis relecture Hektor.")
+    diffusable.add_argument("--app-dossier-id", type=int, required=True)
+    diffusable.add_argument("--state", type=int, choices=[0, 1], required=True)
+    diffusable.add_argument("--dry-run", action="store_true")
+
     single = sub.add_parser("test-single-target", help="Ecrase localement les cibles d'un dossier avec une seule passerelle puis la teste.")
     single.add_argument("--app-dossier-id", type=int, required=True)
     single.add_argument("--broadcast-id", required=True)
@@ -1177,6 +1226,15 @@ def main() -> None:
                 phase2_conn=phase2_conn,
                 app_dossier_id=args.app_dossier_id,
                 state=int(args.state),
+                dry_run=bool(args.dry_run),
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return
+        if args.command == "set-diffusable":
+            result = set_diffusable_for_dossier(
+                phase2_conn=phase2_conn,
+                app_dossier_id=args.app_dossier_id,
+                diffusable=bool(int(args.state)),
                 dry_run=bool(args.dry_run),
             )
             print(json.dumps(result, ensure_ascii=False, indent=2))
