@@ -251,11 +251,12 @@ function normalizeValidationState(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toLowerCase()
+    .replace(/\s+/g, ' ')
 }
 
 function isValidationApproved(value: string | null | undefined) {
   const normalized = normalizeValidationState(value)
-  return normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation_ok' || normalized === 'ok'
+  return normalized === '1' || normalized === 'true' || normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation ok' || normalized === 'validation_ok' || normalized === 'ok'
 }
 
 function erreurDiffusionLabel(value: boolean | number | string | null | undefined) {
@@ -1942,7 +1943,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           setDetailDiffusableObserved(diffusableValue === '1')
         }
       }
-      if (input.status === 'accepted' && acceptanceResult?.waiting_on_hektor) {
+      if (input.status === 'accepted' && currentRequest && acceptanceResult?.waiting_on_hektor) {
         await setDossierHektorState(currentRequest.app_dossier_id, {
           validationDiffusionState: acceptanceResult.observed_validation ?? acceptanceResult.validation_state ?? currentMandat?.validation_diffusion_state ?? null,
           diffusable:

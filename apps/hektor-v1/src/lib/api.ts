@@ -379,11 +379,12 @@ function normalizeValidationState(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toLowerCase()
+    .replace(/\s+/g, ' ')
 }
 
 function isValidationApproved(value: string | null | undefined) {
   const normalized = normalizeValidationState(value)
-  return normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation_ok' || normalized === 'ok'
+  return normalized === '1' || normalized === 'true' || normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation ok' || normalized === 'validation_ok' || normalized === 'ok'
 }
 
 function normalizeOfferPropositionType(value: string | null | undefined) {

@@ -43,7 +43,7 @@ function normalizeText(value: string | null | undefined) {
 
 function isValidationApproved(value: string | null | undefined) {
   const normalized = normalizeText(value)
-  return normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation ok' || normalized === 'ok'
+  return normalized === '1' || normalized === 'true' || normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation ok' || normalized === 'validation_ok' || normalized === 'ok'
 }
 
 function normalizeHektorMessage(message: string | undefined) {
