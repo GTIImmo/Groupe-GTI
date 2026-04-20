@@ -68,10 +68,6 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "--missing-only"
 )
 
-Invoke-Step -Label "phase1 process online refresh queue" -Arguments @(
-    "phase2\sync\process_refresh_queue.py"
-)
-
 Invoke-Step -Label "normalize_source" -Arguments @(
     "normalize_source.py"
 )

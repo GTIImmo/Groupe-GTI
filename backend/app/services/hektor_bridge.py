@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import unicodedata
 from datetime import datetime, timezone
 from typing import Any
@@ -118,39 +117,6 @@ class HektorBridgeService:
             "diffusable": row.get("diffusable"),
             "refreshed_at": row.get("refreshed_at"),
         }
-
-    def _refresh_single_annonce_local(self, annonce_id: str) -> dict[str, Any]:
-        script_path = self.settings.refresh_single_annonce_script
-        if not script_path.exists():
-            return {"ok": False, "error": f"Script introuvable: {script_path}"}
-        try:
-            completed = subprocess.run(
-                [self.settings.python_executable, str(script_path), "--id-annonce", str(annonce_id).strip()],
-                cwd=str(self.settings.project_root),
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
-            )
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)}
-        stdout = (completed.stdout or "").strip()
-        stderr = (completed.stderr or "").strip()
-        if completed.returncode != 0:
-            return {
-                "ok": False,
-                "error": f"refresh_single_annonce failed with code {completed.returncode}",
-                "stdout": stdout or None,
-                "stderr": stderr or None,
-            }
-        if stdout:
-            try:
-                payload = json.loads(stdout)
-                if isinstance(payload, dict):
-                    return payload
-            except Exception:
-                pass
-        return {"ok": True, "stdout": stdout or None, "stderr": stderr or None}
 
     def _load_targets(self, app_dossier_id: int) -> list[dict[str, Any]]:
         response = requests.get(
@@ -512,7 +478,7 @@ class HektorBridgeService:
         ensure_result = self._set_diffusable_state(dossier, diffusable, dry_run=False)
         observed_diffusable = self._read_observed_diffusable(dossier)
         expected = "1" if diffusable else "0"
-        result = {
+        return {
             "app_dossier_id": dossier["app_dossier_id"],
             "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
             "dry_run": False,
@@ -522,19 +488,14 @@ class HektorBridgeService:
             "observed_diffusable": observed_diffusable,
             "error": None if observed_diffusable == expected else f"Hektor n'a pas confirme diffusable = {expected} apres PATCH Diffuse.",
         }
-        result["refresh_single_annonce"] = self._refresh_single_annonce_local(str(dossier["hektor_annonce_id"]))
-        return result
 
     def set_validation(self, app_dossier_id: int, state: int, dry_run: bool) -> dict[str, Any]:
         dossier = self._load_dossier(app_dossier_id)
         result = self._set_property_validation(dossier, state, dry_run)
-        payload = {
+        return {
             "app_dossier_id": dossier["app_dossier_id"],
             **result,
         }
-        if not dry_run:
-            payload["refresh_single_annonce"] = self._refresh_single_annonce_local(str(dossier["hektor_annonce_id"]))
-        return payload
 
     def _run_apply(self, dossier: dict[str, Any], requested_by: str | None, dry_run: bool, ensure_diffusable_flag: bool, reset_to_agency_defaults: bool) -> dict[str, Any]:
         targets = self._load_targets(int(dossier["app_dossier_id"]))
@@ -715,14 +676,8 @@ class HektorBridgeService:
 
     def apply(self, app_dossier_id: int, dry_run: bool, ensure_diffusable: bool, requested_by: str | None = None) -> dict[str, Any]:
         dossier = self._load_dossier(app_dossier_id)
-        result = self._run_apply(dossier, requested_by, dry_run, ensure_diffusable, False)
-        if not dry_run and result.get("hektor_annonce_id"):
-            result["refresh_single_annonce"] = self._refresh_single_annonce_local(str(result["hektor_annonce_id"]))
-        return result
+        return self._run_apply(dossier, requested_by, dry_run, ensure_diffusable, False)
 
     def accept(self, app_dossier_id: int, dry_run: bool, requested_by: str | None = None) -> dict[str, Any]:
         dossier = self._load_dossier(app_dossier_id)
-        result = self._accept_validation_first(dossier, requested_by, dry_run)
-        if not dry_run and result.get("hektor_annonce_id"):
-            result["refresh_single_annonce"] = self._refresh_single_annonce_local(str(result["hektor_annonce_id"]))
-        return result
+        return self._accept_validation_first(dossier, requested_by, dry_run)

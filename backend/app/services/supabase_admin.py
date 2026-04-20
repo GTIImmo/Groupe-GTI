@@ -179,31 +179,3 @@ class SupabaseAdminService:
         )
         self._raise_for_response(response, "Unable to send reset email")
         return {"ok": True}
-
-    def enqueue_annonce_refresh(
-        self,
-        *,
-        app_dossier_id: int,
-        hektor_annonce_id: str | None,
-        reason: str,
-        requested_by: str | None,
-        source: str = "online_action",
-        payload: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        response = requests.post(
-            f"{self.settings.supabase_url}/rest/v1/app_annonce_refresh_queue",
-            headers={**self._rest_headers(), "Prefer": "return=representation"},
-            json=[{
-                "app_dossier_id": app_dossier_id,
-                "hektor_annonce_id": hektor_annonce_id,
-                "reason": reason,
-                "source": source,
-                "requested_by": requested_by,
-                "payload_json": payload or {},
-                "status": "pending",
-            }],
-            timeout=30,
-        )
-        self._raise_for_response(response, "Unable to enqueue annonce refresh")
-        rows = response.json() or []
-        return rows[0] if rows else {"ok": True}
