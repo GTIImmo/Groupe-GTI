@@ -116,6 +116,92 @@ function hektorDiffusionDevApi(): Plugin {
     })
   }
 
+  const handleValidationCommand = (req: any, res: any) => {
+    if (req.method !== 'POST') {
+      res.statusCode = 405
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ error: 'Method not allowed' }))
+      return
+    }
+
+    const chunks: Buffer[] = []
+    req.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+    req.on('end', () => {
+      try {
+        const raw = Buffer.concat(chunks).toString('utf-8') || '{}'
+        const body = JSON.parse(raw) as { appDossierId?: number; state?: number; dryRun?: boolean }
+        const appDossierId = Number(body.appDossierId)
+        const state = Number(body.state)
+        if (!Number.isFinite(appDossierId) || appDossierId <= 0 || ![0, 1].includes(state)) {
+          res.statusCode = 400
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Invalid appDossierId or state' }))
+          return
+        }
+
+        const args = [scriptPath, 'set-validation', '--app-dossier-id', String(appDossierId), '--state', String(state)]
+        if (body.dryRun) args.push('--dry-run')
+
+        execFile(pythonPath, args, { cwd: projectRoot, timeout: 120000 }, (error, stdout, stderr) => {
+          res.setHeader('Content-Type', 'application/json')
+          if (error) {
+            res.statusCode = 500
+            res.end(JSON.stringify({
+              ok: false,
+              error: error.message,
+              stderr: stderr.trim() || null,
+              stdout: stdout.trim() || null,
+            }))
+            return
+          }
+          try {
+            const payload = JSON.parse(stdout)
+            if (!body.dryRun && typeof payload?.hektor_annonce_id === 'string' && payload.hektor_annonce_id.trim().length > 0) {
+              execFile(
+                pythonPath,
+                [refreshScriptPath, '--id-annonce', String(payload.hektor_annonce_id).trim()],
+                { cwd: projectRoot, timeout: 120000 },
+                (refreshError, refreshStdout, refreshStderr) => {
+                  let refreshPayload: unknown = { stdout: refreshStdout.trim() || null, stderr: refreshStderr.trim() || null }
+                  try {
+                    refreshPayload = JSON.parse(refreshStdout)
+                  } catch {
+                    // no-op
+                  }
+                  res.statusCode = 200
+                  res.end(JSON.stringify({
+                    ok: true,
+                    payload: {
+                      ...payload,
+                      refresh_single_annonce: refreshError
+                        ? {
+                            ok: false,
+                            error: refreshError.message,
+                            stdout: refreshStdout.trim() || null,
+                            stderr: refreshStderr.trim() || null,
+                          }
+                        : refreshPayload,
+                    },
+                  }))
+                },
+              )
+              return
+            }
+            res.statusCode = 200
+            res.end(JSON.stringify({ ok: true, payload }))
+          } catch {
+            res.statusCode = 200
+            res.end(JSON.stringify({ ok: true, payload: { stdout: stdout.trim() || null, stderr: stderr.trim() || null } }))
+          }
+        })
+      } catch (error) {
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : 'Unexpected error' }))
+      }
+    })
+  }
+
   return {
     name: 'hektor-diffusion-dev-api',
     configureServer(server) {
@@ -352,6 +438,9 @@ function hektorDiffusionDevApi(): Plugin {
       })
       server.middlewares.use('/api/hektor-diffusion/accept', (req, res) => {
         handleCommand(req, res, 'accept-request')
+      })
+      server.middlewares.use('/api/hektor-diffusion/set-validation', (req, res) => {
+        handleValidationCommand(req, res)
       })
     },
   }

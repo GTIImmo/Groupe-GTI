@@ -408,12 +408,81 @@ def fetch_annonce_detail(client: HektorClient, settings: Settings, annonce_id: s
     )
 
 
+def fetch_annonce_detail_optional(client: HektorClient, settings: Settings, annonce_id: str) -> tuple[dict[str, Any] | None, str | None]:
+    try:
+        return fetch_annonce_detail(client, settings, annonce_id), None
+    except Exception as exc:
+        return None, normalize_hektor_message(str(exc))
+
+
+def fetch_annonce_search_row(
+    client: HektorClient,
+    settings: Settings,
+    *,
+    annonce_id: str,
+    numero_dossier: str | None,
+) -> dict[str, Any] | None:
+    search = (numero_dossier or "").strip()
+    if not search:
+        return None
+    payload = client.get_json(
+        "/Api/Annonce/searchAnnonces/",
+        params={"search": search, "strict": "1", "version": settings.api_version},
+    )
+    rows = payload.get("liste")
+    if not isinstance(rows, list):
+        return None
+    for row in rows:
+        if isinstance(row, dict) and str(row.get("id") or "") == annonce_id:
+            return row
+    return rows[0] if rows and isinstance(rows[0], dict) else None
+
+
 def extract_diffusable(detail_payload: dict[str, Any]) -> str | None:
+    if detail_payload.get("diffusable") is not None:
+        return str(detail_payload.get("diffusable"))
     data = detail_payload.get("data")
     if isinstance(data, dict):
         for candidate in (data.get("annonce"), data.get("keyData"), data):
             if isinstance(candidate, dict):
                 value = candidate.get("diffusable")
+                if value is not None:
+                    return str(value)
+    return None
+
+
+def read_observed_diffusable(client: HektorClient, settings: Settings, dossier: sqlite3.Row, annonce_id: str) -> str | None:
+    try:
+        return extract_diffusable(fetch_annonce_detail(client, settings, annonce_id))
+    except Exception:
+        row = fetch_annonce_search_row(
+            client,
+            settings,
+            annonce_id=annonce_id,
+            numero_dossier=str(dossier["numero_dossier"] or ""),
+        )
+        return extract_diffusable(row or {})
+
+
+def extract_validation_state(detail_payload: dict[str, Any]) -> str | None:
+    validation_keys = (
+        "validation",
+        "valide",
+        "validated",
+        "isValid",
+        "is_valid",
+        "checkValid",
+        "check_valid",
+        "validationMandat",
+        "validation_mandat",
+    )
+    data = detail_payload.get("data")
+    if isinstance(data, dict):
+        for candidate in (data.get("annonce"), data.get("keyData"), data):
+            if not isinstance(candidate, dict):
+                continue
+            for key in validation_keys:
+                value = candidate.get(key)
                 if value is not None:
                     return str(value)
     return None
@@ -589,25 +658,88 @@ def apply_portal_change(
 
 
 def try_diffuse_request(client: HektorClient, settings: Settings, annonce_id: str) -> str:
-    attempts = (
-        ("POST", {"idAnnonce": annonce_id, "version": settings.api_version}),
-        ("GET", {"idAnnonce": annonce_id, "version": settings.api_version}),
-        ("POST", {"id": annonce_id, "version": settings.api_version}),
-        ("GET", {"id": annonce_id, "version": settings.api_version}),
+    params = {"idAnnonce": annonce_id, "version": settings.api_version}
+    response = client.request("PATCH", "/Api/Annonce/Diffuse/", params=params)
+    return response.text[:500] or "PATCH ok"
+
+
+def set_property_validation(client: HektorClient, settings: Settings, annonce_id: str, *, state: int, dry_run: bool) -> dict[str, Any]:
+    before, before_error = fetch_annonce_detail_optional(client, settings, annonce_id)
+    before_validation = extract_validation_state(before) if before else None
+    before_diffusable = extract_diffusable(before) if before else None
+    if dry_run:
+        return {
+            "hektor_annonce_id": annonce_id,
+            "dry_run": True,
+            "requested_state": state,
+            "validation_result": "would_patch_property_validation",
+            "observed_validation_before": before_validation,
+            "observed_validation": before_validation,
+            "observed_diffusable_before": before_diffusable,
+            "observed_diffusable": before_diffusable,
+            "read_before_error": before_error,
+            "read_after_error": None,
+            "error": None,
+        }
+    response = client.request(
+        "PATCH",
+        "/Api/Annonce/PropertyValidation/",
+        params={"idAnnonce": annonce_id, "state": state, "version": settings.api_version},
     )
-    errors: list[str] = []
-    for method, params in attempts:
-        try:
-            response = client.request(method, "/Api/Annonce/Diffuse/", params=params)
-            return response.text[:500] or f"{method} ok"
-        except Exception as exc:
-            errors.append(f"{method} {json.dumps(params, ensure_ascii=False)} => {normalize_hektor_message(str(exc))}")
-    raise RuntimeError(" | ".join(errors))
+    response_text = response.text[:1000] if response.text else ""
+    response_payload: Any = None
+    response_error: str | None = None
+    try:
+        response_payload = response.json()
+        if isinstance(response_payload, dict):
+            raw_error = response_payload.get("error")
+            response_error = normalize_hektor_message(str(raw_error)) if raw_error not in (None, "", False) else None
+    except Exception:
+        response_payload = response_text or None
+
+    after, after_error = fetch_annonce_detail_optional(client, settings, annonce_id)
+    observed_validation = extract_validation_state(after) if after else None
+    observed_diffusable = extract_diffusable(after) if after else None
+    return {
+        "hektor_annonce_id": annonce_id,
+        "dry_run": False,
+        "requested_state": state,
+        "validation_result": "patched",
+        "response_status": response.status_code,
+        "response_payload": response_payload,
+        "response_preview": response_text,
+        "error": response_error,
+        "observed_validation_before": before_validation,
+        "observed_validation": observed_validation,
+        "observed_diffusable_before": before_diffusable,
+        "observed_diffusable": observed_diffusable,
+        "read_before_error": before_error,
+        "read_after_error": after_error,
+    }
 
 
-def ensure_diffusable(client: HektorClient, settings: Settings, annonce_id: str, *, dry_run: bool) -> tuple[bool, str]:
-    detail = fetch_annonce_detail(client, settings, annonce_id)
-    current = extract_diffusable(detail)
+def set_validation_for_dossier(
+    *,
+    phase2_conn: sqlite3.Connection,
+    app_dossier_id: int,
+    state: int,
+    dry_run: bool,
+) -> dict[str, Any]:
+    if state not in (0, 1):
+        raise RuntimeError("state doit etre 0 ou 1")
+    dossier = load_dossier(phase2_conn, app_dossier_id)
+    annonce_id = str(dossier["hektor_annonce_id"])
+    settings = Settings.from_env()
+    client = HektorClient(settings)
+    result = set_property_validation(client, settings, annonce_id, state=state, dry_run=dry_run)
+    return {
+        "app_dossier_id": app_dossier_id,
+        **result,
+    }
+
+
+def ensure_diffusable(client: HektorClient, settings: Settings, dossier: sqlite3.Row, annonce_id: str, *, dry_run: bool) -> tuple[bool, str]:
+    current = read_observed_diffusable(client, settings, dossier, annonce_id)
     if current == "1":
         return False, "already_diffusable"
     if dry_run:
@@ -618,8 +750,7 @@ def ensure_diffusable(client: HektorClient, settings: Settings, annonce_id: str,
     except Exception as exc:
         message = normalize_hektor_message(str(exc))
         try:
-            detail_after_error = fetch_annonce_detail(client, settings, annonce_id)
-            if extract_diffusable(detail_after_error) == "1":
+            if read_observed_diffusable(client, settings, dossier, annonce_id) == "1":
                 return True, f"confirmed_after_diffuse_error: {message}"
         except Exception:
             pass
@@ -710,11 +841,10 @@ def apply_targets(
     failed: list[dict[str, Any]] = []
     pending: list[dict[str, Any]] = []
     if manage_diffusable:
-        diffusable_changed, diffusable_result = ensure_diffusable(client, settings, annonce_id, dry_run=dry_run)
+        diffusable_changed, diffusable_result = ensure_diffusable(client, settings, dossier, annonce_id, dry_run=dry_run)
         if not dry_run:
             try:
-                detail_after_diffuse = fetch_annonce_detail(client, settings, annonce_id)
-                observed_diffusable = extract_diffusable(detail_after_diffuse)
+                observed_diffusable = read_observed_diffusable(client, settings, dossier, annonce_id)
                 confirmed_diffusable = observed_diffusable == "1"
             except Exception as exc:
                 confirmed_diffusable = False
@@ -885,6 +1015,11 @@ def build_parser() -> argparse.ArgumentParser:
     accept.add_argument("--requested-by", default="system")
     accept.add_argument("--dry-run", action="store_true")
 
+    validation = sub.add_parser("set-validation", help="Valide ou invalide une annonce via PropertyValidation.")
+    validation.add_argument("--app-dossier-id", type=int, required=True)
+    validation.add_argument("--state", type=int, choices=[0, 1], required=True)
+    validation.add_argument("--dry-run", action="store_true")
+
     single = sub.add_parser("test-single-target", help="Ecrase localement les cibles d'un dossier avec une seule passerelle puis la teste.")
     single.add_argument("--app-dossier-id", type=int, required=True)
     single.add_argument("--broadcast-id", required=True)
@@ -1034,6 +1169,15 @@ def main() -> None:
                 dry_run=bool(args.dry_run),
                 manage_diffusable=True,
                 reset_to_agency_defaults=True,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return
+        if args.command == "set-validation":
+            result = set_validation_for_dossier(
+                phase2_conn=phase2_conn,
+                app_dossier_id=args.app_dossier_id,
+                state=int(args.state),
+                dry_run=bool(args.dry_run),
             )
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return

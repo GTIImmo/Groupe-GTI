@@ -4,6 +4,7 @@ import json
 import re
 import unicodedata
 from typing import Any
+from urllib.parse import quote
 
 import requests
 from fastapi import HTTPException
@@ -72,7 +73,7 @@ class HektorBridgeService:
     def _load_dossier(self, app_dossier_id: int) -> dict[str, Any]:
         return self._supabase_select_single(
             "app_dossiers_current",
-            "app_dossier_id,hektor_annonce_id,validation_diffusion_state,agence_nom",
+            "app_dossier_id,hektor_annonce_id,numero_dossier,validation_diffusion_state,agence_nom",
             {"app_dossier_id": f"eq.{app_dossier_id}"},
         )
 
@@ -212,7 +213,29 @@ class HektorBridgeService:
             raise HTTPException(status_code=500, detail="Lecture annonce Hektor invalide")
         return parsed
 
+    def _fetch_annonce_search_result(self, dossier: dict[str, Any]) -> dict[str, Any] | None:
+        numero_dossier = str(dossier.get("numero_dossier") or "").strip()
+        if not numero_dossier:
+            return None
+        search = quote(numero_dossier, safe="")
+        parsed, _ = self._call_hektor(
+            f"/Api/Annonce/searchAnnonces/?search={search}&strict=1&version={self.settings.hektor_api_version}",
+            method="GET",
+        )
+        if not isinstance(parsed, dict):
+            return None
+        annonce_id = str(dossier.get("hektor_annonce_id") or "").strip()
+        rows = parsed.get("liste")
+        if not isinstance(rows, list):
+            return None
+        for row in rows:
+            if isinstance(row, dict) and str(row.get("id") or "") == annonce_id:
+                return row
+        return rows[0] if rows and isinstance(rows[0], dict) else None
+
     def _extract_diffusable(self, detail_payload: dict[str, Any]) -> str | None:
+        if detail_payload.get("diffusable") is not None:
+            return str(detail_payload.get("diffusable"))
         data = detail_payload.get("data")
         if isinstance(data, dict):
             candidates = [data.get("annonce"), data.get("keyData"), data]
@@ -220,6 +243,14 @@ class HektorBridgeService:
                 if isinstance(candidate, dict) and candidate.get("diffusable") is not None:
                     return str(candidate.get("diffusable"))
         return None
+
+    def _read_observed_diffusable(self, dossier: dict[str, Any]) -> str | None:
+        annonce_id = str(dossier["hektor_annonce_id"])
+        try:
+            return self._extract_diffusable(self._fetch_annonce_detail(annonce_id))
+        except Exception:
+            search_row = self._fetch_annonce_search_result(dossier)
+            return self._extract_diffusable(search_row or {})
 
     def _fetch_annonce_broadcasts(self, annonce_id: str) -> list[dict[str, Any]]:
         parsed, _ = self._call_hektor(
@@ -243,10 +274,7 @@ class HektorBridgeService:
 
     def _try_diffuse_request(self, annonce_id: str) -> str:
         attempts = [
-            ("POST", {"idAnnonce": annonce_id, "version": self.settings.hektor_api_version}),
-            ("GET", {"idAnnonce": annonce_id, "version": self.settings.hektor_api_version}),
-            ("POST", {"id": annonce_id, "version": self.settings.hektor_api_version}),
-            ("GET", {"id": annonce_id, "version": self.settings.hektor_api_version}),
+            ("PATCH", {"idAnnonce": annonce_id, "version": self.settings.hektor_api_version}),
         ]
         errors: list[str] = []
         for method, params in attempts:
@@ -258,9 +286,9 @@ class HektorBridgeService:
                 errors.append(f"{method} {params} => {self._normalize_hektor_message(str(error.detail))}")
         raise HTTPException(status_code=500, detail=" | ".join(errors))
 
-    def _ensure_diffusable(self, annonce_id: str, dry_run: bool) -> dict[str, Any]:
-        detail = self._fetch_annonce_detail(annonce_id)
-        current = self._extract_diffusable(detail)
+    def _ensure_diffusable(self, dossier: dict[str, Any], dry_run: bool) -> dict[str, Any]:
+        annonce_id = str(dossier["hektor_annonce_id"])
+        current = self._read_observed_diffusable(dossier)
         if current == "1":
             return {"changed": False, "result": "already_diffusable"}
         if dry_run:
@@ -271,8 +299,7 @@ class HektorBridgeService:
         except HTTPException as error:
             message = self._normalize_hektor_message(str(error.detail))
             try:
-                detail_after = self._fetch_annonce_detail(annonce_id)
-                if self._extract_diffusable(detail_after) == "1":
+                if self._read_observed_diffusable(dossier) == "1":
                     return {"changed": True, "result": f"confirmed_after_diffuse_error: {message}"}
             except Exception:
                 pass
@@ -302,13 +329,12 @@ class HektorBridgeService:
         observed_diffusable: str | None = None
         if ensure_diffusable_flag:
             try:
-                ensure_result = self._ensure_diffusable(str(dossier["hektor_annonce_id"]), dry_run)
+                ensure_result = self._ensure_diffusable(dossier, dry_run)
                 diffusable_changed = bool(ensure_result["changed"])
                 diffusable_result = self._normalize_hektor_message(str(ensure_result["result"]))
                 if not dry_run:
                     try:
-                        detail_after = self._fetch_annonce_detail(str(dossier["hektor_annonce_id"]))
-                        observed_diffusable = self._extract_diffusable(detail_after)
+                        observed_diffusable = self._read_observed_diffusable(dossier)
                     except Exception as error:
                         observed_diffusable = None
                         diffusable_result = self._normalize_hektor_message(f"{diffusable_result} | detail_read_error: {error}")
@@ -383,8 +409,7 @@ class HektorBridgeService:
         observed_broadcasts: list[dict[str, Any]] = []
         if not dry_run:
             try:
-                detail_after = self._fetch_annonce_detail(str(dossier["hektor_annonce_id"]))
-                observed_diffusable = self._extract_diffusable(detail_after)
+                observed_diffusable = self._read_observed_diffusable(dossier)
             except Exception as error:
                 failed.append({"action": "read-detail", "error": self._normalize_hektor_message(str(error))})
             try:

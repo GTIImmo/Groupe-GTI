@@ -178,7 +178,7 @@ function isMissingDiffusionAgencyTargetTableError(message: string | undefined) {
   return text.includes('app_diffusion_agency_target') && (text.includes('schema cache') || text.includes('could not find the table') || text.includes('does not exist'))
 }
 
-function canUseLocalDiffusionDevApi() {
+export function canUseLocalDiffusionDevApi() {
   if (typeof window === 'undefined') return true
   const host = window.location.hostname.toLowerCase()
   return host === 'localhost' || host === '127.0.0.1'
@@ -323,6 +323,25 @@ async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST
     throw new Error(message)
   }
   return payload as T
+}
+
+function extractApiErrorMessage(payload: unknown) {
+  if (typeof payload === 'string' && payload.trim()) return payload.trim()
+  if (!payload || typeof payload !== 'object') return ''
+  const record = payload as Record<string, unknown>
+  if (typeof record.detail === 'string' && record.detail.trim()) return record.detail.trim()
+  if (record.detail && typeof record.detail === 'object') {
+    const nested = record.detail as Record<string, unknown>
+    if (typeof nested.error === 'string' && nested.error.trim()) return nested.error.trim()
+    if (typeof nested.message === 'string' && nested.message.trim()) return nested.message.trim()
+  }
+  if (typeof record.error === 'string' && record.error.trim()) return record.error.trim()
+  if (typeof record.message === 'string' && record.message.trim()) return record.message.trim()
+  try {
+    return JSON.stringify(payload)
+  } catch {
+    return ''
+  }
 }
 
 function normalizeHektorApplyMessage(message: string | undefined) {
@@ -997,6 +1016,43 @@ export async function setDossierDiffusable(appDossierId: number, diffusable: boo
     })
     .eq('app_dossier_id', appDossierId)
   if (error) throw new Error(error.message)
+}
+
+export type HektorValidationResult = {
+  app_dossier_id: number
+  hektor_annonce_id: string
+  dry_run: boolean
+  requested_state: 0 | 1
+  validation_result: string
+  response_status?: number
+  response_payload?: unknown
+  response_preview?: string
+  error?: string | null
+  observed_validation_before?: string | null
+  observed_validation?: string | null
+  observed_diffusable_before?: string | null
+  observed_diffusable?: string | null
+  refresh_single_annonce?: unknown
+}
+
+export async function setDossierValidationOnHektor(input: { appDossierId: number; state: 0 | 1; dryRun?: boolean }): Promise<HektorValidationResult> {
+  if (!canUseLocalDiffusionDevApi()) {
+    throw new Error("Le pilotage Validation Oui/Non est limite au local tant que le nouveau chemin Hektor n'est pas valide puis porte sur Render.")
+  }
+  const response = await fetch('/api/hektor-diffusion/set-validation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(extractApiErrorMessage(payload) || 'Erreur de mise a jour validation Hektor')
+  }
+  const result = payload?.payload as HektorValidationResult
+  if (result?.error) {
+    throw new Error(result.error)
+  }
+  return result
 }
 
 export async function loadFilterCatalog(scope?: DataScope | null): Promise<FilterCatalog> {

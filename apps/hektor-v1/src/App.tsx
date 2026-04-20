@@ -7,6 +7,7 @@ import {
   type FilterCatalog,
   type MandatStats,
   type SuiviRequestStats,
+  canUseLocalDiffusionDevApi,
   createDiffusionRequest,
   acceptDiffusionRequestOnHektor,
   applyDiffusionTargetsOnHektor,
@@ -22,6 +23,7 @@ import {
   loadFilterCatalog,
   loadMandatFilterCatalog,
   loadMandatBroadcasts,
+  setDossierValidationOnHektor,
   setDossierDiffusable,
   saveDiffusionTargets,
   loadMandatsPage,
@@ -1293,6 +1295,7 @@ export default function App() {
   const [diffusionTargetsSaving, setDiffusionTargetsSaving] = useState(false)
   const [diffusionTargetsSavedAt, setDiffusionTargetsSavedAt] = useState<string | null>(null)
   const [diffusionApplyPending, setDiffusionApplyPending] = useState(false)
+  const [detailValidationPending, setDetailValidationPending] = useState(false)
   const [detailDiffusablePending, setDetailDiffusablePending] = useState(false)
   const [detailDiffusableDraft, setDetailDiffusableDraft] = useState<boolean | null>(null)
   const [detailDiffusableObserved, setDetailDiffusableObserved] = useState<boolean | null>(null)
@@ -1862,13 +1865,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       let acceptanceInfoMessage: string | null = null
       if (input.status === 'accepted' && !isPriceDropRequest(currentRequest?.request_type) && currentRequest) {
         if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
-          acceptanceInfoMessage = "Demande acceptee. Comme l'annonce est encore en validation = non, aucun appel API n'a ete lance. Il faut cocher manuellement validation + diffusable + les passerelles dans Hektor."
-          openHektorAnnonceCompact(currentMandat?.hektor_annonce_id ?? selectedDossier?.hektor_annonce_id)
-        } else {
-          acceptanceResult = await acceptDiffusionRequestOnHektor({
-            appDossierId: currentRequest.app_dossier_id,
-          })
+          acceptanceInfoMessage = "Demande acceptee. Hektor indique encore validation = non ; l'app tente quand meme Diffuse puis les passerelles, conformement au test API."
         }
+        acceptanceResult = await acceptDiffusionRequestOnHektor({
+          appDossierId: currentRequest.app_dossier_id,
+        })
       }
       await updateDiffusionRequest({
         id: input.requestId,
@@ -1888,7 +1889,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             ? currentMandat.validation_diffusion_state
             : acceptanceResult.validation_state && isValidationApproved(acceptanceResult.validation_state)
               ? acceptanceResult.validation_state
-              : 'oui'
+              : currentMandat?.validation_diffusion_state ?? null
         setDossiers((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
         setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
         setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, diffusable: diffusableValue, validation_diffusion_state: validationValue } : current)
@@ -2154,10 +2155,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   async function handleApplyDiffusionTargetsOnHektor(dryRun = false) {
     if (!diffusionModalMandat) return
-    if (!isValidationApproved(diffusionModalMandat.validation_diffusion_state)) {
-      setErrorMessage("Diffusion impossible : l'annonce n'est pas encore validee dans Hektor.")
-      return
-    }
     setDiffusionApplyPending(true)
     setErrorMessage(null)
     try {
@@ -2241,6 +2238,38 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour diffusable')
     } finally {
       setDetailDiffusablePending(false)
+    }
+  }
+
+  async function handleSetSelectedDossierValidation(nextValue: boolean) {
+    if (!selectedDossier || detailValidationPending) return
+    setDetailValidationPending(true)
+    setErrorMessage(null)
+    try {
+      const result = await setDossierValidationOnHektor({
+        appDossierId: selectedDossier.app_dossier_id,
+        state: nextValue ? 1 : 0,
+      })
+      const validationValue = nextValue ? 'oui' : 'non'
+      const diffusableValue = result.observed_diffusable === '1' ? '1' : result.observed_diffusable === '0' ? '0' : selectedDossier.diffusable ?? null
+      const patch = {
+        validation_diffusion_state: validationValue,
+        diffusable: diffusableValue,
+      }
+      setSelectedDossier((current) => (current ? { ...current, ...patch } : current))
+      setDossiers((current) => current.map((item) => item.app_dossier_id === selectedDossier.app_dossier_id ? { ...item, ...patch } : item))
+      setMandats((current) => current.map((item) => item.app_dossier_id === selectedDossier.app_dossier_id ? { ...item, ...patch } : item))
+      if (typeof patch.diffusable !== 'undefined') {
+        const observed = isDiffusableValue(patch.diffusable)
+        setDetailDiffusableDraft(observed)
+        setDetailDiffusableObserved(observed)
+        setDetailDiffusableSaved(observed)
+      }
+      setErrorMessage(nextValue ? 'Validation Hektor demandee et relue.' : 'Invalidation Hektor demandee et relue.')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour validation Hektor')
+    } finally {
+      setDetailValidationPending(false)
     }
   }
 
@@ -3135,6 +3164,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 eyebrow="Detail annonce"
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
+                allowMarkValidation={screen === 'suivi' && isAdmin && canUseLocalDiffusionDevApi()}
+                markValidationPending={detailValidationPending}
+                onSetValidation={handleSetSelectedDossierValidation}
                 allowMarkDiffusable={screen === 'suivi' && isAdmin}
                 markDiffusablePending={detailDiffusablePending}
                 onSetDiffusable={handleSetSelectedDossierDiffusable}
@@ -3378,7 +3410,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <p className="empty-state">
                       {isValidationApproved(diffusionModalMandat.validation_diffusion_state)
                         ? "Aucune passerelle n'est configuree pour ce mandat. Le mapping agence n'a pas ete trouve."
-                        : "Aucune passerelle disponible tant que l'annonce n'est pas validee dans Hektor."}
+                        : "Aucune passerelle configuree pour ce mandat. L'app peut tenter Diffuse puis les portails meme si Hektor indique validation = non."}
                     </p>
                   )}
                 </article>
@@ -4160,6 +4192,9 @@ function DossierDetailLayout(props: {
   eyebrow: string
   backLabel: string
   onBack: () => void
+  allowMarkValidation?: boolean
+  markValidationPending?: boolean
+  onSetValidation?: (checked: boolean) => void
   allowMarkDiffusable?: boolean
   markDiffusablePending?: boolean
   onSetDiffusable?: (checked: boolean) => void
@@ -4174,6 +4209,7 @@ function DossierDetailLayout(props: {
   }
   const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop'>('all')
   const dossier = props.selectedDossier
+  const isValidated = isValidationApproved(dossier.validation_diffusion_state)
   const isDraftDiffusable = props.diffusableDraft ?? isDiffusableValue(dossier.diffusable)
   const isObservedDiffusable = props.diffusableObserved ?? isDiffusableValue(dossier.diffusable)
   const isSavedDiffusable = props.diffusableSaved ?? isDraftDiffusable
@@ -4474,19 +4510,59 @@ function DossierDetailLayout(props: {
             <aside className="detail-column-side">
               <section className="detail-section detail-section-status">
                 <div className="section-header"><h4>Diffusion</h4></div>
+                {props.allowMarkValidation ? (
+                  <div className="detail-diffusable-toggle">
+                    <span className="detail-label">Validation Hektor</span>
+                    <div className="tag-row">
+                      <StatusPill value={`Validation : ${isValidated ? 'Oui' : 'Non'}`} />
+                      <StatusPill value={`Diffusion : ${diffusableLabel(dossier.diffusable)}`} />
+                    </div>
+                    <div className="row-actions">
+                      <button
+                        className={`ghost-button ${isValidated ? 'is-active' : ''}`}
+                        type="button"
+                        disabled={Boolean(props.markValidationPending) || isValidated}
+                        onClick={() => props.onSetValidation?.(true)}
+                      >
+                        Validation : Oui
+                      </button>
+                      <button
+                        className={`ghost-button ${!isValidated ? 'is-active' : ''}`}
+                        type="button"
+                        disabled={Boolean(props.markValidationPending) || !isValidated}
+                        onClick={() => props.onSetValidation?.(false)}
+                      >
+                        Validation : Non
+                      </button>
+                    </div>
+                    {props.markValidationPending ? (
+                      <div className="detail-sync-alert is-pending">Mise a jour validation Hektor en cours...</div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {props.allowMarkDiffusable ? (
                   <div className="detail-diffusable-toggle">
-                    <label className="checkbox-inline detail-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={isDraftDiffusable}
-                        disabled={Boolean(props.markDiffusablePending)}
-                        onChange={(event) => {
-                          props.onSetDiffusable?.(event.target.checked)
-                        }}
-                      />
-                      Passer cette annonce en diffusable
-                    </label>
+                    <div className="tag-row">
+                      <StatusPill value={`Diffusable : ${isDraftDiffusable ? 'Oui' : 'Non'}`} />
+                    </div>
+                    <div className="row-actions">
+                      <button
+                        className={`ghost-button ${isDraftDiffusable ? 'is-active' : ''}`}
+                        type="button"
+                        disabled={Boolean(props.markDiffusablePending) || isDraftDiffusable}
+                        onClick={() => props.onSetDiffusable?.(true)}
+                      >
+                        Diffusable : Oui
+                      </button>
+                      <button
+                        className={`ghost-button ${!isDraftDiffusable ? 'is-active' : ''}`}
+                        type="button"
+                        disabled={Boolean(props.markDiffusablePending) || !isDraftDiffusable}
+                        onClick={() => props.onSetDiffusable?.(false)}
+                      >
+                        Diffusable : Non
+                      </button>
+                    </div>
                     {props.markDiffusablePending || hektorSyncPending || portalSyncPending ? (
                       <div className={`detail-sync-alert ${props.markDiffusablePending ? 'is-pending' : 'is-waiting'}`}>
                         {props.markDiffusablePending

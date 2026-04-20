@@ -1573,3 +1573,164 @@ Regle de reprise si le bug revient :
    - le bug est dans le flux `create_user(...)`
 5. si l'email du profil ne matche pas l'email Auth :
    - supprimer la ligne parasite et recreer proprement
+
+## Mise a jour 09/04/2026 - retour Romain avril sur validation / diffusable
+
+Nouveau retour de Romain recu le 09/04/2026 :
+
+- le mail precedent contenait encore une erreur de methode sur `Diffuse`
+- toutes les modifications de donnees cote API doivent passer en `PUT` ou `PATCH`
+
+Correction importante sur `diffusable` :
+
+- l'endpoint `Diffuse` doit etre appele en :
+  - `PATCH /Api/Annonce/Diffuse/?idAnnonce=PROPERTY_ID&version=v2`
+- le `GET /Api/Annonce/Diffuse/...` etait faux
+- l'erreur observee localement :
+  - `HTTP 500`
+  - `{"error":"Method Diffuse does not exist"}`
+  etait coherente avec cette mauvaise methode
+
+Nouvel endpoint confirme pour la validation :
+
+- `PATCH /Api/Annonce/PropertyValidation/?idAnnonce=PROPERTY_ID&state=STATE&version=v2`
+- `state=1`
+  - validation
+- `state=0`
+  - invalidation
+
+Regle metier communiquee par Romain :
+
+- une fois l'annonce validee
+- et si les prerequis metier sont bons
+- le bien doit devenir `diffusable` comme dans Hektor
+- l'invalidation suit la logique inverse
+
+Lecture de reponse a retenir :
+
+- `HTTP 200`
+  - si `error` est vide / absent / null
+    - traitement considere comme OK
+  - si `error` contient un message
+    - refus metier a traiter comme un vrai blocage fonctionnel
+- `HTTP 500`
+  - peut indiquer :
+    - droits insuffisants
+    - erreur serveur
+    - ou autre cas a remonter avec :
+      - horodatage
+      - `idAnnonce`
+      - payload complet
+
+Impact sur notre strategie locale :
+
+- le contournement provisoire actuel :
+  - ouvrir Hektor
+  - cocher manuellement `validation`
+  - cocher manuellement `diffusable`
+  - puis cocher les passerelles
+  devient obsolete si les tests API en `PATCH` sont concluants
+
+Nouvelle sequence cible a tester localement :
+
+1. `PATCH PropertyValidation state=1`
+2. relire `AnnonceById`
+3. si l'annonce n'est pas encore `diffusable`
+   - tenter `PATCH Diffuse`
+4. relire `AnnonceById`
+5. appliquer les passerelles cochees :
+   - `PUT addAnnonceToPasserelle`
+   - `DELETE removeAnnonceToPasserelle`
+6. relire `ListPasserelles`
+
+Decision de reprise retenue :
+
+- ne pas porter tout de suite ce changement directement sur Render
+- d'abord recabler le flux local Python de reference
+- valider le comportement sur un ou deux dossiers tests
+- seulement ensuite reporter la meme logique dans le backend Python Render
+
+Corrections a apporter dans le projet :
+
+### 1. Script Python local
+
+Fichier cible :
+
+- `phase2/sync/hektor_diffusion_writeback.py`
+
+Corrections prevues :
+
+- remplacer l'ancien appel `GET /Api/Annonce/Diffuse/` par :
+  - `PATCH /Api/Annonce/Diffuse/`
+- ajouter un helper pour :
+  - `PATCH /Api/Annonce/PropertyValidation/`
+- enrichir la relecture post-action :
+  - `AnnonceById`
+  - puis `ListPasserelles`
+- faire remonter distinctement :
+  - succes technique
+  - refus metier (`error` renseigne)
+  - erreur serveur `500`
+
+### 2. API locale Vite / front local
+
+Fichiers cibles :
+
+- `apps/hektor-v1/vite.config.ts`
+- `apps/hektor-v1/src/lib/api.ts`
+
+Corrections prevues :
+
+- conserver le contrat actuel `apply` / `accept`
+- mais faire retourner au front un payload plus riche :
+  - validation tentee ou non
+  - validation reussie ou refusee
+  - `diffusable` observe apres relecture
+  - etat des passerelles observe
+
+### 3. Application React
+
+Fichier cible :
+
+- `apps/hektor-v1/src/App.tsx`
+
+Corrections prevues dans l'app :
+
+- console `Diffusion`
+  - ne plus bloquer automatiquement sur `validation = non`
+  - tenter d'abord la validation API
+  - puis la diffusion API
+  - puis les passerelles
+- acceptation d'une `Demande de validation`
+  - ne plus ouvrir Hektor par defaut
+  - tenter le nouveau chemin API complet
+  - n'ouvrir Hektor qu'en vrai fallback si l'API renvoie un refus metier ou un echec serveur
+- messages utilisateur plus precis :
+  - `validation effectuee`
+  - `validation refusee par Hektor`
+  - `annonce diffusable`
+  - `passerelles appliquees`
+  - ou fallback manuel si besoin
+
+### 4. Backend Python Render
+
+Fichier cible :
+
+- `backend/app/services/hektor_bridge.py`
+
+Ordre retenu :
+
+- ne rien modifier sur Render avant validation locale
+- une fois la sequence locale prouvee :
+  - reporter la meme logique `PATCH PropertyValidation` puis `PATCH Diffuse`
+  - garder la meme relecture `AnnonceById` / `ListPasserelles`
+
+Conclusion de reprise :
+
+- le blocage historique sur la validation n'est plus un manque d'endpoint
+- il faut maintenant recabler et tester la bonne methode HTTP
+- le provisoire actuel doit etre conserve tant que le test local n'est pas prouve
+- mais la cible produit devient bien :
+  - validation API
+  - diffusable API
+  - passerelles API
