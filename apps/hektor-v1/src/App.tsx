@@ -2229,6 +2229,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     try {
       await setDossierDiffusable(selectedDossier.app_dossier_id, nextValue)
       const diffusableValue = nextValue ? '1' : '0'
+      setDetailDiffusableObserved(nextValue)
       setDetailDiffusableSaved(nextValue)
       setSelectedDossier((current) => (current ? { ...current, diffusable: diffusableValue } : current))
       setDossiers((current) => current.map((item) => item.app_dossier_id === selectedDossier.app_dossier_id ? { ...item, diffusable: diffusableValue } : item))
