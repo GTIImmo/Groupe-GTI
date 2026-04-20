@@ -60,6 +60,12 @@ class SetValidationPayload(BaseModel):
     dryRun: bool = False
 
 
+class PersistHektorStatePayload(BaseModel):
+    appDossierId: int = Field(gt=0)
+    validationDiffusionState: str | None = None
+    diffusable: bool | None = None
+
+
 class AcceptDiffusionPayload(BaseModel):
     appDossierId: int = Field(gt=0)
     dryRun: bool = False

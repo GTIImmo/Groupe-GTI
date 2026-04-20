@@ -1022,6 +1022,16 @@ export async function setDossierHektorState(
   appDossierId: number,
   input: { validationDiffusionState?: string | null; diffusable?: boolean | null },
 ): Promise<void> {
+  if (canUseBackendApi()) {
+    await invokeBackendApi<{ ok: true; payload: { app_dossier_id: number } }>('/hektor-diffusion/persist-state', {
+      body: {
+        appDossierId,
+        validationDiffusionState: typeof input.validationDiffusionState !== 'undefined' ? input.validationDiffusionState : undefined,
+        diffusable: typeof input.diffusable !== 'undefined' ? input.diffusable : undefined,
+      },
+    })
+    return
+  }
   if (!hasSupabaseEnv || !supabase) return
   const now = new Date().toISOString()
   const patch: Record<string, string> = {

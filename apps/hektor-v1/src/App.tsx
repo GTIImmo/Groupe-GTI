@@ -4568,69 +4568,95 @@ function DossierDetailLayout(props: {
               <section className="detail-section detail-section-status">
                 <div className="section-header"><h4>Diffusion</h4></div>
                 {props.allowMarkValidation ? (
-                  <div className="detail-diffusable-toggle">
-                    <span className="detail-label">Validation Hektor</span>
-                    <div className="tag-row">
+                  <div className="detail-diffusable-toggle detail-action-card">
+                    <div className="detail-action-head">
+                      <div>
+                        <span className="detail-label">Pilotage Hektor</span>
+                        <strong className="detail-action-title">Valider mandat</strong>
+                      </div>
+                      <span className={`detail-action-state ${isValidationApproved(validationDraft) ? 'is-positive' : 'is-negative'}`}>
+                        {isValidationApproved(validationDraft) ? 'Etat actuel : valide' : 'Etat actuel : non valide'}
+                      </span>
+                    </div>
+                    <div className="detail-action-meta">
                       <StatusPill value={`Validation : ${isValidationApproved(validationDraft) ? 'Oui' : 'Non'}`} />
                       <StatusPill value={`Diffusion : ${diffusableLabel(dossier.diffusable)}`} />
                     </div>
-                    <div className="row-actions">
+                    <div className="detail-action-buttons">
                       <button
-                        className={`ghost-button ${isValidationApproved(validationDraft) ? 'is-active' : ''}`}
+                        className={`detail-action-button is-positive ${isValidationApproved(validationDraft) ? 'is-selected' : ''}`}
                         type="button"
                         disabled={Boolean(props.markValidationPending) || isValidationApproved(validationDraft)}
                         onClick={() => props.onSetValidation?.(true)}
                       >
-                        Validation : Oui
+                        Activer
                       </button>
                       <button
-                        className={`ghost-button ${!isValidationApproved(validationDraft) ? 'is-active' : ''}`}
+                        className={`detail-action-button is-negative ${!isValidationApproved(validationDraft) ? 'is-selected' : ''}`}
                         type="button"
                         disabled={Boolean(props.markValidationPending) || !isValidationApproved(validationDraft)}
                         onClick={() => props.onSetValidation?.(false)}
                       >
-                        Validation : Non
+                        Desactiver
                       </button>
                     </div>
+                    <div className="detail-action-caption">
+                      Debloque la diffusion Hektor et les passerelles quand la validation est confirmee.
+                    </div>
                     {props.markValidationPending ? (
-                      <div className="detail-sync-alert is-pending">Mise a jour validation Hektor en cours...</div>
+                      <div className="detail-sync-alert is-pending">Validation Hektor en cours...</div>
                     ) : validationSyncPending ? (
-                      <div className="detail-sync-alert is-waiting">{`Validation relue par Hektor : ${isValidationApproved(validationObserved) ? 'Oui' : 'Non'}`}</div>
+                      <div className="detail-sync-alert is-waiting">{`Relecture Hektor : ${isValidationApproved(validationObserved) ? 'valide' : 'non valide'}`}</div>
                     ) : (
-                      <div className="detail-sync-alert is-confirmed">{`Validation Hektor confirmee : ${isValidationApproved(validationObserved) ? 'Oui' : 'Non'}`}</div>
+                      <div className="detail-sync-alert is-confirmed">{`Validation confirmee : ${isValidationApproved(validationObserved) ? 'Oui' : 'Non'}`}</div>
                     )}
                   </div>
                 ) : null}
                 {props.allowMarkDiffusable ? (
-                  <div className="detail-diffusable-toggle">
-                    <div className="tag-row">
-                      <StatusPill value={`Diffusable : ${isDraftDiffusable ? 'Oui' : 'Non'}`} />
+                  <div className="detail-diffusable-toggle detail-action-card">
+                    <div className="detail-action-head">
+                      <div>
+                        <span className="detail-label">Pilotage Hektor</span>
+                        <strong className="detail-action-title">Diffuser mandat</strong>
+                      </div>
+                      <span className={`detail-action-state ${isDraftDiffusable ? 'is-positive' : 'is-negative'}`}>
+                        {isDraftDiffusable ? 'Etat actuel : diffusable' : 'Etat actuel : non diffusable'}
+                      </span>
                     </div>
-                    <div className="row-actions">
+                    <div className="detail-action-meta">
+                      <StatusPill value={`Diffusable : ${isDraftDiffusable ? 'Oui' : 'Non'}`} />
+                      <StatusPill value={dossier.portails_resume || 'Aucune passerelle active'} />
+                    </div>
+                    <div className="detail-action-buttons">
                       <button
-                        className={`ghost-button ${isDraftDiffusable ? 'is-active' : ''}`}
+                        className={`detail-action-button is-positive ${isDraftDiffusable ? 'is-selected' : ''}`}
                         type="button"
                         disabled={Boolean(props.markDiffusablePending) || isDraftDiffusable}
                         onClick={() => props.onSetDiffusable?.(true)}
                       >
-                        Diffusable : Oui
+                        Activer
                       </button>
                       <button
-                        className={`ghost-button ${!isDraftDiffusable ? 'is-active' : ''}`}
+                        className={`detail-action-button is-negative ${!isDraftDiffusable ? 'is-selected' : ''}`}
                         type="button"
                         disabled={Boolean(props.markDiffusablePending) || !isDraftDiffusable}
                         onClick={() => props.onSetDiffusable?.(false)}
                       >
-                        Diffusable : Non
+                        Desactiver
                       </button>
+                    </div>
+                    <div className="detail-action-caption">
+                      Pilote l'etat diffusable relu par Hektor et conditionne les actions de diffusion.
                     </div>
                     {props.markDiffusablePending || hektorSyncPending || portalSyncPending ? (
                       <div className={`detail-sync-alert ${props.markDiffusablePending ? 'is-pending' : 'is-waiting'}`}>
                         {props.markDiffusablePending
-                          ? 'Mise a jour en cours...'
-                          : 'En attente de mise a jour Hektor... La modification a bien ete envoyee.'}
+                          ? 'Mise a jour diffusion en cours...'
+                          : 'Mise a jour envoyee. En attente de confirmation Hektor ou passerelles.'}
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="detail-sync-alert is-confirmed">{`Diffusion confirmee : ${isDraftDiffusable ? 'Oui' : 'Non'}`}</div>
+                    )}
                   </div>
                 ) : null}
                 <div className="detail-portals-list">

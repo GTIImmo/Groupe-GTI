@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -70,12 +71,52 @@ class HektorBridgeService:
             raise HTTPException(status_code=404, detail=f"{table} introuvable")
         return rows[0]
 
+    def _supabase_patch_rows(self, table: str, payload: dict[str, Any], filters: dict[str, str]) -> list[dict[str, Any]]:
+        response = requests.patch(
+            f"{self.settings.supabase_url}/rest/v1/{table}",
+            headers={**self._rest_headers(), "Prefer": "return=representation"},
+            params=filters,
+            json=payload,
+            timeout=30,
+        )
+        self._raise_for_response(response, f"Unable to update {table}")
+        return response.json() or []
+
     def _load_dossier(self, app_dossier_id: int) -> dict[str, Any]:
         return self._supabase_select_single(
             "app_dossiers_current",
             "app_dossier_id,hektor_annonce_id,numero_dossier,validation_diffusion_state,agence_nom",
             {"app_dossier_id": f"eq.{app_dossier_id}"},
         )
+
+    def persist_state(
+        self,
+        app_dossier_id: int,
+        *,
+        validation_diffusion_state: str | None = None,
+        diffusable: bool | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "refreshed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if validation_diffusion_state is not None:
+            payload["validation_diffusion_state"] = validation_diffusion_state
+        if diffusable is not None:
+            payload["diffusable"] = "1" if diffusable else "0"
+        rows = self._supabase_patch_rows(
+            "app_dossier_current",
+            payload,
+            {"app_dossier_id": f"eq.{app_dossier_id}"},
+        )
+        if not rows:
+            raise HTTPException(status_code=404, detail="app_dossier_current introuvable")
+        row = rows[0]
+        return {
+            "app_dossier_id": row.get("app_dossier_id", app_dossier_id),
+            "validation_diffusion_state": row.get("validation_diffusion_state"),
+            "diffusable": row.get("diffusable"),
+            "refreshed_at": row.get("refreshed_at"),
+        }
 
     def _load_targets(self, app_dossier_id: int) -> list[dict[str, Any]]:
         response = requests.get(
