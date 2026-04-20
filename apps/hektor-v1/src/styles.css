@@ -990,16 +990,16 @@ body {
   letter-spacing: 0.01em;
 }
 .row-actions .split-action-type-validation {
-  background: linear-gradient(180deg, #fcf4df 0%, #f1deb3 100%);
-  border-color: #d3ab56;
+  background: linear-gradient(180deg, #e6f5e8 0%, #c8e5ce 100%);
+  border-color: #78b287;
 }
 .row-actions .split-action-type-validation .split-action-type {
-  color: #815213;
+  color: #2d6a39;
 }
 .row-actions .split-action-type-validation .split-action-type::before {
   content: 'V';
-  background: rgba(129, 82, 19, 0.12);
-  color: #815213;
+  background: rgba(45, 106, 57, 0.12);
+  color: #2d6a39;
   font-size: 10px;
   font-weight: 800;
 }
