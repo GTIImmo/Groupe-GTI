@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import subprocess
 import sys
 import unicodedata
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from hektor_pipeline.common import HektorClient, Settings, connect_db
 
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
+REFRESH_SINGLE_ANNONCE_SCRIPT = ROOT / "phase2" / "sync" / "refresh_single_annonce.py"
 
 DEFAULT_AGENCY_TARGETS: tuple[tuple[str, str, str], ...] = (
     ("Groupe GTI Ambert", "bienicidirect", "2"),
@@ -759,6 +761,39 @@ def set_validation_for_dossier(
     }
 
 
+def refresh_single_annonce_local(annonce_id: str) -> dict[str, Any]:
+    if not REFRESH_SINGLE_ANNONCE_SCRIPT.exists():
+        return {"ok": False, "error": f"Script introuvable: {REFRESH_SINGLE_ANNONCE_SCRIPT}"}
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(REFRESH_SINGLE_ANNONCE_SCRIPT), "--id-annonce", str(annonce_id).strip()],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    stdout = (completed.stdout or "").strip()
+    stderr = (completed.stderr or "").strip()
+    if completed.returncode != 0:
+        return {
+            "ok": False,
+            "error": f"refresh_single_annonce failed with code {completed.returncode}",
+            "stdout": stdout or None,
+            "stderr": stderr or None,
+        }
+    if stdout:
+        try:
+            payload = json.loads(stdout)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            pass
+    return {"ok": True, "stdout": stdout or None, "stderr": stderr or None}
+
+
 def set_diffusable_state(client: HektorClient, settings: Settings, dossier: sqlite3.Row, annonce_id: str, *, requested: bool, dry_run: bool) -> tuple[bool, str, str | None]:
     current = read_observed_diffusable(client, settings, dossier, annonce_id)
     requested_value = "1" if requested else "0"
@@ -1296,6 +1331,8 @@ def main() -> None:
                 dry_run=bool(args.dry_run),
                 manage_diffusable=bool(args.ensure_diffusable),
             )
+            if not bool(args.dry_run) and result.get("hektor_annonce_id"):
+                result["refresh_single_annonce"] = refresh_single_annonce_local(str(result["hektor_annonce_id"]))
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
         if args.command == "accept-request":
@@ -1306,6 +1343,8 @@ def main() -> None:
                 requested_by=args.requested_by,
                 dry_run=bool(args.dry_run),
             )
+            if not bool(args.dry_run) and result.get("hektor_annonce_id"):
+                result["refresh_single_annonce"] = refresh_single_annonce_local(str(result["hektor_annonce_id"]))
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
         if args.command == "set-validation":
@@ -1315,6 +1354,8 @@ def main() -> None:
                 state=int(args.state),
                 dry_run=bool(args.dry_run),
             )
+            if not bool(args.dry_run) and result.get("hektor_annonce_id"):
+                result["refresh_single_annonce"] = refresh_single_annonce_local(str(result["hektor_annonce_id"]))
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
         if args.command == "set-diffusable":
@@ -1324,6 +1365,8 @@ def main() -> None:
                 diffusable=bool(int(args.state)),
                 dry_run=bool(args.dry_run),
             )
+            if not bool(args.dry_run) and result.get("hektor_annonce_id"):
+                result["refresh_single_annonce"] = refresh_single_annonce_local(str(result["hektor_annonce_id"]))
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
         if args.command == "test-single-target":
@@ -1342,6 +1385,8 @@ def main() -> None:
                 dry_run=bool(args.dry_run),
                 manage_diffusable=bool(args.ensure_diffusable),
             )
+            if not bool(args.dry_run) and result.get("hektor_annonce_id"):
+                result["refresh_single_annonce"] = refresh_single_annonce_local(str(result["hektor_annonce_id"]))
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
         raise RuntimeError(f"Commande inconnue: {args.command}")

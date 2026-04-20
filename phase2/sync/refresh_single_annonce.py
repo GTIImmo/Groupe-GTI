@@ -56,11 +56,66 @@ def normalized_id(value: Any) -> str | None:
     return text or None
 
 
+def fetch_annonce_search_row(client: HektorClient, settings: Settings, annonce_id: str, no_dossier: str | None) -> dict[str, Any] | None:
+    search = str(no_dossier or "").strip()
+    if not search:
+        return None
+    payload = client.get_json(
+        "/Api/Annonce/searchAnnonces/",
+        params={"search": search, "strict": 1, "version": settings.api_version},
+    )
+    rows = payload.get("liste")
+    if not isinstance(rows, list):
+        rows = payload.get("data")
+    if not isinstance(rows, list):
+        return None
+    for row in rows:
+        if isinstance(row, dict) and str(row.get("id") or "").strip() == str(annonce_id).strip():
+            return row
+    return rows[0] if rows and isinstance(rows[0], dict) else None
+
+
+def extract_validation_value(payload: dict[str, Any] | None) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    for key in ("valide", "checkValid", "validation", "validated", "isValid", "is_valid"):
+        value = payload.get(key)
+        if value is not None:
+            text = str(value).strip()
+            return text or None
+    return None
+
+
+def refresh_validation_state(
+    conn: sqlite3.Connection,
+    client: HektorClient,
+    settings: Settings,
+    annonce_id: str,
+    no_dossier: str | None,
+) -> str | None:
+    row = fetch_annonce_search_row(client, settings, annonce_id, no_dossier)
+    validation_value = extract_validation_value(row)
+    if validation_value is None:
+        return None
+    conn.execute(
+        "UPDATE hektor_annonce SET valide = ?, synced_at = ? WHERE hektor_annonce_id = ?",
+        (validation_value, now_utc_iso(), annonce_id),
+    )
+    return validation_value
+
+
 def update_annonce_from_detail(conn: sqlite3.Connection, annonce_id: str, payload: dict[str, Any]) -> None:
     data = payload.get("data") or {}
     key_data = data.get("keyData") if isinstance(data, dict) else {}
     localite = data.get("localite") if isinstance(data, dict) else {}
     publique = localite.get("publique") if isinstance(localite, dict) else {}
+    valide_value = key_data.get("valide")
+    if valide_value is None:
+        valide_value = key_data.get("checkValid")
+    if valide_value is None and isinstance(data, dict):
+        valide_value = data.get("valide")
+    if valide_value is None and isinstance(data, dict):
+        valide_value = data.get("checkValid")
 
     existing = conn.execute(
         "SELECT titre, valide, partage FROM hektor_annonce WHERE hektor_annonce_id = ?",
@@ -109,7 +164,7 @@ def update_annonce_from_detail(conn: sqlite3.Connection, annonce_id: str, payloa
             key_data.get("surface"),
             key_data.get("archive"),
             key_data.get("diffusable"),
-            key_data.get("valide") if key_data.get("valide") is not None else existing_valide,
+            valide_value if valide_value is not None else existing_valide,
             key_data.get("partage") if key_data.get("partage") is not None else existing_partage,
             data.get("titre") or key_data.get("titre") or existing_titre,
             publique.get("ville") if isinstance(publique, dict) else None,
@@ -252,6 +307,8 @@ def main() -> int:
         upsert_annonce_detail(conn, annonce_id, detail_payload)
         replace_annonce_contact_links(conn, annonce_id, detail_payload)
         mark_annonce_detail_synced(conn, annonce_id)
+        key_data = ((detail_payload.get("data") or {}).get("keyData") or {}) if isinstance(detail_payload.get("data"), dict) else {}
+        refresh_validation_state(conn, client, settings, annonce_id, key_data.get("NO_DOSSIER"))
 
         mandats_payload = client.get_json(
             "/Api/Mandat/MandatsByIdAnnonce/",
