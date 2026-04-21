@@ -984,6 +984,7 @@ function mandateAsDossier(value: MandatRecord): Dossier {
     app_dossier_id: value.app_dossier_id,
     hektor_annonce_id: value.hektor_annonce_id,
     photo_url_listing: value.photo_url_listing ?? null,
+    images_preview_json: value.images_preview_json ?? null,
     archive: value.archive ?? null,
     diffusable: value.diffusable ?? null,
     nb_portails_actifs: value.nb_portails_actifs ?? null,
@@ -4106,7 +4107,7 @@ function MandatsScreen(props: {
                       <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
-                      <td><ListingThumbnail url={item.photo_url_listing} title={item.titre_bien} /></td>
+                      <td><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
                       <td>
                         <div className="row-actions">
                           <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
@@ -4552,7 +4553,7 @@ function SuiviMandatsScreenV2(props: {
                       <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
                       <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
                       <td><small>{activeRequest.requested_at ? formatDate(activeRequest.requested_at) : '-'}</small><small>{requestTypeLabel(activeRequest.request_type)} · {requestStatusLabel(activeRequest.request_status)}</small></td>
-                      <td><ListingThumbnail url={item.photo_url_listing} title={item.titre_bien} /></td>
+                      <td><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
                       <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={activeRequest} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
                     </tr>
                   </Fragment>
@@ -5254,14 +5255,24 @@ function PortalStatusMark({ enabled }: { enabled: boolean }) {
   )
 }
 
-function ListingThumbnail({ url, title }: { url?: string | null; title: string }) {
-  if (!url) {
+function listingPreviewUrl(imagesPreviewJson?: string | null, fallbackUrl?: string | null) {
+  const previewImages = parseJson<Array<Record<string, unknown>>>(imagesPreviewJson, [])
+  for (const image of previewImages) {
+    const candidate = safeText(image.url)
+    if (candidate) return candidate
+  }
+  return fallbackUrl ?? null
+}
+
+function ListingThumbnail({ url, imagesPreviewJson, title }: { url?: string | null; imagesPreviewJson?: string | null; title: string }) {
+  const resolvedUrl = listingPreviewUrl(imagesPreviewJson, url)
+  if (!resolvedUrl) {
     return <div className="listing-thumb listing-thumb-placeholder" aria-hidden="true">{title.slice(0, 1).toUpperCase()}</div>
   }
   return (
     <img
       className="listing-thumb"
-      src={url}
+      src={resolvedUrl}
       alt={title}
       loading="lazy"
       decoding="async"

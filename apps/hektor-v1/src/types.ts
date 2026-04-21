@@ -118,6 +118,7 @@ export type Dossier = {
   app_dossier_id: number
   hektor_annonce_id: number
   photo_url_listing?: string | null
+  images_preview_json?: string | null
   archive?: string | null
   diffusable?: string | null
   nb_portails_actifs?: number | null
@@ -165,6 +166,7 @@ export type WorkItem = {
   app_dossier_id: number
   hektor_annonce_id: number
   photo_url_listing?: string | null
+  images_preview_json?: string | null
   archive?: string | null
   numero_dossier: string | null
   numero_mandat: string | null
@@ -207,6 +209,7 @@ export type MandatRecord = {
   app_dossier_id: number
   hektor_annonce_id: number
   photo_url_listing?: string | null
+  images_preview_json?: string | null
   adresse_privee_listing?: string | null
   adresse_detail?: string | null
   code_postal?: string | null
