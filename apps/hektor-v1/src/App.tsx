@@ -3361,23 +3361,48 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <p className="modal-subline">{requestModalMandat.numero_dossier ?? '-'} - {requestModalMandat.numero_mandat ?? '-'} - {commercialDisplay(requestModalMandat)}</p>
               {requestModalEffectiveType !== 'demande_baisse_prix' ? (
                 <section className="request-summary-card">
-                  <div className="tag-row">
-                    <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : (requestModalState?.label ?? 'Demande de validation')} />
-                    <StatusPill value={requestTypeLabel(requestModalEffectiveType)} />
-                    <StatusPill value={requestModalMandat.statut_annonce} />
-                    <StatusPill value={`Validation : ${requestModalMandat.validation_diffusion_state ?? '-'}`} />
+                  <div className="request-summary-hero">
+                    <div className="request-summary-copy">
+                      <p className="request-summary-kicker">Validation diffusion</p>
+                      <h4 className="request-summary-heading">
+                        {requestModalRole === 'pauline'
+                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
+                            ? 'Relecture avant retour'
+                            : 'Decision de Pauline'
+                          : requestModalState?.label?.includes('corriger')
+                            ? 'Correction prete a renvoyer'
+                            : requestModalState?.label?.includes('envoyee')
+                              ? 'Demande deja transmise'
+                              : 'Validation en preparation'}
+                      </h4>
+                      <p className="request-summary-note">
+                        {requestModalRole === 'pauline'
+                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
+                            ? 'Relis le dernier retour puis decide si le dossier peut repartir ou non.'
+                            : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
+                          : requestModalState?.label?.includes('corriger')
+                            ? 'Le dossier a ete ajuste. Tu peux renvoyer une version propre a Pauline.'
+                            : requestModalState?.label?.includes('envoyee')
+                              ? 'La demande est partie. Il reste a suivre le retour de validation.'
+                              : 'Une fois approuvee, la diffusion et les passerelles par defaut seront activees automatiquement.'}
+                      </p>
+                    </div>
+                    <div className="request-summary-state">
+                      <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : (requestModalState?.label ?? 'Demande de validation')} />
+                    </div>
                   </div>
-                  <p className="request-summary-text">
-                    {requestModalRole === 'pauline'
-                      ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
-                        ? 'La demande a ete refusee. Pauline retrouve ici le motif, le dernier echange et l historique avant un nouveau retour du negociateur.'
-                        : 'Pauline traite ici la demande de validation, avec lecture du contexte, du dernier retour et decision de traitement.'
-                      : requestModalState?.label?.includes('corriger')
-                        ? 'Pauline attend une correction sur cette demande. Relis le dernier retour puis envoie ta correction depuis ce popup.'
-                        : requestModalState?.label?.includes('envoyee')
-                          ? 'La demande est deja transmise. Ce popup sert maintenant a suivre son etat avant validation du bien.'
-                          : "Cette demande sert a faire valider le bien. Si Pauline accepte, le bien sera passe en diffusable et les passerelles par defaut seront activees automatiquement."}
-                  </p>
+                  <div className="request-summary-metrics">
+                    <article className="request-summary-metric">
+                      <span className="request-summary-metric-label">Dossier</span>
+                      <strong>{requestModalMandat.numero_dossier ?? '-'}</strong>
+                      <small>Mandat {requestModalMandat.numero_mandat ?? '-'}</small>
+                    </article>
+                    <article className="request-summary-metric">
+                      <span className="request-summary-metric-label">Apres accord</span>
+                      <strong>Diffusion activee</strong>
+                      <small>Passerelles par defaut appliquees</small>
+                    </article>
+                  </div>
                 </section>
               ) : null}
               {requestModalRole !== 'pauline' ? (
