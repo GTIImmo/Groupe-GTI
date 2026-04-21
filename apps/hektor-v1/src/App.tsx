@@ -935,8 +935,6 @@ function mandateRegisterDiffusableLabel(value: string | null | undefined) {
   return isDiffusableValue(value) ? 'Oui' : 'Non'
 }
 
-type RegisterQuickFilter = 'all' | 'validated' | 'not_validated' | 'diffusable' | 'non_diffusable'
-
 const hektorPropertyTypeLabels: Record<string, string> = {
   '1': 'Maison',
   '2': 'Appartement',
@@ -2711,10 +2709,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     if (screen === 'registre') {
       return [
-        { label: 'Mandats enregistrés', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'volume', action: null },
-        { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: null },
-        { label: 'Mandats diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: null },
-        { label: 'Mandats non diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: null },
+        { label: 'Mandats enregistrés', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'volume', action: 'all_annonces' },
+        { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide' },
+        { label: 'Mandats diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
+        { label: 'Mandats non diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
       ]
     }
     return [
@@ -3019,7 +3017,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             ) : screen === 'registre' ? (
               <div className="header-kpis">
                 {headerMetrics.map((item) => (
-                  <article key={item.label} className={`header-kpi-card tone-${item.tone}`}>
+                  <article
+                    key={item.label}
+                    className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
+                    onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
+                    role={item.action ? 'button' : undefined}
+                    tabIndex={item.action ? 0 : undefined}
+                    onKeyDown={item.action ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        openMandatDrilldown(item.action)
+                      }
+                    } : undefined}
+                  >
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
                   </article>
@@ -3416,7 +3426,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
             mandats={mandats}
-            stats={mandatStats}
             mandatsTotal={mandatsTotal}
             mandatPage={mandatPage}
             mandatTotalPages={mandatTotalPages}
@@ -3426,25 +3435,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedMandat={selectedMandat}
             onSelectMandat={setSelectedMandatId}
             onOpenDetailPage={openDossierDetailPage}
-            quickFilter={filters.validationDiffusion === '__validated__' ? 'validated' : filters.validationDiffusion === '__not_validated__' ? 'not_validated' : filters.diffusable === 'diffusable' ? 'diffusable' : filters.diffusable === 'non_diffusable' ? 'non_diffusable' : 'all'}
-            onQuickFilterChange={(filter) => {
-              setFilters((current) => ({
-                ...current,
-                validationDiffusion:
-                  filter === 'validated'
-                    ? '__validated__'
-                    : filter === 'not_validated'
-                      ? '__not_validated__'
-                      : allFilterValue,
-                diffusable:
-                  filter === 'diffusable'
-                    ? 'diffusable'
-                    : filter === 'non_diffusable'
-                      ? 'non_diffusable'
-                      : allFilterValue,
-              }))
-              setMandatPage(1)
-            }}
             loading={mandatLoading}
           />
         ) : (
@@ -4178,7 +4168,6 @@ function MandatsScreen(props: {
 
 function MandatRegisterScreen(props: {
   mandats: MandatRecord[]
-  stats: MandatStats
   mandatsTotal: number
   mandatPage: number
   mandatTotalPages: number
@@ -4188,10 +4177,10 @@ function MandatRegisterScreen(props: {
   selectedMandat: MandatRecord | null
   onSelectMandat: (id: number) => void
   onOpenDetailPage: (id: number) => void
-  quickFilter: RegisterQuickFilter
-  onQuickFilterChange: (filter: RegisterQuickFilter) => void
   loading: boolean
 }) {
+  const [expandedMandants, setExpandedMandants] = useState<Record<number, boolean>>({})
+
   return (
     <section className="panel-grid">
       <section className="panel panel-wide">
@@ -4208,13 +4197,6 @@ function MandatRegisterScreen(props: {
               <input type="number" min={1} max={props.mandatTotalPages} value={props.mandatPage} onChange={(event) => props.onGoToMandatPage(Number(event.target.value || 1))} />
             </label>
           </div>
-        </div>
-        <div className="kpi-strip register-kpi-strip">
-          <MetricCard label="Tout" value={props.stats.total} tone="neutral" active={props.quickFilter === 'all'} onClick={() => props.onQuickFilterChange('all')} />
-          <MetricCard label="Valide" value={props.stats.mandatValide} tone="success" active={props.quickFilter === 'validated'} onClick={() => props.onQuickFilterChange('validated')} />
-          <MetricCard label="Non valide" value={props.stats.mandatNonValide} tone="warning" active={props.quickFilter === 'not_validated'} onClick={() => props.onQuickFilterChange('not_validated')} />
-          <MetricCard label="Diffusable" value={props.stats.mandatDiffuse} tone="brand" active={props.quickFilter === 'diffusable'} onClick={() => props.onQuickFilterChange('diffusable')} />
-          <MetricCard label="Non diffusable" value={props.stats.mandatNonDiffuse} tone="danger" active={props.quickFilter === 'non_diffusable'} onClick={() => props.onQuickFilterChange('non_diffusable')} />
         </div>
         <div className="table-wrap register-table-wrap">
           <table className="register-table">
@@ -4234,6 +4216,9 @@ function MandatRegisterScreen(props: {
             <tbody>
               {props.mandats.map((item) => {
                 const isSelected = item.app_dossier_id === props.selectedMandat?.app_dossier_id
+                const mandantsLabel = mandateRegisterMandantsLabel(item)
+                const canExpandMandants = mandantsLabel.length > 42
+                const isMandantsExpanded = Boolean(expandedMandants[item.app_dossier_id])
                 return (
                   <tr
                     key={item.app_dossier_id}
@@ -4246,7 +4231,7 @@ function MandatRegisterScreen(props: {
                     <td className="register-col-mandat">
                       <strong className="register-primary">{item.numero_mandat ?? '-'}</strong>
                       {mandateRegisterTypeInlineLabel(item) ? <span className="register-type-inline">{mandateRegisterTypeInlineLabel(item)}</span> : null}
-                      <span className="register-secondary">Dossier {item.numero_dossier ?? '-'}</span>
+                      <span className="register-secondary">{item.numero_dossier ?? '-'}</span>
                     </td>
                     <td className="register-col-status"><StatusPill value={item.statut_annonce} /></td>
                     <td className="register-col-flag"><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
@@ -4254,7 +4239,21 @@ function MandatRegisterScreen(props: {
                     <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
                     <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
                     <td className="register-col-amount"><strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
-                    <td className="register-col-mandants"><strong className="register-primary">{mandateRegisterMandantsLabel(item)}</strong></td>
+                    <td className="register-col-mandants">
+                      <strong className={`register-primary register-mandants-text ${canExpandMandants && !isMandantsExpanded ? 'is-clamped' : ''}`}>{mandantsLabel}</strong>
+                      {canExpandMandants ? (
+                        <button
+                          className="register-more-button"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setExpandedMandants((current) => ({ ...current, [item.app_dossier_id]: !current[item.app_dossier_id] }))
+                          }}
+                        >
+                          {isMandantsExpanded ? '−' : '+'}
+                        </button>
+                      ) : null}
+                    </td>
                     <td className="register-col-nature"><span className="register-muted">{mandateRegisterNatureLabel(item)}</span></td>
                   </tr>
                 )

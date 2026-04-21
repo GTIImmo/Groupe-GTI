@@ -2203,6 +2203,32 @@ tbody tr.is-selected { background: #e9f1f4; }
   line-height: 1.25;
   margin-top: 2px;
 }
+.register-mandants-text.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.register-more-button {
+  margin-top: 6px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(15, 76, 92, 0.14);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(248, 251, 252, 0.98), rgba(236, 243, 246, 0.98));
+  color: #335965;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.register-more-button:hover {
+  border-color: rgba(15, 76, 92, 0.24);
+  background: linear-gradient(180deg, rgba(244, 249, 250, 0.98), rgba(228, 238, 242, 0.98));
+}
 .register-muted {
   display: block;
   color: #738990;
@@ -3165,9 +3191,6 @@ button.metric-card.is-active {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
-}
-.register-kpi-strip {
-  margin-bottom: 14px;
 }
 .suivi-layout {
   display: grid;
