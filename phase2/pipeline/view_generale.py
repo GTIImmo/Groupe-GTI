@@ -243,6 +243,8 @@ SELECT
     src.archive,
     src.diffusable,
     src.valide,
+    COALESCE(m.hektor_mandat_id, src.mandat_id) AS mandat_source_id,
+    COALESCE(NULLIF(TRIM(src.no_mandat), ''), m.numero) AS mandat_numero_reference,
     COALESCE(NULLIF(TRIM(src.mandat_type), ''), m.type) AS mandat_type,
     COALESCE(NULLIF(TRIM(src.mandat_date_debut), ''), m.date_debut) AS mandat_date_debut,
     COALESCE(NULLIF(TRIM(src.mandat_date_fin), ''), m.date_fin) AS mandat_date_fin,
