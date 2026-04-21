@@ -2112,26 +2112,29 @@ tbody tr.is-selected { background: #e9f1f4; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 .register-table {
-  min-width: 1460px;
+  min-width: 1320px;
   border-collapse: separate;
   border-spacing: 0;
 }
 .register-table th {
   white-space: nowrap;
-  padding: 14px 12px;
-  background: rgba(244, 248, 249, 0.95);
-  color: #5d737a;
+  padding: 13px 10px;
+  background: linear-gradient(180deg, rgba(245, 249, 250, 0.98), rgba(240, 245, 247, 0.98));
+  color: #526b73;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
   border-bottom: 1px solid rgba(15, 76, 92, 0.10);
 }
 .register-table td {
-  padding: 16px 12px;
+  padding: 14px 10px;
   border-bottom: 1px solid rgba(15, 76, 92, 0.08);
 }
 .register-table tbody tr {
   transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+.register-table tbody tr:nth-child(even) {
+  background: rgba(248, 251, 252, 0.58);
 }
 .register-table tbody tr:hover {
   background: #f7fbfc;
@@ -2142,29 +2145,53 @@ tbody tr.is-selected { background: #e9f1f4; }
 }
 .register-col-mandat,
 .register-col-mandants,
+.register-col-object,
 .register-col-nature {
   min-width: 0;
 }
 .register-col-mandat strong,
 .register-col-mandants strong,
+.register-col-object strong,
 .register-col-nature strong {
   white-space: normal;
   line-height: 1.45;
 }
 .register-col-mandat {
-  min-width: 110px;
+  width: 118px;
+  min-width: 118px;
 }
 .register-col-mandants {
-  min-width: 220px;
+  width: 200px;
+  min-width: 200px;
+}
+.register-col-object {
+  width: 156px;
+  min-width: 156px;
 }
 .register-col-nature {
-  min-width: 260px;
+  width: 248px;
+  min-width: 248px;
 }
 .register-col-date {
-  min-width: 116px;
+  width: 104px;
+  min-width: 104px;
 }
 .register-col-amount {
-  min-width: 132px;
+  width: 118px;
+  min-width: 118px;
+}
+.register-col-status {
+  width: 110px;
+  min-width: 110px;
+}
+.register-col-flag {
+  width: 82px;
+  min-width: 82px;
+  text-align: center;
+}
+.register-col-flag .register-bool,
+.register-col-status .status-pill {
+  margin-inline: auto;
 }
 .register-primary {
   color: #17323a;
@@ -2194,10 +2221,10 @@ tbody tr.is-selected { background: #e9f1f4; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 62px;
-  padding: 8px 11px;
+  min-width: 50px;
+  padding: 7px 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;

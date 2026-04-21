@@ -4182,16 +4182,16 @@ function MandatRegisterScreen(props: {
           <table className="register-table">
             <thead>
               <tr>
-                <th>N° de mandat</th>
-                <th>Date de debut</th>
-                <th>Date de fin</th>
-                <th>Montant</th>
-                <th>Mandant(s)</th>
-                <th>Objet du mandat</th>
-                <th>Nature et situation</th>
-                <th>Statut de l'annonce</th>
-                <th>Valide</th>
-                <th>Diffusable</th>
+                <th className="register-col-mandat">N° de mandat</th>
+                <th className="register-col-date">Date de debut</th>
+                <th className="register-col-date">Date de fin</th>
+                <th className="register-col-amount">Montant</th>
+                <th className="register-col-mandants">Mandant(s)</th>
+                <th className="register-col-object">Objet du mandat</th>
+                <th className="register-col-nature">Nature et situation</th>
+                <th className="register-col-status">Statut</th>
+                <th className="register-col-flag">Valide</th>
+                <th className="register-col-flag">Diffusable</th>
               </tr>
             </thead>
             <tbody>
@@ -4214,11 +4214,11 @@ function MandatRegisterScreen(props: {
                     <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
                     <td className="register-col-amount"><strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
                     <td className="register-col-mandants"><strong className="register-primary">{mandateRegisterMandantsLabel(item)}</strong></td>
-                    <td><strong className="register-primary">{mandateRegisterObjectLabel(item)}</strong></td>
+                    <td className="register-col-object"><strong className="register-primary">{mandateRegisterObjectLabel(item)}</strong></td>
                     <td className="register-col-nature"><strong className="register-primary">{mandateRegisterNatureLabel(item)}</strong></td>
-                    <td><StatusPill value={item.statut_annonce} /></td>
-                    <td><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
-                    <td><span className={`register-bool ${isDiffusableValue(item.diffusable) ? 'is-yes' : 'is-no'}`}>{mandateRegisterDiffusableLabel(item.diffusable)}</span></td>
+                    <td className="register-col-status"><StatusPill value={item.statut_annonce} /></td>
+                    <td className="register-col-flag"><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
+                    <td className="register-col-flag"><span className={`register-bool ${isDiffusableValue(item.diffusable) ? 'is-yes' : 'is-no'}`}>{mandateRegisterDiffusableLabel(item.diffusable)}</span></td>
                   </tr>
                 )
               })}
