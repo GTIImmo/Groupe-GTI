@@ -2106,12 +2106,39 @@ tbody tr:hover { background: #f4f8fa; }
 tbody tr.is-selected { background: #e9f1f4; }
 .register-table-wrap {
   overflow-x: auto;
+  border: 1px solid rgba(15, 76, 92, 0.08);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(248, 251, 252, 0.98), rgba(255, 255, 255, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 .register-table {
-  min-width: 1500px;
+  min-width: 1460px;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .register-table th {
   white-space: nowrap;
+  padding: 14px 12px;
+  background: rgba(244, 248, 249, 0.95);
+  color: #5d737a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  border-bottom: 1px solid rgba(15, 76, 92, 0.10);
+}
+.register-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid rgba(15, 76, 92, 0.08);
+}
+.register-table tbody tr {
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+.register-table tbody tr:hover {
+  background: #f7fbfc;
+}
+.register-table tbody tr.is-selected {
+  background: #edf5f7;
+  box-shadow: inset 3px 0 0 #0f4c5c;
 }
 .register-col-mandat,
 .register-col-mandants,
@@ -2133,24 +2160,55 @@ tbody tr.is-selected { background: #e9f1f4; }
 .register-col-nature {
   min-width: 260px;
 }
+.register-col-date {
+  min-width: 116px;
+}
+.register-col-amount {
+  min-width: 132px;
+}
+.register-primary {
+  color: #17323a;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.register-secondary {
+  color: #668088;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.register-date {
+  color: #21414a;
+  font-size: 13px;
+  font-weight: 700;
+}
+.register-amount {
+  color: #0f4c5c;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
 .register-bool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 56px;
-  padding: 7px 10px;
+  min-width: 62px;
+  padding: 8px 11px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .register-bool.is-yes {
-  background: #dcebd6;
-  color: #2f6a32;
+  background: #deefe0;
+  color: #2b6837;
 }
 .register-bool.is-no {
-  background: #efd4ce;
-  color: #8d3425;
+  background: #f2d9d2;
+  color: #8c3427;
 }
 .listing-thumb {
   width: 56px;

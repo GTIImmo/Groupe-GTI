@@ -881,6 +881,29 @@ function mandateRegisterObjectLabel(item: MandatRecord) {
   return (item.mandat_type ?? item.mandat_type_source ?? '').trim() || '-'
 }
 
+function mandateRegisterMandantsLabel(item: MandatRecord) {
+  const raw = (item.mandants_texte ?? '').replace(/\s+/g, ' ').trim()
+  if (!raw) return '-'
+
+  const cutPatterns = [
+    /\b\d{5}\b/,
+    /\d+\s*(?:bis|ter|quater|[a-z])?\s+(?:rue|route|avenue|av\.?|impasse|chemin|allee|all[ée]e|boulevard|bd|place|lotissement|lot|residence|r[ée]sidence|mont[ée]e|faubourg|hameau|quartier|lieu-dit|ld)\b/i,
+    /(?:^|[\s,-])(?:rue|route|avenue|av\.?|impasse|chemin|allee|all[ée]e|boulevard|bd|place|lotissement|lot|residence|r[ée]sidence|mont[ée]e|faubourg|hameau|quartier|lieu-dit|ld)\b/i,
+    /\s-\s/,
+  ]
+
+  let cutIndex = raw.length
+  for (const pattern of cutPatterns) {
+    const match = pattern.exec(raw)
+    if (match && match.index > 0) {
+      cutIndex = Math.min(cutIndex, match.index)
+    }
+  }
+
+  const label = raw.slice(0, cutIndex).replace(/[,\-;\s]+$/g, '').trim()
+  return label || raw
+}
+
 function mandateRegisterNatureLabel(item: MandatRecord) {
   const address = [
     item.adresse_privee_listing,
@@ -4183,13 +4206,16 @@ function MandatRegisterScreen(props: {
                       props.onOpenDetailPage(item.app_dossier_id)
                     }}
                   >
-                    <td className="register-col-mandat"><strong>{item.numero_mandat ?? '-'}</strong><span>{item.numero_dossier ?? '-'}</span></td>
-                    <td>{formatDate(item.mandat_date_debut)}</td>
-                    <td>{formatDate(item.mandat_date_fin)}</td>
-                    <td><strong>{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
-                    <td className="register-col-mandants"><strong>{(item.mandants_texte ?? '').trim() || '-'}</strong></td>
-                    <td><strong>{mandateRegisterObjectLabel(item)}</strong></td>
-                    <td className="register-col-nature"><strong>{mandateRegisterNatureLabel(item)}</strong></td>
+                    <td className="register-col-mandat">
+                      <strong className="register-primary">{item.numero_mandat ?? '-'}</strong>
+                      <span className="register-secondary">Dossier {item.numero_dossier ?? '-'}</span>
+                    </td>
+                    <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
+                    <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
+                    <td className="register-col-amount"><strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
+                    <td className="register-col-mandants"><strong className="register-primary">{mandateRegisterMandantsLabel(item)}</strong></td>
+                    <td><strong className="register-primary">{mandateRegisterObjectLabel(item)}</strong></td>
+                    <td className="register-col-nature"><strong className="register-primary">{mandateRegisterNatureLabel(item)}</strong></td>
                     <td><StatusPill value={item.statut_annonce} /></td>
                     <td><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
                     <td><span className={`register-bool ${isDiffusableValue(item.diffusable) ? 'is-yes' : 'is-no'}`}>{mandateRegisterDiffusableLabel(item.diffusable)}</span></td>
