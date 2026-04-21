@@ -881,6 +881,12 @@ function mandateRegisterObjectLabel(item: MandatRecord) {
   return (item.mandat_type ?? item.mandat_type_source ?? '').trim() || '-'
 }
 
+function mandateRegisterTypeInlineLabel(item: MandatRecord) {
+  const value = mandateRegisterObjectLabel(item)
+  if (!value || value === '-') return ''
+  return value.toLocaleLowerCase('fr-FR')
+}
+
 function mandateRegisterMandantsLabel(item: MandatRecord) {
   const raw = (item.mandants_texte ?? '').replace(/\s+/g, ' ').trim()
   if (!raw) return '-'
@@ -928,6 +934,8 @@ function mandateRegisterValidationLabel(value: string | null | undefined) {
 function mandateRegisterDiffusableLabel(value: string | null | undefined) {
   return isDiffusableValue(value) ? 'Oui' : 'Non'
 }
+
+type RegisterQuickFilter = 'all' | 'validated' | 'not_validated' | 'diffusable' | 'non_diffusable'
 
 const hektorPropertyTypeLabels: Record<string, string> = {
   '1': 'Maison',
@@ -3408,6 +3416,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
             mandats={mandats}
+            stats={mandatStats}
             mandatsTotal={mandatsTotal}
             mandatPage={mandatPage}
             mandatTotalPages={mandatTotalPages}
@@ -3417,6 +3426,25 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedMandat={selectedMandat}
             onSelectMandat={setSelectedMandatId}
             onOpenDetailPage={openDossierDetailPage}
+            quickFilter={filters.validationDiffusion === '__validated__' ? 'validated' : filters.validationDiffusion === '__not_validated__' ? 'not_validated' : filters.diffusable === 'diffusable' ? 'diffusable' : filters.diffusable === 'non_diffusable' ? 'non_diffusable' : 'all'}
+            onQuickFilterChange={(filter) => {
+              setFilters((current) => ({
+                ...current,
+                validationDiffusion:
+                  filter === 'validated'
+                    ? '__validated__'
+                    : filter === 'not_validated'
+                      ? '__not_validated__'
+                      : allFilterValue,
+                diffusable:
+                  filter === 'diffusable'
+                    ? 'diffusable'
+                    : filter === 'non_diffusable'
+                      ? 'non_diffusable'
+                      : allFilterValue,
+              }))
+              setMandatPage(1)
+            }}
             loading={mandatLoading}
           />
         ) : (
@@ -4150,6 +4178,7 @@ function MandatsScreen(props: {
 
 function MandatRegisterScreen(props: {
   mandats: MandatRecord[]
+  stats: MandatStats
   mandatsTotal: number
   mandatPage: number
   mandatTotalPages: number
@@ -4159,6 +4188,8 @@ function MandatRegisterScreen(props: {
   selectedMandat: MandatRecord | null
   onSelectMandat: (id: number) => void
   onOpenDetailPage: (id: number) => void
+  quickFilter: RegisterQuickFilter
+  onQuickFilterChange: (filter: RegisterQuickFilter) => void
   loading: boolean
 }) {
   return (
@@ -4178,6 +4209,13 @@ function MandatRegisterScreen(props: {
             </label>
           </div>
         </div>
+        <div className="kpi-strip register-kpi-strip">
+          <MetricCard label="Tout" value={props.stats.total} tone="neutral" active={props.quickFilter === 'all'} onClick={() => props.onQuickFilterChange('all')} />
+          <MetricCard label="Valide" value={props.stats.mandatValide} tone="success" active={props.quickFilter === 'validated'} onClick={() => props.onQuickFilterChange('validated')} />
+          <MetricCard label="Non valide" value={props.stats.mandatNonValide} tone="warning" active={props.quickFilter === 'not_validated'} onClick={() => props.onQuickFilterChange('not_validated')} />
+          <MetricCard label="Diffusable" value={props.stats.mandatDiffuse} tone="brand" active={props.quickFilter === 'diffusable'} onClick={() => props.onQuickFilterChange('diffusable')} />
+          <MetricCard label="Non diffusable" value={props.stats.mandatNonDiffuse} tone="danger" active={props.quickFilter === 'non_diffusable'} onClick={() => props.onQuickFilterChange('non_diffusable')} />
+        </div>
         <div className="table-wrap register-table-wrap">
           <table className="register-table">
             <thead>
@@ -4190,7 +4228,6 @@ function MandatRegisterScreen(props: {
                 <th className="register-col-date">Date de fin</th>
                 <th className="register-col-amount">Montant</th>
                 <th className="register-col-mandants">Mandant(s)</th>
-                <th className="register-col-object">Objet du mandat</th>
                 <th className="register-col-nature">Nature et situation</th>
               </tr>
             </thead>
@@ -4208,6 +4245,7 @@ function MandatRegisterScreen(props: {
                   >
                     <td className="register-col-mandat">
                       <strong className="register-primary">{item.numero_mandat ?? '-'}</strong>
+                      {mandateRegisterTypeInlineLabel(item) ? <span className="register-type-inline">{mandateRegisterTypeInlineLabel(item)}</span> : null}
                       <span className="register-secondary">Dossier {item.numero_dossier ?? '-'}</span>
                     </td>
                     <td className="register-col-status"><StatusPill value={item.statut_annonce} /></td>
@@ -4217,7 +4255,6 @@ function MandatRegisterScreen(props: {
                     <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
                     <td className="register-col-amount"><strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
                     <td className="register-col-mandants"><strong className="register-primary">{mandateRegisterMandantsLabel(item)}</strong></td>
-                    <td className="register-col-object"><span className="register-soft">{mandateRegisterObjectLabel(item)}</span></td>
                     <td className="register-col-nature"><span className="register-muted">{mandateRegisterNatureLabel(item)}</span></td>
                   </tr>
                 )
@@ -5335,11 +5372,24 @@ function MetricCard({
   label,
   value,
   tone = 'neutral',
+  active = false,
+  onClick,
 }: {
   label: string
   value: string | number | null | undefined
   tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'
+  active?: boolean
+  onClick?: () => void
 }) {
+  const content = (
+    <>
+      <span>{label}</span>
+      <strong>{value == null || value === '' ? '-' : value}</strong>
+    </>
+  )
+  if (onClick) {
+    return <button className={`metric-card tone-${tone} ${active ? 'is-active' : ''}`} type="button" onClick={onClick}>{content}</button>
+  }
   return <article className={`metric-card tone-${tone}`}><span>{label}</span><strong>{value == null || value === '' ? '-' : value}</strong></article>
 }
 
