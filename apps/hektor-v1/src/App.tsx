@@ -1471,7 +1471,10 @@ export default function App() {
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
-    loadMandatStats(filters, dataScope)
+    const statsFilters = screen === 'registre'
+      ? { ...filters, mandat: withMandatFilterValue }
+      : filters
+    loadMandatStats(statsFilters, dataScope)
       .then((stats) => {
         if (!cancelled) setMandatStats(stats)
       })
@@ -1481,7 +1484,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, filters, dataScope])
+  }, [session, filters, dataScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
