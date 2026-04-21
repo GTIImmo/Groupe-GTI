@@ -1778,21 +1778,21 @@ export default function App() {
                   ? { eyebrow: '', title: 'Demandes envoyées' }
                   : action === 'correction_attente'
                     ? { eyebrow: '', title: 'Corrections en attente' }
-                : action === 'mandat_diffuse'
-                  ? { eyebrow: '', title: 'Mandats diffusés' }
-                  : action === 'mandat_valide'
-                    ? { eyebrow: '', title: 'Mandats validés' }
-                    : action === 'mandat_non_valide'
-                      ? { eyebrow: '', title: 'Mandats non validés' }
-                  : action === 'mandat_non_diffuse'
-                    ? { eyebrow: '', title: 'Mandats non diffusés' }
-                    : action === 'sans_mandat'
-                      ? { eyebrow: '', title: 'Sans mandat' }
-                      : action === 'leboncoin'
-                        ? { eyebrow: '', title: 'Diffusées sur LeBonCoin' }
-                        : action === 'bienici'
-                          ? { eyebrow: '', title: "Diffusées sur Bien'ici" }
-                          : null
+                    : action === 'mandat_diffuse'
+                      ? { eyebrow: '', title: 'Mandats diffusés' }
+                      : action === 'mandat_valide'
+                        ? { eyebrow: '', title: 'Mandats validés' }
+                        : action === 'mandat_non_valide'
+                          ? { eyebrow: '', title: 'Mandats non validés' }
+                          : action === 'mandat_non_diffuse'
+                            ? { eyebrow: '', title: 'Mandats non diffusés' }
+                            : action === 'sans_mandat'
+                              ? { eyebrow: '', title: 'Sans mandat' }
+                              : action === 'leboncoin'
+                                ? { eyebrow: '', title: 'Diffusées sur LeBonCoin' }
+                                : action === 'bienici'
+                                  ? { eyebrow: '', title: "Diffusées sur Bien'ici" }
+                                  : null
     setScreen('mandats')
     setFiltersOpen(false)
     setDossierPage(1)
@@ -1801,6 +1801,37 @@ export default function App() {
     setDetailOpen(false)
     setCommercialMetricsExpanded(false)
     setMandatDrilldownLabel(nextLabel)
+    setSuiviDrilldownLabel(null)
+    setSuiviRequestFilter(null)
+    setFilters(nextFilters)
+  }
+
+  function openRegisterDrilldown(action: HeaderMetricItem['action']) {
+    if (!action) return
+    const nextFilters: AppFilters = {
+      ...emptyFilters,
+      affaire: action === 'offres_en_cours' || action === 'offres_refusees' ? 'offre_achat' : action === 'compromis_en_cours' || action === 'compromis_annules' ? 'compromis' : allFilterValue,
+      offreStatus: action === 'offres_en_cours' ? 'en_cours' : action === 'offres_refusees' ? 'refusee' : allFilterValue,
+      compromisStatus: action === 'compromis_en_cours' ? 'en_cours' : action === 'compromis_annules' ? 'annule' : allFilterValue,
+      requestScope:
+        action === 'demandes_envoyees'
+          ? 'pending_or_in_progress'
+          : action === 'correction_attente'
+            ? 'waiting_correction'
+            : allFilterValue,
+      mandat: action === 'mandat_diffuse' || action === 'mandat_non_diffuse' || action === 'mandat_valide' || action === 'mandat_non_valide' ? withMandatFilterValue : action === 'sans_mandat' ? withoutMandatFilterValue : allFilterValue,
+      validationDiffusion: action === 'mandat_valide' ? '__validated__' : action === 'mandat_non_valide' ? '__not_validated__' : allFilterValue,
+      diffusable: action === 'mandat_diffuse' ? 'diffusable' : action === 'mandat_non_diffuse' ? 'non_diffusable' : allFilterValue,
+      passerelle: action === 'leboncoin' ? 'leboncoin' : action === 'bienici' ? "bien'ici" : allFilterValue,
+    }
+    setScreen('registre')
+    setFiltersOpen(false)
+    setDossierPage(1)
+    setMandatPage(1)
+    setWorkItemPage(1)
+    setDetailOpen(false)
+    setCommercialMetricsExpanded(false)
+    setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(null)
     setFilters(nextFilters)
@@ -3020,13 +3051,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <article
                     key={item.label}
                     className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
-                    onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
+                    onClick={item.action ? () => openRegisterDrilldown(item.action) : undefined}
                     role={item.action ? 'button' : undefined}
                     tabIndex={item.action ? 0 : undefined}
                     onKeyDown={item.action ? (event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault()
-                        openMandatDrilldown(item.action)
+                        openRegisterDrilldown(item.action)
                       }
                     } : undefined}
                   >
