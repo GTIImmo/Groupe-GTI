@@ -295,6 +295,7 @@ DOSSIER_KEEP_FIELDS = {
     "has_diffusion_error",
     "portails_resume",
     "photo_url_listing",
+    "images_preview_json",
     "mandat_type",
     "mandat_type_source",
     "mandat_date_debut",

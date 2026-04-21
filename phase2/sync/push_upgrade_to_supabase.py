@@ -16,14 +16,14 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from phase2.sync.export_app_payload import build_payload
+    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_payload
 except ModuleNotFoundError:
     import sys
 
     ROOT_DIR = Path(__file__).resolve().parents[2]
     if str(ROOT_DIR) not in sys.path:
         sys.path.insert(0, str(ROOT_DIR))
-    from phase2.sync.export_app_payload import build_payload
+    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_payload
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -354,6 +354,7 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             "negociateur_email": normalized.get("negociateur_email"),
             "agence_nom": normalized.get("agence_nom"),
             "photo_url_listing": normalized.get("photo_url_listing"),
+            "images_preview_json": normalized.get("images_preview_json"),
             "statut_annonce": normalized.get("statut_annonce"),
             "validation_diffusion_state": normalized.get("validation_diffusion_state"),
             "mandat_type": normalized.get("mandat_type"),
@@ -474,7 +475,14 @@ def grouped_work_hashes(rows: list[dict[str, object]]) -> dict[int, list[str]]:
 def fetch_local_app_dossier_ids() -> list[int]:
     con = sqlite3.connect(PHASE2_DB)
     try:
-        rows = con.execute("SELECT id FROM app_dossier ORDER BY id").fetchall()
+        rows = con.execute(
+            f"""
+            SELECT app_dossier_id
+            FROM app_view_generale
+            WHERE {ANNONCES_SCOPE_WHERE}
+            ORDER BY app_dossier_id
+            """
+        ).fetchall()
         return [int(row[0]) for row in rows]
     finally:
         con.close()
