@@ -217,10 +217,10 @@ SELECT
     src.archive,
     src.diffusable,
     src.valide,
-    src.mandat_type,
-    src.mandat_date_debut,
-    src.mandat_date_fin,
-    src.mandat_date_cloture,
+    COALESCE(NULLIF(TRIM(src.mandat_type), ''), m.type) AS mandat_type,
+    COALESCE(NULLIF(TRIM(src.mandat_date_debut), ''), m.date_debut) AS mandat_date_debut,
+    COALESCE(NULLIF(TRIM(src.mandat_date_fin), ''), m.date_fin) AS mandat_date_fin,
+    COALESCE(NULLIF(TRIM(src.mandat_date_cloture), ''), m.date_cloture) AS mandat_date_cloture,
     m.numero AS mandat_numero_source,
     m.type AS mandat_type_source,
     m.date_enregistrement AS mandat_date_enregistrement,
@@ -345,7 +345,13 @@ FROM app_dossier d
 LEFT JOIN hektor.case_dossier_source src ON src.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
 LEFT JOIN hektor.hektor_annonce ann ON ann.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
 LEFT JOIN hektor.hektor_agence ag ON ag.hektor_agence_id = src.hektor_agence_id
-LEFT JOIN hektor.hektor_mandat m ON m.hektor_mandat_id = src.mandat_id
+LEFT JOIN hektor.hektor_mandat m
+    ON m.hektor_mandat_id = src.mandat_id
+    OR (
+        src.mandat_id IS NULL
+        AND m.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
+        AND COALESCE(m.numero, '') = COALESCE(src.no_mandat, '')
+    )
 LEFT JOIN hektor.hektor_offre off ON off.hektor_offre_id = src.offre_id
 LEFT JOIN hektor.hektor_compromis cmp ON cmp.hektor_compromis_id = src.compromis_id
 LEFT JOIN hektor.hektor_vente v ON v.hektor_vente_id = src.vente_id

@@ -56,6 +56,93 @@ def normalized_id(value: Any) -> str | None:
     return text or None
 
 
+def normalize_text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def iter_mandat_items(payload: Any) -> Iterable[dict[str, Any]]:
+    if isinstance(payload, list):
+        for item in payload:
+            if isinstance(item, dict):
+                yield item
+        return
+    if isinstance(payload, dict):
+        data = payload.get("data")
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    yield item
+            return
+        if isinstance(data, dict):
+            for key in ("mandats", "liste", "items"):
+                nested = data.get(key)
+                if isinstance(nested, list):
+                    for item in nested:
+                        if isinstance(item, dict):
+                            yield item
+                    return
+        for key in ("mandats", "liste", "items"):
+            nested = payload.get(key)
+            if isinstance(nested, list):
+                for item in nested:
+                    if isinstance(item, dict):
+                        yield item
+                return
+
+
+def replace_mandats_for_annonce(conn: sqlite3.Connection, annonce_id: str, mandat_items: Iterable[dict[str, Any]]) -> None:
+    rows: list[tuple[str, str, str | None, str | None, str | None, str | None, str | None, str | None, str, str]] = []
+    for item in mandat_items:
+        mandat_id = normalized_id(item.get("id") or item.get("idMandat") or item.get("mandat_id"))
+        if not mandat_id:
+            continue
+        rows.append(
+            (
+                mandat_id,
+                annonce_id,
+                normalize_text(item.get("numero") or item.get("NO_MANDAT")),
+                normalize_text(item.get("type")),
+                normalize_text(item.get("dateenr") or item.get("date_enregistrement")),
+                normalize_text(item.get("debut") or item.get("date_debut")),
+                normalize_text(item.get("fin") or item.get("date_fin")),
+                normalize_text(item.get("cloture") or item.get("date_cloture")),
+                normalize_text(item.get("montant")),
+                normalize_text(item.get("mandants")),
+                normalize_text(item.get("note")),
+                json.dumps(item, ensure_ascii=False),
+                now_utc_iso(),
+            )
+        )
+
+    conn.execute("DELETE FROM hektor_mandat WHERE hektor_annonce_id = ?", (annonce_id,))
+    if not rows:
+        return
+
+    conn.executemany(
+        """
+        INSERT INTO hektor_mandat(
+            hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement, date_debut, date_fin,
+            date_cloture, montant, mandants_texte, note, raw_json, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(hektor_mandat_id) DO UPDATE SET
+            hektor_annonce_id = excluded.hektor_annonce_id,
+            numero = excluded.numero,
+            type = excluded.type,
+            date_enregistrement = excluded.date_enregistrement,
+            date_debut = excluded.date_debut,
+            date_fin = excluded.date_fin,
+            date_cloture = excluded.date_cloture,
+            montant = excluded.montant,
+            mandants_texte = excluded.mandants_texte,
+            note = excluded.note,
+            raw_json = excluded.raw_json,
+            synced_at = excluded.synced_at
+        """,
+        rows,
+    )
+
+
 def fetch_annonce_search_row(client: HektorClient, settings: Settings, annonce_id: str, no_dossier: str | None) -> dict[str, Any] | None:
     search = str(no_dossier or "").strip()
     if not search:
@@ -325,6 +412,10 @@ def main() -> int:
             payload=mandats_payload,
             http_status=200,
         )
+        mandat_items = list(iter_mandat_items(mandats_payload))
+        if not mandat_items and isinstance(detail_payload.get("data"), dict):
+            mandat_items = list(iter_mandat_items({"data": {"mandats": (detail_payload.get("data") or {}).get("mandats")}}))
+        replace_mandats_for_annonce(conn, annonce_id, mandat_items)
 
         passerelles_payload = client.get_json(
             "/Api/Annonce/ListPasserelles/",
