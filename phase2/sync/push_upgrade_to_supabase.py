@@ -432,24 +432,28 @@ def build_current_filter_catalog(filter_catalog: list[dict[str, object]]) -> lis
 
 
 def normalize_broadcast_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
-    normalized_rows: list[dict[str, object]] = []
+    normalized_by_key: dict[tuple[int, str, str], dict[str, object]] = {}
     for row in rows:
-        normalized_rows.append(
-            {
-                "app_dossier_id": int(row["app_dossier_id"]),
-                "hektor_annonce_id": int(row["hektor_annonce_id"]),
-                "passerelle_key": str(row.get("passerelle_key") or ""),
-                "commercial_key": str(row.get("commercial_key") or ""),
-                "commercial_id": row.get("commercial_id"),
-                "commercial_nom": row.get("commercial_nom"),
-                "commercial_prenom": row.get("commercial_prenom"),
-                "current_state": row.get("current_state"),
-                "export_status": row.get("export_status"),
-                "is_success": normalize_bool(row.get("is_success")),
-                "is_error": normalize_bool(row.get("is_error")),
-            }
+        normalized_row = {
+            "app_dossier_id": int(row["app_dossier_id"]),
+            "hektor_annonce_id": int(row["hektor_annonce_id"]),
+            "passerelle_key": str(row.get("passerelle_key") or ""),
+            "commercial_key": str(row.get("commercial_key") or ""),
+            "commercial_id": row.get("commercial_id"),
+            "commercial_nom": row.get("commercial_nom"),
+            "commercial_prenom": row.get("commercial_prenom"),
+            "current_state": row.get("current_state"),
+            "export_status": row.get("export_status"),
+            "is_success": normalize_bool(row.get("is_success")),
+            "is_error": normalize_bool(row.get("is_error")),
+        }
+        dedupe_key = (
+            int(normalized_row["app_dossier_id"]),
+            str(normalized_row["passerelle_key"]),
+            str(normalized_row["commercial_key"]),
         )
-    return normalized_rows
+        normalized_by_key[dedupe_key] = normalized_row
+    return list(normalized_by_key.values())
 
 
 def map_hashes(rows: list[dict[str, object]], *, id_key: str) -> dict[int, str]:
