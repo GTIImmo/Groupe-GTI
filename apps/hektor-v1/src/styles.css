@@ -413,6 +413,10 @@ body {
   background: linear-gradient(180deg, #fbf4f0 0%, #eedfd6 100%);
   border-color: rgba(150, 101, 78, 0.18);
 }
+.header-kpi-card.tone-warning {
+  background: linear-gradient(180deg, #fff7ee 0%, #f3e1c6 100%);
+  border-color: rgba(171, 130, 56, 0.18);
+}
 .header-kpi-card.tone-neutral {
   background: linear-gradient(180deg, #fbfcfd 0%, #edf2f5 100%);
   border-color: rgba(96, 120, 138, 0.16);
@@ -2106,9 +2110,11 @@ tbody tr:hover { background: #f4f8fa; }
 tbody tr.is-selected { background: #e9f1f4; }
 .register-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: #fff;
+  border: 1px solid rgba(208, 216, 224, 0.9);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,249,250,0.98) 100%);
+  box-shadow: 0 12px 26px rgba(21, 32, 43, 0.05), inset 0 1px 0 rgba(255,255,255,0.85);
 }
 .register-table {
   min-width: 1160px;
@@ -2118,16 +2124,16 @@ tbody tr.is-selected { background: #e9f1f4; }
 .register-table th {
   white-space: nowrap;
   padding: 14px 10px;
-  background: transparent;
-  color: var(--muted);
+  background: linear-gradient(180deg, rgba(248,251,252,0.94) 0%, rgba(242,246,248,0.94) 100%);
+  color: #607783;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border-bottom: 1px solid var(--line);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid rgba(208, 216, 224, 0.95);
 }
 .register-table td {
   padding: 14px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(221, 228, 233, 0.9);
 }
 .register-table tbody tr {
   transition: background-color 120ms ease, transform 120ms ease;
@@ -2136,7 +2142,8 @@ tbody tr.is-selected { background: #e9f1f4; }
   background: transparent;
 }
 .register-table tbody tr.is-selected {
-  background: #e9f1f4;
+  background: linear-gradient(180deg, rgba(234, 242, 245, 0.94), rgba(228, 238, 242, 0.94));
+  box-shadow: inset 3px 0 0 var(--brand);
 }
 .register-col-mandat,
 .register-col-mandants,
@@ -2231,10 +2238,10 @@ tbody tr.is-selected { background: #e9f1f4; }
 }
 .register-muted {
   display: block;
-  color: #738990;
-  font-size: 12px;
+  color: #657b84;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.48;
 }
 .register-date {
   color: var(--ink);

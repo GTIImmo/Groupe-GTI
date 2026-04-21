@@ -986,7 +986,7 @@ function buildPortalsResume(values: Array<string | null | undefined>) {
 type HeaderMetricItem = {
   label: string
   value: string
-  tone: 'volume' | 'affaires' | 'diffusion' | 'demandes' | 'neutral'
+  tone: 'volume' | 'affaires' | 'diffusion' | 'demandes' | 'warning' | 'neutral'
   action?:
     | 'all_annonces'
     | 'offres_en_cours'
@@ -2742,6 +2742,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return [
         { label: 'Mandats enregistrés', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'volume', action: 'all_annonces' },
         { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide' },
+        { label: 'Mandats non validés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'warning', action: 'mandat_non_valide' },
         { label: 'Mandats diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
         { label: 'Mandats non diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
       ]
