@@ -1986,11 +1986,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ? buildDiffusionDecisionEmail({
             status: input.status,
             requestType: currentRequest.request_type,
-            negociateurEmail: currentMandat?.negociateur_email ?? selectedDossier?.negociateur_email ?? null,
+            negociateurEmail:
+              currentMandat?.app_dossier_id === currentRequest.app_dossier_id
+                ? currentMandat?.negociateur_email ?? null
+                : selectedDossier?.app_dossier_id === currentRequest.app_dossier_id
+                  ? selectedDossier?.negociateur_email ?? null
+                  : null,
             processorLabel: userFullName(profile),
             processorEmail: profile.email,
             appDossierId: currentRequest.app_dossier_id,
-            mandat: currentMandat ?? selectedDossier ?? null,
+            mandat:
+              currentMandat?.app_dossier_id === currentRequest.app_dossier_id
+                ? currentMandat
+                : selectedDossier?.app_dossier_id === currentRequest.app_dossier_id
+                  ? selectedDossier
+                  : null,
             response: input.response,
             refusalReason: input.refusalReason,
           })
