@@ -23,6 +23,7 @@ import {
   loadFilterCatalog,
   loadMandatFilterCatalog,
   loadMandatBroadcasts,
+  loadMandatRegisterPage,
   setDossierHektorState,
   setDossierValidationOnHektor,
   setDossierDiffusableOnHektor,
@@ -869,10 +870,40 @@ function profileRoleLabel(role?: UserProfile['role'] | null) {
   return 'Profil'
 }
 
-function screenContextLabel(screen: 'annonces' | 'mandats' | 'suivi') {
+function screenContextLabel(screen: 'annonces' | 'mandats' | 'registre' | 'suivi') {
   if (screen === 'annonces') return 'Vue stock'
   if (screen === 'mandats') return 'Vue mandat'
+  if (screen === 'registre') return 'Registre'
   return 'Vue Pauline'
+}
+
+function mandateRegisterObjectLabel(item: MandatRecord) {
+  return (item.mandat_type ?? item.mandat_type_source ?? '').trim() || '-'
+}
+
+function mandateRegisterNatureLabel(item: MandatRecord) {
+  const address = [
+    item.adresse_privee_listing,
+    item.adresse_detail,
+    item.code_postal_prive_detail,
+    item.code_postal,
+    item.ville_privee_detail,
+    item.ville,
+  ]
+    .map((value) => (value ?? '').trim())
+    .filter(Boolean)
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join(', ')
+  const type = propertyTypeLabel(item.type_bien)
+  return [type !== '-' ? type : '', address].filter(Boolean).join(' · ') || '-'
+}
+
+function mandateRegisterValidationLabel(value: string | null | undefined) {
+  return isValidationApproved(value) ? 'Oui' : 'Non'
+}
+
+function mandateRegisterDiffusableLabel(value: string | null | undefined) {
+  return isDiffusableValue(value) ? 'Oui' : 'Non'
 }
 
 const hektorPropertyTypeLabels: Record<string, string> = {
@@ -1219,7 +1250,7 @@ function activeFilterEntries(filters: AppFilters) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'annonces' | 'mandats' | 'suivi'>('mandats')
+  const [screen, setScreen] = useState<'annonces' | 'mandats' | 'registre' | 'suivi'>('mandats')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
   const [filters, setFilters] = useState<AppFilters>(emptyFilters)
   const [dossiers, setDossiers] = useState<Dossier[]>([])
@@ -1461,7 +1492,9 @@ export default function App() {
     const nextMandatPageSize = screen === 'suivi' ? 1000 : mandatPageSize
     Promise.all([
       loadDossiersPage({ filters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope }),
-      loadMandatsPage({ filters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope }),
+      screen === 'registre'
+        ? loadMandatRegisterPage({ filters: { ...filters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+        : loadMandatsPage({ filters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope }),
       loadWorkItemsPage({ filters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope }),
     ])
       .then(([nextDossiersPage, nextMandatsPage, nextWorkItemsPage]) => {
@@ -1643,7 +1676,7 @@ export default function App() {
     setDetailOpen(false)
   }
 
-  function openScreen(nextScreen: 'annonces' | 'mandats' | 'suivi') {
+  function openScreen(nextScreen: 'annonces' | 'mandats' | 'registre' | 'suivi') {
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
@@ -2440,6 +2473,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         copy: '',
       }
     }
+    if (screen === 'registre') {
+      return { title: 'Registre des mandats', copy: '' }
+    }
     return { title: 'Suivi des mandats', copy: '' }
   }, [screen, mandatDrilldownLabel])
   const dossierCountLabel = activeFilters.length > 0 ? 'Dossiers apres filtres' : 'Tous les dossiers'
@@ -2639,6 +2675,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         { label: 'Correction en attente', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.waitingCorrection), tone: 'demandes', action: 'correction_attente' },
         { label: 'Diffuse sur LeBonCoin', value: new Intl.NumberFormat('fr-FR').format(mandatStats.leboncoin), tone: 'diffusion', action: 'leboncoin' },
         { label: "Diffuse sur Bien'ici", value: new Intl.NumberFormat('fr-FR').format(mandatStats.bienici), tone: 'diffusion', action: 'bienici' },
+      ]
+    }
+    if (screen === 'registre') {
+      return [
+        { label: 'Mandats enregistrés', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'volume', action: null },
+        { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: null },
+        { label: 'Mandats diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: null },
+        { label: 'Mandats non diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: null },
       ]
     }
     return [
@@ -2848,6 +2892,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div>
         <nav className="screen-nav">
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Liste des annonces</button>
+          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Registre des mandats</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi des mandats</button> : null}
         </nav>
         <div className="header-user-stack">
@@ -2873,11 +2918,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <div className="hero-top-row">
               <label className="search-box">
                 <span>Recherche rapide</span>
-                <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
+                <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
               </label>
               <section className="result-indicator result-indicator-compact">
-                <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : 'Demandes administratives'}</span>
-                <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
+                <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : screen === 'registre' ? 'Mandats enregistrés' : 'Demandes administratives'}</span>
+                <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' || screen === 'registre' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
               </section>
               <div className="hero-actions">
                 <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
@@ -2939,6 +2984,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </div>
                 ) : null}
               </div>
+            ) : screen === 'registre' ? (
+              <div className="header-kpis">
+                {headerMetrics.map((item) => (
+                  <article key={item.label} className={`header-kpi-card tone-${item.tone}`}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </article>
+                ))}
+              </div>
             ) : (
               <div className="header-kpis">
                 {headerMetrics.map((item) => (
@@ -2968,8 +3022,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="filters-head">
               <div>
-                <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres mandats' : 'Filtres suivi administratif'}</p>
-                <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Mandats et diffusion' : 'Demandes et parc mandat'}</strong>
+                <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres mandats' : screen === 'registre' ? 'Filtres registre' : 'Filtres suivi administratif'}</p>
+                <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Mandats et diffusion' : screen === 'registre' ? 'Mandats avec numéro' : 'Demandes et parc mandat'}</strong>
               </div>
               <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
             </div>
@@ -3069,6 +3123,72 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: withoutMandatFilterValue, label: 'Sans mandat' },
                   ]}
                 />
+                <FilterSelect
+                  label="Mandat diffusable"
+                  value={filters.diffusable}
+                  onChange={(value) => updateFilter('diffusable', value)}
+                  options={[
+                    { value: 'diffusable', label: 'Oui' },
+                    { value: 'non_diffusable', label: 'Non' },
+                  ]}
+                />
+                <FilterSelect label="Passerelle active" value={filters.passerelle} onChange={(value) => updateFilter('passerelle', value)} options={filterCatalog.passerelles} />
+                <FilterSelect
+                  label="Erreur passerelle"
+                  value={filters.erreurDiffusion}
+                  onChange={(value) => updateFilter('erreurDiffusion', value)}
+                  options={[
+                    { value: 'avec_erreur', label: 'Oui' },
+                    { value: 'sans_erreur', label: 'Non' },
+                  ]}
+                />
+                <FilterSelect
+                  label="Transactions"
+                  value={filters.affaire}
+                  onChange={(value) => updateFilter('affaire', value)}
+                  options={[
+                    { value: 'offre_achat', label: "Offre d'achat" },
+                    { value: 'compromis', label: 'Compromis' },
+                  ]}
+                />
+                {filters.affaire === 'offre_achat' ? (
+                  <FilterSelect
+                    label="Etat offre"
+                    value={filters.offreStatus}
+                    onChange={(value) => updateFilter('offreStatus', value)}
+                    options={[
+                      { value: 'en_cours', label: 'En cours' },
+                      { value: 'refusee', label: 'Refusee' },
+                    ]}
+                  />
+                ) : null}
+                {filters.affaire === 'compromis' ? (
+                  <FilterSelect
+                    label="Etat compromis"
+                    value={filters.compromisStatus}
+                    onChange={(value) => updateFilter('compromisStatus', value)}
+                    options={[
+                      { value: 'en_cours', label: 'En cours' },
+                      { value: 'annule', label: 'Annule' },
+                    ]}
+                  />
+                ) : null}
+                <FilterSelect
+                  label="Archive"
+                  value={filters.archive}
+                  onChange={(value) => updateFilter('archive', value)}
+                  options={[
+                    { value: activeArchiveFilterValue, label: 'Actifs' },
+                    { value: archivedFilterValue, label: 'Archives' },
+                  ]}
+                />
+              </>
+            ) : screen === 'registre' ? (
+              <>
+                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect
                   label="Mandat diffusable"
                   value={filters.diffusable}
@@ -3260,6 +3380,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             detailLoading={detailLoading}
             eyebrow={mandatDrilldownLabel?.eyebrow ?? 'Annonces'}
             title={mandatDrilldownLabel?.title ?? 'Liste des annonces'}
+          />
+        ) : screen === 'registre' ? (
+          <MandatRegisterScreen
+            mandats={mandats}
+            mandatsTotal={mandatsTotal}
+            mandatPage={mandatPage}
+            mandatTotalPages={mandatTotalPages}
+            onPrevMandat={() => setMandatPage((page) => Math.max(1, page - 1))}
+            onNextMandat={() => setMandatPage((page) => Math.min(mandatTotalPages, page + 1))}
+            onGoToMandatPage={(page) => setMandatPage(Math.min(mandatTotalPages, Math.max(1, page)))}
+            selectedMandat={selectedMandat}
+            onSelectMandat={setSelectedMandatId}
+            onOpenDetailPage={openDossierDetailPage}
+            loading={mandatLoading}
           />
         ) : (
           <SuiviMandatsScreenV2
@@ -3989,6 +4123,86 @@ function MandatsScreen(props: {
     </section>
   )
 }
+
+function MandatRegisterScreen(props: {
+  mandats: MandatRecord[]
+  mandatsTotal: number
+  mandatPage: number
+  mandatTotalPages: number
+  onPrevMandat: () => void
+  onNextMandat: () => void
+  onGoToMandatPage: (page: number) => void
+  selectedMandat: MandatRecord | null
+  onSelectMandat: (id: number) => void
+  onOpenDetailPage: (id: number) => void
+  loading: boolean
+}) {
+  return (
+    <section className="panel-grid">
+      <section className="panel panel-wide">
+        <div className="panel-head">
+          <div><p className="eyebrow">Registre</p><h3>Registre des mandats</h3></div>
+          <div className="page-controls">
+            {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
+            <span>{pageLabel(props.mandatsTotal, mandatPageSize, props.mandatPage)}</span>
+            <span>Page {props.mandatPage} / {props.mandatTotalPages}</span>
+            <button className="ghost-button" type="button" onClick={props.onPrevMandat} disabled={props.mandatPage === 1}>Prec</button>
+            <button className="ghost-button" type="button" onClick={props.onNextMandat} disabled={props.mandatPage * mandatPageSize >= props.mandatsTotal}>Suiv</button>
+            <label className="page-jump">
+              <span>Aller</span>
+              <input type="number" min={1} max={props.mandatTotalPages} value={props.mandatPage} onChange={(event) => props.onGoToMandatPage(Number(event.target.value || 1))} />
+            </label>
+          </div>
+        </div>
+        <div className="table-wrap register-table-wrap">
+          <table className="register-table">
+            <thead>
+              <tr>
+                <th>N° de mandat</th>
+                <th>Date de debut</th>
+                <th>Date de fin</th>
+                <th>Montant</th>
+                <th>Mandant(s)</th>
+                <th>Objet du mandat</th>
+                <th>Nature et situation</th>
+                <th>Statut de l'annonce</th>
+                <th>Valide</th>
+                <th>Diffusable</th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.mandats.map((item) => {
+                const isSelected = item.app_dossier_id === props.selectedMandat?.app_dossier_id
+                return (
+                  <tr
+                    key={item.app_dossier_id}
+                    className={isSelected ? 'is-selected' : ''}
+                    onClick={() => {
+                      props.onSelectMandat(item.app_dossier_id)
+                      props.onOpenDetailPage(item.app_dossier_id)
+                    }}
+                  >
+                    <td className="register-col-mandat"><strong>{item.numero_mandat ?? '-'}</strong><span>{item.numero_dossier ?? '-'}</span></td>
+                    <td>{formatDate(item.mandat_date_debut)}</td>
+                    <td>{formatDate(item.mandat_date_fin)}</td>
+                    <td><strong>{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
+                    <td className="register-col-mandants"><strong>{(item.mandants_texte ?? '').trim() || '-'}</strong></td>
+                    <td><strong>{mandateRegisterObjectLabel(item)}</strong></td>
+                    <td className="register-col-nature"><strong>{mandateRegisterNatureLabel(item)}</strong></td>
+                    <td><StatusPill value={item.statut_annonce} /></td>
+                    <td><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
+                    <td><span className={`register-bool ${isDiffusableValue(item.diffusable) ? 'is-yes' : 'is-no'}`}>{mandateRegisterDiffusableLabel(item.diffusable)}</span></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  )
+}
+
 function SuiviMandatsScreen(props: {
   isAdmin: boolean
   mandats: MandatRecord[]

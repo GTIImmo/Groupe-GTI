@@ -2104,6 +2104,54 @@ td span, td small { color: var(--muted); margin-top: 4px; }
 tbody tr { cursor: pointer; transition: background-color 120ms ease, transform 120ms ease; }
 tbody tr:hover { background: #f4f8fa; }
 tbody tr.is-selected { background: #e9f1f4; }
+.register-table-wrap {
+  overflow-x: auto;
+}
+.register-table {
+  min-width: 1500px;
+}
+.register-table th {
+  white-space: nowrap;
+}
+.register-col-mandat,
+.register-col-mandants,
+.register-col-nature {
+  min-width: 0;
+}
+.register-col-mandat strong,
+.register-col-mandants strong,
+.register-col-nature strong {
+  white-space: normal;
+  line-height: 1.45;
+}
+.register-col-mandat {
+  min-width: 110px;
+}
+.register-col-mandants {
+  min-width: 220px;
+}
+.register-col-nature {
+  min-width: 260px;
+}
+.register-bool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.register-bool.is-yes {
+  background: #dcebd6;
+  color: #2f6a32;
+}
+.register-bool.is-no {
+  background: #efd4ce;
+  color: #8d3425;
+}
 .listing-thumb {
   width: 56px;
   height: 56px;

@@ -207,6 +207,11 @@ export type MandatRecord = {
   app_dossier_id: number
   hektor_annonce_id: number
   photo_url_listing?: string | null
+  adresse_privee_listing?: string | null
+  adresse_detail?: string | null
+  code_postal?: string | null
+  code_postal_prive_detail?: string | null
+  ville_privee_detail?: string | null
   archive: string | null
   diffusable: string | null
   nb_portails_actifs: number | null
@@ -224,6 +229,12 @@ export type MandatRecord = {
   agence_nom: string | null
   statut_annonce: string | null
   validation_diffusion_state?: string | null
+  mandat_type?: string | null
+  mandat_type_source?: string | null
+  mandat_date_debut?: string | null
+  mandat_date_fin?: string | null
+  mandat_montant?: number | string | null
+  mandants_texte?: string | null
   priority: string | null
   offre_id: string | null
   offre_state?: string | null

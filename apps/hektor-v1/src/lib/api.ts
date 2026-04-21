@@ -1419,6 +1419,89 @@ export async function loadMandatsPage({
   }
 }
 
+function mandatNumberSortValue(value: string | null | undefined) {
+  const normalized = (value ?? '').trim()
+  if (!normalized) return Number.NEGATIVE_INFINITY
+  const digits = normalized.replace(/\D+/g, '')
+  if (!digits) return Number.NEGATIVE_INFINITY
+  const parsed = Number(digits)
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY
+}
+
+function sortMandatRegisterRows(rows: MandatRecord[]) {
+  return rows.slice().sort((a, b) => {
+    const byNumber = mandatNumberSortValue(b.numero_mandat) - mandatNumberSortValue(a.numero_mandat)
+    if (byNumber !== 0) return byNumber
+    const byLabel = String(b.numero_mandat ?? '').localeCompare(String(a.numero_mandat ?? ''), 'fr')
+    if (byLabel !== 0) return byLabel
+    return b.app_dossier_id - a.app_dossier_id
+  })
+}
+
+export async function loadMandatRegisterPage({
+  filters,
+  page,
+  pageSize,
+  scope,
+}: {
+  filters: AppFilters
+  page: number
+  pageSize: number
+  scope?: DataScope | null
+}): Promise<PageResult<MandatRecord>> {
+  if (!hasSupabaseEnv || !supabase) {
+    const rows = sortMandatRegisterRows(
+      (applyLocalDossierFilters(
+        filterByNegotiatorEmail(mockMandats, scope)
+          .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
+          .map((item) => ({
+            ...item,
+            etat_visibilite: null,
+            alerte_principale: null,
+            has_open_blocker: false,
+            commentaire_resume: null,
+            date_relance_prevue: null,
+            dernier_event_type: null,
+            dernier_work_status: null,
+          })),
+        filters,
+      ) as unknown as MandatRecord[]),
+    )
+    return paginate(rows, page, pageSize)
+  }
+
+  const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
+  const batchSize = 1000
+  let from = 0
+  const rows: MandatRecord[] = []
+
+  while (true) {
+    let query = applyDossierFiltersToQuery(
+      applyNegotiatorScopeToQuery(
+        supabase
+          .from('app_dossiers_current')
+          .select('*')
+          .not('numero_mandat', 'is', null)
+          .neq('numero_mandat', '')
+          .order('app_dossier_id', { ascending: true })
+          .range(from, from + batchSize - 1),
+        scope,
+      ),
+      filters,
+    )
+    if (requestScopedIds) {
+      query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
+    }
+    const { data, error } = await query
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat register')
+    rows.push(...(data as MandatRecord[]))
+    if (data.length < batchSize) break
+    from += batchSize
+  }
+
+  return paginate(sortMandatRegisterRows(rows), page, pageSize)
+}
+
 export async function loadMandatStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
   if (!hasSupabaseEnv || !supabase) {
     const rows = applyLocalDossierFilters(
