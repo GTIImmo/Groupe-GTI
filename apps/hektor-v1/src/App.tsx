@@ -2005,6 +2005,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             refusalReason: input.refusalReason,
           })
         : null
+      if (!decisionEmail && currentRequest && input.status === 'accepted') {
+        acceptanceInfoMessage = acceptanceInfoMessage
+          ? `${acceptanceInfoMessage} Email commercial non envoye : aucun negociateur email sur ce dossier`
+          : 'Decision enregistree, mais email commercial non envoye : aucun negociateur email sur ce dossier'
+      }
       if (decisionEmail) {
         try {
           await sendDiffusionDecisionEmail(decisionEmail)
