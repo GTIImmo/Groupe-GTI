@@ -316,7 +316,7 @@ class SupabaseRestClient:
 
 
 def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = []
+    rows_by_id: dict[int, dict[str, object]] = {}
     for row in dossiers:
         normalized = normalize_row(row, DOSSIER_NULLABLE_KEYS)
         source_updated_at = normalize_timestamp(normalized.get("date_maj") or normalized.get("date_enregistrement_annonce"))
@@ -369,12 +369,12 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             "source_updated_at": source_updated_at,
         }
         current_row["source_hash"] = stable_hash(current_row)
-        rows.append(current_row)
-    return rows
+        rows_by_id[int(current_row["app_dossier_id"])] = current_row
+    return list(rows_by_id.values())
 
 
 def build_current_details(dossier_details: list[dict[str, object]], source_updated_at_by_id: dict[int, str | None]) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = []
+    rows_by_id: dict[int, dict[str, object]] = {}
     for row in dossier_details:
         current_row = {
             "app_dossier_id": row["app_dossier_id"],
@@ -383,8 +383,8 @@ def build_current_details(dossier_details: list[dict[str, object]], source_updat
             "detail_payload_json": row["detail_payload_json"],
         }
         current_row["source_hash"] = stable_hash(current_row)
-        rows.append(current_row)
-    return rows
+        rows_by_id[int(current_row["app_dossier_id"])] = current_row
+    return list(rows_by_id.values())
 
 
 def build_current_work_items(work_items: list[dict[str, object]]) -> list[dict[str, object]]:

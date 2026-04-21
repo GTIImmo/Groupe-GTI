@@ -14,6 +14,10 @@ def normalize_text(value: object) -> str | None:
     return text or None
 
 
+def storage_mandat_id(annonce_id: str, mandat_id: str) -> str:
+    return f"{annonce_id}:{mandat_id}"
+
+
 def main() -> int:
     con = sqlite3.connect(HEKTOR_DB)
     con.row_factory = sqlite3.Row
@@ -50,6 +54,7 @@ def main() -> int:
                 mandat_id = normalize_text(item.get("id") or item.get("idMandat") or item.get("mandat_id"))
                 if not mandat_id:
                     continue
+                mandat_storage_id = storage_mandat_id(annonce_id, mandat_id)
                 con.execute(
                     """
                     INSERT INTO hektor_mandat(
@@ -71,7 +76,7 @@ def main() -> int:
                         synced_at = CURRENT_TIMESTAMP
                     """,
                     (
-                        mandat_id,
+                        mandat_storage_id,
                         annonce_id,
                         normalize_text(item.get("numero") or item.get("NO_MANDAT")),
                         normalize_text(item.get("type")),

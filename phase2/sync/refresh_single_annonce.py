@@ -61,6 +61,10 @@ def normalize_text(value: Any) -> str | None:
     return text or None
 
 
+def storage_mandat_id(annonce_id: str, mandat_id: str) -> str:
+    return f"{annonce_id}:{mandat_id}"
+
+
 def iter_mandat_items(payload: Any) -> Iterable[dict[str, Any]]:
     if isinstance(payload, list):
         for item in payload:
@@ -97,9 +101,10 @@ def replace_mandats_for_annonce(conn: sqlite3.Connection, annonce_id: str, manda
         mandat_id = normalized_id(item.get("id") or item.get("idMandat") or item.get("mandat_id"))
         if not mandat_id:
             continue
+        mandat_storage_id = storage_mandat_id(annonce_id, mandat_id)
         rows.append(
             (
-                mandat_id,
+                mandat_storage_id,
                 annonce_id,
                 normalize_text(item.get("numero") or item.get("NO_MANDAT")),
                 normalize_text(item.get("type")),

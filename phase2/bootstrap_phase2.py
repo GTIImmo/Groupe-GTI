@@ -63,17 +63,19 @@ def bootstrap_app_dossier(con: sqlite3.Connection) -> None:
             )
             SELECT
                 CAST(src.hektor_annonce_id AS INTEGER),
-                CAST(
-                    COALESCE(
-                        src.mandat_id,
-                        (
-                            SELECT m.hektor_mandat_id
-                            FROM hektor.hektor_mandat m
-                            WHERE m.hektor_annonce_id = src.hektor_annonce_id
-                              AND COALESCE(m.numero, '') = COALESCE(src.no_mandat, '')
-                            LIMIT 1
-                        )
-                    ) AS INTEGER
+                COALESCE(
+                    (
+                        SELECT m.hektor_mandat_id
+                        FROM hektor.hektor_mandat m
+                        WHERE m.hektor_annonce_id = src.hektor_annonce_id
+                          AND (
+                              m.hektor_mandat_id = src.mandat_id
+                              OR COALESCE(m.numero, '') = COALESCE(src.no_mandat, '')
+                          )
+                        ORDER BY CASE WHEN COALESCE(m.numero, '') = COALESCE(src.no_mandat, '') THEN 0 ELSE 1 END
+                        LIMIT 1
+                    ),
+                    src.mandat_id
                 ),
                 src.no_dossier,
                 src.no_mandat,

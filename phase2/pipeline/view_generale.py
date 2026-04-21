@@ -53,6 +53,32 @@ latest_followup AS (
     WHERE COALESCE(f.result_status, 'pending') = 'pending'
     GROUP BY f.app_dossier_id
 ),
+mandat_enrich AS (
+    SELECT
+        ranked.hektor_mandat_id,
+        ranked.hektor_annonce_id,
+        ranked.numero,
+        ranked.type,
+        ranked.date_enregistrement,
+        ranked.date_debut,
+        ranked.date_fin,
+        ranked.date_cloture,
+        ranked.montant,
+        ranked.mandants_texte,
+        ranked.note,
+        ranked.raw_json,
+        ranked.synced_at
+    FROM (
+        SELECT
+            m.*,
+            ROW_NUMBER() OVER (
+                PARTITION BY m.hektor_annonce_id, COALESCE(m.numero, '')
+                ORDER BY COALESCE(m.synced_at, '') DESC, COALESCE(m.hektor_mandat_id, '') DESC
+            ) AS rn
+        FROM hektor.hektor_mandat m
+    ) ranked
+    WHERE ranked.rn = 1
+),
 detail_enrich AS (
     SELECT
         det.hektor_annonce_id,
@@ -345,13 +371,12 @@ FROM app_dossier d
 LEFT JOIN hektor.case_dossier_source src ON src.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
 LEFT JOIN hektor.hektor_annonce ann ON ann.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
 LEFT JOIN hektor.hektor_agence ag ON ag.hektor_agence_id = src.hektor_agence_id
-LEFT JOIN hektor.hektor_mandat m
-    ON m.hektor_mandat_id = src.mandat_id
-    OR (
-        src.mandat_id IS NULL
-        AND m.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
-        AND COALESCE(m.numero, '') = COALESCE(src.no_mandat, '')
-    )
+LEFT JOIN mandat_enrich m
+    ON m.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
+   AND (
+        m.hektor_mandat_id = src.mandat_id
+        OR COALESCE(m.numero, '') = COALESCE(src.no_mandat, '')
+   )
 LEFT JOIN hektor.hektor_offre off ON off.hektor_offre_id = src.offre_id
 LEFT JOIN hektor.hektor_compromis cmp ON cmp.hektor_compromis_id = src.compromis_id
 LEFT JOIN hektor.hektor_vente v ON v.hektor_vente_id = src.vente_id
