@@ -1478,35 +1478,37 @@ export async function loadMandatRegisterPage({
   }
 
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
-  const batchSize = 1000
-  let from = 0
-  const rows: MandatRecord[] = []
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+  const countMode: 'exact' = 'exact'
+  let query = applyDossierFiltersToQuery(
+    applyNegotiatorScopeToQuery(
+      supabase
+        .from('app_registre_mandats_current')
+        .select('*', { count: countMode })
+        .not('numero_mandat', 'is', null)
+        .neq('numero_mandat', ''),
+      scope,
+    ),
+    filters,
+  )
+    .order('register_sort_num', { ascending: false })
+    .order('hektor_annonce_id', { ascending: false })
+    .order('register_row_id', { ascending: false })
+    .range(from, to)
 
-  while (true) {
-    let query = applyDossierFiltersToQuery(
-      applyNegotiatorScopeToQuery(
-        supabase
-          .from('app_registre_mandats_current')
-          .select('*')
-          .not('numero_mandat', 'is', null)
-          .neq('numero_mandat', '')
-          .order('register_row_id', { ascending: true })
-          .range(from, from + batchSize - 1),
-        scope,
-      ),
-      filters,
-    )
-    if (requestScopedIds) {
-      query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
-    }
-    const { data, error } = await query
-    if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat register')
-    rows.push(...withRegisterRowId(data as MandatRecord[]))
-    if (data.length < batchSize) break
-    from += batchSize
+  if (requestScopedIds) {
+    query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
 
-  return paginate(sortMandatRegisterRows(rows), page, pageSize)
+  const { data, error, count } = await query
+  if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat register')
+  return {
+    rows: withRegisterRowId(data as MandatRecord[]),
+    total: count ?? 0,
+    page,
+    pageSize,
+  }
 }
 
 export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {

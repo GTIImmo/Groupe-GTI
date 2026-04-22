@@ -682,6 +682,11 @@ def synthetic_register_app_dossier_id(hektor_annonce_id: str, numero_mandat: str
     return -int(digest, 16)
 
 
+def mandate_sort_number(value: object) -> int:
+    digits = "".join(ch for ch in normalize_text(value) if ch.isdigit())
+    return int(digits) if digits else 0
+
+
 def build_register_detail_payload(
     *,
     raw_row: dict[str, object],
@@ -841,6 +846,7 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
                 "portails_resume": (source_row.get("portails_resume") if source_row else None) or normalize_text(broadcast.get("portails_resume")) or None,
                 "numero_dossier": (source_row.get("numero_dossier") if source_row else None) or normalize_text(raw.get("no_dossier")) or None,
                 "numero_mandat": numero,
+                "register_sort_num": mandate_sort_number(numero),
                 "titre_bien": titre_bien,
                 "ville": (source_row.get("ville") if source_row else None) or normalize_text(raw.get("ville")) or None,
                 "type_bien": (source_row.get("type_bien") if source_row else None) or normalize_text(raw.get("idtype")) or None,

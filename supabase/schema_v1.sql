@@ -288,6 +288,7 @@ create table if not exists public.app_mandat_register_current (
     portails_resume text,
     numero_dossier text,
     numero_mandat text,
+    register_sort_num bigint not null default 0,
     titre_bien text,
     ville text,
     type_bien text,
@@ -376,6 +377,7 @@ create index if not exists idx_app_mandat_register_annonce on public.app_mandat_
 create index if not exists idx_app_mandat_register_dossier on public.app_mandat_register_current (app_dossier_id);
 create index if not exists idx_app_mandat_register_statut on public.app_mandat_register_current (statut_annonce, register_source_kind);
 create index if not exists idx_app_mandat_register_commercial on public.app_mandat_register_current (commercial_nom, negociateur_email);
+create index if not exists idx_app_mandat_register_sort on public.app_mandat_register_current (register_sort_num desc, hektor_annonce_id desc, register_row_id desc);
 create index if not exists idx_app_mandat_broadcast_current_annonce on public.app_mandat_broadcast_current (hektor_annonce_id, passerelle_key);
 create index if not exists idx_app_diffusion_request_status on public.app_diffusion_request (request_status, requested_at desc);
 create index if not exists idx_app_diffusion_request_dossier on public.app_diffusion_request (app_dossier_id);

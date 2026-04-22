@@ -223,6 +223,7 @@ export type MandatRecord = {
   portails_resume: string | null
   numero_dossier: string | null
   numero_mandat: string | null
+  register_sort_num?: number | null
   titre_bien: string
   ville: string | null
   type_bien: string | null
