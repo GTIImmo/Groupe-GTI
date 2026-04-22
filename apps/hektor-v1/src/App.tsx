@@ -425,10 +425,18 @@ function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'valida
   return { label: 'Aucune demande', tone: 'idle', opens: 'request' as const }
 }
 
-function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error'>) {
+function shouldTreatAsPublishableAnomaly(status: string | null | undefined) {
+  const normalized = safeText(status).toLowerCase()
+  if (!normalized) return true
+  if (normalized.includes('offre') || normalized.includes('compromis')) return false
+  return true
+}
+
+function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce'>) {
+  const shouldCheckPublishability = shouldTreatAsPublishableAnomaly(mandat.statut_annonce)
   const labels = [
     !mandat.numero_mandat ? 'Mandat manquant' : null,
-    (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publié' : null,
+    shouldCheckPublishability && (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publié' : null,
     (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs) ? 'Publication active non autorisée' : null,
     Boolean(mandat.has_diffusion_error) ? 'Erreur de passerelle' : null,
   ].filter(Boolean) as string[]
@@ -4995,7 +5003,7 @@ function SuiviMandatsScreenV2(props: {
   const refusedRows = requestRowsSource.filter((row) => row.request.request_status === 'refused')
   const anomalyRows = props.mandats.filter((item) =>
     Boolean((item.numero_mandat ?? '').trim()) && (
-      ((item.diffusable ?? '0') === '1' && !item.nb_portails_actifs) ||
+      (shouldTreatAsPublishableAnomaly(item.statut_annonce) && (item.diffusable ?? '0') === '1' && !item.nb_portails_actifs) ||
       ((item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs)) ||
       Boolean(item.has_diffusion_error) ||
       !item.numero_mandat
