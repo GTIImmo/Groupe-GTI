@@ -1411,7 +1411,7 @@ export default function App() {
   const [commercialMetricsExpanded, setCommercialMetricsExpanded] = useState(false)
   const [mandatDrilldownLabel, setMandatDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
   const [suiviDrilldownLabel, setSuiviDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
-  const [suiviRequestFilter, setSuiviRequestFilter] = useState<'pending_only' | 'in_progress_only' | 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | null>('pending_only')
+  const [suiviRequestFilter, setSuiviRequestFilter] = useState<'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null>('pending_or_in_progress')
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestPending, setRequestPending] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -1806,7 +1806,7 @@ export default function App() {
     setFilters(emptyFilters)
     setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
-    setSuiviRequestFilter(screen === 'suivi' ? 'pending_only' : null)
+    setSuiviRequestFilter(screen === 'suivi' ? 'pending_or_in_progress' : null)
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
@@ -1817,7 +1817,7 @@ export default function App() {
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
-    setSuiviRequestFilter(nextScreen === 'suivi' ? 'pending_only' : null)
+    setSuiviRequestFilter(nextScreen === 'suivi' ? 'pending_or_in_progress' : null)
     setFiltersOpen(false)
     setDossierPage(1)
     setMandatPage(1)
@@ -1831,7 +1831,7 @@ export default function App() {
     if (action === 'suivi_a_traiter' || action === 'suivi_acceptees' || action === 'suivi_rejetees') {
       const nextSuiviFilter =
         action === 'suivi_a_traiter'
-          ? 'pending_only'
+          ? 'pending_or_in_progress'
           : action === 'suivi_acceptees'
                 ? 'accepted_history'
                 : 'refused'
@@ -4939,71 +4939,110 @@ function SuiviMandatsScreenV2(props: {
   detailLoading: boolean
   eyebrow?: string
   title?: string
-  requestFilter?: 'pending_only' | 'in_progress_only' | 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | null
-  onSetRequestFilter: (value: 'pending_only' | 'in_progress_only' | 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | null) => void
+  requestFilter?: 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null
+  onSetRequestFilter: (value: 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null) => void
 }) {
   if (!props.isAdmin) {
     return <section className="panel"><p className="empty-state">Cette vue est reservee aux administrateurs.</p></section>
   }
-  const requestRowsSource = props.requestFilter === 'accepted_history'
+
+  const activeSuiviFilter = props.requestFilter ?? 'pending_or_in_progress'
+
+  const requestRowsSource = activeSuiviFilter === 'accepted_history'
     ? props.mandats
         .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
         .flatMap((item) => {
-          const diffusionRequests = props.requests
+          const diffusionRequest = props.requests
             .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_diffusion' && request.request_status === 'accepted')
             .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
-          const priceDropRequests = props.requests
+          const priceDropRequest = props.requests
             .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_baisse_prix' && request.request_status === 'accepted')
             .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
-          return [diffusionRequests, priceDropRequests].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+          return [diffusionRequest, priceDropRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
         })
     : props.mandats
+        .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
+        .flatMap((item) => {
+          const diffusionRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
+          const priceDropRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_baisse_prix')
+          return [diffusionRequest, priceDropRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+        })
+
+  const pendingRows = requestRowsSource.filter((row) => row.request.request_status === 'pending' || row.request.request_status === 'in_progress')
+  const acceptedRows = requestRowsSource.filter((row) => row.request.request_status === 'accepted')
+  const refusedRows = requestRowsSource.filter((row) => row.request.request_status === 'refused')
+  const anomalyRows = props.mandats.filter((item) =>
+    Boolean((item.numero_mandat ?? '').trim()) && (
+      ((item.diffusable ?? '0') === '1' && !item.nb_portails_actifs) ||
+      ((item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs)) ||
+      Boolean(item.has_diffusion_error) ||
+      !item.numero_mandat
+    ),
+  )
+  const priceAlertRows = props.mandats
     .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
-    .flatMap((item) => {
-      const diffusionRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
-      const priceDropRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_baisse_prix')
-      return [diffusionRequest, priceDropRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+    .map((item) => {
+      const acceptedPriceDrop = props.requests
+        .filter((request) =>
+          request.app_dossier_id === item.app_dossier_id &&
+          normalizeRequestType(request.request_type) === 'demande_baisse_prix' &&
+          request.request_status === 'accepted',
+        )
+        .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0] ?? null
+      const hasPriceChange = Number(item.price_change_event_count ?? 0) > 0
+      const priceChangedAt = new Date(item.price_change_last_detected_at ?? 0).getTime()
+      const acceptedAt = new Date(requestTimelineDate(acceptedPriceDrop) ?? 0).getTime()
+      const isAlert =
+        (hasPriceChange && !acceptedPriceDrop) ||
+        (Boolean(acceptedPriceDrop) && (!hasPriceChange || priceChangedAt < acceptedAt))
+      return isAlert ? { mandat: item, request: acceptedPriceDrop } : null
     })
+    .filter(Boolean) as Array<{ mandat: MandatRecord; request: DiffusionRequest | null }>
+  const portfolioRows = props.mandats.slice()
+
   const suiviRequestRows = requestRowsSource
     .filter((row) => {
-      if (!props.requestFilter) return isRequestActiveStatus(row.request.request_status)
-      if (props.requestFilter === 'pending_only') return row.request.request_status === 'pending'
-      if (props.requestFilter === 'in_progress_only') return row.request.request_status === 'in_progress'
-      if (props.requestFilter === 'pending_or_in_progress') return row.request.request_status === 'pending' || row.request.request_status === 'in_progress'
-      if (props.requestFilter === 'accepted_history') return row.request.request_status === 'accepted'
-      if (props.requestFilter === 'refused') return row.request.request_status === 'refused'
-      if (props.requestFilter === 'waiting_correction') return row.request.request_status === 'waiting_commercial' || row.request.request_status === 'refused'
+      if (activeSuiviFilter === 'pending_or_in_progress') return row.request.request_status === 'pending' || row.request.request_status === 'in_progress'
+      if (activeSuiviFilter === 'accepted_history') return row.request.request_status === 'accepted'
+      if (activeSuiviFilter === 'refused') return row.request.request_status === 'refused'
       return true
     })
     .slice()
     .sort((a, b) => {
-      const rankA = a.request.request_status === 'pending' || a.request.request_status === 'in_progress' ? 0 : 1
-      const rankB = b.request.request_status === 'pending' || b.request.request_status === 'in_progress' ? 0 : 1
-      if (rankA !== rankB) return rankA - rankB
-      const dateA = new Date(a.request.requested_at ?? 0).getTime()
-      const dateB = new Date(b.request.requested_at ?? 0).getTime()
+      const dateA = new Date(requestTimelineDate(a.request) ?? 0).getTime()
+      const dateB = new Date(requestTimelineDate(b.request) ?? 0).getTime()
       if (dateA !== dateB) return dateB - dateA
       return String(a.mandat.numero_mandat ?? '').localeCompare(String(b.mandat.numero_mandat ?? ''), 'fr')
     })
-  const pendingRows = requestRowsSource.filter((row) => row.request.request_status === 'pending')
-  const inProgressRows = requestRowsSource.filter((row) => row.request.request_status === 'in_progress')
-  const acceptedRows = requestRowsSource.filter((row) => row.request.request_status === 'accepted')
-  const refusedRows = requestRowsSource.filter((row) => row.request.request_status === 'refused')
-  const activeSuiviFilter = props.requestFilter ?? 'pending_only'
-  const suiviKpis: Array<{ key: 'pending_only' | 'in_progress_only' | 'accepted_history' | 'refused'; label: string; value: number; tone: string; copy: string }> = [
-    { key: 'pending_only', label: 'À traiter', value: pendingRows.length, tone: 'action', copy: 'Demandes nouvelles à traiter maintenant.' },
-    { key: 'in_progress_only', label: 'En cours', value: inProgressRows.length, tone: 'progress', copy: 'Dossiers déjà pris en charge par Pauline.' },
-    { key: 'accepted_history', label: 'Acceptées', value: acceptedRows.length, tone: 'success', copy: 'Demandes validées côté Pauline.' },
-    { key: 'refused', label: 'Refusées', value: refusedRows.length, tone: 'danger', copy: 'Demandes refusées ou à reprendre.' },
+
+  const suiviKpis: Array<{
+    key: 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'anomalies' | 'price_alert' | 'portfolio'
+    label: string
+    value: number
+    tone: string
+    copy: string
+  }> = [
+    { key: 'pending_or_in_progress', label: 'À traiter', value: pendingRows.length, tone: 'action', copy: 'Demandes à traiter maintenant.' },
+    { key: 'accepted_history', label: 'Acceptées', value: acceptedRows.length, tone: 'success', copy: 'Demandes validées par Pauline.' },
+    { key: 'refused', label: 'Refusées', value: refusedRows.length, tone: 'danger', copy: 'Demandes rejetées ou refusées.' },
+    { key: 'anomalies', label: 'Anomalies', value: anomalyRows.length, tone: 'warning', copy: 'Incohérences diffusion et mandat.' },
+    { key: 'price_alert', label: 'Alerte prix', value: priceAlertRows.length, tone: 'danger', copy: 'Prix modifiés sans cohérence de traitement.' },
+    { key: 'portfolio', label: 'Portefeuille', value: portfolioRows.length, tone: 'overview', copy: 'Vue complète du portefeuille mandat.' },
   ]
-  const suiviListingTitle =
-    activeSuiviFilter === 'pending_only'
+
+  const listingTitle =
+    activeSuiviFilter === 'pending_or_in_progress'
       ? 'Demandes à traiter'
-      : activeSuiviFilter === 'in_progress_only'
-        ? 'Demandes en cours'
-        : activeSuiviFilter === 'accepted_history'
-          ? 'Demandes acceptées'
-          : 'Demandes refusées'
+      : activeSuiviFilter === 'accepted_history'
+        ? 'Demandes acceptées'
+        : activeSuiviFilter === 'refused'
+          ? 'Demandes refusées'
+          : activeSuiviFilter === 'anomalies'
+            ? 'Anomalies diffusion et mandat'
+            : activeSuiviFilter === 'price_alert'
+              ? 'Alertes prix'
+              : 'Portefeuille'
+
   return (
     <section className="panel-grid suivi-pauline-view">
       <section className="panel suivi-command-panel">
@@ -5036,29 +5075,85 @@ function SuiviMandatsScreenV2(props: {
 
       <section className="panel suivi-block suivi-block-portfolio">
         <div className="panel-head">
-          <div><p className="eyebrow">Actions Pauline</p><h3>{suiviListingTitle}</h3></div>
-          <div className="suivi-portfolio-kpis"><span>{suiviRequestRows.length} ligne(s)</span></div>
+          <div><p className="eyebrow">Listing unique</p><h3>{listingTitle}</h3></div>
+          <div className="suivi-portfolio-kpis">
+            <span>
+              {activeSuiviFilter === 'anomalies'
+                ? anomalyRows.length
+                : activeSuiviFilter === 'price_alert'
+                  ? priceAlertRows.length
+                  : activeSuiviFilter === 'portfolio'
+                    ? portfolioRows.length
+                    : suiviRequestRows.length} ligne(s)
+            </span>
+          </div>
         </div>
         <div className="table-wrap suivi-portfolio-wrap">
-          <table className="suivi-portfolio-table">
-            <thead><tr><th>Demande</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Motif</th><th>Actions</th></tr></thead>
-            <tbody>
-              {suiviRequestRows.length > 0 ? suiviRequestRows.map(({ mandat: item, request: activeRequest }) => (
-                <tr key={`${item.app_dossier_id}-${activeRequest.id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
-                  <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>{formatDate(activeRequest.requested_at)}</span></td>
-                  <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
-                  <td>{commercialDisplay(item)}</td>
-                  <td><small>{requestStatusLabel(activeRequest.request_status)}</small><small>{item.statut_annonce ?? '-'}</small></td>
-                  <td><small>{activeRequest.request_reason || activeRequest.request_comment || 'Sans motif'}</small></td>
-                  <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={activeRequest} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={6}><p className="empty-state">Aucune demande dans cette vue.</p></td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          {activeSuiviFilter === 'anomalies' ? (
+            <table className="suivi-portfolio-table">
+              <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Diffusion</th><th>Anomalie</th><th>Actions</th></tr></thead>
+              <tbody>
+                {anomalyRows.length > 0 ? anomalyRows.map((item) => (
+                  <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                    <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                    <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.statut_annonce ?? '-'}</span></td>
+                    <td>{commercialDisplay(item)}</td>
+                    <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
+                    <td><small>{!item.numero_mandat ? 'Sans mandat' : '-'}</small><small>{(item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : '-'}</small><small>{(item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : '-'}</small><small>{Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : '-'}</small></td>
+                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
+                  </tr>
+                )) : <tr><td colSpan={6}><p className="empty-state">Aucune anomalie dans cette vue.</p></td></tr>}
+              </tbody>
+            </table>
+          ) : activeSuiviFilter === 'price_alert' ? (
+            <table className="suivi-portfolio-table">
+              <thead><tr><th>Mandat</th><th>Negociateur</th><th>Prix</th><th>Contrôle</th><th>Dernière date</th><th>Actions</th></tr></thead>
+              <tbody>
+                {priceAlertRows.length > 0 ? priceAlertRows.map(({ mandat: item, request }) => (
+                  <tr key={`price-alert-${item.app_dossier_id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                    <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                    <td>{commercialDisplay(item)}</td>
+                    <td><small>{formatPrice(item.price_change_last_old_value ?? item.prix)}</small><small>{formatPrice(item.price_change_last_new_value ?? item.prix)}</small></td>
+                    <td><small>{request ? 'Validation prix sans changement constaté' : 'Prix changé sans baisse validée'}</small></td>
+                    <td><small>{formatDate(item.price_change_last_detected_at)}</small><small>{request ? `Validation ${formatDate(requestTimelineDate(request))}` : 'Aucune validation'}</small></td>
+                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={request ?? undefined} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
+                  </tr>
+                )) : <tr><td colSpan={6}><p className="empty-state">Aucune alerte prix dans cette vue.</p></td></tr>}
+              </tbody>
+            </table>
+          ) : activeSuiviFilter === 'portfolio' ? (
+            <table className="suivi-portfolio-table">
+              <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Visibilite</th><th>Actions</th></tr></thead>
+              <tbody>
+                {portfolioRows.length > 0 ? portfolioRows.map((item) => (
+                  <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                    <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                    <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
+                    <td>{commercialDisplay(item)}</td>
+                    <td><small>{item.statut_annonce ?? '-'}</small><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
+                    <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
+                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
+                  </tr>
+                )) : <tr><td colSpan={6}><p className="empty-state">Aucun mandat dans cette vue.</p></td></tr>}
+              </tbody>
+            </table>
+          ) : (
+            <table className="suivi-portfolio-table">
+              <thead><tr><th>Demande</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Motif</th><th>Actions</th></tr></thead>
+              <tbody>
+                {suiviRequestRows.length > 0 ? suiviRequestRows.map(({ mandat: item, request: activeRequest }) => (
+                  <tr key={`${item.app_dossier_id}-${activeRequest.id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                    <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>{formatDate(activeRequest.requested_at)}</span></td>
+                    <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                    <td>{commercialDisplay(item)}</td>
+                    <td><small>{requestStatusLabel(activeRequest.request_status)}</small><small>{item.statut_annonce ?? '-'}</small></td>
+                    <td><small>{activeRequest.request_reason || activeRequest.request_comment || 'Sans motif'}</small></td>
+                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={activeRequest} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
+                  </tr>
+                )) : <tr><td colSpan={6}><p className="empty-state">Aucune demande dans cette vue.</p></td></tr>}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
     </section>
