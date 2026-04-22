@@ -3118,7 +3118,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
               </label>
               <section className="result-indicator result-indicator-compact">
-                <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : screen === 'registre' ? 'Mandats enregistrés' : 'Demandes administratives'}</span>
+                <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : screen === 'registre' ? 'Mandats enregistrés' : 'Mandats suivis'}</span>
                 <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' || screen === 'registre' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
               </section>
               <div className="hero-actions">
@@ -3202,7 +3202,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </article>
                 ))}
               </div>
-            ) : (
+            ) : screen === 'suivi' ? null : (
               <div className="header-kpis">
                 {headerMetrics.map((item) => (
                   <article
