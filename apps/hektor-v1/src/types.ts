@@ -254,6 +254,12 @@ export type MandatRecord = {
   mandat_date_fin?: string | null
   mandat_montant?: number | string | null
   mandants_texte?: string | null
+  price_change_event_count?: number | null
+  price_change_last_source_kind?: string | null
+  price_change_last_old_value?: number | string | null
+  price_change_last_new_value?: number | string | null
+  price_change_last_detected_at?: string | null
+  price_change_last_source_updated_at?: string | null
   priority: string | null
   offre_id: string | null
   offre_state?: string | null

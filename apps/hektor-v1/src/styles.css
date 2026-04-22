@@ -2261,6 +2261,14 @@ tbody tr.is-selected { background: #e9f1f4; }
   font-weight: 700;
   letter-spacing: -0.01em;
 }
+.register-price-history {
+  display: block;
+  color: #6f848d;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 4px;
+}
 .register-bool {
   display: inline-flex;
   align-items: center;
@@ -2298,6 +2306,36 @@ tbody tr.is-selected { background: #e9f1f4; }
   display: grid;
   gap: 8px;
   margin-top: 18px;
+}
+.price-history-list {
+  gap: 10px;
+}
+.price-history-card {
+  gap: 8px;
+}
+.price-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.price-history-head strong {
+  color: var(--ink);
+}
+.price-history-head span {
+  color: #6f848d;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.price-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .detail-rich-copy strong {
   font-size: 12px;

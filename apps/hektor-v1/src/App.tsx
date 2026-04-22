@@ -948,6 +948,77 @@ function parseRegisterAvenants(item: MandatRecord) {
   return parseJson<Array<Record<string, unknown>>>(item.register_avenants_json ?? '', [])
 }
 
+type PriceChangeEventRecord = {
+  source_kind?: string | null
+  old_value?: number | string | null
+  new_value?: number | string | null
+  source_updated_at?: string | null
+  detected_at?: string | null
+  numero_mandat?: string | null
+}
+
+function parsePriceChangeEventsJson(value: unknown) {
+  const rows = parseJson<Array<Record<string, unknown>>>(String(value ?? ''), [])
+  return rows.map((item) => ({
+    source_kind: safeText(item.source_kind) || null,
+    old_value: typeof item.old_value === 'number' || typeof item.old_value === 'string' ? item.old_value : null,
+    new_value: typeof item.new_value === 'number' || typeof item.new_value === 'string' ? item.new_value : null,
+    source_updated_at: safeText(item.source_updated_at) || null,
+    detected_at: safeText(item.detected_at) || null,
+    numero_mandat: safeText(item.numero_mandat) || null,
+  }))
+}
+
+function normalizePriceChangeScalar(value: unknown): string | number | null {
+  return typeof value === 'number' || typeof value === 'string' ? value : null
+}
+
+function readPriceChangeEvents(
+  value:
+    | Pick<DossierDetailPayload, 'price_change_events_json' | 'price_change_event_count' | 'price_change_last_source_kind' | 'price_change_last_old_value' | 'price_change_last_new_value' | 'price_change_last_detected_at' | 'price_change_last_source_updated_at'>
+    | Pick<Dossier, 'price_change_event_count' | 'price_change_last_source_kind' | 'price_change_last_old_value' | 'price_change_last_new_value' | 'price_change_last_detected_at' | 'price_change_last_source_updated_at'>
+    | Pick<MandatRecord, 'price_change_event_count' | 'price_change_last_source_kind' | 'price_change_last_old_value' | 'price_change_last_new_value' | 'price_change_last_detected_at' | 'price_change_last_source_updated_at'>
+    | Record<string, unknown>,
+) {
+  const parsed = parsePriceChangeEventsJson((value as { price_change_events_json?: unknown }).price_change_events_json)
+  if (parsed.length > 0) return parsed
+  const count = Number((value as { price_change_event_count?: unknown }).price_change_event_count ?? 0)
+  if (!count) return []
+  return [
+    {
+      source_kind: safeText((value as { price_change_last_source_kind?: unknown }).price_change_last_source_kind) || null,
+      old_value: normalizePriceChangeScalar((value as { price_change_last_old_value?: unknown }).price_change_last_old_value),
+      new_value: normalizePriceChangeScalar((value as { price_change_last_new_value?: unknown }).price_change_last_new_value),
+      source_updated_at: safeText((value as { price_change_last_source_updated_at?: unknown }).price_change_last_source_updated_at) || null,
+      detected_at: safeText((value as { price_change_last_detected_at?: unknown }).price_change_last_detected_at) || null,
+      numero_mandat: null,
+    },
+  ]
+}
+
+function priceChangeSourceLabel(value: string | null | undefined) {
+  const normalized = (value ?? '').trim().toLowerCase()
+  if (normalized === 'annonce_prix') return 'Prix annonce'
+  if (normalized === 'mandat_montant') return 'Montant mandat'
+  return 'Changement prix'
+}
+
+function priceChangeAnchorDate(entry: PriceChangeEventRecord) {
+  return entry.source_updated_at ?? entry.detected_at ?? null
+}
+
+function priceChangeSummaryLine(
+  value:
+    | Pick<Dossier, 'price_change_event_count' | 'price_change_last_detected_at'>
+    | Pick<MandatRecord, 'price_change_event_count' | 'price_change_last_detected_at'>,
+) {
+  const count = Number(value.price_change_event_count ?? 0)
+  if (!count) return ''
+  const label = `${count} modif${count > 1 ? 's' : ''} prix`
+  const date = formatDate((value.price_change_last_detected_at as string | null | undefined) ?? null)
+  return date && date !== '-' ? `${label} · ${date}` : label
+}
+
 function mandateRegisterValidationLabel(value: string | null | undefined) {
   return isValidationApproved(value) ? 'Oui' : 'Non'
 }
@@ -4344,7 +4415,10 @@ function MandatRegisterScreen(props: {
                     <td className="register-col-flag"><span className={`register-bool ${isDiffusableValue(item.diffusable) ? 'is-yes' : 'is-no'}`}>{mandateRegisterDiffusableLabel(item.diffusable)}</span></td>
                     <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
                     <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
-                    <td className="register-col-amount"><strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong></td>
+                    <td className="register-col-amount">
+                      <strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong>
+                      {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
+                    </td>
                     <td className="register-col-mandants">
                       <strong className={`register-primary register-mandants-text ${canExpandMandants && !isMandantsExpanded ? 'is-clamped' : ''}`}>{mandantsLabel}</strong>
                       {canExpandMandants ? (
@@ -4433,6 +4507,11 @@ function MandatRegisterScreen(props: {
                   ) : null}
                 </div>
               </article>
+              <PriceChangeHistoryCard
+                source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
+                title="Historique des prix"
+                emptyLabel="Aucun changement de prix historisé pour ce mandat."
+              />
               <article className="detail-card">
                 <span className="detail-label">Historique des versions</span>
                 {selectedHistory.length > 0 ? (
@@ -5026,6 +5105,16 @@ function DossierDetailLayout(props: {
                   ) : <p className="empty-state">Aucune information mandat riche.</p>) : null}
                 </article>
                 <article className="detail-subsection">
+                  <div className="section-header">
+                    <h4>Historique des prix</h4>
+                  </div>
+                  <PriceChangeHistoryCard
+                    source={props.detail.price_change_events_json ? props.detail : dossier}
+                    title="Historique des prix"
+                    emptyLabel="Aucun changement de prix historisé pour cette annonce."
+                  />
+                </article>
+                <article className="detail-subsection">
                   <div className="section-header section-header-collapsible">
                     <h4>Detail contact</h4>
                     {secondaryContacts.length > 0 ? (
@@ -5543,6 +5632,43 @@ function ListingThumbnail({ url, imagesPreviewJson, title }: { url?: string | nu
       loading="lazy"
       decoding="async"
     />
+  )
+}
+
+function PriceChangeHistoryCard({
+  source,
+  title = 'Historique des prix',
+  emptyLabel = 'Aucun changement de prix detecte.',
+}: {
+  source: Record<string, unknown> | DossierDetailPayload | Dossier | MandatRecord
+  title?: string
+  emptyLabel?: string
+}) {
+  const events = readPriceChangeEvents(source)
+    .slice()
+    .sort((a, b) => new Date(priceChangeAnchorDate(b) ?? 0).getTime() - new Date(priceChangeAnchorDate(a) ?? 0).getTime())
+
+  return (
+    <article className="detail-card">
+      <span className="detail-label">{title}</span>
+      {events.length > 0 ? (
+        <div className="timeline-list price-history-list">
+          {events.map((entry, index) => (
+            <article key={`price-history-${index}-${entry.detected_at ?? 'na'}`} className="timeline-card price-history-card">
+              <div className="price-history-head">
+                <strong>{formatPrice(entry.old_value)} → {formatPrice(entry.new_value)}</strong>
+                <span>{priceChangeSourceLabel(entry.source_kind)}</span>
+              </div>
+              <div className="price-history-meta">
+                <span>Maj Hektor : {formatDate(priceChangeAnchorDate(entry))}</span>
+                {entry.detected_at && entry.detected_at !== entry.source_updated_at ? <span>Detecte : {formatDate(entry.detected_at)}</span> : null}
+                {entry.numero_mandat ? <span>Mandat {entry.numero_mandat}</span> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : <p>{emptyLabel}</p>}
+    </article>
   )
 }
 
