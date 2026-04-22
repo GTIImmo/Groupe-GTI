@@ -4945,6 +4945,7 @@ function SuiviMandatsScreenV2(props: {
   if (!props.isAdmin) {
     return <section className="panel"><p className="empty-state">Cette vue est reservee aux administrateurs.</p></section>
   }
+  const [secondaryKpisOpen, setSecondaryKpisOpen] = useState(false)
 
   const activeSuiviFilter = props.requestFilter ?? 'pending_or_in_progress'
 
@@ -5020,15 +5021,16 @@ function SuiviMandatsScreenV2(props: {
     label: string
     value: number
     tone: string
-    copy: string
   }> = [
-    { key: 'pending_or_in_progress', label: 'À traiter', value: pendingRows.length, tone: 'action', copy: 'Demandes à traiter maintenant.' },
-    { key: 'accepted_history', label: 'Acceptées', value: acceptedRows.length, tone: 'success', copy: 'Demandes validées par Pauline.' },
-    { key: 'refused', label: 'Refusées', value: refusedRows.length, tone: 'danger', copy: 'Demandes rejetées ou refusées.' },
-    { key: 'anomalies', label: 'Anomalies', value: anomalyRows.length, tone: 'warning', copy: 'Incohérences diffusion et mandat.' },
-    { key: 'price_alert', label: 'Alerte prix', value: priceAlertRows.length, tone: 'danger', copy: 'Prix modifiés sans cohérence de traitement.' },
-    { key: 'portfolio', label: 'Portefeuille', value: portfolioRows.length, tone: 'overview', copy: 'Vue complète du portefeuille mandat.' },
+    { key: 'pending_or_in_progress', label: 'À traiter', value: pendingRows.length, tone: 'demandes' },
+    { key: 'accepted_history', label: 'Acceptées', value: acceptedRows.length, tone: 'affaires' },
+    { key: 'refused', label: 'Refusées', value: refusedRows.length, tone: 'warning' },
+    { key: 'anomalies', label: 'Anomalies', value: anomalyRows.length, tone: 'warning' },
+    { key: 'price_alert', label: 'Alerte prix', value: priceAlertRows.length, tone: 'demandes' },
+    { key: 'portfolio', label: 'Portefeuille', value: portfolioRows.length, tone: 'neutral' },
   ]
+  const primarySuiviKpis = suiviKpis.filter((item) => ['À traiter', 'Anomalies', 'Alerte prix', 'Portefeuille'].includes(item.label))
+  const secondarySuiviKpis = suiviKpis.filter((item) => ['Acceptées', 'Refusées'].includes(item.label))
 
   const listingTitle =
     activeSuiviFilter === 'pending_or_in_progress'
@@ -5051,7 +5053,7 @@ function SuiviMandatsScreenV2(props: {
           {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
         </div>
         <div className="header-kpis suivi-header-kpis">
-          {suiviKpis.map((item) => (
+          {primarySuiviKpis.map((item) => (
             <article
               key={item.key}
               className={`header-kpi-card tone-${item.tone} is-clickable ${activeSuiviFilter === item.key ? 'is-active' : ''}`}
@@ -5070,6 +5072,38 @@ function SuiviMandatsScreenV2(props: {
             </article>
           ))}
         </div>
+        <div className="header-kpi-secondary-toggle">
+          <button
+            className={`ghost-button kpi-toggle-button ${secondaryKpisOpen ? 'is-open' : ''}`}
+            type="button"
+            onClick={() => setSecondaryKpisOpen((value) => !value)}
+          >
+            <span>{secondaryKpisOpen ? 'Masquer les KPI secondaires' : 'Afficher les KPI secondaires'}</span>
+            <strong>{secondarySuiviKpis.length}</strong>
+          </button>
+        </div>
+        {secondaryKpisOpen ? (
+          <div className="header-kpis header-kpis-secondary">
+            {secondarySuiviKpis.map((item) => (
+              <article
+                key={item.key}
+                className={`header-kpi-card tone-${item.tone} is-clickable ${activeSuiviFilter === item.key ? 'is-active' : ''}`}
+                onClick={() => props.onSetRequestFilter(item.key)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    props.onSetRequestFilter(item.key)
+                  }
+                }}
+              >
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="panel suivi-block suivi-block-portfolio">
