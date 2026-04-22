@@ -1937,20 +1937,48 @@ export default function App() {
   function openRegisterDrilldown(action: HeaderMetricItem['action']) {
     if (!action) return
     const nextFilters: AppFilters = {
-      ...emptyFilters,
-      affaire: action === 'offres_en_cours' || action === 'offres_refusees' ? 'offre_achat' : action === 'compromis_en_cours' || action === 'compromis_annules' ? 'compromis' : allFilterValue,
-      offreStatus: action === 'offres_en_cours' ? 'en_cours' : action === 'offres_refusees' ? 'refusee' : allFilterValue,
-      compromisStatus: action === 'compromis_en_cours' ? 'en_cours' : action === 'compromis_annules' ? 'annule' : allFilterValue,
+      ...filters,
+      affaire: action === 'offres_en_cours' || action === 'offres_refusees'
+        ? 'offre_achat'
+        : action === 'compromis_en_cours' || action === 'compromis_annules'
+          ? 'compromis'
+          : filters.affaire,
+      offreStatus: action === 'offres_en_cours'
+        ? 'en_cours'
+        : action === 'offres_refusees'
+          ? 'refusee'
+          : filters.offreStatus,
+      compromisStatus: action === 'compromis_en_cours'
+        ? 'en_cours'
+        : action === 'compromis_annules'
+          ? 'annule'
+          : filters.compromisStatus,
       requestScope:
         action === 'demandes_envoyees'
           ? 'pending_or_in_progress'
           : action === 'correction_attente'
             ? 'waiting_correction'
-            : allFilterValue,
-      mandat: action === 'mandat_diffuse' || action === 'mandat_non_diffuse' || action === 'mandat_valide' || action === 'mandat_non_valide' ? withMandatFilterValue : action === 'sans_mandat' ? withoutMandatFilterValue : allFilterValue,
-      validationDiffusion: action === 'mandat_valide' ? '__validated__' : action === 'mandat_non_valide' ? '__not_validated__' : allFilterValue,
-      diffusable: action === 'mandat_diffuse' ? 'diffusable' : action === 'mandat_non_diffuse' ? 'non_diffusable' : allFilterValue,
-      passerelle: action === 'leboncoin' ? 'leboncoin' : action === 'bienici' ? "bien'ici" : allFilterValue,
+            : filters.requestScope,
+      mandat: action === 'mandat_diffuse' || action === 'mandat_non_diffuse' || action === 'mandat_valide' || action === 'mandat_non_valide'
+        ? withMandatFilterValue
+        : action === 'sans_mandat'
+          ? withoutMandatFilterValue
+          : filters.mandat,
+      validationDiffusion: action === 'mandat_valide'
+        ? '__validated__'
+        : action === 'mandat_non_valide'
+          ? '__not_validated__'
+          : filters.validationDiffusion,
+      diffusable: action === 'mandat_diffuse'
+        ? 'diffusable'
+        : action === 'mandat_non_diffuse'
+          ? 'non_diffusable'
+          : filters.diffusable,
+      passerelle: action === 'leboncoin'
+        ? 'leboncoin'
+        : action === 'bienici'
+          ? "bien'ici"
+          : filters.passerelle,
     }
     setScreen('registre')
     setFiltersOpen(false)
