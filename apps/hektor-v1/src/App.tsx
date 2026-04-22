@@ -969,6 +969,10 @@ function mandateRegisterSourceLabel(item: MandatRecord) {
   return (item.register_source_kind ?? '').trim().toLowerCase() === 'historique' ? 'Historique' : 'Actif'
 }
 
+function mandateRegisterSourceBadge(item: MandatRecord) {
+  return (item.register_source_kind ?? '').trim().toLowerCase() === 'historique' ? 'Historique' : null
+}
+
 function parseRegisterDetailPayload(item: MandatRecord) {
   return parseJson<Record<string, unknown>>(item.register_detail_payload_json ?? '', {})
 }
@@ -4487,7 +4491,7 @@ function MandatRegisterScreen(props: {
                       {mandateRegisterTypeInlineLabel(item) ? <span className="register-type-inline">{mandateRegisterTypeInlineLabel(item)}</span> : null}
                       <span className="register-secondary">{item.numero_dossier ?? '-'}</span>
                       <div className="tag-row register-tag-row">
-                        <StatusPill value={mandateRegisterSourceLabel(item)} />
+                        <StatusPill value={mandateRegisterSourceBadge(item)} />
                         {(item.register_version_count ?? 1) > 1 ? <StatusPill value={`+${item.register_version_count} versions`} /> : null}
                         {(item.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`+${item.register_embedded_avenant_count} avenant${(item.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
                       </div>
@@ -4826,7 +4830,7 @@ function SuiviMandatsScreen(props: {
                   <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                   <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                   <td>{commercialDisplay(item)}</td>
-                  <td><small>{item.statut_annonce ?? '-'}</small><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
+                  <td><StatusPill value={item.statut_annonce} /><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
                   <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
                   <td><small>{item.offre_id ? 'Offre' : '-'}</small><small>{item.compromis_id ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
                   <td><button className="ghost-button" type="button" onClick={() => openHektorAnnonce(item.hektor_annonce_id)}>Ouvrir</button></td>
@@ -4926,7 +4930,7 @@ function SuiviMandatsScreenV2Legacy(props: {
                   {attentionMandats.map((item) => (
                     <tr key={item.app_dossier_id} className={item.app_dossier_id === selectedAnomalyMandat?.app_dossier_id ? 'is-selected' : ''} onClick={() => setSelectedMandatId(item.app_dossier_id)}>
                       <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
-                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.statut_annonce ?? '-'}</span></td>
+                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                       <td>{commercialDisplay(item)}</td>
                       <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
                       <td><small>{!item.numero_mandat ? 'Sans mandat' : '-'}</small><small>{(item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : '-'}</small><small>{(item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : '-'}</small><small>{Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : '-'}</small></td>
@@ -4949,7 +4953,7 @@ function SuiviMandatsScreenV2Legacy(props: {
                       <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                       <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                       <td>{commercialDisplay(item)}</td>
-                      <td><small>{item.statut_annonce ?? '-'}</small><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
+                      <td><StatusPill value={item.statut_annonce} /><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
                       <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
                       <td><small>{item.offre_id ? 'Offre' : '-'}</small><small>{item.compromis_id ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
                       <td>
@@ -5198,7 +5202,7 @@ function SuiviMandatsScreenV2(props: {
                   return (
                     <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                       <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
-                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.statut_annonce ?? '-'}</span></td>
+                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                       <td>{commercialDisplay(item)}</td>
                       <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
                       <td>
@@ -5234,7 +5238,7 @@ function SuiviMandatsScreenV2(props: {
                     <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                     <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                     <td>{commercialDisplay(item)}</td>
-                    <td><small>{item.statut_annonce ?? '-'}</small><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
+                    <td><StatusPill value={item.statut_annonce} /><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
                     <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
                   </tr>
                 )) : <tr><td colSpan={5}><p className="empty-state">Aucun mandat dans cette vue.</p></td></tr>}
@@ -5249,7 +5253,7 @@ function SuiviMandatsScreenV2(props: {
                     <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>{formatDate(activeRequest.requested_at)}</span></td>
                     <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                     <td>{commercialDisplay(item)}</td>
-                    <td><small>{requestStatusLabel(activeRequest.request_status)}</small><small>{item.statut_annonce ?? '-'}</small></td>
+                    <td><small>{requestStatusLabel(activeRequest.request_status)}</small><StatusPill value={item.statut_annonce} /></td>
                     <td><small>{activeRequest.request_reason || activeRequest.request_comment || 'Sans motif'}</small></td>
                     <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={activeRequest} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
                   </tr>
@@ -5941,7 +5945,24 @@ function DossierDetailScreen(props: {
 
 function StatusPill({ value }: { value: string | null }) {
   if (!value) return null
-  return <span className="status-pill">{value}</span>
+  const normalized = safeText(value).toLowerCase()
+  const toneClass =
+    normalized === 'actif'
+      ? ' status-pill-state-active'
+      : normalized.includes('offre')
+        ? ' status-pill-state-offer'
+        : normalized.includes('compromis')
+          ? ' status-pill-state-compromis'
+          : normalized.includes('vendu') || normalized.includes('vente')
+            ? ' status-pill-state-sold'
+            : normalized.includes('clos') || normalized.includes('clotur')
+              ? ' status-pill-state-closed'
+              : normalized.includes('archive')
+                ? ' status-pill-state-archived'
+                : normalized.includes('historique')
+                  ? ' status-pill-state-history'
+                  : ''
+  return <span className={`status-pill${toneClass}`}>{value}</span>
 }
 
 function PortalStatusMark({ enabled }: { enabled: boolean }) {

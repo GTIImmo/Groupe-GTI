@@ -3744,6 +3744,43 @@ button.metric-card.is-active {
   font-weight: 600;
 }
 
+.status-pill.status-pill-state-active {
+  background: linear-gradient(180deg, #e4f5ea 0%, #d4ecd9 100%);
+  color: #1d6848;
+  border-color: rgba(29, 104, 72, 0.18);
+}
+
+.status-pill.status-pill-state-offer {
+  background: linear-gradient(180deg, #e4f0ff 0%, #d6e6ff 100%);
+  color: #1f5aa6;
+  border-color: rgba(31, 90, 166, 0.18);
+}
+
+.status-pill.status-pill-state-compromis {
+  background: linear-gradient(180deg, #efe7ff 0%, #e3d8ff 100%);
+  color: #6643a7;
+  border-color: rgba(102, 67, 167, 0.18);
+}
+
+.status-pill.status-pill-state-sold {
+  background: linear-gradient(180deg, #ffe9e1 0%, #ffd8cb 100%);
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.18);
+}
+
+.status-pill.status-pill-state-closed {
+  background: linear-gradient(180deg, #eef1f5 0%, #e1e6ec 100%);
+  color: #4f5d6b;
+  border-color: rgba(79, 93, 107, 0.16);
+}
+
+.status-pill.status-pill-state-archived,
+.status-pill.status-pill-state-history {
+  background: linear-gradient(180deg, #f4f5f6 0%, #eceef0 100%);
+  color: #68717c;
+  border-color: rgba(104, 113, 124, 0.14);
+}
+
 .portal-mark {
   display: inline-flex;
   align-items: center;
