@@ -172,6 +172,16 @@ const emptyFilters: AppFilters = {
   internalStatus: allFilterValue,
 }
 
+function defaultFiltersForScreen(screen: 'annonces' | 'mandats' | 'registre' | 'suivi'): AppFilters {
+  if (screen === 'registre') {
+    return {
+      ...emptyFilters,
+      statut: 'Actif',
+    }
+  }
+  return emptyFilters
+}
+
 function formatPrice(value: number | string | null | undefined) {
   if (value == null || value === '') return '-'
   const amount = typeof value === 'number' ? value : Number(value)
@@ -1824,7 +1834,7 @@ export default function App() {
   }
 
   function resetFilters() {
-    setFilters(emptyFilters)
+    setFilters(defaultFiltersForScreen(screen))
     setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(screen === 'suivi' ? 'pending_or_in_progress' : null)
@@ -1844,7 +1854,7 @@ export default function App() {
     setMandatPage(1)
     setWorkItemPage(1)
     setDetailOpen(false)
-    setFilters(emptyFilters)
+    setFilters(defaultFiltersForScreen(nextScreen))
   }
 
   function openMandatDrilldown(action: HeaderMetricItem['action']) {
