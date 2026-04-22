@@ -3125,10 +3125,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </section>
                 </>
               ) : null}
-              <div className="hero-actions">
-                <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
-                <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
-              </div>
+              {screen !== 'suivi' ? (
+                <div className="hero-actions">
+                  <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
+                  <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
+                </div>
+              ) : null}
             </div>
             {screen === 'mandats' ? (
               <div className="header-kpi-stack">
@@ -4985,7 +4987,6 @@ function SuiviMandatsScreenV2(props: {
     })
   const pendingRows = suiviRequestRows.filter((row) => row.request.request_status === 'pending')
   const inProgressRows = suiviRequestRows.filter((row) => row.request.request_status === 'in_progress')
-  const correctionRows = suiviRequestRows.filter((row) => row.request.request_status === 'waiting_commercial' || row.request.request_status === 'refused')
   const anomalyRows = props.mandats
     .filter((item) =>
       Boolean((item.numero_mandat ?? '').trim()) && (
@@ -5008,7 +5009,6 @@ function SuiviMandatsScreenV2(props: {
           <article className="suivi-command-card tone-overview"><span className="suivi-command-kicker">Parc</span><strong>{props.stats.total}</strong><p>Annonces suivies dans le portefeuille administratif.</p></article>
           <article className="suivi-command-card tone-action"><span className="suivi-command-kicker">A traiter</span><strong>{pendingRows.length}</strong><p>Demandes nouvelles à traiter maintenant.</p></article>
           <article className="suivi-command-card tone-progress"><span className="suivi-command-kicker">En cours</span><strong>{inProgressRows.length}</strong><p>Dossiers déjà pris en charge par Pauline.</p></article>
-          <article className="suivi-command-card tone-warning"><span className="suivi-command-kicker">Corrections</span><strong>{correctionRows.length}</strong><p>Retours à reprendre avec le négociateur.</p></article>
           <article className="suivi-command-card tone-danger"><span className="suivi-command-kicker">Anomalies</span><strong>{anomalyRows.length}</strong><p>Mandats avec incohérence diffusion ou données.</p></article>
           <article className="suivi-command-card tone-success"><span className="suivi-command-kicker">Diffusés</span><strong>{props.stats.mandatDiffuse}</strong><p>Mandats visibles et correctement diffusés.</p></article>
         </div>
@@ -5023,7 +5023,6 @@ function SuiviMandatsScreenV2(props: {
             {[
               { title: 'Nouvelles demandes', tone: 'action', rows: pendingRows },
               { title: 'Demandes en cours', tone: 'progress', rows: inProgressRows },
-              { title: 'Corrections en attente', tone: 'warning', rows: correctionRows },
             ].map((group) => (
               <section key={group.title} className={`suivi-lane tone-${group.tone}`}>
                 <div className="suivi-lane-head">
