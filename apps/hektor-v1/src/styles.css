@@ -283,6 +283,9 @@ body {
   display: grid;
   gap: 12px;
 }
+.hero-stack-suivi {
+  gap: 0;
+}
 .hero-top-row {
   display: grid;
   grid-template-columns: minmax(260px, 1.4fr) auto auto;
@@ -3283,26 +3286,27 @@ button.metric-card.is-active {
 .suivi-command-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 .suivi-command-card {
   position: relative;
   display: grid;
-  gap: 8px;
-  min-height: 138px;
-  padding: 16px;
-  border-radius: 20px;
+  gap: 6px;
+  min-height: 104px;
+  padding: 14px;
+  border-radius: 18px;
   border: 1px solid rgba(21, 32, 43, 0.08);
   background: rgba(255,255,255,0.86);
-  box-shadow: 0 16px 32px rgba(21, 32, 43, 0.08);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 10px 22px rgba(21, 32, 43, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  cursor: pointer;
 }
 .suivi-command-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 36px rgba(21, 32, 43, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(21, 32, 43, 0.1);
 }
 .suivi-command-card strong {
-  font-size: 34px;
+  font-size: 28px;
   line-height: 1;
   letter-spacing: -0.05em;
 }
@@ -3313,10 +3317,14 @@ button.metric-card.is-active {
   line-height: 1.45;
 }
 .suivi-command-kicker {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+.suivi-command-card.is-active {
+  border-color: rgba(15, 76, 92, 0.22);
+  box-shadow: 0 0 0 1px rgba(15, 76, 92, 0.08), 0 16px 28px rgba(21, 32, 43, 0.1);
 }
 .suivi-command-card.tone-overview { background: linear-gradient(180deg, #f8fbfc 0%, #edf5f7 100%); }
 .suivi-command-card.tone-overview .suivi-command-kicker,

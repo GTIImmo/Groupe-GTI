@@ -3111,7 +3111,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
       <main className="content">
         <section className="hero">
-          <div className="hero-stack">
+          <div className={`hero-stack ${screen === 'suivi' ? 'hero-stack-suivi' : ''}`}>
             {screen !== 'suivi' ? (
               <div className="hero-top-row">
                 <label className="search-box">
@@ -5067,7 +5067,6 @@ function SuiviMandatsScreenV2(props: {
             >
               <span className="suivi-command-kicker">{item.label}</span>
               <strong>{item.value}</strong>
-              <p>{item.copy}</p>
             </article>
           ))}
         </div>
