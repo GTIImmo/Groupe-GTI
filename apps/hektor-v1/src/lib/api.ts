@@ -18,6 +18,8 @@ export type FilterCatalog = {
 
 export type AppFilters = {
   query: string
+  mandatNumber: string
+  mandantName: string
   commercial: string
   agency: string
   archive: string
@@ -661,8 +663,10 @@ function buildDiffusionRequestEvent(input: {
   } satisfies DiffusionRequestEvent
 }
 
-function applyLocalDossierFilters(rows: Dossier[], filters: AppFilters) {
+function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string | null }>(rows: T[], filters: AppFilters) {
   const query = filters.query.trim().toLowerCase()
+  const mandatNumber = filters.mandatNumber.trim().toLowerCase()
+  const mandantName = filters.mandantName.trim().toLowerCase()
   const commercial = normalizeFilterValue(filters.commercial)
   const agency = normalizeFilterValue(filters.agency)
   const archive = filters.archive
@@ -681,7 +685,7 @@ function applyLocalDossierFilters(rows: Dossier[], filters: AppFilters) {
   const latestByDossier = requestScope || requestType ? buildLatestRequestStatusMap(readLocalDiffusionRequests()) : null
 
   return rows.filter((item) => {
-    const text = `${item.titre_bien} ${item.numero_dossier ?? ''} ${item.numero_mandat ?? ''} ${item.commercial_nom ?? ''} ${item.agence_nom ?? ''} ${item.ville ?? ''}`.toLowerCase()
+    const text = `${item.titre_bien} ${item.numero_dossier ?? ''} ${item.numero_mandat ?? ''} ${item.commercial_nom ?? ''} ${item.agence_nom ?? ''} ${item.ville ?? ''} ${item.mandants_texte ?? ''}`.toLowerCase()
     const isArchived = (item.archive ?? '0') === '1'
     const hasMandat = Boolean((item.numero_mandat ?? '').trim())
     const isDiffusable = (item.diffusable ?? '0') === '1'
@@ -693,6 +697,8 @@ function applyLocalDossierFilters(rows: Dossier[], filters: AppFilters) {
       !affaire
     return (
       (!query || text.includes(query)) &&
+      (!mandatNumber || (item.numero_mandat ?? '').toLowerCase().includes(mandatNumber)) &&
+      (!mandantName || (item.mandants_texte ?? '').toLowerCase().includes(mandantName)) &&
       (!commercial ||
         (commercial === withoutCommercialFilterValue
           ? !(item.commercial_nom ?? '').trim()
@@ -726,6 +732,8 @@ function applyLocalWorkItemFilters(rows: WorkItem[], filters: AppFilters) {
   const archive = filters.archive
   const mandat = filters.mandat
   const priority = normalizeFilterValue(filters.priority)
+  const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
+  const mandantName = normalizeSearchTerm(filters.mandantName)
   const workStatus = normalizeFilterValue(filters.workStatus)
   const internalStatus = normalizeFilterValue(filters.internalStatus)
   const validationDiffusion = normalizeFilterValue(filters.validationDiffusion)
@@ -770,6 +778,8 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   const passerelle = normalizeFilterValue(filters.passerelle)
   const erreurDiffusion = normalizeFilterValue(filters.erreurDiffusion)
   const priority = normalizeFilterValue(filters.priority)
+  const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
+  const mandantName = normalizeSearchTerm(filters.mandantName)
 
   if (commercial) {
     if (commercial === withoutCommercialFilterValue) {
@@ -814,6 +824,8 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (erreurDiffusion === 'avec_erreur') query = query.eq('has_diffusion_error', true)
   if (erreurDiffusion === 'sans_erreur') query = query.or('has_diffusion_error.is.null,has_diffusion_error.eq.false,has_diffusion_error.eq.0')
   if (priority) query = query.eq('priority', priority)
+  if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
+  if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
   const search = normalizeSearchTerm(filters.query)
   if (search) {
@@ -825,6 +837,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
         `numero_mandat.ilike.${ilike}`,
         `commercial_nom.ilike.${ilike}`,
         `ville.ilike.${ilike}`,
+        `mandants_texte.ilike.${ilike}`,
       ].join(','),
     )
   }

@@ -151,6 +151,8 @@ function mergeCatalog(primary: FilterCatalog, fallback: FilterCatalog): FilterCa
 
 const emptyFilters: AppFilters = {
   query: '',
+  mandatNumber: '',
+  mandantName: '',
   commercial: allFilterValue,
   agency: allFilterValue,
   archive: allFilterValue,
@@ -1338,6 +1340,8 @@ function totalPages(total: number, pageSize: number) {
 function activeFilterEntries(filters: AppFilters) {
   return [
     filters.query.trim() ? ['Recherche', filters.query.trim()] : null,
+    filters.mandatNumber.trim() ? ['N° mandat', filters.mandatNumber.trim()] : null,
+    filters.mandantName.trim() ? ['Mandant', filters.mandantName.trim()] : null,
     filters.commercial !== allFilterValue ? ['Negociateur', filters.commercial === withoutCommercialFilterValue ? 'Sans' : filters.commercial] : null,
     filters.agency !== allFilterValue ? ['Agence', filters.agency] : null,
     filters.archive === activeArchiveFilterValue ? ['Archive', 'Actives'] : null,
@@ -3111,7 +3115,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <div className="hero-top-row">
               <label className="search-box">
                 <span>Recherche rapide</span>
-                <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
+                <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
               </label>
               <section className="result-indicator result-indicator-compact">
                 <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : screen === 'registre' ? 'Mandats enregistrés' : 'Demandes administratives'}</span>
@@ -3390,6 +3394,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </>
             ) : screen === 'registre' ? (
               <>
+                <label className="filter-field">
+                  <span>N° de mandat</span>
+                  <input
+                    value={filters.mandatNumber}
+                    onChange={(event) => updateFilter('mandatNumber', event.target.value)}
+                    placeholder="Exemple : 18540"
+                  />
+                </label>
+                <label className="filter-field">
+                  <span>Nom mandant</span>
+                  <input
+                    value={filters.mandantName}
+                    onChange={(event) => updateFilter('mandantName', event.target.value)}
+                    placeholder="Exemple : Dupont"
+                  />
+                </label>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
