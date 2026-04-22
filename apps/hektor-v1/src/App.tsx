@@ -3113,14 +3113,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         <section className="hero">
           <div className="hero-stack">
             <div className="hero-top-row">
-              <label className="search-box">
-                <span>Recherche rapide</span>
-                <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
-              </label>
-              <section className="result-indicator result-indicator-compact">
-                <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : screen === 'registre' ? 'Mandats enregistrés' : 'Mandats suivis'}</span>
-                <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' || screen === 'registre' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
-              </section>
+              {screen !== 'suivi' ? (
+                <>
+                  <label className="search-box">
+                    <span>Recherche rapide</span>
+                    <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
+                  </label>
+                  <section className="result-indicator result-indicator-compact">
+                    <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : 'Mandats enregistrés'}</span>
+                    <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' || screen === 'registre' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
+                  </section>
+                </>
+              ) : null}
               <div className="hero-actions">
                 <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                 <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
