@@ -3110,9 +3110,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       </header>
 
       <main className="content">
+        {screen !== 'suivi' ? (
         <section className="hero">
-          <div className={`hero-stack ${screen === 'suivi' ? 'hero-stack-suivi' : ''}`}>
-            {screen !== 'suivi' ? (
+          <div className="hero-stack">
               <div className="hero-top-row">
                 <label className="search-box">
                   <span>Recherche rapide</span>
@@ -3127,7 +3127,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
                 </div>
               </div>
-            ) : null}
             {screen === 'mandats' ? (
               <div className="header-kpi-stack">
                 <div className="header-kpis">
@@ -3204,7 +3203,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </article>
                 ))}
               </div>
-            ) : screen === 'suivi' ? null : (
+            ) : (
               <div className="header-kpis">
                 {headerMetrics.map((item) => (
                   <article
@@ -3228,6 +3227,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             )}
           </div>
         </section>
+        ) : null}
 
         {filtersOpen ? <div className="filters-overlay" onClick={() => setFiltersOpen(false)}>
           <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
@@ -5050,11 +5050,11 @@ function SuiviMandatsScreenV2(props: {
           <div><p className="eyebrow">{props.eyebrow ?? 'Console Pauline'}</p><h3>{props.title ?? 'Parc mandat'}</h3></div>
           {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
         </div>
-        <div className="suivi-command-grid">
+        <div className="header-kpis suivi-header-kpis">
           {suiviKpis.map((item) => (
             <article
               key={item.key}
-              className={`suivi-command-card tone-${item.tone} ${activeSuiviFilter === item.key ? 'is-active' : ''}`}
+              className={`header-kpi-card tone-${item.tone} is-clickable ${activeSuiviFilter === item.key ? 'is-active' : ''}`}
               onClick={() => props.onSetRequestFilter(item.key)}
               role="button"
               tabIndex={0}
@@ -5065,7 +5065,7 @@ function SuiviMandatsScreenV2(props: {
                 }
               }}
             >
-              <span className="suivi-command-kicker">{item.label}</span>
+              <span>{item.label}</span>
               <strong>{item.value}</strong>
             </article>
           ))}

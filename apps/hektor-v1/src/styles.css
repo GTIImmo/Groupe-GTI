@@ -424,6 +424,13 @@ body {
   background: linear-gradient(180deg, #fbfcfd 0%, #edf2f5 100%);
   border-color: rgba(96, 120, 138, 0.16);
 }
+.header-kpi-card.is-active {
+  border-color: rgba(15, 76, 92, 0.24);
+  box-shadow: 0 12px 24px rgba(21, 32, 43, 0.09);
+}
+.suivi-header-kpis {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
 
 .search-box span {
   font-size: 12px;
