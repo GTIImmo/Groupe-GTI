@@ -160,6 +160,53 @@ WORK_ITEM_NULLABLE_KEYS = (
     "age_jours",
 )
 
+MANDAT_REGISTER_NULLABLE_KEYS = (
+    "app_dossier_id",
+    "photo_url_listing",
+    "images_preview_json",
+    "adresse_privee_listing",
+    "adresse_detail",
+    "code_postal",
+    "code_postal_prive_detail",
+    "ville_privee_detail",
+    "archive",
+    "diffusable",
+    "portails_resume",
+    "numero_dossier",
+    "numero_mandat",
+    "titre_bien",
+    "ville",
+    "type_bien",
+    "prix",
+    "commercial_id",
+    "commercial_nom",
+    "negociateur_email",
+    "agence_nom",
+    "statut_annonce",
+    "validation_diffusion_state",
+    "mandat_source_id",
+    "mandat_numero_reference",
+    "mandat_type",
+    "mandat_type_source",
+    "mandat_date_debut",
+    "mandat_date_fin",
+    "mandat_montant",
+    "mandants_texte",
+    "mandat_note",
+    "priority",
+    "offre_id",
+    "offre_state",
+    "offre_last_proposition_type",
+    "compromis_id",
+    "compromis_state",
+    "vente_id",
+    "source_updated_at",
+    "register_source_kind",
+    "register_history_json",
+    "register_avenants_json",
+    "register_detail_payload_json",
+)
+
 
 class SupabaseRestClient:
     def __init__(self, *, base_url: str, service_role_key: str) -> None:
@@ -436,6 +483,68 @@ def build_current_filter_catalog(filter_catalog: list[dict[str, object]]) -> lis
     return rows
 
 
+def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    current_rows: list[dict[str, object]] = []
+    for row in rows:
+        normalized = normalize_row(row, MANDAT_REGISTER_NULLABLE_KEYS)
+        current_row = {
+            "register_row_id": normalized["register_row_id"],
+            "app_dossier_id": normalized.get("app_dossier_id"),
+            "hektor_annonce_id": normalized["hektor_annonce_id"],
+            "photo_url_listing": normalized.get("photo_url_listing"),
+            "images_preview_json": normalized.get("images_preview_json"),
+            "adresse_privee_listing": normalized.get("adresse_privee_listing"),
+            "adresse_detail": normalized.get("adresse_detail"),
+            "code_postal": normalized.get("code_postal"),
+            "code_postal_prive_detail": normalized.get("code_postal_prive_detail"),
+            "ville_privee_detail": normalized.get("ville_privee_detail"),
+            "archive": normalized.get("archive"),
+            "diffusable": normalized.get("diffusable"),
+            "nb_portails_actifs": int(normalized.get("nb_portails_actifs") or 0),
+            "has_diffusion_error": normalize_bool(normalized.get("has_diffusion_error")),
+            "portails_resume": normalized.get("portails_resume"),
+            "numero_dossier": normalized.get("numero_dossier"),
+            "numero_mandat": normalized.get("numero_mandat"),
+            "titre_bien": normalized.get("titre_bien"),
+            "ville": normalized.get("ville"),
+            "type_bien": normalized.get("type_bien"),
+            "prix": normalize_numeric(normalized.get("prix")),
+            "commercial_id": normalized.get("commercial_id"),
+            "commercial_nom": normalized.get("commercial_nom"),
+            "negociateur_email": normalized.get("negociateur_email"),
+            "agence_nom": normalized.get("agence_nom"),
+            "statut_annonce": normalized.get("statut_annonce"),
+            "validation_diffusion_state": normalized.get("validation_diffusion_state"),
+            "mandat_source_id": normalized.get("mandat_source_id"),
+            "mandat_numero_reference": normalized.get("mandat_numero_reference"),
+            "mandat_type": normalized.get("mandat_type"),
+            "mandat_type_source": normalized.get("mandat_type_source"),
+            "mandat_date_debut": normalized.get("mandat_date_debut"),
+            "mandat_date_fin": normalized.get("mandat_date_fin"),
+            "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
+            "mandants_texte": normalized.get("mandants_texte"),
+            "mandat_note": normalized.get("mandat_note"),
+            "priority": normalized.get("priority"),
+            "offre_id": normalized.get("offre_id"),
+            "offre_state": normalized.get("offre_state"),
+            "offre_last_proposition_type": normalized.get("offre_last_proposition_type"),
+            "compromis_id": normalized.get("compromis_id"),
+            "compromis_state": normalized.get("compromis_state"),
+            "vente_id": normalized.get("vente_id"),
+            "source_updated_at": normalize_timestamp(normalized.get("source_updated_at")),
+            "register_source_kind": normalized.get("register_source_kind"),
+            "register_detail_available": normalize_bool(normalized.get("register_detail_available")),
+            "register_version_count": int(normalized.get("register_version_count") or 0),
+            "register_embedded_avenant_count": int(normalized.get("register_embedded_avenant_count") or 0),
+            "register_history_json": normalized.get("register_history_json"),
+            "register_avenants_json": normalized.get("register_avenants_json"),
+            "register_detail_payload_json": normalized.get("register_detail_payload_json"),
+        }
+        current_row["source_hash"] = stable_hash(current_row)
+        current_rows.append(current_row)
+    return current_rows
+
+
 def normalize_broadcast_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     normalized_by_key: dict[tuple[int, str, str], dict[str, object]] = {}
     for row in rows:
@@ -639,6 +748,7 @@ def main() -> None:
     source_updated_at_by_id = {int(row["app_dossier_id"]): row.get("source_updated_at") for row in current_dossiers}
     current_details = build_current_details(payload["dossier_details"], source_updated_at_by_id)
     current_work_items = build_current_work_items(payload["work_items"])
+    current_mandat_register_rows = build_current_mandat_register_rows(payload.get("mandat_register_rows", []))
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
 
     dossier_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_dossiers})
@@ -780,19 +890,27 @@ def main() -> None:
             if current_filter_catalog:
                 client.insert_rows(path="app_filter_catalog_current_store", rows=current_filter_catalog, batch_size=args.filter_batch_size)
 
+        client.delete_all_rows(path="app_mandat_register_current", filter_expr="register_row_id=not.is.null")
+        if current_mandat_register_rows:
+            client.insert_rows(
+                path="app_mandat_register_current",
+                rows=current_mandat_register_rows,
+                batch_size=args.work_item_batch_size,
+            )
+
         client.update_delta_run(
             delta_run_id,
             {
                 "status": "completed",
-                "finished_at": now_iso(),
-                "dossiers_detected": len(set(candidate_ids) | set(stale_ids)),
-                "dossiers_upserted": len(dossier_upsert_ids),
-                "details_upserted": len(detail_upsert_ids),
-                "work_items_replaced": len(work_replace_ids),
-                "filters_replaced": len(current_filter_catalog),
-                "deleted_dossiers": len(stale_ids),
-            },
-        )
+                    "finished_at": now_iso(),
+                    "dossiers_detected": len(set(candidate_ids) | set(stale_ids)),
+                    "dossiers_upserted": len(dossier_upsert_ids),
+                    "details_upserted": len(detail_upsert_ids),
+                    "work_items_replaced": len(work_replace_ids),
+                    "filters_replaced": len(current_filter_catalog),
+                    "deleted_dossiers": len(stale_ids),
+                },
+            )
 
         print(
             json.dumps(
@@ -803,6 +921,7 @@ def main() -> None:
                     "details_upserted": len(detail_upsert_ids),
                     "work_items_replaced": len(work_replace_ids),
                     "filters_replaced": len(current_filter_catalog),
+                    "mandat_register_replaced": len(current_mandat_register_rows),
                     "deleted_dossiers": len(stale_ids),
                     "mode": "full_rebuild" if args.full_rebuild else "upgrade",
                     "baseline_adopted": baseline_adopted,

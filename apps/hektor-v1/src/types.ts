@@ -206,6 +206,7 @@ export type UserNegotiatorContext = {
 }
 
 export type MandatRecord = {
+  register_row_id?: string | null
   app_dossier_id: number
   hektor_annonce_id: number
   photo_url_listing?: string | null
@@ -247,6 +248,16 @@ export type MandatRecord = {
   vente_id: string | null
   source_updated_at: string | null
   refreshed_at: string | null
+  mandat_source_id?: string | null
+  mandat_numero_reference?: string | null
+  mandat_note?: string | null
+  register_source_kind?: string | null
+  register_detail_available?: boolean | number | null
+  register_version_count?: number | null
+  register_embedded_avenant_count?: number | null
+  register_history_json?: string | null
+  register_avenants_json?: string | null
+  register_detail_payload_json?: string | null
 }
 
 export type MandatBroadcast = {

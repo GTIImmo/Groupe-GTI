@@ -270,6 +270,62 @@ create table if not exists public.app_mandat_current (
     refreshed_at timestamptz not null default now()
 );
 
+create table if not exists public.app_mandat_register_current (
+    register_row_id text primary key,
+    app_dossier_id bigint,
+    hektor_annonce_id bigint not null,
+    photo_url_listing text,
+    images_preview_json text,
+    adresse_privee_listing text,
+    adresse_detail text,
+    code_postal text,
+    code_postal_prive_detail text,
+    ville_privee_detail text,
+    archive text,
+    diffusable text,
+    nb_portails_actifs integer not null default 0,
+    has_diffusion_error boolean not null default false,
+    portails_resume text,
+    numero_dossier text,
+    numero_mandat text,
+    titre_bien text,
+    ville text,
+    type_bien text,
+    prix numeric,
+    commercial_id text,
+    commercial_nom text,
+    negociateur_email text,
+    agence_nom text,
+    statut_annonce text,
+    validation_diffusion_state text,
+    mandat_source_id text,
+    mandat_numero_reference text,
+    mandat_type text,
+    mandat_type_source text,
+    mandat_date_debut text,
+    mandat_date_fin text,
+    mandat_montant numeric,
+    mandants_texte text,
+    mandat_note text,
+    priority text,
+    offre_id text,
+    offre_state text,
+    offre_last_proposition_type text,
+    compromis_id text,
+    compromis_state text,
+    vente_id text,
+    source_updated_at timestamptz,
+    register_source_kind text,
+    register_detail_available boolean not null default false,
+    register_version_count integer not null default 1,
+    register_embedded_avenant_count integer not null default 0,
+    register_history_json text,
+    register_avenants_json text,
+    register_detail_payload_json text,
+    source_hash text not null,
+    refreshed_at timestamptz not null default now()
+);
+
 create table if not exists public.app_mandat_broadcast_current (
     app_dossier_id bigint not null,
     hektor_annonce_id bigint not null,
@@ -316,6 +372,10 @@ create table if not exists public.app_diffusion_request (
 
 create index if not exists idx_app_mandat_current_commercial on public.app_mandat_current (commercial_id, commercial_nom);
 create index if not exists idx_app_mandat_current_statut on public.app_mandat_current (statut_annonce, archive, diffusable);
+create index if not exists idx_app_mandat_register_annonce on public.app_mandat_register_current (hektor_annonce_id, numero_mandat);
+create index if not exists idx_app_mandat_register_dossier on public.app_mandat_register_current (app_dossier_id);
+create index if not exists idx_app_mandat_register_statut on public.app_mandat_register_current (statut_annonce, register_source_kind);
+create index if not exists idx_app_mandat_register_commercial on public.app_mandat_register_current (commercial_nom, negociateur_email);
 create index if not exists idx_app_mandat_broadcast_current_annonce on public.app_mandat_broadcast_current (hektor_annonce_id, passerelle_key);
 create index if not exists idx_app_diffusion_request_status on public.app_diffusion_request (request_status, requested_at desc);
 create index if not exists idx_app_diffusion_request_dossier on public.app_diffusion_request (app_dossier_id);
@@ -548,6 +608,11 @@ with (security_invoker=on) as
 select *
 from public.app_mandat_current;
 
+create or replace view public.app_registre_mandats_current
+with (security_invoker=on) as
+select *
+from public.app_mandat_register_current;
+
 create or replace view public.app_mandat_broadcasts_current
 with (security_invoker=on) as
 select *
@@ -623,6 +688,7 @@ alter table public.app_work_item_current enable row level security;
 alter table public.app_filter_catalog_current_store enable row level security;
 alter table public.app_delta_run enable row level security;
 alter table public.app_mandat_current enable row level security;
+alter table public.app_mandat_register_current enable row level security;
 alter table public.app_mandat_broadcast_current enable row level security;
 alter table public.app_diffusion_request enable row level security;
 
@@ -692,6 +758,11 @@ using (public.is_app_manager_or_admin());
 
 create policy "app_mandat_current_select_active_users"
 on public.app_mandat_current
+for select
+using (public.is_app_user_active());
+
+create policy "app_mandat_register_current_select_active_users"
+on public.app_mandat_register_current
 for select
 using (public.is_app_user_active());
 

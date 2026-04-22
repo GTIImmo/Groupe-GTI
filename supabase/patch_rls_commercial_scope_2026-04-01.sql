@@ -150,6 +150,22 @@ begin
     $sql$;
   end if;
 
+  if to_regclass('public.app_mandat_register_current') is not null then
+    execute 'drop policy if exists "app_mandat_register_current_select_active_users" on public.app_mandat_register_current';
+    execute 'drop policy if exists "app_mandat_register_current_select_scoped_users" on public.app_mandat_register_current';
+    execute $sql$
+      create policy "app_mandat_register_current_select_scoped_users"
+      on public.app_mandat_register_current
+      for select
+      using (
+        case
+          when app_dossier_id is not null then public.can_access_current_dossier(app_dossier_id)
+          else public.is_app_manager_or_admin()
+        end
+      )
+    $sql$;
+  end if;
+
   if to_regclass('public.app_mandat_broadcast_current') is not null then
     execute 'drop policy if exists "app_mandat_broadcast_current_select_active_users" on public.app_mandat_broadcast_current';
     execute 'drop policy if exists "app_mandat_broadcast_current_select_scoped_users" on public.app_mandat_broadcast_current';

@@ -24,6 +24,7 @@ import {
   loadMandatFilterCatalog,
   loadMandatBroadcasts,
   loadMandatRegisterPage,
+  loadMandatRegisterStats,
   setDossierHektorState,
   setDossierValidationOnHektor,
   setDossierDiffusableOnHektor,
@@ -927,6 +928,26 @@ function mandateRegisterNatureLabel(item: MandatRecord) {
   return [type !== '-' ? type : '', address].filter(Boolean).join(' · ') || '-'
 }
 
+function mandateRegisterRowKey(item: MandatRecord) {
+  return item.register_row_id ?? `${item.hektor_annonce_id}:${item.numero_mandat ?? item.app_dossier_id ?? 'na'}`
+}
+
+function mandateRegisterSourceLabel(item: MandatRecord) {
+  return (item.register_source_kind ?? '').trim().toLowerCase() === 'historique' ? 'Historique' : 'Actif'
+}
+
+function parseRegisterDetailPayload(item: MandatRecord) {
+  return parseJson<Record<string, unknown>>(item.register_detail_payload_json ?? '', {})
+}
+
+function parseRegisterHistory(item: MandatRecord) {
+  return parseJson<Array<Record<string, unknown>>>(item.register_history_json ?? '', [])
+}
+
+function parseRegisterAvenants(item: MandatRecord) {
+  return parseJson<Array<Record<string, unknown>>>(item.register_avenants_json ?? '', [])
+}
+
 function mandateRegisterValidationLabel(value: string | null | undefined) {
   return isValidationApproved(value) ? 'Oui' : 'Non'
 }
@@ -1290,6 +1311,7 @@ export default function App() {
   const [mandatsTotal, setMandatsTotal] = useState(0)
   const [mandatPage, setMandatPage] = useState(1)
   const [selectedMandatId, setSelectedMandatId] = useState<number | null>(null)
+  const [selectedRegisterRowId, setSelectedRegisterRowId] = useState<string | null>(null)
   const [mandatBroadcasts, setMandatBroadcasts] = useState<MandatBroadcast[]>([])
   const [diffusionRequests, setDiffusionRequests] = useState<DiffusionRequest[]>([])
   const [diffusionRequestEvents, setDiffusionRequestEvents] = useState<DiffusionRequestEvent[]>([])
@@ -1471,10 +1493,10 @@ export default function App() {
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
-    const statsFilters = screen === 'registre'
-      ? { ...filters, mandat: withMandatFilterValue }
-      : filters
-    loadMandatStats(statsFilters, dataScope)
+    const statsPromise = screen === 'registre'
+      ? loadMandatRegisterStats({ ...filters, mandat: withMandatFilterValue }, dataScope)
+      : loadMandatStats(filters, dataScope)
+    statsPromise
       .then((stats) => {
         if (!cancelled) setMandatStats(stats)
       })
@@ -1540,7 +1562,14 @@ export default function App() {
         setWorkItemsTotal(nextWorkItemsPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, nextWorkItemsPage.rows, nextMandatsPage.rows)))
         setSelectedDossierId((current) => current ?? nextDossiersPage.rows[0]?.app_dossier_id ?? null)
-        setSelectedMandatId((current) => current ?? nextMandatsPage.rows[0]?.app_dossier_id ?? null)
+        if (screen === 'registre') {
+          setSelectedRegisterRowId((current) => {
+            if (current && nextMandatsPage.rows.some((item) => item.register_row_id === current)) return current
+            return nextMandatsPage.rows[0]?.register_row_id ?? null
+          })
+        } else {
+          setSelectedMandatId((current) => current ?? (nextMandatsPage.rows[0]?.app_dossier_id ?? null))
+        }
       })
       .catch((error) => {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement')
@@ -2574,6 +2603,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       (selectedDossier && selectedDossier.app_dossier_id === selectedMandatId ? (selectedDossier as unknown as MandatRecord) : null),
     [mandats, selectedDossier, selectedMandatId],
   )
+  const selectedRegisterMandat = useMemo(
+    () => mandats.find((item) => (item.register_row_id ?? null) === selectedRegisterRowId) ?? null,
+    [mandats, selectedRegisterRowId],
+  )
   const requestModalMandat = useMemo(
     () =>
       mandats.find((item) => item.app_dossier_id === requestModalMandatId) ??
@@ -2871,18 +2904,42 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const mandatDetails = useMemo(() => {
     const rawMandats = parseJson<Array<Record<string, unknown>>>(detail.mandats_json, [])
     if (rawMandats.length > 0) {
-      return rawMandats.map((item, index) => ({
-        id: `${index}-${safeText(item.numero)}`,
-        title: [safeText(item.numero), safeText(item.type)].filter(Boolean).join(' - ') || `Mandat ${index + 1}`,
-        lines: [
-          ['Enregistrement', safeText(item.dateenr) || safeText(item.date_enregistrement)] as [string, string],
-          ['Debut', safeText(item.debut)] as [string, string],
-          ['Fin', safeText(item.fin)] as [string, string],
-          ['Cloture', safeText(item.cloture)] as [string, string],
-          ['Montant', safeText(item.montant)] as [string, string],
-          ['Note', safeText(item.note)] as [string, string],
-        ].filter((entry) => entry[1]),
-      }))
+      const grouped = new Map<string, Array<Record<string, unknown>>>()
+      rawMandats.forEach((item, index) => {
+        const numero = safeText(item.numero) || `Mandat ${index + 1}`
+        grouped.set(numero, [...(grouped.get(numero) ?? []), item])
+      })
+      return Array.from(grouped.entries()).map(([numero, versions], index) => {
+        const sortedVersions = versions
+          .slice()
+          .sort((a, b) => {
+            const score = (entry: Record<string, unknown>) =>
+              ['type', 'debut', 'fin', 'cloture', 'montant', 'mandants', 'note'].reduce((count, key) => count + (safeText(entry[key]) ? 1 : 0), 0)
+            const scoreDiff = score(b) - score(a)
+            if (scoreDiff !== 0) return scoreDiff
+            return safeText(b.id).localeCompare(safeText(a.id), 'fr')
+          })
+        const current = sortedVersions[0]
+        const embeddedAvenants = sortedVersions.flatMap((item) => {
+          const avenants = Array.isArray(item.avenants) ? item.avenants : []
+          return avenants.filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === 'object'))
+        })
+        return {
+          id: `${index}-${numero}`,
+          title: [numero, safeText(current.type)].filter(Boolean).join(' - ') || `Mandat ${index + 1}`,
+          lines: [
+            ['Enregistrement', safeText(current.dateenr) || safeText(current.date_enregistrement)] as [string, string],
+            ['Debut', safeText(current.debut)] as [string, string],
+            ['Fin', safeText(current.fin)] as [string, string],
+            ['Cloture', safeText(current.cloture)] as [string, string],
+            ['Montant', safeText(current.montant)] as [string, string],
+            ['Mandants', safeText(current.mandants)] as [string, string],
+            ['Versions', sortedVersions.length > 1 ? `${sortedVersions.length} versions détectées` : '1 version'] as [string, string],
+            ['Avenants', embeddedAvenants.length > 0 ? embeddedAvenants.map((entry) => [safeText(entry.numero), safeText(entry.date), safeText(entry.detail)].filter(Boolean).join(' · ')).join(' | ') : ''] as [string, string],
+            ['Note', safeText(current.note)] as [string, string],
+          ].filter((entry) => entry[1]),
+        }
+      })
     }
     return [[
       ['Numero source', detail.mandat_numero_source ?? ''] as [string, string],
@@ -3467,8 +3524,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onPrevMandat={() => setMandatPage((page) => Math.max(1, page - 1))}
             onNextMandat={() => setMandatPage((page) => Math.min(mandatTotalPages, page + 1))}
             onGoToMandatPage={(page) => setMandatPage(Math.min(mandatTotalPages, Math.max(1, page)))}
-            selectedMandat={selectedMandat}
-            onSelectMandat={setSelectedMandatId}
+            selectedMandat={selectedRegisterMandat}
+            onSelectMandat={setSelectedRegisterRowId}
             onOpenDetailPage={openDossierDetailPage}
             loading={mandatLoading}
           />
@@ -4210,11 +4267,18 @@ function MandatRegisterScreen(props: {
   onNextMandat: () => void
   onGoToMandatPage: (page: number) => void
   selectedMandat: MandatRecord | null
-  onSelectMandat: (id: number) => void
+  onSelectMandat: (registerRowId: string) => void
   onOpenDetailPage: (id: number) => void
   loading: boolean
 }) {
-  const [expandedMandants, setExpandedMandants] = useState<Record<number, boolean>>({})
+  const [expandedMandants, setExpandedMandants] = useState<Record<string, boolean>>({})
+  const [detailOpen, setDetailOpen] = useState(false)
+  const selectedDetail = props.selectedMandat
+  const selectedDetailPayload = selectedDetail ? parseRegisterDetailPayload(selectedDetail) : {}
+  const selectedHistory = selectedDetail ? parseRegisterHistory(selectedDetail) : []
+  const selectedAvenants = selectedDetail ? parseRegisterAvenants(selectedDetail) : []
+  const selectedImages = parseJson<Array<Record<string, unknown>>>(String(selectedDetailPayload.images_preview_json ?? selectedDetail?.images_preview_json ?? '[]'), [])
+  const selectedImageUrl = selectedImages.find((item) => safeText(item.url))?.url as string | undefined
 
   return (
     <section className="panel-grid">
@@ -4250,23 +4314,30 @@ function MandatRegisterScreen(props: {
             </thead>
             <tbody>
               {props.mandats.map((item) => {
-                const isSelected = item.app_dossier_id === props.selectedMandat?.app_dossier_id
+                const rowKey = mandateRegisterRowKey(item)
+                const isSelected = rowKey === (props.selectedMandat ? mandateRegisterRowKey(props.selectedMandat) : null)
                 const mandantsLabel = mandateRegisterMandantsLabel(item)
                 const canExpandMandants = mandantsLabel.length > 42
-                const isMandantsExpanded = Boolean(expandedMandants[item.app_dossier_id])
+                const expandKey = rowKey
+                const isMandantsExpanded = Boolean(expandedMandants[expandKey])
                 return (
                   <tr
-                    key={item.app_dossier_id}
+                    key={rowKey}
                     className={isSelected ? 'is-selected' : ''}
                     onClick={() => {
-                      props.onSelectMandat(item.app_dossier_id)
-                      props.onOpenDetailPage(item.app_dossier_id)
+                      props.onSelectMandat(rowKey)
+                      setDetailOpen(true)
                     }}
                   >
                     <td className="register-col-mandat">
                       <strong className="register-primary">{item.numero_mandat ?? '-'}</strong>
                       {mandateRegisterTypeInlineLabel(item) ? <span className="register-type-inline">{mandateRegisterTypeInlineLabel(item)}</span> : null}
                       <span className="register-secondary">{item.numero_dossier ?? '-'}</span>
+                      <div className="tag-row register-tag-row">
+                        <StatusPill value={mandateRegisterSourceLabel(item)} />
+                        {(item.register_version_count ?? 1) > 1 ? <StatusPill value={`+${item.register_version_count} versions`} /> : null}
+                        {(item.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`+${item.register_embedded_avenant_count} avenant${(item.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
+                      </div>
                     </td>
                     <td className="register-col-status"><StatusPill value={item.statut_annonce} /></td>
                     <td className="register-col-flag"><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
@@ -4282,7 +4353,7 @@ function MandatRegisterScreen(props: {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation()
-                            setExpandedMandants((current) => ({ ...current, [item.app_dossier_id]: !current[item.app_dossier_id] }))
+                            setExpandedMandants((current) => ({ ...current, [expandKey]: !current[expandKey] }))
                           }}
                         >
                           {isMandantsExpanded ? '−' : '+'}
@@ -4297,6 +4368,104 @@ function MandatRegisterScreen(props: {
           </table>
         </div>
       </section>
+      {detailOpen && selectedDetail ? (
+        <div className="modal-overlay" onClick={() => setDetailOpen(false)}>
+          <section className="modal-panel modal-panel-detail mandate-register-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="panel-head">
+              <div>
+                <p className="eyebrow">{selectedDetail.register_source_kind === 'historique' ? 'Mandat historique' : 'Mandat'}</p>
+                <h3>{selectedDetail.numero_mandat ?? '-'} · {selectedDetail.titre_bien}</h3>
+              </div>
+              <div className="row-actions">
+                {Boolean(selectedDetail.register_detail_available) ? (
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={() => {
+                      setDetailOpen(false)
+                      props.onOpenDetailPage(Number(selectedDetail.app_dossier_id))
+                    }}
+                  >
+                    Ouvrir fiche
+                  </button>
+                ) : null}
+                <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(selectedDetail.hektor_annonce_id)}>Hektor</button>
+                <button className="ghost-button button-subtle" type="button" onClick={() => setDetailOpen(false)}>Fermer</button>
+              </div>
+            </div>
+            <div className="detail-stack detail-stack-rich">
+              <article className="detail-card detail-card-hero">
+                <div className="detail-card-hero-media">
+                  {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
+                </div>
+                <div className="detail-card-hero-body">
+                  <strong>{selectedDetail.titre_bien}</strong>
+                  <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
+                  <div className="tag-row">
+                    <StatusPill value={selectedDetail.statut_annonce} />
+                    <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
+                    {(selectedDetail.register_version_count ?? 1) > 1 ? <StatusPill value={`${selectedDetail.register_version_count} versions`} /> : null}
+                    {(selectedDetail.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`${selectedDetail.register_embedded_avenant_count} avenant${(selectedDetail.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
+                  </div>
+                </div>
+              </article>
+              <article className="detail-card">
+                <span className="detail-label">Mandat courant</span>
+                <div className="info-grid">
+                  <InfoCard label="Numero" value={selectedDetail.numero_mandat} />
+                  <InfoCard label="Type" value={selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'} />
+                  <InfoCard label="Debut" value={formatDate(selectedDetail.mandat_date_debut)} />
+                  <InfoCard label="Fin" value={formatDate(selectedDetail.mandat_date_fin)} />
+                  <InfoCard label="Montant" value={formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)} />
+                  <InfoCard label="Validation" value={selectedDetail.validation_diffusion_state ?? '-'} />
+                  <InfoCard label="Diffusable" value={mandateRegisterDiffusableLabel(selectedDetail.diffusable)} />
+                  <InfoCard label="Commercial" value={selectedDetail.commercial_nom ?? '-'} />
+                  <InfoCard label="Agence" value={selectedDetail.agence_nom ?? '-'} />
+                </div>
+                <div className="detail-rich-copy">
+                  <strong>Mandant(s)</strong>
+                  <p>{selectedDetail.mandants_texte ?? '-'}</p>
+                  {selectedDetail.mandat_note ? (
+                    <>
+                      <strong>Note mandat</strong>
+                      <p>{selectedDetail.mandat_note}</p>
+                    </>
+                  ) : null}
+                </div>
+              </article>
+              <article className="detail-card">
+                <span className="detail-label">Historique des versions</span>
+                {selectedHistory.length > 0 ? (
+                  <div className="timeline-list">
+                    {selectedHistory.map((entry, index) => (
+                      <article key={String(entry.history_id ?? index)} className="timeline-card">
+                        <strong>{String(entry.label ?? `Version ${index + 1}`)}</strong>
+                        <span>{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} → {formatDate(String(entry.date_fin ?? ''))}</span>
+                        <p>{formatPrice(String(entry.montant ?? ''))} · {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}</p>
+                        {safeText(entry.note) ? <small>{String(entry.note)}</small> : null}
+                      </article>
+                    ))}
+                  </div>
+                ) : <p>Aucun historique de version disponible.</p>}
+              </article>
+              <article className="detail-card">
+                <span className="detail-label">Avenants Hektor</span>
+                {selectedAvenants.length > 0 ? (
+                  <div className="timeline-list">
+                    {selectedAvenants.map((entry, index) => (
+                      <article key={String(entry.avenant_id ?? index)} className="timeline-card">
+                        <strong>{String(entry.numero ?? 'Avenant')}</strong>
+                        <span>{formatDate(String(entry.date ?? ''))}</span>
+                        <p>{String(entry.detail ?? 'Sans detail')}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : <p>Aucun avenant explicite dans le brut.</p>}
+              </article>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }

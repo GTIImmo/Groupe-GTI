@@ -1260,7 +1260,7 @@ export async function loadFilterCatalog(scope?: DataScope | null): Promise<Filte
 
 export async function loadMandatFilterCatalog(scope?: DataScope | null): Promise<Pick<FilterCatalog, 'commercials' | 'agencies' | 'statuts' | 'validationDiffusions' | 'passerelles' | 'diffusions' | 'erreursDiffusion'>> {
   if (!hasSupabaseEnv || !supabase) {
-    const scopedMandats = filterByNegotiatorEmail(mockMandats, scope)
+    const scopedMandats = withRegisterRowId(filterByNegotiatorEmail(mockMandats, scope))
     return {
       commercials: uniqSorted(scopedMandats.map((item) => item.commercial_nom)),
       agencies: uniqSorted(scopedMandats.map((item) => item.agence_nom)),
@@ -1284,11 +1284,11 @@ export async function loadMandatFilterCatalog(scope?: DataScope | null): Promise
   while (true) {
     const { data, error } = await applyNegotiatorScopeToQuery(
       supabase
-      .from('app_dossiers_current')
-      .select('app_dossier_id,commercial_nom,agence_nom,statut_annonce,validation_diffusion_state,portails_resume,diffusable,numero_mandat')
+      .from('app_registre_mandats_current')
+      .select('register_row_id,commercial_nom,agence_nom,statut_annonce,validation_diffusion_state,portails_resume,diffusable,numero_mandat')
       .not('numero_mandat', 'is', null)
       .neq('numero_mandat', '')
-      .order('app_dossier_id', { ascending: true })
+      .order('register_row_id', { ascending: true })
       .range(from, from + batchSize - 1),
       scope,
     )
@@ -1428,13 +1428,20 @@ function mandatNumberSortValue(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY
 }
 
+function withRegisterRowId<T extends MandatRecord>(rows: T[]) {
+  return rows.map((item) => ({
+    ...item,
+    register_row_id: item.register_row_id ?? `${item.hektor_annonce_id ?? 'na'}:${item.numero_mandat ?? item.app_dossier_id ?? 'na'}`,
+  }))
+}
+
 function sortMandatRegisterRows(rows: MandatRecord[]) {
   return rows.slice().sort((a, b) => {
     const byNumber = mandatNumberSortValue(b.numero_mandat) - mandatNumberSortValue(a.numero_mandat)
     if (byNumber !== 0) return byNumber
     const byLabel = String(b.numero_mandat ?? '').localeCompare(String(a.numero_mandat ?? ''), 'fr')
     if (byLabel !== 0) return byLabel
-    return b.app_dossier_id - a.app_dossier_id
+    return String(b.register_row_id ?? b.app_dossier_id ?? '').localeCompare(String(a.register_row_id ?? a.app_dossier_id ?? ''), 'fr')
   })
 }
 
@@ -1452,7 +1459,7 @@ export async function loadMandatRegisterPage({
   if (!hasSupabaseEnv || !supabase) {
     const rows = sortMandatRegisterRows(
       (applyLocalDossierFilters(
-        filterByNegotiatorEmail(mockMandats, scope)
+        withRegisterRowId(filterByNegotiatorEmail(mockMandats, scope))
           .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
           .map((item) => ({
             ...item,
@@ -1479,11 +1486,11 @@ export async function loadMandatRegisterPage({
     let query = applyDossierFiltersToQuery(
       applyNegotiatorScopeToQuery(
         supabase
-          .from('app_dossiers_current')
+          .from('app_registre_mandats_current')
           .select('*')
           .not('numero_mandat', 'is', null)
           .neq('numero_mandat', '')
-          .order('app_dossier_id', { ascending: true })
+          .order('register_row_id', { ascending: true })
           .range(from, from + batchSize - 1),
         scope,
       ),
@@ -1494,12 +1501,100 @@ export async function loadMandatRegisterPage({
     }
     const { data, error } = await query
     if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat register')
-    rows.push(...(data as MandatRecord[]))
+    rows.push(...withRegisterRowId(data as MandatRecord[]))
     if (data.length < batchSize) break
     from += batchSize
   }
 
   return paginate(sortMandatRegisterRows(rows), page, pageSize)
+}
+
+export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
+  if (!hasSupabaseEnv || !supabase) {
+    const rows = applyLocalDossierFilters(
+      withRegisterRowId(filterByNegotiatorEmail(mockMandats, scope)).map((item) => ({
+        ...item,
+        etat_visibilite: null,
+        alerte_principale: null,
+        has_open_blocker: false,
+        commentaire_resume: null,
+        date_relance_prevue: null,
+        dernier_event_type: null,
+        dernier_work_status: null,
+      })),
+      filters,
+    ) as unknown as MandatRecord[]
+    return {
+      total: rows.length,
+      withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
+      mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
+      mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
+      mandatValide: rows.filter((item) => isValidationApproved(item.validation_diffusion_state)).length,
+      mandatNonValide: rows.filter((item) => !isValidationApproved(item.validation_diffusion_state)).length,
+      offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
+      offresRefusees: rows.filter((item) => hasOffreAchatRefusee(item)).length,
+      compromisEnCours: rows.filter((item) => hasCompromisEnCours(item)).length,
+      compromisAnnules: rows.filter((item) => hasCompromisAnnule(item)).length,
+      affairesEnCours: rows.filter((item) => hasAffaireEnCours(item)).length,
+      affairesAnnulees: rows.filter((item) => hasAffaireAnnulee(item)).length,
+      leboncoin: rows.filter((item) => (item.portails_resume ?? '').toLowerCase().includes('leboncoin')).length,
+      bienici: rows.filter((item) => {
+        const normalized = (item.portails_resume ?? '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+        return normalized.includes('bienici')
+      }).length,
+      withErrors: rows.filter((item) => Boolean(item.has_diffusion_error)).length,
+    }
+  }
+
+  const batchSize = 1000
+  let from = 0
+  const rows: MandatRecord[] = []
+
+  while (true) {
+    const { data, error } = await applyDossierFiltersToQuery(
+      applyNegotiatorScopeToQuery(
+        supabase
+          .from('app_registre_mandats_current')
+          .select('register_row_id,app_dossier_id,numero_mandat,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error')
+          .order('register_row_id', { ascending: true })
+          .range(from, from + batchSize - 1),
+        scope,
+      ),
+      filters,
+    )
+
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load register stats')
+    rows.push(...withRegisterRowId(data as MandatRecord[]))
+    if (data.length < batchSize) break
+    from += batchSize
+  }
+
+  return {
+    total: rows.length,
+    withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
+    mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
+    mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
+    mandatValide: rows.filter((item) => isValidationApproved(item.validation_diffusion_state)).length,
+    mandatNonValide: rows.filter((item) => !isValidationApproved(item.validation_diffusion_state)).length,
+    offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
+    offresRefusees: rows.filter((item) => hasOffreAchatRefusee(item)).length,
+    compromisEnCours: rows.filter((item) => hasCompromisEnCours(item)).length,
+    compromisAnnules: rows.filter((item) => hasCompromisAnnule(item)).length,
+    affairesEnCours: rows.filter((item) => hasAffaireEnCours(item)).length,
+    affairesAnnulees: rows.filter((item) => hasAffaireAnnulee(item)).length,
+    leboncoin: rows.filter((item) => (item.portails_resume ?? '').toLowerCase().includes('leboncoin')).length,
+    bienici: rows.filter((item) => {
+      const normalized = (item.portails_resume ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+      return normalized.includes('bienici')
+    }).length,
+    withErrors: rows.filter((item) => Boolean(item.has_diffusion_error)).length,
+  }
 }
 
 export async function loadMandatStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
