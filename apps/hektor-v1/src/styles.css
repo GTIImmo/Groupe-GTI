@@ -2311,6 +2311,88 @@ tbody tr.is-selected { background: #e9f1f4; }
 }
 .mandate-register-modal {
   max-width: 1020px;
+  background:
+    radial-gradient(circle at top right, rgba(20, 96, 115, 0.08) 0%, rgba(20, 96, 115, 0) 28%),
+    radial-gradient(circle at top left, rgba(201, 169, 110, 0.10) 0%, rgba(201, 169, 110, 0) 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(246,250,252,0.98) 100%);
+}
+.mandate-register-modal .panel-head {
+  align-items: start;
+  padding: 18px 18px 14px;
+  margin: -6px -6px 8px;
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(16, 78, 94, 0.08) 0%, rgba(248, 252, 253, 0.98) 48%, rgba(255, 247, 234, 0.92) 100%);
+  border: 1px solid rgba(212, 222, 228, 0.92);
+  box-shadow: 0 14px 24px rgba(21, 32, 43, 0.05);
+}
+.mandate-register-subtitle {
+  margin: 6px 0 0;
+  color: #627783;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+.mandate-register-modal .detail-card-hero {
+  grid-template-columns: minmax(110px, 150px) minmax(0, 1fr);
+  gap: 16px;
+  border-radius: 22px;
+}
+.mandate-register-modal .detail-card-hero-media {
+  min-height: 124px;
+  max-height: 124px;
+  align-self: start;
+}
+.mandate-register-modal .detail-card-hero-body {
+  gap: 12px;
+}
+.mandate-register-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.mandate-register-hero-copy {
+  display: grid;
+  gap: 8px;
+}
+.mandate-register-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+}
+.mandate-register-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.mandate-register-link {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border-color: rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.12);
+  color: #fffdf8;
+  box-shadow: 0 10px 18px rgba(21, 32, 43, 0.10);
+}
+.mandate-register-link:hover {
+  border-color: rgba(255,255,255,0.34);
+  background: rgba(255,255,255,0.16);
+}
+.mandate-register-link.primary {
+  background: rgba(255,255,255,0.92);
+  color: #164453;
+  border-color: rgba(255,255,255,0.9);
+}
+.mandate-register-modal .detail-card {
+  border-radius: 20px;
+  border-color: rgba(205, 216, 222, 0.9);
+  box-shadow: 0 12px 24px rgba(24, 40, 53, 0.05);
+}
+.mandate-register-modal .info-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .detail-rich-copy {
   display: grid;

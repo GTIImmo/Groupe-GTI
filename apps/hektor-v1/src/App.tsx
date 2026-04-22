@@ -4470,23 +4470,11 @@ function MandatRegisterScreen(props: {
           <section className="modal-panel modal-panel-detail mandate-register-modal" onClick={(event) => event.stopPropagation()}>
             <div className="panel-head">
               <div>
-                <p className="eyebrow">{selectedDetail.register_source_kind === 'historique' ? 'Mandat historique' : 'Mandat'}</p>
+                <p className="eyebrow">Fiche mandat</p>
                 <h3>{selectedDetail.numero_mandat ?? '-'} · {selectedDetail.titre_bien}</h3>
+                <p className="mandate-register-subtitle">{selectedDetail.register_source_kind === 'historique' ? 'Mandat historique' : 'Mandat actif'} · {selectedDetail.numero_dossier ?? '-'}</p>
               </div>
               <div className="row-actions">
-                {Boolean(selectedDetail.register_detail_available) ? (
-                  <button
-                    className="ghost-button"
-                    type="button"
-                    onClick={() => {
-                      setDetailOpen(false)
-                      props.onOpenDetailPage(Number(selectedDetail.app_dossier_id))
-                    }}
-                  >
-                    Ouvrir fiche
-                  </button>
-                ) : null}
-                <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(selectedDetail.hektor_annonce_id)}>Hektor</button>
                 <button className="ghost-button button-subtle" type="button" onClick={() => setDetailOpen(false)}>Fermer</button>
               </div>
             </div>
@@ -4496,8 +4484,28 @@ function MandatRegisterScreen(props: {
                   {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
                 </div>
                 <div className="detail-card-hero-body">
-                  <strong>{selectedDetail.titre_bien}</strong>
-                  <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
+                  <div className="mandate-register-hero-top">
+                    <div className="mandate-register-hero-copy">
+                      <span className="mandate-register-kicker">{selectedDetail.numero_mandat ?? '-'}</span>
+                      <strong>{selectedDetail.titre_bien}</strong>
+                      <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
+                    </div>
+                    <div className="mandate-register-hero-actions">
+                      {Boolean(selectedDetail.register_detail_available) ? (
+                        <button
+                          className="ghost-button mandate-register-link primary"
+                          type="button"
+                          onClick={() => {
+                            setDetailOpen(false)
+                            props.onOpenDetailPage(Number(selectedDetail.app_dossier_id))
+                          }}
+                        >
+                          Fiche bien
+                        </button>
+                      ) : null}
+                      <button className="ghost-button mandate-register-link" type="button" onClick={() => openHektorAnnonce(selectedDetail.hektor_annonce_id)}>Hektor</button>
+                    </div>
+                  </div>
                   <div className="tag-row">
                     <StatusPill value={selectedDetail.statut_annonce} />
                     <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
@@ -5124,7 +5132,7 @@ function SuiviMandatsScreenV2(props: {
         <div className="table-wrap suivi-portfolio-wrap">
           {activeSuiviFilter === 'anomalies' ? (
             <table className="suivi-portfolio-table">
-              <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Diffusion</th><th>Anomalie</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Diffusion</th><th>Anomalie</th></tr></thead>
               <tbody>
                 {anomalyRows.length > 0 ? anomalyRows.map((item) => (
                   <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
@@ -5133,14 +5141,13 @@ function SuiviMandatsScreenV2(props: {
                     <td>{commercialDisplay(item)}</td>
                     <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
                     <td><small>{!item.numero_mandat ? 'Sans mandat' : '-'}</small><small>{(item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : '-'}</small><small>{(item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : '-'}</small><small>{Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : '-'}</small></td>
-                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
                   </tr>
-                )) : <tr><td colSpan={6}><p className="empty-state">Aucune anomalie dans cette vue.</p></td></tr>}
+                )) : <tr><td colSpan={5}><p className="empty-state">Aucune anomalie dans cette vue.</p></td></tr>}
               </tbody>
             </table>
           ) : activeSuiviFilter === 'price_alert' ? (
             <table className="suivi-portfolio-table">
-              <thead><tr><th>Mandat</th><th>Negociateur</th><th>Prix</th><th>Contrôle</th><th>Dernière date</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Mandat</th><th>Negociateur</th><th>Prix</th><th>Contrôle</th><th>Dernière date</th></tr></thead>
               <tbody>
                 {priceAlertRows.length > 0 ? priceAlertRows.map(({ mandat: item, request }) => (
                   <tr key={`price-alert-${item.app_dossier_id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
@@ -5149,14 +5156,13 @@ function SuiviMandatsScreenV2(props: {
                     <td><small>{formatPrice(item.price_change_last_old_value ?? item.prix)}</small><small>{formatPrice(item.price_change_last_new_value ?? item.prix)}</small></td>
                     <td><small>{request ? 'Validation prix sans changement constaté' : 'Prix changé sans baisse validée'}</small></td>
                     <td><small>{formatDate(item.price_change_last_detected_at)}</small><small>{request ? `Validation ${formatDate(requestTimelineDate(request))}` : 'Aucune validation'}</small></td>
-                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={request ?? undefined} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
                   </tr>
-                )) : <tr><td colSpan={6}><p className="empty-state">Aucune alerte prix dans cette vue.</p></td></tr>}
+                )) : <tr><td colSpan={5}><p className="empty-state">Aucune alerte prix dans cette vue.</p></td></tr>}
               </tbody>
             </table>
           ) : activeSuiviFilter === 'portfolio' ? (
             <table className="suivi-portfolio-table">
-              <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Visibilite</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Visibilite</th></tr></thead>
               <tbody>
                 {portfolioRows.length > 0 ? portfolioRows.map((item) => (
                   <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
@@ -5165,9 +5171,8 @@ function SuiviMandatsScreenV2(props: {
                     <td>{commercialDisplay(item)}</td>
                     <td><small>{item.statut_annonce ?? '-'}</small><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
                     <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
-                    <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
                   </tr>
-                )) : <tr><td colSpan={6}><p className="empty-state">Aucun mandat dans cette vue.</p></td></tr>}
+                )) : <tr><td colSpan={5}><p className="empty-state">Aucun mandat dans cette vue.</p></td></tr>}
               </tbody>
             </table>
           ) : (
