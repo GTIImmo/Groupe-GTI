@@ -2332,64 +2332,85 @@ tbody tr.is-selected { background: #e9f1f4; }
   font-size: 12px;
   letter-spacing: 0.01em;
 }
-.mandate-register-modal .detail-card-hero {
-  grid-template-columns: minmax(110px, 150px) minmax(0, 1fr);
-  gap: 16px;
+.mandate-sheet-hero-card {
+  padding: 18px;
   border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(243,248,250,0.98) 100%);
 }
-.mandate-register-modal .detail-card-hero-media {
-  min-height: 124px;
-  max-height: 124px;
-  align-self: start;
-}
-.mandate-register-modal .detail-card-hero-body {
-  gap: 12px;
-}
-.mandate-register-hero-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-.mandate-register-hero-copy {
+.mandate-sheet-hero-layout {
   display: grid;
-  gap: 8px;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.mandate-sheet-media {
+  width: 118px;
+  height: 118px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ecf2f5;
+  border: 1px solid rgba(205, 216, 222, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+}
+.mandate-sheet-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.mandate-sheet-summary {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.mandate-sheet-summary strong {
+  font-size: 25px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  color: #173745;
+}
+.mandate-sheet-summary p {
+  margin: 0;
+  color: #5f7580;
 }
 .mandate-register-kicker {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.72);
+  color: #7a8f99;
 }
-.mandate-register-hero-actions {
+.mandate-sheet-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
 }
 .mandate-register-link {
   min-height: 38px;
   padding: 0 14px;
   border-radius: 12px;
-  border-color: rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.12);
-  color: #fffdf8;
-  box-shadow: 0 10px 18px rgba(21, 32, 43, 0.10);
+  border-color: rgba(181, 197, 206, 0.92);
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8fa 100%);
+  color: #1b4a5b;
+  box-shadow: 0 8px 16px rgba(21, 32, 43, 0.06);
 }
 .mandate-register-link:hover {
-  border-color: rgba(255,255,255,0.34);
-  background: rgba(255,255,255,0.16);
+  border-color: rgba(146, 171, 184, 0.96);
+  background: linear-gradient(180deg, #ffffff 0%, #eef5f8 100%);
 }
 .mandate-register-link.primary {
-  background: rgba(255,255,255,0.92);
-  color: #164453;
-  border-color: rgba(255,255,255,0.9);
+  background: linear-gradient(180deg, #0f4c5c 0%, #1a6477 100%);
+  color: #fffdf8;
+  border-color: rgba(15, 76, 92, 0.92);
 }
 .mandate-register-modal .detail-card {
   border-radius: 20px;
   border-color: rgba(205, 216, 222, 0.9);
   box-shadow: 0 12px 24px rgba(24, 40, 53, 0.05);
+}
+.mandate-sheet-section {
+  padding: 18px;
 }
 .mandate-register-modal .info-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));

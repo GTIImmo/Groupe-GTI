@@ -4492,18 +4492,22 @@ function MandatRegisterScreen(props: {
               </div>
             </div>
             <div className="detail-stack detail-stack-rich">
-              <article className="detail-card detail-card-hero">
-                <div className="detail-card-hero-media">
-                  {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
-                </div>
-                <div className="detail-card-hero-body">
-                  <div className="mandate-register-hero-top">
-                    <div className="mandate-register-hero-copy">
-                      <span className="mandate-register-kicker">{selectedDetail.numero_mandat ?? '-'}</span>
-                      <strong>{selectedDetail.titre_bien}</strong>
-                      <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
+              <article className="detail-card mandate-sheet-hero-card">
+                <div className="mandate-sheet-hero-layout">
+                  <div className="mandate-sheet-media">
+                    {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
+                  </div>
+                  <div className="mandate-sheet-summary">
+                    <span className="mandate-register-kicker">Mandat {selectedDetail.numero_mandat ?? '-'}</span>
+                    <strong>{selectedDetail.titre_bien}</strong>
+                    <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
+                    <div className="tag-row">
+                      <StatusPill value={selectedDetail.statut_annonce} />
+                      <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
+                      {(selectedDetail.register_version_count ?? 1) > 1 ? <StatusPill value={`${selectedDetail.register_version_count} versions`} /> : null}
+                      {(selectedDetail.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`${selectedDetail.register_embedded_avenant_count} avenant${(selectedDetail.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
                     </div>
-                    <div className="mandate-register-hero-actions">
+                    <div className="mandate-sheet-actions">
                       {Boolean(selectedDetail.register_detail_available) ? (
                         <button
                           className="ghost-button mandate-register-link primary"
@@ -4519,15 +4523,9 @@ function MandatRegisterScreen(props: {
                       <button className="ghost-button mandate-register-link" type="button" onClick={() => openHektorAnnonce(selectedDetail.hektor_annonce_id)}>Hektor</button>
                     </div>
                   </div>
-                  <div className="tag-row">
-                    <StatusPill value={selectedDetail.statut_annonce} />
-                    <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
-                    {(selectedDetail.register_version_count ?? 1) > 1 ? <StatusPill value={`${selectedDetail.register_version_count} versions`} /> : null}
-                    {(selectedDetail.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`${selectedDetail.register_embedded_avenant_count} avenant${(selectedDetail.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
-                  </div>
                 </div>
               </article>
-              <article className="detail-card">
+              <article className="detail-card mandate-sheet-section">
                 <span className="detail-label">Mandat courant</span>
                 <div className="info-grid">
                   <InfoCard label="Numero" value={selectedDetail.numero_mandat} />
@@ -4551,12 +4549,14 @@ function MandatRegisterScreen(props: {
                   ) : null}
                 </div>
               </article>
-              <PriceChangeHistoryCard
-                source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
-                title="Historique des prix"
-                emptyLabel="Aucun changement de prix historisé pour ce mandat."
-              />
-              <article className="detail-card">
+              <article className="detail-card mandate-sheet-section">
+                <PriceChangeHistoryCard
+                  source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
+                  title="Historique des prix"
+                  emptyLabel="Aucun changement de prix historisé pour ce mandat."
+                />
+              </article>
+              <article className="detail-card mandate-sheet-section">
                 <span className="detail-label">Historique des versions</span>
                 {selectedHistory.length > 0 ? (
                   <div className="timeline-list">
@@ -4571,7 +4571,7 @@ function MandatRegisterScreen(props: {
                   </div>
                 ) : <p>Aucun historique de version disponible.</p>}
               </article>
-              <article className="detail-card">
+              <article className="detail-card mandate-sheet-section">
                 <span className="detail-label">Avenants Hektor</span>
                 {selectedAvenants.length > 0 ? (
                   <div className="timeline-list">
