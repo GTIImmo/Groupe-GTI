@@ -785,6 +785,7 @@ def build_register_detail_payload(
     images_preview_json: str | None,
     active_row: dict[str, object] | None,
     detail_available: bool,
+    price_change_summary: dict[str, object] | None = None,
 ) -> str:
     localite = safe_json_loads(raw_row.get("localite_json"), {})
     textes = safe_json_loads(raw_row.get("textes_json"), [])
@@ -822,6 +823,13 @@ def build_register_detail_payload(
         "mandants_texte": normalize_text(current_version.get("mandants")) or None,
         "mandat_note": normalize_text(current_version.get("note")) or None,
         "nb_images": len(preview_images) if isinstance(preview_images, list) else 0,
+        "price_change_event_count": (price_change_summary or {}).get("price_change_event_count", 0),
+        "price_change_last_source_kind": (price_change_summary or {}).get("price_change_last_source_kind"),
+        "price_change_last_old_value": (price_change_summary or {}).get("price_change_last_old_value"),
+        "price_change_last_new_value": (price_change_summary or {}).get("price_change_last_new_value"),
+        "price_change_last_detected_at": (price_change_summary or {}).get("price_change_last_detected_at"),
+        "price_change_last_source_updated_at": (price_change_summary or {}).get("price_change_last_source_updated_at"),
+        "price_change_events_json": (price_change_summary or {}).get("price_change_events_json"),
     }
     return json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
 
@@ -846,6 +854,10 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
 
     register_rows: list[dict[str, object]] = []
     raw_rows = fetch_rows(con, build_limited_sql(SQL_REGISTER_RAW_BASE, None))
+    price_change_by_annonce = build_price_change_by_annonce(
+        con,
+        [normalize_text(row.get("hektor_annonce_id")) for row in raw_rows if normalize_text(row.get("hektor_annonce_id"))],
+    )
     for raw in raw_rows:
         annonce_id = normalize_text(raw.get("hektor_annonce_id"))
         if not annonce_id:
@@ -901,6 +913,7 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
         ) or " ".join(filter(None, [normalize_text(raw.get("negociateur_prenom")), normalize_text(raw.get("negociateur_nom"))])).strip() or None
         agence_nom = (normalize_text(active_any.get("agence_nom")) if active_any else "") or normalize_text(raw.get("agence_nom")) or None
         broadcast = broadcast_map.get(annonce_id, {})
+        price_change_summary = price_change_by_annonce.get(annonce_id, {})
 
         for numero, versions in grouped_entries.items():
             versions_sorted = sorted(
@@ -964,12 +977,12 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
                 "mandat_montant": normalize_text(current_version.get("montant")) or None,
                 "mandants_texte": normalize_text(current_version.get("mandants")) or None,
                 "mandat_note": normalize_text(current_version.get("note")) or None,
-                "price_change_event_count": source_row.get("price_change_event_count") if source_row else 0,
-                "price_change_last_source_kind": source_row.get("price_change_last_source_kind") if source_row else None,
-                "price_change_last_old_value": source_row.get("price_change_last_old_value") if source_row else None,
-                "price_change_last_new_value": source_row.get("price_change_last_new_value") if source_row else None,
-                "price_change_last_detected_at": source_row.get("price_change_last_detected_at") if source_row else None,
-                "price_change_last_source_updated_at": source_row.get("price_change_last_source_updated_at") if source_row else None,
+                "price_change_event_count": price_change_summary.get("price_change_event_count", 0),
+                "price_change_last_source_kind": price_change_summary.get("price_change_last_source_kind"),
+                "price_change_last_old_value": price_change_summary.get("price_change_last_old_value"),
+                "price_change_last_new_value": price_change_summary.get("price_change_last_new_value"),
+                "price_change_last_detected_at": price_change_summary.get("price_change_last_detected_at"),
+                "price_change_last_source_updated_at": price_change_summary.get("price_change_last_source_updated_at"),
                 "priority": source_row.get("priority") if source_row else None,
                 "offre_id": source_row.get("offre_id") if source_row else None,
                 "offre_state": source_row.get("offre_state") if source_row else None,
@@ -996,6 +1009,7 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
                     images_preview_json=images_preview_json,
                     active_row=source_row,
                     detail_available=detail_available,
+                    price_change_summary=price_change_summary,
                 ),
             }
             register_rows.append(row)
