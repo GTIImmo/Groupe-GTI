@@ -507,7 +507,7 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "portails_resume": normalized.get("portails_resume"),
             "numero_dossier": normalized.get("numero_dossier"),
             "numero_mandat": normalized.get("numero_mandat"),
-            "register_sort_group": int(normalized.get("register_sort_group") or 1),
+            "register_sort_group": int(normalized.get("register_sort_group") if normalized.get("register_sort_group") is not None else 1),
             "register_sort_num": int(normalized.get("register_sort_num") or 0),
             "titre_bien": normalized.get("titre_bien"),
             "ville": normalized.get("ville"),

@@ -920,7 +920,7 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
 
     register_rows.sort(
         key=lambda item: (
-            int(item.get("register_sort_group") or 1),
+            int(item.get("register_sort_group") if item.get("register_sort_group") is not None else 1),
             -(int("".join(ch for ch in str(item.get("numero_mandat") or "") if ch.isdigit()) or 0)),
             -int(item.get("hektor_annonce_id") or 0),
             str(item.get("register_row_id") or ""),
