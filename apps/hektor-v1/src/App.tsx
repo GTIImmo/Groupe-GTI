@@ -425,6 +425,19 @@ function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'valida
   return { label: 'Aucune demande', tone: 'idle', opens: 'request' as const }
 }
 
+function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error'>) {
+  const labels = [
+    !mandat.numero_mandat ? 'Mandat manquant' : null,
+    (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publié' : null,
+    (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs) ? 'Publication active non autorisée' : null,
+    Boolean(mandat.has_diffusion_error) ? 'Erreur de passerelle' : null,
+  ].filter(Boolean) as string[]
+  return {
+    primary: labels[0] ?? 'Anomalie à qualifier',
+    secondary: labels.slice(1),
+  }
+}
+
 type ActionButtonTypeTone = 'validation' | 'price-drop' | 'diffusion' | 'hektor'
 type ActionButtonStateTone = 'request' | 'progress' | 'correction' | 'rejected' | 'accepted' | 'diffusion'
 type ActionTriggerTone = 'neutral' | 'creation' | 'correction' | 'rejected'
@@ -5134,15 +5147,21 @@ function SuiviMandatsScreenV2(props: {
             <table className="suivi-portfolio-table">
               <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Diffusion</th><th>Anomalie</th></tr></thead>
               <tbody>
-                {anomalyRows.length > 0 ? anomalyRows.map((item) => (
-                  <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
-                    <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
-                    <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.statut_annonce ?? '-'}</span></td>
-                    <td>{commercialDisplay(item)}</td>
-                    <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
-                    <td><small>{!item.numero_mandat ? 'Sans mandat' : '-'}</small><small>{(item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : '-'}</small><small>{(item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : '-'}</small><small>{Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : '-'}</small></td>
-                  </tr>
-                )) : <tr><td colSpan={5}><p className="empty-state">Aucune anomalie dans cette vue.</p></td></tr>}
+                {anomalyRows.length > 0 ? anomalyRows.map((item) => {
+                  const anomaly = mandateAnomalyLabels(item)
+                  return (
+                    <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                      <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.statut_annonce ?? '-'}</span></td>
+                      <td>{commercialDisplay(item)}</td>
+                      <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
+                      <td>
+                        <strong>{anomaly.primary}</strong>
+                        {anomaly.secondary.map((label) => <small key={label}>{label}</small>)}
+                      </td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={5}><p className="empty-state">Aucune anomalie dans cette vue.</p></td></tr>}
               </tbody>
             </table>
           ) : activeSuiviFilter === 'price_alert' ? (
