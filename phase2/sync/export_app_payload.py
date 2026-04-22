@@ -200,6 +200,13 @@ DETAIL_PAYLOAD_FIELDS = {
     "mandat_date_cloture",
     "mandat_source_id",
     "mandat_numero_reference",
+    "price_change_event_count",
+    "price_change_last_source_kind",
+    "price_change_last_old_value",
+    "price_change_last_new_value",
+    "price_change_last_detected_at",
+    "price_change_last_source_updated_at",
+    "price_change_events_json",
     "mandat_numero_source",
     "mandat_type_source",
     "mandat_date_enregistrement",
@@ -310,6 +317,12 @@ DOSSIER_KEEP_FIELDS = {
     "mandants_texte",
     "mandat_source_id",
     "mandat_numero_reference",
+    "price_change_event_count",
+    "price_change_last_source_kind",
+    "price_change_last_old_value",
+    "price_change_last_new_value",
+    "price_change_last_detected_at",
+    "price_change_last_source_updated_at",
     "offre_id",
     "offre_state",
     "offre_last_proposition_type",
@@ -485,6 +498,69 @@ def fetch_rows_by_ids(
             if remaining <= 0:
                 break
     return rows
+
+
+def build_price_change_by_annonce(
+    con: sqlite3.Connection,
+    annonce_ids: list[object],
+) -> dict[str, dict[str, object]]:
+    cleaned_ids = sorted({str(value or "").strip() for value in annonce_ids if str(value or "").strip()})
+    if not cleaned_ids:
+        return {}
+    output: dict[str, dict[str, object]] = {}
+    for start in range(0, len(cleaned_ids), SQLITE_IN_MAX):
+        batch = cleaned_ids[start : start + SQLITE_IN_MAX]
+        placeholders = ",".join("?" for _ in batch)
+        try:
+            rows = con.execute(
+                f"""
+                SELECT
+                    hektor_annonce_id,
+                    hektor_mandat_id,
+                    numero_mandat,
+                    source_kind,
+                    old_value,
+                    new_value,
+                    source_updated_at,
+                    detected_at
+                FROM hektor.hektor_price_change_event
+                WHERE hektor_annonce_id IN ({placeholders})
+                ORDER BY COALESCE(source_updated_at, detected_at) DESC, detected_at DESC, event_key DESC
+                """,
+                batch,
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                return {}
+            raise
+        grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
+        for row in rows:
+            annonce_id = str(row[0] or "").strip()
+            if not annonce_id:
+                continue
+            grouped[annonce_id].append(
+                {
+                    "hektor_mandat_id": row[1],
+                    "numero_mandat": row[2],
+                    "source_kind": row[3],
+                    "old_value": row[4],
+                    "new_value": row[5],
+                    "source_updated_at": row[6],
+                    "detected_at": row[7],
+                }
+            )
+        for annonce_id, events in grouped.items():
+            latest = events[0] if events else {}
+            output[annonce_id] = {
+                "price_change_event_count": len(events),
+                "price_change_last_source_kind": latest.get("source_kind"),
+                "price_change_last_old_value": latest.get("old_value"),
+                "price_change_last_new_value": latest.get("new_value"),
+                "price_change_last_detected_at": latest.get("detected_at"),
+                "price_change_last_source_updated_at": latest.get("source_updated_at"),
+                "price_change_events_json": json.dumps(events[:20], ensure_ascii=True, separators=(",", ":")),
+            }
+    return output
 
 
 def trim_json_array_field(value: object, *, limit: int) -> str | None:
@@ -974,6 +1050,23 @@ def build_trimmed_detail_payload(row: dict[str, object]) -> dict[str, object]:
     return detail_payload
 
 
+def attach_price_change_summary(con: sqlite3.Connection, rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    by_annonce = build_price_change_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
+    enriched: list[dict[str, object]] = []
+    for row in rows:
+        next_row = dict(row)
+        summary = by_annonce.get(str(row.get("hektor_annonce_id") or "").strip(), {})
+        next_row["price_change_event_count"] = summary.get("price_change_event_count", 0)
+        next_row["price_change_last_source_kind"] = summary.get("price_change_last_source_kind")
+        next_row["price_change_last_old_value"] = summary.get("price_change_last_old_value")
+        next_row["price_change_last_new_value"] = summary.get("price_change_last_new_value")
+        next_row["price_change_last_detected_at"] = summary.get("price_change_last_detected_at")
+        next_row["price_change_last_source_updated_at"] = summary.get("price_change_last_source_updated_at")
+        next_row["price_change_events_json"] = summary.get("price_change_events_json")
+        enriched.append(next_row)
+    return enriched
+
+
 def attach_detail_payload(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     enriched: list[dict[str, object]] = []
     for row in rows:
@@ -1152,6 +1245,7 @@ def build_payload(
             limit=limit,
         )
         dossier_rows = enrich_offer_transaction_fields(con, dossier_rows)
+        dossier_rows = attach_price_change_summary(con, dossier_rows)
         dossiers = attach_detail_payload(dossier_rows)
         dossier_details = build_dossier_details(dossier_rows)
         work_items = fetch_rows_by_ids(

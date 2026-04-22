@@ -347,6 +347,19 @@ def init_db(conn: sqlite3.Connection) -> None:
             synced_at TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS hektor_price_change_event (
+            event_key TEXT PRIMARY KEY,
+            hektor_annonce_id TEXT,
+            hektor_mandat_id TEXT,
+            numero_mandat TEXT,
+            source_kind TEXT NOT NULL,
+            old_value REAL,
+            new_value REAL,
+            source_updated_at TEXT,
+            detected_at TEXT NOT NULL,
+            raw_context_json TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS hektor_contact (
             hektor_contact_id TEXT PRIMARY KEY,
             hektor_agence_id TEXT,
@@ -518,6 +531,8 @@ def init_db(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_annonce_nego ON hektor_annonce(hektor_negociateur_id);
         CREATE INDEX IF NOT EXISTS idx_annonce_dossier ON hektor_annonce(no_dossier, no_mandat);
         CREATE INDEX IF NOT EXISTS idx_mandat_annonce ON hektor_mandat(hektor_annonce_id, numero);
+        CREATE INDEX IF NOT EXISTS idx_price_change_annonce ON hektor_price_change_event(hektor_annonce_id, detected_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_price_change_mandat ON hektor_price_change_event(hektor_mandat_id, detected_at DESC);
         CREATE INDEX IF NOT EXISTS idx_offre_annonce ON hektor_offre(hektor_annonce_id);
         CREATE INDEX IF NOT EXISTS idx_compromis_annonce ON hektor_compromis(hektor_annonce_id);
         CREATE INDEX IF NOT EXISTS idx_vente_annonce ON hektor_vente(hektor_annonce_id);

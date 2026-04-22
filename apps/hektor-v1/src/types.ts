@@ -33,6 +33,13 @@ export type DossierDetailPayload = {
   mandat_montant?: number | string | null
   mandants_texte?: string | null
   mandat_note?: string | null
+  price_change_event_count?: number | null
+  price_change_last_source_kind?: string | null
+  price_change_last_old_value?: number | string | null
+  price_change_last_new_value?: number | string | null
+  price_change_last_detected_at?: string | null
+  price_change_last_source_updated_at?: string | null
+  price_change_events_json?: string | null
   nb_portails_actifs?: number | null
   has_diffusion_error?: boolean | number | null
   portails_resume?: string | null
@@ -142,6 +149,12 @@ export type Dossier = {
   agence_nom?: string | null
   statut_annonce: string | null
   validation_diffusion_state?: string | null
+  price_change_event_count?: number | null
+  price_change_last_source_kind?: string | null
+  price_change_last_old_value?: number | string | null
+  price_change_last_new_value?: number | string | null
+  price_change_last_detected_at?: string | null
+  price_change_last_source_updated_at?: string | null
   etat_visibilite: string | null
   alerte_principale: string | null
   priority: string | null

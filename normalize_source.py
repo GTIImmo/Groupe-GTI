@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sqlite3
 from typing import Any, Dict, Iterable
 
 from hektor_pipeline.common import Settings, connect_db, fetch_latest_raw_payloads, init_db, json_dumps, now_utc_iso
+from phase2.sync.manual_mandat_corrections import get_manual_mandat_correction, inject_manual_mandat_if_missing
 
 
 ANNONCE_ENDPOINTS = (
@@ -94,6 +96,98 @@ def parse_json_list(value: Any) -> list[Dict[str, Any]]:
         if isinstance(parsed, list):
             return [item for item in parsed if isinstance(item, dict)]
     return []
+
+
+def parse_numeric_value(value: Any) -> float | None:
+    if value is None:
+        return None
+    text = str(value).strip().replace("\u00a0", "").replace(" ", "")
+    if not text:
+        return None
+    text = text.replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def values_differ(previous: float | None, current: float | None) -> bool:
+    return previous is not None and current is not None and abs(previous - current) > 1e-9
+
+
+def build_price_change_event_key(
+    *,
+    source_kind: str,
+    hektor_annonce_id: str | None,
+    hektor_mandat_id: str | None,
+    numero_mandat: str | None,
+    old_value: float,
+    new_value: float,
+    source_updated_at: str | None,
+) -> str:
+    payload = "|".join(
+        [
+            source_kind,
+            hektor_annonce_id or "",
+            hektor_mandat_id or "",
+            numero_mandat or "",
+            f"{old_value:.6f}",
+            f"{new_value:.6f}",
+            source_updated_at or "",
+        ]
+    )
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
+def insert_price_change_event(
+    conn: sqlite3.Connection,
+    *,
+    source_kind: str,
+    hektor_annonce_id: str | None,
+    hektor_mandat_id: str | None,
+    numero_mandat: str | None,
+    old_value: float,
+    new_value: float,
+    source_updated_at: str | None,
+    raw_context: Dict[str, Any],
+) -> None:
+    event_key = build_price_change_event_key(
+        source_kind=source_kind,
+        hektor_annonce_id=hektor_annonce_id,
+        hektor_mandat_id=hektor_mandat_id,
+        numero_mandat=numero_mandat,
+        old_value=old_value,
+        new_value=new_value,
+        source_updated_at=source_updated_at,
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO hektor_price_change_event(
+            event_key,
+            hektor_annonce_id,
+            hektor_mandat_id,
+            numero_mandat,
+            source_kind,
+            old_value,
+            new_value,
+            source_updated_at,
+            detected_at,
+            raw_context_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            event_key,
+            hektor_annonce_id,
+            hektor_mandat_id,
+            numero_mandat,
+            source_kind,
+            old_value,
+            new_value,
+            source_updated_at,
+            now_utc_iso(),
+            json_dumps(raw_context),
+        ),
+    )
 
 
 def derive_offre_state_and_event_date(source: Dict[str, Any], item: Dict[str, Any]) -> tuple[str | None, str | None]:
@@ -275,6 +369,34 @@ def upsert_annonces(conn: sqlite3.Connection) -> None:
     for item in iter_listing_items_for_endpoints(conn, ANNONCE_ENDPOINTS):
         localite = item.get("localite") or {}
         publique = localite.get("publique") if isinstance(localite, dict) else {}
+        annonce_id = str(item.get("id") or "")
+        previous_row = conn.execute(
+            "SELECT prix, date_maj, no_mandat FROM hektor_annonce WHERE hektor_annonce_id = ?",
+            (annonce_id,),
+        ).fetchone()
+        previous_price = parse_numeric_value(previous_row["prix"]) if previous_row else None
+        next_price = parse_numeric_value(item.get("prix"))
+        if values_differ(previous_price, next_price):
+            previous_numero_mandat = str(previous_row["no_mandat"]).strip() if previous_row and previous_row["no_mandat"] is not None else ""
+            source_updated_at = str(item.get("datemaj") or (previous_row["date_maj"] if previous_row else "") or "").strip() or None
+            insert_price_change_event(
+                conn,
+                source_kind="annonce_prix",
+                hektor_annonce_id=annonce_id,
+                hektor_mandat_id=None,
+                numero_mandat=str(item.get("NO_MANDAT") or previous_numero_mandat or "").strip() or None,
+                old_value=previous_price,
+                new_value=next_price,
+                source_updated_at=source_updated_at,
+                raw_context={
+                    "hektor_annonce_id": annonce_id,
+                    "numero_dossier": item.get("NO_DOSSIER"),
+                    "numero_mandat": item.get("NO_MANDAT"),
+                    "old_value": previous_price,
+                    "new_value": next_price,
+                    "date_maj": item.get("datemaj"),
+                },
+            )
         conn.execute(
             """
             INSERT INTO hektor_annonce(
@@ -302,7 +424,7 @@ def upsert_annonces(conn: sqlite3.Connection) -> None:
                 synced_at = excluded.synced_at
             """,
             (
-                str(item.get("id") or ""),
+                annonce_id,
                 item.get("NO_DOSSIER"),
                 item.get("NO_MANDAT"),
                 normalized_id(item.get("agence")),
@@ -334,6 +456,7 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
             "hektor_offre",
             "hektor_compromis",
             "hektor_vente",
+            "hektor_price_change_event",
             "hektor_broadcast_listing",
             "hektor_annonce_broadcast_state",
             "sync_annonce_contact_link",
@@ -356,6 +479,7 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
         "sync_annonce_contact_link",
     ):
         conn.execute(f"DELETE FROM {table} WHERE hektor_annonce_id NOT IN ({placeholders})", params)
+    conn.execute(f"DELETE FROM hektor_price_change_event WHERE hektor_annonce_id NOT IN ({placeholders})", params)
     conn.execute(
         f"DELETE FROM hektor_mandat WHERE hektor_annonce_id IS NOT NULL AND hektor_annonce_id NOT IN ({placeholders})",
         params,
@@ -366,6 +490,7 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
 def upsert_annonce_details(conn: sqlite3.Connection) -> None:
     details = latest_detail_map(fetch_latest_raw_payloads(conn, "annonce_detail"))
     for annonce_id, data in details.items():
+        data = inject_manual_mandat_if_missing(data)
         statut = data.get("statut") or {}
         conn.execute(
             """
@@ -416,6 +541,7 @@ def upsert_annonce_details(conn: sqlite3.Connection) -> None:
 
 
 def upsert_mandats(conn: sqlite3.Connection) -> None:
+    annonce_detail_map = latest_detail_map(fetch_latest_raw_payloads(conn, "annonce_detail"))
     detail_map = latest_detail_map(fetch_latest_raw_payloads(conn, "mandat_detail"))
     mandat_id_to_annonce, mandat_numero_to_annonce = load_annonce_mandat_links(conn)
 
@@ -435,6 +561,28 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
                 enriched["idAnnonce"] = annonce_id
                 relation_items[mandat_id] = enriched
 
+    existing_relation_pairs = {
+        (
+            normalized_id(item.get("idAnnonce")),
+            str(first_present(item.get("numero"), "") or "").strip(),
+        )
+        for item in relation_items.values()
+    }
+    for annonce_id, detail_data in annonce_detail_map.items():
+        patched_detail = inject_manual_mandat_if_missing(detail_data)
+        correction = get_manual_mandat_correction(
+            mandate_number=((patched_detail.get("keyData") or {}) if isinstance(patched_detail.get("keyData"), dict) else {}).get("NO_MANDAT")
+        )
+        if not correction:
+            continue
+        pair = (annonce_id, str(correction.get("numero") or "").strip())
+        if pair in existing_relation_pairs:
+            continue
+        manual_item = dict(correction)
+        manual_item["idAnnonce"] = annonce_id
+        relation_items[str(manual_item["id"])] = manual_item
+        existing_relation_pairs.add(pair)
+
     seen_ids: set[str] = set()
 
     for item in iter_listing_items_for_endpoints(conn, MANDAT_ENDPOINTS):
@@ -451,6 +599,37 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
             or mandat_numero_to_annonce.get(mandat_numero)
         )
         seen_ids.add(mandat_id)
+        previous_row = conn.execute(
+            "SELECT montant, hektor_annonce_id, numero, synced_at FROM hektor_mandat WHERE hektor_mandat_id = ?",
+            (mandat_id,),
+        ).fetchone()
+        previous_montant = parse_numeric_value(previous_row["montant"]) if previous_row else None
+        next_montant = parse_numeric_value(first_present(source.get("montant"), item.get("montant")))
+        if values_differ(previous_montant, next_montant):
+            source_updated_at = (
+                str(first_present(source.get("dateMaj"), source.get("datemaj"), source.get("dateEnregistrement"), source.get("debut")) or "").strip()
+                or now_utc_iso()
+            )
+            event_annonce_id = hektor_annonce_id or (normalized_id(previous_row["hektor_annonce_id"]) if previous_row else None)
+            event_numero = mandat_numero or (str(previous_row["numero"]).strip() if previous_row and previous_row["numero"] is not None else None)
+            insert_price_change_event(
+                conn,
+                source_kind="mandat_montant",
+                hektor_annonce_id=event_annonce_id,
+                hektor_mandat_id=mandat_id,
+                numero_mandat=event_numero,
+                old_value=previous_montant,
+                new_value=next_montant,
+                source_updated_at=source_updated_at,
+                raw_context={
+                    "hektor_mandat_id": mandat_id,
+                    "hektor_annonce_id": hektor_annonce_id,
+                    "numero_mandat": mandat_numero,
+                    "old_value": previous_montant,
+                    "new_value": next_montant,
+                    "type": first_present(source.get("type"), item.get("type")),
+                },
+            )
         conn.execute(
             """
             INSERT INTO hektor_mandat(
@@ -500,6 +679,37 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
             or mandat_id_to_annonce.get(mandat_id)
             or mandat_numero_to_annonce.get(mandat_numero)
         )
+        previous_row = conn.execute(
+            "SELECT montant, hektor_annonce_id, numero, synced_at FROM hektor_mandat WHERE hektor_mandat_id = ?",
+            (mandat_id,),
+        ).fetchone()
+        previous_montant = parse_numeric_value(previous_row["montant"]) if previous_row else None
+        next_montant = parse_numeric_value(first_present(source.get("montant"), relation_item.get("montant")))
+        if values_differ(previous_montant, next_montant):
+            source_updated_at = (
+                str(first_present(source.get("dateMaj"), source.get("datemaj"), source.get("dateEnregistrement"), source.get("debut")) or "").strip()
+                or now_utc_iso()
+            )
+            event_annonce_id = hektor_annonce_id or (normalized_id(previous_row["hektor_annonce_id"]) if previous_row else None)
+            event_numero = mandat_numero or (str(previous_row["numero"]).strip() if previous_row and previous_row["numero"] is not None else None)
+            insert_price_change_event(
+                conn,
+                source_kind="mandat_montant",
+                hektor_annonce_id=event_annonce_id,
+                hektor_mandat_id=mandat_id,
+                numero_mandat=event_numero,
+                old_value=previous_montant,
+                new_value=next_montant,
+                source_updated_at=source_updated_at,
+                raw_context={
+                    "hektor_mandat_id": mandat_id,
+                    "hektor_annonce_id": hektor_annonce_id,
+                    "numero_mandat": mandat_numero,
+                    "old_value": previous_montant,
+                    "new_value": next_montant,
+                    "type": first_present(source.get("type"), relation_item.get("type")),
+                },
+            )
         conn.execute(
             """
             INSERT INTO hektor_mandat(
