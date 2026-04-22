@@ -4991,7 +4991,7 @@ function SuiviMandatsScreenV2(props: {
         .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0] ?? null
       const hasPriceChange = Number(item.price_change_event_count ?? 0) > 0
       const priceChangedAt = new Date(item.price_change_last_detected_at ?? 0).getTime()
-      const acceptedAt = new Date(requestTimelineDate(acceptedPriceDrop) ?? 0).getTime()
+      const acceptedAt = acceptedPriceDrop ? new Date(requestTimelineDate(acceptedPriceDrop)).getTime() : 0
       const isAlert =
         (hasPriceChange && !acceptedPriceDrop) ||
         (Boolean(acceptedPriceDrop) && (!hasPriceChange || priceChangedAt < acceptedAt))
