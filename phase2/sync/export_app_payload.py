@@ -15,6 +15,8 @@ HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 OUTPUT_JSON = ROOT / "phase2" / "docs" / "APP_PAYLOAD_V1_SAMPLE.json"
 SQLITE_IN_MAX = 900
 MAX_EXPORTED_IMAGES = 5
+CURRENT_MANDATE_SERIES_START = "2024-01-01"
+CURRENT_MANDATE_SERIES_MAX_NUM = 199999
 ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
     "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis')"
@@ -687,6 +689,17 @@ def mandate_sort_number(value: object) -> int:
     return int(digits) if digits else 0
 
 
+def mandate_current_series_rank(value: object, *dates: object) -> int:
+    sort_num = mandate_sort_number(value)
+    if sort_num <= 0 or sort_num > CURRENT_MANDATE_SERIES_MAX_NUM:
+        return 1
+    for item in dates:
+        text = normalize_text(item)
+        if text and text[:10] >= CURRENT_MANDATE_SERIES_START:
+            return 0
+    return 1
+
+
 def build_register_detail_payload(
     *,
     raw_row: dict[str, object],
@@ -846,6 +859,15 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
                 "portails_resume": (source_row.get("portails_resume") if source_row else None) or normalize_text(broadcast.get("portails_resume")) or None,
                 "numero_dossier": (source_row.get("numero_dossier") if source_row else None) or normalize_text(raw.get("no_dossier")) or None,
                 "numero_mandat": numero,
+                "register_sort_group": mandate_current_series_rank(
+                    numero,
+                    current_version.get("dateenr"),
+                    current_version.get("debut"),
+                    current_version.get("fin"),
+                    raw.get("date_enregistrement"),
+                    raw.get("date_maj"),
+                    source_updated_at,
+                ),
                 "register_sort_num": mandate_sort_number(numero),
                 "titre_bien": titre_bien,
                 "ville": (source_row.get("ville") if source_row else None) or normalize_text(raw.get("ville")) or None,
@@ -898,6 +920,7 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
 
     register_rows.sort(
         key=lambda item: (
+            int(item.get("register_sort_group") or 1),
             -(int("".join(ch for ch in str(item.get("numero_mandat") or "") if ch.isdigit()) or 0)),
             -int(item.get("hektor_annonce_id") or 0),
             str(item.get("register_row_id") or ""),

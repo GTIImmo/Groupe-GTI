@@ -1492,6 +1492,7 @@ export async function loadMandatRegisterPage({
     ),
     filters,
   )
+    .order('register_sort_group', { ascending: true })
     .order('register_sort_num', { ascending: false })
     .order('hektor_annonce_id', { ascending: false })
     .order('register_row_id', { ascending: false })

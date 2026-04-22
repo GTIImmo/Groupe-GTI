@@ -16,6 +16,7 @@ create table if not exists public.app_mandat_register_current (
     portails_resume text,
     numero_dossier text,
     numero_mandat text,
+    register_sort_group integer not null default 1,
     register_sort_num bigint not null default 0,
     titre_bien text,
     ville text,
@@ -59,7 +60,7 @@ create index if not exists idx_app_mandat_register_annonce on public.app_mandat_
 create index if not exists idx_app_mandat_register_dossier on public.app_mandat_register_current (app_dossier_id);
 create index if not exists idx_app_mandat_register_statut on public.app_mandat_register_current (statut_annonce, register_source_kind);
 create index if not exists idx_app_mandat_register_commercial on public.app_mandat_register_current (commercial_nom, negociateur_email);
-create index if not exists idx_app_mandat_register_sort on public.app_mandat_register_current (register_sort_num desc, hektor_annonce_id desc, register_row_id desc);
+create index if not exists idx_app_mandat_register_sort on public.app_mandat_register_current (register_sort_group asc, register_sort_num desc, hektor_annonce_id desc, register_row_id desc);
 
 create or replace view public.app_registre_mandats_current
 with (security_invoker=on) as
