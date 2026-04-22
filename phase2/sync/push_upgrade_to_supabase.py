@@ -174,6 +174,7 @@ MANDAT_REGISTER_NULLABLE_KEYS = (
     "portails_resume",
     "numero_dossier",
     "numero_mandat",
+    "register_sort_group",
     "register_sort_num",
     "titre_bien",
     "ville",
