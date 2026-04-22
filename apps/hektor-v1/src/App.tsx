@@ -4979,40 +4979,142 @@ function SuiviMandatsScreenV2(props: {
       if (dateA !== dateB) return dateB - dateA
       return String(a.mandat.numero_mandat ?? '').localeCompare(String(b.mandat.numero_mandat ?? ''), 'fr')
     })
+  const pendingRows = suiviRequestRows.filter((row) => row.request.request_status === 'pending')
+  const inProgressRows = suiviRequestRows.filter((row) => row.request.request_status === 'in_progress')
+  const correctionRows = suiviRequestRows.filter((row) => row.request.request_status === 'waiting_commercial' || row.request.request_status === 'refused')
+  const anomalyRows = props.mandats
+    .filter((item) =>
+      Boolean((item.numero_mandat ?? '').trim()) && (
+        ((item.diffusable ?? '0') === '1' && !item.nb_portails_actifs) ||
+        ((item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs)) ||
+        Boolean(item.has_diffusion_error) ||
+        !item.numero_mandat
+      )
+    )
+    .slice(0, 18)
+  const portfolioRows = props.mandats.slice(0, 100)
   return (
-    <section className="panel-grid">
-      <section className="panel panel-wide">
+    <section className="panel-grid suivi-pauline-view">
+      <section className="panel suivi-command-panel">
         <div className="panel-head">
           <div><p className="eyebrow">{props.eyebrow ?? 'Console Pauline'}</p><h3>{props.title ?? 'Parc mandat'}</h3></div>
           {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Mandat</th><th>Bien</th><th>Negociateur</th><th>Statut</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Derniere action</th><th>Photo</th><th>Actions</th></tr></thead>
+        <div className="suivi-command-grid">
+          <article className="suivi-command-card tone-overview"><span className="suivi-command-kicker">Parc</span><strong>{props.stats.total}</strong><p>Annonces suivies dans le portefeuille administratif.</p></article>
+          <article className="suivi-command-card tone-action"><span className="suivi-command-kicker">A traiter</span><strong>{pendingRows.length}</strong><p>Demandes nouvelles à traiter maintenant.</p></article>
+          <article className="suivi-command-card tone-progress"><span className="suivi-command-kicker">En cours</span><strong>{inProgressRows.length}</strong><p>Dossiers déjà pris en charge par Pauline.</p></article>
+          <article className="suivi-command-card tone-warning"><span className="suivi-command-kicker">Corrections</span><strong>{correctionRows.length}</strong><p>Retours à reprendre avec le négociateur.</p></article>
+          <article className="suivi-command-card tone-danger"><span className="suivi-command-kicker">Anomalies</span><strong>{anomalyRows.length}</strong><p>Mandats avec incohérence diffusion ou données.</p></article>
+          <article className="suivi-command-card tone-success"><span className="suivi-command-kicker">Diffusés</span><strong>{props.stats.mandatDiffuse}</strong><p>Mandats visibles et correctement diffusés.</p></article>
+        </div>
+      </section>
+
+      <section className="suivi-block-grid">
+        <section className="panel suivi-block suivi-block-primary">
+          <div className="panel-head">
+            <div><p className="eyebrow">Actions Pauline</p><h3>Demandes à traiter maintenant</h3></div>
+          </div>
+          <div className="suivi-lanes">
+            {[
+              { title: 'Nouvelles demandes', tone: 'action', rows: pendingRows },
+              { title: 'Demandes en cours', tone: 'progress', rows: inProgressRows },
+              { title: 'Corrections en attente', tone: 'warning', rows: correctionRows },
+            ].map((group) => (
+              <section key={group.title} className={`suivi-lane tone-${group.tone}`}>
+                <div className="suivi-lane-head">
+                  <strong>{group.title}</strong>
+                  <span>{group.rows.length}</span>
+                </div>
+                <div className="timeline-list suivi-request-list">
+                  {group.rows.length > 0 ? group.rows.map(({ mandat: item, request: activeRequest }) => (
+                    <article key={`${item.app_dossier_id}-${activeRequest.id}`} className={`timeline-card suivi-request-card tone-${group.tone}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                      <div className="suivi-request-head">
+                        <div>
+                          <strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong>
+                          <span>{item.titre_bien}</span>
+                        </div>
+                        <StatusPill value={requestTypeLabel(activeRequest.request_type)} />
+                      </div>
+                      <div className="suivi-request-meta">
+                        <span>{commercialDisplay(item)}</span>
+                        <span>{formatDate(activeRequest.requested_at)}</span>
+                        <span>{requestStatusLabel(activeRequest.request_status)}</span>
+                      </div>
+                      <p>{activeRequest.request_reason || activeRequest.request_comment || 'Sans motif'}</p>
+                      <div className="row-actions">
+                        <MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={activeRequest} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
+                      </div>
+                    </article>
+                  )) : <p className="empty-state">Aucune demande dans ce bloc.</p>}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+
+        <section className="panel suivi-block suivi-block-alerts">
+          <div className="panel-head">
+            <div><p className="eyebrow">Surveillance</p><h3>Anomalies diffusion et mandat</h3></div>
+          </div>
+          <div className="suivi-alert-grid">
+            {anomalyRows.length > 0 ? anomalyRows.map((item) => {
+              const anomalies = [
+                !item.numero_mandat ? 'Sans mandat' : null,
+                (item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : null,
+                (item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : null,
+                Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : null,
+              ].filter(Boolean)
+              return (
+                <article key={item.app_dossier_id} className="suivi-alert-card" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                  <div className="suivi-alert-head">
+                    <div>
+                      <strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong>
+                      <span>{item.titre_bien}</span>
+                    </div>
+                    <StatusPill value={item.statut_annonce} />
+                  </div>
+                  <div className="suivi-alert-meta">
+                    <span>{commercialDisplay(item)}</span>
+                    <span>{diffusableLabel(item.diffusable)}</span>
+                  </div>
+                  <div className="suivi-alert-tags">
+                    {anomalies.map((label) => <span key={label} className="suivi-alert-tag">{label}</span>)}
+                  </div>
+                  <div className="suivi-alert-footer">
+                    <span>{item.portails_resume || 'Aucune passerelle active'}</span>
+                    <button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); openHektorAnnonce(item.hektor_annonce_id) }}>Hektor</button>
+                  </div>
+                </article>
+              )
+            }) : <p className="empty-state">Aucune anomalie sur la sélection courante.</p>}
+          </div>
+        </section>
+      </section>
+
+      <section className="panel suivi-block suivi-block-portfolio">
+        <div className="panel-head">
+          <div><p className="eyebrow">Portefeuille administratif</p><h3>Vue portefeuille</h3></div>
+          <div className="suivi-portfolio-kpis">
+            <span>{props.stats.mandatNonDiffuse} non diffusés</span>
+            <span>{props.stats.withErrors} avec erreur</span>
+          </div>
+        </div>
+        <div className="table-wrap suivi-portfolio-wrap">
+          <table className="suivi-portfolio-table">
+            <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Visibilite</th><th>Affaires</th><th>Actions</th></tr></thead>
             <tbody>
-              {suiviRequestRows.map(({ mandat: item, request: activeRequest }) => {
-                const hasLeboncoin = hasPortalEnabled(item, ['leboncoin'])
-                const hasBienici = hasPortalEnabled(item, ['bienici'])
-                const hasSiteGti = isSiteGtiEnabled(item)
-                return (
-                  <Fragment key={`${item.app_dossier_id}-${activeRequest.id}`}>
-                    <tr onClick={() => {
-                      props.onOpenDetailPage(item.app_dossier_id)
-                    }}>
-                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
-                      <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
-                      <td><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
-                      <td><StatusPill value={item.statut_annonce} /></td>
-                      <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
-                      <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
-                      <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
-                      <td><small>{activeRequest.requested_at ? formatDate(activeRequest.requested_at) : '-'}</small><small>{requestTypeLabel(activeRequest.request_type)} · {requestStatusLabel(activeRequest.request_status)}</small></td>
-                      <td><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
-                      <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} currentRequest={activeRequest} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
-                    </tr>
-                  </Fragment>
-                )
-              })}
+              {portfolioRows.map((item) => (
+                <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                  <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                  <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
+                  <td>{commercialDisplay(item)}</td>
+                  <td><small>{item.statut_annonce ?? '-'}</small><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
+                  <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
+                  <td><small>{item.offre_id ? 'Offre' : '-'}</small><small>{item.compromis_id ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
+                  <td><div className="row-actions"><MandatActionMenu mandat={item} role="pauline" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /></div></td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
