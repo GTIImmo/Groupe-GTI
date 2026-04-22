@@ -4585,6 +4585,9 @@ function SuiviMandatsScreen(props: {
   const visibleRequests = props.requests.filter((item) => mandatIds.has(item.app_dossier_id))
   const pending = visibleRequests.filter((item) => item.request_status === 'pending').length
   const inProgress = visibleRequests.filter((item) => item.request_status === 'in_progress').length
+  const correctionRequests = visibleRequests.filter((item) => item.request_status === 'waiting_commercial' || item.request_status === 'refused')
+  const pendingRequests = visibleRequests.filter((item) => item.request_status === 'pending')
+  const inProgressRequests = visibleRequests.filter((item) => item.request_status === 'in_progress')
   const withErrors = props.stats.withErrors
   const attentionMandats = props.mandats
     .filter((item) =>
@@ -4594,75 +4597,161 @@ function SuiviMandatsScreen(props: {
       !item.numero_mandat,
     )
     .slice(0, 50)
+  const attentionHighlights = attentionMandats.slice(0, 12)
+  const portfolioRows = props.mandats.slice(0, 100)
 
   return (
-    <section className="panel-grid">
-      <section className="panel">
-        <div className="panel-head"><div><p className="eyebrow">Parc mandat</p><h3>Etat global</h3></div>{props.loading ? <span className="loading-inline">Mise a jour...</span> : null}</div>
-        <div className="kpi-strip">
-          <MetricCard label="Annonces" value={props.stats.total} />
-          <MetricCard label="Demandes a traiter" value={pending} />
-          <MetricCard label="Demandes en cours" value={inProgress} />
-          <MetricCard label="Correction en attente" value={visibleRequests.filter((item) => item.request_status === 'waiting_commercial' || item.request_status === 'refused').length} />
-          <MetricCard label="Mandat non diffuse" value={props.stats.mandatNonDiffuse} />
-          <MetricCard label="Mandat diffuse" value={props.stats.mandatDiffuse} />
-          <MetricCard label="Mandats avec erreur passerelle" value={withErrors} />
+    <section className="panel-grid suivi-pauline-view">
+      <section className="panel suivi-command-panel">
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">Vue Pauline</p>
+            <h3>Poste de pilotage des mandats</h3>
+          </div>
+          {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
+        </div>
+        <div className="suivi-command-grid">
+          <article className="suivi-command-card tone-overview">
+            <span className="suivi-command-kicker">Parc</span>
+            <strong>{props.stats.total}</strong>
+            <p>Annonces actuellement suivies dans le portefeuille administratif.</p>
+          </article>
+          <article className="suivi-command-card tone-action">
+            <span className="suivi-command-kicker">A traiter</span>
+            <strong>{pending}</strong>
+            <p>Demandes nouvelles en attente d'une action Pauline.</p>
+          </article>
+          <article className="suivi-command-card tone-progress">
+            <span className="suivi-command-kicker">En cours</span>
+            <strong>{inProgress}</strong>
+            <p>Dossiers déjà pris en main avec suivi de traitement.</p>
+          </article>
+          <article className="suivi-command-card tone-warning">
+            <span className="suivi-command-kicker">Corrections</span>
+            <strong>{correctionRequests.length}</strong>
+            <p>Retours négociateur ou demandes refusées à reprendre.</p>
+          </article>
+          <article className="suivi-command-card tone-danger">
+            <span className="suivi-command-kicker">Anomalies</span>
+            <strong>{attentionMandats.length}</strong>
+            <p>Mandats sans diffusion, sans numéro ou avec incohérence de passerelle.</p>
+          </article>
+          <article className="suivi-command-card tone-success">
+            <span className="suivi-command-kicker">Diffusés</span>
+            <strong>{props.stats.mandatDiffuse}</strong>
+            <p>Mandats actuellement visibles et conformes côté diffusion.</p>
+          </article>
         </div>
       </section>
-      <section className="dashboard-grid">
-      <section className="panel">
-        <div className="panel-head"><div><p className="eyebrow">Demandes commerciales</p><h3>Demandes a traiter par Pauline</h3></div></div>
-        <div className="timeline-list">
-          {visibleRequests.length > 0 ? visibleRequests.map((item) => (
-            <article key={item.id} className="timeline-card">
-              {(() => { return (
-                <>
-              <strong>{item.numero_mandat ?? item.numero_dossier ?? item.titre_bien}</strong>
-              <span>{item.requested_by_name ?? item.requested_by_label ?? '-'} - {formatDate(item.requested_at)}</span>
-              <span>{requestTypeLabel(item.request_type)}</span>
-              <span>{requestStatusLabel(item.request_status)}</span>
-              <p>{item.request_reason || item.request_comment || 'Sans commentaire'}</p>
-              <div className="admin-action-row">
-                <select value={item.request_status} onChange={(event) => props.onUpdateRequest({ requestId: item.id, status: event.target.value, response: comments[item.id] ?? item.admin_response ?? item.processing_comment ?? '', refusalReason: item.refusal_reason ?? '', followUpNeeded: Boolean(item.follow_up_needed), followUpDays: 0, relaunchCount: item.relaunch_count ?? 0 })}>
-                  {requestStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
-                <input value={comments[item.id] ?? item.processing_comment ?? ''} onChange={(event) => setComments((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Commentaire administratif ou retour au commercial" />
-                <button className="ghost-button" type="button" onClick={() => props.onUpdateRequest({ requestId: item.id, status: item.request_status, response: comments[item.id] ?? item.admin_response ?? item.processing_comment ?? '', refusalReason: item.refusal_reason ?? '', followUpNeeded: Boolean(item.follow_up_needed), followUpDays: 0, relaunchCount: item.relaunch_count ?? 0 })}>Valider le traitement</button>
-              </div>
-                </>
-              ) })()}
-            </article>
-          )) : <p className="empty-state">Aucune demande sur la selection courante.</p>}
+
+      <section className="suivi-block-grid">
+        <section className="panel suivi-block suivi-block-primary">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">Actions Pauline</p>
+              <h3>Demandes à traiter maintenant</h3>
+            </div>
+          </div>
+          <div className="suivi-lanes">
+            {[
+              { title: 'Nouvelles demandes', tone: 'action', rows: pendingRequests },
+              { title: 'Demandes en cours', tone: 'progress', rows: inProgressRequests },
+              { title: 'Corrections en attente', tone: 'warning', rows: correctionRequests },
+            ].map((group) => (
+              <section key={group.title} className={`suivi-lane tone-${group.tone}`}>
+                <div className="suivi-lane-head">
+                  <strong>{group.title}</strong>
+                  <span>{group.rows.length}</span>
+                </div>
+                <div className="timeline-list suivi-request-list">
+                  {group.rows.length > 0 ? group.rows.map((item) => (
+                    <article key={item.id} className={`timeline-card suivi-request-card tone-${group.tone}`}>
+                      <div className="suivi-request-head">
+                        <div>
+                          <strong>{item.numero_mandat ?? item.numero_dossier ?? item.titre_bien}</strong>
+                          <span>{item.titre_bien}</span>
+                        </div>
+                        <StatusPill value={requestTypeLabel(item.request_type)} />
+                      </div>
+                      <div className="suivi-request-meta">
+                        <span>{item.requested_by_name ?? item.requested_by_label ?? '-'}</span>
+                        <span>{formatDate(item.requested_at)}</span>
+                        <span>{requestStatusLabel(item.request_status)}</span>
+                      </div>
+                      <p>{item.request_reason || item.request_comment || 'Sans commentaire'}</p>
+                      <div className="admin-action-row suivi-admin-action-row">
+                        <select value={item.request_status} onChange={(event) => props.onUpdateRequest({ requestId: item.id, status: event.target.value, response: comments[item.id] ?? item.admin_response ?? item.processing_comment ?? '', refusalReason: item.refusal_reason ?? '', followUpNeeded: Boolean(item.follow_up_needed), followUpDays: 0, relaunchCount: item.relaunch_count ?? 0 })}>
+                          {requestStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                        <input value={comments[item.id] ?? item.processing_comment ?? ''} onChange={(event) => setComments((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Commentaire administratif ou retour au commercial" />
+                        <button className="ghost-button" type="button" onClick={() => props.onUpdateRequest({ requestId: item.id, status: item.request_status, response: comments[item.id] ?? item.admin_response ?? item.processing_comment ?? '', refusalReason: item.refusal_reason ?? '', followUpNeeded: Boolean(item.follow_up_needed), followUpDays: 0, relaunchCount: item.relaunch_count ?? 0 })}>Valider</button>
+                      </div>
+                    </article>
+                  )) : <p className="empty-state">Aucune demande dans ce bloc.</p>}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+
+        <section className="panel suivi-block suivi-block-alerts">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">Surveillance</p>
+              <h3>Anomalies diffusion et mandat</h3>
+            </div>
+          </div>
+          <div className="suivi-alert-grid">
+            {attentionHighlights.length > 0 ? attentionHighlights.map((item) => {
+              const anomalies = [
+                !item.numero_mandat ? 'Sans mandat' : null,
+                (item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : null,
+                (item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : null,
+                Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : null,
+              ].filter(Boolean)
+              return (
+                <article key={item.app_dossier_id} className="suivi-alert-card">
+                  <div className="suivi-alert-head">
+                    <div>
+                      <strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong>
+                      <span>{item.titre_bien}</span>
+                    </div>
+                    <StatusPill value={item.statut_annonce} />
+                  </div>
+                  <div className="suivi-alert-meta">
+                    <span>{commercialDisplay(item)}</span>
+                    <span>{diffusableLabel(item.diffusable)}</span>
+                  </div>
+                  <div className="suivi-alert-tags">
+                    {anomalies.map((label) => <span key={label} className="suivi-alert-tag">{label}</span>)}
+                  </div>
+                  <div className="suivi-alert-footer">
+                    <span>{item.portails_resume || 'Aucune passerelle active'}</span>
+                    <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(item.hektor_annonce_id)}>Hektor</button>
+                  </div>
+                </article>
+              )
+            }) : <p className="empty-state">Aucune anomalie sur la sélection courante.</p>}
+          </div>
+        </section>
+      </section>
+
+      <section className="panel suivi-block suivi-block-portfolio">
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">Portefeuille administratif</p>
+            <h3>Vue portefeuille</h3>
+          </div>
+          <div className="suivi-portfolio-kpis">
+            <span>{props.stats.mandatNonDiffuse} non diffusés</span>
+            <span>{withErrors} avec erreur</span>
+          </div>
         </div>
-      </section>
-      <section className="panel">
-        <div className="panel-head"><div><p className="eyebrow">Mandats a surveiller</p><h3>Mandats sans diffusion ou en anomalie</h3></div></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Diffusion</th><th>Anomalie</th><th>Hektor</th></tr></thead>
-            <tbody>
-              {attentionMandats.map((item) => (
-                <tr key={item.app_dossier_id}>
-                  <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
-                  <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.statut_annonce ?? '-'}</span></td>
-                  <td>{commercialDisplay(item)}</td>
-                  <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small></td>
-                  <td><small>{!item.numero_mandat ? 'Sans mandat' : '-'}</small><small>{(item.diffusable ?? '0') === '1' && !item.nb_portails_actifs ? 'Diffusable non visible' : '-'}</small><small>{(item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs) ? 'Annonce non diffusable mais active sur passerelle' : '-'}</small><small>{Boolean(item.has_diffusion_error) ? 'Erreur passerelle' : '-'}</small></td>
-                  <td><button className="ghost-button" type="button" onClick={() => openHektorAnnonce(item.hektor_annonce_id)}>Ouvrir</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      </section>
-      <section className="panel">
-        <div className="panel-head"><div><p className="eyebrow">Parc mandat</p><h3>Vue portefeuille administratif</h3></div></div>
-        <div className="table-wrap">
-          <table>
+        <div className="table-wrap suivi-portfolio-wrap">
+          <table className="suivi-portfolio-table">
             <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Visibilite</th><th>Affaires</th><th>Hektor</th></tr></thead>
             <tbody>
-              {props.mandats.slice(0, 100).map((item) => (
+              {portfolioRows.map((item) => (
                 <tr key={item.app_dossier_id}>
                   <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                   <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
