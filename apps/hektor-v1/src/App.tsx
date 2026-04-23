@@ -153,6 +153,7 @@ const emptyFilters: AppFilters = {
   query: '',
   mandatNumber: '',
   mandantName: '',
+  mandateState: allFilterValue,
   commercial: allFilterValue,
   agency: allFilterValue,
   archive: allFilterValue,
@@ -442,17 +443,56 @@ function shouldTreatAsPublishableAnomaly(status: string | null | undefined) {
   return true
 }
 
-function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce'>) {
+function normalizeMandateLifecycleStatus(value: string | null | undefined) {
+  return safeText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function isMandateEndDateStillValid(value: string | null | undefined) {
+  if (!value) return true
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return true
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  return date.getTime() >= today.getTime()
+}
+
+function mandateLifecycleState(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin'>) {
+  const status = normalizeMandateLifecycleStatus(item.statut_annonce)
+  if (status.includes('vendu') || status.includes('vente') || status.includes('clos') || status.includes('clotur')) return 'Annulé'
+  if (status.includes('offre') || status.includes('compromis')) return 'En cours'
+  if (status === 'actif' && isMandateEndDateStillValid(item.mandat_date_fin)) return 'En cours'
+  return 'Annulé'
+}
+
+function mandateLifecycleRowClass(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin'>) {
+  return mandateLifecycleState(item) === 'En cours' ? 'register-row-state-current' : 'register-row-state-cancelled'
+}
+
+function hasCancelledMandateExposureAnomaly(mandat: Pick<MandatRecord, 'diffusable' | 'nb_portails_actifs' | 'statut_annonce' | 'mandat_date_fin'>) {
+  return mandateLifecycleState(mandat) === 'Annulé' && (((mandat.diffusable ?? '0') === '1') || Boolean(mandat.nb_portails_actifs))
+}
+
+function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce' | 'mandat_date_fin'>) {
   const shouldCheckPublishability = shouldTreatAsPublishableAnomaly(mandat.statut_annonce)
+  const cancelledExposure = hasCancelledMandateExposureAnomaly(mandat)
   const labels = [
     !mandat.numero_mandat ? 'Mandat manquant' : null,
-    shouldCheckPublishability && (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publié' : null,
-    (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs) ? 'Publication active non autorisée' : null,
+    cancelledExposure ? 'Mandat annulé encore exposé' : null,
+    !cancelledExposure && shouldCheckPublishability && (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publié' : null,
+    !cancelledExposure && (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs) ? 'Publication active non autorisée' : null,
     Boolean(mandat.has_diffusion_error) ? 'Erreur de passerelle' : null,
   ].filter(Boolean) as string[]
   return {
     primary: labels[0] ?? 'Anomalie à qualifier',
-    secondary: labels.slice(1),
+    secondary: [
+      ...labels.slice(1),
+      ...(cancelledExposure && (mandat.diffusable ?? '0') === '1' ? ['Annonce encore diffusable'] : []),
+      ...(cancelledExposure && Boolean(mandat.nb_portails_actifs) ? ['Passerelle encore active'] : []),
+    ],
   }
 }
 
@@ -1377,6 +1417,7 @@ function activeFilterEntries(filters: AppFilters) {
     filters.query.trim() ? ['Recherche', filters.query.trim()] : null,
     filters.mandatNumber.trim() ? ['N° mandat', filters.mandatNumber.trim()] : null,
     filters.mandantName.trim() ? ['Mandant', filters.mandantName.trim()] : null,
+    filters.mandateState !== allFilterValue ? ['État mandat', filters.mandateState] : null,
     filters.commercial !== allFilterValue ? ['Negociateur', filters.commercial === withoutCommercialFilterValue ? 'Sans' : filters.commercial] : null,
     filters.agency !== allFilterValue ? ['Agence', filters.agency] : null,
     filters.archive === activeArchiveFilterValue ? ['Archive', 'Actives'] : null,
@@ -3478,6 +3519,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect
+                  label="Etat du mandat"
+                  value={filters.mandateState}
+                  onChange={(value) => updateFilter('mandateState', value)}
+                  options={[
+                    { value: 'En cours', label: 'En cours' },
+                    { value: 'Annulé', label: 'Annulé' },
+                  ]}
+                />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect
                   label="Mandat diffusable"
@@ -4480,7 +4530,7 @@ function MandatRegisterScreen(props: {
                 return (
                   <tr
                     key={rowKey}
-                    className={isSelected ? 'is-selected' : ''}
+                    className={`${mandateLifecycleRowClass(item)} ${isSelected ? 'is-selected' : ''}`.trim()}
                     onClick={() => {
                       props.onSelectMandat(rowKey)
                       setDetailOpen(true)
@@ -5045,6 +5095,7 @@ function SuiviMandatsScreenV2(props: {
   const refusedRows = requestRowsSource.filter((row) => row.request.request_status === 'refused')
   const anomalyRows = props.mandats.filter((item) =>
     Boolean((item.numero_mandat ?? '').trim()) && (
+      hasCancelledMandateExposureAnomaly(item) ||
       (shouldTreatAsPublishableAnomaly(item.statut_annonce) && (item.diffusable ?? '0') === '1' && !item.nb_portails_actifs) ||
       ((item.diffusable ?? '0') !== '1' && Boolean(item.nb_portails_actifs)) ||
       Boolean(item.has_diffusion_error) ||

@@ -2147,6 +2147,12 @@ tbody tr.is-selected { background: #e9f1f4; }
 .register-table tbody tr {
   transition: background-color 120ms ease, transform 120ms ease;
 }
+.register-table tbody tr.register-row-state-current {
+  background: linear-gradient(90deg, rgba(223, 244, 231, 0.72) 0%, rgba(255, 255, 255, 0) 22%);
+}
+.register-table tbody tr.register-row-state-cancelled {
+  background: linear-gradient(90deg, rgba(251, 226, 223, 0.72) 0%, rgba(255, 255, 255, 0) 22%);
+}
 .register-table tbody tr:hover {
   background: #f4f8fa;
 }
