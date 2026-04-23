@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>Vitrine Digitale | GTI Immobilier</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css?v=20260420-location-9" />
+</head>
+
+<body>
+  <main id="app" class="app" aria-live="polite">
+
+    <!-- HUD (caché par défaut, visible si debug=1) -->
+    <header class="hud" aria-hidden="true">
+      <div class="hud__left">
+        <div class="pill" id="hudAgency">AGENCE</div>
+        <div class="pill pill--muted" id="hudMode">SLIDE</div>
+      </div>
+      <div class="hud__right">
+        <div class="pill pill--muted" id="hudInfo">…</div>
+      </div>
+    </header>
+
+    <!-- SLIDE -->
+    <section id="viewSlide" class="view view--slide">
+      <article class="slide" id="slide">
+
+        <!-- MEDIA -->
+        <div class="slide__media">
+          <!-- décor léger (ne dépend pas du JS) -->
+          <div class="mediaGlow" aria-hidden="true"></div>
+          <div class="mediaFrame" aria-hidden="true"></div>
+
+          <img id="slideImgA" class="slide__img is-visible" alt="" />
+          <img id="slideImgB" class="slide__img" alt="" />
+          <div class="slide__gradient"></div>
+
+          <div class="priceBadge" id="slidePrice">—</div>
+          <div class="cornerTag" id="slideRef">—</div>
+
+          <!-- STATS sous la photo (ID inchangé => JS OK) -->
+          <div class="mediaStats" aria-hidden="true">
+            <div class="statsRow statsRow--media" id="slideStats" aria-label="Caractéristiques du bien"></div>
+          </div>
+
+          <div class="progWrap" aria-hidden="true">
+            <div class="progBar" id="slideProg"></div>
+          </div>
+        </div>
+
+        <!-- ✅ COLONNE DROITE -->
+        <div class="slide__panel">
+
+          <!-- TOP : titre + localisation -->
+          <div class="panelTop">
+            <div class="slide__title" id="slideTitle">—</div>
+            <div class="slide__meta" id="slideMeta">—</div>
+          </div>
+
+          <!-- CONTACT -->
+          <div class="contactCard" id="contactCard">
+            <div class="contactTop">
+              <div class="contactBrand">
+                <div class="contactBrand__head">
+                  <img
+                    class="contactLogo"
+                    src="https://www.gti-immobilier.fr/images/logoSite.png"
+                    alt="GTI Immobilier"
+                    loading="eager"
+                    decoding="async"
+                  />
+                  <div class="contactBrand__texts">
+                    <div class="contactBrand__name">GTI Immobilier</div>
+                    <div class="contactBrand__tag">Votre projet, notre équipe</div>
+                  </div>
+                </div>
+              </div>
+              <div class="contactBadge">CONTACT</div>
+            </div>
+
+            <div class="contactGrid">
+              <div class="contactRow">
+                <div class="contactLabel">Conseiller</div>
+                <div class="contactValue" id="contactAdvisor">—</div>
+              </div>
+
+              <div class="contactRow">
+                <div class="contactLabel">Tél agence</div>
+                <div class="contactValue contactValue--big" id="contactAgencyPhone">—</div>
+              </div>
+
+              <div class="contactRow">
+                <div class="contactLabel">Mobile</div>
+                <div class="contactValue contactValue--big" id="contactAdvisorMobile">—</div>
+              </div>
+            </div>
+
+            <!-- ✅ QR (réservé même si absent du JSON) -->
+            <div class="qrBlock" id="qrBlock" aria-label="QR code pour plus d'informations">
+              <div class="qrBox is-empty" id="qrBox">
+                <img id="qrImg" alt="QR code" decoding="async" loading="eager" />
+              </div>
+              <div class="qrText">
+                <div class="qrTitle">Scanner</div>
+                <div class="qrSub">Plus d’infos / visite</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ DPE EN DERNIER (footer compact tendance) -->
+          <div class="dpeCard hidden dpeCard--compact" id="dpeCard" aria-label="Diagnostic de performance énergétique">
+            <div class="dpeHead">
+              <div class="dpeTitle">DPE</div>
+              <div class="dpeHint">Conso &amp; GES</div>
+            </div>
+
+            <div class="dpeInline">
+              <div class="dpeThumb">
+                <span class="dpeMiniLabel">Conso</span>
+                <img id="dpeConsoImg" class="dpeImg" alt="DPE - Consommation" />
+              </div>
+
+              <div class="dpeThumb">
+                <span class="dpeMiniLabel">GES</span>
+                <img id="dpeGesImg" class="dpeImg" alt="DPE - GES" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </article>
+    </section>
+
+    <!-- EMPTY -->
+    <section id="viewEmpty" class="view view--empty hidden">
+      <div class="empty">
+        <div class="empty__title" id="emptyTitle">Aucune annonce à afficher</div>
+        <div class="empty__sub" id="emptySub">Vérifiez les paramètres ou la source JSON.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="script.js?v=20260420-location-9"></script>
+</body>
+</html>
