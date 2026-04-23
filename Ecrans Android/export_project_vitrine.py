@@ -427,7 +427,7 @@ def main() -> None:
                     (VITRINE_DIR / "index.html", "index.html"),
                     (VITRINE_DIR / "style.css", "style.css"),
                     (VITRINE_DIR / "script.js", "script.js"),
-                    (VITRINE_DIR / "assets" / "logo-gti-immobilier.svg", "assets/logo-gti-immobilier.svg"),
+                    (VITRINE_DIR / "assets" / "GTI-Logos-Grisblanc.png", "assets/GTI-Logos-Grisblanc.png"),
                 ]
             )
         push_many_files_to_github(
