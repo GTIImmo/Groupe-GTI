@@ -48,6 +48,7 @@ PROPERTY_TYPE_LABELS = {
     "28": "Triplex",
     "29": "Atelier",
     "30": "Ferme",
+    "31": "Loft",
 }
 
 

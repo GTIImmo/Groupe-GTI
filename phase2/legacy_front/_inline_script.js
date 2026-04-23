@@ -78,7 +78,8 @@ const TYPE_LABELS={
   '27':'Duplex',
   '28':'Triplex',
   '29':'Atelier',
-  '30':'Ferme'
+  '30':'Ferme',
+  '31':'Loft'
 };
 function typeLabel(v){const key=txt(v);return TYPE_LABELS[key]||key||'';}
 function hasMandate(r){
