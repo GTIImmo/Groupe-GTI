@@ -130,6 +130,37 @@ body.debug .hud{display:flex;}
   z-index:3;
 }
 
+.stateRibbon{
+  position:absolute;
+  top:24px;
+  right:-64px;
+  width:240px;
+  padding:11px 0;
+  transform:rotate(38deg);
+  transform-origin:center;
+  text-align:center;
+  font-weight:950;
+  font-size:12px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.24);
+  box-shadow:0 18px 44px rgba(0,0,0,.28);
+  z-index:5;
+  pointer-events:none;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.stateRibbon--offer{
+  background:linear-gradient(135deg, rgba(201,122,30,.95), rgba(159,93,18,.95));
+}
+.stateRibbon--compromis{
+  background:linear-gradient(135deg, rgba(66,101,182,.96), rgba(44,76,145,.96));
+}
+.stateRibbon--sold{
+  background:linear-gradient(135deg, rgba(184,39,68,.96), rgba(136,20,44,.96));
+}
+
 /* PRICE + REF */
 .priceBadge{
   position:absolute;top:28px;left:28px;
@@ -371,7 +402,7 @@ body.debug .hud{display:flex;}
 .contactTop{
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-end;
   gap:12px;
   margin-bottom:14px;
 
@@ -383,33 +414,6 @@ body.debug .hud{display:flex;}
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
-.contactBrand__head{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-/* ✅ logo rectangle noir premium */
-.contactLogo{
-  width:66px;
-  height:44px;
-  border-radius: 6px;
-  padding:10px 12px;
-
-  background: linear-gradient(180deg, #101218, #07080c);
-  border: 1px solid rgba(255,255,255,.16);
-  box-shadow:
-    0 18px 50px rgba(0,0,0,.26),
-    inset 0 1px 0 rgba(255,255,255,.10);
-
-  object-fit: contain;
-}
-
-/* masque textes de marque si présents */
-.contactBrand__texts{display:none !important;}
-.contactBrand__name{display:none !important;}
-.contactBrand__tag{display:none !important;}
-
 /* CTA CONTACT aligné, plus fin */
 .contactBadge{
   padding:9px 11px;
@@ -616,7 +620,6 @@ body.debug .hud{display:flex;}
   #contactCard .contactRow:nth-child(3) .contactValue{ font-size:14px; }
   .qrBox{ width:84px; height:84px; }
   .dpeImg{ height:32px; }
-  .contactLogo{ width:58px; height:40px; padding:9px 11px; }
   .statsRow--media .statValue{font-size:14.5px}
 }
 
@@ -641,7 +644,6 @@ body.debug .hud{display:flex;}
   .slide__meta{font-size:15px}
   .mediaStats{ left:12px; right:12px; bottom:12px; }
   .qrBox{ width:104px; height:104px; }
-  .contactLogo{ width:58px; height:40px; padding:8px 10px; }
   .contactBadge{ padding:10px 12px; font-size:10px; }
 }
 

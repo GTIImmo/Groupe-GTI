@@ -15,6 +15,7 @@
     slidePrice: $("#slidePrice"),
     slideTitle: $("#slideTitle"),
     slideMeta: $("#slideMeta"),
+    slideStateRibbon: $("#slideStateRibbon"),
 
     slideImgA: $("#slideImgA"),
     slideImgB: $("#slideImgB"),
@@ -282,6 +283,31 @@
     const d = digitsOnly(item.phone);
     if (isLikelyFRPhone(d)) return formatFR10(d);
     return "—";
+  }
+
+  function normalizeStateLabel(value) {
+    return safeText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  }
+
+  function stateRibbonConfig(item) {
+    const state = normalizeStateLabel(item && item.state);
+    if (!state || state === "ACTIF") return null;
+    if (state.includes("OFFRE")) return { label: "SOUS OFFRE", cls: "stateRibbon--offer" };
+    if (state.includes("COMPROMIS")) return { label: "SOUS COMPROMIS", cls: "stateRibbon--compromis" };
+    if (state.includes("VENDU") || state.includes("VENTE")) return { label: "VENDU", cls: "stateRibbon--sold" };
+    return null;
+  }
+
+  function setStateRibbon(item) {
+    if (!els.slideStateRibbon) return;
+    const config = stateRibbonConfig(item);
+    if (!config) {
+      els.slideStateRibbon.textContent = "";
+      els.slideStateRibbon.className = "stateRibbon hidden";
+      return;
+    }
+    els.slideStateRibbon.textContent = config.label;
+    els.slideStateRibbon.className = `stateRibbon ${config.cls}`;
   }
 
   // ---------------------------
@@ -657,6 +683,7 @@
     renderStats(item);
     setDpe(item);
     setQr(item, params);
+    setStateRibbon(item);
 
     const extracted = extractContactFromAgence(item.agence);
     els.contactAdvisor.textContent = extracted.advisorName || "Conseiller GTI";

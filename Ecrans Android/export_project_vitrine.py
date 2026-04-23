@@ -241,6 +241,7 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
             v.garage_box_detail,
             v.date_maj,
             v.offre_type,
+            v.statut_annonce,
             v.photo_url_listing,
             v.images_json,
             v.images_preview_json,
@@ -267,7 +268,6 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
         ) h ON h.hektor_annonce_id = CAST(v.hektor_annonce_id AS TEXT)
         WHERE COALESCE(v.archive, '0') = '0'
           AND COALESCE(v.diffusable, '0') = '1'
-          AND LOWER(COALESCE(v.portails_resume, '')) LIKE '%bienicidirect%'
         ORDER BY datetime(v.date_maj) DESC, v.hektor_annonce_id DESC
         """
         conn.execute(f"ATTACH DATABASE '{HEKTOR_DB.as_posix()}' AS hektor")
@@ -293,6 +293,7 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
             "bedrooms": as_int(row["nb_chambres"]) or 0,
             "offerType": row["offre_type"] or "VENTE",
             "status": "2",
+            "state": str(row["statut_annonce"] or "").strip(),
             "photos": visible_photos(row["images_json"], row["photo_url_listing"], max_photos),
             "url": "https://groupe-gti-immobilier.la-boite-immo.com/",
             "updatedAt": row["date_maj"] or "",
@@ -427,7 +428,6 @@ def main() -> None:
                     (VITRINE_DIR / "index.html", "index.html"),
                     (VITRINE_DIR / "style.css", "style.css"),
                     (VITRINE_DIR / "script.js", "script.js"),
-                    (VITRINE_DIR / "assets" / "GTI-Logos-Grisblanc.png", "assets/GTI-Logos-Grisblanc.png"),
                 ]
             )
         push_many_files_to_github(
