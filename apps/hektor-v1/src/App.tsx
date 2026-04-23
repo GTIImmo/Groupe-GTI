@@ -476,6 +476,41 @@ function hasCancelledMandateExposureAnomaly(mandat: Pick<MandatRecord, 'diffusab
   return mandateLifecycleState(mandat) === 'Annulé' && (((mandat.diffusable ?? '0') === '1') || Boolean(mandat.nb_portails_actifs))
 }
 
+type MandateAnomalyType =
+  | 'all'
+  | 'missing_mandate'
+  | 'cancelled_exposed'
+  | 'not_published'
+  | 'unauthorized_publication'
+  | 'gateway_error'
+
+function mandateAnomalyType(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce' | 'mandat_date_fin'>): MandateAnomalyType {
+  const shouldCheckPublishability = shouldTreatAsPublishableAnomaly(mandat.statut_annonce)
+  if (!mandat.numero_mandat) return 'missing_mandate'
+  if (hasCancelledMandateExposureAnomaly(mandat)) return 'cancelled_exposed'
+  if (shouldCheckPublishability && (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs) return 'not_published'
+  if (!hasCancelledMandateExposureAnomaly(mandat) && (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs)) return 'unauthorized_publication'
+  if (Boolean(mandat.has_diffusion_error)) return 'gateway_error'
+  return 'all'
+}
+
+function mandateAnomalyTypeLabel(type: MandateAnomalyType) {
+  switch (type) {
+    case 'missing_mandate':
+      return 'Mandat manquant'
+    case 'cancelled_exposed':
+      return 'Mandat annulé exposé'
+    case 'not_published':
+      return 'Diffusable non publié'
+    case 'unauthorized_publication':
+      return 'Publication non autorisée'
+    case 'gateway_error':
+      return 'Erreur passerelle'
+    default:
+      return 'Toutes'
+  }
+}
+
 function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce' | 'mandat_date_fin'>) {
   const shouldCheckPublishability = shouldTreatAsPublishableAnomaly(mandat.statut_annonce)
   const cancelledExposure = hasCancelledMandateExposureAnomaly(mandat)
@@ -5067,6 +5102,7 @@ function SuiviMandatsScreenV2(props: {
     return <section className="panel"><p className="empty-state">Cette vue est reservee aux administrateurs.</p></section>
   }
   const [secondaryKpisOpen, setSecondaryKpisOpen] = useState(false)
+  const [activeAnomalyType, setActiveAnomalyType] = useState<MandateAnomalyType>('all')
 
   const activeSuiviFilter = props.requestFilter ?? 'pending_or_in_progress'
 
@@ -5102,6 +5138,22 @@ function SuiviMandatsScreenV2(props: {
       !item.numero_mandat
     ),
   )
+  const anomalyTypeKeys: MandateAnomalyType[] = [
+    'all',
+    'missing_mandate',
+    'cancelled_exposed',
+    'not_published',
+    'unauthorized_publication',
+    'gateway_error',
+  ]
+  const anomalyTypeOptions: Array<{ key: MandateAnomalyType; label: string; count: number }> = anomalyTypeKeys.map((key) => ({
+    key,
+    label: mandateAnomalyTypeLabel(key),
+    count: key === 'all' ? anomalyRows.length : anomalyRows.filter((item) => mandateAnomalyType(item) === key).length,
+  }))
+  const visibleAnomalyRows = activeAnomalyType === 'all'
+    ? anomalyRows
+    : anomalyRows.filter((item) => mandateAnomalyType(item) === activeAnomalyType)
   const priceAlertRows = props.mandats
     .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
     .map((item) => {
@@ -5166,6 +5218,10 @@ function SuiviMandatsScreenV2(props: {
             : activeSuiviFilter === 'price_alert'
               ? 'Alertes prix'
               : 'Portefeuille'
+
+  useEffect(() => {
+    if (activeSuiviFilter !== 'anomalies') setActiveAnomalyType('all')
+  }, [activeSuiviFilter])
 
   return (
     <section className="panel-grid suivi-pauline-view">
@@ -5234,7 +5290,7 @@ function SuiviMandatsScreenV2(props: {
           <div className="suivi-portfolio-kpis">
             <span>
               {activeSuiviFilter === 'anomalies'
-                ? anomalyRows.length
+                ? visibleAnomalyRows.length
                 : activeSuiviFilter === 'price_alert'
                   ? priceAlertRows.length
                   : activeSuiviFilter === 'portfolio'
@@ -5243,12 +5299,27 @@ function SuiviMandatsScreenV2(props: {
             </span>
           </div>
         </div>
+        {activeSuiviFilter === 'anomalies' ? (
+          <div className="suivi-anomaly-filters" role="tablist" aria-label="Types d'anomalies">
+            {anomalyTypeOptions.filter((item) => item.key === 'all' || item.count > 0).map((item) => (
+              <button
+                key={item.key}
+                className={`suivi-anomaly-chip ${activeAnomalyType === item.key ? 'is-active' : ''}`}
+                type="button"
+                onClick={() => setActiveAnomalyType(item.key)}
+              >
+                <span>{item.label}</span>
+                <strong>{item.count}</strong>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="table-wrap suivi-portfolio-wrap">
           {activeSuiviFilter === 'anomalies' ? (
             <table className="suivi-portfolio-table">
               <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Diffusion</th><th>Anomalie</th></tr></thead>
               <tbody>
-                {anomalyRows.length > 0 ? anomalyRows.map((item) => {
+                {visibleAnomalyRows.length > 0 ? visibleAnomalyRows.map((item) => {
                   const anomaly = mandateAnomalyLabels(item)
                   return (
                     <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
@@ -5262,7 +5333,7 @@ function SuiviMandatsScreenV2(props: {
                       </td>
                     </tr>
                   )
-                }) : <tr><td colSpan={5}><p className="empty-state">Aucune anomalie dans cette vue.</p></td></tr>}
+                }) : <tr><td colSpan={5}><p className="empty-state">Aucune anomalie dans ce filtre.</p></td></tr>}
               </tbody>
             </table>
           ) : activeSuiviFilter === 'price_alert' ? (

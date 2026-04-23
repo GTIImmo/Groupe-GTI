@@ -3613,6 +3613,54 @@ button.metric-card.is-active {
   font-size: 12px;
   font-weight: 600;
 }
+.suivi-anomaly-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.suivi-anomaly-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 76, 92, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: #4a6271;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.suivi-anomaly-chip strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(15, 76, 92, 0.08);
+  color: #244654;
+  font-size: 11px;
+  font-weight: 800;
+}
+.suivi-anomaly-chip:hover {
+  border-color: rgba(15, 76, 92, 0.22);
+  background: rgba(243, 248, 250, 0.98);
+  color: #1e3d4a;
+  transform: translateY(-1px);
+}
+.suivi-anomaly-chip.is-active {
+  border-color: rgba(166, 59, 59, 0.22);
+  background: linear-gradient(180deg, rgba(251, 239, 239, 0.98), rgba(247, 228, 228, 0.98));
+  color: #8d3434;
+  box-shadow: 0 10px 18px rgba(141, 52, 52, 0.08);
+}
+.suivi-anomaly-chip.is-active strong {
+  background: rgba(166, 59, 59, 0.14);
+  color: #8d3434;
+}
 .suivi-portfolio-wrap {
   border: 1px solid var(--line);
   border-radius: 18px;
