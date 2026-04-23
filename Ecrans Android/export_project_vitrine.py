@@ -268,6 +268,7 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
         ) h ON h.hektor_annonce_id = CAST(v.hektor_annonce_id AS TEXT)
         WHERE COALESCE(v.archive, '0') = '0'
           AND COALESCE(v.diffusable, '0') = '1'
+          AND LOWER(COALESCE(v.statut_annonce, '')) IN ('actif', 'sous offre', 'sous compromis')
         ORDER BY datetime(v.date_maj) DESC, v.hektor_annonce_id DESC
         """
         conn.execute(f"ATTACH DATABASE '{HEKTOR_DB.as_posix()}' AS hektor")
