@@ -19,6 +19,7 @@
 
     slideImgA: $("#slideImgA"),
     slideImgB: $("#slideImgB"),
+    slideVideo: $("#slideVideo"),
     slideProg: $("#slideProg"),
 
     slideStats: $("#slideStats"),
@@ -97,6 +98,44 @@
 
   function displayNature(item) {
     return cleanTitle(item.nature || item.propertyType || item.typeLabel || item.category || item.title || "Bien immobilier");
+  }
+
+  function propertyTypeIcon(item) {
+    const type = safeText(item.nature || item.propertyType || item.typeLabel || "").toLowerCase();
+    if (type.includes("appartement") || type.includes("studio") || type.includes("duplex") || type.includes("triplex")) {
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 20V6l7-3 7 3v14" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 9h1M9 13h1M14 9h1M14 13h1M11 20v-4h2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    if (type.includes("maison") || type.includes("villa") || type.includes("chalet") || type.includes("ferme") || type.includes("demeure") || type.includes("mas") || type.includes("propriété")) {
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20H4v-9.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20v-5h4v5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
+    }
+    if (type.includes("bureau") || type.includes("local") || type.includes("commerce") || type.includes("boutique")) {
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V7h16v13" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 20h20M8 11h8M8 15h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    if (type.includes("terrain")) {
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19 10 7l3 5 7-4-4 11H4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    if (type.includes("garage") || type.includes("parking")) {
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11 12 4l9 7v9H3v-9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 20v-5h8v5M8 11h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 20V6l7-3 7 3v14" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 9h1M9 13h1M14 9h1M14 13h1M11 20v-4h2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+  }
+
+  function displayCityOnly(item) {
+    const city = safeText(item.city || "");
+    const postal = safeText(item.postalCode || "");
+    if (!city) return "";
+    if (!postal) return city;
+    return city.replace(new RegExp(`\\s*${postal}\\s*$`), "").trim() || city;
+  }
+
+  function propertyTypeTone(item) {
+    const type = safeText(item.nature || item.propertyType || item.typeLabel || "").toLowerCase();
+    if (type.includes("appartement") || type.includes("studio") || type.includes("duplex") || type.includes("triplex")) return "appartement";
+    if (type.includes("maison") || type.includes("villa") || type.includes("chalet") || type.includes("ferme") || type.includes("demeure") || type.includes("mas") || type.includes("propri")) return "maison";
+    if (type.includes("bureau") || type.includes("local") || type.includes("commerce") || type.includes("boutique")) return "pro";
+    if (type.includes("terrain")) return "terrain";
+    if (type.includes("garage") || type.includes("parking")) return "parking";
+    return "default";
   }
 
   function normalizePhotos(photos, max = 10) {
@@ -292,8 +331,8 @@
   function stateRibbonConfig(item) {
     const state = normalizeStateLabel(item && item.state);
     if (!state || state === "ACTIF") return null;
-    if (state.includes("OFFRE")) return { label: "SOUS OFFRE", cls: "stateRibbon--offer" };
-    if (state.includes("COMPROMIS")) return { label: "SOUS COMPROMIS", cls: "stateRibbon--compromis" };
+    if (state.includes("OFFRE")) return { label: "Sous offre", cls: "stateRibbon--offer" };
+    if (state.includes("COMPROMIS")) return { label: "Sous compromis", cls: "stateRibbon--compromis" };
     if (state.includes("VENDU") || state.includes("VENTE")) return { label: "VENDU", cls: "stateRibbon--sold" };
     return null;
   }
@@ -565,6 +604,11 @@
       debug: p.get("debug") === "1",
 
       qr: (p.get("qr") || "").trim(),
+      promo: p.get("promo") !== "0",
+      promoEvery: clampInt(p.get("promoEvery"), 1, 999, 6),
+      promoDuration: clampInt(p.get("promoDuration"), 5, 300, 12),
+      promoOffset: clampInt(p.get("promoOffset"), -1, 999, -1),
+      promoVideo: (p.get("promoVideo") || "assets/promo-gti.mp4.mp4").trim(),
     };
   }
 
@@ -631,6 +675,41 @@
     }
   }
 
+  function isPromoEntry(entry) {
+    return !!(entry && entry.kind === "promo");
+  }
+
+  function resolvePromoOffset(params) {
+    const every = Math.max(1, params.promoEvery || 1);
+    if (params.promoOffset >= 0) return params.promoOffset % every;
+    return ((params.screen || 1) - 1) % every;
+  }
+
+  function buildPlaylist(items, params) {
+    const listings = items.map(item => ({ kind: "listing", id: item.id, item }));
+    if (!params.promo || !params.promoVideo || !listings.length) return listings;
+
+    const every = Math.max(1, params.promoEvery || 1);
+    const offset = resolvePromoOffset(params);
+    const out = [];
+    let seenListings = 0;
+
+    for (const entry of listings) {
+      out.push(entry);
+      seenListings += 1;
+      if (((seenListings + offset) % every) === 0) {
+        out.push({
+          kind: "promo",
+          id: `PROMO_${params.screen}_${seenListings}`,
+          videoUrl: params.promoVideo,
+          durationSec: params.promoDuration,
+        });
+      }
+    }
+
+    return out;
+  }
+
   // ---------------------------
   // Slide engine
   // ---------------------------
@@ -654,6 +733,10 @@
     state.photoTimer = null;
     state.tickTimer = null;
     state.progTimer = null;
+    if (els.slideVideo) {
+      els.slideVideo.pause();
+      try { els.slideVideo.currentTime = 0; } catch (_) {}
+    }
   }
 
   // ✅ durée calculée SANS reboucler les photos
@@ -673,11 +756,77 @@
     els.slideProg.style.width = `${(pct * 100).toFixed(1)}%`;
   }
 
-  function setSlideItem(item, rotateMinSec, photoRotateSec, params) {
-    els.slidePrice.textContent = formatPriceEUR(item.price);
-    els.slideTitle.textContent = displayNature(item);
+  function setPromoVisibility(isPromo) {
+    if (els.slidePrice) els.slidePrice.classList.toggle("hidden", !!isPromo);
+    if (els.slideStats) els.slideStats.classList.toggle("hidden", !!isPromo);
+    if (els.qrBlock) els.qrBlock.classList.toggle("hidden", !!isPromo);
+    if (els.dpeCard) els.dpeCard.classList.toggle("hidden", !!isPromo);
+    if (els.slideStateRibbon) els.slideStateRibbon.classList.toggle("hidden", !!isPromo);
 
-    const cityLine = safeText(item.city || "");
+    const contactCard = document.getElementById("contactCard");
+    if (contactCard) contactCard.classList.toggle("hidden", !!isPromo);
+  }
+
+  function stopPromoVideo() {
+    if (!els.slideVideo) return;
+    els.slideVideo.pause();
+    try { els.slideVideo.currentTime = 0; } catch (_) {}
+    els.slideVideo.classList.add("hidden");
+  }
+
+  function startPromoVideo(url) {
+    if (!els.slideVideo) return;
+    const absUrl = new URL(url, window.location.href).toString();
+    if (els.slideVideo.src !== absUrl) {
+      els.slideVideo.src = absUrl;
+    }
+    els.slideVideo.classList.remove("hidden");
+    els.slideVideo.muted = true;
+    els.slideVideo.loop = false;
+    els.slideVideo.playsInline = true;
+    els.slideVideo.autoplay = true;
+    els.slideVideo.onended = () => { state.nextItemAt = Date.now(); };
+    els.slideVideo.onerror = () => { state.nextItemAt = Date.now(); };
+    const playPromise = els.slideVideo.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  }
+
+  function setPromoEntry(entry) {
+    setPromoVisibility(true);
+    stopPromoVideo();
+
+    els.slideTitle.innerHTML = `<span class="slide__titleMain slide__titleMain--default">GTI Immobilier</span>`;
+    els.slideMeta.textContent = "Video promotionnelle";
+
+    els.slideImgA.classList.remove("is-visible");
+    els.slideImgB.classList.remove("is-visible");
+    els.slideImgA.classList.add("hidden");
+    els.slideImgB.classList.add("hidden");
+
+    startPromoVideo(entry.videoUrl);
+
+    state.itemDurationMs = (entry.durationSec || 12) * 1000;
+    state.nextItemAt = Date.now() + state.itemDurationMs;
+    if (els.slideProg) els.slideProg.style.width = "0%";
+
+    if (state.photoTimer) {
+      clearInterval(state.photoTimer);
+      state.photoTimer = null;
+    }
+  }
+
+  function setSlideItem(item, rotateMinSec, photoRotateSec, params) {
+    setPromoVisibility(false);
+    stopPromoVideo();
+
+    els.slidePrice.textContent = formatPriceEUR(item.price);
+    const nature = displayNature(item);
+    const tone = propertyTypeTone(item);
+    els.slideTitle.innerHTML = `<span class="slide__titleMain slide__titleMain--${tone}">${nature}</span>`;
+
+    const cityLine = displayCityOnly(item);
     els.slideMeta.textContent = cityLine || "—";
 
     renderStats(item);
@@ -696,6 +845,8 @@
     const p0 = getPhoto(item, 0);
     const p1 = getPhoto(item, 1);
 
+    els.slideImgA.classList.remove("hidden");
+    els.slideImgB.classList.remove("hidden");
     els.slideImgA.src = p0;
     els.slideImgB.src = p1;
     els.slideImgA.classList.add("is-visible");
@@ -708,10 +859,18 @@
 
     warmupItem(item, 1, 3).catch(()=>{});
     const nextItem = state.items[(state.itemIndex + 1) % state.items.length];
-    if (nextItem) preload(getPhoto(nextItem, 0)).catch(()=>{});
+    if (nextItem && !isPromoEntry(nextItem)) preload(getPhoto(nextItem.item, 0)).catch(()=>{});
 
     // ✅ reset phase rotation photo pour ce bien (photo 1 = 4s plein)
     restartPhotoTimer(photoRotateSec, params.maxPhotos);
+  }
+
+  function setSlideEntry(entry, rotateMinSec, photoRotateSec, params) {
+    if (isPromoEntry(entry)) {
+      setPromoEntry(entry);
+      return;
+    }
+    setSlideItem(entry.item, rotateMinSec, photoRotateSec, params);
   }
 
   function restartInfoAnimation(slideEl) {
@@ -728,7 +887,7 @@
   function transitionToItem(item, rotateMinSec, photoRotateSec, params) {
     const slideEl = document.getElementById("slide");
     if (!slideEl) {
-      setSlideItem(item, rotateMinSec, photoRotateSec, params);
+      setSlideEntry(item, rotateMinSec, photoRotateSec, params);
       return;
     }
 
@@ -742,7 +901,7 @@
       slideEl.classList.remove("is-exit");
       slideEl.classList.add("is-enter");
 
-      setSlideItem(item, rotateMinSec, photoRotateSec, params);
+      setSlideEntry(item, rotateMinSec, photoRotateSec, params);
       restartInfoAnimation(slideEl);
 
       requestAnimationFrame(() => {
@@ -765,7 +924,8 @@
     if (state.photoTimer) clearInterval(state.photoTimer);
     state.photoTimer = setInterval(() => {
       const item = state.items[state.itemIndex];
-      swapPhoto(item, maxPhotos).catch(()=>{});
+      if (!item || isPromoEntry(item)) return;
+      swapPhoto(item.item, maxPhotos).catch(()=>{});
     }, photoRotateSec * 1000);
   }
 
@@ -811,7 +971,7 @@
     }
 
     const first = items[0];
-    setSlideItem(first, rotateMinSec, photoRotateSec, params);
+    setSlideEntry(first, rotateMinSec, photoRotateSec, params);
     restartInfoAnimation(slideEl);
 
     state.tickTimer = setInterval(() => {
@@ -865,11 +1025,12 @@
         return;
       }
 
-      const fp = fingerprint(items);
+      const playlist = buildPlaylist(items, params);
+      const fp = `${fingerprint(items)}|promo=${params.promo ? 1 : 0}|every=${params.promoEvery}|duration=${params.promoDuration}|offset=${resolvePromoOffset(params)}|video=${params.promoVideo}`;
       if (fp !== lastFingerprint) {
         lastFingerprint = fp;
         preload(getPhoto(items[0], 0)).catch(()=>{});
-        startSlide(items, params.rotate, params.photoRotate, params);
+        startSlide(playlist, params.rotate, params.photoRotate, params);
       } else {
         showView("slide");
         scheduleFitStats();

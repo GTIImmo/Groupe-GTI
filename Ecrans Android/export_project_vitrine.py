@@ -451,6 +451,9 @@ def main() -> None:
                     (VITRINE_DIR / "script.js", "script.js"),
                 ]
             )
+            promo_video = VITRINE_DIR / "assets" / "promo-gti.mp4.mp4"
+            if promo_video.exists():
+                files_to_push.append((promo_video, "assets/promo-gti.mp4.mp4"))
         push_many_files_to_github(
             files=files_to_push,
             owner=args.github_owner,
