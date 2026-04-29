@@ -69,6 +69,10 @@ body.debug .hud{display:flex;}
 }
 .slide--promo .slide__media{
   grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
 }
 .slide--promo .slide__panel{
   display:none;
@@ -144,7 +148,12 @@ body.debug .hud{display:flex;}
   z-index:1;
 }
 .slide--promo .slide__video{
+  inset:24px;
+  width:calc(100% - 48px);
+  height:calc(100% - 48px);
   z-index:6;
+  object-fit:contain;
+  object-position:center center;
 }
 
 /* overlay très léger */
