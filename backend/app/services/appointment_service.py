@@ -317,11 +317,10 @@ class AppointmentService:
         return self._context_payload(link, dossier)
 
     def get_public_annonce_slots(self, ref: str) -> dict[str, Any]:
-        link, dossier = self._resolve_link(ref)
+        link, _ = self._resolve_link(ref)
         rule = self._read_slot_rule(link)
         slots = self._generate_slots(link, rule)
         return {
-            "context": self._context_payload(link, dossier),
             "rule": {
                 "minDelayHours": int(rule.get("min_delay_hours") or 36),
                 "daysAhead": int(rule.get("days_ahead") or 21),
@@ -380,18 +379,20 @@ class AppointmentService:
                     if cursor < lunch_end_dt and next_cursor > lunch_start_dt:
                         cursor = next_cursor
                         continue
-                if self._is_fake_busy(seed, cursor, busy_ratio):
-                    cursor = next_cursor
-                    continue
                 slots.append(
                     {
                         "startAt": cursor.astimezone(UTC).isoformat(),
                         "endAt": next_cursor.astimezone(UTC).isoformat(),
+                        "dateKey": day.isoformat(),
+                        "dayNumber": day.day,
+                        "monthLabel": FRENCH_MONTHS[day.month],
+                        "weekdayLabel": FRENCH_WEEKDAYS[day.weekday()],
                         "displayDate": cursor.strftime("%d/%m/%Y"),
                         "displayDateLabel": self._format_public_date(day),
                         "displayTime": cursor.strftime("%H:%M"),
                         "endDisplayTime": f"jusqu'a {next_cursor.strftime('%H:%M')}",
                         "periodLabel": self._period_label(cursor),
+                        "available": not self._is_fake_busy(seed, cursor, busy_ratio),
                     }
                 )
                 cursor = next_cursor
@@ -521,7 +522,11 @@ class AppointmentService:
             raise HTTPException(status_code=400, detail="Aucun email negociateur disponible pour cette annonce")
         requested_start = self._parse_client_datetime(payload.requestedStartAt)
         requested_end = self._parse_client_datetime(payload.requestedEndAt) if payload.requestedEndAt else None
-        valid_slots = {slot["startAt"]: slot for slot in self._generate_slots(link, self._read_slot_rule(link))}
+        valid_slots = {
+            slot["startAt"]: slot
+            for slot in self._generate_slots(link, self._read_slot_rule(link))
+            if slot.get("available")
+        }
         start_key = requested_start.astimezone(UTC).isoformat()
         if start_key not in valid_slots:
             raise HTTPException(status_code=400, detail="Le creneau demande n'est plus disponible")

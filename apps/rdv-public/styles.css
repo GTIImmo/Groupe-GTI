@@ -332,40 +332,63 @@ img{max-width:100%;display:block}
   white-space:nowrap;
 }
 
-.slot-groups{
+.day-list{
+  margin-top:18px;
+  display:flex;
+  gap:12px;
+  overflow:auto;
+  padding-bottom:4px;
+}
+
+.day-button{
+  min-width:118px;
+  padding:14px 14px 12px;
+  border:1px solid #c7d4db;
+  border-radius:18px;
+  background:#fff;
+  color:var(--ink);
+  display:grid;
+  gap:4px;
+  justify-items:start;
+  cursor:pointer;
+  transition:transform .14s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.day-button:hover{
+  transform:translateY(-1px);
+  border-color:rgba(15,76,92,.36);
+  box-shadow:0 12px 22px rgba(15,76,92,.08);
+}
+
+.day-button.is-selected{
+  border-color:var(--brand);
+  background:linear-gradient(180deg, rgba(15,76,92,.06), rgba(15,76,92,.02));
+  box-shadow:0 0 0 3px rgba(15,76,92,.08);
+}
+
+.day-name,
+.day-month,
+.day-count{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:capitalize;
+}
+
+.day-number{
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:-.04em;
+}
+
+.slot-grid{
   margin-top:18px;
   display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   gap:14px;
 }
 
-.slot-group{
-  display:grid;
-  gap:10px;
-  padding:16px;
-  border:1px solid var(--line);
-  border-radius:20px;
-  background:var(--panel-soft);
-}
-
-.group-title{
-  margin:0;
-  font-size:1.05rem;
-  letter-spacing:-.02em;
-}
-
-.slot-part{
-  display:grid;
-  gap:10px;
-}
-
-.slot-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-}
-
 .slot-button{
-  min-width:120px;
+  width:100%;
   padding:14px 16px;
   border:1px solid #c7d4db;
   border-radius:16px;
@@ -388,6 +411,14 @@ img{max-width:100%;display:block}
   box-shadow:0 0 0 3px rgba(15,76,92,.08);
 }
 
+.slot-button.is-unavailable{
+  background:#f3f6f8;
+  color:#7a8692;
+  border-color:#d7dfe4;
+  box-shadow:none;
+  cursor:not-allowed;
+}
+
 .slot-time{
   display:block;
   font-size:18px;
@@ -399,6 +430,18 @@ img{max-width:100%;display:block}
   display:block;
   margin-top:4px;
   font-size:12px;
+}
+
+.slot-status{
+  display:block;
+  margin-top:8px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--brand-strong);
+}
+
+.slot-button.is-unavailable .slot-status{
+  color:#8a949d;
 }
 
 .selection-box{

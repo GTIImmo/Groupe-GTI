@@ -5,6 +5,7 @@
     context: null,
     slots: [],
     selectedSlot: null,
+    selectedDayKey: null,
   };
 
   const els = {
@@ -24,6 +25,7 @@
     agencyPhone: $("agencyPhone"),
     agencyEmail: $("agencyEmail"),
     slotRuleLabel: $("slotRuleLabel"),
+    dayList: $("dayList"),
     slotList: $("slotList"),
     selectedSlotLabel: $("selectedSlotLabel"),
     appointmentForm: $("appointmentForm"),
@@ -71,6 +73,7 @@
         maximumFractionDigits: 0,
       }).format(context.price)
       : "Prix sur demande";
+
     els.listingTitle.textContent = context.title || `Annonce ${context.hektorAnnonceId}`;
     els.listingCity.textContent = context.ville || "Ville non renseignee";
     els.listingType.textContent = context.typeBien || "Bien immobilier";
@@ -105,6 +108,25 @@
     element.classList.remove("hidden");
   }
 
+  function groupSlotsByDay(slots) {
+    const groups = new Map();
+    slots.forEach((slot, index) => {
+      const key = slot.dateKey || slot.displayDateLabel || slot.displayDate || String(index);
+      if (!groups.has(key)) {
+        groups.set(key, {
+          dayKey: key,
+          dateLabel: slot.displayDateLabel || slot.displayDate || "",
+          weekdayLabel: slot.weekdayLabel || "",
+          dayNumber: slot.dayNumber || "",
+          monthLabel: slot.monthLabel || "",
+          slots: [],
+        });
+      }
+      groups.get(key).slots.push({ ...slot, slotIndex: index });
+    });
+    return Array.from(groups.values());
+  }
+
   function selectSlot(index) {
     state.selectedSlot = state.slots[index] || null;
     Array.from(els.slotList.querySelectorAll(".slot-button")).forEach((button) => {
@@ -114,29 +136,73 @@
     els.submitButton.disabled = !state.selectedSlot;
   }
 
-  function groupSlotsByDate(slots) {
-    const groups = new Map();
-    slots.forEach((slot, index) => {
-      const key = slot.displayDateLabel || slot.displayDate || "Autre";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push({ slot, index });
+  function selectDay(dayKey) {
+    state.selectedDayKey = dayKey;
+    state.selectedSlot = null;
+    els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    els.submitButton.disabled = true;
+    Array.from(els.dayList.querySelectorAll(".day-button")).forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.dayKey === dayKey);
     });
-    return groups;
+    renderSlotsForSelectedDay();
   }
 
-  function groupSlotsByPart(entries) {
-    const groups = new Map();
-    entries.forEach((entry) => {
-      const key = entry.slot.periodLabel || "Journee";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(entry);
+  function renderDayPicker(days) {
+    els.dayList.innerHTML = "";
+    days.forEach((day) => {
+      const availableCount = day.slots.filter((slot) => slot.available).length;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "day-button";
+      button.dataset.dayKey = day.dayKey;
+      button.innerHTML = [
+        `<span class="day-name">${day.weekdayLabel || ""}</span>`,
+        `<span class="day-number">${day.dayNumber || ""}</span>`,
+        `<span class="day-month">${day.monthLabel || ""}</span>`,
+        `<span class="day-count">${availableCount} libre${availableCount > 1 ? "s" : ""}</span>`,
+      ].join("");
+      button.addEventListener("click", () => selectDay(day.dayKey));
+      els.dayList.appendChild(button);
     });
-    return groups;
   }
 
-  function renderSlots(rule, slots) {
+  function renderSlotsForSelectedDay() {
+    const daySlots = state.slots.filter((slot) => (slot.dateKey || slot.displayDateLabel) === state.selectedDayKey);
+    els.slotList.innerHTML = "";
+
+    if (!daySlots.length) {
+      const empty = document.createElement("p");
+      empty.className = "panel-intro";
+      empty.textContent = "Aucun creneau disponible pour ce jour.";
+      els.slotList.appendChild(empty);
+      return;
+    }
+
+    daySlots.forEach((slot, index) => {
+      const globalIndex = state.slots.findIndex((item) => item.startAt === slot.startAt);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "slot-button";
+      button.dataset.index = String(globalIndex);
+      button.disabled = !slot.available;
+      if (!slot.available) button.classList.add("is-unavailable");
+      button.innerHTML = [
+        `<span class="slot-time">${slot.displayTime}</span>`,
+        `<span class="slot-meta">${slot.endDisplayTime || ""}</span>`,
+        `<span class="slot-status">${slot.available ? "Disponible" : "Indisponible"}</span>`,
+      ].join("");
+      if (slot.available) {
+        button.addEventListener("click", () => selectSlot(globalIndex));
+      }
+      els.slotList.appendChild(button);
+    });
+  }
+
+  function renderAgenda(rule, slots) {
     state.slots = Array.isArray(slots) ? slots : [];
+    state.selectedSlot = null;
     els.slotRuleLabel.textContent = `Agenda de visite - delai mini ${rule.minDelayHours} h`;
+    els.dayList.innerHTML = "";
     els.slotList.innerHTML = "";
     els.selectedSlotLabel.textContent = "Choisissez un creneau";
     els.submitButton.disabled = true;
@@ -149,45 +215,12 @@
       return;
     }
 
-    const groups = groupSlotsByDate(state.slots);
-    groups.forEach((entries, dateLabel) => {
-      const group = document.createElement("section");
-      group.className = "slot-group";
-
-      const title = document.createElement("h3");
-      title.className = "group-title";
-      title.textContent = dateLabel;
-      group.appendChild(title);
-
-      const partGroups = groupSlotsByPart(entries);
-      partGroups.forEach((partEntries, partLabel) => {
-        const part = document.createElement("div");
-        part.className = "slot-part";
-
-        const partTitle = document.createElement("span");
-        partTitle.className = "group-label";
-        partTitle.textContent = partLabel;
-        part.appendChild(partTitle);
-
-        const row = document.createElement("div");
-        row.className = "slot-row";
-
-        partEntries.forEach(({ slot, index }) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "slot-button";
-          button.dataset.index = String(index);
-          button.innerHTML = `<span class="slot-time">${slot.displayTime}</span><span class="slot-meta">${slot.endDisplayTime || ""}</span>`;
-          button.addEventListener("click", () => selectSlot(index));
-          row.appendChild(button);
-        });
-
-        part.appendChild(row);
-        group.appendChild(part);
-      });
-
-      els.slotList.appendChild(group);
-    });
+    const days = groupSlotsByDay(state.slots);
+    renderDayPicker(days);
+    state.selectedDayKey = days[0]?.dayKey || null;
+    if (state.selectedDayKey) {
+      selectDay(state.selectedDayKey);
+    }
   }
 
   async function fetchJson(path, options) {
@@ -210,11 +243,13 @@
       return;
     }
     try {
-      const context = await fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}`);
-      const slotsPayload = await fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}/slots`);
+      const [context, slotsPayload] = await Promise.all([
+        fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}`),
+        fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}/slots`),
+      ]);
       state.context = context;
       renderContext(context);
-      renderSlots(slotsPayload.rule, slotsPayload.slots);
+      renderAgenda(slotsPayload.rule, slotsPayload.slots);
       els.loadingPanel.classList.add("hidden");
       els.contentPanel.classList.remove("hidden");
     } catch (error) {
