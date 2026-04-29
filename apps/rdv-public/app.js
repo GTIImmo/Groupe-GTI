@@ -12,12 +12,17 @@
     errorPanel: $("errorPanel"),
     errorMessage: $("errorMessage"),
     contentPanel: $("contentPanel"),
+    listingPhoto: $("listingPhoto"),
     listingTitle: $("listingTitle"),
-    listingMeta: $("listingMeta"),
+    listingCity: $("listingCity"),
+    listingType: $("listingType"),
+    listingPrice: $("listingPrice"),
     commercialName: $("commercialName"),
+    commercialPhone: $("commercialPhone"),
+    commercialEmail: $("commercialEmail"),
     agencyName: $("agencyName"),
-    dossierNumber: $("dossierNumber"),
-    mandatNumber: $("mandatNumber"),
+    agencyPhone: $("agencyPhone"),
+    agencyEmail: $("agencyEmail"),
     slotRuleLabel: $("slotRuleLabel"),
     slotList: $("slotList"),
     selectedSlotLabel: $("selectedSlotLabel"),
@@ -67,11 +72,37 @@
       }).format(context.price)
       : "Prix sur demande";
     els.listingTitle.textContent = context.title || `Annonce ${context.hektorAnnonceId}`;
-    els.listingMeta.textContent = [context.address, context.ville, price].filter(Boolean).join(" / ");
+    els.listingCity.textContent = context.ville || "Ville non renseignee";
+    els.listingType.textContent = context.typeBien || "Bien immobilier";
+    els.listingPrice.textContent = price;
     els.commercialName.textContent = context.commercialName || "-";
     els.agencyName.textContent = context.agenceNom || "-";
-    els.dossierNumber.textContent = context.numeroDossier || "-";
-    els.mandatNumber.textContent = context.numeroMandat || "-";
+    renderContactLink(els.commercialPhone, context.negociateurMobile || context.negociateurPhone, "Tel. ");
+    renderContactLink(els.commercialEmail, context.negociateurEmail, "");
+    renderContactLink(els.agencyPhone, context.agencePhone, "Tel. ");
+    renderContactLink(els.agencyEmail, context.agenceEmail, "");
+
+    if (context.photoUrl) {
+      els.listingPhoto.src = context.photoUrl;
+      els.listingPhoto.classList.remove("hidden");
+    } else {
+      els.listingPhoto.removeAttribute("src");
+      els.listingPhoto.classList.add("hidden");
+    }
+  }
+
+  function renderContactLink(element, value, prefix) {
+    const text = (value || "").trim();
+    if (!text) {
+      element.textContent = "";
+      element.classList.add("hidden");
+      element.removeAttribute("href");
+      return;
+    }
+    const isEmail = text.includes("@");
+    element.textContent = `${prefix}${text}`;
+    element.href = isEmail ? `mailto:${text}` : `tel:${text.replace(/\s+/g, "")}`;
+    element.classList.remove("hidden");
   }
 
   function selectSlot(index) {

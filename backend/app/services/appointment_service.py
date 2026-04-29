@@ -11,6 +11,7 @@ import requests
 from fastapi import HTTPException
 
 from ..models import AppointmentRequestCreatePayload
+from ..services.hektor_bridge import HektorBridgeService
 from ..services.notification_service import NotificationService
 from ..settings import Settings
 
@@ -38,6 +39,7 @@ class AppointmentService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.notification_service = NotificationService(settings)
+        self.hektor_bridge = HektorBridgeService(settings)
 
     def _rest_headers(self) -> dict[str, str]:
         return {
@@ -82,7 +84,7 @@ class AppointmentService:
         rows = self._rest_get(
             "app_dossier_current",
             params={
-                "select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,ville,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,adresse_detail,adresse_privee_listing",
+                "select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,ville,prix,type_bien,commercial_id,commercial_nom,negociateur_email,agence_nom,photo_url_listing,adresse_detail,adresse_privee_listing",
                 "hektor_annonce_id": f"eq.{annonce_id}",
                 "limit": "1",
             },
@@ -200,22 +202,115 @@ class AppointmentService:
         return f"{base}/rdv/annonce/{token}"
 
     def _context_payload(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
+        contacts = self._load_contact_details(dossier)
         return {
             "token": link.get("token"),
             "publicUrl": self._compose_public_url(str(link.get("token") or "")),
             "hektorAnnonceId": dossier.get("hektor_annonce_id"),
             "appDossierId": dossier.get("app_dossier_id"),
             "title": dossier.get("titre_bien"),
-            "numeroDossier": dossier.get("numero_dossier"),
-            "numeroMandat": dossier.get("numero_mandat"),
             "ville": dossier.get("ville"),
-            "address": dossier.get("adresse_detail") or dossier.get("adresse_privee_listing"),
+            "typeBien": dossier.get("type_bien"),
             "price": dossier.get("prix"),
+            "photoUrl": dossier.get("photo_url_listing"),
             "commercialId": dossier.get("commercial_id"),
             "commercialName": dossier.get("commercial_nom"),
             "negociateurEmail": dossier.get("negociateur_email"),
             "agenceNom": dossier.get("agence_nom"),
+            "negociateurPhone": contacts.get("negociateurPhone"),
+            "negociateurMobile": contacts.get("negociateurMobile"),
+            "agencePhone": contacts.get("agencePhone"),
+            "agenceEmail": contacts.get("agenceEmail"),
         }
+
+    def _load_contact_details(self, dossier: dict[str, Any]) -> dict[str, Any]:
+        details = {
+            "negociateurPhone": None,
+            "negociateurMobile": None,
+            "agencePhone": None,
+            "agenceEmail": None,
+        }
+        if not (
+            self.settings.hektor_api_base_url
+            and self.settings.hektor_client_id
+            and self.settings.hektor_client_secret
+        ):
+            return details
+
+        commercial_id = str(dossier.get("commercial_id") or "").strip()
+        agence_nom = str(dossier.get("agence_nom") or "").strip()
+
+        try:
+            if commercial_id:
+                nego = self._fetch_hektor_negociateur(commercial_id)
+                details["negociateurPhone"] = nego.get("telephone") or None
+                details["negociateurMobile"] = nego.get("portable") or None
+                agence_nom = str(nego.get("agence_nom") or agence_nom).strip()
+        except Exception:
+            pass
+
+        try:
+            if agence_nom:
+                agence = self._fetch_hektor_agence(agence_nom)
+                details["agencePhone"] = agence.get("tel") or None
+                details["agenceEmail"] = agence.get("mail") or None
+        except Exception:
+            pass
+
+        return details
+
+    def _fetch_hektor_negociateur(self, negotiateur_id: str) -> dict[str, Any]:
+        parsed, _ = self.hektor_bridge._call_hektor(
+            f"/Api/Negociateur/NegoById/?id={requests.utils.quote(negotiateur_id, safe='')}&version={self.settings.hektor_api_version}",
+            method="GET",
+        )
+        if not isinstance(parsed, dict):
+            return {}
+        data = parsed.get("data") if isinstance(parsed.get("data"), dict) else parsed
+        if not isinstance(data, dict):
+            return {}
+        return {
+            "telephone": self._coalesce_text(data.get("telephone"), data.get("tel")),
+            "portable": self._coalesce_text(data.get("portable"), data.get("mobile")),
+            "agence_nom": self._coalesce_text(data.get("agence"), data.get("agence_nom")),
+        }
+
+    def _fetch_hektor_agence(self, agence_nom: str) -> dict[str, Any]:
+        parsed, _ = self.hektor_bridge._call_hektor(
+            f"/Api/Agence/ListAgences/?version={self.settings.hektor_api_version}",
+            method="GET",
+        )
+        rows = []
+        if isinstance(parsed, dict):
+            if isinstance(parsed.get("data"), list):
+                rows = parsed.get("data") or []
+            elif isinstance(parsed.get("liste"), list):
+                rows = parsed.get("liste") or []
+        elif isinstance(parsed, list):
+            rows = parsed
+
+        target = self._normalize_text(agence_nom)
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            row_name = self._coalesce_text(row.get("nom"), row.get("agence"), row.get("name"))
+            if self._normalize_text(row_name) == target:
+                coord = row.get("coordonnees") if isinstance(row.get("coordonnees"), dict) else {}
+                return {
+                    "tel": self._coalesce_text(coord.get("tel"), row.get("tel")),
+                    "mail": self._coalesce_text(coord.get("mail"), row.get("mail"), row.get("email")),
+                }
+        return {}
+
+    def _normalize_text(self, value: Any) -> str:
+        return " ".join(str(value or "").strip().lower().split())
+
+    def _coalesce_text(self, *values: Any) -> str | None:
+        for value in values:
+            text = str(value or "").strip()
+            if text:
+                return text
+        return None
 
     def get_public_annonce_context(self, ref: str) -> dict[str, Any]:
         link, dossier = self._resolve_link(ref)

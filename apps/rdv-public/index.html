@@ -41,26 +41,33 @@
     <section class="content-grid hidden" id="contentPanel">
       <div class="content-main">
         <article class="panel panel-listing">
-          <p class="eyebrow">Annonce</p>
-          <h2 id="listingTitle">Bien immobilier</h2>
-          <p id="listingMeta" class="panel-intro">Chargement...</p>
+          <div class="listing-hero">
+            <div class="listing-photo-wrap">
+              <img id="listingPhoto" class="listing-photo" src="" alt="Photo du bien" />
+            </div>
+            <div class="listing-summary">
+              <p class="eyebrow">Bien</p>
+              <h2 id="listingTitle">Bien immobilier</h2>
+              <div class="listing-tags">
+                <span class="listing-tag" id="listingCity">-</span>
+                <span class="listing-tag" id="listingType">-</span>
+              </div>
+              <p id="listingPrice" class="listing-price">-</p>
+            </div>
+          </div>
 
-          <div class="listing-grid">
-            <div class="listing-card">
+          <div class="contact-grid">
+            <div class="contact-card">
               <span class="listing-label">Votre conseiller</span>
               <strong id="commercialName">-</strong>
+              <a id="commercialPhone" class="contact-link hidden" href="#"></a>
+              <a id="commercialEmail" class="contact-link hidden" href="#"></a>
             </div>
-            <div class="listing-card">
+            <div class="contact-card">
               <span class="listing-label">Agence</span>
               <strong id="agencyName">-</strong>
-            </div>
-            <div class="listing-card">
-              <span class="listing-label">R&eacute;f&eacute;rence du bien</span>
-              <strong id="dossierNumber">-</strong>
-            </div>
-            <div class="listing-card">
-              <span class="listing-label">R&eacute;f&eacute;rence compl&eacute;mentaire</span>
-              <strong id="mandatNumber">-</strong>
+              <a id="agencyPhone" class="contact-link hidden" href="#"></a>
+              <a id="agencyEmail" class="contact-link hidden" href="#"></a>
             </div>
           </div>
         </article>
