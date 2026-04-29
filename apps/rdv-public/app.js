@@ -7,6 +7,7 @@
     selectedSlot: null,
     selectedDayKey: null,
   };
+  const WEEKDAY_SHORT = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
 
   const els = {
     loadingPanel: $("loadingPanel"),
@@ -147,22 +148,77 @@
     renderSlotsForSelectedDay();
   }
 
-  function renderDayPicker(days) {
-    els.dayList.innerHTML = "";
+  function groupDaysByMonth(days) {
+    const groups = new Map();
     days.forEach((day) => {
-      const availableCount = day.slots.filter((slot) => slot.available).length;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "day-button";
-      button.dataset.dayKey = day.dayKey;
-      button.innerHTML = [
-        `<span class="day-name">${day.weekdayLabel || ""}</span>`,
-        `<span class="day-number">${day.dayNumber || ""}</span>`,
-        `<span class="day-month">${day.monthLabel || ""}</span>`,
-        `<span class="day-count">${availableCount} libre${availableCount > 1 ? "s" : ""}</span>`,
-      ].join("");
-      button.addEventListener("click", () => selectDay(day.dayKey));
-      els.dayList.appendChild(button);
+      const key = String(day.dayKey || "").slice(0, 7);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(day);
+    });
+    return Array.from(groups.entries());
+  }
+
+  function monthTitleFromKey(key, sampleDay) {
+    if (!key) return sampleDay?.monthLabel || "";
+    const [yearText, monthText] = key.split("-");
+    const year = Number(yearText);
+    const monthIndex = Number(monthText) - 1;
+    const monthName = sampleDay?.monthLabel || "";
+    return `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`;
+  }
+
+  function weekdayOffset(dateKey) {
+    const date = new Date(`${dateKey}T12:00:00`);
+    return (date.getDay() + 6) % 7;
+  }
+
+  function renderCalendar(days) {
+    els.dayList.innerHTML = "";
+    groupDaysByMonth(days).forEach(([monthKey, monthDays]) => {
+      const month = document.createElement("section");
+      month.className = "calendar-month";
+
+      const title = document.createElement("h3");
+      title.className = "calendar-title";
+      title.textContent = monthTitleFromKey(monthKey, monthDays[0]);
+      month.appendChild(title);
+
+      const weekdays = document.createElement("div");
+      weekdays.className = "calendar-weekdays";
+      WEEKDAY_SHORT.forEach((label) => {
+        const item = document.createElement("span");
+        item.className = "calendar-weekday";
+        item.textContent = label;
+        weekdays.appendChild(item);
+      });
+      month.appendChild(weekdays);
+
+      const grid = document.createElement("div");
+      grid.className = "calendar-grid";
+      const offset = weekdayOffset(monthDays[0]?.dayKey);
+      for (let index = 0; index < offset; index += 1) {
+        const filler = document.createElement("span");
+        filler.className = "calendar-filler";
+        grid.appendChild(filler);
+      }
+
+      monthDays.forEach((day) => {
+        const availableCount = day.slots.filter((slot) => slot.available).length;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "day-button";
+        button.dataset.dayKey = day.dayKey;
+        button.innerHTML = [
+          `<span class="day-name">${day.weekdayLabel || ""}</span>`,
+          `<span class="day-number">${day.dayNumber || ""}</span>`,
+          `<span class="day-count">${availableCount} libre${availableCount > 1 ? "s" : ""}</span>`,
+        ].join("");
+        button.addEventListener("click", () => selectDay(day.dayKey));
+        grid.appendChild(button);
+      });
+
+      month.appendChild(grid);
+      els.dayList.appendChild(month);
     });
   }
 
@@ -216,7 +272,7 @@
     }
 
     const days = groupSlotsByDay(state.slots);
-    renderDayPicker(days);
+    renderCalendar(days);
     state.selectedDayKey = days[0]?.dayKey || null;
     if (state.selectedDayKey) {
       selectDay(state.selectedDayKey);

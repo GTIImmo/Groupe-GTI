@@ -80,7 +80,7 @@
             </div>
             <span id="slotRuleLabel" class="rule-chip">D&eacute;lai mini 36 h</span>
           </div>
-          <div id="dayList" class="day-list"></div>
+          <div id="dayList" class="calendar-wrap"></div>
           <div id="slotList" class="slot-grid"></div>
         </article>
       </div>
@@ -89,7 +89,7 @@
         <article class="panel panel-form">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Coordonnees</p>
+              <p class="eyebrow">Vos coordonn&eacute;es</p>
               <h2>Envoyer la demande</h2>
             </div>
           </div>
@@ -100,23 +100,25 @@
           </div>
 
           <form id="appointmentForm" class="form-grid">
+            <div class="form-row">
+              <label class="field">
+                <span>Nom complet</span>
+                <input id="clientName" name="clientName" type="text" required maxlength="160" placeholder="Votre nom" />
+              </label>
+              <label class="field">
+                <span>T&eacute;l&eacute;phone</span>
+                <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
+              </label>
+            </div>
             <label class="field">
-              <span>Nom complet</span>
-              <input id="clientName" name="clientName" type="text" required maxlength="160" />
-            </label>
-            <label class="field">
-              <span>T&eacute;l&eacute;phone</span>
-              <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" />
-            </label>
-            <label class="field field-full">
               <span>Email</span>
-              <input id="clientEmail" name="clientEmail" type="email" maxlength="160" />
+              <input id="clientEmail" name="clientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
             </label>
-            <label class="field field-full">
+            <label class="field">
               <span>Message</span>
-              <textarea id="clientMessage" name="clientMessage" rows="5" maxlength="4000" placeholder="Precisez vos disponibilites, le nombre de visiteurs ou toute information utile."></textarea>
+              <textarea id="clientMessage" name="clientMessage" rows="5" maxlength="4000" placeholder="Pr&eacute;cisez si besoin vos disponibilit&eacute;s ou une information utile."></textarea>
             </label>
-            <div class="field-full form-actions">
+            <div class="form-actions">
               <button id="submitButton" type="submit" class="button-primary" disabled>Envoyer ma demande</button>
             </div>
           </form>
