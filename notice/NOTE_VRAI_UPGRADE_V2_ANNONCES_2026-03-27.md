@@ -67,4 +67,10 @@ Version prudente si besoin :
 
 ```powershell
 .\.venv\Scripts\python.exe phase2\sync\push_upgrade_to_supabase.py --dossier-batch-size 50 --detail-batch-size 25 --work-item-batch-size 50 --filter-batch-size 50
+.\.venv\Scripts\python.exe phase2\sync\push_hektor_directory_to_supabase.py
 ```
+
+Le run quotidien inclut maintenant aussi l'annuaire local Supabase :
+
+- `app_user_directory`
+- `app_agence_directory`

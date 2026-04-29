@@ -95,6 +95,16 @@ Commande quotidienne retenue :
 .\.venv\Scripts\python.exe sync_raw.py --mode update --resources annonces contacts mandats offres compromis ventes broadcasts; .\.venv\Scripts\python.exe normalize_source.py; .\.venv\Scripts\python.exe build_case_index.py
 ```
 
+Si l'objectif est aussi l'upload app / Supabase, prolonger ensuite avec :
+
+```powershell
+.\.venv\Scripts\python.exe phase2\bootstrap_phase2.py
+.\.venv\Scripts\python.exe phase2\refresh_views.py
+.\.venv\Scripts\python.exe phase2\checks\run_quality_checks.py
+.\.venv\Scripts\python.exe phase2\sync\push_upgrade_to_supabase.py --dossier-batch-size 50 --detail-batch-size 25 --work-item-batch-size 50 --filter-batch-size 50
+.\.venv\Scripts\python.exe phase2\sync\push_hektor_directory_to_supabase.py
+```
+
 Parametrage quotidien retenu dans le code :
 
 - `offre_recent_limit = 1000`

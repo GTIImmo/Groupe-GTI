@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import secrets
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
@@ -11,7 +12,6 @@ import requests
 from fastapi import HTTPException
 
 from ..models import AppointmentRequestCreatePayload
-from ..services.hektor_bridge import HektorBridgeService
 from ..services.notification_service import NotificationService
 from ..settings import Settings
 
@@ -39,7 +39,6 @@ class AppointmentService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.notification_service = NotificationService(settings)
-        self.hektor_bridge = HektorBridgeService(settings)
 
     def _rest_headers(self) -> dict[str, str]:
         return {
@@ -103,6 +102,26 @@ class AppointmentService:
         if not rows:
             raise HTTPException(status_code=404, detail=f"Annonce {annonce_id} introuvable dans app_dossier_current")
         return rows[0]
+
+    def _read_detail_payload_by_annonce(self, annonce_id: int) -> dict[str, Any]:
+        rows = self._rest_get(
+            "app_dossier_detail_current",
+            params={
+                "select": "detail_payload_json",
+                "hektor_annonce_id": f"eq.{annonce_id}",
+                "limit": "1",
+            },
+        )
+        if not rows:
+            return {}
+        raw_payload = str(rows[0].get("detail_payload_json") or "").strip()
+        if not raw_payload:
+            return {}
+        try:
+            parsed = json.loads(raw_payload)
+        except Exception:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
 
     def _read_link_by_token(self, token: str) -> dict[str, Any] | None:
         rows = self._rest_get(
@@ -244,32 +263,56 @@ class AppointmentService:
             "agencePhone": None,
             "agenceEmail": None,
         }
-        if not (
-            self.settings.hektor_api_base_url
-            and self.settings.hektor_client_id
-            and self.settings.hektor_client_secret
-        ):
-            return details
-
         commercial_id = str(dossier.get("commercial_id") or "").strip()
         agence_nom = str(dossier.get("agence_nom") or "").strip()
+        if commercial_id:
+            try:
+                user_rows = self._rest_get(
+                    "app_user_directory",
+                    params={
+                        "select": "tel,portable,email",
+                        "id_user": f"eq.{commercial_id}",
+                        "limit": "1",
+                    },
+                )
+                if user_rows:
+                    user_row = user_rows[0]
+                    details["negociateurPhone"] = self._coalesce_text(user_row.get("tel"))
+                    details["negociateurMobile"] = self._coalesce_text(user_row.get("portable"))
+            except Exception:
+                pass
 
-        try:
-            if commercial_id:
-                nego = self._fetch_hektor_negociateur(commercial_id)
-                details["negociateurPhone"] = nego.get("telephone") or None
-                details["negociateurMobile"] = nego.get("portable") or None
-                agence_nom = str(nego.get("agence_nom") or agence_nom).strip()
-        except Exception:
-            pass
+        if agence_nom:
+            try:
+                agency_rows = self._rest_get(
+                    "app_agence_directory",
+                    params={
+                        "select": "tel,mail",
+                        "nom": f"ilike.{agence_nom}",
+                        "limit": "1",
+                    },
+                )
+                if agency_rows:
+                    agency_row = agency_rows[0]
+                    details["agencePhone"] = self._coalesce_text(agency_row.get("tel"))
+                    details["agenceEmail"] = self._coalesce_text(agency_row.get("mail"))
+            except Exception:
+                pass
 
-        try:
-            if agence_nom:
-                agence = self._fetch_hektor_agence(agence_nom)
-                details["agencePhone"] = agence.get("tel") or None
-                details["agenceEmail"] = agence.get("mail") or None
-        except Exception:
-            pass
+        if not all(details.values()):
+            detail_payload = self._read_detail_payload_by_annonce(int(dossier["hektor_annonce_id"]))
+            text_candidates = [
+                str(detail_payload.get("texte_principal_html") or "").strip(),
+                str(detail_payload.get("corps_listing_html") or "").strip(),
+            ]
+            if not details["negociateurMobile"]:
+                details["negociateurMobile"] = self._extract_phone_from_text(text_candidates)
+            if not details["agenceEmail"]:
+                details["agenceEmail"] = self._extract_email_from_text(text_candidates)
+            if not details["negociateurPhone"]:
+                details["negociateurPhone"] = details["negociateurMobile"]
+            if not details["agencePhone"]:
+                details["agencePhone"] = self._extract_second_phone_from_text(text_candidates, details["negociateurMobile"])
 
         return details
 
@@ -298,49 +341,6 @@ class AppointmentService:
         link.update(payload)
         return link
 
-    def _fetch_hektor_negociateur(self, negotiateur_id: str) -> dict[str, Any]:
-        parsed, _ = self.hektor_bridge._call_hektor(
-            f"/Api/Negociateur/NegoById/?id={requests.utils.quote(negotiateur_id, safe='')}&version={self.settings.hektor_api_version}",
-            method="GET",
-        )
-        if not isinstance(parsed, dict):
-            return {}
-        data = parsed.get("data") if isinstance(parsed.get("data"), dict) else parsed
-        if not isinstance(data, dict):
-            return {}
-        return {
-            "telephone": self._coalesce_text(data.get("telephone"), data.get("tel")),
-            "portable": self._coalesce_text(data.get("portable"), data.get("mobile")),
-            "agence_nom": self._coalesce_text(data.get("agence"), data.get("agence_nom")),
-        }
-
-    def _fetch_hektor_agence(self, agence_nom: str) -> dict[str, Any]:
-        parsed, _ = self.hektor_bridge._call_hektor(
-            f"/Api/Agence/ListAgences/?version={self.settings.hektor_api_version}",
-            method="GET",
-        )
-        rows = []
-        if isinstance(parsed, dict):
-            if isinstance(parsed.get("data"), list):
-                rows = parsed.get("data") or []
-            elif isinstance(parsed.get("liste"), list):
-                rows = parsed.get("liste") or []
-        elif isinstance(parsed, list):
-            rows = parsed
-
-        target = self._normalize_text(agence_nom)
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            row_name = self._coalesce_text(row.get("nom"), row.get("agence"), row.get("name"))
-            if self._normalize_text(row_name) == target:
-                coord = row.get("coordonnees") if isinstance(row.get("coordonnees"), dict) else {}
-                return {
-                    "tel": self._coalesce_text(coord.get("tel"), row.get("tel")),
-                    "mail": self._coalesce_text(coord.get("mail"), row.get("mail"), row.get("email")),
-                }
-        return {}
-
     def _normalize_text(self, value: Any) -> str:
         return " ".join(str(value or "").strip().lower().split())
 
@@ -349,6 +349,32 @@ class AppointmentService:
             text = str(value or "").strip()
             if text:
                 return text
+        return None
+
+    def _extract_phone_from_text(self, texts: list[str]) -> str | None:
+        for text in texts:
+            matches = re.findall(r"(?:\+33|0)[\d .-]{8,}", text)
+            for match in matches:
+                digits = re.sub(r"\D+", "", match)
+                if len(digits) >= 10:
+                    return match.strip()
+        return None
+
+    def _extract_second_phone_from_text(self, texts: list[str], first_phone: str | None) -> str | None:
+        first_digits = re.sub(r"\D+", "", first_phone or "")
+        for text in texts:
+            matches = re.findall(r"(?:\+33|0)[\d .-]{8,}", text)
+            for match in matches:
+                digits = re.sub(r"\D+", "", match)
+                if len(digits) >= 10 and digits != first_digits:
+                    return match.strip()
+        return None
+
+    def _extract_email_from_text(self, texts: list[str]) -> str | None:
+        for text in texts:
+            match = re.search(r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}", text, flags=re.IGNORECASE)
+            if match:
+                return match.group(0).strip()
         return None
 
     def get_public_annonce_context(self, ref: str) -> dict[str, Any]:

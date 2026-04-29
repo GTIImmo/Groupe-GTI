@@ -63,7 +63,13 @@ Depuis `C:\Users\frede\Desktop\Projet` :
 .\.venv\Scripts\python.exe phase2\refresh_views.py
 .\.venv\Scripts\python.exe phase2\checks\run_quality_checks.py
 .\.venv\Scripts\python.exe phase2\sync\push_upgrade_to_supabase.py --dossier-batch-size 50 --detail-batch-size 25 --work-item-batch-size 50 --filter-batch-size 50
+.\.venv\Scripts\python.exe phase2\sync\push_hektor_directory_to_supabase.py
 ```
+
+Ce dernier script complete desormais le run quotidien pour synchroniser dans Supabase :
+
+- les users Hektor utiles aux commerciaux
+- les agences Hektor utiles aux contacts agence
 
 ## Cas de secours uniquement
 

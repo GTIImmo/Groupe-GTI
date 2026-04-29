@@ -142,7 +142,10 @@ Version prudente :
 
 ```powershell
 .\.venv\Scripts\python.exe phase2\sync\push_upgrade_to_supabase.py --dossier-batch-size 50 --detail-batch-size 25 --work-item-batch-size 50 --filter-batch-size 50
+.\.venv\Scripts\python.exe phase2\sync\push_hektor_directory_to_supabase.py
 ```
+
+Conserver cette synchro annuaire dans les futurs uploads permet d'eviter les appels externes pour les contacts clients/collaborateurs.
 
 ## 7. Recharger le front
 

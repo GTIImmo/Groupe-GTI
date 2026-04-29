@@ -53,6 +53,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Cree et enrichit les liens publics RDV avec les contacts nego/agence.")
     parser.add_argument("--annonce-id", action="append", dest="annonce_ids", help="Annonce Hektor a traiter. Peut etre repete.")
     parser.add_argument("--limit", type=int, default=None, help="Limite le nombre d'annonces lues depuis app_dossier_current.")
+    parser.add_argument("--quiet", action="store_true", help="N'affiche que le resume final et les erreurs.")
     args = parser.parse_args()
 
     load_env_file(ROOT / ".env")
@@ -67,7 +68,17 @@ def main() -> None:
 
     processed = 0
     enriched = 0
-    for annonce_id in annonce_ids:
+    skipped = 0
+    errors = 0
+
+    def log(message: str, *, force: bool = False) -> None:
+        if args.quiet and not force:
+            return
+        print(message, flush=True)
+
+    log(f"backfill:start annonces={len(annonce_ids)} limit={args.limit if args.limit is not None else 'all'}")
+
+    for index, annonce_id in enumerate(annonce_ids, start=1):
         try:
             link = service._ensure_link_for_annonce(annonce_id)
             dossier = service._read_dossier_by_annonce(annonce_id)
@@ -85,13 +96,27 @@ def main() -> None:
                 "agence_email": str(updated.get("agence_email") or "").strip(),
             }
             processed += 1
-            if after != before and any(after.values()):
+            changed = after != before
+            has_contacts = any(after.values())
+            if changed and has_contacts:
                 enriched += 1
-            print(f"annonce={annonce_id} token={updated.get('token')} enriched={after != before}")
+                status = "updated"
+            else:
+                skipped += 1
+                status = "skipped"
+            log(
+                f"[{index}/{len(annonce_ids)}] annonce={annonce_id} token={updated.get('token')} status={status} "
+                f"nego_phone={after['negociateur_phone'] or '-'} nego_mobile={after['negociateur_mobile'] or '-'} "
+                f"agence_phone={after['agence_phone'] or '-'} agence_email={after['agence_email'] or '-'}"
+            )
         except Exception as exc:
-            print(f"annonce={annonce_id} error={exc}")
+            errors += 1
+            print(f"[{index}/{len(annonce_ids)}] annonce={annonce_id} status=error error={exc}", flush=True)
 
-    print(f"processed={processed} enriched={enriched}")
+    print(
+        f"backfill:done processed={processed} updated={enriched} skipped={skipped} errors={errors}",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
