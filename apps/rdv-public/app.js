@@ -299,13 +299,10 @@
       return;
     }
     try {
-      const [context, slotsPayload] = await Promise.all([
-        fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}`),
-        fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}/slots`),
-      ]);
-      state.context = context;
-      renderContext(context);
-      renderAgenda(slotsPayload.rule, slotsPayload.slots);
+      const bootstrapPayload = await fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}/bootstrap`);
+      state.context = bootstrapPayload.context || null;
+      renderContext(bootstrapPayload.context || {});
+      renderAgenda(bootstrapPayload.rule || {}, Array.isArray(bootstrapPayload.slots) ? bootstrapPayload.slots : []);
       els.loadingPanel.classList.add("hidden");
       els.contentPanel.classList.remove("hidden");
     } catch (error) {

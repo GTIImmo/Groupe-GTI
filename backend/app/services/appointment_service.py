@@ -80,6 +80,17 @@ class AppointmentService:
         self._raise_for_response(response, f"Unable to write {path}")
         return response.json() or []
 
+    def _rest_patch(self, path: str, *, payload: dict[str, Any], params: dict[str, str]) -> list[dict[str, Any]]:
+        response = requests.patch(
+            f"{self.settings.supabase_url}/rest/v1/{path}",
+            headers={**self._rest_headers(), "Prefer": "return=representation"},
+            params=params,
+            json=payload,
+            timeout=30,
+        )
+        self._raise_for_response(response, f"Unable to update {path}")
+        return response.json() or []
+
     def _read_dossier_by_annonce(self, annonce_id: int) -> dict[str, Any]:
         rows = self._rest_get(
             "app_dossier_current",
@@ -132,6 +143,10 @@ class AppointmentService:
             "commercial_nom": dossier.get("commercial_nom"),
             "negociateur_email": dossier.get("negociateur_email"),
             "agence_nom": dossier.get("agence_nom"),
+            "ville": dossier.get("ville"),
+            "type_bien": dossier.get("type_bien"),
+            "prix": dossier.get("prix"),
+            "photo_url": dossier.get("photo_url_listing"),
             "last_generated_at": datetime.now(UTC).isoformat(),
             "is_active": True,
         }
@@ -202,25 +217,24 @@ class AppointmentService:
         return f"{base}/rdv/annonce/{token}"
 
     def _context_payload(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
-        contacts = self._load_contact_details(dossier)
         return {
             "token": link.get("token"),
             "publicUrl": self._compose_public_url(str(link.get("token") or "")),
             "hektorAnnonceId": dossier.get("hektor_annonce_id"),
             "appDossierId": dossier.get("app_dossier_id"),
             "title": dossier.get("titre_bien"),
-            "ville": dossier.get("ville"),
-            "typeBien": dossier.get("type_bien"),
-            "price": dossier.get("prix"),
-            "photoUrl": dossier.get("photo_url_listing"),
-            "commercialId": dossier.get("commercial_id"),
-            "commercialName": dossier.get("commercial_nom"),
-            "negociateurEmail": dossier.get("negociateur_email"),
-            "agenceNom": dossier.get("agence_nom"),
-            "negociateurPhone": contacts.get("negociateurPhone"),
-            "negociateurMobile": contacts.get("negociateurMobile"),
-            "agencePhone": contacts.get("agencePhone"),
-            "agenceEmail": contacts.get("agenceEmail"),
+            "ville": link.get("ville") or dossier.get("ville"),
+            "typeBien": link.get("type_bien") or dossier.get("type_bien"),
+            "price": link.get("prix") if link.get("prix") is not None else dossier.get("prix"),
+            "photoUrl": link.get("photo_url") or dossier.get("photo_url_listing"),
+            "commercialId": link.get("commercial_id") or dossier.get("commercial_id"),
+            "commercialName": link.get("commercial_nom") or dossier.get("commercial_nom"),
+            "negociateurEmail": link.get("negociateur_email") or dossier.get("negociateur_email"),
+            "agenceNom": link.get("agence_nom") or dossier.get("agence_nom"),
+            "negociateurPhone": link.get("negociateur_phone"),
+            "negociateurMobile": link.get("negociateur_mobile"),
+            "agencePhone": link.get("agence_phone"),
+            "agenceEmail": link.get("agence_email"),
         }
 
     def _load_contact_details(self, dossier: dict[str, Any]) -> dict[str, Any]:
@@ -258,6 +272,31 @@ class AppointmentService:
             pass
 
         return details
+
+    def _maybe_enrich_link_contacts(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
+        if any(
+            str(link.get(key) or "").strip()
+            for key in ("negociateur_phone", "negociateur_mobile", "agence_phone", "agence_email")
+        ):
+            return link
+
+        details = self._load_contact_details(dossier)
+        payload = {
+            "negociateur_phone": details.get("negociateurPhone"),
+            "negociateur_mobile": details.get("negociateurMobile"),
+            "agence_phone": details.get("agencePhone"),
+            "agence_email": details.get("agenceEmail"),
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+        rows = self._rest_patch(
+            "app_appointment_public_link",
+            payload=payload,
+            params={"id": f"eq.{link['id']}"},
+        )
+        if rows:
+            return rows[0]
+        link.update(payload)
+        return link
 
     def _fetch_hektor_negociateur(self, negotiateur_id: str) -> dict[str, Any]:
         parsed, _ = self.hektor_bridge._call_hektor(
@@ -316,6 +355,20 @@ class AppointmentService:
         link, dossier = self._resolve_link(ref)
         return self._context_payload(link, dossier)
 
+    def get_public_annonce_bootstrap(self, ref: str) -> dict[str, Any]:
+        link, dossier = self._resolve_link(ref)
+        rule = self._read_slot_rule(link)
+        slots = self._generate_slots(link, rule)
+        return {
+            "context": self._context_payload(link, dossier),
+            "rule": {
+                "minDelayHours": int(rule.get("min_delay_hours") or 36),
+                "daysAhead": int(rule.get("days_ahead") or 21),
+                "slotMinutes": int(rule.get("slot_minutes") or 30),
+            },
+            "slots": slots,
+        }
+
     def get_public_annonce_slots(self, ref: str) -> dict[str, Any]:
         link, _ = self._resolve_link(ref)
         rule = self._read_slot_rule(link)
@@ -332,6 +385,7 @@ class AppointmentService:
     def get_internal_annonce_summary(self, annonce_id: int) -> dict[str, Any]:
         link = self._ensure_link_for_annonce(annonce_id)
         dossier = self._read_dossier_by_annonce(annonce_id)
+        link = self._maybe_enrich_link_contacts(link, dossier)
         requests = self._read_requests_for_annonce(annonce_id)
         events = self._read_events_for_request_ids([str(item.get("id") or "").strip() for item in requests])
         return {

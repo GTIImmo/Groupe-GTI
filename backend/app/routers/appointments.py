@@ -23,6 +23,14 @@ def get_public_annonce_context(
     return service.get_public_annonce_context(ref)
 
 
+@router.get("/annonce/{ref}/bootstrap")
+def get_public_annonce_bootstrap(
+    ref: str,
+    service: AppointmentService = Depends(get_appointment_service),
+):
+    return service.get_public_annonce_bootstrap(ref)
+
+
 @router.get("/annonce/{ref}/slots")
 def get_public_annonce_slots(
     ref: str,
