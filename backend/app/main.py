@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.admin_users import router as admin_users_router
+from .routers.appointments import router as appointments_router
 from .routers.hektor_diffusion import router as hektor_diffusion_router
 from .routers.notifications import router as notifications_router
 
@@ -29,5 +30,6 @@ def health() -> dict[str, object]:
 
 
 app.include_router(admin_users_router)
+app.include_router(appointments_router)
 app.include_router(hektor_diffusion_router)
 app.include_router(notifications_router)

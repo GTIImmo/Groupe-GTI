@@ -229,6 +229,13 @@ def build_listing_url(hektor_annonce_id: Any) -> str:
     )
 
 
+def build_appointment_url(hektor_annonce_id: Any) -> str:
+    annonce_id = str(hektor_annonce_id or "").strip()
+    if not annonce_id:
+        return ""
+    return f"https://gtiimmo.github.io/vitrine/rdv/index.html?ref={quote(annonce_id, safe='')}"
+
+
 def build_qr_url(target_url: str) -> str:
     text = str(target_url or "").strip()
     if not text:
@@ -298,6 +305,7 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
     for row in rows[:limit]:
         surface = as_int(row["surface_habitable_detail"]) or as_int(row["surface"])
         listing_url = build_listing_url(row["hektor_annonce_id"])
+        appointment_url = build_appointment_url(row["hektor_annonce_id"])
         item = {
             "id": f"HEKTOR_{row['hektor_annonce_id']}",
             "ref": row["numero_dossier"] or row["numero_mandat"] or str(row["hektor_annonce_id"]),
@@ -316,7 +324,8 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
             "state": str(row["statut_annonce"] or "").strip(),
             "photos": visible_photos(row["images_json"], row["photo_url_listing"], max_photos),
             "url": listing_url,
-            "qrUrl": build_qr_url(listing_url),
+            "appointmentUrl": appointment_url,
+            "qrUrl": build_qr_url(appointment_url or listing_url),
             "updatedAt": row["date_maj"] or "",
             "phone": row["nego_portable"] or row["agence_tel"] or "",
             "weight": 0,
@@ -449,6 +458,10 @@ def main() -> None:
                     (VITRINE_DIR / "index.html", "index.html"),
                     (VITRINE_DIR / "style.css", "style.css"),
                     (VITRINE_DIR / "script.js", "script.js"),
+                    (ROOT / "apps" / "rdv-public" / "index.html", "rdv/index.html"),
+                    (ROOT / "apps" / "rdv-public" / "app.js", "rdv/app.js"),
+                    (ROOT / "apps" / "rdv-public" / "styles.css", "rdv/styles.css"),
+                    (ROOT / "apps" / "rdv-public" / "404.html", "rdv/404.html"),
                 ]
             )
             promo_video = VITRINE_DIR / "assets" / "promo-gti.mp4.mp4"

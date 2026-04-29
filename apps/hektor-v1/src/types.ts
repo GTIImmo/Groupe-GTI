@@ -8,6 +8,12 @@ export type DashboardSummary = {
 }
 
 export type DossierDetailPayload = {
+  appointment_public_token?: string | null
+  appointment_public_url?: string | null
+  appointment_negociateur_id?: string | number | null
+  appointment_negociateur_email?: string | null
+  appointment_requests_json?: string | null
+  appointment_request_events_json?: string | null
   code_postal?: string | null
   surface?: number | string | null
   date_maj?: string | null

@@ -712,6 +712,64 @@ function buildHektorAnnonceUrl(hektorAnnonceId: number | string | null | undefin
   return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(id)}`
 }
 
+function buildAppointmentAnnonceUrl(
+  dossier: Pick<Dossier, 'hektor_annonce_id'> | Pick<MandatRecord, 'hektor_annonce_id'> | null | undefined,
+  detail?: DossierDetailPayload | null,
+) {
+  const explicit = safeText(detail?.appointment_public_url)
+  if (explicit) return explicit
+  const annonceId = dossier?.hektor_annonce_id
+  const normalizedAnnonceId = annonceId == null ? '' : String(annonceId).trim()
+  if (!normalizedAnnonceId) return null
+  const publicBase = safeText(import.meta.env.VITE_APPOINTMENT_PUBLIC_BASE_URL)
+  const root = publicBase || (typeof window !== 'undefined' ? window.location.origin : '')
+  if (!root) return null
+  const normalizedRoot = root.replace(/\/+$/, '')
+  const token = safeText(detail?.appointment_public_token)
+  if (token) return `${normalizedRoot}/rdv/annonce/${encodeURIComponent(token)}`
+  return `${normalizedRoot}/rdv/annonce/${encodeURIComponent(normalizedAnnonceId)}`
+}
+
+type AppointmentRequestEntry = {
+  id?: string | number | null
+  status?: string | null
+  client_nom?: string | null
+  client_email?: string | null
+  client_telephone?: string | null
+  requested_start_at?: string | null
+  requested_end_at?: string | null
+  message?: string | null
+  created_at?: string | null
+}
+
+type AppointmentRequestEventEntry = {
+  id?: string | number | null
+  event_type?: string | null
+  event_label?: string | null
+  actor_name?: string | null
+  created_at?: string | null
+  payload_json?: string | null
+}
+
+function parseAppointmentRequests(detail: DossierDetailPayload | null | undefined) {
+  return parseJson<AppointmentRequestEntry[]>(detail?.appointment_requests_json ?? '[]', [])
+}
+
+function parseAppointmentRequestEvents(detail: DossierDetailPayload | null | undefined) {
+  return parseJson<AppointmentRequestEventEntry[]>(detail?.appointment_request_events_json ?? '[]', [])
+}
+
+function appointmentStatusLabel(value: string | null | undefined) {
+  const normalized = safeText(value).toLowerCase()
+  if (!normalized) return 'En attente'
+  if (normalized === 'pending') return 'En attente'
+  if (normalized === 'contacted') return 'Client recontacte'
+  if (normalized === 'confirmed') return 'Confirme'
+  if (normalized === 'rescheduled') return 'A redecaler'
+  if (normalized === 'cancelled' || normalized === 'canceled') return 'Annule'
+  return value ?? 'En attente'
+}
+
 function buildAppRequestUrl(
   appDossierId: number | null | undefined,
   role: 'nego' | 'pauline' = 'nego',
@@ -5761,6 +5819,8 @@ function DossierDetailLayout(props: {
                   </div>
                 ) : <p className="empty-state">Aucune note disponible.</p>}
               </section>
+
+              <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
             </div>
 
             <aside className="detail-column-side">
@@ -5960,6 +6020,8 @@ function DossierInlineDetail(props: {
     return <p className="empty-state">Chargement du detail...</p>
   }
   const heroImage = props.images[0]?.url || props.detail.photo_url_listing || null
+  const appointmentUrl = buildAppointmentAnnonceUrl(props.dossier, props.detail)
+  const appointmentEmail = safeText(props.detail.appointment_negociateur_email) || props.dossier.negociateur_email || '-'
 
   return (
     <div className="detail-stack detail-stack-rich">
@@ -6006,6 +6068,17 @@ function DossierInlineDetail(props: {
           <InfoCard label="Commentaire" value={'commentaire_resume' in props.dossier ? props.dossier.commentaire_resume ?? '-' : '-'} />
         </div>
       </article>
+      <article className="detail-card">
+        <span className="detail-label">Rendez-vous annonce</span>
+        <div className="info-grid">
+          <InfoCard label="QR cible" value="Annonce vitrine" />
+          <InfoCard label="ID annonce" value={props.dossier.hektor_annonce_id} />
+          <InfoCard label="Commercial cible" value={props.dossier.commercial_nom ?? '-'} />
+          <InfoCard label="Email nego" value={appointmentEmail} />
+          <InfoCard label="Agence" value={props.dossier.agence_nom ?? '-'} />
+          <InfoCard label="URL publique" value={appointmentUrl ?? 'A configurer'} />
+        </div>
+      </article>
       {props.extraCards}
       <article className="detail-card">
         <span className="detail-label">Demandes liees</span>
@@ -6022,6 +6095,70 @@ function DossierInlineDetail(props: {
         ) : <p>Aucune demande liee sur ce dossier.</p>}
       </article>
     </div>
+  )
+}
+
+function AppointmentAnnonceSection(props: {
+  dossier: Dossier | null
+  detail: DossierDetailPayload
+}) {
+  const appointmentUrl = buildAppointmentAnnonceUrl(props.dossier, props.detail)
+  const requests = parseAppointmentRequests(props.detail)
+  const events = parseAppointmentRequestEvents(props.detail)
+  const appointmentEmail = safeText(props.detail.appointment_negociateur_email) || props.dossier?.negociateur_email || '-'
+  const appointmentNegociateurId = props.detail.appointment_negociateur_id ?? props.dossier?.commercial_id ?? '-'
+
+  return (
+    <section className="detail-section">
+      <div className="section-header"><h4>Rendez-vous annonce</h4></div>
+      <div className="detail-stack">
+        <article className="detail-card">
+          <span className="detail-label">Ciblage QR</span>
+          <div className="info-grid">
+            <InfoCard label="Mode" value="QR annonce vitrine" />
+            <InfoCard label="ID annonce" value={props.dossier?.hektor_annonce_id ?? '-'} />
+            <InfoCard label="Negociateur" value={props.dossier?.commercial_nom ?? '-'} />
+            <InfoCard label="ID nego" value={appointmentNegociateurId} />
+            <InfoCard label="Email nego" value={appointmentEmail} />
+            <InfoCard label="Agence" value={props.dossier?.agence_nom ?? '-'} />
+          </div>
+          <div className="detail-rich-copy">
+            <strong>URL publique cible</strong>
+            <p>{appointmentUrl ?? 'Aucune URL publique configuree pour le moment.'}</p>
+          </div>
+        </article>
+        <article className="detail-card">
+          <span className="detail-label">Demandes recues</span>
+          {requests.length > 0 ? (
+            <div className="timeline-list">
+              {requests.map((item, index) => (
+                <article key={String(item.id ?? index)} className="timeline-card">
+                  <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
+                  <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` → ${formatDate(item.requested_end_at)}` : ''}</span>
+                  <span>{item.client_telephone ?? item.client_email ?? '-'}</span>
+                  <p>{item.message ?? 'Sans message client.'}</p>
+                </article>
+              ))}
+            </div>
+          ) : <p className="empty-state">Aucune demande RDV stockee pour cette annonce pour le moment.</p>}
+        </article>
+        <article className="detail-card">
+          <span className="detail-label">Historique RDV</span>
+          {events.length > 0 ? (
+            <div className="timeline-list">
+              {events.map((item, index) => (
+                <article key={String(item.id ?? index)} className="timeline-card">
+                  <strong>{item.event_label ?? item.event_type ?? 'Evenement RDV'}</strong>
+                  <span>{formatDate(item.created_at)}</span>
+                  <span>{item.actor_name ?? 'Systeme'}</span>
+                  <p>{item.payload_json ?? 'Sans detail supplementaire.'}</p>
+                </article>
+              ))}
+            </div>
+          ) : <p className="empty-state">Historique RDV vide tant que le module de demandes n'est pas encore stocke en base.</p>}
+        </article>
+      </div>
+    </section>
   )
 }
 

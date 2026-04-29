@@ -113,6 +113,18 @@ export type DataScope = {
   negotiatorEmail?: string | null
 }
 
+type AppointmentSummaryResponse = {
+  ok?: boolean
+  context?: {
+    token?: string | null
+    publicUrl?: string | null
+    commercialId?: string | number | null
+    negociateurEmail?: string | null
+  } | null
+  requests?: unknown[]
+  events?: unknown[]
+}
+
 const allFilterValue = '__all__'
 const activeArchiveFilterValue = '__active__'
 const archivedFilterValue = '__archived__'
@@ -376,6 +388,16 @@ function extractApiErrorMessage(payload: unknown) {
     return JSON.stringify(payload)
   } catch {
     return ''
+  }
+}
+
+function parseJsonObject(value: string | null | undefined) {
+  if (!value) return {}
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
+  } catch {
+    return {}
   }
 }
 
@@ -1046,9 +1068,28 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
 
   if (detailError && detailError.code !== 'PGRST116') throw new Error(detailError.message)
 
+  const detailPayload = parseJsonObject((detailData as DossierDetail | null)?.detail_payload_json ?? null)
+
+  if (canUseBackendApi()) {
+    try {
+      const appointmentSummary = await invokeBackendApi<AppointmentSummaryResponse>(`/public/appointments/annonce/${encodeURIComponent(String(dossierData.hektor_annonce_id))}/summary`, {
+        method: 'GET',
+      })
+      const context = appointmentSummary.context ?? {}
+      detailPayload.appointment_public_token = context.token ?? detailPayload.appointment_public_token ?? null
+      detailPayload.appointment_public_url = context.publicUrl ?? detailPayload.appointment_public_url ?? null
+      detailPayload.appointment_negociateur_id = context.commercialId ?? detailPayload.appointment_negociateur_id ?? null
+      detailPayload.appointment_negociateur_email = context.negociateurEmail ?? detailPayload.appointment_negociateur_email ?? null
+      detailPayload.appointment_requests_json = JSON.stringify(Array.isArray(appointmentSummary.requests) ? appointmentSummary.requests : [])
+      detailPayload.appointment_request_events_json = JSON.stringify(Array.isArray(appointmentSummary.events) ? appointmentSummary.events : [])
+    } catch {
+      // Ne bloque pas la fiche annonce si le module RDV n'est pas encore joignable.
+    }
+  }
+
   return {
     ...(dossierData as Dossier),
-    detail_payload_json: (detailData as DossierDetail | null)?.detail_payload_json ?? null,
+    detail_payload_json: JSON.stringify(detailPayload),
   }
 }
 

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GTI Immobilier | Demande de rendez-vous</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-api-base="https://gti-backend-xlyf.onrender.com">
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">GTI Immobilier</p>
+      <h1>Demande de rendez-vous</h1>
+      <p class="hero-copy">Choisissez un créneau indicatif. Le négociateur vous recontactera pour confirmer ou ajuster le rendez-vous.</p>
+    </section>
+
+    <section class="panel hidden" id="loadingPanel">
+      <p class="state-copy">Chargement de l’annonce et des disponibilités…</p>
+    </section>
+
+    <section class="panel hidden" id="errorPanel">
+      <h2>Impossible de charger ce lien</h2>
+      <p id="errorMessage" class="state-copy">Vérifiez le QR code ou réessayez plus tard.</p>
+    </section>
+
+    <section class="layout hidden" id="contentPanel">
+      <article class="panel context-panel">
+        <p class="eyebrow">Annonce</p>
+        <h2 id="listingTitle">Bien immobilier</h2>
+        <p id="listingMeta" class="muted">Chargement…</p>
+        <div class="fact-grid">
+          <div class="fact-card">
+            <span class="fact-label">Négociateur</span>
+            <strong id="commercialName">-</strong>
+          </div>
+          <div class="fact-card">
+            <span class="fact-label">Agence</span>
+            <strong id="agencyName">-</strong>
+          </div>
+          <div class="fact-card">
+            <span class="fact-label">Dossier</span>
+            <strong id="dossierNumber">-</strong>
+          </div>
+          <div class="fact-card">
+            <span class="fact-label">Mandat</span>
+            <strong id="mandatNumber">-</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel slots-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Créneaux</p>
+            <h2>Disponibilités indicatives</h2>
+          </div>
+          <span id="slotRuleLabel" class="chip">Délai mini 36h</span>
+        </div>
+        <div id="slotList" class="slot-list"></div>
+      </article>
+
+      <article class="panel form-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Coordonnées</p>
+            <h2>Envoyer une demande</h2>
+          </div>
+        </div>
+        <form id="appointmentForm" class="form-grid">
+          <label class="field">
+            <span>Nom</span>
+            <input id="clientName" name="clientName" type="text" required maxlength="160" />
+          </label>
+          <label class="field">
+            <span>Téléphone</span>
+            <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" />
+          </label>
+          <label class="field field-full">
+            <span>Email</span>
+            <input id="clientEmail" name="clientEmail" type="email" maxlength="160" />
+          </label>
+          <label class="field field-full">
+            <span>Créneau choisi</span>
+            <input id="selectedSlotLabel" type="text" readonly placeholder="Choisissez un créneau ci-dessus" />
+          </label>
+          <label class="field field-full">
+            <span>Message</span>
+            <textarea id="clientMessage" name="clientMessage" rows="5" maxlength="4000" placeholder="Exemple : nous souhaitons visiter ce bien cette semaine."></textarea>
+          </label>
+          <div class="form-actions field-full">
+            <button id="submitButton" type="submit" class="primary-button" disabled>Envoyer la demande</button>
+            <p class="muted form-note">Le rendez-vous ne sera pas confirmé automatiquement. Le négociateur vous rappellera.</p>
+          </div>
+        </form>
+        <div id="successPanel" class="success-box hidden">
+          <strong>Demande envoyée</strong>
+          <p>Le négociateur a été prévenu par mail et reviendra vers vous pour confirmer le rendez-vous.</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
