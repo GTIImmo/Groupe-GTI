@@ -4,10 +4,13 @@ import argparse
 import base64
 import json
 import sqlite3
+import ssl
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
+from urllib.error import URLError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
 
@@ -367,23 +370,43 @@ def read_github_token(token_file: Path) -> str:
 
 
 def github_request(url: str, token: str, method: str = "GET", payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    data = None
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "User-Agent": "GTI-vitrine-export",
     }
     if payload is not None:
-        data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
-    request = Request(url, data=data, headers=headers, method=method)
-    try:
-        with urlopen(request, timeout=60) as response:
-            body = response.read().decode("utf-8")
-            return json.loads(body) if body else {}
-    except HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"GitHub {method} failed HTTP {exc.code}: {body[:300]}") from exc
+
+    attempts = 4
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        request = Request(url, data=data, headers=headers, method=method)
+        try:
+            with urlopen(request, timeout=60) as response:
+                body = response.read().decode("utf-8")
+                return json.loads(body) if body else {}
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            if exc.code in {401, 403, 408, 409, 429, 500, 502, 503, 504} and attempt < attempts:
+                wait_seconds = attempt * 2
+                print(f"retry github {method} after HTTP {exc.code} ({wait_seconds}s) -> {url}")
+                time.sleep(wait_seconds)
+                last_error = exc
+                continue
+            raise RuntimeError(f"GitHub {method} failed HTTP {exc.code}: {body[:300]}") from exc
+        except (URLError, TimeoutError, ssl.SSLError, OSError) as exc:
+            if attempt < attempts:
+                wait_seconds = attempt * 2
+                print(f"retry github {method} after transport error ({wait_seconds}s) -> {url} :: {exc}")
+                time.sleep(wait_seconds)
+                last_error = exc
+                continue
+            last_error = exc
+            break
+
+    raise RuntimeError(f"GitHub {method} failed after retries: {last_error}") from last_error
 
 
 def github_get_file_sha(owner: str, repo: str, path: str, branch: str, token: str) -> str:
