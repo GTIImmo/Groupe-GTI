@@ -2,6 +2,7 @@
   const $ = (sel) => document.querySelector(sel);
 
   const els = {
+    slide: $("#slide"),
     hudAgency: $("#hudAgency"),
     hudMode: $("#hudMode"),
     hudInfo: $("#hudInfo"),
@@ -606,7 +607,7 @@
       qr: (p.get("qr") || "").trim(),
       promo: p.get("promo") !== "0",
       promoEvery: clampInt(p.get("promoEvery"), 1, 999, 6),
-      promoDuration: clampInt(p.get("promoDuration"), 5, 300, 12),
+      promoDuration: clampInt(p.get("promoDuration"), 0, 300, 0),
       promoOffset: clampInt(p.get("promoOffset"), -1, 999, -1),
       promoVideo: (p.get("promoVideo") || "assets/promo-gti.mp4.mp4").trim(),
     };
@@ -721,6 +722,7 @@
     photoTimer: null,
     tickTimer: null,
     progTimer: null,
+    promoTimer: null,
     nextItemAt: 0,
     itemDurationMs: 0,
     isTransitioning: false
@@ -730,9 +732,11 @@
     if (state.photoTimer) clearInterval(state.photoTimer);
     if (state.tickTimer) clearInterval(state.tickTimer);
     if (state.progTimer) clearInterval(state.progTimer);
+    if (state.promoTimer) clearTimeout(state.promoTimer);
     state.photoTimer = null;
     state.tickTimer = null;
     state.progTimer = null;
+    state.promoTimer = null;
     if (els.slideVideo) {
       els.slideVideo.pause();
       try { els.slideVideo.currentTime = 0; } catch (_) {}
@@ -757,6 +761,7 @@
   }
 
   function setPromoVisibility(isPromo) {
+    if (els.slide) els.slide.classList.toggle("slide--promo", !!isPromo);
     if (els.slidePrice) els.slidePrice.classList.toggle("hidden", !!isPromo);
     if (els.slideStats) els.slideStats.classList.toggle("hidden", !!isPromo);
     if (els.qrBlock) els.qrBlock.classList.toggle("hidden", !!isPromo);
@@ -769,16 +774,25 @@
 
   function stopPromoVideo() {
     if (!els.slideVideo) return;
+    if (state.promoTimer) {
+      clearTimeout(state.promoTimer);
+      state.promoTimer = null;
+    }
+    els.slideVideo.onended = null;
+    els.slideVideo.onerror = null;
+    els.slideVideo.onloadedmetadata = null;
     els.slideVideo.pause();
     try { els.slideVideo.currentTime = 0; } catch (_) {}
     els.slideVideo.classList.add("hidden");
   }
 
-  function startPromoVideo(url) {
+  function startPromoVideo(entry) {
     if (!els.slideVideo) return;
+    const url = entry.videoUrl;
     const absUrl = new URL(url, window.location.href).toString();
     if (els.slideVideo.src !== absUrl) {
       els.slideVideo.src = absUrl;
+      els.slideVideo.load();
     }
     els.slideVideo.classList.remove("hidden");
     els.slideVideo.muted = true;
@@ -787,6 +801,18 @@
     els.slideVideo.autoplay = true;
     els.slideVideo.onended = () => { state.nextItemAt = Date.now(); };
     els.slideVideo.onerror = () => { state.nextItemAt = Date.now(); };
+    els.slideVideo.onloadedmetadata = () => {
+      const hasFixedDuration = Number(entry.durationSec) > 0;
+      const durationMs = hasFixedDuration
+        ? entry.durationSec * 1000
+        : Math.max(1000, Math.round((els.slideVideo.duration || 0) * 1000));
+      state.itemDurationMs = durationMs;
+      state.nextItemAt = Date.now() + durationMs;
+      if (state.promoTimer) clearTimeout(state.promoTimer);
+      if (hasFixedDuration) {
+        state.promoTimer = setTimeout(() => { state.nextItemAt = Date.now(); }, durationMs);
+      }
+    };
     const playPromise = els.slideVideo.play();
     if (playPromise && typeof playPromise.catch === "function") {
       playPromise.catch(() => {});
@@ -797,17 +823,14 @@
     setPromoVisibility(true);
     stopPromoVideo();
 
-    els.slideTitle.innerHTML = `<span class="slide__titleMain slide__titleMain--default">GTI Immobilier</span>`;
-    els.slideMeta.textContent = "Video promotionnelle";
-
     els.slideImgA.classList.remove("is-visible");
     els.slideImgB.classList.remove("is-visible");
     els.slideImgA.classList.add("hidden");
     els.slideImgB.classList.add("hidden");
 
-    startPromoVideo(entry.videoUrl);
+    startPromoVideo(entry);
 
-    state.itemDurationMs = (entry.durationSec || 12) * 1000;
+    state.itemDurationMs = Number(entry.durationSec) > 0 ? entry.durationSec * 1000 : 60000;
     state.nextItemAt = Date.now() + state.itemDurationMs;
     if (els.slideProg) els.slideProg.style.width = "0%";
 

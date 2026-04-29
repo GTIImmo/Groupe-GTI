@@ -64,6 +64,22 @@ body.debug .hud{display:flex;}
   display:grid;
   grid-template-columns: minmax(0, 1fr) 310px;
 }
+.slide--promo{
+  grid-template-columns:minmax(0, 1fr);
+}
+.slide--promo .slide__media{
+  grid-column:1 / -1;
+}
+.slide--promo .slide__panel{
+  display:none;
+}
+.slide--promo .slide__gradient,
+.slide--promo .mediaGlow,
+.slide--promo .mediaFrame,
+.slide--promo .priceBadge,
+.slide--promo .mediaStats{
+  display:none !important;
+}
 
 /* MEDIA */
 .slide__media{
@@ -126,6 +142,9 @@ body.debug .hud{display:flex;}
   object-fit:cover;
   background:#000;
   z-index:1;
+}
+.slide--promo .slide__video{
+  z-index:6;
 }
 
 /* overlay très léger */
