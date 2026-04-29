@@ -25,7 +25,7 @@ create table if not exists public.app_agence_directory (
     refreshed_at timestamptz not null default now()
 );
 
-create unique index if not exists idx_app_agence_directory_user on public.app_agence_directory (id_user);
+create index if not exists idx_app_agence_directory_user on public.app_agence_directory (id_user);
 create index if not exists idx_app_user_directory_email on public.app_user_directory (email);
 create index if not exists idx_app_user_directory_type on public.app_user_directory (user_type);
 create index if not exists idx_app_agence_directory_nom on public.app_agence_directory (nom);

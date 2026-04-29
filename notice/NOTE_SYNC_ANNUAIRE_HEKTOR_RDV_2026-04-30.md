@@ -20,6 +20,8 @@ Les controles live ont confirme :
 - `GET /Api/User/UsersOfParent/`
   - necessite `page=1`
   - les coordonnees sont dans `coordonnees.mail`, `coordonnees.tel`, `coordonnees.portable`
+  - sur l'instance GTI, l'appel `page=1` remonte deja la liste utile et `metadata.nextPage` ne doit pas etre suivi aveuglement
+  - les pages suivantes peuvent rejouer un sous-ensemble deja present
 - `GET /Api/Agence/ListAgences/`
   - necessite `page=0`
   - les coordonnees agence sont a la racine `mail`, `tel`
@@ -28,6 +30,7 @@ Donc :
 
 - `UsersOfParent` suffit pour les users / commerciaux
 - `ListAgences` suffit pour les contacts agence
+- pour `UsersOfParent`, la synchro quotidienne lit uniquement `page=1` puis dedoublonne par `id_user` en garde-fou
 
 ## Tables Supabase ajoutees
 
@@ -53,11 +56,27 @@ Nouveau script :
 
 Ce script :
 
-1. appelle `UsersOfParent`
+1. appelle `UsersOfParent` sur `page=1`
 2. appelle `ListAgences`
 3. upsert les users dans `app_user_directory`
 4. upsert les agences dans `app_agence_directory`
 5. purge les ids absents du listing source
+
+## Correctif 2026-04-30
+
+Une premiere version du script suivait `metadata.nextPage` sur `UsersOfParent`.
+
+Sur l'instance GTI, cela provoquait un rejeu partiel des users deja vus et donc :
+
+- un lot d'upsert avec plusieurs lignes portant le meme `id_user`
+- une erreur Supabase `ON CONFLICT DO UPDATE command cannot affect row a second time`
+
+Le correctif retenu est :
+
+- lecture unique de `UsersOfParent?page=1`
+- dedoublonnage de securite par `id_user` avant envoi Supabase
+
+Le probleme ne venait donc pas d'un doublon stocke dans Supabase, mais d'une collecte trop agressive cote script.
 
 ## Effet sur le module RDV
 

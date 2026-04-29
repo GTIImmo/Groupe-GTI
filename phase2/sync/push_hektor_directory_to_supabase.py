@@ -9,6 +9,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -34,6 +35,31 @@ def load_env_file(path: Path) -> None:
 def stable_hash(payload: object) -> str:
     encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
     return hashlib.sha1(encoded.encode("utf-8")).hexdigest()
+
+
+def dedupe_rows(rows: list[dict[str, object]], key: str) -> list[dict[str, object]]:
+    deduped: dict[str, dict[str, object]] = {}
+    for row in rows:
+        value = str(row.get(key) or "").strip()
+        if not value:
+            continue
+        deduped[value] = row
+    return list(deduped.values())
+
+
+def write_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def build_duplicate_user_rows(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        user_id = str(row.get("idUser") or "").strip()
+        if not user_id:
+            continue
+        grouped.setdefault(user_id, []).append(row)
+    return {user_id: items for user_id, items in grouped.items() if len(items) > 1}
 
 
 class SupabaseRestClient:
@@ -64,8 +90,12 @@ class SupabaseRestClient:
         if payload is not None:
             body = json.dumps(payload, ensure_ascii=True).encode("utf-8")
         request = urllib.request.Request(url, data=body, headers=headers, method=method)
-        with urllib.request.urlopen(request, timeout=300) as response:
-            raw = response.read().decode("utf-8")
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response:
+                raw = response.read().decode("utf-8")
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Supabase {method} {path} failed HTTP {exc.code}: {detail[:800]}") from exc
         return json.loads(raw) if raw else None
 
     def upsert_rows(self, *, path: str, rows: list[dict[str, object]], batch_size: int = 100) -> None:
@@ -92,19 +122,10 @@ class SupabaseRestClient:
 
 
 def fetch_all_users(client: HektorClient, version: str) -> list[dict[str, Any]]:
-    page = 1
-    rows: list[dict[str, Any]] = []
-    while True:
-        payload = client.get_json("/Api/User/UsersOfParent/", params={"page": page, "version": version})
-        data = payload.get("data") if isinstance(payload, dict) else None
-        metadata = payload.get("metadata") if isinstance(payload, dict) else None
-        batch = data if isinstance(data, list) else []
-        rows.extend(item for item in batch if isinstance(item, dict))
-        next_page = metadata.get("nextPage") if isinstance(metadata, dict) else None
-        if not next_page:
-            break
-        page = int(next_page)
-    return rows
+    payload = client.get_json("/Api/User/UsersOfParent/", params={"page": 1, "version": version})
+    data = payload.get("data") if isinstance(payload, dict) else None
+    batch = data if isinstance(data, list) else []
+    return [item for item in batch if isinstance(item, dict)]
 
 
 def fetch_all_agencies(client: HektorClient, version: str) -> list[dict[str, Any]]:
@@ -170,6 +191,7 @@ def build_agency_rows(rows: list[dict[str, Any]]) -> list[dict[str, object]]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Synchronise users et agences Hektor vers Supabase.")
     parser.add_argument("--skip-purge", action="store_true", help="N'efface pas les ids absents du listing source.")
+    parser.add_argument("--dump-dir", default="", help="Dossier optionnel pour exporter les fichiers users/agences en local.")
     return parser.parse_args()
 
 
@@ -187,8 +209,21 @@ def main() -> None:
     hektor = HektorClient(settings)
     client = SupabaseRestClient(base_url=supabase_url, service_role_key=service_role_key)
 
-    user_rows = build_user_rows(fetch_all_users(hektor, settings.api_version))
-    agency_rows = build_agency_rows(fetch_all_agencies(hektor, settings.api_version))
+    raw_users = fetch_all_users(hektor, settings.api_version)
+    raw_agencies = fetch_all_agencies(hektor, settings.api_version)
+    user_rows = dedupe_rows(build_user_rows(raw_users), "id_user")
+    agency_rows = dedupe_rows(build_agency_rows(raw_agencies), "id_agence")
+
+    if args.dump_dir:
+        dump_dir = Path(args.dump_dir)
+        duplicate_user_rows = build_duplicate_user_rows(raw_users)
+        duplicate_user_ids = sorted(duplicate_user_rows.keys())
+        write_json(dump_dir / "hektor_users_raw.json", raw_users)
+        write_json(dump_dir / "hektor_users_directory.json", user_rows)
+        write_json(dump_dir / "hektor_agences_raw.json", raw_agencies)
+        write_json(dump_dir / "hektor_agences_directory.json", agency_rows)
+        write_json(dump_dir / "hektor_users_duplicate_ids.json", duplicate_user_ids)
+        write_json(dump_dir / "hektor_users_duplicates.json", duplicate_user_rows)
 
     client.upsert_rows(path="app_user_directory", rows=user_rows)
     client.upsert_rows(path="app_agence_directory", rows=agency_rows)
@@ -214,6 +249,7 @@ def main() -> None:
                 "agencies_upserted": len(agency_rows),
                 "users_deleted": deleted_users,
                 "agencies_deleted": deleted_agencies,
+                "dump_dir": args.dump_dir or None,
             },
             ensure_ascii=False,
             indent=2,
