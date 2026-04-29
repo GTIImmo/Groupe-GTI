@@ -7,96 +7,142 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-api-base="https://gti-backend-xlyf.onrender.com">
-  <main class="app-shell">
-    <section class="hero">
-      <p class="eyebrow">GTI Immobilier</p>
-      <h1>Demande de rendez-vous</h1>
-      <p class="hero-copy">Choisissez un créneau indicatif. Le négociateur vous recontactera pour confirmer ou ajuster le rendez-vous.</p>
+  <main class="page-shell">
+    <section class="hero-card">
+      <div class="hero-topbar">
+        <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
+        <span class="hero-chip">Demande de rendez-vous</span>
+      </div>
+
+      <div class="hero-copy">
+        <p class="eyebrow">Vitrine GTI</p>
+        <h1>Organisez une visite dans un cadre clair et professionnel.</h1>
+        <p class="hero-text">
+          Choisissez un cr&eacute;neau indicatif et laissez vos coordonn&eacute;es.
+          Le n&eacute;gociateur vous rappellera pour confirmer ou ajuster le rendez-vous.
+        </p>
+      </div>
+
+      <div class="hero-points">
+        <article class="hero-point">
+          <strong>Pas de rendez-vous sous 36 h</strong>
+          <span>Seulement des disponibilit&eacute;s plausibles et exploitables.</span>
+        </article>
+        <article class="hero-point">
+          <strong>Contact humain</strong>
+          <span>Le rendez-vous est confirm&eacute; ensuite directement par le n&eacute;gociateur.</span>
+        </article>
+        <article class="hero-point">
+          <strong>Annonce cibl&eacute;e</strong>
+          <span>La demande reste rattach&eacute;e au bon bien et au bon n&eacute;gociateur.</span>
+        </article>
+      </div>
     </section>
 
-    <section class="panel hidden" id="loadingPanel">
-      <p class="state-copy">Chargement de l’annonce et des disponibilités…</p>
+    <section class="status-card hidden" id="loadingPanel">
+      <div class="status-spinner" aria-hidden="true"></div>
+      <div>
+        <strong>Chargement en cours</strong>
+        <p>R&eacute;cup&eacute;ration de l'annonce et des disponibilit&eacute;s.</p>
+      </div>
     </section>
 
-    <section class="panel hidden" id="errorPanel">
-      <h2>Impossible de charger ce lien</h2>
-      <p id="errorMessage" class="state-copy">Vérifiez le QR code ou réessayez plus tard.</p>
+    <section class="status-card status-card-error hidden" id="errorPanel">
+      <div>
+        <strong>Impossible de charger ce lien</strong>
+        <p id="errorMessage">V&eacute;rifiez le QR code ou r&eacute;essayez plus tard.</p>
+      </div>
     </section>
 
-    <section class="layout hidden" id="contentPanel">
-      <article class="panel context-panel">
-        <p class="eyebrow">Annonce</p>
-        <h2 id="listingTitle">Bien immobilier</h2>
-        <p id="listingMeta" class="muted">Chargement…</p>
-        <div class="fact-grid">
-          <div class="fact-card">
-            <span class="fact-label">Négociateur</span>
-            <strong id="commercialName">-</strong>
-          </div>
-          <div class="fact-card">
-            <span class="fact-label">Agence</span>
-            <strong id="agencyName">-</strong>
-          </div>
-          <div class="fact-card">
-            <span class="fact-label">Dossier</span>
-            <strong id="dossierNumber">-</strong>
-          </div>
-          <div class="fact-card">
-            <span class="fact-label">Mandat</span>
-            <strong id="mandatNumber">-</strong>
-          </div>
-        </div>
-      </article>
+    <section class="content-grid hidden" id="contentPanel">
+      <div class="content-main">
+        <article class="panel panel-listing">
+          <p class="eyebrow">Annonce</p>
+          <h2 id="listingTitle">Bien immobilier</h2>
+          <p id="listingMeta" class="panel-intro">Chargement...</p>
 
-      <article class="panel slots-panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Créneaux</p>
-            <h2>Disponibilités indicatives</h2>
+          <div class="listing-grid">
+            <div class="listing-card">
+              <span class="listing-label">N&eacute;gociateur</span>
+              <strong id="commercialName">-</strong>
+            </div>
+            <div class="listing-card">
+              <span class="listing-label">Agence</span>
+              <strong id="agencyName">-</strong>
+            </div>
+            <div class="listing-card">
+              <span class="listing-label">Dossier</span>
+              <strong id="dossierNumber">-</strong>
+            </div>
+            <div class="listing-card">
+              <span class="listing-label">Mandat</span>
+              <strong id="mandatNumber">-</strong>
+            </div>
           </div>
-          <span id="slotRuleLabel" class="chip">Délai mini 36h</span>
-        </div>
-        <div id="slotList" class="slot-list"></div>
-      </article>
+        </article>
 
-      <article class="panel form-panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Coordonnées</p>
-            <h2>Envoyer une demande</h2>
+        <article class="panel panel-slots">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Disponibilit&eacute;s</p>
+              <h2>Cr&eacute;neaux propos&eacute;s</h2>
+            </div>
+            <span id="slotRuleLabel" class="rule-chip">D&eacute;lai mini 36 h</span>
           </div>
-        </div>
-        <form id="appointmentForm" class="form-grid">
-          <label class="field">
-            <span>Nom</span>
-            <input id="clientName" name="clientName" type="text" required maxlength="160" />
-          </label>
-          <label class="field">
-            <span>Téléphone</span>
-            <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" />
-          </label>
-          <label class="field field-full">
-            <span>Email</span>
-            <input id="clientEmail" name="clientEmail" type="email" maxlength="160" />
-          </label>
-          <label class="field field-full">
-            <span>Créneau choisi</span>
-            <input id="selectedSlotLabel" type="text" readonly placeholder="Choisissez un créneau ci-dessus" />
-          </label>
-          <label class="field field-full">
-            <span>Message</span>
-            <textarea id="clientMessage" name="clientMessage" rows="5" maxlength="4000" placeholder="Exemple : nous souhaitons visiter ce bien cette semaine."></textarea>
-          </label>
-          <div class="form-actions field-full">
-            <button id="submitButton" type="submit" class="primary-button" disabled>Envoyer la demande</button>
-            <p class="muted form-note">Le rendez-vous ne sera pas confirmé automatiquement. Le négociateur vous rappellera.</p>
+          <p class="panel-intro">
+            S&eacute;lectionnez un cr&eacute;neau ci-dessous. Ces horaires sont indicatifs et servent
+            &agrave; enclencher le rappel du n&eacute;gociateur.
+          </p>
+          <div id="slotList" class="slot-groups"></div>
+        </article>
+      </div>
+
+      <aside class="content-side">
+        <article class="panel panel-form">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Coordonnees</p>
+              <h2>Envoyer la demande</h2>
+            </div>
           </div>
-        </form>
-        <div id="successPanel" class="success-box hidden">
-          <strong>Demande envoyée</strong>
-          <p>Le négociateur a été prévenu par mail et reviendra vers vous pour confirmer le rendez-vous.</p>
-        </div>
-      </article>
+
+          <div class="selection-box">
+            <span class="selection-label">Cr&eacute;neau choisi</span>
+            <strong id="selectedSlotLabel" class="selection-value">Choisissez un cr&eacute;neau</strong>
+          </div>
+
+          <form id="appointmentForm" class="form-grid">
+            <label class="field">
+              <span>Nom complet</span>
+              <input id="clientName" name="clientName" type="text" required maxlength="160" />
+            </label>
+            <label class="field">
+              <span>T&eacute;l&eacute;phone</span>
+              <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" />
+            </label>
+            <label class="field field-full">
+              <span>Email</span>
+              <input id="clientEmail" name="clientEmail" type="email" maxlength="160" />
+            </label>
+            <label class="field field-full">
+              <span>Message</span>
+              <textarea id="clientMessage" name="clientMessage" rows="5" maxlength="4000" placeholder="Precisez vos disponibilites, le nombre de visiteurs ou toute information utile."></textarea>
+            </label>
+            <div class="field-full form-actions">
+              <button id="submitButton" type="submit" class="button-primary" disabled>Envoyer ma demande</button>
+              <p class="form-note">
+                Cette demande ne bloque pas automatiquement un rendez-vous.
+                Le n&eacute;gociateur vous recontacte ensuite pour validation.
+              </p>
+            </div>
+          </form>
+
+          <div id="successPanel" class="success-box hidden">
+            <strong>Demande envoy&eacute;e</strong>
+            <p>Le n&eacute;gociateur a &eacute;t&eacute; pr&eacute;venu par mail. Il reviendra vers vous pour confirmer la visite.</p>
+          </div>
+        </article>
+      </aside>
     </section>
   </main>
 

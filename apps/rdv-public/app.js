@@ -54,16 +54,20 @@
   }
 
   function formatDateTimeRange(slot) {
-    if (!slot) return "";
-    return `${slot.displayDate} à ${slot.displayTime}`;
+    if (!slot) return "Choisissez un creneau";
+    return `${slot.displayDate} a ${slot.displayTime}`;
   }
 
   function renderContext(context) {
     const price = typeof context.price === "number"
-      ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(context.price)
+      ? new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "EUR",
+        maximumFractionDigits: 0,
+      }).format(context.price)
       : "Prix sur demande";
     els.listingTitle.textContent = context.title || `Annonce ${context.hektorAnnonceId}`;
-    els.listingMeta.textContent = [context.address, context.ville, price].filter(Boolean).join(" · ");
+    els.listingMeta.textContent = [context.address, context.ville, price].filter(Boolean).join(" / ");
     els.commercialName.textContent = context.commercialName || "-";
     els.agencyName.textContent = context.agenceNom || "-";
     els.dossierNumber.textContent = context.numeroDossier || "-";
@@ -72,31 +76,63 @@
 
   function selectSlot(index) {
     state.selectedSlot = state.slots[index] || null;
-    Array.from(els.slotList.querySelectorAll(".slot-button")).forEach((button, buttonIndex) => {
-      button.classList.toggle("is-selected", buttonIndex === index);
+    Array.from(els.slotList.querySelectorAll(".slot-button")).forEach((button) => {
+      button.classList.toggle("is-selected", Number(button.dataset.index) === index);
     });
-    els.selectedSlotLabel.value = formatDateTimeRange(state.selectedSlot);
+    els.selectedSlotLabel.textContent = formatDateTimeRange(state.selectedSlot);
     els.submitButton.disabled = !state.selectedSlot;
+  }
+
+  function groupSlotsByDate(slots) {
+    const groups = new Map();
+    slots.forEach((slot, index) => {
+      const key = slot.displayDate || "Autre";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ slot, index });
+    });
+    return groups;
   }
 
   function renderSlots(rule, slots) {
     state.slots = Array.isArray(slots) ? slots : [];
-    els.slotRuleLabel.textContent = `Délai mini ${rule.minDelayHours}h`;
+    els.slotRuleLabel.textContent = `Delai mini ${rule.minDelayHours} h`;
     els.slotList.innerHTML = "";
+    els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    els.submitButton.disabled = true;
+
     if (!state.slots.length) {
       const empty = document.createElement("p");
-      empty.className = "muted";
-      empty.textContent = "Aucun créneau disponible pour le moment.";
+      empty.className = "panel-intro";
+      empty.textContent = "Aucun creneau disponible pour le moment.";
       els.slotList.appendChild(empty);
       return;
     }
-    state.slots.forEach((slot, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "slot-button";
-      button.innerHTML = `<span class="slot-date">${slot.displayDate}</span><span class="slot-time">${slot.displayTime}</span>`;
-      button.addEventListener("click", () => selectSlot(index));
-      els.slotList.appendChild(button);
+
+    const groups = groupSlotsByDate(state.slots);
+    groups.forEach((entries, dateLabel) => {
+      const group = document.createElement("section");
+      group.className = "slot-group";
+
+      const title = document.createElement("span");
+      title.className = "group-label";
+      title.textContent = dateLabel;
+      group.appendChild(title);
+
+      const row = document.createElement("div");
+      row.className = "slot-row";
+
+      entries.forEach(({ slot, index }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "slot-button";
+        button.dataset.index = String(index);
+        button.innerHTML = `<span class="slot-time">${slot.displayTime}</span><span class="slot-meta">Creneau indicatif</span>`;
+        button.addEventListener("click", () => selectSlot(index));
+        row.appendChild(button);
+      });
+
+      group.appendChild(row);
+      els.slotList.appendChild(group);
     });
   }
 
@@ -116,7 +152,7 @@
     state.ref = parseRefFromLocation();
     els.loadingPanel.classList.remove("hidden");
     if (!state.ref) {
-      showError("Référence annonce introuvable dans l’URL.");
+      showError("Reference annonce introuvable dans l'URL.");
       return;
     }
     try {
@@ -135,7 +171,7 @@
   els.appointmentForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.selectedSlot) {
-      showError("Choisissez d’abord un créneau.");
+      showError("Choisissez d'abord un creneau.");
       return;
     }
     els.submitButton.disabled = true;

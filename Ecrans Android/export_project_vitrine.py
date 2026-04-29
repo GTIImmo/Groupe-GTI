@@ -485,6 +485,7 @@ def main() -> None:
                     (ROOT / "apps" / "rdv-public" / "app.js", "rdv/app.js"),
                     (ROOT / "apps" / "rdv-public" / "styles.css", "rdv/styles.css"),
                     (ROOT / "apps" / "rdv-public" / "404.html", "rdv/404.html"),
+                    (VITRINE_DIR / "GTI-Logos-Grisblanc.png", "rdv/gti-logo.png"),
                 ]
             )
             promo_video = VITRINE_DIR / "assets" / "promo-gti.mp4.mp4"
