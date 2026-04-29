@@ -55,7 +55,7 @@
 
   function formatDateTimeRange(slot) {
     if (!slot) return "Choisissez un creneau";
-    return `${slot.displayDate} a ${slot.displayTime}`;
+    return `${slot.displayDateLabel || slot.displayDate} a ${slot.displayTime}`;
   }
 
   function renderContext(context) {
@@ -86,16 +86,26 @@
   function groupSlotsByDate(slots) {
     const groups = new Map();
     slots.forEach((slot, index) => {
-      const key = slot.displayDate || "Autre";
+      const key = slot.displayDateLabel || slot.displayDate || "Autre";
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push({ slot, index });
     });
     return groups;
   }
 
+  function groupSlotsByPart(entries) {
+    const groups = new Map();
+    entries.forEach((entry) => {
+      const key = entry.slot.periodLabel || "Journee";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(entry);
+    });
+    return groups;
+  }
+
   function renderSlots(rule, slots) {
     state.slots = Array.isArray(slots) ? slots : [];
-    els.slotRuleLabel.textContent = `Delai mini ${rule.minDelayHours} h`;
+    els.slotRuleLabel.textContent = `Agenda de visite - delai mini ${rule.minDelayHours} h`;
     els.slotList.innerHTML = "";
     els.selectedSlotLabel.textContent = "Choisissez un creneau";
     els.submitButton.disabled = true;
@@ -113,25 +123,38 @@
       const group = document.createElement("section");
       group.className = "slot-group";
 
-      const title = document.createElement("span");
-      title.className = "group-label";
+      const title = document.createElement("h3");
+      title.className = "group-title";
       title.textContent = dateLabel;
       group.appendChild(title);
 
-      const row = document.createElement("div");
-      row.className = "slot-row";
+      const partGroups = groupSlotsByPart(entries);
+      partGroups.forEach((partEntries, partLabel) => {
+        const part = document.createElement("div");
+        part.className = "slot-part";
 
-      entries.forEach(({ slot, index }) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "slot-button";
-        button.dataset.index = String(index);
-        button.innerHTML = `<span class="slot-time">${slot.displayTime}</span><span class="slot-meta">Creneau indicatif</span>`;
-        button.addEventListener("click", () => selectSlot(index));
-        row.appendChild(button);
+        const partTitle = document.createElement("span");
+        partTitle.className = "group-label";
+        partTitle.textContent = partLabel;
+        part.appendChild(partTitle);
+
+        const row = document.createElement("div");
+        row.className = "slot-row";
+
+        partEntries.forEach(({ slot, index }) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "slot-button";
+          button.dataset.index = String(index);
+          button.innerHTML = `<span class="slot-time">${slot.displayTime}</span><span class="slot-meta">${slot.endDisplayTime || ""}</span>`;
+          button.addEventListener("click", () => selectSlot(index));
+          row.appendChild(button);
+        });
+
+        part.appendChild(row);
+        group.appendChild(part);
       });
 
-      group.appendChild(row);
       els.slotList.appendChild(group);
     });
   }

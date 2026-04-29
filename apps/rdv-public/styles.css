@@ -284,6 +284,17 @@ img{max-width:100%;display:block}
   background:var(--panel-soft);
 }
 
+.group-title{
+  margin:0;
+  font-size:1.05rem;
+  letter-spacing:-.02em;
+}
+
+.slot-part{
+  display:grid;
+  gap:10px;
+}
+
 .slot-row{
   display:flex;
   flex-wrap:wrap;

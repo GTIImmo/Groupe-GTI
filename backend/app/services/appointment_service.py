@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -16,6 +16,22 @@ from ..settings import Settings
 
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
+FRENCH_WEEKDAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+FRENCH_MONTHS = [
+    "",
+    "janvier",
+    "fevrier",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "aout",
+    "septembre",
+    "octobre",
+    "novembre",
+    "decembre",
+]
 
 
 class AppointmentService:
@@ -254,6 +270,8 @@ class AppointmentService:
                 continue
             if weekday == 6 and not allow_sunday:
                 continue
+            if self._is_french_public_holiday(day):
+                continue
             cursor = datetime.combine(day, time(hour=day_start_hour), tzinfo=PARIS_TZ)
             end_of_day = datetime.combine(day, time(hour=day_end_hour), tzinfo=PARIS_TZ)
             while cursor < end_of_day:
@@ -275,11 +293,58 @@ class AppointmentService:
                         "startAt": cursor.astimezone(UTC).isoformat(),
                         "endAt": next_cursor.astimezone(UTC).isoformat(),
                         "displayDate": cursor.strftime("%d/%m/%Y"),
+                        "displayDateLabel": self._format_public_date(day),
                         "displayTime": cursor.strftime("%H:%M"),
+                        "endDisplayTime": f"jusqu'a {next_cursor.strftime('%H:%M')}",
+                        "periodLabel": self._period_label(cursor),
                     }
                 )
                 cursor = next_cursor
         return slots[:80]
+
+    def _period_label(self, value: datetime) -> str:
+        return "Matin" if value.hour < 12 else "Apres-midi"
+
+    def _format_public_date(self, value: date) -> str:
+        weekday = FRENCH_WEEKDAYS[value.weekday()]
+        month = FRENCH_MONTHS[value.month]
+        return f"{weekday} {value.day} {month}"
+
+    def _is_french_public_holiday(self, value: date) -> bool:
+        easter = self._easter_sunday(value.year)
+        fixed_days = {
+            date(value.year, 1, 1),
+            date(value.year, 5, 1),
+            date(value.year, 5, 8),
+            date(value.year, 7, 14),
+            date(value.year, 8, 15),
+            date(value.year, 11, 1),
+            date(value.year, 11, 11),
+            date(value.year, 12, 25),
+        }
+        moving_days = {
+            easter + timedelta(days=1),
+            easter + timedelta(days=39),
+            easter + timedelta(days=50),
+        }
+        return value in fixed_days or value in moving_days
+
+    def _easter_sunday(self, year: int) -> date:
+        a = year % 19
+        b = year // 100
+        c = year % 100
+        d = b // 4
+        e = b % 4
+        f = (b + 8) // 25
+        g = (b - f + 1) // 3
+        h = (19 * a + b - d - g + 15) % 30
+        i = c // 4
+        k = c % 4
+        l = (32 + 2 * e + 2 * i - h - k) % 7
+        m = (a + 11 * h + 22 * l) // 451
+        month = (h + l - 7 * m + 114) // 31
+        day = ((h + l - 7 * m + 114) % 31) + 1
+        return date(year, month, day)
 
     def _parse_hhmm(self, value: str) -> time | None:
         text = value.strip()
