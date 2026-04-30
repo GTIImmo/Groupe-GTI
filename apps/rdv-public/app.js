@@ -100,7 +100,13 @@
 
   function parseAgencyFromLocation() {
     const params = new URLSearchParams(window.location.search);
-    return (params.get("agency") || "").trim();
+    return (params.get("agency") || "")
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 
   function buildQueryRef() {

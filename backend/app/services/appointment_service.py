@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import secrets
+import unicodedata
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -351,6 +352,12 @@ class AppointmentService:
     def _normalize_text(self, value: Any) -> str:
         return " ".join(str(value or "").strip().lower().split())
 
+    def _normalize_route_key(self, value: Any) -> str:
+        text = str(value or "").strip().lower()
+        text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+        text = re.sub(r"[^a-z0-9]+", "-", text)
+        return text.strip("-")
+
     def _coalesce_text(self, *values: Any) -> str | None:
         for value in values:
             text = str(value or "").strip()
@@ -386,16 +393,19 @@ class AppointmentService:
         return rows[0]
 
     def _read_estimation_route(self, route_key: str) -> dict[str, Any] | None:
+        normalized_key = self._normalize_route_key(route_key)
         rows = self._rest_get(
             "app_estimation_agency_route",
             params={
                 "select": "route_key,agency_id,agency_label,is_active",
-                "route_key": f"eq.{route_key}",
                 "is_active": "eq.true",
-                "limit": "1",
+                "limit": "200",
             },
         )
-        return rows[0] if rows else None
+        for row in rows:
+            if self._normalize_route_key(row.get("route_key")) == normalized_key:
+                return row
+        return None
 
     def _read_estimation_negotiators(self, route_key: str) -> list[dict[str, Any]]:
         rows = self._rest_get(
@@ -454,36 +464,38 @@ class AppointmentService:
 
         if agency_key:
             route = self._read_estimation_route(agency_key)
-            if route:
-                agency = self._read_agency_by_id(str(route.get("agency_id") or "").strip())
-                negotiator = self._pick_estimation_negotiator(agency_key)
-                context = {
-                    "token": f"estimation-{agency_key}",
-                    "publicUrl": None,
-                    "hektorAnnonceId": None,
-                    "appDossierId": None,
-                    "title": "Estimer mon bien",
-                    "ville": None,
-                    "typeBien": None,
-                    "price": None,
-                    "photoUrl": None,
-                    "commercialId": str(negotiator.get("user_id") or "").strip() or None if negotiator else None,
-                    "commercialName": self._coalesce_text(negotiator.get("negotiator_label") if negotiator else None, "Un conseiller GTI Immobilier"),
-                    "negociateurEmail": self._coalesce_text(negotiator.get("negotiator_email") if negotiator else None, agency.get("mail")),
-                    "agenceNom": self._coalesce_text(route.get("agency_label"), agency.get("nom")) or "GTI Immobilier",
-                    "negociateurPhone": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
-                    "negociateurMobile": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
-                    "agencePhone": self._coalesce_text(agency.get("tel")),
-                    "agenceEmail": self._coalesce_text(agency.get("mail")),
-                    "pageTitle": "Faire estimer mon bien",
-                    "pageIntro": "Choisissez un rendez-vous pour echanger avec l'agence GTI concernée.",
-                    "agencyKey": agency_key,
-                }
-                generic_link = {
-                    "token": f"estimation-{agency_key}",
-                    "commercial_id": context.get("commercialId"),
-                }
-                return context, generic_link
+            if not route:
+                raise HTTPException(status_code=404, detail="Route agence introuvable pour l'estimation")
+            stored_route_key = str(route.get("route_key") or "").strip() or self._normalize_route_key(agency_key)
+            agency = self._read_agency_by_id(str(route.get("agency_id") or "").strip())
+            negotiator = self._pick_estimation_negotiator(stored_route_key)
+            context = {
+                "token": f"estimation-{stored_route_key}",
+                "publicUrl": None,
+                "hektorAnnonceId": None,
+                "appDossierId": None,
+                "title": "Estimer mon bien",
+                "ville": None,
+                "typeBien": None,
+                "price": None,
+                "photoUrl": None,
+                "commercialId": str(negotiator.get("user_id") or "").strip() or None if negotiator else None,
+                "commercialName": self._coalesce_text(negotiator.get("negotiator_label") if negotiator else None, "Un conseiller GTI Immobilier"),
+                "negociateurEmail": self._coalesce_text(negotiator.get("negotiator_email") if negotiator else None, agency.get("mail")),
+                "agenceNom": self._coalesce_text(route.get("agency_label"), agency.get("nom")) or "GTI Immobilier",
+                "negociateurPhone": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
+                "negociateurMobile": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
+                "agencePhone": self._coalesce_text(agency.get("tel")),
+                "agenceEmail": self._coalesce_text(agency.get("mail")),
+                "pageTitle": "Faire estimer mon bien",
+                "pageIntro": "Choisissez un rendez-vous pour echanger avec l'agence GTI concernee.",
+                "agencyKey": stored_route_key,
+            }
+            generic_link = {
+                "token": f"estimation-{stored_route_key}",
+                "commercial_id": context.get("commercialId"),
+            }
+            return context, generic_link
 
         agency = self._read_default_agency_row()
         generic_link = {
