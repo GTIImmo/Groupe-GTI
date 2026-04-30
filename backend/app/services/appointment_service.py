@@ -538,7 +538,7 @@ class AppointmentService:
                     }
                 )
                 cursor = next_cursor
-        return slots[:80]
+        return slots
 
     def _period_label(self, value: datetime) -> str:
         return "Matin" if value.hour < 12 else "Apres-midi"
