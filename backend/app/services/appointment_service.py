@@ -274,17 +274,29 @@ class AppointmentService:
             "agenceEmail": None,
         }
         commercial_id = str(dossier.get("commercial_id") or "").strip()
+        negotiator_email = str(dossier.get("negociateur_email") or "").strip()
         agence_nom = str(dossier.get("agence_nom") or "").strip()
-        if commercial_id:
+        if commercial_id or negotiator_email:
             try:
-                user_rows = self._rest_get(
-                    "app_user_directory",
-                    params={
-                        "select": "tel,portable,email",
-                        "id_user": f"eq.{commercial_id}",
-                        "limit": "1",
-                    },
-                )
+                user_rows: list[dict[str, Any]] = []
+                if negotiator_email:
+                    user_rows = self._rest_get(
+                        "app_user_directory",
+                        params={
+                            "select": "tel,portable,email",
+                            "email": f"eq.{negotiator_email}",
+                            "limit": "1",
+                        },
+                    )
+                if not user_rows and commercial_id:
+                    user_rows = self._rest_get(
+                        "app_user_directory",
+                        params={
+                            "select": "tel,portable,email",
+                            "id_user": f"eq.{commercial_id}",
+                            "limit": "1",
+                        },
+                    )
                 if user_rows:
                     user_row = user_rows[0]
                     details["negociateurPhone"] = self._coalesce_text(user_row.get("tel"))
