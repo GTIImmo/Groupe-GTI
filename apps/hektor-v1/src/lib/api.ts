@@ -259,12 +259,9 @@ async function invokeSupabaseFunction<T>(name: string, body: Record<string, unkn
   if (!supabase) {
     throw new Error('Supabase function is not available')
   }
-  const refreshResult = await supabase.auth.refreshSession()
-  if (refreshResult.error) {
-    const currentSession = await supabase.auth.getSession()
-    if (!currentSession.data.session) {
-      throw new Error(refreshResult.error.message || 'Session Supabase introuvable')
-    }
+  const currentSession = await supabase.auth.getSession()
+  if (!currentSession.data.session) {
+    throw new Error('Session Supabase introuvable')
   }
 
   const { data, error } = await supabase.functions.invoke(name, {
@@ -303,12 +300,8 @@ async function getFreshSupabaseAccessToken() {
   if (!supabase) {
     throw new Error('Supabase session is not available')
   }
-  const refreshResult = await supabase.auth.refreshSession()
-  let accessToken = refreshResult.data.session?.access_token ?? null
-  if (!accessToken) {
-    const currentSession = await supabase.auth.getSession()
-    accessToken = currentSession.data.session?.access_token ?? null
-  }
+  const currentSession = await supabase.auth.getSession()
+  const accessToken = currentSession.data.session?.access_token ?? null
   if (!accessToken) {
     throw new Error('Session Supabase introuvable')
   }
