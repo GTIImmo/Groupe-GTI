@@ -4,6 +4,7 @@
   const pageType = (body && body.dataset && body.dataset.page) || "listing";
   const state = {
     ref: null,
+    agency: null,
     context: null,
     slots: [],
     selectedSlot: null,
@@ -97,8 +98,17 @@
     return "";
   }
 
+  function parseAgencyFromLocation() {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("agency") || "").trim();
+  }
+
   function buildQueryRef() {
-    return state.ref ? `?ref=${encodeURIComponent(state.ref)}` : "";
+    const params = new URLSearchParams();
+    if (state.ref) params.set("ref", state.ref);
+    if (state.agency) params.set("agency", state.agency);
+    const query = params.toString();
+    return query ? `?${query}` : "";
   }
 
   function buildListingSheetUrl(annonceId) {
@@ -611,6 +621,7 @@
 
   async function bootstrap() {
     state.ref = parseRefFromLocation();
+    state.agency = parseAgencyFromLocation();
     bindPressAnimations();
     setLoading(true);
     try {

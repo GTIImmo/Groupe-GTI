@@ -34,9 +34,10 @@ def get_public_annonce_bootstrap(
 @router.get("/estimation/bootstrap")
 def get_public_estimation_bootstrap(
     ref: str | None = None,
+    agency: str | None = None,
     service: AppointmentService = Depends(get_appointment_service),
 ):
-    return service.get_public_estimation_bootstrap(ref)
+    return service.get_public_estimation_bootstrap(ref, agency)
 
 
 @router.get("/annonce/{ref}/slots")
@@ -60,9 +61,10 @@ def create_public_annonce_request(
 def create_public_estimation_request(
     payload: EstimationRequestCreatePayload,
     ref: str | None = None,
+    agency: str | None = None,
     service: AppointmentService = Depends(get_appointment_service),
 ):
-    return service.create_public_estimation_request(ref, payload)
+    return service.create_public_estimation_request(ref, payload, agency)
 
 
 @router.get("/annonce/{annonce_id}/summary")

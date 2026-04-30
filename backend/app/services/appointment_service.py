@@ -372,7 +372,78 @@ class AppointmentService:
         preferred = next((row for row in rows if "gti" in self._normalize_text(row.get("nom"))), None)
         return preferred or rows[0]
 
-    def _build_estimation_context(self, ref: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
+    def _read_agency_by_id(self, agency_id: str) -> dict[str, Any]:
+        rows = self._rest_get(
+            "app_agence_directory",
+            params={
+                "select": "id_agence,nom,tel,mail",
+                "id_agence": f"eq.{agency_id}",
+                "limit": "1",
+            },
+        )
+        if not rows:
+            raise HTTPException(status_code=404, detail="Agence introuvable pour l'estimation")
+        return rows[0]
+
+    def _read_estimation_route(self, route_key: str) -> dict[str, Any] | None:
+        rows = self._rest_get(
+            "app_estimation_agency_route",
+            params={
+                "select": "route_key,agency_id,agency_label,is_active",
+                "route_key": f"eq.{route_key}",
+                "is_active": "eq.true",
+                "limit": "1",
+            },
+        )
+        return rows[0] if rows else None
+
+    def _read_estimation_negotiators(self, route_key: str) -> list[dict[str, Any]]:
+        rows = self._rest_get(
+            "app_estimation_agency_negotiator",
+            params={
+                "select": "id,route_key,user_id,negotiator_label,negotiator_email,negotiator_phone,is_active,sort_order",
+                "route_key": f"eq.{route_key}",
+                "is_active": "eq.true",
+                "order": "sort_order.asc,id.asc",
+                "limit": "100",
+            },
+        )
+        return rows
+
+    def _read_estimation_rotation(self, route_key: str) -> dict[str, Any] | None:
+        rows = self._rest_get(
+            "app_estimation_agency_rotation",
+            params={
+                "select": "route_key,last_user_id,rotation_count,updated_at",
+                "route_key": f"eq.{route_key}",
+                "limit": "1",
+            },
+        )
+        return rows[0] if rows else None
+
+    def _write_estimation_rotation(self, route_key: str, user_id: str | None, rotation_count: int) -> None:
+        payload = {
+            "route_key": route_key,
+            "last_user_id": user_id,
+            "rotation_count": rotation_count,
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+        self._rest_post("app_estimation_agency_rotation", payload=[payload], on_conflict="route_key")
+
+    def _pick_estimation_negotiator(self, route_key: str) -> dict[str, Any] | None:
+        negotiators = self._read_estimation_negotiators(route_key)
+        if not negotiators:
+            return None
+        rotation = self._read_estimation_rotation(route_key)
+        last_user_id = str(rotation.get("last_user_id") or "").strip() if rotation else ""
+        current_index = next((index for index, row in enumerate(negotiators) if str(row.get("user_id") or "").strip() == last_user_id), -1)
+        next_index = 0 if current_index < 0 else (current_index + 1) % len(negotiators)
+        selected = negotiators[next_index]
+        next_count = int(rotation.get("rotation_count") or 0) + 1 if rotation else 1
+        self._write_estimation_rotation(route_key, str(selected.get("user_id") or "").strip() or None, next_count)
+        return selected
+
+    def _build_estimation_context(self, ref: str | None, agency_key: str | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
         if ref:
             link, dossier = self._resolve_link(ref)
             link = self._maybe_enrich_link_contacts(link, dossier)
@@ -380,6 +451,39 @@ class AppointmentService:
             context["pageTitle"] = "Faire estimer mon bien"
             context["pageIntro"] = "Prenez rendez-vous avec votre conseiller pour une estimation confidentielle."
             return context, link
+
+        if agency_key:
+            route = self._read_estimation_route(agency_key)
+            if route:
+                agency = self._read_agency_by_id(str(route.get("agency_id") or "").strip())
+                negotiator = self._pick_estimation_negotiator(agency_key)
+                context = {
+                    "token": f"estimation-{agency_key}",
+                    "publicUrl": None,
+                    "hektorAnnonceId": None,
+                    "appDossierId": None,
+                    "title": "Estimer mon bien",
+                    "ville": None,
+                    "typeBien": None,
+                    "price": None,
+                    "photoUrl": None,
+                    "commercialId": str(negotiator.get("user_id") or "").strip() or None if negotiator else None,
+                    "commercialName": self._coalesce_text(negotiator.get("negotiator_label") if negotiator else None, "Un conseiller GTI Immobilier"),
+                    "negociateurEmail": self._coalesce_text(negotiator.get("negotiator_email") if negotiator else None, agency.get("mail")),
+                    "agenceNom": self._coalesce_text(route.get("agency_label"), agency.get("nom")) or "GTI Immobilier",
+                    "negociateurPhone": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
+                    "negociateurMobile": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
+                    "agencePhone": self._coalesce_text(agency.get("tel")),
+                    "agenceEmail": self._coalesce_text(agency.get("mail")),
+                    "pageTitle": "Faire estimer mon bien",
+                    "pageIntro": "Choisissez un rendez-vous pour echanger avec l'agence GTI concernée.",
+                    "agencyKey": agency_key,
+                }
+                generic_link = {
+                    "token": f"estimation-{agency_key}",
+                    "commercial_id": context.get("commercialId"),
+                }
+                return context, generic_link
 
         agency = self._read_default_agency_row()
         generic_link = {
@@ -449,8 +553,8 @@ class AppointmentService:
             "slots": slots,
         }
 
-    def get_public_estimation_bootstrap(self, ref: str | None) -> dict[str, Any]:
-        context, link = self._build_estimation_context(ref.strip() if ref else None)
+    def get_public_estimation_bootstrap(self, ref: str | None, agency_key: str | None = None) -> dict[str, Any]:
+        context, link = self._build_estimation_context(ref.strip() if ref else None, agency_key.strip() if agency_key else None)
         rule = self._read_slot_rule(link)
         slots = self._generate_slots(link, rule)
         return {
@@ -734,8 +838,8 @@ class AppointmentService:
             "status": created["request_status"],
         }
 
-    def create_public_estimation_request(self, ref: str | None, payload: EstimationRequestCreatePayload) -> dict[str, Any]:
-        context, link = self._build_estimation_context(ref.strip() if ref else None)
+    def create_public_estimation_request(self, ref: str | None, payload: EstimationRequestCreatePayload, agency_key: str | None = None) -> dict[str, Any]:
+        context, link = self._build_estimation_context(ref.strip() if ref else None, agency_key.strip() if agency_key else None)
         recipient = self._coalesce_text(context.get("negociateurEmail"), context.get("agenceEmail"))
         if not recipient:
             raise HTTPException(status_code=400, detail="Aucun email disponible pour traiter la demande d'estimation")
