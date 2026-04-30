@@ -118,8 +118,11 @@
 
   function buildQueryRef() {
     const params = new URLSearchParams();
-    if (state.ref) params.set("ref", state.ref);
-    if (state.agency) params.set("agency", state.agency);
+    if (state.ref) {
+      params.set("ref", state.ref);
+    } else if (state.agency) {
+      params.set("agency", state.agency);
+    }
     const query = params.toString();
     return query ? `?${query}` : "";
   }
@@ -222,7 +225,11 @@
   function configureBackLink() {
     if (!els.backLink) return;
     const params = new URLSearchParams();
-    if (state.agency) params.set("agency", state.agency);
+    if (state.ref) {
+      params.set("ref", state.ref);
+    } else if (state.agency) {
+      params.set("agency", state.agency);
+    }
     const query = params.toString();
     els.backLink.setAttribute("href", `./index.html${query ? `?${query}` : ""}`);
   }
