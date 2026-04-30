@@ -14,17 +14,32 @@
     errorPanel: $("errorPanel"),
     errorMessage: $("errorMessage"),
     contentPanel: $("contentPanel"),
+    heroImage: $("heroImage"),
     listingPhoto: $("listingPhoto"),
     listingTitle: $("listingTitle"),
+    propertyTitle: $("propertyTitle"),
+    listingMeta: $("listingMeta"),
     listingCity: $("listingCity"),
     listingType: $("listingType"),
     listingPrice: $("listingPrice"),
+    propertyLead: $("propertyLead"),
     commercialName: $("commercialName"),
+    commercialNameCard: $("commercialNameCard"),
+    commercialPhoneInline: $("commercialPhoneInline"),
     commercialPhone: $("commercialPhone"),
     commercialEmail: $("commercialEmail"),
     agencyName: $("agencyName"),
     agencyPhone: $("agencyPhone"),
     agencyEmail: $("agencyEmail"),
+    callNowButton: $("callNowButton"),
+    saveContactButton: $("saveContactButton"),
+    visitAction: $("visitAction"),
+    downloadAction: $("downloadAction"),
+    contactAction: $("contactAction"),
+    estimateAction: $("estimateAction"),
+    visitSection: $("visitSection"),
+    contactSection: $("contactSection"),
+    estimateSection: $("estimateSection"),
     slotRuleLabel: $("slotRuleLabel"),
     dayList: $("dayList"),
     slotList: $("slotList"),
@@ -36,6 +51,11 @@
     clientPhone: $("clientPhone"),
     clientEmail: $("clientEmail"),
     clientMessage: $("clientMessage"),
+    estimateForm: $("estimateForm"),
+    estimateAddress: $("estimateAddress"),
+    estimateName: $("estimateName"),
+    estimatePhone: $("estimatePhone"),
+    estimateSuccessPanel: $("estimateSuccessPanel"),
   };
 
   function getApiBase() {
@@ -61,38 +81,15 @@
     els.errorMessage.textContent = message || "Erreur inattendue.";
   }
 
-  function formatDateTimeRange(slot) {
-    if (!slot) return "Choisissez un creneau";
-    return `${slot.displayDateLabel || slot.displayDate} a ${slot.displayTime}`;
+  function formatCurrency(value) {
+    return typeof value === "number"
+      ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value)
+      : "Prix sur demande";
   }
 
-  function renderContext(context) {
-    const price = typeof context.price === "number"
-      ? new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-        maximumFractionDigits: 0,
-      }).format(context.price)
-      : "Prix sur demande";
-
-    els.listingTitle.textContent = context.title || `Annonce ${context.hektorAnnonceId}`;
-    els.listingCity.textContent = context.ville || "Ville non renseignee";
-    els.listingType.textContent = context.typeBien || "Bien immobilier";
-    els.listingPrice.textContent = price;
-    els.commercialName.textContent = context.commercialName || "-";
-    els.agencyName.textContent = context.agenceNom || "-";
-    renderContactLink(els.commercialPhone, context.negociateurMobile || context.negociateurPhone, "Tel. ");
-    renderContactLink(els.commercialEmail, context.negociateurEmail, "");
-    renderContactLink(els.agencyPhone, context.agencePhone, "Tel. ");
-    renderContactLink(els.agencyEmail, context.agenceEmail, "");
-
-    if (context.photoUrl) {
-      els.listingPhoto.src = context.photoUrl;
-      els.listingPhoto.classList.remove("hidden");
-    } else {
-      els.listingPhoto.removeAttribute("src");
-      els.listingPhoto.classList.add("hidden");
-    }
+  function formatDateTimeRange(slot) {
+    if (!slot) return "Choisissez un créneau";
+    return `${slot.displayDateLabel || slot.displayDate} à ${slot.displayTime}`;
   }
 
   function renderContactLink(element, value, prefix) {
@@ -107,6 +104,53 @@
     element.textContent = `${prefix}${text}`;
     element.href = isEmail ? `mailto:${text}` : `tel:${text.replace(/\s+/g, "")}`;
     element.classList.remove("hidden");
+  }
+
+  function renderImage(element, url, alt) {
+    if (url) {
+      element.src = url;
+      element.alt = alt;
+      element.classList.remove("hidden");
+      return;
+    }
+    element.removeAttribute("src");
+    element.classList.add("hidden");
+  }
+
+  function renderContext(context) {
+    const title = context.title || `Annonce ${context.hektorAnnonceId}`;
+    const city = context.ville || "Ville non renseignée";
+    const type = context.typeBien || "Bien immobilier";
+    const price = formatCurrency(context.price);
+    const phone = context.negociateurMobile || context.negociateurPhone || "";
+
+    state.context = context;
+    document.title = `${title} | GTI Immobilier`;
+    els.listingTitle.textContent = title;
+    els.propertyTitle.textContent = title;
+    els.listingMeta.textContent = `${city} · ${type}`;
+    els.listingCity.textContent = city;
+    els.listingType.textContent = type;
+    els.listingPrice.textContent = price;
+    els.propertyLead.textContent = `Découvrez ce ${type.toLowerCase()} à ${city} et échangez directement avec votre conseiller GTI.`;
+    els.commercialName.textContent = context.commercialName || "Votre conseiller GTI";
+    els.commercialNameCard.textContent = context.commercialName || "Votre conseiller GTI";
+    els.agencyName.textContent = context.agenceNom || "Agence GTI Immobilier";
+
+    renderImage(els.heroImage, context.photoUrl, title);
+    renderImage(els.listingPhoto, context.photoUrl, title);
+    renderContactLink(els.commercialPhoneInline, phone, "");
+    renderContactLink(els.commercialPhone, phone, "Téléphone · ");
+    renderContactLink(els.commercialEmail, context.negociateurEmail, "Email · ");
+    renderContactLink(els.agencyPhone, context.agencePhone, "Téléphone · ");
+    renderContactLink(els.agencyEmail, context.agenceEmail, "Email · ");
+    renderContactLink(els.callNowButton, phone, "");
+    if (!phone) {
+      els.callNowButton.textContent = "Appeler maintenant";
+      els.callNowButton.classList.add("hidden");
+    } else {
+      els.callNowButton.textContent = "Appeler maintenant";
+    }
   }
 
   function groupSlotsByDay(slots) {
@@ -140,7 +184,7 @@
   function selectDay(dayKey) {
     state.selectedDayKey = dayKey;
     state.selectedSlot = null;
-    els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    els.selectedSlotLabel.textContent = "Choisissez un créneau";
     els.submitButton.disabled = true;
     Array.from(els.dayList.querySelectorAll(".day-button")).forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.dayKey === dayKey);
@@ -162,7 +206,6 @@
     if (!key) return sampleDay?.monthLabel || "";
     const [yearText, monthText] = key.split("-");
     const year = Number(yearText);
-    const monthIndex = Number(monthText) - 1;
     const monthName = sampleDay?.monthLabel || "";
     return `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`;
   }
@@ -228,13 +271,13 @@
 
     if (!daySlots.length) {
       const empty = document.createElement("p");
-      empty.className = "panel-intro";
-      empty.textContent = "Aucun creneau disponible pour ce jour.";
+      empty.className = "property-lead";
+      empty.textContent = "Aucun créneau disponible pour ce jour.";
       els.slotList.appendChild(empty);
       return;
     }
 
-    daySlots.forEach((slot, index) => {
+    daySlots.forEach((slot) => {
       const globalIndex = state.slots.findIndex((item) => item.startAt === slot.startAt);
       const button = document.createElement("button");
       button.type = "button";
@@ -247,9 +290,7 @@
         `<span class="slot-meta">${slot.endDisplayTime || ""}</span>`,
         `<span class="slot-status">${slot.available ? "Disponible" : "Indisponible"}</span>`,
       ].join("");
-      if (slot.available) {
-        button.addEventListener("click", () => selectSlot(globalIndex));
-      }
+      if (slot.available) button.addEventListener("click", () => selectSlot(globalIndex));
       els.slotList.appendChild(button);
     });
   }
@@ -257,16 +298,16 @@
   function renderAgenda(rule, slots) {
     state.slots = Array.isArray(slots) ? slots : [];
     state.selectedSlot = null;
-    els.slotRuleLabel.textContent = `Agenda de visite - delai mini ${rule.minDelayHours} h`;
+    els.slotRuleLabel.textContent = `Agenda de visite · délai mini ${rule.minDelayHours || 36} h`;
     els.dayList.innerHTML = "";
     els.slotList.innerHTML = "";
-    els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    els.selectedSlotLabel.textContent = "Choisissez un créneau";
     els.submitButton.disabled = true;
 
     if (!state.slots.length) {
       const empty = document.createElement("p");
-      empty.className = "panel-intro";
-      empty.textContent = "Aucun creneau disponible pour le moment.";
+      empty.className = "property-lead";
+      empty.textContent = "Aucun créneau disponible pour le moment.";
       els.slotList.appendChild(empty);
       return;
     }
@@ -274,9 +315,95 @@
     const days = groupSlotsByDay(state.slots);
     renderCalendar(days);
     state.selectedDayKey = days[0]?.dayKey || null;
-    if (state.selectedDayKey) {
-      selectDay(state.selectedDayKey);
+    if (state.selectedDayKey) selectDay(state.selectedDayKey);
+  }
+
+  function scrollToSection(section) {
+    section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function buildVCard(context) {
+    const lines = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      `FN:${context.commercialName || "Conseiller GTI Immobilier"}`,
+      context.commercialName ? `ORG:${context.agenceNom || "GTI Immobilier"}` : "ORG:GTI Immobilier",
+      context.negociateurMobile || context.negociateurPhone ? `TEL;TYPE=CELL:${context.negociateurMobile || context.negociateurPhone}` : "",
+      context.negociateurEmail ? `EMAIL:${context.negociateurEmail}` : "",
+      context.agenceNom ? `NOTE:${context.agenceNom}` : "",
+      "END:VCARD",
+    ].filter(Boolean);
+    return lines.join("\n");
+  }
+
+  function downloadBlob(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleDownloadSheet() {
+    if (!state.context) return;
+    const context = state.context;
+    const lines = [
+      `GTI Immobilier`,
+      `${context.title || "Bien immobilier"}`,
+      `${context.ville || ""} · ${context.typeBien || ""}`,
+      `${formatCurrency(context.price)}`,
+      ``,
+      `Conseiller : ${context.commercialName || "-"}`,
+      `Téléphone : ${context.negociateurMobile || context.negociateurPhone || "-"}`,
+      `Email : ${context.negociateurEmail || "-"}`,
+      `Agence : ${context.agenceNom || "-"}`,
+      `Téléphone agence : ${context.agencePhone || "-"}`,
+      `Email agence : ${context.agenceEmail || "-"}`,
+      ``,
+      `Lien : ${window.location.href}`,
+    ];
+    const safeRef = String(context.hektorAnnonceId || "bien").replace(/[^\w-]+/g, "-");
+    downloadBlob(`fiche-bien-${safeRef}.txt`, lines.join("\n"), "text/plain;charset=utf-8");
+  }
+
+  function handleSaveContact() {
+    if (!state.context) return;
+    const safeRef = String(state.context.hektorAnnonceId || "contact").replace(/[^\w-]+/g, "-");
+    downloadBlob(`contact-gti-${safeRef}.vcf`, buildVCard(state.context), "text/vcard;charset=utf-8");
+  }
+
+  function handleEstimateSubmit(event) {
+    event.preventDefault();
+    if (!state.context) return;
+    const recipient = state.context.agenceEmail || state.context.negociateurEmail;
+    const phone = els.estimatePhone.value.trim();
+    const name = els.estimateName.value.trim();
+    const address = els.estimateAddress.value.trim();
+    if (!recipient) {
+      showError("Aucune adresse email disponible pour transmettre votre demande.");
+      return;
     }
+    const subject = encodeURIComponent(`Demande d'estimation - ${name || "Prospect"}`);
+    const body = encodeURIComponent(
+      [
+        `Bonjour,`,
+        ``,
+        `Je souhaite faire estimer mon bien.`,
+        `Adresse : ${address}`,
+        `Nom : ${name}`,
+        `Téléphone : ${phone}`,
+        ``,
+        `Bien consulté : ${state.context.title || "-"}`,
+        `Référence annonce : ${state.context.hektorAnnonceId || "-"}`,
+      ].join("\n")
+    );
+    window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+    els.estimateSuccessPanel.classList.remove("hidden");
+    els.estimateForm.classList.add("hidden");
   }
 
   async function fetchJson(path, options) {
@@ -295,12 +422,11 @@
     state.ref = parseRefFromLocation();
     els.loadingPanel.classList.remove("hidden");
     if (!state.ref) {
-      showError("Reference annonce introuvable dans l'URL.");
+      showError("Référence annonce introuvable dans l'URL.");
       return;
     }
     try {
       const bootstrapPayload = await fetchJson(`/public/appointments/annonce/${encodeURIComponent(state.ref)}/bootstrap`);
-      state.context = bootstrapPayload.context || null;
       renderContext(bootstrapPayload.context || {});
       renderAgenda(bootstrapPayload.rule || {}, Array.isArray(bootstrapPayload.slots) ? bootstrapPayload.slots : []);
       els.loadingPanel.classList.add("hidden");
@@ -310,10 +436,17 @@
     }
   }
 
+  els.visitAction.addEventListener("click", () => scrollToSection(els.visitSection));
+  els.contactAction.addEventListener("click", () => scrollToSection(els.contactSection));
+  els.estimateAction.addEventListener("click", () => scrollToSection(els.estimateSection));
+  els.downloadAction.addEventListener("click", handleDownloadSheet);
+  els.saveContactButton.addEventListener("click", handleSaveContact);
+  els.estimateForm.addEventListener("submit", handleEstimateSubmit);
+
   els.appointmentForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.selectedSlot) {
-      showError("Choisissez d'abord un creneau.");
+      showError("Choisissez d'abord un créneau.");
       return;
     }
     els.submitButton.disabled = true;

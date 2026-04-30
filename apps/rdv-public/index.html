@@ -3,132 +3,195 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GTI Immobilier | Demande de rendez-vous</title>
+  <title>GTI Immobilier | Bien immobilier</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-api-base="https://gti-backend-xlyf.onrender.com">
   <main class="page-shell">
     <section class="hero-card">
-      <div class="hero-topbar">
-        <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
-        <span class="hero-chip">Demande de rendez-vous</span>
+      <div class="hero-media">
+        <img id="heroImage" class="hero-image hidden" src="" alt="Photo du bien" loading="lazy" decoding="async" />
+        <div class="hero-overlay"></div>
       </div>
 
-      <div class="hero-copy">
-        <p class="eyebrow">GTI Immobilier</p>
-        <h1>Demande de visite</h1>
-        <p class="hero-text">
-          Choisissez un cr&eacute;neau et laissez vos coordonn&eacute;es.
-        </p>
+      <div class="hero-body">
+        <div class="hero-topbar">
+          <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
+          <span class="hero-badge">En vitrine</span>
+        </div>
+
+        <div class="hero-copy">
+          <p class="hero-kicker">GTI Immobilier</p>
+          <h1 id="listingTitle">Bien immobilier</h1>
+          <p id="listingMeta" class="hero-meta">Ville · Type de bien</p>
+          <p id="listingPrice" class="hero-price">-</p>
+        </div>
+
+        <div class="hero-contact">
+          <p class="hero-contact-label">Votre conseiller</p>
+          <strong id="commercialName">-</strong>
+          <a id="commercialPhoneInline" class="hero-contact-link hidden" href="#"></a>
+        </div>
       </div>
     </section>
 
     <section class="status-card hidden" id="loadingPanel">
       <div class="status-spinner" aria-hidden="true"></div>
       <div>
-        <strong>Chargement en cours</strong>
-        <p>R&eacute;cup&eacute;ration de l'annonce et des disponibilit&eacute;s.</p>
+        <strong>Chargement</strong>
+        <p>Préparation du bien et des disponibilités.</p>
       </div>
     </section>
 
     <section class="status-card status-card-error hidden" id="errorPanel">
       <div>
-        <strong>Impossible de charger ce lien</strong>
-        <p id="errorMessage">V&eacute;rifiez le QR code ou r&eacute;essayez plus tard.</p>
+        <strong>Impossible de charger ce bien</strong>
+        <p id="errorMessage">Vérifiez le QR code ou réessayez plus tard.</p>
       </div>
     </section>
 
-    <section class="content-grid hidden" id="contentPanel">
-      <div class="content-main">
-        <article class="panel panel-listing">
-          <div class="listing-hero">
-            <div class="listing-photo-wrap">
-              <img id="listingPhoto" class="listing-photo" src="" alt="Photo du bien" loading="lazy" decoding="async" />
-            </div>
-            <div class="listing-summary">
-              <p class="eyebrow">Bien</p>
-              <h2 id="listingTitle">Bien immobilier</h2>
-              <div class="listing-tags">
-                <span class="listing-tag" id="listingCity">-</span>
-                <span class="listing-tag" id="listingType">-</span>
-              </div>
-              <p id="listingPrice" class="listing-price">-</p>
-            </div>
-          </div>
+    <section class="content-stack hidden" id="contentPanel">
+      <section class="action-grid">
+        <button id="visitAction" class="action-tile action-tile-primary" type="button">
+          <span class="action-label">Visiter ce bien</span>
+          <span class="action-subtitle">Choisir un créneau</span>
+        </button>
+        <button id="downloadAction" class="action-tile" type="button">
+          <span class="action-label">Télécharger la fiche</span>
+          <span class="action-subtitle">Version mobile</span>
+        </button>
+        <button id="contactAction" class="action-tile" type="button">
+          <span class="action-label">Contacter le négociateur</span>
+          <span class="action-subtitle">Appel et contact</span>
+        </button>
+        <button id="estimateAction" class="action-tile action-tile-accent" type="button">
+          <span class="action-label">Faire estimer mon bien</span>
+          <span class="action-subtitle">Recevoir un avis</span>
+        </button>
+      </section>
 
-          <div class="contact-grid">
-            <div class="contact-card">
-              <span class="listing-label">Votre conseiller</span>
-              <strong id="commercialName">-</strong>
-              <a id="commercialPhone" class="contact-link hidden" href="#"></a>
-              <a id="commercialEmail" class="contact-link hidden" href="#"></a>
-            </div>
-            <div class="contact-card">
-              <span class="listing-label">Agence</span>
-              <strong id="agencyName">-</strong>
-              <a id="agencyPhone" class="contact-link hidden" href="#"></a>
-              <a id="agencyEmail" class="contact-link hidden" href="#"></a>
-            </div>
+      <article class="panel panel-property reveal">
+        <div class="property-card">
+          <div class="property-visual">
+            <img id="listingPhoto" class="property-photo hidden" src="" alt="Photo du bien" loading="lazy" decoding="async" />
           </div>
-        </article>
-
-        <article class="panel panel-slots">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Disponibilit&eacute;s</p>
-              <h2>Choisissez votre jour</h2>
+          <div class="property-copy">
+            <p class="section-kicker">Le bien</p>
+            <h2 id="propertyTitle">Bien immobilier</h2>
+            <div class="property-tags">
+              <span id="listingCity" class="property-tag">-</span>
+              <span id="listingType" class="property-tag">-</span>
             </div>
-            <span id="slotRuleLabel" class="rule-chip">D&eacute;lai mini 36 h</span>
+            <p id="propertyLead" class="property-lead">Découvrez ce bien et échangez directement avec votre conseiller GTI.</p>
           </div>
-          <div id="dayList" class="calendar-wrap"></div>
-          <div id="slotList" class="slot-grid"></div>
-        </article>
-      </div>
+        </div>
+      </article>
 
-      <aside class="content-side">
-        <article class="panel panel-form">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Vos coordonn&eacute;es</p>
-              <h2>Envoyer la demande</h2>
-            </div>
+      <article class="panel panel-contact reveal" id="contactSection">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Contact</p>
+            <h2>Votre interlocuteur</h2>
           </div>
+        </div>
 
-          <div class="selection-box">
-            <span class="selection-label">Cr&eacute;neau choisi</span>
-            <strong id="selectedSlotLabel" class="selection-value">Choisissez un cr&eacute;neau</strong>
+        <div class="contact-stack">
+          <div class="contact-card">
+            <span class="contact-label">Conseiller</span>
+            <strong id="commercialNameCard">-</strong>
+            <a id="commercialPhone" class="contact-link hidden" href="#"></a>
+            <a id="commercialEmail" class="contact-link hidden" href="#"></a>
           </div>
-
-          <form id="appointmentForm" class="form-grid">
-            <div class="form-row">
-              <label class="field">
-                <span>Nom complet</span>
-                <input id="clientName" name="clientName" type="text" required maxlength="160" placeholder="Votre nom" />
-              </label>
-              <label class="field">
-                <span>T&eacute;l&eacute;phone</span>
-                <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
-              </label>
-            </div>
-            <label class="field">
-              <span>Email</span>
-              <input id="clientEmail" name="clientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
-            </label>
-            <label class="field">
-              <span>Message</span>
-              <textarea id="clientMessage" name="clientMessage" rows="5" maxlength="4000" placeholder="Pr&eacute;cisez si besoin vos disponibilit&eacute;s ou une information utile."></textarea>
-            </label>
-            <div class="form-actions">
-              <button id="submitButton" type="submit" class="button-primary" disabled>Envoyer ma demande</button>
-            </div>
-          </form>
-
-          <div id="successPanel" class="success-box hidden">
-            <strong>Demande envoy&eacute;e</strong>
-            <p>Nous vous recontactons rapidement.</p>
+          <div class="contact-card">
+            <span class="contact-label">Agence</span>
+            <strong id="agencyName">-</strong>
+            <a id="agencyPhone" class="contact-link hidden" href="#"></a>
+            <a id="agencyEmail" class="contact-link hidden" href="#"></a>
           </div>
-        </article>
-      </aside>
+        </div>
+
+        <div class="dual-actions">
+          <a id="callNowButton" class="button-strong hidden" href="#">Appeler maintenant</a>
+          <button id="saveContactButton" class="button-ghost" type="button">Ajouter à mes contacts</button>
+        </div>
+      </article>
+
+      <article class="panel panel-visit reveal" id="visitSection">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Visite</p>
+            <h2>Choisir un rendez-vous</h2>
+          </div>
+          <span id="slotRuleLabel" class="rule-chip">Disponibilités</span>
+        </div>
+
+        <div id="dayList" class="calendar-wrap"></div>
+        <div id="slotList" class="slot-grid"></div>
+
+        <div class="selection-box">
+          <span class="selection-label">Créneau sélectionné</span>
+          <strong id="selectedSlotLabel" class="selection-value">Choisissez un créneau</strong>
+        </div>
+
+        <form id="appointmentForm" class="form-grid">
+          <label class="field">
+            <span>Nom</span>
+            <input id="clientName" name="clientName" type="text" required maxlength="160" placeholder="Votre nom" />
+          </label>
+          <label class="field">
+            <span>Téléphone</span>
+            <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
+          </label>
+          <label class="field field-full">
+            <span>Email</span>
+            <input id="clientEmail" name="clientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
+          </label>
+          <label class="field field-full">
+            <span>Précision</span>
+            <textarea id="clientMessage" name="clientMessage" rows="4" maxlength="4000" placeholder="Indiquez une précision utile si besoin."></textarea>
+          </label>
+          <div class="field-full">
+            <button id="submitButton" type="submit" class="button-primary" disabled>Confirmer la visite</button>
+          </div>
+        </form>
+
+        <div id="successPanel" class="success-box hidden">
+          <strong>Demande envoyée</strong>
+          <p>Votre conseiller vous recontacte rapidement.</p>
+        </div>
+      </article>
+
+      <article class="panel panel-estimate reveal" id="estimateSection">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Estimation</p>
+            <h2>Faire estimer mon bien</h2>
+          </div>
+        </div>
+
+        <form id="estimateForm" class="form-grid">
+          <label class="field field-full">
+            <span>Adresse du bien</span>
+            <input id="estimateAddress" name="estimateAddress" type="text" required maxlength="240" placeholder="Adresse du bien à estimer" />
+          </label>
+          <label class="field">
+            <span>Nom</span>
+            <input id="estimateName" name="estimateName" type="text" required maxlength="160" placeholder="Votre nom" />
+          </label>
+          <label class="field">
+            <span>Téléphone</span>
+            <input id="estimatePhone" name="estimatePhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
+          </label>
+          <div class="field-full">
+            <button id="estimateSubmitButton" type="submit" class="button-primary button-primary-accent">Recevoir mon estimation</button>
+          </div>
+        </form>
+
+        <div id="estimateSuccessPanel" class="success-box hidden">
+          <strong>Demande préparée</strong>
+          <p>Votre message est prêt à être envoyé à l’agence.</p>
+        </div>
+      </article>
     </section>
   </main>
 
