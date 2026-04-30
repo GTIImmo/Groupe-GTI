@@ -69,6 +69,7 @@
     estimateClientMessage: $("estimateClientMessage"),
     estimateSubmitButton: $("estimateSubmitButton"),
     estimateSuccessPanel: $("estimateSuccessPanel"),
+    backLink: document.querySelector(".hero-back-link"),
   };
 
   function addListener(element, eventName, handler) {
@@ -98,15 +99,19 @@
     return "";
   }
 
-  function parseAgencyFromLocation() {
-    const params = new URLSearchParams(window.location.search);
-    return (params.get("agency") || "")
+  function normalizeAgencyKey(value) {
+    return String(value || "")
       .trim()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
+  }
+
+  function parseAgencyFromLocation() {
+    const params = new URLSearchParams(window.location.search);
+    return normalizeAgencyKey(params.get("agency") || "");
   }
 
   function buildQueryRef() {
@@ -206,6 +211,14 @@
     els.estimateAction.setAttribute("href", `./estimation.html${buildQueryRef()}`);
   }
 
+  function configureBackLink() {
+    if (!els.backLink) return;
+    const params = new URLSearchParams();
+    if (state.agency) params.set("agency", state.agency);
+    const query = params.toString();
+    els.backLink.setAttribute("href", `./index.html${query ? `?${query}` : ""}`);
+  }
+
   function buildHeroTitle(context) {
     if (state.mode === "estimation") return context.pageTitle || "Faire estimer mon bien";
     if (state.ref) return "Prendre rendez-vous pour ce bien";
@@ -226,6 +239,8 @@
     const safeContext = context || {};
     const title = safeContext.title || "GTI Immobilier";
     const phone = safeContext.negociateurMobile || safeContext.negociateurPhone || safeContext.agencePhone || "";
+    if (!state.agency && safeContext.agencyKey) state.agency = normalizeAgencyKey(safeContext.agencyKey);
+    if (!state.agency && safeContext.agenceNom) state.agency = normalizeAgencyKey(safeContext.agenceNom);
     state.context = safeContext;
 
     if (els.heroSplashTitle) els.heroSplashTitle.textContent = buildHeroTitle(safeContext);
@@ -265,6 +280,7 @@
 
     configureDownloadAction(safeContext);
     configureEstimateAction();
+    configureBackLink();
     document.title = `${buildHeroTitle(safeContext)} | GTI Immobilier`;
   }
 
@@ -542,7 +558,8 @@
   }
 
   async function bootstrapHome() {
-    const payload = await fetchJson("/public/appointments/estimation/bootstrap");
+    const query = state.agency ? `?agency=${encodeURIComponent(state.agency)}` : "";
+    const payload = await fetchJson(`/public/appointments/estimation/bootstrap${query}`);
     state.mode = "home";
     renderSharedContext(payload.context || {});
     setView("home");
