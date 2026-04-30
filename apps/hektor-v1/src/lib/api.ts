@@ -136,6 +136,63 @@ const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
 const localDiffusionRequestsKey = 'hektor-v1-diffusion-requests'
 const localDiffusionRequestEventsKey = 'hektor-v1-diffusion-request-events'
 const backendApiBaseUrl = (import.meta.env.VITE_BACKEND_API_URL ?? '').trim().replace(/\/+$/, '')
+const dossierListSelect = [
+  'app_dossier_id',
+  'hektor_annonce_id',
+  'photo_url_listing',
+  'images_preview_json',
+  'archive',
+  'diffusable',
+  'nb_portails_actifs',
+  'has_diffusion_error',
+  'portails_resume',
+  'offre_id',
+  'offre_state',
+  'offre_last_proposition_type',
+  'compromis_id',
+  'compromis_state',
+  'vente_id',
+  'numero_dossier',
+  'numero_mandat',
+  'titre_bien',
+  'ville',
+  'type_bien',
+  'prix',
+  'commercial_id',
+  'commercial_nom',
+  'negociateur_email',
+  'agence_nom',
+  'statut_annonce',
+  'validation_diffusion_state',
+  'price_change_event_count',
+  'price_change_last_source_kind',
+  'price_change_last_old_value',
+  'price_change_last_new_value',
+  'price_change_last_detected_at',
+  'price_change_last_source_updated_at',
+  'etat_visibilite',
+  'alerte_principale',
+  'priority',
+  'has_open_blocker',
+  'commentaire_resume',
+  'date_relance_prevue',
+  'dernier_event_type',
+  'dernier_work_status',
+].join(',')
+const mandatListSelect = [
+  ...dossierListSelect.split(','),
+  'adresse_privee_listing',
+  'adresse_detail',
+  'code_postal',
+  'code_postal_prive_detail',
+  'ville_privee_detail',
+  'mandat_type',
+  'mandat_type_source',
+  'mandat_date_debut',
+  'mandat_date_fin',
+  'mandat_montant',
+  'mandants_texte',
+].join(',')
 const defaultDiffusionAgencyTargets = [
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'bienicidirect', hektor_broadcast_id: '2' },
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
@@ -987,7 +1044,7 @@ export async function loadDossiersPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   let query = applyDossierFiltersToQuery(
-    applyNegotiatorScopeToQuery(supabase.from('app_dossiers_current').select('*', { count: countMode }), scope),
+    applyNegotiatorScopeToQuery(supabase.from('app_dossiers_current').select(dossierListSelect, { count: countMode }), scope),
     filters,
   )
     .order('has_open_blocker', { ascending: false })
@@ -1485,7 +1542,7 @@ export async function loadMandatsPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   let query = applyDossierFiltersToQuery(
-    applyNegotiatorScopeToQuery(supabase.from('app_dossiers_current').select('*', { count: countMode }), scope),
+    applyNegotiatorScopeToQuery(supabase.from('app_dossiers_current').select(mandatListSelect, { count: countMode }), scope),
     filters,
   )
     .order('has_diffusion_error', { ascending: false })
