@@ -29,6 +29,7 @@
     homeCallAction: $("homeCallAction"),
     homeMailAction: $("homeMailAction"),
     homeSaveContactButton: $("homeSaveContactButton"),
+    homeEstimateAction: document.querySelector("#homePanel a.action-tile-primary"),
     visitActionMeta: $("visitActionMeta"),
     commercialName: $("commercialName"),
     commercialNameCard: $("commercialNameCard"),
@@ -207,6 +208,9 @@
   }
 
   function configureEstimateAction() {
+    if (els.homeEstimateAction) {
+      els.homeEstimateAction.setAttribute("href", `./estimation.html${buildQueryRef()}`);
+    }
     if (!els.estimateAction) return;
     els.estimateAction.setAttribute("href", `./estimation.html${buildQueryRef()}`);
   }
