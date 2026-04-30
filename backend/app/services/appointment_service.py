@@ -631,10 +631,12 @@ class AppointmentService:
 
     def get_public_annonce_context(self, ref: str) -> dict[str, Any]:
         link, dossier = self._resolve_link(ref)
+        link = self._maybe_enrich_link_contacts(link, dossier)
         return self._context_payload(link, dossier)
 
     def get_public_annonce_bootstrap(self, ref: str) -> dict[str, Any]:
         link, dossier = self._resolve_link(ref)
+        link = self._maybe_enrich_link_contacts(link, dossier)
         rule = self._read_slot_rule(link)
         slots = self._generate_slots(link, rule)
         return {
