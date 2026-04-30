@@ -244,6 +244,7 @@ class AppointmentService:
         }
 
     def _context_payload(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
+        agence_nom = link.get("agence_nom") or dossier.get("agence_nom")
         return {
             "token": link.get("token"),
             "publicUrl": self._compose_public_url(str(link.get("token") or "")),
@@ -257,11 +258,12 @@ class AppointmentService:
             "commercialId": link.get("commercial_id") or dossier.get("commercial_id"),
             "commercialName": link.get("commercial_nom") or dossier.get("commercial_nom"),
             "negociateurEmail": link.get("negociateur_email") or dossier.get("negociateur_email"),
-            "agenceNom": link.get("agence_nom") or dossier.get("agence_nom"),
+            "agenceNom": agence_nom,
             "negociateurPhone": link.get("negociateur_phone"),
             "negociateurMobile": link.get("negociateur_mobile"),
             "agencePhone": link.get("agence_phone"),
             "agenceEmail": link.get("agence_email"),
+            "agencyKey": self._build_agency_key(agence_nom),
         }
 
     def _load_contact_details(self, dossier: dict[str, Any]) -> dict[str, Any]:
@@ -358,6 +360,13 @@ class AppointmentService:
         text = re.sub(r"[^a-z0-9]+", "-", text)
         return text.strip("-")
 
+    def _build_agency_key(self, value: Any) -> str:
+        slug = self._normalize_route_key(value)
+        for prefix in ("groupe-gti-", "gti-immobilier-", "gti-"):
+            if slug.startswith(prefix):
+                return slug[len(prefix):] or slug
+        return slug
+
     def _coalesce_text(self, *values: Any) -> str | None:
         for value in values:
             text = str(value or "").strip()
@@ -392,33 +401,51 @@ class AppointmentService:
             raise HTTPException(status_code=404, detail="Agence introuvable pour l'estimation")
         return rows[0]
 
-    def _read_estimation_route(self, route_key: str) -> dict[str, Any] | None:
-        normalized_key = self._normalize_route_key(route_key)
+    def _read_agency_by_key(self, agency_key: str) -> dict[str, Any]:
+        normalized_key = self._build_agency_key(agency_key)
         rows = self._rest_get(
-            "app_estimation_agency_route",
+            "app_agence_directory",
             params={
-                "select": "route_key,agency_id,agency_label,is_active",
-                "is_active": "eq.true",
-                "limit": "200",
-            },
-        )
-        for row in rows:
-            if self._normalize_route_key(row.get("route_key")) == normalized_key:
-                return row
-        return None
-
-    def _read_estimation_negotiators(self, route_key: str) -> list[dict[str, Any]]:
-        rows = self._rest_get(
-            "app_estimation_agency_negotiator",
-            params={
-                "select": "id,route_key,user_id,negotiator_label,negotiator_email,negotiator_phone,is_active,sort_order",
-                "route_key": f"eq.{route_key}",
-                "is_active": "eq.true",
-                "order": "sort_order.asc,id.asc",
+                "select": "id_agence,nom,tel,mail,parent_id",
+                "order": "id_agence.asc",
                 "limit": "100",
             },
         )
-        return rows
+        for row in rows:
+            if self._build_agency_key(row.get("nom")) == normalized_key:
+                return row
+        raise HTTPException(status_code=404, detail="Agence introuvable pour l'estimation")
+
+    def _read_dynamic_agency_negotiators(self, agency: dict[str, Any]) -> list[dict[str, Any]]:
+        agency_name = str(agency.get("nom") or "").strip()
+        if not agency_name:
+            return []
+        rows = self._rest_get(
+            "app_dossiers_current",
+            params={
+                "select": "commercial_id,commercial_nom,negociateur_email,agence_nom",
+                "agence_nom": f"ilike.{agency_name}",
+                "order": "app_dossier_id.desc",
+                "limit": "500",
+            },
+        )
+        by_key: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            commercial_id = str(row.get("commercial_id") or "").strip()
+            commercial_name = str(row.get("commercial_nom") or "").strip()
+            negotiator_email = str(row.get("negociateur_email") or "").strip()
+            if not (commercial_id or negotiator_email or commercial_name):
+                continue
+            key = negotiator_email.lower() or commercial_id or commercial_name.lower()
+            if key in by_key:
+                continue
+            by_key[key] = {
+                "user_id": commercial_id or None,
+                "negotiator_label": commercial_name or None,
+                "negotiator_email": negotiator_email or None,
+                "negotiator_phone": None,
+            }
+        return list(by_key.values())
 
     def _read_estimation_rotation(self, route_key: str) -> dict[str, Any] | None:
         rows = self._rest_get(
@@ -440,8 +467,8 @@ class AppointmentService:
         }
         self._rest_post("app_estimation_agency_rotation", payload=[payload], on_conflict="route_key")
 
-    def _pick_estimation_negotiator(self, route_key: str) -> dict[str, Any] | None:
-        negotiators = self._read_estimation_negotiators(route_key)
+    def _pick_estimation_negotiator(self, route_key: str, agency: dict[str, Any]) -> dict[str, Any] | None:
+        negotiators = self._read_dynamic_agency_negotiators(agency)
         if not negotiators:
             return None
         rotation = self._read_estimation_rotation(route_key)
@@ -510,12 +537,9 @@ class AppointmentService:
             return context, link
 
         if agency_key:
-            route = self._read_estimation_route(agency_key)
-            if not route:
-                raise HTTPException(status_code=404, detail="Route agence introuvable pour l'estimation")
-            stored_route_key = str(route.get("route_key") or "").strip() or self._normalize_route_key(agency_key)
-            agency = self._read_agency_by_id(str(route.get("agency_id") or "").strip())
-            negotiator = self._pick_estimation_negotiator(stored_route_key)
+            stored_route_key = self._build_agency_key(agency_key)
+            agency = self._read_agency_by_key(stored_route_key)
+            negotiator = self._pick_estimation_negotiator(stored_route_key, agency)
             negotiator_details = self._hydrate_estimation_negotiator(negotiator)
             context = {
                 "token": f"estimation-{stored_route_key}",
@@ -530,7 +554,7 @@ class AppointmentService:
                 "commercialId": negotiator_details.get("user_id"),
                 "commercialName": self._coalesce_text(negotiator_details.get("label"), "Un conseiller GTI Immobilier"),
                 "negociateurEmail": self._coalesce_text(negotiator_details.get("email"), agency.get("mail")),
-                "agenceNom": self._coalesce_text(route.get("agency_label"), agency.get("nom")) or "GTI Immobilier",
+                "agenceNom": self._coalesce_text(agency.get("nom")) or "GTI Immobilier",
                 "negociateurPhone": self._coalesce_text(negotiator_details.get("phone"), agency.get("tel")),
                 "negociateurMobile": self._coalesce_text(negotiator_details.get("mobile"), agency.get("tel")),
                 "agencePhone": self._coalesce_text(agency.get("tel")),
