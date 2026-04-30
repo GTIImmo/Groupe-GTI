@@ -453,6 +453,53 @@ class AppointmentService:
         self._write_estimation_rotation(route_key, str(selected.get("user_id") or "").strip() or None, next_count)
         return selected
 
+    def _hydrate_estimation_negotiator(self, negotiator: dict[str, Any] | None) -> dict[str, Any]:
+        details = {
+            "user_id": str((negotiator or {}).get("user_id") or "").strip() or None,
+            "label": self._coalesce_text((negotiator or {}).get("negotiator_label")),
+            "email": self._coalesce_text((negotiator or {}).get("negotiator_email")),
+            "phone": self._coalesce_text((negotiator or {}).get("negotiator_phone")),
+            "mobile": self._coalesce_text((negotiator or {}).get("negotiator_phone")),
+        }
+        if not negotiator:
+            return details
+        user_id = str(negotiator.get("user_id") or "").strip()
+        email = str(negotiator.get("negotiator_email") or "").strip()
+        try:
+            user_rows: list[dict[str, Any]] = []
+            if user_id:
+                user_rows = self._rest_get(
+                    "app_user_directory",
+                    params={
+                        "select": "id_user,display_name,email,tel,portable",
+                        "id_user": f"eq.{user_id}",
+                        "limit": "1",
+                    },
+                )
+            if not user_rows and email:
+                user_rows = self._rest_get(
+                    "app_user_directory",
+                    params={
+                        "select": "id_user,display_name,email,tel,portable",
+                        "email": f"eq.{email}",
+                        "limit": "1",
+                    },
+                )
+            if user_rows:
+                user_row = user_rows[0]
+                details["user_id"] = str(user_row.get("id_user") or details["user_id"] or "").strip() or None
+                details["label"] = self._coalesce_text(user_row.get("display_name"), details["label"])
+                details["email"] = self._coalesce_text(user_row.get("email"), details["email"])
+                details["phone"] = self._coalesce_text(user_row.get("tel"), user_row.get("portable"), details["phone"])
+                details["mobile"] = self._coalesce_text(user_row.get("portable"), user_row.get("tel"), details["mobile"], details["phone"])
+        except Exception:
+            pass
+        if not details["mobile"]:
+            details["mobile"] = details["phone"]
+        if not details["phone"]:
+            details["phone"] = details["mobile"]
+        return details
+
     def _build_estimation_context(self, ref: str | None, agency_key: str | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
         if ref:
             link, dossier = self._resolve_link(ref)
@@ -469,6 +516,7 @@ class AppointmentService:
             stored_route_key = str(route.get("route_key") or "").strip() or self._normalize_route_key(agency_key)
             agency = self._read_agency_by_id(str(route.get("agency_id") or "").strip())
             negotiator = self._pick_estimation_negotiator(stored_route_key)
+            negotiator_details = self._hydrate_estimation_negotiator(negotiator)
             context = {
                 "token": f"estimation-{stored_route_key}",
                 "publicUrl": None,
@@ -479,12 +527,12 @@ class AppointmentService:
                 "typeBien": None,
                 "price": None,
                 "photoUrl": None,
-                "commercialId": str(negotiator.get("user_id") or "").strip() or None if negotiator else None,
-                "commercialName": self._coalesce_text(negotiator.get("negotiator_label") if negotiator else None, "Un conseiller GTI Immobilier"),
-                "negociateurEmail": self._coalesce_text(negotiator.get("negotiator_email") if negotiator else None, agency.get("mail")),
+                "commercialId": negotiator_details.get("user_id"),
+                "commercialName": self._coalesce_text(negotiator_details.get("label"), "Un conseiller GTI Immobilier"),
+                "negociateurEmail": self._coalesce_text(negotiator_details.get("email"), agency.get("mail")),
                 "agenceNom": self._coalesce_text(route.get("agency_label"), agency.get("nom")) or "GTI Immobilier",
-                "negociateurPhone": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
-                "negociateurMobile": self._coalesce_text(negotiator.get("negotiator_phone") if negotiator else None, agency.get("tel")),
+                "negociateurPhone": self._coalesce_text(negotiator_details.get("phone"), agency.get("tel")),
+                "negociateurMobile": self._coalesce_text(negotiator_details.get("mobile"), agency.get("tel")),
                 "agencePhone": self._coalesce_text(agency.get("tel")),
                 "agenceEmail": self._coalesce_text(agency.get("mail")),
                 "pageTitle": "Faire estimer mon bien",
