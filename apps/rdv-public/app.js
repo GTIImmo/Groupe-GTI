@@ -28,10 +28,7 @@
     homeCallAction: $("homeCallAction"),
     homeMailAction: $("homeMailAction"),
     homeSaveContactButton: $("homeSaveContactButton"),
-    listingPhoto: $("listingPhoto"),
-    listingCity: $("listingCity"),
-    listingType: $("listingType"),
-    listingPriceCard: $("listingPriceCard"),
+    visitActionMeta: $("visitActionMeta"),
     commercialName: $("commercialName"),
     commercialNameCard: $("commercialNameCard"),
     commercialPhoneInline: $("commercialPhoneInline"),
@@ -220,12 +217,13 @@
     if (els.commercialName) els.commercialName.textContent = safeContext.commercialName || "Un conseiller GTI Immobilier";
     if (els.commercialNameCard) els.commercialNameCard.textContent = safeContext.commercialName || "Un conseiller GTI Immobilier";
     if (els.agencyName) els.agencyName.textContent = safeContext.agenceNom || "GTI Immobilier";
-    if (els.listingCity) els.listingCity.textContent = safeContext.ville || "Votre secteur";
-    if (els.listingType) els.listingType.textContent = safeContext.typeBien || "Immobilier";
-    if (els.listingPriceCard) els.listingPriceCard.textContent = formatCurrency(safeContext.price);
+    if (els.visitActionMeta && state.mode === "listing") {
+      const refLabel = safeContext.hektorAnnonceId ? `Ref ${safeContext.hektorAnnonceId}` : "Ref";
+      const priceLabel = formatCurrency(safeContext.price);
+      els.visitActionMeta.textContent = [safeContext.typeBien || "Bien", priceLabel, refLabel].filter(Boolean).join(" · ");
+    }
 
     renderImage(els.heroImage, safeContext.photoUrl, title);
-    renderImage(els.listingPhoto, safeContext.photoUrl, title);
     renderContactLink(els.commercialPhoneInline, phone, "");
     renderContactLink(els.commercialPhone, phone, "Telephone · ");
     renderContactLink(els.commercialEmail, safeContext.negociateurEmail, "Email · ");

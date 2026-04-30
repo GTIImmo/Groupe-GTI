@@ -96,10 +96,12 @@ a{color:inherit}
 }
 
 .hero-back-link{
-  padding:10px 14px;
+  padding:11px 16px;
   border-radius:999px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(255,255,255,.08);
+  border:1px solid rgba(230,0,126,.5);
+  background:linear-gradient(135deg, rgba(230,0,126,.9), rgba(255,27,147,.9));
+  color:#fff;
+  box-shadow:0 14px 30px rgba(230,0,126,.24);
   text-decoration:none;
   font-size:13px;
   font-weight:800;
@@ -256,7 +258,8 @@ a{color:inherit}
   color:var(--ink);
   display:flex;
   flex-direction:column;
-  justify-content:space-between;
+  justify-content:flex-start;
+  gap:10px;
   text-align:left;
   text-decoration:none;
   transition:transform .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease;
@@ -342,37 +345,31 @@ a{color:inherit}
 }
 
 .action-label{
-  font-size:1.2rem;
-  line-height:1.05;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:1.34rem;
+  line-height:1;
   font-weight:900;
-  letter-spacing:-.04em;
+  letter-spacing:-.05em;
 }
 
 .action-subtitle{
-  font-size:.88rem;
-  opacity:.76;
+  font-size:.8rem;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  opacity:.72;
 }
 
-.property-card{
-  display:grid;
-  gap:16px;
+.action-meta{
+  margin-top:auto;
+  font-size:.78rem;
+  line-height:1.35;
+  opacity:.82;
 }
 
-.property-visual{
-  overflow:hidden;
-  border-radius:22px;
-  border:1px solid var(--line);
-  background:#18181b;
-  aspect-ratio:4/3;
+.action-tile-link .action-meta,
+.action-tile-accent .action-meta{
+  color:inherit;
 }
-
-.property-photo{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.property-copy{display:grid;gap:12px}
 
 .section-head{
   display:flex;
@@ -387,23 +384,6 @@ a{color:inherit}
   font-size:clamp(1.7rem, 7vw, 2.8rem);
   line-height:.95;
   letter-spacing:-.06em;
-}
-
-.property-tags{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-}
-
-.property-tag{
-  display:inline-flex;
-  align-items:center;
-  padding:10px 14px;
-  border-radius:999px;
-  background:#17171a;
-  border:1px solid var(--line);
-  font-size:.84rem;
-  font-weight:800;
 }
 
 .contact-stack{
