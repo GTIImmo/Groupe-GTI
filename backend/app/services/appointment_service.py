@@ -339,18 +339,12 @@ class AppointmentService:
         return details
 
     def _maybe_enrich_link_contacts(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
-        if any(
-            str(link.get(key) or "").strip()
-            for key in ("negociateur_phone", "negociateur_mobile", "agence_phone", "agence_email")
-        ):
-            return link
-
         details = self._load_contact_details(dossier)
         payload = {
-            "negociateur_phone": details.get("negociateurPhone"),
-            "negociateur_mobile": details.get("negociateurMobile"),
-            "agence_phone": details.get("agencePhone"),
-            "agence_email": details.get("agenceEmail"),
+            "negociateur_phone": details.get("negociateurPhone") or self._coalesce_text(link.get("negociateur_phone")),
+            "negociateur_mobile": details.get("negociateurMobile") or self._coalesce_text(link.get("negociateur_mobile")),
+            "agence_phone": details.get("agencePhone") or self._coalesce_text(link.get("agence_phone")),
+            "agence_email": details.get("agenceEmail") or self._coalesce_text(link.get("agence_email")),
             "updated_at": datetime.now(UTC).isoformat(),
         }
         rows = self._rest_patch(
