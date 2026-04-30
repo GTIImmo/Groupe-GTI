@@ -89,6 +89,13 @@
     return `https://gti-immobilier.fr/admin/pdf.php?lang=fr&idann=${encodeURIComponent(id)}&fiche_type=visite&pdf_orientation=P&pdf_template=1`;
   }
 
+  function configureDownloadAction(context) {
+    const href = buildListingSheetUrl(context && context.hektorAnnonceId);
+    els.downloadAction.setAttribute("href", href || "#");
+    els.downloadAction.classList.toggle("is-disabled", !href);
+    els.downloadAction.setAttribute("aria-disabled", href ? "false" : "true");
+  }
+
   function formatDateTimeRange(slot) {
     if (!slot) return "Choisissez un créneau";
     return `${slot.displayDateLabel || slot.displayDate} à ${slot.displayTime}`;
@@ -143,6 +150,7 @@
     renderContactLink(els.agencyPhone, context.agencePhone, "Téléphone · ");
     renderContactLink(els.agencyEmail, context.agenceEmail, "Email · ");
     renderContactLink(els.callNowButton, phone, "");
+    configureDownloadAction(context);
     if (!phone) {
       els.callNowButton.textContent = "Appeler maintenant";
       els.callNowButton.classList.add("hidden");
@@ -346,16 +354,6 @@
     URL.revokeObjectURL(url);
   }
 
-  function handleDownloadSheet() {
-    if (!state.context) return;
-    const url = buildListingSheetUrl(state.context.hektorAnnonceId);
-    if (!url) {
-      showError("Impossible de retrouver la fiche du bien.");
-      return;
-    }
-    window.open(url, "_blank", "noopener");
-  }
-
   function handleSaveContact() {
     if (!state.context) return;
     const safeRef = String(state.context.hektorAnnonceId || "contact").replace(/[^\w-]+/g, "-");
@@ -425,7 +423,6 @@
   els.visitAction.addEventListener("click", () => scrollToSection(els.visitSection));
   els.contactAction.addEventListener("click", () => scrollToSection(els.contactSection));
   els.estimateAction.addEventListener("click", () => scrollToSection(els.estimateSection));
-  els.downloadAction.addEventListener("click", handleDownloadSheet);
   els.saveContactButton.addEventListener("click", handleSaveContact);
   els.estimateForm.addEventListener("submit", handleEstimateSubmit);
 
