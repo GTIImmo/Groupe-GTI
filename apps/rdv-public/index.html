@@ -152,8 +152,22 @@
           <span id="slotRuleLabel" class="rule-chip">Disponibilites</span>
         </div>
 
-        <div id="dayList" class="calendar-wrap"></div>
-        <div id="slotList" class="slot-grid"></div>
+        <div class="calendar-shell">
+          <div class="calendar-toolbar">
+            <button id="monthPrevButton" class="calendar-nav-button" type="button" aria-label="Mois precedent">‹</button>
+            <strong id="monthLabel" class="calendar-month-label">Mois</strong>
+            <button id="monthNextButton" class="calendar-nav-button" type="button" aria-label="Mois suivant">›</button>
+          </div>
+          <div id="dayList" class="calendar-wrap"></div>
+        </div>
+
+        <div class="slots-shell">
+          <div class="slots-head">
+            <span class="selection-label">Creneaux disponibles</span>
+            <strong id="selectedDayLabel" class="slots-day-label">Choisissez un jour</strong>
+          </div>
+          <div id="slotList" class="slot-grid hidden"></div>
+        </div>
 
         <div class="selection-box">
           <span class="selection-label">Creneau selectionne</span>

@@ -8,9 +8,10 @@
     slots: [],
     selectedSlot: null,
     selectedDayKey: null,
+    selectedMonthKey: null,
     mode: pageType,
   };
-  const WEEKDAY_SHORT = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
+  const WEEKDAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   const els = {
     loadingPanel: $("loadingPanel"),
@@ -48,8 +49,12 @@
     visitSection: $("visitSection"),
     contactSection: $("contactSection"),
     slotRuleLabel: $("slotRuleLabel"),
+    monthPrevButton: $("monthPrevButton"),
+    monthNextButton: $("monthNextButton"),
+    monthLabel: $("monthLabel"),
     dayList: $("dayList"),
     slotList: $("slotList"),
+    selectedDayLabel: $("selectedDayLabel"),
     selectedSlotLabel: $("selectedSlotLabel"),
     appointmentForm: $("appointmentForm"),
     submitButton: $("submitButton"),
@@ -268,6 +273,10 @@
     return Array.from(groups.values());
   }
 
+  function toMonthKey(value) {
+    return String(value || "").slice(0, 7);
+  }
+
   function formatDateTimeRange(slot) {
     if (!slot) return "Choisissez un creneau";
     return `${slot.displayDateLabel || slot.displayDate} a ${slot.displayTime}`;
@@ -287,11 +296,16 @@
     if (!els.slotList) return;
     const daySlots = state.slots.filter((slot) => (slot.dateKey || slot.displayDateLabel) === state.selectedDayKey);
     els.slotList.innerHTML = "";
+    els.slotList.classList.remove("hidden");
+    if (els.selectedDayLabel) {
+      const selectedDay = daySlots[0];
+      els.selectedDayLabel.textContent = selectedDay ? (selectedDay.displayDateLabel || selectedDay.displayDate || "Jour choisi") : "Choisissez un jour";
+    }
 
     if (!daySlots.length) {
       const empty = document.createElement("p");
       empty.className = "slot-empty";
-      empty.textContent = "Aucun creneau disponible pour ce jour.";
+      empty.textContent = "Aucun creneau pour ce jour.";
       els.slotList.appendChild(empty);
       return;
     }
@@ -316,6 +330,7 @@
 
   function selectDay(dayKey) {
     state.selectedDayKey = dayKey;
+    state.selectedMonthKey = toMonthKey(dayKey);
     state.selectedSlot = null;
     if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un creneau";
     if (els.submitButton) els.submitButton.disabled = true;
@@ -329,7 +344,8 @@
   function monthTitleFromKey(key, sampleDay) {
     if (!key) return sampleDay && sampleDay.monthLabel ? sampleDay.monthLabel : "";
     const parts = key.split("-");
-    return `${sampleDay && sampleDay.monthLabel ? sampleDay.monthLabel : ""} ${parts[0]}`;
+    const monthName = sampleDay && sampleDay.monthLabel ? sampleDay.monthLabel : "";
+    return `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${parts[0]}`;
   }
 
   function weekdayOffset(dateKey) {
@@ -350,52 +366,53 @@
   function renderCalendar(days) {
     if (!els.dayList) return;
     els.dayList.innerHTML = "";
-    groupDaysByMonth(days).forEach(([monthKey, monthDays]) => {
-      const month = document.createElement("section");
-      month.className = "calendar-month";
+    const months = groupDaysByMonth(days);
+    if (!months.length) return;
+    if (!state.selectedMonthKey || !months.some(([monthKey]) => monthKey === state.selectedMonthKey)) {
+      state.selectedMonthKey = months[0][0];
+    }
+    const monthIndex = months.findIndex(([monthKey]) => monthKey === state.selectedMonthKey);
+    const monthDays = monthIndex >= 0 ? months[monthIndex][1] : months[0][1];
 
-      const title = document.createElement("h3");
-      title.className = "calendar-title";
-      title.textContent = monthTitleFromKey(monthKey, monthDays[0]);
-      month.appendChild(title);
+    if (els.monthLabel) els.monthLabel.textContent = monthTitleFromKey(state.selectedMonthKey, monthDays[0]);
+    if (els.monthPrevButton) els.monthPrevButton.disabled = monthIndex <= 0;
+    if (els.monthNextButton) els.monthNextButton.disabled = monthIndex >= months.length - 1;
 
-      const weekdays = document.createElement("div");
-      weekdays.className = "calendar-weekdays";
-      WEEKDAY_SHORT.forEach((label) => {
-        const item = document.createElement("span");
-        item.className = "calendar-weekday";
-        item.textContent = label;
-        weekdays.appendChild(item);
-      });
-      month.appendChild(weekdays);
-
-      const grid = document.createElement("div");
-      grid.className = "calendar-grid";
-      const offset = weekdayOffset(monthDays[0] && monthDays[0].dayKey);
-      for (let index = 0; index < offset; index += 1) {
-        const filler = document.createElement("span");
-        filler.className = "calendar-filler";
-        grid.appendChild(filler);
-      }
-
-      monthDays.forEach((day) => {
-        const availableCount = day.slots.filter((slot) => slot.available).length;
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "day-button";
-        button.dataset.dayKey = day.dayKey;
-        button.innerHTML = [
-          `<span class="day-name">${day.weekdayLabel || ""}</span>`,
-          `<span class="day-number">${day.dayNumber || ""}</span>`,
-          `<span class="day-count">${availableCount} libre${availableCount > 1 ? "s" : ""}</span>`,
-        ].join("");
-        button.addEventListener("click", () => selectDay(day.dayKey));
-        grid.appendChild(button);
-      });
-
-      month.appendChild(grid);
-      els.dayList.appendChild(month);
+    const weekdays = document.createElement("div");
+    weekdays.className = "calendar-weekdays";
+    WEEKDAY_SHORT.forEach((label) => {
+      const item = document.createElement("span");
+      item.className = "calendar-weekday";
+      item.textContent = label;
+      weekdays.appendChild(item);
     });
+    els.dayList.appendChild(weekdays);
+
+    const grid = document.createElement("div");
+    grid.className = "calendar-grid";
+    const offset = weekdayOffset(monthDays[0] && monthDays[0].dayKey);
+    for (let index = 0; index < offset; index += 1) {
+      const filler = document.createElement("span");
+      filler.className = "calendar-filler";
+      grid.appendChild(filler);
+    }
+
+    monthDays.forEach((day) => {
+      const availableCount = day.slots.filter((slot) => slot.available).length;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "day-button";
+      if (day.dayKey === state.selectedDayKey) button.classList.add("is-selected");
+      button.dataset.dayKey = day.dayKey;
+      button.innerHTML = [
+        `<span class="day-number">${day.dayNumber || ""}</span>`,
+        `<span class="day-dot${availableCount ? " is-active" : ""}"></span>`,
+      ].join("");
+      button.addEventListener("click", () => selectDay(day.dayKey));
+      grid.appendChild(button);
+    });
+
+    els.dayList.appendChild(grid);
   }
 
   function renderAgenda(rule, slots) {
@@ -411,7 +428,9 @@
     if (els.estimateSubmitButton) els.estimateSubmitButton.disabled = true;
     if (!els.slotList) return;
     els.slotList.innerHTML = "";
+    els.slotList.classList.add("hidden");
     if (els.dayList) els.dayList.innerHTML = "";
+    if (els.selectedDayLabel) els.selectedDayLabel.textContent = "Choisissez un jour";
 
     if (!state.slots.length) {
       const empty = document.createElement("p");
@@ -422,9 +441,28 @@
     }
 
     const days = groupSlotsByDay(state.slots);
+    state.selectedMonthKey = toMonthKey(days[0] && days[0].dayKey);
     renderCalendar(days);
-    state.selectedDayKey = days[0] ? days[0].dayKey : null;
-    if (state.selectedDayKey) selectDay(state.selectedDayKey);
+    state.selectedDayKey = null;
+  }
+
+  function shiftMonth(direction) {
+    const days = groupSlotsByDay(state.slots);
+    const months = groupDaysByMonth(days);
+    if (!months.length) return;
+    const currentIndex = months.findIndex(([monthKey]) => monthKey === state.selectedMonthKey);
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= months.length) return;
+    state.selectedMonthKey = months[targetIndex][0];
+    state.selectedDayKey = null;
+    state.selectedSlot = null;
+    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    if (els.selectedDayLabel) els.selectedDayLabel.textContent = "Choisissez un jour";
+    if (els.slotList) {
+      els.slotList.innerHTML = "";
+      els.slotList.classList.add("hidden");
+    }
+    renderCalendar(days);
   }
 
   function scrollToSection(section) {
@@ -591,6 +629,8 @@
 
   addListener(els.visitAction, "click", () => scrollToSection(els.visitSection));
   addListener(els.contactAction, "click", () => scrollToSection(els.contactSection));
+  addListener(els.monthPrevButton, "click", () => shiftMonth(-1));
+  addListener(els.monthNextButton, "click", () => shiftMonth(1));
   addListener(els.homeSaveContactButton, "click", handleSaveContact);
   addListener(els.saveContactButton, "click", handleSaveContact);
   addListener(els.appointmentForm, "submit", handleVisitSubmit);
