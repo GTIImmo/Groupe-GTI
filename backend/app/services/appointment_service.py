@@ -485,6 +485,8 @@ class AppointmentService:
         now = datetime.now(PARIS_TZ)
         min_delay = int(rule.get("min_delay_hours") or 36)
         days_ahead = int(rule.get("days_ahead") or 21)
+        # Keep the public calendar navigable across at least two months.
+        effective_days_ahead = max(days_ahead, 45)
         slot_minutes = int(rule.get("slot_minutes") or 30)
         day_start_hour = int(rule.get("day_start_hour") or 9)
         day_end_hour = int(rule.get("day_end_hour") or 18)
@@ -497,7 +499,7 @@ class AppointmentService:
         seed = str(link.get("token") or link.get("hektor_annonce_id") or "")
         slots: list[dict[str, Any]] = []
 
-        for offset in range(days_ahead + 1):
+        for offset in range(effective_days_ahead + 1):
             day = (earliest + timedelta(days=offset)).date()
             weekday = day.weekday()
             if weekday == 5 and not allow_saturday:
