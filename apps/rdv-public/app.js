@@ -16,13 +16,9 @@
     contentPanel: $("contentPanel"),
     heroImage: $("heroImage"),
     listingPhoto: $("listingPhoto"),
-    listingTitle: $("listingTitle"),
-    propertyTitle: $("propertyTitle"),
-    listingMeta: $("listingMeta"),
     listingCity: $("listingCity"),
     listingType: $("listingType"),
-    listingPrice: $("listingPrice"),
-    propertyLead: $("propertyLead"),
+    listingPriceCard: $("listingPriceCard"),
     commercialName: $("commercialName"),
     commercialNameCard: $("commercialNameCard"),
     commercialPhoneInline: $("commercialPhoneInline"),
@@ -87,6 +83,12 @@
       : "Prix sur demande";
   }
 
+  function buildListingSheetUrl(annonceId) {
+    const id = String(annonceId || "").trim();
+    if (!id) return "";
+    return `https://gti-immobilier.fr/admin/pdf.php?lang=fr&idann=${encodeURIComponent(id)}&fiche_type=visite&pdf_orientation=P&pdf_template=1`;
+  }
+
   function formatDateTimeRange(slot) {
     if (!slot) return "Choisissez un créneau";
     return `${slot.displayDateLabel || slot.displayDate} à ${slot.displayTime}`;
@@ -126,13 +128,9 @@
 
     state.context = context;
     document.title = `${title} | GTI Immobilier`;
-    els.listingTitle.textContent = title;
-    els.propertyTitle.textContent = title;
-    els.listingMeta.textContent = `${city} · ${type}`;
     els.listingCity.textContent = city;
     els.listingType.textContent = type;
-    els.listingPrice.textContent = price;
-    els.propertyLead.textContent = `Découvrez ce ${type.toLowerCase()} à ${city} et échangez directement avec votre conseiller GTI.`;
+    els.listingPriceCard.textContent = price;
     els.commercialName.textContent = context.commercialName || "Votre conseiller GTI";
     els.commercialNameCard.textContent = context.commercialName || "Votre conseiller GTI";
     els.agencyName.textContent = context.agenceNom || "Agence GTI Immobilier";
@@ -271,7 +269,7 @@
 
     if (!daySlots.length) {
       const empty = document.createElement("p");
-      empty.className = "property-lead";
+      empty.className = "slot-empty";
       empty.textContent = "Aucun créneau disponible pour ce jour.";
       els.slotList.appendChild(empty);
       return;
@@ -306,7 +304,7 @@
 
     if (!state.slots.length) {
       const empty = document.createElement("p");
-      empty.className = "property-lead";
+      empty.className = "slot-empty";
       empty.textContent = "Aucun créneau disponible pour le moment.";
       els.slotList.appendChild(empty);
       return;
@@ -350,24 +348,12 @@
 
   function handleDownloadSheet() {
     if (!state.context) return;
-    const context = state.context;
-    const lines = [
-      `GTI Immobilier`,
-      `${context.title || "Bien immobilier"}`,
-      `${context.ville || ""} · ${context.typeBien || ""}`,
-      `${formatCurrency(context.price)}`,
-      ``,
-      `Conseiller : ${context.commercialName || "-"}`,
-      `Téléphone : ${context.negociateurMobile || context.negociateurPhone || "-"}`,
-      `Email : ${context.negociateurEmail || "-"}`,
-      `Agence : ${context.agenceNom || "-"}`,
-      `Téléphone agence : ${context.agencePhone || "-"}`,
-      `Email agence : ${context.agenceEmail || "-"}`,
-      ``,
-      `Lien : ${window.location.href}`,
-    ];
-    const safeRef = String(context.hektorAnnonceId || "bien").replace(/[^\w-]+/g, "-");
-    downloadBlob(`fiche-bien-${safeRef}.txt`, lines.join("\n"), "text/plain;charset=utf-8");
+    const url = buildListingSheetUrl(state.context.hektorAnnonceId);
+    if (!url) {
+      showError("Impossible de retrouver la fiche du bien.");
+      return;
+    }
+    window.open(url, "_blank", "noopener");
   }
 
   function handleSaveContact() {
