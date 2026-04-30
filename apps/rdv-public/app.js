@@ -24,6 +24,7 @@
     heroSplash: $("heroSplash"),
     heroSplashTitle: $("heroSplashTitle"),
     heroSplashCopy: $("heroSplashCopy"),
+    heroEstimateAction: document.querySelector(".hero-splash-actions .hero-cta-primary"),
     heroContact: $("heroContact"),
     heroCallCta: $("heroCallCta"),
     homeCallAction: $("homeCallAction"),
@@ -208,6 +209,9 @@
   }
 
   function configureEstimateAction() {
+    if (els.heroEstimateAction) {
+      els.heroEstimateAction.setAttribute("href", `./estimation.html${buildQueryRef()}`);
+    }
     if (els.homeEstimateAction) {
       els.homeEstimateAction.setAttribute("href", `./estimation.html${buildQueryRef()}`);
     }
