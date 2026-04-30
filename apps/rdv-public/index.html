@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GTI Immobilier | Bien immobilier</title>
+  <title>GTI Immobilier | Rendez-vous</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body data-api-base="https://gti-backend-xlyf.onrender.com">
+<body data-api-base="https://gti-backend-xlyf.onrender.com" data-page="listing">
   <main class="page-shell">
     <section class="hero-card">
       <div class="hero-media">
@@ -19,7 +19,17 @@
           <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
         </div>
 
-        <div class="hero-contact">
+        <div id="heroSplash" class="hero-splash hidden">
+          <p class="hero-kicker">GTI Immobilier</p>
+          <h1 id="heroSplashTitle">Vos rendez-vous immobiliers</h1>
+          <p id="heroSplashCopy" class="hero-splash-copy">Prenez contact, planifiez une visite ou lancez une demande d'estimation en quelques secondes.</p>
+          <div class="hero-splash-actions">
+            <a class="hero-cta hero-cta-primary" href="./estimation.html">Faire estimer mon bien</a>
+            <a id="heroCallCta" class="hero-cta hero-cta-ghost hidden" href="#">Parler a un conseiller</a>
+          </div>
+        </div>
+
+        <div id="heroContact" class="hero-contact">
           <p class="hero-contact-label">Votre conseiller</p>
           <strong id="commercialName">-</strong>
           <a id="commercialPhoneInline" class="hero-contact-link hidden" href="#"></a>
@@ -31,35 +41,62 @@
       <div class="status-spinner" aria-hidden="true"></div>
       <div>
         <strong>Chargement</strong>
-        <p>Préparation du bien et des disponibilités.</p>
+        <p>Preparation de votre experience GTI.</p>
       </div>
     </section>
 
     <section class="status-card status-card-error hidden" id="errorPanel">
       <div>
-        <strong>Impossible de charger ce bien</strong>
-        <p id="errorMessage">Vérifiez le QR code ou réessayez plus tard.</p>
+        <strong>Impossible de charger cette page</strong>
+        <p id="errorMessage">Verifiez le lien ou reessayez plus tard.</p>
       </div>
+    </section>
+
+    <section class="home-stack hidden" id="homePanel">
+      <article class="panel panel-home-intro reveal">
+        <p class="section-kicker">Accueil</p>
+        <h2>Choisissez votre prochaine action</h2>
+        <p class="panel-copy">Une visite, une estimation ou un simple echange avec un conseiller GTI.</p>
+      </article>
+
+      <section class="action-grid action-grid-home">
+        <a class="action-tile action-tile-primary action-tile-link" href="./estimation.html">
+          <span class="action-label">Faire estimer mon bien</span>
+          <span class="action-subtitle">Rendez-vous estimation</span>
+        </a>
+        <a id="homeCallAction" class="action-tile action-tile-link hidden" href="#">
+          <span class="action-label">Contacter un conseiller</span>
+          <span class="action-subtitle">Appel immediat</span>
+        </a>
+        <a id="homeMailAction" class="action-tile action-tile-link hidden" href="#">
+          <span class="action-label">Ecrire a l'agence</span>
+          <span class="action-subtitle">Demande rapide</span>
+        </a>
+        <button id="homeSaveContactButton" class="action-tile action-tile-accent" type="button">
+          <span class="action-label">Ajouter GTI a mes contacts</span>
+          <span class="action-subtitle">Carte de contact</span>
+        </button>
+      </section>
     </section>
 
     <section class="content-stack hidden" id="contentPanel">
       <section class="action-grid">
         <button id="visitAction" class="action-tile action-tile-primary" type="button">
           <span class="action-label">Visiter ce bien</span>
-          <span class="action-subtitle">Choisir un créneau</span>
+          <span class="action-subtitle">Choisir un creneau</span>
         </button>
         <a id="downloadAction" class="action-tile" href="#" target="_blank" rel="noopener">
-          <span class="action-label">Télécharger la fiche</span>
+          <span class="action-label">Telecharger la fiche</span>
           <span class="action-subtitle">Version mobile</span>
         </a>
         <button id="contactAction" class="action-tile" type="button">
-          <span class="action-label">Contacter le négociateur</span>
+          <span class="action-label">Contacter le negociateur</span>
           <span class="action-subtitle">Appel et contact</span>
         </button>
-        <button id="estimateAction" class="action-tile action-tile-accent" type="button">
+        <a id="estimateAction" class="action-tile action-tile-accent action-tile-link" href="./estimation.html">
           <span class="action-label">Faire estimer mon bien</span>
-          <span class="action-subtitle">Recevoir un avis</span>
-        </button>
+          <span class="action-subtitle">Rendez-vous estimation</span>
+        </a>
       </section>
 
       <article class="panel panel-property reveal">
@@ -102,7 +139,7 @@
 
         <div class="dual-actions">
           <a id="callNowButton" class="button-strong hidden" href="#">Appeler maintenant</a>
-          <button id="saveContactButton" class="button-ghost" type="button">Ajouter à mes contacts</button>
+          <button id="saveContactButton" class="button-ghost" type="button">Ajouter a mes contacts</button>
         </div>
       </article>
 
@@ -112,15 +149,15 @@
             <p class="section-kicker">Visite</p>
             <h2>Choisir un rendez-vous</h2>
           </div>
-          <span id="slotRuleLabel" class="rule-chip">Disponibilités</span>
+          <span id="slotRuleLabel" class="rule-chip">Disponibilites</span>
         </div>
 
         <div id="dayList" class="calendar-wrap"></div>
         <div id="slotList" class="slot-grid"></div>
 
         <div class="selection-box">
-          <span class="selection-label">Créneau sélectionné</span>
-          <strong id="selectedSlotLabel" class="selection-value">Choisissez un créneau</strong>
+          <span class="selection-label">Creneau selectionne</span>
+          <strong id="selectedSlotLabel" class="selection-value">Choisissez un creneau</strong>
         </div>
 
         <form id="appointmentForm" class="form-grid">
@@ -129,7 +166,7 @@
             <input id="clientName" name="clientName" type="text" required maxlength="160" placeholder="Votre nom" />
           </label>
           <label class="field">
-            <span>Téléphone</span>
+            <span>Telephone</span>
             <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
           </label>
           <label class="field field-full">
@@ -137,8 +174,8 @@
             <input id="clientEmail" name="clientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
           </label>
           <label class="field field-full">
-            <span>Précision</span>
-            <textarea id="clientMessage" name="clientMessage" rows="4" maxlength="4000" placeholder="Indiquez une précision utile si besoin."></textarea>
+            <span>Precision</span>
+            <textarea id="clientMessage" name="clientMessage" rows="4" maxlength="4000" placeholder="Indiquez une precision utile si besoin."></textarea>
           </label>
           <div class="field-full">
             <button id="submitButton" type="submit" class="button-primary" disabled>Confirmer la visite</button>
@@ -146,40 +183,8 @@
         </form>
 
         <div id="successPanel" class="success-box hidden">
-          <strong>Demande envoyée</strong>
+          <strong>Demande envoyee</strong>
           <p>Votre conseiller vous recontacte rapidement.</p>
-        </div>
-      </article>
-
-      <article class="panel panel-estimate reveal" id="estimateSection">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">Estimation</p>
-            <h2>Faire estimer mon bien</h2>
-          </div>
-        </div>
-
-        <form id="estimateForm" class="form-grid">
-          <label class="field field-full">
-            <span>Adresse du bien</span>
-            <input id="estimateAddress" name="estimateAddress" type="text" required maxlength="240" placeholder="Adresse du bien à estimer" />
-          </label>
-          <label class="field">
-            <span>Nom</span>
-            <input id="estimateName" name="estimateName" type="text" required maxlength="160" placeholder="Votre nom" />
-          </label>
-          <label class="field">
-            <span>Téléphone</span>
-            <input id="estimatePhone" name="estimatePhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
-          </label>
-          <div class="field-full">
-            <button id="estimateSubmitButton" type="submit" class="button-primary button-primary-accent">Recevoir mon estimation</button>
-          </div>
-        </form>
-
-        <div id="estimateSuccessPanel" class="success-box hidden">
-          <strong>Demande préparée</strong>
-          <p>Votre message est prêt à être envoyé à l’agence.</p>
         </div>
       </article>
     </section>

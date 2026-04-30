@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 import requests
 from fastapi import HTTPException
 
-from ..models import AppointmentRequestCreatePayload
+from ..models import AppointmentRequestCreatePayload, EstimationRequestCreatePayload
 from ..services.notification_service import NotificationService
 from ..settings import Settings
 
@@ -235,6 +235,13 @@ class AppointmentService:
             return None
         return f"{base}/rdv/annonce/{token}"
 
+    def _serialize_rule(self, rule: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "minDelayHours": int(rule.get("min_delay_hours") or 36),
+            "daysAhead": int(rule.get("days_ahead") or 21),
+            "slotMinutes": int(rule.get("slot_minutes") or 30),
+        }
+
     def _context_payload(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
         return {
             "token": link.get("token"),
@@ -351,6 +358,57 @@ class AppointmentService:
                 return text
         return None
 
+    def _read_default_agency_row(self) -> dict[str, Any]:
+        rows = self._rest_get(
+            "app_agence_directory",
+            params={
+                "select": "id_agence,nom,tel,mail",
+                "order": "id_agence.asc",
+                "limit": "25",
+            },
+        )
+        if not rows:
+            raise HTTPException(status_code=500, detail="Aucune agence disponible pour l'estimation")
+        preferred = next((row for row in rows if "gti" in self._normalize_text(row.get("nom"))), None)
+        return preferred or rows[0]
+
+    def _build_estimation_context(self, ref: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
+        if ref:
+            link, dossier = self._resolve_link(ref)
+            link = self._maybe_enrich_link_contacts(link, dossier)
+            context = self._context_payload(link, dossier)
+            context["pageTitle"] = "Faire estimer mon bien"
+            context["pageIntro"] = "Prenez rendez-vous avec votre conseiller pour une estimation confidentielle."
+            return context, link
+
+        agency = self._read_default_agency_row()
+        generic_link = {
+            "token": "estimation",
+            "commercial_id": None,
+        }
+        context = {
+            "token": "estimation",
+            "publicUrl": None,
+            "hektorAnnonceId": None,
+            "appDossierId": None,
+            "title": "Estimer mon bien",
+            "ville": None,
+            "typeBien": None,
+            "price": None,
+            "photoUrl": None,
+            "commercialId": None,
+            "commercialName": "Un conseiller GTI Immobilier",
+            "negociateurEmail": self._coalesce_text(agency.get("mail")),
+            "agenceNom": self._coalesce_text(agency.get("nom")) or "GTI Immobilier",
+            "negociateurPhone": self._coalesce_text(agency.get("tel")),
+            "negociateurMobile": self._coalesce_text(agency.get("tel")),
+            "agencePhone": self._coalesce_text(agency.get("tel")),
+            "agenceEmail": self._coalesce_text(agency.get("mail")),
+            "pageTitle": "Faire estimer mon bien",
+            "pageIntro": "Choisissez un rendez-vous pour echanger avec GTI Immobilier sur la valeur de votre bien.",
+        }
+        return context, generic_link
+
     def _extract_phone_from_text(self, texts: list[str]) -> str | None:
         for text in texts:
             matches = re.findall(r"(?:\+33|0)[\d .-]{8,}", text)
@@ -387,11 +445,17 @@ class AppointmentService:
         slots = self._generate_slots(link, rule)
         return {
             "context": self._context_payload(link, dossier),
-            "rule": {
-                "minDelayHours": int(rule.get("min_delay_hours") or 36),
-                "daysAhead": int(rule.get("days_ahead") or 21),
-                "slotMinutes": int(rule.get("slot_minutes") or 30),
-            },
+            "rule": self._serialize_rule(rule),
+            "slots": slots,
+        }
+
+    def get_public_estimation_bootstrap(self, ref: str | None) -> dict[str, Any]:
+        context, link = self._build_estimation_context(ref.strip() if ref else None)
+        rule = self._read_slot_rule(link)
+        slots = self._generate_slots(link, rule)
+        return {
+            "context": context,
+            "rule": self._serialize_rule(rule),
             "slots": slots,
         }
 
@@ -400,11 +464,7 @@ class AppointmentService:
         rule = self._read_slot_rule(link)
         slots = self._generate_slots(link, rule)
         return {
-            "rule": {
-                "minDelayHours": int(rule.get("min_delay_hours") or 36),
-                "daysAhead": int(rule.get("days_ahead") or 21),
-                "slotMinutes": int(rule.get("slot_minutes") or 30),
-            },
+            "rule": self._serialize_rule(rule),
             "slots": slots,
         }
 
@@ -670,6 +730,66 @@ class AppointmentService:
             "ok": True,
             "requestId": created["id"],
             "status": created["request_status"],
+        }
+
+    def create_public_estimation_request(self, ref: str | None, payload: EstimationRequestCreatePayload) -> dict[str, Any]:
+        context, link = self._build_estimation_context(ref.strip() if ref else None)
+        recipient = self._coalesce_text(context.get("negociateurEmail"), context.get("agenceEmail"))
+        if not recipient:
+            raise HTTPException(status_code=400, detail="Aucun email disponible pour traiter la demande d'estimation")
+
+        requested_start = self._parse_client_datetime(payload.requestedStartAt)
+        requested_end = self._parse_client_datetime(payload.requestedEndAt) if payload.requestedEndAt else None
+        valid_slots = {
+            slot["startAt"]: slot
+            for slot in self._generate_slots(link, self._read_slot_rule(link))
+            if slot.get("available")
+        }
+        start_key = requested_start.astimezone(UTC).isoformat()
+        if start_key not in valid_slots:
+            raise HTTPException(status_code=400, detail="Le creneau demande n'est plus disponible")
+        if requested_end is None:
+            requested_end = self._parse_client_datetime(valid_slots[start_key]["endAt"])
+
+        start_local = requested_start.astimezone(PARIS_TZ)
+        end_local = requested_end.astimezone(PARIS_TZ)
+        subject = "Nouvelle demande d'estimation"
+        if context.get("hektorAnnonceId"):
+            subject = f"{subject} - suite a l'annonce {context.get('hektorAnnonceId')}"
+
+        lines = [
+            "Une demande d'estimation a ete envoyee depuis le module public GTI.",
+            "",
+            f"Motif : Demande d'estimation",
+            f"Adresse du bien a estimer : {payload.propertyAddress}",
+            f"Client : {payload.clientName}",
+            f"Telephone : {payload.clientPhone}",
+            f"Email : {payload.clientEmail or '-'}",
+            f"Creneau souhaite : {start_local.strftime('%d/%m/%Y %H:%M')} - {end_local.strftime('%H:%M')}",
+            f"Message : {payload.message or 'Sans message'}",
+        ]
+        if context.get("hektorAnnonceId"):
+            lines.extend(
+                [
+                    "",
+                    f"Annonce source : {context.get('hektorAnnonceId')}",
+                    f"Conseiller source : {context.get('commercialName') or '-'}",
+                ]
+            )
+
+        self.notification_service.send_diffusion_decision(
+            {
+                "to": recipient,
+                "subject": subject,
+                "bodyText": "\n".join(lines),
+                "fromName": "GTI Estimation",
+                "replyTo": payload.clientEmail,
+            }
+        )
+
+        return {
+            "ok": True,
+            "status": "sent",
         }
 
     def _parse_client_datetime(self, value: str) -> datetime:

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GTI Immobilier | Estimer mon bien</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-api-base="https://gti-backend-xlyf.onrender.com" data-page="estimation">
+  <main class="page-shell">
+    <section class="hero-card hero-card-estimation">
+      <div class="hero-media">
+        <img id="heroImage" class="hero-image hidden" src="" alt="Illustration estimation" loading="lazy" decoding="async" />
+        <div class="hero-overlay"></div>
+      </div>
+
+      <div class="hero-body">
+        <div class="hero-topbar">
+          <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
+          <a class="hero-back-link" href="./index.html">Retour</a>
+        </div>
+
+        <div id="heroSplash" class="hero-splash">
+          <p class="hero-kicker">Estimation GTI</p>
+          <h1 id="heroSplashTitle">Planifier une estimation</h1>
+          <p id="heroSplashCopy" class="hero-splash-copy">Choisissez un rendez-vous pour echanger avec un conseiller GTI sur la valeur de votre bien.</p>
+        </div>
+
+        <div id="heroContact" class="hero-contact">
+          <p class="hero-contact-label">Votre conseiller</p>
+          <strong id="commercialName">-</strong>
+          <a id="commercialPhoneInline" class="hero-contact-link hidden" href="#"></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="status-card hidden" id="loadingPanel">
+      <div class="status-spinner" aria-hidden="true"></div>
+      <div>
+        <strong>Chargement</strong>
+        <p>Preparation de votre rendez-vous d'estimation.</p>
+      </div>
+    </section>
+
+    <section class="status-card status-card-error hidden" id="errorPanel">
+      <div>
+        <strong>Impossible de charger cette page</strong>
+        <p id="errorMessage">Reessayez plus tard.</p>
+      </div>
+    </section>
+
+    <section class="content-stack hidden" id="contentPanel">
+      <section class="action-grid action-grid-estimation">
+        <button id="visitAction" class="action-tile action-tile-primary" type="button">
+          <span class="action-label">Prendre rendez-vous</span>
+          <span class="action-subtitle">Choisir un creneau</span>
+        </button>
+        <button id="contactAction" class="action-tile" type="button">
+          <span class="action-label">Parler au conseiller</span>
+          <span class="action-subtitle">Appel et contact</span>
+        </button>
+      </section>
+
+      <article class="panel panel-contact reveal" id="contactSection">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Contact</p>
+            <h2>Votre interlocuteur</h2>
+          </div>
+        </div>
+
+        <div class="contact-stack">
+          <div class="contact-card">
+            <span class="contact-label">Conseiller</span>
+            <strong id="commercialNameCard">-</strong>
+            <a id="commercialPhone" class="contact-link hidden" href="#"></a>
+            <a id="commercialEmail" class="contact-link hidden" href="#"></a>
+          </div>
+          <div class="contact-card">
+            <span class="contact-label">Agence</span>
+            <strong id="agencyName">-</strong>
+            <a id="agencyPhone" class="contact-link hidden" href="#"></a>
+            <a id="agencyEmail" class="contact-link hidden" href="#"></a>
+          </div>
+        </div>
+
+        <div class="dual-actions">
+          <a id="callNowButton" class="button-strong hidden" href="#">Appeler maintenant</a>
+          <button id="saveContactButton" class="button-ghost" type="button">Ajouter a mes contacts</button>
+        </div>
+      </article>
+
+      <article class="panel panel-visit panel-estimation-booking reveal" id="visitSection">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Estimation</p>
+            <h2>Choisir un rendez-vous</h2>
+          </div>
+          <span id="slotRuleLabel" class="rule-chip">Agenda estimation</span>
+        </div>
+
+        <div id="dayList" class="calendar-wrap"></div>
+        <div id="slotList" class="slot-grid"></div>
+
+        <div class="selection-box">
+          <span class="selection-label">Creneau selectionne</span>
+          <strong id="selectedSlotLabel" class="selection-value">Choisissez un creneau</strong>
+        </div>
+
+        <form id="estimateAppointmentForm" class="form-grid">
+          <label class="field field-full">
+            <span>Adresse du bien</span>
+            <input id="estimatePropertyAddress" name="estimatePropertyAddress" type="text" required maxlength="240" placeholder="Adresse du bien a estimer" />
+          </label>
+          <label class="field">
+            <span>Nom</span>
+            <input id="estimateClientName" name="estimateClientName" type="text" required maxlength="160" placeholder="Votre nom" />
+          </label>
+          <label class="field">
+            <span>Telephone</span>
+            <input id="estimateClientPhone" name="estimateClientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
+          </label>
+          <label class="field field-full">
+            <span>Email</span>
+            <input id="estimateClientEmail" name="estimateClientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
+          </label>
+          <label class="field field-full">
+            <span>Precision</span>
+            <textarea id="estimateClientMessage" name="estimateClientMessage" rows="4" maxlength="4000" placeholder="Surface, type de bien, disponibilites..."></textarea>
+          </label>
+          <div class="field-full">
+            <button id="estimateSubmitButton" type="submit" class="button-primary button-primary-accent" disabled>Confirmer le rendez-vous</button>
+          </div>
+        </form>
+
+        <div id="estimateSuccessPanel" class="success-box hidden">
+          <strong>Demande envoyee</strong>
+          <p>Votre demande d'estimation a bien ete transmise.</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

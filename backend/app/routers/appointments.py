@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from ..auth import get_authenticated_user, require_request_user
-from ..models import AppointmentRequestCreatePayload
+from ..models import AppointmentRequestCreatePayload, EstimationRequestCreatePayload
 from ..services.appointment_service import AppointmentService
 from ..settings import Settings, get_settings
 
@@ -31,6 +31,14 @@ def get_public_annonce_bootstrap(
     return service.get_public_annonce_bootstrap(ref)
 
 
+@router.get("/estimation/bootstrap")
+def get_public_estimation_bootstrap(
+    ref: str | None = None,
+    service: AppointmentService = Depends(get_appointment_service),
+):
+    return service.get_public_estimation_bootstrap(ref)
+
+
 @router.get("/annonce/{ref}/slots")
 def get_public_annonce_slots(
     ref: str,
@@ -46,6 +54,15 @@ def create_public_annonce_request(
     service: AppointmentService = Depends(get_appointment_service),
 ):
     return service.create_public_annonce_request(ref, payload)
+
+
+@router.post("/estimation/request")
+def create_public_estimation_request(
+    payload: EstimationRequestCreatePayload,
+    ref: str | None = None,
+    service: AppointmentService = Depends(get_appointment_service),
+):
+    return service.create_public_estimation_request(ref, payload)
 
 
 @router.get("/annonce/{annonce_id}/summary")

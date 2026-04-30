@@ -482,6 +482,7 @@ def main() -> None:
                     (VITRINE_DIR / "style.css", "style.css"),
                     (VITRINE_DIR / "script.js", "script.js"),
                     (ROOT / "apps" / "rdv-public" / "index.html", "rdv/index.html"),
+                    (ROOT / "apps" / "rdv-public" / "estimation.html", "rdv/estimation.html"),
                     (ROOT / "apps" / "rdv-public" / "app.js", "rdv/app.js"),
                     (ROOT / "apps" / "rdv-public" / "styles.css", "rdv/styles.css"),
                     (ROOT / "apps" / "rdv-public" / "404.html", "rdv/404.html"),

@@ -80,3 +80,13 @@ class AppointmentRequestCreatePayload(BaseModel):
     requestedStartAt: str = Field(min_length=10)
     requestedEndAt: str | None = None
     message: str | None = Field(default=None, max_length=4000)
+
+
+class EstimationRequestCreatePayload(BaseModel):
+    propertyAddress: str = Field(min_length=3, max_length=240)
+    clientName: str = Field(min_length=1, max_length=160)
+    clientEmail: EmailStr | None = None
+    clientPhone: str = Field(min_length=6, max_length=40)
+    requestedStartAt: str = Field(min_length=10)
+    requestedEndAt: str | None = None
+    message: str | None = Field(default=None, max_length=4000)

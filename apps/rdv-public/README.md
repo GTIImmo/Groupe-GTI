@@ -1,35 +1,38 @@
 # RDV Public
 
-Mini front public statique pour les QR codes annonce.
+Mini front public statique pour les QR codes GTI.
 
-## URLs supportées
+## URLs supportees
 
-- `https://.../rdv/annonce/<token>`
-- `https://.../rdv/annonce/<hektor_annonce_id>`
-- fallback simple : `index.html?ref=<token>`
+- `https://.../rdv/index.html`
+- `https://.../rdv/index.html?ref=<token>`
+- `https://.../rdv/index.html?ref=<hektor_annonce_id>`
+- `https://.../rdv/estimation.html`
+- `https://.../rdv/estimation.html?ref=<token>`
 
 ## API attendue
 
 Le front appelle :
 
-- `GET /api/public/appointments/annonce/{ref}`
-- `GET /api/public/appointments/annonce/{ref}/slots`
+- `GET /api/public/appointments/annonce/{ref}/bootstrap`
 - `POST /api/public/appointments/annonce/{ref}/request`
+- `GET /api/public/appointments/estimation/bootstrap`
+- `POST /api/public/appointments/estimation/request`
 
-Par défaut, la base API est `window.location.origin + /api`.
+Par defaut, la base API est `window.location.origin + /api`.
 
-Pour pointer vers un backend différent, renseigner l'attribut :
+Pour pointer vers un backend different, renseigner l'attribut :
 
 ```html
 <body data-api-base="https://mon-backend.exemple.com">
 ```
 
-## Déploiement statique
+## Deploiement statique
 
-Ce dossier peut être publié tel quel sur :
+Ce dossier peut etre publie tel quel sur :
 
 - GitHub Pages
 - Vercel (mode statique)
 - Netlify
 
-Pour des liens profonds GitHub Pages, prévoir une redirection `404.html` ou un domaine qui réécrit vers `index.html`.
+Pour des liens profonds GitHub Pages, prevoir une redirection `404.html` ou un domaine qui reecrit vers `index.html`.
