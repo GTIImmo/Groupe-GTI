@@ -88,17 +88,21 @@ Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
 )
 
-$supabaseArgs = @("phase2\sync\push_upgrade_to_supabase.py")
+$supabaseArgs = @(
+    "phase2\sync\push_upgrade_to_supabase.py",
+    "--dossier-batch-size", "50",
+    "--detail-batch-size", "25",
+    "--work-item-batch-size", "50",
+    "--filter-batch-size", "50"
+)
 if ($FullRebuildSupabase) {
-    $supabaseArgs += @(
-        "--full-rebuild",
-        "--dossier-batch-size", "50",
-        "--detail-batch-size", "25",
-        "--work-item-batch-size", "50",
-        "--filter-batch-size", "50"
-    )
+    $supabaseArgs = @("phase2\sync\push_upgrade_to_supabase.py", "--full-rebuild") + $supabaseArgs[1..($supabaseArgs.Length - 1)]
 }
 Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs
+
+Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
+    "phase2\sync\push_hektor_directory_to_supabase.py"
+)
 
 if (-not $SkipAndroid) {
     if (-not (Test-Path $GitHubTokenFile)) {

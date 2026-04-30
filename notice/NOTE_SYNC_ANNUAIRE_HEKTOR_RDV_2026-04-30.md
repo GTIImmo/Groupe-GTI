@@ -102,6 +102,35 @@ Depuis `C:\Users\frede\Desktop\Projet` :
 .\.venv\Scripts\python.exe phase2\sync\push_hektor_directory_to_supabase.py
 ```
 
+## Script run_full_pipeline
+
+Le script versionne :
+
+- `run_full_pipeline.ps1`
+
+est aligne sur la commande quotidienne ci-dessus.
+
+Il execute maintenant, dans cet ordre :
+
+1. `sync_raw.py --mode update --resources annonces contacts mandats offres compromis ventes broadcasts --missing-only`
+2. `normalize_source.py`
+3. `build_case_index.py`
+4. `phase2/bootstrap_phase2.py`
+5. `phase2/refresh_views.py`
+6. `phase2/checks/run_quality_checks.py`
+7. `phase2/sync/push_upgrade_to_supabase.py --dossier-batch-size 50 --detail-batch-size 25 --work-item-batch-size 50 --filter-batch-size 50`
+8. `phase2/sync/push_hektor_directory_to_supabase.py`
+
+Si `-FullRebuildSupabase` est passe, il ajoute aussi :
+
+- `--full-rebuild`
+
+sur `push_upgrade_to_supabase.py`.
+
+Si `-SkipAndroid` n'est pas passe, il publie ensuite la vitrine GitHub Pages.
+
+Si `-PushAndroidFront` est passe, il republie aussi les fichiers front statiques (`index.html`, `style.css`, `script.js`, `rdv/`).
+
 ## Point de vigilance
 
 Le patch SQL suivant doit etre applique dans Supabase avant usage :
