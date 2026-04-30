@@ -25,8 +25,8 @@ insert into public.app_estimation_agency_negotiator (
   is_active,
   sort_order
 ) values
-  ('saint-etienne', '4', 'Lucille FORLICO', 'forlico@gti-immobilier.fr', null, true, 10),
-  ('saint-etienne', '5', 'Mélanie LEGRAND', 'legrand@gti-immobilier.fr', '06 58 80 32 90', true, 20)
+  ('saint-etienne', '29', 'Lucille FORLICO', 'forlico@gti-immobilier.fr', '0640193927', true, 10),
+  ('saint-etienne', '30', 'Melanie LEGRAND', 'legrand@gti-immobilier.fr', '0668413858', true, 20)
 on conflict (route_key, user_id) do update
 set
   negotiator_label = excluded.negotiator_label,

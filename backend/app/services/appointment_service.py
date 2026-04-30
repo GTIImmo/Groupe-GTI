@@ -467,21 +467,21 @@ class AppointmentService:
         email = str(negotiator.get("negotiator_email") or "").strip()
         try:
             user_rows: list[dict[str, Any]] = []
-            if user_id:
-                user_rows = self._rest_get(
-                    "app_user_directory",
-                    params={
-                        "select": "id_user,display_name,email,tel,portable",
-                        "id_user": f"eq.{user_id}",
-                        "limit": "1",
-                    },
-                )
-            if not user_rows and email:
+            if email:
                 user_rows = self._rest_get(
                     "app_user_directory",
                     params={
                         "select": "id_user,display_name,email,tel,portable",
                         "email": f"eq.{email}",
+                        "limit": "1",
+                    },
+                )
+            if not user_rows and user_id:
+                user_rows = self._rest_get(
+                    "app_user_directory",
+                    params={
+                        "select": "id_user,display_name,email,tel,portable",
+                        "id_user": f"eq.{user_id}",
                         "limit": "1",
                     },
                 )
