@@ -36,7 +36,7 @@ a{color:inherit}
 .hidden{display:none!important}
 
 .page-shell{
-  width:min(100%, 580px);
+  width:min(100%, 560px);
   margin:0 auto;
   padding:14px 14px 48px;
   display:grid;
@@ -232,17 +232,16 @@ a{color:inherit}
 .action-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px;
+  gap:10px;
 }
 
 .action-tile{
   position:relative;
   overflow:hidden;
-  min-height:0;
-  aspect-ratio:1 / 1;
-  padding:18px 16px 16px;
+  min-height:112px;
+  padding:16px 14px 14px;
   border:1px solid rgba(0,0,0,.04);
-  border-radius:28px;
+  border-radius:23px;
   background:linear-gradient(180deg, #fbf7f4 0%, #f1ebe6 100%);
   color:var(--ink-dark);
   display:flex;
@@ -275,21 +274,21 @@ a{color:inherit}
 .action-tile::after{
   content:"";
   position:absolute;
-  top:16px;
-  right:16px;
-  width:42px;
-  height:42px;
+  top:13px;
+  right:13px;
+  width:34px;
+  height:34px;
   border-radius:999px;
   background:rgba(255,255,255,.38);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.5);
 }
 
 .action-estimate::after{
-  border-radius:16px;
+  border-radius:14px;
   background:
-    linear-gradient(to top, rgba(255,255,255,.92) 0 48%, transparent 48%) 11px 19px / 5px 14px no-repeat,
-    linear-gradient(to top, rgba(255,255,255,.92) 0 68%, transparent 68%) 19px 14px / 5px 19px no-repeat,
-    linear-gradient(to top, rgba(255,255,255,.92) 0 86%, transparent 86%) 27px 9px / 5px 24px no-repeat,
+    linear-gradient(to top, rgba(255,255,255,.92) 0 48%, transparent 48%) 8px 16px / 4px 11px no-repeat,
+    linear-gradient(to top, rgba(255,255,255,.92) 0 68%, transparent 68%) 15px 12px / 4px 15px no-repeat,
+    linear-gradient(to top, rgba(255,255,255,.92) 0 86%, transparent 86%) 22px 8px / 4px 19px no-repeat,
     rgba(255,255,255,.22);
 }
 
@@ -303,35 +302,35 @@ a{color:inherit}
 }
 
 .action-contact::after{
-  border-radius:18px;
+  border-radius:15px;
   background:
-    radial-gradient(circle at 16px 17px, rgba(255,255,255,.95) 0 3px, transparent 4px),
-    radial-gradient(circle at 24px 17px, rgba(255,255,255,.95) 0 3px, transparent 4px),
+    radial-gradient(circle at 13px 14px, rgba(255,255,255,.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 21px 14px, rgba(255,255,255,.95) 0 2px, transparent 3px),
     linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.18));
 }
 
 .action-download::after{
-  border-radius:16px;
+  border-radius:14px;
   background:
-    linear-gradient(rgba(45,36,27,.88), rgba(45,36,27,.88)) 19px 9px / 5px 18px no-repeat,
-    linear-gradient(135deg, transparent 45%, rgba(45,36,27,.88) 46% 60%, transparent 61%) 14px 20px / 16px 16px no-repeat,
-    linear-gradient(rgba(45,36,27,.88), rgba(45,36,27,.88)) 12px 31px / 18px 4px no-repeat,
+    linear-gradient(rgba(45,36,27,.88), rgba(45,36,27,.88)) 15px 7px / 4px 15px no-repeat,
+    linear-gradient(135deg, transparent 45%, rgba(45,36,27,.88) 46% 60%, transparent 61%) 11px 17px / 13px 13px no-repeat,
+    linear-gradient(rgba(45,36,27,.88), rgba(45,36,27,.88)) 10px 26px / 15px 3px no-repeat,
     rgba(255,255,255,.45);
 }
 
 .action-add::after{
   background:
-    linear-gradient(#163025, #163025) center / 18px 4px no-repeat,
-    linear-gradient(#163025, #163025) center / 4px 18px no-repeat,
+    linear-gradient(#163025, #163025) center / 15px 3px no-repeat,
+    linear-gradient(#163025, #163025) center / 3px 15px no-repeat,
     rgba(255,255,255,.45);
 }
 
 .action-write::after{
-  border-radius:16px;
+  border-radius:14px;
   background:
-    linear-gradient(32deg, transparent 48%, #172832 49% 53%, transparent 54%) 9px 13px / 24px 15px no-repeat,
-    linear-gradient(-32deg, transparent 48%, #172832 49% 53%, transparent 54%) 9px 13px / 24px 15px no-repeat,
-    linear-gradient(#172832, #172832) 9px 28px / 24px 3px no-repeat,
+    linear-gradient(32deg, transparent 48%, #172832 49% 53%, transparent 54%) 7px 11px / 20px 12px no-repeat,
+    linear-gradient(-32deg, transparent 48%, #172832 49% 53%, transparent 54%) 7px 11px / 20px 12px no-repeat,
+    linear-gradient(#172832, #172832) 7px 24px / 20px 3px no-repeat,
     rgba(255,255,255,.45);
 }
 
@@ -416,8 +415,8 @@ a{color:inherit}
 
 .action-label{
   font-family:"Sora","Manrope","Segoe UI",sans-serif;
-  font-size:1.38rem;
-  line-height:.94;
+  font-size:1.12rem;
+  line-height:1;
   font-weight:900;
   letter-spacing:0;
   max-width:8ch;
@@ -426,18 +425,18 @@ a{color:inherit}
 }
 
 .action-subtitle{
-  font-size:.72rem;
+  font-size:.66rem;
   text-transform:uppercase;
-  letter-spacing:.18em;
+  letter-spacing:.12em;
   opacity:.62;
-  max-width:18ch;
+  max-width:16ch;
   position:relative;
   z-index:1;
 }
 
 .action-meta{
   margin-top:auto;
-  font-size:.78rem;
+  font-size:.7rem;
   line-height:1.4;
   opacity:.7;
   position:relative;
@@ -862,7 +861,7 @@ textarea:focus{
 
 @media (min-width: 720px){
   .page-shell{
-    width:min(100%, 900px);
+    width:min(100%, 720px);
   }
 
   .hero-splash h1{
@@ -874,15 +873,16 @@ textarea:focus{
   }
 
   .action-grid{
-    gap:16px;
+    gap:12px;
   }
 
   .action-tile{
-    padding:24px 22px 20px;
+    min-height:126px;
+    padding:18px 16px 15px;
   }
 
   .action-label{
-    font-size:1.9rem;
+    font-size:1.28rem;
   }
 
   .content-stack,
