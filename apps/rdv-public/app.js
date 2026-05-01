@@ -386,6 +386,12 @@
     if (els.submitButton) els.submitButton.disabled = !state.selectedSlot;
     if (els.estimateSubmitButton) els.estimateSubmitButton.disabled = !state.selectedSlot;
     updateBookingPanels();
+    if (state.selectedSlot) {
+      const target = state.mode === "estimation" ? els.estimateFormWrap : els.appointmentForm;
+      window.setTimeout(() => {
+        (target || els.selectedSlotLabel)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 90);
+    }
   }
 
   function renderSlotsForSelectedDay() {
