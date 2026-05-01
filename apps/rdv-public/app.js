@@ -13,6 +13,39 @@
     mode: pageType,
   };
   const WEEKDAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const PROPERTY_TYPE_LABELS = {
+    "1": "Maison",
+    "2": "Appartement",
+    "3": "Parking / Garage",
+    "4": "Bureau",
+    "5": "Terrain",
+    "6": "Local",
+    "7": "Immeuble",
+    "8": "Divers",
+    "9": "Programme neuf",
+    "10": "Loft / Atelier",
+    "11": "Boutique",
+    "12": "Appartement meublé",
+    "13": "Maison meublée",
+    "14": "Garage",
+    "15": "Parking",
+    "16": "Local professionnel",
+    "17": "Chalet",
+    "18": "Bâtiment",
+    "19": "Demeure",
+    "20": "Propriété",
+    "21": "Mas",
+    "22": "Hôtel particulier",
+    "23": "Commerce",
+    "24": "Immeuble",
+    "25": "Villa",
+    "26": "Studio",
+    "27": "Duplex",
+    "28": "Triplex",
+    "29": "Atelier",
+    "30": "Ferme",
+    "31": "Loft",
+  };
 
   const els = {
     loadingPanel: $("loadingPanel"),
@@ -148,6 +181,12 @@
       : "Prix sur demande";
   }
 
+  function propertyTypeLabel(value) {
+    const key = String(value || "").trim();
+    if (!key) return "";
+    return PROPERTY_TYPE_LABELS[key] || key;
+  }
+
   function setView(view) {
     body.dataset.view = view;
     setHidden(els.loadingPanel, true);
@@ -277,7 +316,7 @@
     const parts = [];
     if (state.ref) {
       if (context.agenceNom) parts.push(context.agenceNom);
-      if (context.typeBien) parts.push(context.typeBien);
+      if (context.typeBien) parts.push(propertyTypeLabel(context.typeBien));
       if (context.hektorAnnonceId) parts.push(`Réf. ${context.hektorAnnonceId}`);
       return parts.filter(Boolean).join(" • ");
     }
@@ -312,7 +351,7 @@
     if (els.visitActionMeta && state.mode === "listing") {
       const refLabel = safeContext.hektorAnnonceId ? `R\u00e9f. ${safeContext.hektorAnnonceId}` : "R\u00e9f.";
       const priceLabel = formatCurrency(safeContext.price);
-      els.visitActionMeta.textContent = [safeContext.typeBien || "Bien", priceLabel, refLabel].filter(Boolean).join(" \u00b7 ");
+      els.visitActionMeta.textContent = [propertyTypeLabel(safeContext.typeBien) || "Bien", priceLabel, refLabel].filter(Boolean).join(" \u00b7 ");
     }
 
     renderImage(els.heroImage, "", title);
