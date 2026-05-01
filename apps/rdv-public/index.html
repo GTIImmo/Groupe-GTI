@@ -9,30 +9,19 @@
 <body data-api-base="https://gti-backend-xlyf.onrender.com" data-page="listing">
   <main class="page-shell">
     <section class="hero-card">
-      <div class="hero-media">
-        <img id="heroImage" class="hero-image hidden" src="" alt="Photo du bien" loading="lazy" decoding="async" />
-        <div class="hero-overlay"></div>
-      </div>
-
-      <div class="hero-body">
+      <div class="hero-body hero-body-compact">
         <div class="hero-topbar">
           <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
         </div>
 
-        <div id="heroSplash" class="hero-splash hidden">
+        <div id="heroSplash" class="hero-splash">
           <p class="hero-kicker">GTI Immobilier</p>
           <h1 id="heroSplashTitle">Vos rendez-vous immobiliers</h1>
           <p id="heroSplashCopy" class="hero-splash-copy">Prenez contact, planifiez une visite ou lancez une demande d'estimation en quelques secondes.</p>
           <div class="hero-splash-actions">
             <a class="hero-cta hero-cta-primary" href="./estimation.html">Faire estimer mon bien</a>
-            <a id="heroCallCta" class="hero-cta hero-cta-ghost hidden" href="#">Parler a un conseiller</a>
+            <a id="heroCallCta" class="hero-cta hero-cta-ghost hidden" href="#">Parler &agrave; un conseiller</a>
           </div>
-        </div>
-
-        <div id="heroContact" class="hero-contact">
-          <p class="hero-contact-label">Votre conseiller</p>
-          <strong id="commercialName">-</strong>
-          <a id="commercialPhoneInline" class="hero-contact-link hidden" href="#"></a>
         </div>
       </div>
     </section>
@@ -41,14 +30,14 @@
       <div class="status-spinner" aria-hidden="true"></div>
       <div>
         <strong>Chargement</strong>
-        <p>Preparation de votre experience GTI.</p>
+        <p>Pr&eacute;paration de votre exp&eacute;rience GTI.</p>
       </div>
     </section>
 
     <section class="status-card status-card-error hidden" id="errorPanel">
       <div>
         <strong>Impossible de charger cette page</strong>
-        <p id="errorMessage">Verifiez le lien ou reessayez plus tard.</p>
+        <p id="errorMessage">V&eacute;rifiez le lien ou r&eacute;essayez plus tard.</p>
       </div>
     </section>
 
@@ -56,7 +45,7 @@
       <article class="panel panel-home-intro reveal">
         <p class="section-kicker">Accueil</p>
         <h2>Choisissez votre prochaine action</h2>
-        <p class="panel-copy">Une visite, une estimation ou un simple echange avec un conseiller GTI.</p>
+        <p class="panel-copy">Une visite, une estimation ou un simple &eacute;change avec un conseiller GTI.</p>
       </article>
 
       <section class="action-grid action-grid-home">
@@ -66,14 +55,14 @@
         </a>
         <a id="homeCallAction" class="action-tile action-tile-link hidden" href="#">
           <span class="action-label">Contacter un conseiller</span>
-          <span class="action-subtitle">Appel immediat</span>
+          <span class="action-subtitle">Appel imm&eacute;diat</span>
         </a>
         <a id="homeMailAction" class="action-tile action-tile-link hidden" href="#">
-          <span class="action-label">Ecrire a l'agence</span>
+          <span class="action-label">&Eacute;crire &agrave; l'agence</span>
           <span class="action-subtitle">Demande rapide</span>
         </a>
         <button id="homeSaveContactButton" class="action-tile action-tile-accent" type="button">
-          <span class="action-label">Ajouter GTI a mes contacts</span>
+          <span class="action-label">Ajouter GTI &agrave; mes contacts</span>
           <span class="action-subtitle">Carte de contact</span>
         </button>
       </section>
@@ -83,15 +72,15 @@
       <section class="action-grid">
         <button id="visitAction" class="action-tile action-tile-primary" type="button">
           <span class="action-label">Visiter ce bien</span>
-          <span class="action-subtitle">Choisir un creneau horaire</span>
-          <span id="visitActionMeta" class="action-meta">Nature · Prix · Ref</span>
+          <span class="action-subtitle">Choisir un cr&eacute;neau horaire</span>
+          <span id="visitActionMeta" class="action-meta">Nature &middot; Prix &middot; R&eacute;f.</span>
         </button>
         <a id="downloadAction" class="action-tile" href="#" target="_blank" rel="noopener">
-          <span class="action-label">Telecharger la fiche</span>
+          <span class="action-label">T&eacute;l&eacute;charger la fiche</span>
           <span class="action-subtitle">Version mobile</span>
         </a>
         <button id="contactAction" class="action-tile" type="button">
-          <span class="action-label">Contacter le negociateur</span>
+          <span class="action-label">Contacter le n&eacute;gociateur</span>
           <span class="action-subtitle">Appel et contact</span>
         </button>
         <a id="estimateAction" class="action-tile action-tile-accent action-tile-link" href="./estimation.html">
@@ -103,7 +92,6 @@
       <article class="panel panel-contact reveal" id="contactSection">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Contact</p>
             <h2>Votre interlocuteur</h2>
           </div>
         </div>
@@ -125,7 +113,7 @@
 
         <div class="dual-actions">
           <a id="callNowButton" class="button-strong hidden" href="#">Appeler maintenant</a>
-          <button id="saveContactButton" class="button-ghost" type="button">Ajouter a mes contacts</button>
+          <button id="saveContactButton" class="button-ghost" type="button">Ajouter &agrave; mes contacts</button>
         </div>
       </article>
 
@@ -135,29 +123,29 @@
             <p class="section-kicker">Visite</p>
             <h2>Choisir un rendez-vous</h2>
           </div>
-          <span id="slotRuleLabel" class="rule-chip">Disponibilites</span>
+          <span id="slotRuleLabel" class="rule-chip">Disponibilit&eacute;s</span>
         </div>
 
         <div class="calendar-shell">
           <div class="calendar-toolbar">
-            <button id="monthPrevButton" class="calendar-nav-button" type="button" aria-label="Mois precedent">‹</button>
+            <button id="monthPrevButton" class="calendar-nav-button" type="button" aria-label="Mois pr&eacute;c&eacute;dent">&lsaquo;</button>
             <strong id="monthLabel" class="calendar-month-label">Mois</strong>
-            <button id="monthNextButton" class="calendar-nav-button" type="button" aria-label="Mois suivant">›</button>
+            <button id="monthNextButton" class="calendar-nav-button" type="button" aria-label="Mois suivant">&rsaquo;</button>
           </div>
           <div id="dayList" class="calendar-wrap"></div>
         </div>
 
         <div class="slots-shell">
           <div class="slots-head">
-            <span class="selection-label">Creneaux disponibles</span>
+            <span class="selection-label">Cr&eacute;neaux disponibles</span>
             <strong id="selectedDayLabel" class="slots-day-label">Choisissez un jour</strong>
           </div>
           <div id="slotList" class="slot-grid hidden"></div>
         </div>
 
         <div class="selection-box">
-          <span class="selection-label">Creneau selectionne</span>
-          <strong id="selectedSlotLabel" class="selection-value">Choisissez un creneau</strong>
+          <span class="selection-label">Cr&eacute;neau s&eacute;lectionn&eacute;</span>
+          <strong id="selectedSlotLabel" class="selection-value">Choisissez un cr&eacute;neau</strong>
         </div>
 
         <form id="appointmentForm" class="form-grid">
@@ -166,16 +154,16 @@
             <input id="clientName" name="clientName" type="text" required maxlength="160" placeholder="Votre nom" />
           </label>
           <label class="field">
-            <span>Telephone</span>
+            <span>T&eacute;l&eacute;phone</span>
             <input id="clientPhone" name="clientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
           </label>
           <label class="field field-full">
-            <span>Email</span>
+            <span>E-mail</span>
             <input id="clientEmail" name="clientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
           </label>
           <label class="field field-full">
-            <span>Precision</span>
-            <textarea id="clientMessage" name="clientMessage" rows="4" maxlength="4000" placeholder="Indiquez une precision utile si besoin."></textarea>
+            <span>Pr&eacute;cision</span>
+            <textarea id="clientMessage" name="clientMessage" rows="4" maxlength="4000" placeholder="Indiquez une pr&eacute;cision utile si besoin."></textarea>
           </label>
           <div class="field-full">
             <button id="submitButton" type="submit" class="button-primary" disabled>Confirmer la visite</button>
@@ -183,12 +171,17 @@
         </form>
 
         <div id="successPanel" class="success-box hidden">
-          <strong>Demande envoyee</strong>
-          <p>Votre conseiller vous recontacte rapidement.</p>
+          <strong>Demande envoy&eacute;e</strong>
+          <p>Votre conseiller vous recontactera rapidement.</p>
         </div>
       </article>
     </section>
   </main>
+
+  <div id="commercialName" class="hidden" aria-hidden="true"></div>
+  <a id="commercialPhoneInline" class="hidden" href="#" aria-hidden="true"></a>
+  <img id="heroImage" class="hidden" src="" alt="" aria-hidden="true" />
+  <div id="heroContact" class="hidden" aria-hidden="true"></div>
 
   <script src="app.js"></script>
 </body>

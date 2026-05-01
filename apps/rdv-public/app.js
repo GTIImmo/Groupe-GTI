@@ -135,7 +135,11 @@
 
   function formatCurrency(value) {
     return typeof value === "number"
-      ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value)
+      ? new Intl.NumberFormat("fr-FR", {
+          style: "currency",
+          currency: "EUR",
+          maximumFractionDigits: 0,
+        }).format(value)
       : "Prix sur demande";
   }
 
@@ -237,6 +241,7 @@
   function buildHeroTitle(context) {
     if (state.mode === "estimation") return context.pageTitle || "Faire estimer mon bien";
     if (state.ref) return "Prendre rendez-vous pour ce bien";
+    if (state.agency && context.agenceNom) return `Vos rendez-vous avec ${context.agenceNom}`;
     return "Vos rendez-vous immobiliers";
   }
 
@@ -245,7 +250,7 @@
       return context.pageIntro || "Choisissez un rendez-vous pour parler estimation avec GTI Immobilier.";
     }
     if (state.ref) {
-      return "Choisissez un creneau, contactez le conseiller ou ouvrez la fiche du bien.";
+      return "Choisissez un cr\u00e9neau, contactez le conseiller ou ouvrez la fiche du bien.";
     }
     return "Prenez contact avec GTI Immobilier et lancez votre prochaine action en quelques secondes.";
   }
@@ -264,30 +269,33 @@
     if (els.commercialNameCard) els.commercialNameCard.textContent = safeContext.commercialName || "Un conseiller GTI Immobilier";
     if (els.agencyName) els.agencyName.textContent = safeContext.agenceNom || "GTI Immobilier";
     if (els.visitActionMeta && state.mode === "listing") {
-      const refLabel = safeContext.hektorAnnonceId ? `Ref ${safeContext.hektorAnnonceId}` : "Ref";
+      const refLabel = safeContext.hektorAnnonceId ? `R\u00e9f. ${safeContext.hektorAnnonceId}` : "R\u00e9f.";
       const priceLabel = formatCurrency(safeContext.price);
-      els.visitActionMeta.textContent = [safeContext.typeBien || "Bien", priceLabel, refLabel].filter(Boolean).join(" · ");
+      els.visitActionMeta.textContent = [safeContext.typeBien || "Bien", priceLabel, refLabel].filter(Boolean).join(" \u00b7 ");
     }
 
-    renderImage(els.heroImage, safeContext.photoUrl, title);
+    renderImage(els.heroImage, "", title);
     renderContactLink(els.commercialPhoneInline, phone, "");
-    renderContactLink(els.commercialPhone, phone, "Telephone · ");
-    renderContactLink(els.commercialEmail, safeContext.negociateurEmail, "Email · ");
-    renderContactLink(els.agencyPhone, safeContext.agencePhone, "Telephone · ");
-    renderContactLink(els.agencyEmail, safeContext.agenceEmail, "Email · ");
+    renderContactLink(els.commercialPhone, phone, "T\u00e9l\u00e9phone \u00b7 ");
+    renderContactLink(els.commercialEmail, safeContext.negociateurEmail, "E-mail \u00b7 ");
+    renderContactLink(els.agencyPhone, safeContext.agencePhone, "T\u00e9l\u00e9phone \u00b7 ");
+    renderContactLink(els.agencyEmail, safeContext.agenceEmail, "E-mail \u00b7 ");
     renderContactLink(els.callNowButton, phone, "");
     renderActionLink(els.heroCallCta, phone, "tel:");
     renderActionLink(els.homeCallAction, phone, "tel:");
     renderActionLink(els.homeMailAction, safeContext.agenceEmail || safeContext.negociateurEmail, "tel:");
 
     if (els.homeCallAction && !els.homeCallAction.classList.contains("hidden")) {
-      els.homeCallAction.querySelector(".action-subtitle").textContent = phone || "Conseil immediat";
+      const subtitle = els.homeCallAction.querySelector(".action-subtitle");
+      if (subtitle) subtitle.textContent = phone || "Conseil imm\u00e9diat";
     }
     if (els.homeMailAction && !els.homeMailAction.classList.contains("hidden")) {
-      els.homeMailAction.querySelector(".action-subtitle").textContent = (safeContext.agenceEmail || safeContext.negociateurEmail || "Message rapide");
+      const subtitle = els.homeMailAction.querySelector(".action-subtitle");
+      if (subtitle) subtitle.textContent = safeContext.agenceEmail || safeContext.negociateurEmail || "Message rapide";
     }
-    if (els.heroContact) setHidden(els.heroContact, !state.ref && state.mode !== "estimation");
-    if (els.heroSplash) setHidden(els.heroSplash, !!state.ref && state.mode === "listing");
+
+    if (els.heroContact) setHidden(els.heroContact, true);
+    if (els.heroSplash) setHidden(els.heroSplash, false);
     if (els.callNowButton) {
       els.callNowButton.textContent = "Appeler maintenant";
       setHidden(els.callNowButton, !phone);
@@ -323,8 +331,8 @@
   }
 
   function formatDateTimeRange(slot) {
-    if (!slot) return "Choisissez un creneau";
-    return `${slot.displayDateLabel || slot.displayDate} a ${slot.displayTime}`;
+    if (!slot) return "Choisissez un cr\u00e9neau";
+    return `${slot.displayDateLabel || slot.displayDate} \u00e0 ${slot.displayTime}`;
   }
 
   function selectSlot(index) {
@@ -350,7 +358,7 @@
     if (!daySlots.length) {
       const empty = document.createElement("p");
       empty.className = "slot-empty";
-      empty.textContent = "Aucun creneau pour ce jour.";
+      empty.textContent = "Aucun cr\u00e9neau pour ce jour.";
       els.slotList.appendChild(empty);
       return;
     }
@@ -377,7 +385,7 @@
     state.selectedDayKey = dayKey;
     state.selectedMonthKey = toMonthKey(dayKey);
     state.selectedSlot = null;
-    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un cr\u00e9neau";
     if (els.submitButton) els.submitButton.disabled = true;
     if (els.estimateSubmitButton) els.estimateSubmitButton.disabled = true;
     Array.from(document.querySelectorAll(".day-button")).forEach((button) => {
@@ -466,9 +474,9 @@
     state.selectedDayKey = null;
     if (els.slotRuleLabel) {
       const prefix = state.mode === "estimation" ? "Agenda estimation" : "Agenda de visite";
-      els.slotRuleLabel.textContent = `${prefix} · delai mini ${rule.minDelayHours || 36} h`;
+      els.slotRuleLabel.textContent = `${prefix} \u00b7 d\u00e9lai minimum ${rule.minDelayHours || 36} h`;
     }
-    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un cr\u00e9neau";
     if (els.submitButton) els.submitButton.disabled = true;
     if (els.estimateSubmitButton) els.estimateSubmitButton.disabled = true;
     if (!els.slotList) return;
@@ -480,7 +488,7 @@
     if (!state.slots.length) {
       const empty = document.createElement("p");
       empty.className = "slot-empty";
-      empty.textContent = "Aucun creneau disponible pour le moment.";
+      empty.textContent = "Aucun cr\u00e9neau disponible pour le moment.";
       els.slotList.appendChild(empty);
       return;
     }
@@ -501,7 +509,7 @@
     state.selectedMonthKey = months[targetIndex][0];
     state.selectedDayKey = null;
     state.selectedSlot = null;
-    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un creneau";
+    if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un cr\u00e9neau";
     if (els.selectedDayLabel) els.selectedDayLabel.textContent = "Choisissez un jour";
     if (els.slotList) {
       els.slotList.innerHTML = "";
@@ -603,7 +611,7 @@
   async function handleVisitSubmit(event) {
     event.preventDefault();
     if (!state.selectedSlot || !state.ref) {
-      showError("Choisissez d'abord un creneau.");
+      showError("Choisissez d'abord un cr\u00e9neau.");
       return;
     }
     if (els.submitButton) els.submitButton.disabled = true;
@@ -631,7 +639,7 @@
   async function handleEstimateSubmit(event) {
     event.preventDefault();
     if (!state.selectedSlot) {
-      showError("Choisissez d'abord un creneau.");
+      showError("Choisissez d'abord un cr\u00e9neau.");
       return;
     }
     if (els.estimateSubmitButton) els.estimateSubmitButton.disabled = true;

@@ -9,12 +9,7 @@
 <body data-api-base="https://gti-backend-xlyf.onrender.com" data-page="estimation">
   <main class="page-shell">
     <section class="hero-card hero-card-estimation">
-      <div class="hero-media">
-        <img id="heroImage" class="hero-image hidden" src="" alt="Illustration estimation" loading="lazy" decoding="async" />
-        <div class="hero-overlay"></div>
-      </div>
-
-      <div class="hero-body">
+      <div class="hero-body hero-body-compact">
         <div class="hero-topbar">
           <img class="hero-logo" src="gti-logo.png" alt="GTI Immobilier" />
           <a class="hero-back-link" href="./index.html">Retour</a>
@@ -23,13 +18,7 @@
         <div id="heroSplash" class="hero-splash">
           <p class="hero-kicker">Estimation GTI</p>
           <h1 id="heroSplashTitle">Planifier une estimation</h1>
-          <p id="heroSplashCopy" class="hero-splash-copy">Choisissez un rendez-vous pour echanger avec un conseiller GTI sur la valeur de votre bien.</p>
-        </div>
-
-        <div id="heroContact" class="hero-contact">
-          <p class="hero-contact-label">Votre conseiller</p>
-          <strong id="commercialName">-</strong>
-          <a id="commercialPhoneInline" class="hero-contact-link hidden" href="#"></a>
+          <p id="heroSplashCopy" class="hero-splash-copy">Choisissez un rendez-vous pour &eacute;changer avec un conseiller GTI sur la valeur de votre bien.</p>
         </div>
       </div>
     </section>
@@ -38,14 +27,14 @@
       <div class="status-spinner" aria-hidden="true"></div>
       <div>
         <strong>Chargement</strong>
-        <p>Preparation de votre rendez-vous d'estimation.</p>
+        <p>Pr&eacute;paration de votre rendez-vous d'estimation.</p>
       </div>
     </section>
 
     <section class="status-card status-card-error hidden" id="errorPanel">
       <div>
         <strong>Impossible de charger cette page</strong>
-        <p id="errorMessage">Reessayez plus tard.</p>
+        <p id="errorMessage">R&eacute;essayez plus tard.</p>
       </div>
     </section>
 
@@ -53,7 +42,7 @@
       <section class="action-grid action-grid-estimation">
         <button id="visitAction" class="action-tile action-tile-primary" type="button">
           <span class="action-label">Prendre rendez-vous</span>
-          <span class="action-subtitle">Choisir un creneau</span>
+          <span class="action-subtitle">Choisir un cr&eacute;neau</span>
         </button>
         <button id="contactAction" class="action-tile" type="button">
           <span class="action-label">Parler au conseiller</span>
@@ -64,7 +53,6 @@
       <article class="panel panel-contact reveal" id="contactSection">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Contact</p>
             <h2>Votre interlocuteur</h2>
           </div>
         </div>
@@ -86,7 +74,7 @@
 
         <div class="dual-actions">
           <a id="callNowButton" class="button-strong hidden" href="#">Appeler maintenant</a>
-          <button id="saveContactButton" class="button-ghost" type="button">Ajouter a mes contacts</button>
+          <button id="saveContactButton" class="button-ghost" type="button">Ajouter &agrave; mes contacts</button>
         </div>
       </article>
 
@@ -101,46 +89,46 @@
 
         <div class="calendar-shell">
           <div class="calendar-toolbar">
-            <button id="monthPrevButton" class="calendar-nav-button" type="button" aria-label="Mois precedent">‹</button>
+            <button id="monthPrevButton" class="calendar-nav-button" type="button" aria-label="Mois pr&eacute;c&eacute;dent">&lsaquo;</button>
             <strong id="monthLabel" class="calendar-month-label">Mois</strong>
-            <button id="monthNextButton" class="calendar-nav-button" type="button" aria-label="Mois suivant">›</button>
+            <button id="monthNextButton" class="calendar-nav-button" type="button" aria-label="Mois suivant">&rsaquo;</button>
           </div>
           <div id="dayList" class="calendar-wrap"></div>
         </div>
 
         <div class="slots-shell">
           <div class="slots-head">
-            <span class="selection-label">Creneaux disponibles</span>
+            <span class="selection-label">Cr&eacute;neaux disponibles</span>
             <strong id="selectedDayLabel" class="slots-day-label">Choisissez un jour</strong>
           </div>
           <div id="slotList" class="slot-grid hidden"></div>
         </div>
 
         <div class="selection-box">
-          <span class="selection-label">Creneau selectionne</span>
-          <strong id="selectedSlotLabel" class="selection-value">Choisissez un creneau</strong>
+          <span class="selection-label">Cr&eacute;neau s&eacute;lectionn&eacute;</span>
+          <strong id="selectedSlotLabel" class="selection-value">Choisissez un cr&eacute;neau</strong>
         </div>
 
         <form id="estimateAppointmentForm" class="form-grid">
           <label class="field field-full">
             <span>Adresse du bien</span>
-            <input id="estimatePropertyAddress" name="estimatePropertyAddress" type="text" required maxlength="240" placeholder="Adresse du bien a estimer" />
+            <input id="estimatePropertyAddress" name="estimatePropertyAddress" type="text" required maxlength="240" placeholder="Adresse du bien &agrave; estimer" />
           </label>
           <label class="field">
             <span>Nom</span>
             <input id="estimateClientName" name="estimateClientName" type="text" required maxlength="160" placeholder="Votre nom" />
           </label>
           <label class="field">
-            <span>Telephone</span>
+            <span>T&eacute;l&eacute;phone</span>
             <input id="estimateClientPhone" name="estimateClientPhone" type="tel" required maxlength="40" placeholder="06 00 00 00 00" />
           </label>
           <label class="field field-full">
-            <span>Email</span>
+            <span>E-mail</span>
             <input id="estimateClientEmail" name="estimateClientEmail" type="email" maxlength="160" placeholder="nom@exemple.fr" />
           </label>
           <label class="field field-full">
-            <span>Precision</span>
-            <textarea id="estimateClientMessage" name="estimateClientMessage" rows="4" maxlength="4000" placeholder="Surface, type de bien, disponibilites..."></textarea>
+            <span>Pr&eacute;cision</span>
+            <textarea id="estimateClientMessage" name="estimateClientMessage" rows="4" maxlength="4000" placeholder="Surface, type de bien, disponibilit&eacute;s..."></textarea>
           </label>
           <div class="field-full">
             <button id="estimateSubmitButton" type="submit" class="button-primary button-primary-accent" disabled>Confirmer le rendez-vous</button>
@@ -148,12 +136,17 @@
         </form>
 
         <div id="estimateSuccessPanel" class="success-box hidden">
-          <strong>Demande envoyee</strong>
-          <p>Votre demande d'estimation a bien ete transmise.</p>
+          <strong>Demande envoy&eacute;e</strong>
+          <p>Votre demande d'estimation a bien &eacute;t&eacute; transmise.</p>
         </div>
       </article>
     </section>
   </main>
+
+  <div id="commercialName" class="hidden" aria-hidden="true"></div>
+  <a id="commercialPhoneInline" class="hidden" href="#" aria-hidden="true"></a>
+  <img id="heroImage" class="hidden" src="" alt="" aria-hidden="true" />
+  <div id="heroContact" class="hidden" aria-hidden="true"></div>
 
   <script src="app.js"></script>
 </body>
