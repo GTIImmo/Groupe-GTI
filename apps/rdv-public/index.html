@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GTI Immobilier | Rendez-vous</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-api-base="https://gti-backend-xlyf.onrender.com" data-page="listing">
@@ -19,7 +22,7 @@
           <h1 id="heroSplashTitle">Vos rendez-vous immobiliers</h1>
           <p id="heroSplashCopy" class="hero-splash-copy">Prenez contact, planifiez une visite ou lancez une demande d'estimation en quelques secondes.</p>
           <div class="hero-splash-actions">
-            <a class="hero-cta hero-cta-primary" href="./estimation.html">Faire estimer mon bien</a>
+            <a class="hero-cta hero-cta-primary" href="./estimation.html">Estimer</a>
             <a id="heroCallCta" class="hero-cta hero-cta-ghost hidden" href="#">Parler &agrave; un conseiller</a>
           </div>
         </div>
@@ -50,20 +53,20 @@
 
       <section class="action-grid action-grid-home">
         <a class="action-tile action-tile-primary action-tile-link" href="./estimation.html">
-          <span class="action-label">Faire estimer mon bien</span>
-          <span class="action-subtitle">Rendez-vous estimation</span>
+          <span class="action-label">Estimer</span>
+          <span class="action-subtitle">Obtenir un avis de valeur</span>
         </a>
         <a id="homeCallAction" class="action-tile action-tile-link hidden" href="#">
-          <span class="action-label">Contacter un conseiller</span>
-          <span class="action-subtitle">Appel imm&eacute;diat</span>
+          <span class="action-label">Contacter</span>
+          <span class="action-subtitle">Parler &agrave; un conseiller</span>
         </a>
         <a id="homeMailAction" class="action-tile action-tile-link hidden" href="#">
-          <span class="action-label">&Eacute;crire &agrave; l'agence</span>
-          <span class="action-subtitle">Demande rapide</span>
+          <span class="action-label">&Eacute;crire</span>
+          <span class="action-subtitle">Envoyer un message</span>
         </a>
         <button id="homeSaveContactButton" class="action-tile action-tile-accent" type="button">
-          <span class="action-label">Ajouter GTI &agrave; mes contacts</span>
-          <span class="action-subtitle">Carte de contact</span>
+          <span class="action-label">Ajouter</span>
+          <span class="action-subtitle">&Agrave; mes contacts</span>
         </button>
       </section>
     </section>
@@ -71,21 +74,21 @@
     <section class="content-stack hidden" id="contentPanel">
       <section class="action-grid">
         <button id="visitAction" class="action-tile action-tile-primary" type="button">
-          <span class="action-label">Visiter ce bien</span>
-          <span class="action-subtitle">Choisir un cr&eacute;neau horaire</span>
+          <span class="action-label">Visiter</span>
+          <span class="action-subtitle">Choisir un cr&eacute;neau</span>
           <span id="visitActionMeta" class="action-meta">Nature &middot; Prix &middot; R&eacute;f.</span>
         </button>
         <a id="downloadAction" class="action-tile" href="#" target="_blank" rel="noopener">
-          <span class="action-label">T&eacute;l&eacute;charger la fiche</span>
-          <span class="action-subtitle">Version mobile</span>
+          <span class="action-label">T&eacute;l&eacute;charger</span>
+          <span class="action-subtitle">Voir la fiche compl&egrave;te</span>
         </a>
         <button id="contactAction" class="action-tile" type="button">
-          <span class="action-label">Contacter le n&eacute;gociateur</span>
-          <span class="action-subtitle">Appel et contact</span>
+          <span class="action-label">Contacter</span>
+          <span class="action-subtitle">Parler au n&eacute;gociateur</span>
         </button>
         <a id="estimateAction" class="action-tile action-tile-accent action-tile-link" href="./estimation.html">
-          <span class="action-label">Faire estimer mon bien</span>
-          <span class="action-subtitle">Rendez-vous estimation</span>
+          <span class="action-label">Estimer</span>
+          <span class="action-subtitle">Obtenir un avis de valeur</span>
         </a>
       </section>
 
