@@ -24,6 +24,7 @@
     heroSplash: $("heroSplash"),
     heroSplashTitle: $("heroSplashTitle"),
     heroSplashCopy: $("heroSplashCopy"),
+    heroSplashActions: document.querySelector(".hero-splash-actions"),
     heroEstimateAction: document.querySelector(".hero-splash-actions .hero-cta-primary"),
     heroContact: $("heroContact"),
     heroCallCta: $("heroCallCta"),
@@ -312,6 +313,7 @@
 
     if (els.heroContact) setHidden(els.heroContact, true);
     if (els.heroSplash) setHidden(els.heroSplash, false);
+    if (els.heroSplashActions) setHidden(els.heroSplashActions, !!state.ref && state.mode === "listing");
     if (els.callNowButton) {
       els.callNowButton.textContent = "Appeler maintenant";
       setHidden(els.callNowButton, !phone);
