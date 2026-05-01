@@ -24,6 +24,7 @@
     heroSplash: $("heroSplash"),
     heroSplashTitle: $("heroSplashTitle"),
     heroSplashCopy: $("heroSplashCopy"),
+    heroContext: $("heroContext"),
     heroSplashActions: document.querySelector(".hero-splash-actions"),
     heroEstimateAction: document.querySelector(".hero-splash-actions .hero-cta-primary"),
     heroContact: $("heroContact"),
@@ -256,20 +257,38 @@
   }
 
   function buildHeroTitle(context) {
-    if (state.mode === "estimation") return context.pageTitle || "Faire estimer mon bien";
-    if (state.ref) return "Prendre rendez-vous pour ce bien";
-    if (state.agency && context.agenceNom) return `Vos rendez-vous avec ${context.agenceNom}`;
-    return "Vos rendez-vous immobiliers";
+    if (state.mode === "estimation") return context.pageTitle || "Planifier une estimation";
+    if (state.ref) return "Réserver une visite de ce bien";
+    if (state.agency && context.agenceNom) return `Rencontrer ${context.agenceNom}`;
+    return "Prendre rendez-vous avec GTI Immobilier";
   }
 
   function buildHeroCopy(context) {
     if (state.mode === "estimation") {
-      return context.pageIntro || "Choisissez un rendez-vous pour parler estimation avec GTI Immobilier.";
+      return context.pageIntro || "Choisissez le bon moment pour échanger avec un conseiller GTI.";
     }
     if (state.ref) {
-      return "Choisissez un cr\u00e9neau, contactez le conseiller ou ouvrez la fiche du bien.";
+      return "Une visite claire, accompagnée et simple à réserver.";
     }
-    return "Prenez contact avec GTI Immobilier et lancez votre prochaine action en quelques secondes.";
+    return "Un parcours simple pour joindre la bonne agence au bon moment.";
+  }
+
+  function buildHeroContext(context) {
+    const parts = [];
+    if (state.ref) {
+      if (context.agenceNom) parts.push(context.agenceNom);
+      if (context.typeBien) parts.push(context.typeBien);
+      if (context.hektorAnnonceId) parts.push(`Réf. ${context.hektorAnnonceId}`);
+      return parts.filter(Boolean).join(" • ");
+    }
+    if (state.mode === "estimation") {
+      if (context.agenceNom) parts.push(context.agenceNom);
+      parts.push("Rendez-vous estimation");
+      return parts.filter(Boolean).join(" • ");
+    }
+    if (context.agenceNom) parts.push(context.agenceNom);
+    parts.push("Conseil immobilier local");
+    return parts.filter(Boolean).join(" • ");
   }
 
   function renderSharedContext(context) {
@@ -282,6 +301,11 @@
 
     if (els.heroSplashTitle) els.heroSplashTitle.textContent = buildHeroTitle(safeContext);
     if (els.heroSplashCopy) els.heroSplashCopy.textContent = buildHeroCopy(safeContext);
+    if (els.heroContext) {
+      const contextLine = buildHeroContext(safeContext);
+      els.heroContext.textContent = contextLine;
+      setHidden(els.heroContext, !contextLine);
+    }
     if (els.commercialName) els.commercialName.textContent = safeContext.commercialName || "Un conseiller GTI Immobilier";
     if (els.commercialNameCard) els.commercialNameCard.textContent = safeContext.commercialName || "Un conseiller GTI Immobilier";
     if (els.agencyName) els.agencyName.textContent = safeContext.agenceNom || "GTI Immobilier";
