@@ -493,8 +493,8 @@
     state.selectedSlot = null;
     state.selectedDayKey = null;
     if (els.slotRuleLabel) {
-      const prefix = state.mode === "estimation" ? "Agenda estimation" : "Agenda de visite";
-      els.slotRuleLabel.textContent = `${prefix} \u00b7 d\u00e9lai minimum ${rule.minDelayHours || 36} h`;
+      els.slotRuleLabel.textContent = "";
+      setHidden(els.slotRuleLabel, true);
     }
     if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = "Choisissez un cr\u00e9neau";
     if (els.submitButton) els.submitButton.disabled = true;
