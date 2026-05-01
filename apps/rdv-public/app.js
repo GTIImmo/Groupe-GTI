@@ -54,8 +54,10 @@
     monthLabel: $("monthLabel"),
     dayList: $("dayList"),
     slotList: $("slotList"),
+    slotsShell: document.querySelector(".slots-shell"),
     selectedDayLabel: $("selectedDayLabel"),
     selectedSlotLabel: $("selectedSlotLabel"),
+    selectionBox: document.querySelector(".selection-box"),
     appointmentForm: $("appointmentForm"),
     submitButton: $("submitButton"),
     successPanel: $("successPanel"),
@@ -71,6 +73,7 @@
     estimateClientMessage: $("estimateClientMessage"),
     estimateSubmitButton: $("estimateSubmitButton"),
     estimateSuccessPanel: $("estimateSuccessPanel"),
+    estimateFormWrap: $("estimateAppointmentForm"),
     backLink: document.querySelector(".hero-back-link"),
   };
 
@@ -192,6 +195,19 @@
     const isEmail = text.includes("@");
     element.href = `${isEmail ? "mailto:" : hrefPrefix}${isEmail ? text : text.replace(/\s+/g, "")}`;
     element.classList.remove("hidden");
+  }
+
+  function updateBookingPanels() {
+    const hasDay = Boolean(state.selectedDayKey);
+    const hasSlot = Boolean(state.selectedSlot);
+    setHidden(els.slotsShell, !hasDay);
+    setHidden(els.selectionBox, !hasSlot);
+    setHidden(els.appointmentForm, !hasSlot);
+    setHidden(els.estimateFormWrap, !hasSlot);
+    if (!hasSlot) {
+      setHidden(els.successPanel, true);
+      setHidden(els.estimateSuccessPanel, true);
+    }
   }
 
   function renderImage(element, url, alt) {
@@ -343,6 +359,7 @@
     if (els.selectedSlotLabel) els.selectedSlotLabel.textContent = formatDateTimeRange(state.selectedSlot);
     if (els.submitButton) els.submitButton.disabled = !state.selectedSlot;
     if (els.estimateSubmitButton) els.estimateSubmitButton.disabled = !state.selectedSlot;
+    updateBookingPanels();
   }
 
   function renderSlotsForSelectedDay() {
@@ -392,6 +409,7 @@
       button.classList.toggle("is-selected", button.dataset.dayKey === dayKey);
     });
     renderSlotsForSelectedDay();
+    updateBookingPanels();
   }
 
   function monthTitleFromKey(key, sampleDay) {
@@ -490,6 +508,7 @@
       empty.className = "slot-empty";
       empty.textContent = "Aucun cr\u00e9neau disponible pour le moment.";
       els.slotList.appendChild(empty);
+      updateBookingPanels();
       return;
     }
 
@@ -497,6 +516,7 @@
     state.selectedMonthKey = toMonthKey(days[0] && days[0].dayKey);
     renderCalendar(days);
     state.selectedDayKey = null;
+    updateBookingPanels();
   }
 
   function shiftMonth(direction) {
@@ -516,6 +536,7 @@
       els.slotList.classList.add("hidden");
     }
     renderCalendar(days);
+    updateBookingPanels();
   }
 
   function scrollToSection(section) {

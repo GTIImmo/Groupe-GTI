@@ -312,6 +312,21 @@ a{color:inherit}
   border-color:transparent;
 }
 
+.action-tile-sand{
+  background:linear-gradient(180deg, #f5efe5 0%, #eadfce 100%);
+  color:#2d241b;
+}
+
+.action-tile-sky{
+  background:linear-gradient(180deg, #eaf2f6 0%, #d8e7ef 100%);
+  color:#172832;
+}
+
+.action-tile-mint{
+  background:linear-gradient(180deg, #eef5ef 0%, #dcebdd 100%);
+  color:#163025;
+}
+
 .action-label{
   font-family:"Sora","Manrope","Segoe UI",sans-serif;
   font-size:clamp(1.5rem, 4.7vw, 1.85rem);
