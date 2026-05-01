@@ -324,7 +324,7 @@
     renderContactLink(els.callNowButton, phone, "");
     renderActionLink(els.heroCallCta, phone, "tel:");
     renderActionLink(els.homeCallAction, phone, "tel:");
-    renderActionLink(els.homeMailAction, safeContext.agenceEmail || safeContext.negociateurEmail, "tel:");
+    renderActionLink(els.homeMailAction, safeContext.agenceEmail || safeContext.negociateurEmail, "mailto:");
 
     if (els.homeCallAction && !els.homeCallAction.classList.contains("hidden")) {
       const subtitle = els.homeCallAction.querySelector(".action-subtitle");
