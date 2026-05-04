@@ -39,6 +39,7 @@ Il ne remplace ni `Phase 1`, ni `Phase 2`, ni Supabase.
 - `HEKTOR_CLIENT_ID`
 - `HEKTOR_CLIENT_SECRET`
 - `HEKTOR_API_VERSION`
+- `APPOINTMENT_EMAIL_LOGO_URL` : optionnel, URL de secours du logo si le parametre Supabase `app_setting.appointment_email_logo_url` n'est pas encore present.
 
 ## Demarrage local
 

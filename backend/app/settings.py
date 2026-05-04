@@ -25,6 +25,7 @@ class Settings:
     smtp_secure: bool
     smtp_from: str | None
     smtp_allow_user_from: bool
+    appointment_email_logo_url: str | None
     hektor_api_base_url: str | None
     hektor_client_id: str | None
     hektor_client_secret: str | None
@@ -60,6 +61,7 @@ def get_settings() -> Settings:
         smtp_secure=(os.getenv("SMTP_SECURE", "").strip().lower() == "true" or (os.getenv("SMTP_PORT", "").strip() == "465")),
         smtp_from=os.getenv("SMTP_FROM", "").strip() or None,
         smtp_allow_user_from=os.getenv("SMTP_ALLOW_USER_FROM", "").strip().lower() == "true",
+        appointment_email_logo_url=os.getenv("APPOINTMENT_EMAIL_LOGO_URL", "").strip() or None,
         hektor_api_base_url=os.getenv("HEKTOR_API_BASE_URL", "").strip() or None,
         hektor_client_id=os.getenv("HEKTOR_CLIENT_ID", "").strip() or None,
         hektor_client_secret=os.getenv("HEKTOR_CLIENT_SECRET", "").strip() or None,

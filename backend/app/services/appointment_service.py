@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import re
 import secrets
@@ -34,6 +35,11 @@ FRENCH_MONTHS = [
     "novembre",
     "decembre",
 ]
+
+
+def _email_escape(value: Any) -> str:
+    text = str(value or "").strip() or "-"
+    return html.escape(text, quote=True)
 
 
 class AppointmentService:
@@ -1002,6 +1008,135 @@ class AppointmentService:
             parsed = parsed.replace(tzinfo=UTC)
         return parsed
 
+    def _build_appointment_request_email_html(
+        self,
+        *,
+        dossier: dict[str, Any],
+        request_row: dict[str, Any],
+        start_local: datetime,
+        logo_src: str,
+    ) -> str:
+        title = str(dossier.get("titre_bien") or "").strip() or f"Annonce {dossier.get('hektor_annonce_id') or '-'}"
+        client_name = str(request_row.get("client_nom") or "").strip() or "-"
+        client_email = str(request_row.get("client_email") or "").strip()
+        client_phone = str(request_row.get("client_telephone") or "").strip() or "-"
+        client_message = str(request_row.get("client_message") or "").strip() or "Sans message"
+        slot_label = start_local.strftime("%d/%m/%Y a %H:%M")
+        reply_href = f"mailto:{html.escape(client_email, quote=True)}" if client_email else ""
+
+        logo_block = (
+            f'<img src="{html.escape(logo_src, quote=True)}" width="150" alt="GTI Immobilier" '
+            'style="display:block;max-width:150px;height:auto;border:0;outline:none;text-decoration:none;">'
+            if logo_src
+            else '<div style="font-size:22px;font-weight:800;line-height:1;color:#ffffff;">GTI Immobilier</div>'
+        )
+        reply_button = (
+            f'<a href="{reply_href}" style="display:inline-block;padding:12px 18px;border-radius:999px;'
+            'background:#e6007e;color:#ffffff;text-decoration:none;font-weight:800;font-size:14px;">'
+            'Repondre au client</a>'
+            if client_email
+            else ""
+        )
+
+        fields = [
+            ("Bien", title),
+            ("Annonce", dossier.get("hektor_annonce_id") or "-"),
+            ("Dossier", dossier.get("numero_dossier") or "-"),
+            ("Agence", dossier.get("agence_nom") or "-"),
+            ("Client", client_name),
+            ("Telephone", client_phone),
+            ("Email", client_email or "-"),
+            ("Creneau souhaite", slot_label),
+        ]
+        detail_rows = "".join(
+            f"""
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid #ece7e4;color:#7a6e74;font-size:12px;text-transform:uppercase;font-weight:800;">{html.escape(label)}</td>
+              <td style="padding:10px 0;border-bottom:1px solid #ece7e4;color:#171217;font-size:14px;font-weight:700;text-align:right;">{_email_escape(value)}</td>
+            </tr>
+            """
+            for label, value in fields
+        )
+
+        return f"""<!doctype html>
+<html lang="fr">
+  <body style="margin:0;padding:0;background:#f5f1ef;font-family:Arial,Helvetica,sans-serif;color:#171217;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f1ef;margin:0;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #eadfe5;border-radius:24px;overflow:hidden;">
+            <tr>
+              <td style="padding:26px 30px;background:#050505;border-bottom:4px solid #e6007e;">
+                {logo_block}
+                <div style="margin-top:18px;color:#ffffff;font-size:12px;text-transform:uppercase;font-weight:800;letter-spacing:.14em;">Demande de rendez-vous</div>
+                <h1 style="margin:10px 0 0 0;color:#ffffff;font-size:27px;line-height:1.15;font-weight:800;">Un client souhaite etre recontacte</h1>
+                <p style="margin:10px 0 0 0;color:#d9d2d6;font-size:14px;line-height:1.55;">
+                  Cette demande provient du QR code public associe a une annonce vitrine GTI. Le client a choisi un creneau disponible et laisse ses coordonnees pour organiser la suite.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px 30px 10px 30px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  {detail_rows}
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 30px 4px 30px;">
+                <div style="background:#fff6fb;border:1px solid #f4c4dc;border-radius:18px;padding:16px 18px;">
+                  <div style="font-size:12px;text-transform:uppercase;font-weight:800;color:#9a0054;letter-spacing:.1em;margin-bottom:7px;">Message client</div>
+                  <div style="font-size:15px;line-height:1.6;color:#2a2026;">{_email_escape(client_message)}</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 30px 28px 30px;">
+                <p style="margin:0 0 16px 0;color:#5f555b;font-size:14px;line-height:1.6;">
+                  Action conseillee : confirmez rapidement le rendez-vous avec le client ou proposez un autre horaire si ce creneau ne convient plus.
+                </p>
+                {reply_button}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 30px;background:#f8f5f3;border-top:1px solid #eee6e9;color:#867b80;font-size:12px;line-height:1.5;">
+                Notification automatique GTI Rendez-vous. Si l'email du client est renseigne, le bouton de reponse ouvre un message directement adresse au client.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
+
+    def _resolve_appointment_email_logo(self) -> str:
+        logo_url = self._read_app_setting("appointment_email_logo_url")
+        if logo_url:
+            return logo_url
+        logo_url = str(self.settings.appointment_email_logo_url or "").strip()
+        if not logo_url and self.settings.app_base_url:
+            logo_url = f"{self.settings.app_base_url.rstrip('/')}/rdv/gti-logo.png"
+        return logo_url
+
+    def _read_app_setting(self, key: str) -> str | None:
+        try:
+            rows = self._rest_get(
+                "app_setting",
+                params={
+                    "select": "value",
+                    "key": f"eq.{key}",
+                    "limit": "1",
+                },
+            )
+        except HTTPException as exc:
+            if exc.status_code in {404, 406}:
+                return None
+            raise
+        if not rows:
+            return None
+        return self._coalesce_text(rows[0].get("value"))
+
     def _send_notification_email(self, *, dossier: dict[str, Any], request_row: dict[str, Any]) -> None:
         to = str(request_row.get("negociateur_email") or "").strip()
         if not to:
@@ -1021,10 +1156,18 @@ class AppointmentService:
             f"Creneau souhaite : {start_local.strftime('%d/%m/%Y %H:%M')}",
             f"Message : {request_row.get('client_message') or 'Sans message'}",
         ]
+        logo_src = self._resolve_appointment_email_logo()
         email_payload = {
             "to": to,
             "subject": subject,
             "bodyText": "\n".join(lines),
+            "bodyHtml": self._build_appointment_request_email_html(
+                dossier=dossier,
+                request_row=request_row,
+                start_local=start_local,
+                logo_src=logo_src,
+            ),
             "fromName": "GTI Rendez-vous",
+            "replyTo": request_row.get("client_email"),
         }
         self.notification_service.send_diffusion_decision(email_payload)
