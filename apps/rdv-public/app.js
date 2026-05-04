@@ -55,6 +55,7 @@
     contentPanel: $("contentPanel"),
     heroImage: $("heroImage"),
     heroSplash: $("heroSplash"),
+    heroLogo: document.querySelector(".hero-logo"),
     heroSplashTitle: $("heroSplashTitle"),
     heroSplashCopy: $("heroSplashCopy"),
     heroContext: $("heroContext"),
@@ -264,6 +265,18 @@
     element.classList.remove("hidden");
   }
 
+  function renderBrandLogo(context) {
+    if (!els.heroLogo) return;
+    const logoUrl = String((context && (context.brandLogoUrl || context.logoUrl)) || "gti-logo.png").trim() || "gti-logo.png";
+    els.heroLogo.src = logoUrl;
+    els.heroLogo.alt = "GTI Immobilier";
+    els.heroLogo.onerror = function () {
+      if (els.heroLogo.getAttribute("src") !== "gti-logo.png") {
+        els.heroLogo.src = "gti-logo.png";
+      }
+    };
+  }
+
   function configureDownloadAction(context) {
     if (!els.downloadAction) return;
     const href = buildListingSheetUrl(context && context.hektorAnnonceId);
@@ -339,6 +352,7 @@
     state.context = safeContext;
 
     if (els.heroSplashTitle) els.heroSplashTitle.textContent = buildHeroTitle(safeContext);
+    renderBrandLogo(safeContext);
     if (els.heroSplashCopy) els.heroSplashCopy.textContent = buildHeroCopy(safeContext);
     if (els.heroContext) {
       const contextLine = buildHeroContext(safeContext);

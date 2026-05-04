@@ -270,6 +270,7 @@ class AppointmentService:
             "agencePhone": link.get("agence_phone"),
             "agenceEmail": link.get("agence_email"),
             "agencyKey": self._build_agency_key(agence_nom),
+            "brandLogoUrl": self._resolve_appointment_email_logo(),
         }
 
     def _load_contact_details(self, dossier: dict[str, Any]) -> dict[str, Any]:
@@ -574,6 +575,7 @@ class AppointmentService:
                 "pageTitle": "Faire estimer mon bien",
                 "pageIntro": "Choisissez un rendez-vous pour echanger avec l'agence GTI concernee.",
                 "agencyKey": stored_route_key,
+                "brandLogoUrl": self._resolve_appointment_email_logo(),
             }
             generic_link = {
                 "token": f"estimation-{stored_route_key}",
@@ -606,6 +608,7 @@ class AppointmentService:
             "agenceEmail": self._coalesce_text(agency.get("mail")),
             "pageTitle": "Faire estimer mon bien",
             "pageIntro": "Choisissez un rendez-vous pour echanger avec GTI Immobilier sur la valeur de votre bien.",
+            "brandLogoUrl": self._resolve_appointment_email_logo(),
         }
         return context, generic_link
 
