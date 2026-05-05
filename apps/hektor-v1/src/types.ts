@@ -8,6 +8,7 @@ export type DashboardSummary = {
 }
 
 export type DossierDetailPayload = {
+  matterport_groups_json?: string | null
   appointment_public_token?: string | null
   appointment_public_url?: string | null
   appointment_negociateur_id?: string | number | null
@@ -179,6 +180,34 @@ export type DossierDetail = {
 
 export type DetailedDossier = Dossier & {
   detail_payload_json: string | null
+}
+
+export type MatterportModelLink = {
+  id?: string | null
+  matterport_model_id: string
+  matterport_url: string
+  matterport_name: string | null
+  matterport_internal_id: string | null
+  label: string | null
+  display_order: number | null
+  is_primary: boolean | null
+  state: string | null
+  visibility: string | null
+  created_at_matterport: string | null
+  modified_at_matterport: string | null
+}
+
+export type MatterportGroup = {
+  id: string
+  hektor_annonce_id: number
+  numero_mandat: string | null
+  group_label: string | null
+  group_state: string | null
+  group_visibility: string | null
+  match_status: string | null
+  is_validated: boolean | null
+  synced_at: string | null
+  models: MatterportModelLink[]
 }
 
 export type WorkItem = {

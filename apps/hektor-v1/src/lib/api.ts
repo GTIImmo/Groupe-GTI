@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -392,6 +392,29 @@ function parseJsonObject(value: string | null | undefined) {
   } catch {
     return {}
   }
+}
+
+type MatterportGroupRow = Omit<MatterportGroup, 'models'> & {
+  app_matterport_group_model?: MatterportModelLink[] | null
+}
+
+function normalizeMatterportGroups(rows: MatterportGroupRow[] | null | undefined): MatterportGroup[] {
+  return (rows ?? [])
+    .map((row) => ({
+      id: row.id,
+      hektor_annonce_id: row.hektor_annonce_id,
+      numero_mandat: row.numero_mandat ?? null,
+      group_label: row.group_label ?? null,
+      group_state: row.group_state ?? null,
+      group_visibility: row.group_visibility ?? null,
+      match_status: row.match_status ?? null,
+      is_validated: row.is_validated ?? null,
+      synced_at: row.synced_at ?? null,
+      models: (row.app_matterport_group_model ?? [])
+        .slice()
+        .sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999) || String(a.matterport_name ?? '').localeCompare(String(b.matterport_name ?? ''), 'fr')),
+    }))
+    .sort((a, b) => String(a.numero_mandat ?? '').localeCompare(String(b.numero_mandat ?? ''), 'fr'))
 }
 
 function normalizeHektorApplyMessage(message: string | undefined) {
@@ -1062,6 +1085,44 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
   if (detailError && detailError.code !== 'PGRST116') throw new Error(detailError.message)
 
   const detailPayload = parseJsonObject((detailData as DossierDetail | null)?.detail_payload_json ?? null)
+
+  try {
+    const { data: matterportData, error: matterportError } = await supabase
+      .from('app_matterport_group')
+      .select(`
+        id,
+        hektor_annonce_id,
+        numero_mandat,
+        group_label,
+        group_state,
+        group_visibility,
+        match_status,
+        is_validated,
+        synced_at,
+        app_matterport_group_model (
+          id,
+          matterport_model_id,
+          matterport_url,
+          matterport_name,
+          matterport_internal_id,
+          label,
+          display_order,
+          is_primary,
+          state,
+          visibility,
+          created_at_matterport,
+          modified_at_matterport
+        )
+      `)
+      .eq('hektor_annonce_id', dossierData.hektor_annonce_id)
+      .order('numero_mandat', { ascending: true })
+
+    if (!matterportError) {
+      detailPayload.matterport_groups_json = JSON.stringify(normalizeMatterportGroups(matterportData as MatterportGroupRow[]))
+    }
+  } catch {
+    // La table Matterport peut ne pas encore etre appliquee en production.
+  }
 
   if (canUseBackendApi()) {
     try {

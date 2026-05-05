@@ -42,7 +42,7 @@ import {
   updateDiffusionRequest,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 
 const allFilterValue = '__all__'
 const activeArchiveFilterValue = '__active__'
@@ -577,6 +577,30 @@ function mandateAnomalyTypeLabel(type: MandateAnomalyType) {
     default:
       return 'Toutes'
   }
+}
+
+function matterportStateLabel(value: string | null | undefined) {
+  const normalized = (value ?? '').trim().toLowerCase()
+  if (normalized === 'active') return 'Actif'
+  if (normalized === 'inactive') return 'Inactif'
+  if (normalized === 'mixed') return 'Etat mixte'
+  return value || '-'
+}
+
+function matterportVisibilityLabel(value: string | null | undefined) {
+  const normalized = (value ?? '').trim().toLowerCase()
+  if (normalized === 'public') return 'Public'
+  if (normalized === 'private') return 'Prive'
+  if (normalized === 'unlisted') return 'Non liste'
+  if (normalized === 'password') return 'Mot de passe'
+  if (normalized === 'mixed') return 'Visibilite mixte'
+  return value || '-'
+}
+
+function matterportModelLabel(label: string | null | undefined, name: string | null | undefined, single: boolean) {
+  const cleanLabel = (label ?? '').trim()
+  if (cleanLabel) return cleanLabel
+  return single ? 'Visite virtuelle' : (name ?? 'Visite virtuelle')
 }
 
 function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce' | 'mandat_date_fin'>) {
@@ -5561,6 +5585,9 @@ function DossierDetailLayout(props: {
   }
   const diffusionRequestGroups = buildRequestGroups(props.requestHistoryDiffusion, props.requestMessagesDiffusion)
   const priceDropRequestGroups = buildRequestGroups(props.requestHistoryPriceDrop, props.requestMessagesPriceDrop)
+  const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
+  const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
+  const hasMatterport = matterportModels.length > 0
 
   return (
     <section className="detail-screen">
@@ -5615,6 +5642,52 @@ function DossierDetailLayout(props: {
           <div className="detail-columns">
             <div className="detail-column-main">
               <section className="detail-section detail-section-topstack">
+                {hasMatterport ? (
+                  <article className="detail-subsection matterport-section">
+                    <div className="section-header">
+                      <h4>Visites Matterport</h4>
+                    </div>
+                    <div className="matterport-group-list">
+                      {matterportGroups.map((group) => {
+                        const models = group.models ?? []
+                        const single = models.length <= 1
+                        return (
+                          <article key={group.id} className="matterport-group-card">
+                            <div className="matterport-group-head">
+                              <div>
+                                <strong>{group.group_label || (group.numero_mandat ? `Mandat ${group.numero_mandat}` : 'Groupe Matterport')}</strong>
+                                <span>{models.length} visite{models.length > 1 ? 's' : ''} liee{models.length > 1 ? 's' : ''}</span>
+                              </div>
+                              <div className="matterport-state-row">
+                                <StatusPill value={matterportStateLabel(group.group_state)} />
+                                <StatusPill value={matterportVisibilityLabel(group.group_visibility)} />
+                              </div>
+                            </div>
+                            <div className="matterport-model-list">
+                              {models.map((model) => (
+                                <div key={model.matterport_model_id} className="matterport-model-row">
+                                  <div className="matterport-model-main">
+                                    <strong>{matterportModelLabel(model.label, model.matterport_name, single)}</strong>
+                                    <span>{model.matterport_name || model.matterport_model_id}</span>
+                                  </div>
+                                  <div className="matterport-model-actions">
+                                    <a className="ghost-button matterport-open-link" href={model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a>
+                                    <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
+                                      {matterportStateLabel(model.state)}
+                                    </button>
+                                    <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
+                                      {matterportVisibilityLabel(model.visibility)}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </article>
+                ) : null}
                 <article className="detail-subsection">
                   <div className="section-header section-header-collapsible">
                     <h4>Detail mandat</h4>
