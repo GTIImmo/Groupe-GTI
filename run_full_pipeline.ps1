@@ -104,6 +104,17 @@ Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
 )
 
+Invoke-Step -Label "phase2 sync Matterport links to supabase" -Arguments @(
+    "phase2\sync\sync_matterport_models.py",
+    "--max-models", "0",
+    "--supabase-upsert"
+)
+
+Invoke-Step -Label "backfill appointment public links" -Arguments @(
+    "backend\scripts\backfill_appointment_public_links.py",
+    "--quiet"
+)
+
 if (-not $SkipAndroid) {
     if (-not (Test-Path $GitHubTokenFile)) {
         throw "GitHub token file not found: $GitHubTokenFile"

@@ -170,52 +170,6 @@ class MatterportClient:
             },
         )["folder"]
 
-    def patch_model(self, model_id: str, patch: dict[str, Any]) -> dict[str, Any]:
-        mutation = """
-        mutation PatchModel($id: ID!, $patch: ModelPatch!) {
-          patchModel(id: $id, patch: $patch) {
-            id
-            name
-            internalId
-            state
-            visibility
-            modified
-          }
-        }
-        """
-        return self.graphql(mutation, {"id": model_id, "patch": patch})["patchModel"]
-
-    def update_model_state(self, model_id: str, state: str, allow_activate: bool = False) -> dict[str, Any]:
-        mutation = """
-        mutation UpdateModelState($id: ID!, $state: ModelStateChange!, $allowActivate: Boolean) {
-          updateModelState(id: $id, state: $state, allowActivate: $allowActivate) {
-            id
-            name
-            internalId
-            state
-            visibility
-            modified
-          }
-        }
-        """
-        return self.graphql(mutation, {"id": model_id, "state": state, "allowActivate": allow_activate})["updateModelState"]
-
-    def update_model_visibility(self, model_id: str, visibility: str) -> dict[str, Any]:
-        mutation = """
-        mutation UpdateModelAccessVisibility($id: ID!, $visibility: ModelAccessVisibility!) {
-          updateModelAccessVisibility(id: $id, visibility: $visibility) {
-            id
-            name
-            internalId
-            state
-            visibility
-            modified
-          }
-        }
-        """
-        return self.graphql(mutation, {"id": model_id, "visibility": visibility})["updateModelAccessVisibility"]
-
-
 def load_credentials() -> MatterportCredentials:
     load_env_file(MATTERPORT_ENV_FILE)
     token_id = os.getenv("MATTERPORT_TOKEN_ID", "").strip()
@@ -423,9 +377,7 @@ def build_preview_rows(models: list[dict[str, Any]], min_mandat_digits: int) -> 
             "hektor_annonce_ids": "|".join(hektor_ids),
             "hektor_dossiers": "|".join(dossiers),
             "hektor_villes": "|".join(villes),
-            "suggested_internalId": selected_mandat or "",
             "suggested_name": suggested_model_name(model, hektor_rows, selected_mandat),
-            "planned_actions": planned_actions(model, selected_mandat, match_status),
         }
         enriched.append(row)
         if selected_mandat and match_status == "matched_current" and hektor_ids:
@@ -480,13 +432,6 @@ def suggest_label(row: dict[str, Any], group_size: int) -> str:
     return name[:80] if name else "Visite virtuelle"
 
 
-def planned_actions(model: dict[str, Any], mandat: str | None, match_status: str) -> str:
-    actions: list[str] = []
-    if match_status == "matched_current" and mandat and normalize_mandat(model.get("internalId")) != mandat:
-        actions.append(f"patch internalId={mandat}")
-    return "; ".join(actions)
-
-
 def write_outputs(rows: list[dict[str, Any]], groups: list[dict[str, Any]], csv_path: Path, json_path: Path) -> None:
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -506,9 +451,7 @@ def write_outputs(rows: list[dict[str, Any]], groups: list[dict[str, Any]], csv_
         "hektor_annonce_ids",
         "hektor_dossiers",
         "hektor_villes",
-        "suggested_internalId",
         "suggested_name",
-        "planned_actions",
     ]
     with csv_path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
@@ -523,11 +466,8 @@ def write_outputs(rows: list[dict[str, Any]], groups: list[dict[str, Any]], csv_
 def summarize(rows: list[dict[str, Any]], groups: list[dict[str, Any]]) -> dict[str, Any]:
     by_status: dict[str, int] = defaultdict(int)
     by_group_size: dict[str, int] = defaultdict(int)
-    planned = 0
     for row in rows:
         by_status[normalize_text(row.get("match_status"))] += 1
-        if normalize_text(row.get("planned_actions")):
-            planned += 1
     for group in groups:
         size = int(group["model_count"])
         by_group_size["multi_model" if size > 1 else "single_model"] += 1
@@ -536,7 +476,6 @@ def summarize(rows: list[dict[str, Any]], groups: list[dict[str, Any]]) -> dict[
         "groups_matched_current": len(groups),
         "match_status_counts": dict(sorted(by_status.items())),
         "group_size_counts": dict(sorted(by_group_size.items())),
-        "models_with_planned_internalId_patch": planned,
     }
 
 
@@ -634,49 +573,17 @@ def upsert_supabase(rows: list[dict[str, Any]], groups: list[dict[str, Any]], li
     return {"groups_upserted": len(group_rows), "models_upserted": len(model_rows)}
 
 
-def apply_internal_id_patches(client: MatterportClient, rows: list[dict[str, Any]], limit: int) -> dict[str, list[dict[str, Any]]]:
-    patched: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-    candidates = [
-        row
-        for row in rows
-        if row.get("match_status") == "matched_current"
-        and normalize_text(row.get("suggested_internalId"))
-        and normalize_mandat(row.get("internalId")) != normalize_text(row.get("suggested_internalId"))
-    ]
-    for row in candidates:
-        if len(patched) >= limit:
-            break
-        try:
-            result = client.patch_model(row["matterport_id"], {"internalId": row["suggested_internalId"]})
-            patched.append(result)
-        except Exception as error:
-            errors.append(
-                {
-                    "matterport_model_id": row["matterport_id"],
-                    "name": row.get("name"),
-                    "suggested_internalId": row.get("suggested_internalId"),
-                    "error": str(error),
-                }
-            )
-    return {"patched": patched, "errors": errors}
-
-
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Scan Matterport models, match them with Hektor mandates, and prepare safe sync actions.")
+    parser = argparse.ArgumentParser(description="Scan Matterport models, match them with Hektor mandates, and upsert read-only links into Supabase.")
     parser.add_argument("--max-models", type=int, default=25, help="Small dry-run limit. Use 0 for no limit.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--json-output", type=Path, default=DEFAULT_JSON_OUTPUT)
     parser.add_argument("--min-mandat-digits", type=int, default=4, help="Ignore shorter numbers to avoid matching street numbers or floors.")
-    parser.add_argument("--apply-internal-id", action="store_true", help="Actually patch Matterport internalId for matched current models.")
-    parser.add_argument("--apply-limit", type=int, default=1, help="Safety limit for real Matterport patch operations.")
     parser.add_argument("--supabase-upsert", action="store_true", help="Actually upsert matched current Matterport groups/models into Supabase.")
     parser.add_argument("--supabase-limit-groups", type=int, default=0, help="Safety limit for Supabase upsert groups. Use 0 for all matched groups.")
     args = parser.parse_args(argv)
 
     max_models = None if args.max_models == 0 else args.max_models
-    if args.apply_internal_id and args.apply_limit < 1:
-        raise SystemExit("--apply-limit must be >= 1 when writing to Matterport")
 
     credentials = load_credentials()
     client = MatterportClient(credentials)
@@ -688,11 +595,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"CSV: {args.output}")
     print(f"JSON: {args.json_output}")
 
-    if args.apply_internal_id:
-        patched = apply_internal_id_patches(client, rows, args.apply_limit)
-        print(json.dumps({"internalId_write_result": patched}, ensure_ascii=False, indent=2))
-    else:
-        print("DRY_RUN: no Matterport write performed.")
+    print("READ_ONLY: no Matterport write operation exists in this script.")
     if args.supabase_upsert:
         limit_groups = None if args.supabase_limit_groups == 0 else args.supabase_limit_groups
         result = upsert_supabase(rows, groups, limit_groups=limit_groups)
