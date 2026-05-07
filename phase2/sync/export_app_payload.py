@@ -19,7 +19,7 @@ CURRENT_MANDATE_SERIES_START = "2024-01-01"
 CURRENT_MANDATE_SERIES_MAX_NUM = 199999
 ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
-    "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis')"
+    "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis', 'Estimation')"
 )
 REGISTRE_SCOPE_STATUTS = ("Actif", "Sous offre", "Sous compromis", "Vendu", "Clos")
 REGISTRE_SCOPE_SQL = ",".join(f"'{value}'" for value in REGISTRE_SCOPE_STATUTS)

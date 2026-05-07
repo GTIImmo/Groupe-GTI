@@ -50,6 +50,8 @@ const archivedFilterValue = '__archived__'
 const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
+const activeListingsFilterValue = '__active_listings__'
+type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 const dossierPageSize = 50
 const mandatPageSize = 50
 const workItemPageSize = 25
@@ -173,7 +175,7 @@ const emptyFilters: AppFilters = {
   internalStatus: allFilterValue,
 }
 
-function defaultFiltersForScreen(screen: 'annonces' | 'mandats' | 'registre' | 'suivi'): AppFilters {
+function defaultFiltersForScreen(screen: Screen): AppFilters {
   if (screen === 'registre') {
     return {
       ...emptyFilters,
@@ -621,6 +623,26 @@ function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diff
       ...(cancelledExposure && Boolean(mandat.nb_portails_actifs) ? ['Passerelle encore active'] : []),
     ],
   }
+}
+
+function projectIdentityLines(item: Pick<MandatRecord, 'numero_dossier' | 'numero_mandat' | 'type_bien' | 'ville'>) {
+  return {
+    title: item.numero_dossier ?? '-',
+    mandate: item.numero_mandat ? `Mandat ${item.numero_mandat}` : 'Sans mandat',
+    context: [propertyTypeLabel(item.type_bien), item.ville].filter((value) => value && value !== '-').join(' · ') || '-',
+  }
+}
+
+function listingProgressLabel(item: Pick<MandatRecord, 'statut_annonce' | 'numero_mandat' | 'validation_diffusion_state' | 'diffusable' | 'nb_portails_actifs' | 'offre_id' | 'compromis_id' | 'vente_id'>) {
+  if ((item.statut_annonce ?? '').trim() === 'Estimation') return 'Estimation en cours'
+  if (item.vente_id) return 'Vendu'
+  if (item.compromis_id) return 'Compromis en cours'
+  if (item.offre_id) return 'Offre en cours'
+  if (!item.numero_mandat) return 'Annonce créée · mandat manquant'
+  if (!isValidationApproved(item.validation_diffusion_state)) return 'Mandat à valider'
+  if ((item.diffusable ?? '0') === '1' && Boolean(item.nb_portails_actifs)) return 'Diffusé'
+  if ((item.diffusable ?? '0') === '1') return 'Mandat validé · non diffusé'
+  return 'Mandat validé · diffusion à ouvrir'
 }
 
 type ActionButtonTypeTone = 'validation' | 'price-drop' | 'diffusion' | 'hektor'
@@ -1129,9 +1151,10 @@ function profileRoleLabel(role?: UserProfile['role'] | null) {
   return 'Profil'
 }
 
-function screenContextLabel(screen: 'annonces' | 'mandats' | 'registre' | 'suivi') {
+function screenContextLabel(screen: Screen) {
   if (screen === 'annonces') return 'Vue stock'
   if (screen === 'mandats') return 'Vue mandat'
+  if (screen === 'estimations') return 'Estimations'
   if (screen === 'registre') return 'Registre'
   return 'Vue Pauline'
 }
@@ -1638,7 +1661,7 @@ function activeFilterEntries(filters: AppFilters) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'annonces' | 'mandats' | 'registre' | 'suivi'>('mandats')
+  const [screen, setScreen] = useState<Screen>('mandats')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
   const [filters, setFilters] = useState<AppFilters>(emptyFilters)
   const [dossiers, setDossiers] = useState<Dossier[]>([])
@@ -1747,6 +1770,11 @@ export default function App() {
     if (profile?.role !== 'commercial') return undefined
     return { negotiatorEmail: sessionEmail || null }
   }, [profile?.role, sessionEmail])
+  const dataFilters = useMemo<AppFilters>(() => {
+    if (screen === 'mandats' && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
+    if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
+    return filters
+  }, [filters, screen])
 
   useEffect(() => {
     if (!hasSupabaseEnv) {
@@ -1831,8 +1859,8 @@ export default function App() {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
     const statsPromise = screen === 'registre'
-      ? loadMandatRegisterStats({ ...filters, mandat: withMandatFilterValue }, dataScope)
-      : loadMandatStats(filters, dataScope)
+      ? loadMandatRegisterStats({ ...dataFilters, mandat: withMandatFilterValue }, dataScope)
+      : loadMandatStats(dataFilters, dataScope)
     statsPromise
       .then((stats) => {
         if (!cancelled) setMandatStats(stats)
@@ -1843,12 +1871,12 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, filters, dataScope, screen])
+  }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
-    loadSuiviRequestStats(filters, dataScope)
+    loadSuiviRequestStats(dataFilters, dataScope)
       .then((stats) => {
         if (!cancelled) setSuiviRequestStats(stats)
       })
@@ -1858,12 +1886,12 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, filters, dataScope])
+  }, [session, dataFilters, dataScope])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
-    loadCommercialRequestStats(filters, dataScope)
+    loadCommercialRequestStats(dataFilters, dataScope)
       .then((stats) => {
         if (!cancelled) setCommercialRequestStats(stats)
       })
@@ -1873,7 +1901,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, filters, dataScope])
+  }, [session, dataFilters, dataScope])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -1883,11 +1911,11 @@ export default function App() {
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
     const nextMandatPageSize = screen === 'suivi' ? 1000 : mandatPageSize
     Promise.all([
-      loadDossiersPage({ filters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope }),
+      loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope }),
       screen === 'registre'
-        ? loadMandatRegisterPage({ filters: { ...filters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
-        : loadMandatsPage({ filters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope }),
-      loadWorkItemsPage({ filters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope }),
+        ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+        : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope }),
+      loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope }),
     ])
       .then(([nextDossiersPage, nextMandatsPage, nextWorkItemsPage]) => {
         if (cancelled) return
@@ -1920,7 +1948,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, filters, dossierPage, mandatPage, workItemPage, dataScope, screen])
+  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen])
 
   useEffect(() => {
     if (selectedDossierId == null || (hasSupabaseEnv && !session)) return
@@ -2075,7 +2103,7 @@ export default function App() {
     setDetailOpen(false)
   }
 
-  function openScreen(nextScreen: 'annonces' | 'mandats' | 'registre' | 'suivi') {
+  function openScreen(nextScreen: Screen) {
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMandatDrilldownLabel(null)
     setSuiviDrilldownLabel(null)
@@ -2869,9 +2897,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     if (screen === 'mandats') {
       return {
-        title: mandatDrilldownLabel?.title ?? 'Liste des annonces',
+        title: mandatDrilldownLabel?.title ?? 'Annonces actives',
         copy: '',
       }
+    }
+    if (screen === 'estimations') {
+      return { title: 'Estimations', copy: '' }
     }
     if (screen === 'registre') {
       return { title: 'Registre des mandats', copy: '' }
@@ -3088,6 +3119,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         { label: 'Mandats non validés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'warning', action: 'mandat_non_valide' },
         { label: 'Mandats diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
         { label: 'Mandats non diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
+      ]
+    }
+    if (screen === 'estimations') {
+      return [
+        { label: 'Estimations', value: new Intl.NumberFormat('fr-FR').format(mandatStats.total), tone: 'volume', action: null },
+        { label: 'Futurs mandats', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'diffusion', action: null },
+        { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'warning', action: null },
       ]
     }
     return [
@@ -3320,7 +3358,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
         </div>
         <nav className="screen-nav">
-          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Liste des annonces</button>
+          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces actives</button>
+          <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Registre des mandats</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi des mandats</button> : null}
         </nav>
@@ -3348,10 +3387,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="hero-top-row">
                 <label className="search-box">
                   <span>Recherche rapide</span>
-                  <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : 'Dossier, mandat, commercial, ville'} />
+                  <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <section className="result-indicator result-indicator-compact">
-                  <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces visibles' : 'Mandats enregistrés'}</span>
+                  <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces actives' : screen === 'estimations' ? 'Estimations en cours' : 'Mandats enregistrés'}</span>
                   <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' || screen === 'registre' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
                 </section>
                 <div className="hero-actions">
@@ -3465,8 +3504,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="filters-head">
               <div>
-                <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres mandats' : screen === 'registre' ? 'Filtres registre' : 'Filtres suivi administratif'}</p>
-                <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Mandats et diffusion' : screen === 'registre' ? 'Mandats avec numéro' : 'Demandes et parc mandat'}</strong>
+                <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres annonces actives' : screen === 'estimations' ? 'Filtres estimations' : screen === 'registre' ? 'Filtres registre' : 'Filtres suivi administratif'}</p>
+                <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Projets, mandats et diffusion' : screen === 'estimations' ? 'Futurs mandats potentiels' : screen === 'registre' ? 'Mandats avec numéro' : 'Demandes et parc mandat'}</strong>
               </div>
               <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
             </div>
@@ -3549,6 +3588,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <FilterSelect label="Priorite" value={filters.priority} onChange={(value) => updateFilter('priority', value)} options={filterCatalog.priorities} />
                 <FilterSelect label="Work status" value={filters.workStatus} onChange={(value) => updateFilter('workStatus', value)} options={filterCatalog.workStatuses} />
                 <FilterSelect label="Interne" value={filters.internalStatus} onChange={(value) => updateFilter('internalStatus', value)} options={filterCatalog.internalStatuses} />
+              </>
+            ) : screen === 'estimations' ? (
+              <>
+                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                <FilterSelect
+                  label="Archive"
+                  value={filters.archive}
+                  onChange={(value) => updateFilter('archive', value)}
+                  options={[
+                    { value: activeArchiveFilterValue, label: 'Actives' },
+                    { value: archivedFilterValue, label: 'Archives' },
+                  ]}
+                />
               </>
             ) : screen === 'mandats' ? (
               <>
@@ -3847,7 +3900,39 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             linkedWorkItems={linkedWorkItems}
             detailLoading={detailLoading}
             eyebrow={mandatDrilldownLabel?.eyebrow ?? 'Annonces'}
-            title={mandatDrilldownLabel?.title ?? 'Liste des annonces'}
+            title={mandatDrilldownLabel?.title ?? 'Annonces actives'}
+            mode="active"
+          />
+        ) : screen === 'estimations' ? (
+          <MandatsScreen
+            mandats={mandats}
+            mandatsTotal={mandatsTotal}
+            mandatPage={mandatPage}
+            mandatTotalPages={mandatTotalPages}
+            onPrevMandat={() => setMandatPage((page) => Math.max(1, page - 1))}
+            onNextMandat={() => setMandatPage((page) => Math.min(mandatTotalPages, page + 1))}
+            onGoToMandatPage={(page) => setMandatPage(Math.min(mandatTotalPages, Math.max(1, page)))}
+            selectedMandat={selectedMandat}
+            mandatBroadcasts={mandatBroadcasts}
+            requests={diffusionRequests}
+            requestComment={requestComment}
+            onRequestCommentChange={setRequestComment}
+            onCreateRequest={handleCreateDiffusionRequest}
+            onOpenRequestModal={openRequestModal}
+            onOpenDiffusionModal={openDiffusionModal}
+            onOpenDetailPage={openDossierDetailPage}
+            requestPending={requestPending}
+            onSelectMandat={setSelectedMandatId}
+            loading={mandatLoading}
+            selectedDossier={selectedDossier}
+            detail={detail}
+            address={address}
+            images={images}
+            linkedWorkItems={linkedWorkItems}
+            detailLoading={detailLoading}
+            eyebrow="Estimations"
+            title="Futurs mandats potentiels"
+            mode="estimation"
           />
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
@@ -3915,7 +4000,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
                 requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
                 detailLoading={detailLoading}
-                eyebrow="Detail annonce"
+                eyebrow={screen === 'estimations' ? 'Detail estimation' : 'Detail annonce'}
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
                 allowMarkValidation={screen === 'suivi' && isAdmin}
@@ -4531,7 +4616,9 @@ function MandatsScreen(props: {
   detailLoading: boolean
   eyebrow?: string
   title?: string
+  mode?: 'active' | 'estimation'
 }) {
+  const isEstimationMode = props.mode === 'estimation'
   return (
     <section className="panel-grid">
       <section className="panel panel-wide">
@@ -4551,7 +4638,13 @@ function MandatsScreen(props: {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Mandat</th><th>Bien</th><th>Negociateur</th><th>Statut</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Photo</th><th>Actions</th></tr></thead>
+            <thead>
+              {isEstimationMode ? (
+                <tr><th>Projet</th><th>Bien</th><th>Negociateur</th><th>Avancement</th><th>Photo</th><th>Actions</th></tr>
+              ) : (
+                <tr><th>Mandat</th><th>Bien</th><th>Negociateur</th><th>Statut</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Photo</th><th>Actions</th></tr>
+              )}
+            </thead>
             <tbody>
               {props.mandats.map((item) => {
                 const isSelected = item.app_dossier_id === props.selectedMandat?.app_dossier_id
@@ -4559,6 +4652,7 @@ function MandatsScreen(props: {
                 const hasLeboncoin = hasPortalEnabled(item, ['leboncoin'])
                 const hasBienici = hasPortalEnabled(item, ['bienici'])
                 const hasSiteGti = isSiteGtiEnabled(item)
+                const project = projectIdentityLines(item)
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
@@ -4568,17 +4662,31 @@ function MandatsScreen(props: {
                         props.onOpenDetailPage(item.app_dossier_id)
                       }}
                     >
-                      <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
+                      {isEstimationMode ? (
+                        <td><strong>{project.title}</strong><span>{project.mandate}</span><span>{project.context}</span></td>
+                      ) : (
+                        <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
+                      )}
                       <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
                       <td><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
-                      <td><StatusPill value={item.statut_annonce} /></td>
-                      <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
-                      <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
-                      <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
+                      {isEstimationMode ? (
+                        <td><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
+                      ) : (
+                        <>
+                          <td><StatusPill value={item.statut_annonce} /></td>
+                          <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
+                          <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
+                          <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
+                        </>
+                      )}
                       <td><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
                       <td>
                         <div className="row-actions">
-                          <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
+                          {isEstimationMode ? (
+                            <button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
+                          ) : (
+                            <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
+                          )}
                         </div>
                       </td>
                     </tr>

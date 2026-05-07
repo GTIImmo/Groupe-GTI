@@ -131,6 +131,8 @@ const archivedFilterValue = '__archived__'
 const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
+const activeListingsFilterValue = '__active_listings__'
+const activeListingStatuses = ['Actif', 'Sous offre', 'Sous compromis']
 const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accepted', 'refused']
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
 const localDiffusionRequestsKey = 'hektor-v1-diffusion-requests'
@@ -782,7 +784,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
       (!compromisStatus || (compromisStatus === 'en_cours' ? hasCompromisEnCours(item) : hasCompromisAnnule(item))) &&
       (!requestScope || matchesRequestScope(latestByDossier?.get(item.app_dossier_id)?.request_status, requestScope)) &&
       (!requestType || matchesRequestType(latestByDossier?.get(item.app_dossier_id)?.request_type, requestType)) &&
-      (!statut || (item.statut_annonce ?? '') === statut) &&
+      (!statut || (statut === activeListingsFilterValue ? activeListingStatuses.includes(item.statut_annonce ?? '') : (item.statut_annonce ?? '') === statut)) &&
       (!validationDiffusion ||
         (validationDiffusion === '__validated__'
           ? isValidationApproved(item.validation_diffusion_state)
@@ -873,7 +875,8 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (offreStatus === 'refusee') query = query.or('and(offre_id.not.is.null,offre_last_proposition_type.eq.refus)')
   if (compromisStatus === 'en_cours') query = query.or('and(compromis_id.not.is.null,compromis_state.eq.active)')
   if (compromisStatus === 'annule') query = query.or('and(compromis_id.not.is.null,compromis_state.eq.cancelled)')
-  if (statut) query = query.eq('statut_annonce', statut)
+  if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
+  else if (statut) query = query.eq('statut_annonce', statut)
   if (validationDiffusion === '__validated__') {
     query = query.or(
       [
