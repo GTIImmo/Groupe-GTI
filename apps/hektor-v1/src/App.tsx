@@ -5779,6 +5779,19 @@ function DossierDetailLayout(props: {
         </div>
 
         <div className="full-detail-layout">
+          <nav className="detail-tabbar" aria-label="Navigation detail annonce">
+            {detailTabs.map((tab) => (
+              <button
+                key={tab.key}
+                className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
+                type="button"
+                onClick={() => setActiveDetailTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
           <div className="detail-cockpit-body">
             <main className="detail-cockpit-main">
               <section className="detail-overview">
@@ -5821,19 +5834,6 @@ function DossierDetailLayout(props: {
                   </div>
                 </div>
               </section>
-
-              <nav className="detail-tabbar" aria-label="Navigation detail annonce">
-                {detailTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
-                    type="button"
-                    onClick={() => setActiveDetailTab(tab.key)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
 
               <div className="detail-column-main">
               {activeDetailTab === 'summary' ? (

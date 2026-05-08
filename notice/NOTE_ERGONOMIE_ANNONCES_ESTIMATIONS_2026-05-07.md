@@ -174,3 +174,11 @@ Reprise pro apres controle visuel:
 - la largeur de la modale detail est elargie pour retrouver une composition dashboard;
 - les onglets sont reduits en barre de navigation compacte;
 - les cartes, titres, images et espacements sont resserres pour donner une ergonomie outil metier.
+
+Controle popup reel:
+
+- la popup a ete ouverte localement sur une annonce reelle (`EM4048`, mandat `18562`);
+- les onglets sont maintenant visibles des l'ouverture de la popup;
+- la colonne `Pilotage` est visible a droite, avec fond sombre et actions lisibles;
+- le hero ne pousse plus toute la navigation sous la ligne de flottaison;
+- le build production a ete relance apres ce controle.
