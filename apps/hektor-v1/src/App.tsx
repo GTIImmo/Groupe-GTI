@@ -5766,10 +5766,11 @@ function DossierDetailLayout(props: {
 
   return (
     <section className="detail-screen">
-      <div className="panel">
-        <div className="panel-head">
+      <div className="panel detail-cockpit-panel">
+        <div className="panel-head detail-cockpit-head">
           <div className="detail-head-status">
             <span className="detail-status-chip">{dossier.statut_annonce ?? '-'}</span>
+            <span className="detail-cockpit-eyebrow">{props.eyebrow}</span>
           </div>
           <div className="detail-head-actions">
             <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>Ouvrir Hektor</button>
@@ -5805,6 +5806,11 @@ function DossierDetailLayout(props: {
                   {[dossier.agence_nom, dossier.commercial_nom].filter(Boolean).join(' · ')}
                 </p>
               ) : null}
+              <div className="detail-hero-status-row">
+                <StatusPill value={diffusableLabel(dossier.diffusable)} />
+                <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
+                <StatusPill value={activePortals.length ? `${activePortals.length} passerelle${activePortals.length > 1 ? 's' : ''}` : 'Aucune passerelle'} />
+              </div>
               <div className="detail-keyfacts">
                 <InfoCard label="Prix" value={formatPrice(dossier.prix)} />
                 <InfoCard label="Surface" value={props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'} />
@@ -6126,11 +6132,24 @@ function DossierDetailLayout(props: {
 
             <aside className="detail-column-side">
               <section className="detail-section detail-side-quick">
-                <div className="section-header"><h4>Actions</h4></div>
+                <div className="section-header"><h4>Pilotage</h4></div>
                 <div className="detail-side-actions">
-                  <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>Ouvrir Hektor</button>
-                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('diffusion')}>Diffusion</button>
-                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('history')}>Historique</button>
+                  <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>
+                    <span className="detail-side-action-mark">H</span>
+                    Ouvrir Hektor
+                  </button>
+                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('diffusion')}>
+                    <span className="detail-side-action-mark">D</span>
+                    Diffusion
+                  </button>
+                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('history')}>
+                    <span className="detail-side-action-mark">S</span>
+                    Suivi demandes
+                  </button>
+                </div>
+                <div className="detail-side-signal">
+                  <span>{dossier.numero_dossier ?? '-'}</span>
+                  <strong>{dossier.numero_mandat ? `Mandat ${dossier.numero_mandat}` : 'Sans mandat'}</strong>
                 </div>
               </section>
 

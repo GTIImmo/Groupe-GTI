@@ -158,3 +158,11 @@ Principe ergonomique:
 - l'utilisateur retrouve tous les blocs existants, mais ils ne sont plus empiles dans une seule page longue;
 - les passerelles sont affichees sous forme de badges marques, par exemple Leboncoin, Bien'ici, GTI ou SeLoger;
 - une colonne d'actions rapides garde l'acces a Hektor, Diffusion et Historique.
+
+Iteration visuelle ajoutee:
+
+- le conteneur detail devient un panneau cockpit dedie;
+- le haut de page est plus visuel, avec photo, titre, statut, validation et passerelles;
+- les 7 onglets deviennent de vrais boutons de pilotage;
+- la colonne droite devient une zone "Pilotage" plus visible, avec actions rapides;
+- le rendu reste volontairement limite a la page detail, sans changement de requete Supabase ni modification de la logique API.
