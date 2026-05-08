@@ -1951,11 +1951,19 @@ export default function App() {
   }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen])
 
   useEffect(() => {
+    if (selectedDossierId == null) return
+    const quickMandat = mandats.find((item) => item.app_dossier_id === selectedDossierId)
+    const quickBase = dossiers.find((item) => item.app_dossier_id === selectedDossierId) ?? (quickMandat ? mandateAsDossier(quickMandat) : null)
+    setSelectedDossier((current) => {
+      if (!quickBase) return current?.app_dossier_id === selectedDossierId ? current : null
+      const currentDetailPayload = current?.app_dossier_id === selectedDossierId ? current.detail_payload_json : null
+      return { ...quickBase, detail_payload_json: currentDetailPayload }
+    })
+  }, [selectedDossierId, dossiers, mandats])
+
+  useEffect(() => {
     if (selectedDossierId == null || (hasSupabaseEnv && !session)) return
     let cancelled = false
-    const quickBase = dossiers.find((item) => item.app_dossier_id === selectedDossierId)
-    const quick = quickBase ? { ...quickBase, detail_payload_json: selectedDossier?.detail_payload_json ?? null } : selectedDossier
-    if (quick) setSelectedDossier(quick)
     setDetailLoading(true)
     loadDossierDetail(selectedDossierId)
       .then((detail) => {
@@ -1970,7 +1978,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDossierId, session, dossiers])
+  }, [selectedDossierId, session])
 
   useEffect(() => {
     if (deepLinkHandled || bootLoading || (hasSupabaseEnv && !session)) return
@@ -2205,6 +2213,11 @@ export default function App() {
   }
 
   function openDossierDetailPage(appDossierId: number) {
+    const quickMandat = mandats.find((item) => item.app_dossier_id === appDossierId)
+    const quickBase = dossiers.find((item) => item.app_dossier_id === appDossierId) ?? (quickMandat ? mandateAsDossier(quickMandat) : null)
+    const currentDetailPayload = selectedDossier?.app_dossier_id === appDossierId ? selectedDossier.detail_payload_json : null
+    setSelectedDossier(quickBase ? { ...quickBase, detail_payload_json: currentDetailPayload } : null)
+    setDetailLoading(true)
     setSelectedDossierId(appDossierId)
     setDetailOpen(true)
   }

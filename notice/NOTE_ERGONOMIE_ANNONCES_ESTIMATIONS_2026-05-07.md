@@ -86,3 +86,16 @@ La prochaine evolution utile sera de definir les actions metier propres aux esti
 - detecter une estimation transformee en mandat;
 - distinguer estimation active, abandonnee, gagnee;
 - preparer une vue commerciale de conversion estimation -> mandat.
+
+## Correctif detail annonce du 2026-05-08
+
+Probleme observe: au clic sur une ligne, la fiche detail pouvait afficher immediatement les donnees enrichies de l'annonce precedente, puis remplacer l'affichage par la bonne annonce apres chargement.
+
+Cause: le composant conservait temporairement `detail_payload_json` du `selectedDossier` precedent pendant le chargement de `loadDossierDetail(...)`.
+
+Correction appliquee:
+
+- au changement d'annonce, la fiche rapide reprend seulement les donnees de la ligne selectionnee;
+- `detail_payload_json` n'est conserve que si l'utilisateur rouvre exactement le meme `app_dossier_id`;
+- le chargement detail n'est plus relance quand la liste visible se met simplement a jour;
+- les enrichissements optionnels Matterport et rendez-vous backend sont lances en parallele avec un delai maximum de 3 secondes afin de ne pas bloquer l'affichage de la fiche.

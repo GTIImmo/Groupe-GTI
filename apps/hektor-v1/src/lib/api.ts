@@ -367,6 +367,22 @@ async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST
   return payload as T
 }
 
+function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`Timeout apres ${timeoutMs} ms`)), timeoutMs)
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timeout)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timeout)
+        reject(error)
+      },
+    )
+  })
+}
+
 function extractApiErrorMessage(payload: unknown) {
   if (typeof payload === 'string' && payload.trim()) return payload.trim()
   if (!payload || typeof payload !== 'object') return ''
@@ -1079,18 +1095,14 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
   if (dossierError) throw new Error(dossierError.message)
   if (!dossierData) return null
 
-  const { data: detailData, error: detailError } = await supabase
+  const detailPromise = supabase
     .from('app_dossier_details_current')
     .select('app_dossier_id,hektor_annonce_id,detail_payload_json')
     .eq('app_dossier_id', appDossierId)
     .maybeSingle()
 
-  if (detailError && detailError.code !== 'PGRST116') throw new Error(detailError.message)
-
-  const detailPayload = parseJsonObject((detailData as DossierDetail | null)?.detail_payload_json ?? null)
-
-  try {
-    const { data: matterportData, error: matterportError } = await supabase
+  const matterportPromise = withTimeout(
+    supabase
       .from('app_matterport_group')
       .select(`
         id,
@@ -1118,30 +1130,42 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
         )
       `)
       .eq('hektor_annonce_id', dossierData.hektor_annonce_id)
-      .order('numero_mandat', { ascending: true })
+      .order('numero_mandat', { ascending: true }),
+    3000,
+  ).catch(() => null)
 
-    if (!matterportError) {
-      detailPayload.matterport_groups_json = JSON.stringify(normalizeMatterportGroups(matterportData as MatterportGroupRow[]))
-    }
-  } catch {
-    // La table Matterport peut ne pas encore etre appliquee en production.
+  const appointmentSummaryPromise = canUseBackendApi()
+    ? withTimeout(
+        invokeBackendApi<AppointmentSummaryResponse>(`/public/appointments/annonce/${encodeURIComponent(String(dossierData.hektor_annonce_id))}/summary`, {
+          method: 'GET',
+        }),
+        3000,
+      ).catch(() => null)
+    : Promise.resolve(null)
+
+  const [detailResult, matterportResult, appointmentSummary] = await Promise.all([
+    detailPromise,
+    matterportPromise,
+    appointmentSummaryPromise,
+  ])
+
+  const { data: detailData, error: detailError } = detailResult
+  if (detailError && detailError.code !== 'PGRST116') throw new Error(detailError.message)
+
+  const detailPayload = parseJsonObject((detailData as DossierDetail | null)?.detail_payload_json ?? null)
+
+  if (matterportResult && !matterportResult.error) {
+    detailPayload.matterport_groups_json = JSON.stringify(normalizeMatterportGroups(matterportResult.data as MatterportGroupRow[]))
   }
 
-  if (canUseBackendApi()) {
-    try {
-      const appointmentSummary = await invokeBackendApi<AppointmentSummaryResponse>(`/public/appointments/annonce/${encodeURIComponent(String(dossierData.hektor_annonce_id))}/summary`, {
-        method: 'GET',
-      })
-      const context = appointmentSummary.context ?? {}
-      detailPayload.appointment_public_token = context.token ?? detailPayload.appointment_public_token ?? null
-      detailPayload.appointment_public_url = context.publicUrl ?? detailPayload.appointment_public_url ?? null
-      detailPayload.appointment_negociateur_id = context.commercialId ?? detailPayload.appointment_negociateur_id ?? null
-      detailPayload.appointment_negociateur_email = context.negociateurEmail ?? detailPayload.appointment_negociateur_email ?? null
-      detailPayload.appointment_requests_json = JSON.stringify(Array.isArray(appointmentSummary.requests) ? appointmentSummary.requests : [])
-      detailPayload.appointment_request_events_json = JSON.stringify(Array.isArray(appointmentSummary.events) ? appointmentSummary.events : [])
-    } catch {
-      // Ne bloque pas la fiche annonce si le module RDV n'est pas encore joignable.
-    }
+  if (appointmentSummary) {
+    const context = appointmentSummary.context ?? {}
+    detailPayload.appointment_public_token = context.token ?? detailPayload.appointment_public_token ?? null
+    detailPayload.appointment_public_url = context.publicUrl ?? detailPayload.appointment_public_url ?? null
+    detailPayload.appointment_negociateur_id = context.commercialId ?? detailPayload.appointment_negociateur_id ?? null
+    detailPayload.appointment_negociateur_email = context.negociateurEmail ?? detailPayload.appointment_negociateur_email ?? null
+    detailPayload.appointment_requests_json = JSON.stringify(Array.isArray(appointmentSummary.requests) ? appointmentSummary.requests : [])
+    detailPayload.appointment_request_events_json = JSON.stringify(Array.isArray(appointmentSummary.events) ? appointmentSummary.events : [])
   }
 
   return {
