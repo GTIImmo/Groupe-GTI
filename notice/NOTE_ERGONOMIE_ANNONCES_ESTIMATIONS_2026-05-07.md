@@ -98,3 +98,21 @@ Correction appliquee:
 - au changement d'annonce, la fiche rapide reprend seulement les donnees de la ligne selectionnee;
 - `detail_payload_json` n'est conserve que si l'utilisateur rouvre exactement le meme `app_dossier_id`;
 - le chargement detail n'est plus relance quand la liste visible se met simplement a jour.
+
+## Correctif perimetre suivi mandats du 2026-05-08
+
+Probleme observe: l'ajout du statut `Estimation` dans le perimetre exporte vers Supabase pouvait modifier les volumes de la vue "Suivi des mandats".
+
+Cause: la vue "Suivi des mandats" chargeait les mandats avec le filtre statut global lorsqu'il etait vide. Depuis l'ajout des estimations, un filtre statut vide pouvait donc inclure aussi les lignes `Estimation`.
+
+Regle produit retenue:
+
+- "Estimations" reste la seule vue dediee aux annonces `Estimation`;
+- "Suivi des mandats" suit le parc mandat actif et exclut les estimations par defaut;
+- son perimetre par defaut est aligne sur "Annonces actives": `Actif`, `Sous offre`, `Sous compromis`.
+
+Correction appliquee dans l'application:
+
+- a l'ouverture ou a la reinitialisation de "Suivi des mandats", le filtre statut par defaut devient `__active_listings__`;
+- si le filtre statut est vide dans cette vue, l'application force aussi `__active_listings__` avant d'appeler Supabase;
+- les KPI et le listing du suivi ne sont donc plus pollues par les estimations.

@@ -182,6 +182,12 @@ function defaultFiltersForScreen(screen: Screen): AppFilters {
       statut: 'Actif',
     }
   }
+  if (screen === 'suivi') {
+    return {
+      ...emptyFilters,
+      statut: activeListingsFilterValue,
+    }
+  }
   return emptyFilters
 }
 
@@ -1771,7 +1777,7 @@ export default function App() {
     return { negotiatorEmail: sessionEmail || null }
   }, [profile?.role, sessionEmail])
   const dataFilters = useMemo<AppFilters>(() => {
-    if (screen === 'mandats' && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
+    if ((screen === 'mandats' || screen === 'suivi') && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
     if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
     return filters
   }, [filters, screen])
