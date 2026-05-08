@@ -97,5 +97,4 @@ Correction appliquee:
 
 - au changement d'annonce, la fiche rapide reprend seulement les donnees de la ligne selectionnee;
 - `detail_payload_json` n'est conserve que si l'utilisateur rouvre exactement le meme `app_dossier_id`;
-- le chargement detail n'est plus relance quand la liste visible se met simplement a jour;
-- les enrichissements optionnels Matterport et rendez-vous backend sont lances en parallele avec un delai maximum de 3 secondes afin de ne pas bloquer l'affichage de la fiche.
+- le chargement detail n'est plus relance quand la liste visible se met simplement a jour.
