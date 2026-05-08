@@ -116,3 +116,18 @@ Correction appliquee dans l'application:
 - a l'ouverture ou a la reinitialisation de "Suivi des mandats", le filtre statut par defaut devient `__active_listings__`;
 - si le filtre statut est vide dans cette vue, l'application force aussi `__active_listings__` avant d'appeler Supabase;
 - les KPI et le listing du suivi ne sont donc plus pollues par les estimations.
+
+## Correctif experience KPI annonces actives du 2026-05-08
+
+Probleme observe: au clic sur un KPI de la vue "Annonces actives", le titre/filtres changeaient avant le listing, tandis que les anciennes lignes restaient visibles sans retour clair.
+
+Cause: le chargement principal attendait en bloc `loadDossiersPage`, `loadMandatsPage` et `loadWorkItemsPage` avant d'appliquer les nouvelles lignes mandats.
+
+Correction appliquee:
+
+- le KPI clique est marque actif immediatement;
+- le tableau affiche "Chargement du listing..." pendant la mise a jour;
+- les anciennes lignes sont visuellement attenuees pendant le rafraichissement;
+- `loadMandatsPage` met a jour le listing des qu'il repond;
+- `loadDossiersPage` et `loadWorkItemsPage` continuent de se charger a part pour garder le contexte global coherent;
+- les KPI/statistiques continuent de se recalculer independamment, sans bloquer l'experience du tableau.

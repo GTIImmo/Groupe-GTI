@@ -1700,6 +1700,7 @@ export default function App() {
   const [mandatLoading, setMandatLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [commercialMetricsExpanded, setCommercialMetricsExpanded] = useState(false)
+  const [activeMandatKpiAction, setActiveMandatKpiAction] = useState<HeaderMetricItem['action']>(null)
   const [mandatDrilldownLabel, setMandatDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
   const [suiviDrilldownLabel, setSuiviDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
   const [suiviRequestFilter, setSuiviRequestFilter] = useState<'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null>('pending_or_in_progress')
@@ -1916,23 +1917,18 @@ export default function App() {
     setMandatLoading(true)
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
     const nextMandatPageSize = screen === 'suivi' ? 1000 : mandatPageSize
-    Promise.all([
-      loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope }),
-      screen === 'registre'
-        ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
-        : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope }),
-      loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope }),
-    ])
-      .then(([nextDossiersPage, nextMandatsPage, nextWorkItemsPage]) => {
+    const dossiersPromise = loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope })
+    const mandatsPromise = screen === 'registre'
+      ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+      : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+    const workItemsPromise = loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope })
+
+    mandatsPromise
+      .then((nextMandatsPage) => {
         if (cancelled) return
-        setDossiers(nextDossiersPage.rows)
-        setDossiersTotal(nextDossiersPage.total)
         setMandats(nextMandatsPage.rows)
         setMandatsTotal(nextMandatsPage.total)
-        setWorkItems(nextWorkItemsPage.rows)
-        setWorkItemsTotal(nextWorkItemsPage.total)
-        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, nextWorkItemsPage.rows, nextMandatsPage.rows)))
-        setSelectedDossierId((current) => current ?? nextDossiersPage.rows[0]?.app_dossier_id ?? null)
+        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], nextMandatsPage.rows)))
         if (screen === 'registre') {
           setSelectedRegisterRowId((current) => {
             if (current && nextMandatsPage.rows.some((item) => item.register_row_id === current)) return current
@@ -1943,13 +1939,27 @@ export default function App() {
         }
       })
       .catch((error) => {
+        if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement des annonces actives')
+      })
+      .finally(() => {
+        if (!cancelled) setMandatLoading(false)
+      })
+
+    Promise.all([dossiersPromise, workItemsPromise])
+      .then(([nextDossiersPage, nextWorkItemsPage]) => {
+        if (cancelled) return
+        setDossiers(nextDossiersPage.rows)
+        setDossiersTotal(nextDossiersPage.total)
+        setWorkItems(nextWorkItemsPage.rows)
+        setWorkItemsTotal(nextWorkItemsPage.total)
+        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, nextWorkItemsPage.rows, [])))
+        setSelectedDossierId((current) => current ?? nextDossiersPage.rows[0]?.app_dossier_id ?? null)
+      })
+      .catch((error) => {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement')
       })
       .finally(() => {
-        if (!cancelled) {
-          setPageLoading(false)
-          setMandatLoading(false)
-        }
+        if (!cancelled) setPageLoading(false)
       })
     return () => {
       cancelled = true
@@ -2093,6 +2103,7 @@ export default function App() {
   }
 
   function updateFilter<K extends keyof AppFilters>(key: K, value: AppFilters[K]) {
+    if (screen === 'mandats') setActiveMandatKpiAction(null)
     setFilters((current) => {
       const next = { ...current, [key]: value }
       if (key === 'affaire') {
@@ -2109,6 +2120,7 @@ export default function App() {
   function resetFilters() {
     setFilters(defaultFiltersForScreen(screen))
     setMandatDrilldownLabel(null)
+    setActiveMandatKpiAction(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(screen === 'suivi' ? 'pending_or_in_progress' : null)
     setDossierPage(1)
@@ -2120,6 +2132,7 @@ export default function App() {
   function openScreen(nextScreen: Screen) {
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMandatDrilldownLabel(null)
+    setActiveMandatKpiAction(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(nextScreen === 'suivi' ? 'pending_or_in_progress' : null)
     setFiltersOpen(false)
@@ -2153,6 +2166,7 @@ export default function App() {
       setDetailOpen(false)
       setCommercialMetricsExpanded(false)
       setMandatDrilldownLabel(null)
+      setActiveMandatKpiAction(null)
       setSuiviDrilldownLabel(nextSuiviLabel)
       setSuiviRequestFilter(nextSuiviFilter)
       setFilters(emptyFilters)
@@ -2197,6 +2211,7 @@ export default function App() {
     setDetailOpen(false)
     setCommercialMetricsExpanded(false)
     setMandatDrilldownLabel(nextLabel)
+    setActiveMandatKpiAction(action)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(null)
     setFilters(nextFilters)
@@ -2213,6 +2228,7 @@ export default function App() {
     setDetailOpen(false)
     setCommercialMetricsExpanded(false)
     setMandatDrilldownLabel(null)
+    setActiveMandatKpiAction(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(null)
     setFilters(nextFilters)
@@ -3423,7 +3439,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   {primaryCommercialMetrics.map((item) => (
                     <article
                       key={item.label}
-                      className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
+                      className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''} ${item.action && item.action === activeMandatKpiAction ? 'is-active' : ''}`}
                       onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
                       role={item.action ? 'button' : undefined}
                       tabIndex={item.action ? 0 : undefined}
@@ -3454,7 +3470,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     {secondaryCommercialMetrics.map((item) => (
                       <article
                         key={item.label}
-                        className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
+                        className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''} ${item.action && item.action === activeMandatKpiAction ? 'is-active' : ''}`}
                         onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
                         role={item.action ? 'button' : undefined}
                         tabIndex={item.action ? 0 : undefined}
@@ -4655,7 +4671,8 @@ function MandatsScreen(props: {
             </label>
           </div>
         </div>
-        <div className="table-wrap">
+        <div className={`table-wrap listing-table-wrap ${props.loading ? 'is-refreshing' : ''}`}>
+          {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
           <table>
             <thead>
               {isEstimationMode ? (
@@ -4675,7 +4692,7 @@ function MandatsScreen(props: {
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
-                      className={isSelected ? 'is-selected' : ''}
+                      className={`${isSelected ? 'is-selected' : ''} ${props.loading ? 'is-refreshing-row' : ''}`.trim()}
                       onClick={() => {
                         props.onSelectMandat(item.app_dossier_id)
                         props.onOpenDetailPage(item.app_dossier_id)
