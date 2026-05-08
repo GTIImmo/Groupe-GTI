@@ -5779,62 +5779,63 @@ function DossierDetailLayout(props: {
         </div>
 
         <div className="full-detail-layout">
-          <section className="detail-overview">
-            <div className="detail-overview-media">
-              {primaryImage ? (
-                <div className="gallery gallery-compact">
-                  <button className="gallery-medium-button" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
-                    <img src={primaryImage} alt={dossier.titre_bien} />
-                  </button>
-                  {previewImages.length > 1 ? (
-                    <div className="gallery-thumbs gallery-thumbs-compact">
-                      {previewImages.slice(1, 5).map((item) => (
-                        <button key={item.url} className="gallery-thumb-button" type="button" onClick={() => props.onOpenImage?.(item.url)}>
-                          <img src={item.url} alt={item.legend || dossier.titre_bien} />
-                        </button>
-                      ))}
+          <div className="detail-cockpit-body">
+            <main className="detail-cockpit-main">
+              <section className="detail-overview">
+                <div className="detail-overview-media">
+                  {primaryImage ? (
+                    <div className="gallery gallery-compact">
+                      <button className="gallery-medium-button" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
+                        <img src={primaryImage} alt={dossier.titre_bien} />
+                      </button>
+                      {previewImages.length > 1 ? (
+                        <div className="gallery-thumbs gallery-thumbs-compact">
+                          {previewImages.slice(1, 5).map((item) => (
+                            <button key={item.url} className="gallery-thumb-button" type="button" onClick={() => props.onOpenImage?.(item.url)}>
+                              <img src={item.url} alt={item.legend || dossier.titre_bien} />
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  ) : <div className="detail-photo-placeholder">Aucune photo synchronisee</div>}
                 </div>
-              ) : <div className="detail-photo-placeholder">Aucune photo synchronisee</div>}
-            </div>
-            <div className="detail-overview-summary">
-              <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
-              {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
-              {dossier.agence_nom || dossier.commercial_nom ? (
-                <p className="detail-summary-meta">
-                  {[dossier.agence_nom, dossier.commercial_nom].filter(Boolean).join(' · ')}
-                </p>
-              ) : null}
-              <div className="detail-hero-status-row">
-                <StatusPill value={diffusableLabel(dossier.diffusable)} />
-                <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
-                <StatusPill value={activePortals.length ? `${activePortals.length} passerelle${activePortals.length > 1 ? 's' : ''}` : 'Aucune passerelle'} />
-              </div>
-              <div className="detail-keyfacts">
-                <InfoCard label="Prix" value={formatPrice(dossier.prix)} />
-                <InfoCard label="Surface" value={props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'} />
-                <InfoCard label="Dossier" value={dossier.numero_dossier ?? '-'} />
-                <InfoCard label="Mandat" value={dossier.numero_mandat ?? '-'} />
-              </div>
-            </div>
-          </section>
+                <div className="detail-overview-summary">
+                  <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                  {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
+                  {dossier.agence_nom || dossier.commercial_nom ? (
+                    <p className="detail-summary-meta">
+                      {[dossier.agence_nom, dossier.commercial_nom].filter(Boolean).join(' · ')}
+                    </p>
+                  ) : null}
+                  <div className="detail-hero-status-row">
+                    <StatusPill value={diffusableLabel(dossier.diffusable)} />
+                    <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
+                    <StatusPill value={activePortals.length ? `${activePortals.length} passerelle${activePortals.length > 1 ? 's' : ''}` : 'Aucune passerelle'} />
+                  </div>
+                  <div className="detail-keyfacts">
+                    <InfoCard label="Prix" value={formatPrice(dossier.prix)} />
+                    <InfoCard label="Surface" value={props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'} />
+                    <InfoCard label="Dossier" value={dossier.numero_dossier ?? '-'} />
+                    <InfoCard label="Mandat" value={dossier.numero_mandat ?? '-'} />
+                  </div>
+                </div>
+              </section>
 
-          <nav className="detail-tabbar" aria-label="Navigation detail annonce">
-            {detailTabs.map((tab) => (
-              <button
-                key={tab.key}
-                className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
-                type="button"
-                onClick={() => setActiveDetailTab(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+              <nav className="detail-tabbar" aria-label="Navigation detail annonce">
+                {detailTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
+                    type="button"
+                    onClick={() => setActiveDetailTab(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
 
-          <div className="detail-columns">
-            <div className="detail-column-main">
+              <div className="detail-column-main">
               {activeDetailTab === 'summary' ? (
                 <section className="detail-section detail-summary-cockpit">
                   <div className="section-header"><h4>Synthese du dossier</h4>{props.detailLoading ? <span>Chargement...</span> : null}</div>
@@ -6128,7 +6129,8 @@ function DossierDetailLayout(props: {
               ) : null}
 
               {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
-            </div>
+              </div>
+            </main>
 
             <aside className="detail-column-side">
               <section className="detail-section detail-side-quick">

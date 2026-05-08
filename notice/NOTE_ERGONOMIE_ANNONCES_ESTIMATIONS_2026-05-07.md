@@ -166,3 +166,11 @@ Iteration visuelle ajoutee:
 - les 7 onglets deviennent de vrais boutons de pilotage;
 - la colonne droite devient une zone "Pilotage" plus visible, avec actions rapides;
 - le rendu reste volontairement limite a la page detail, sans changement de requete Supabase ni modification de la logique API.
+
+Reprise pro apres controle visuel:
+
+- la colonne de pilotage n'est plus rendue apres le hero, elle est placee dans une grille cockpit a droite du contenu principal;
+- le hero est compacte pour eviter une page vitrine trop haute;
+- la largeur de la modale detail est elargie pour retrouver une composition dashboard;
+- les onglets sont reduits en barre de navigation compacte;
+- les cartes, titres, images et espacements sont resserres pour donner une ergonomie outil metier.
