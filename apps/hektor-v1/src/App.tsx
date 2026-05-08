@@ -1367,6 +1367,36 @@ function buildPortalsResume(values: Array<string | null | undefined>) {
   return uniquePortalKeys(values).join(', ')
 }
 
+function portalBrandLabel(value: string | null | undefined) {
+  const normalized = normalizePortalToken(value)
+  if (normalized.includes('leboncoin') || normalized.includes('lbc')) return 'Leboncoin'
+  if (normalized.includes('bienici') || normalized.includes("bien'ici")) return "Bien'ici"
+  if (normalized.includes('gti') || normalized.includes('site')) return 'GTI'
+  if (normalized.includes('seloger')) return 'SeLoger'
+  return safeText(value) || 'Passerelle'
+}
+
+function portalBrandClass(value: string | null | undefined) {
+  const normalized = normalizePortalToken(value)
+  if (normalized.includes('leboncoin') || normalized.includes('lbc')) return 'is-leboncoin'
+  if (normalized.includes('bienici') || normalized.includes("bien'ici")) return 'is-bienici'
+  if (normalized.includes('gti') || normalized.includes('site')) return 'is-gti'
+  if (normalized.includes('seloger')) return 'is-seloger'
+  return 'is-generic'
+}
+
+type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual'
+
+const detailTabs: Array<{ key: DetailTabKey; label: string }> = [
+  { key: 'summary', label: 'Synthese' },
+  { key: 'commercial', label: 'Commercialisation' },
+  { key: 'mandate', label: 'Mandat & contacts' },
+  { key: 'diffusion', label: 'Diffusion' },
+  { key: 'content', label: 'Contenu annonce' },
+  { key: 'history', label: 'Historique' },
+  { key: 'virtual', label: 'Visites virtuelles' },
+]
+
 type HeaderMetricItem = {
   label: string
   value: string
@@ -5684,6 +5714,7 @@ function DossierDetailLayout(props: {
   const hasAnyHistory = props.requestHistoryDiffusion.length > 0 || props.requestHistoryPriceDrop.length > 0
   const [mandatSectionOpen, setMandatSectionOpen] = useState(true)
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>('summary')
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
   const buildRequestGroups = (
@@ -5783,10 +5814,47 @@ function DossierDetailLayout(props: {
             </div>
           </section>
 
+          <nav className="detail-tabbar" aria-label="Navigation detail annonce">
+            {detailTabs.map((tab) => (
+              <button
+                key={tab.key}
+                className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
+                type="button"
+                onClick={() => setActiveDetailTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
           <div className="detail-columns">
             <div className="detail-column-main">
+              {activeDetailTab === 'summary' ? (
+                <section className="detail-section detail-summary-cockpit">
+                  <div className="section-header"><h4>Synthese du dossier</h4>{props.detailLoading ? <span>Chargement...</span> : null}</div>
+                  <div className="info-grid">
+                    <InfoCard label="Statut" value={dossier.statut_annonce ?? '-'} />
+                    <InfoCard label="Diffusion" value={diffusableLabel(dossier.diffusable)} />
+                    <InfoCard label="Passerelles" value={activePortals.length ? `${activePortals.length} activee${activePortals.length > 1 ? 's' : ''}` : 'Aucune'} />
+                    <InfoCard label="Validation" value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'A valider'} />
+                    <InfoCard label="Commercial" value={dossier.commercial_nom ?? '-'} />
+                    <InfoCard label="Agence" value={dossier.agence_nom ?? '-'} />
+                    <InfoCard label="Offre" value={props.detail.offre_state ?? '-'} />
+                    <InfoCard label="Prochaine action" value={props.detail.next_action ?? '-'} />
+                  </div>
+                  <div className="detail-summary-actions">
+                    <button className="ghost-button button-accent" type="button" onClick={() => setActiveDetailTab('diffusion')}>Piloter la diffusion</button>
+                    <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('mandate')}>Voir mandat & contacts</button>
+                    <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('content')}>Controler l'annonce</button>
+                    <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('virtual')}>Visites virtuelles</button>
+                  </div>
+                </section>
+              ) : null}
+
+              {(activeDetailTab === 'virtual' || activeDetailTab === 'mandate' || activeDetailTab === 'commercial') ? (
               <section className="detail-section detail-section-topstack">
                 {hasMatterport ? (
+                  activeDetailTab === 'virtual' ? (
                   <article className="detail-subsection matterport-section">
                     <div className="section-header">
                       <h4>Visites Matterport</h4>
@@ -5831,7 +5899,9 @@ function DossierDetailLayout(props: {
                       })}
                     </div>
                   </article>
-                ) : null}
+                  ) : null
+                ) : activeDetailTab === 'virtual' ? <p className="empty-state">Aucune visite Matterport liee a cette annonce.</p> : null}
+                {activeDetailTab === 'mandate' ? (
                 <article className="detail-subsection">
                   <div className="section-header section-header-collapsible">
                     <h4>Detail mandat</h4>
@@ -5867,6 +5937,8 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : <p className="empty-state">Aucune information mandat riche.</p>) : null}
                 </article>
+                ) : null}
+                {activeDetailTab === 'commercial' ? (
                 <article className="detail-subsection">
                   <div className="section-header">
                     <h4>Historique des prix</h4>
@@ -5877,6 +5949,8 @@ function DossierDetailLayout(props: {
                     emptyLabel="Aucun changement de prix historisé pour cette annonce."
                   />
                 </article>
+                ) : null}
+                {activeDetailTab === 'mandate' ? (
                 <article className="detail-subsection">
                   <div className="section-header section-header-collapsible">
                     <h4>Detail contact</h4>
@@ -5963,8 +6037,11 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : <p className="empty-state">Aucun contact detaille.</p>}
                 </article>
+                ) : null}
               </section>
+              ) : null}
 
+              {activeDetailTab === 'content' ? (
               <section className="detail-section">
                 <div className="section-header"><h4>Descriptif</h4>{props.detailLoading ? <span>Chargement...</span> : null}</div>
                 {props.texts.length > 0 ? (
@@ -5973,7 +6050,9 @@ function DossierDetailLayout(props: {
                   </div>
                 ) : <p className="empty-state">Aucun descriptif riche disponible.</p>}
               </section>
+              ) : null}
 
+              {activeDetailTab === 'content' ? (
               <section className="detail-section">
                 <div className="section-header"><h4>Caracteristiques du bien</h4></div>
                 <div className="info-grid">
@@ -5988,7 +6067,9 @@ function DossierDetailLayout(props: {
                   <InfoCard label="Ascenseur" value={props.detail.ascenseur_detail ?? '-'} />
                 </div>
               </section>
+              ) : null}
 
+              {activeDetailTab === 'commercial' ? (
               <section className="detail-section detail-section-transactions">
                 <div className="section-header"><h4>Transactions</h4></div>
                 <div className="transaction-columns">
@@ -6027,7 +6108,9 @@ function DossierDetailLayout(props: {
                   </article>
                 </div>
               </section>
+              ) : null}
 
+              {activeDetailTab === 'content' ? (
               <section className="detail-section">
                 <div className="section-header"><h4>Notes et commentaires</h4></div>
                 {props.notes.length > 0 ? (
@@ -6036,11 +6119,22 @@ function DossierDetailLayout(props: {
                   </div>
                 ) : <p className="empty-state">Aucune note disponible.</p>}
               </section>
+              ) : null}
 
-              <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
+              {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
             </div>
 
             <aside className="detail-column-side">
+              <section className="detail-section detail-side-quick">
+                <div className="section-header"><h4>Actions</h4></div>
+                <div className="detail-side-actions">
+                  <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>Ouvrir Hektor</button>
+                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('diffusion')}>Diffusion</button>
+                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('history')}>Historique</button>
+                </div>
+              </section>
+
+              {activeDetailTab === 'diffusion' ? (
               <section className="detail-section detail-section-status">
                 <div className="section-header"><h4>Diffusion</h4></div>
                 {props.allowMarkValidation ? (
@@ -6138,19 +6232,20 @@ function DossierDetailLayout(props: {
                 <div className="detail-portals-list">
                   <span className="detail-label">Passerelles activees</span>
                   {activePortals.length > 0 ? (
-                    <div className="timeline-list">
+                    <div className="detail-portal-badges">
                       {activePortals.map((portal) => (
-                        <article key={portal} className="timeline-card">
-                          <strong>{portal}</strong>
-                          <span>{observedPortals.includes(portal) ? "Etat lu dans l'application" : 'Activation demandee en attente Hektor'}</span>
-                          <span>Depuis : {formatDate(props.detail.date_maj ?? null)}</span>
+                        <article key={portal} className={`detail-portal-badge ${portalBrandClass(portal)}`}>
+                          <strong>{portalBrandLabel(portal)}</strong>
+                          <span>{observedPortals.includes(portal) ? 'Actif' : 'En attente'}</span>
                         </article>
                       ))}
                     </div>
                   ) : <p className="empty-state">Aucune passerelle active.</p>}
                 </div>
               </section>
+              ) : null}
 
+              {activeDetailTab === 'history' ? (
               <section className="detail-section">
                 <div className="section-header">
                   <h4>Historique des demandes</h4>
@@ -6216,6 +6311,7 @@ function DossierDetailLayout(props: {
                   ) : <p className="empty-state">Aucun historique de demande sur la page courante.</p>
                 ) : null}
               </section>
+              ) : null}
             </aside>
           </div>
         </div>

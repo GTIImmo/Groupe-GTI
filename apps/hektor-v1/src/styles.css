@@ -2590,6 +2590,40 @@ tbody tr.is-refreshing-row td {
   display: grid;
   gap: 22px;
 }
+.detail-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(211, 221, 227, 0.94);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,248,250,0.98) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.detail-tab-button {
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #385563;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.detail-tab-button:hover {
+  background: rgba(238, 245, 247, 0.96);
+  border-color: rgba(190, 206, 215, 0.94);
+  transform: translateY(-1px);
+}
+.detail-tab-button.is-active {
+  background: linear-gradient(180deg, #123f4f 0%, #0d2f3c 100%);
+  border-color: rgba(9, 46, 60, 0.35);
+  color: #fff;
+  box-shadow: 0 10px 18px rgba(14, 55, 70, 0.16);
+}
 .detail-overview {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -2659,6 +2693,23 @@ tbody tr.is-refreshing-row td {
 .detail-column-side {
   align-content: start;
   height: max-content;
+}
+.detail-summary-cockpit {
+  display: grid;
+  gap: 16px;
+}
+.detail-summary-actions,
+.detail-side-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.detail-summary-actions .ghost-button,
+.detail-side-actions .ghost-button {
+  min-height: 38px;
+}
+.detail-side-quick {
+  background: linear-gradient(180deg, rgba(247,251,252,0.99) 0%, rgba(239,246,248,0.98) 100%);
 }
 .detail-section-topgrid {
   display: grid;
@@ -3075,6 +3126,44 @@ button.metric-card.is-active {
   gap: 10px;
   margin-top: 16px;
 }
+.detail-portal-badges {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.detail-portal-badge {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 13px 14px;
+  border: 1px solid rgba(210, 220, 226, 0.94);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(246,249,250,0.98) 100%);
+  box-shadow: 0 10px 18px rgba(21, 32, 43, 0.05);
+}
+.detail-portal-badge strong {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  min-width: 42px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+.detail-portal-badge span {
+  color: #536b77;
+  font-size: 12px;
+  font-weight: 700;
+}
+.detail-portal-badge.is-leboncoin strong { background: #f56b2a; }
+.detail-portal-badge.is-bienici strong { background: #d52b8a; }
+.detail-portal-badge.is-gti strong { background: #123f4f; }
+.detail-portal-badge.is-seloger strong { background: #e32227; }
+.detail-portal-badge.is-generic strong { background: #607481; }
 .detail-section-transactions {
   display: grid;
   gap: 16px;
@@ -3975,8 +4064,16 @@ button.metric-card.is-active {
 }
 
 @media (max-width: 900px) {
-  .hero, .panel-grid, .stats-grid, .filter-grid, .dashboard-grid, .detail-overview, .detail-columns, .metric-grid, .info-grid, .gallery-thumbs, .kpi-strip, .admin-action-row, .admin-form-grid, .suivi-layout, .header-kpis, .detail-keyfacts, .detail-status-grid, .detail-section-topgrid, .transaction-columns {
+  .hero, .panel-grid, .stats-grid, .filter-grid, .dashboard-grid, .detail-overview, .detail-columns, .metric-grid, .info-grid, .gallery-thumbs, .kpi-strip, .admin-action-row, .admin-form-grid, .suivi-layout, .header-kpis, .detail-keyfacts, .detail-status-grid, .detail-section-topgrid, .transaction-columns, .detail-portal-badges {
     grid-template-columns: 1fr;
+  }
+  .detail-tabbar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 10px;
+  }
+  .detail-tab-button {
+    flex: 0 0 auto;
   }
   .suivi-command-grid,
   .suivi-lanes,

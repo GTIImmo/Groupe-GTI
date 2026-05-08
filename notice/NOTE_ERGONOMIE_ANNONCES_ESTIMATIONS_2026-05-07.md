@@ -131,3 +131,30 @@ Correction appliquee:
 - `loadMandatsPage` met a jour le listing des qu'il repond;
 - `loadDossiersPage` et `loadWorkItemsPage` continuent de se charger a part pour garder le contexte global coherent;
 - les KPI/statistiques continuent de se recalculer independamment, sans bloquer l'experience du tableau.
+
+## Chantier cockpit detail annonce du 2026-05-08
+
+Objectif: transformer la page detail des annonces actives en espace de pilotage plus lisible, sans retirer les informations deja disponibles.
+
+Sauvegarde de travail:
+
+- branche creee: `codex/detail-cockpit`;
+- `main` reste utilisable sur le dernier etat pousse avant refonte;
+- seuls `apps/hektor-v1/src/App.tsx`, `apps/hektor-v1/src/styles.css` et cette notice doivent porter le chantier.
+
+Organisation retenue:
+
+- `Synthese`: resume rapide du dossier, statut, validation, diffusion, passerelles, commercial et action suivante;
+- `Commercialisation`: historique des prix, offre, compromis, vente et rendez-vous annonce;
+- `Mandat & contacts`: detail mandat et mandants dans une meme zone;
+- `Diffusion`: validation Hektor, etat diffusable et passerelles activees;
+- `Contenu annonce`: descriptif, caracteristiques, notes et commentaires;
+- `Historique`: demandes de diffusion et demandes de baisse de prix;
+- `Visites virtuelles`: groupes et modeles Matterport.
+
+Principe ergonomique:
+
+- les 7 boutons servent de navigation metier stable;
+- l'utilisateur retrouve tous les blocs existants, mais ils ne sont plus empiles dans une seule page longue;
+- les passerelles sont affichees sous forme de badges marques, par exemple Leboncoin, Bien'ici, GTI ou SeLoger;
+- une colonne d'actions rapides garde l'acces a Hektor, Diffusion et Historique.
