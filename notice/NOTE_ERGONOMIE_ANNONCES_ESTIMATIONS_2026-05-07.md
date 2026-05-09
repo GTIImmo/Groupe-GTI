@@ -189,3 +189,9 @@ Reprise apres comparaison avec la maquette:
 - la colonne `Pilotage` affiche maintenant une priorite metier visible dans le premier ecran;
 - les passerelles sont visibles directement dans la colonne de droite, et plus seulement dans l'onglet `Diffusion`;
 - la synthese garde les cartes operationnelles sous le hero pour le detail, mais les signaux critiques sont remontes dans le premier viewport.
+
+Correction ordre maquette:
+
+- le bloc fixe `photo + infos rapides` repasse au-dessus des 7 boutons;
+- la colonne `Pilotage` reste alignee a droite du bloc principal;
+- les boutons de navigation arrivent sous le bloc principal, comme dans la proposition visuelle.
