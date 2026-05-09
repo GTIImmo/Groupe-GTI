@@ -2688,9 +2688,9 @@ tbody tr.is-refreshing-row td {
 }
 .detail-overview {
   display: grid;
-  grid-column: 1;
+  grid-column: 1 / -1;
   grid-row: 1;
-  grid-template-columns: 34% minmax(0, 1fr);
+  grid-template-columns: 28% minmax(0, 1fr);
   gap: 0;
   overflow: hidden;
   padding: 0;
@@ -2767,7 +2767,7 @@ tbody tr.is-refreshing-row td {
 }
 .detail-column-side {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 3;
   align-content: start;
   height: max-content;
   position: sticky;

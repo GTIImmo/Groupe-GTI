@@ -207,3 +207,10 @@ Correction structure head pleine largeur:
 - la grille detail place maintenant `photo + infos rapides` et `Pilotage` sur la premiere ligne du cockpit;
 - les 7 boutons de navigation occupent la ligne suivante sur toute la largeur de la popup;
 - le contenu d'onglet demarre sous cette navigation, ce qui reprend la structure de la maquette.
+
+Correction position Pilotage:
+
+- apres controle visuel, `Pilotage` ne doit pas etre au-dessus des menus;
+- le head pleine largeur contient uniquement `photo + infos rapides`;
+- les 7 boutons restent sous le head sur toute la largeur;
+- `Pilotage` demarre ensuite dans la zone contenu, a droite de l'onglet actif.
