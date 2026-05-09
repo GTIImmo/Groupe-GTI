@@ -273,3 +273,12 @@ Suppression bandeau haut detail:
 - les elements `statut`, `Detail annonce` et `Ouvrir Hektor` disparaissent de cette zone;
 - seul le bouton `Fermer` reste en haut a droite;
 - objectif: remonter le header compact de l'annonce et limiter les doublons avec `Actions du dossier`.
+
+Pilotage admin dans Annonces actives:
+
+- les comptes `admin` retrouvent aussi `Validation` et `Diffusion` dans la fiche detail de `Annonces actives`;
+- en `Suivi`, ces controles restent dans l'onglet `Diffusion`;
+- en `Annonces actives`, ils sont deplaces dans la colonne droite sous `Actions du dossier`;
+- l'affichage devient un bloc `Pilotage Hektor` avec deux tuiles: `Validation mandat` et `Diffusion`;
+- chaque tuile montre un etat fort puis les actions `Activer` / `Desactiver`;
+- les handlers Hektor existants sont reutilises, sans nouvelle logique metier.

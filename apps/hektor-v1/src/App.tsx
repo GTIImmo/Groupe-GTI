@@ -1721,6 +1721,107 @@ function DetailDossierActionPanel(props: {
   )
 }
 
+function DetailAdminPilotPanel(props: {
+  allowValidation?: boolean
+  allowDiffusable?: boolean
+  validationActive: boolean
+  validationObserved: boolean
+  validationPending: boolean
+  validationSyncPending: boolean
+  diffusableActive: boolean
+  diffusableObserved: boolean
+  diffusablePending: boolean
+  diffusableSyncPending: boolean
+  onSetValidation?: (checked: boolean) => void
+  onSetDiffusable?: (checked: boolean) => void
+}) {
+  if (!props.allowValidation && !props.allowDiffusable) return null
+
+  return (
+    <div className="detail-admin-pilot">
+      <div className="section-header"><h4>Pilotage Hektor</h4></div>
+      <div className="detail-admin-pilot-grid">
+        {props.allowValidation ? (
+          <article className="detail-admin-tile">
+            <div className="detail-admin-tile-head">
+              <span className="detail-label">Validation mandat</span>
+              <strong className={`detail-admin-state ${props.validationActive ? 'is-positive' : 'is-warning'}`}>
+                {props.validationPending ? 'Synchronisation...' : props.validationActive ? 'Valide' : 'A valider'}
+              </strong>
+            </div>
+            <p className="detail-admin-copy">
+              {props.validationActive ? 'Mandat pret pour diffusion.' : 'Validation manquante avant pilotage complet.'}
+            </p>
+            <div className="detail-admin-actions">
+              <button
+                className={`detail-action-button is-positive ${props.validationActive ? 'is-selected' : ''}`}
+                type="button"
+                disabled={props.validationPending || props.validationActive}
+                onClick={() => props.onSetValidation?.(true)}
+              >
+                Activer
+              </button>
+              <button
+                className={`detail-action-button is-negative ${!props.validationActive ? 'is-selected' : ''}`}
+                type="button"
+                disabled={props.validationPending || !props.validationActive}
+                onClick={() => props.onSetValidation?.(false)}
+              >
+                Desactiver
+              </button>
+            </div>
+            {props.validationPending ? (
+              <div className="detail-sync-alert is-pending">Validation Hektor en cours...</div>
+            ) : props.validationSyncPending ? (
+              <div className="detail-sync-alert is-waiting">{`Relecture Hektor : ${props.validationObserved ? 'valide' : 'non valide'}`}</div>
+            ) : (
+              <div className="detail-sync-alert is-confirmed">{`Etat confirme : ${props.validationObserved ? 'valide' : 'non valide'}`}</div>
+            )}
+          </article>
+        ) : null}
+        {props.allowDiffusable ? (
+          <article className="detail-admin-tile">
+            <div className="detail-admin-tile-head">
+              <span className="detail-label">Diffusion</span>
+              <strong className={`detail-admin-state ${props.diffusableActive ? 'is-positive' : 'is-warning'}`}>
+                {props.diffusablePending ? 'Synchronisation...' : props.diffusableActive ? 'Diffusable' : 'Desactivee'}
+              </strong>
+            </div>
+            <p className="detail-admin-copy">
+              {props.diffusableActive ? 'Annonce diffusable sur les portails.' : 'Diffusion coupee cote Hektor.'}
+            </p>
+            <div className="detail-admin-actions">
+              <button
+                className={`detail-action-button is-positive ${props.diffusableActive ? 'is-selected' : ''}`}
+                type="button"
+                disabled={props.diffusablePending || props.diffusableActive}
+                onClick={() => props.onSetDiffusable?.(true)}
+              >
+                Activer
+              </button>
+              <button
+                className={`detail-action-button is-negative ${!props.diffusableActive ? 'is-selected' : ''}`}
+                type="button"
+                disabled={props.diffusablePending || !props.diffusableActive}
+                onClick={() => props.onSetDiffusable?.(false)}
+              >
+                Desactiver
+              </button>
+            </div>
+            {props.diffusablePending ? (
+              <div className="detail-sync-alert is-pending">Mise a jour diffusion en cours...</div>
+            ) : props.diffusableSyncPending ? (
+              <div className="detail-sync-alert is-waiting">{`Relecture Hektor : ${props.diffusableObserved ? 'diffusable' : 'non diffusable'}`}</div>
+            ) : (
+              <div className="detail-sync-alert is-confirmed">{`Etat confirme : ${props.diffusableObserved ? 'diffusable' : 'non diffusable'}`}</div>
+            )}
+          </article>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 function totalPages(total: number, pageSize: number) {
   return Math.max(1, Math.ceil(total / pageSize))
 }
@@ -4141,18 +4242,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 eyebrow={screen === 'estimations' ? 'Detail estimation' : 'Detail annonce'}
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
-                allowMarkValidation={screen === 'suivi' && isAdmin}
+                allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
                 validationObserved={detailValidationObserved}
                 validationSaved={detailValidationSaved}
                 onSetValidation={handleSetSelectedDossierValidation}
-                allowMarkDiffusable={screen === 'suivi' && isAdmin}
+                allowMarkDiffusable={(screen === 'suivi' || screen === 'mandats') && isAdmin}
                 markDiffusablePending={detailDiffusablePending}
                 onSetDiffusable={handleSetSelectedDossierDiffusable}
                 diffusableDraft={detailDiffusableDraft}
                 diffusableObserved={detailDiffusableObserved}
                 diffusableSaved={detailDiffusableSaved}
+                adminPilotSurface={screen === 'mandats' ? 'sidebar' : screen === 'suivi' ? 'diffusion' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
               />
             </section>
@@ -5765,6 +5867,7 @@ function DossierDetailLayout(props: {
   diffusableDraft?: boolean | null
   diffusableObserved?: boolean | null
   diffusableSaved?: boolean | null
+  adminPilotSurface?: 'none' | 'sidebar' | 'diffusion' | 'both'
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
 }) {
@@ -5786,6 +5889,9 @@ function DossierDetailLayout(props: {
   const isObservedDiffusable = props.diffusableObserved ?? isDiffusableValue(dossier.diffusable)
   const isSavedDiffusable = props.diffusableSaved ?? isDraftDiffusable
   const hektorSyncPending = isSavedDiffusable !== isObservedDiffusable
+  const adminPilotSurface = props.adminPilotSurface ?? 'none'
+  const showSidebarPilot = adminPilotSurface === 'sidebar' || adminPilotSurface === 'both'
+  const showDiffusionPilot = adminPilotSurface === 'diffusion' || adminPilotSurface === 'both'
   const observedPortals = uniquePortalKeys((dossier.portails_resume ?? '').split(','))
   const activePortals = uniquePortalKeys([...observedPortals, ...(props.pendingPortalKeys ?? [])])
   const portalSyncPending = (props.pendingPortalKeys ?? []).some((portal) => !observedPortals.includes(portal))
@@ -6269,6 +6375,22 @@ function DossierDetailLayout(props: {
                   onOpenRequestModal={openRequestFromDetail}
                   onOpenDiffusionModal={openDiffusionFromDetail}
                 />
+                {showSidebarPilot ? (
+                  <DetailAdminPilotPanel
+                    allowValidation={props.allowMarkValidation}
+                    allowDiffusable={props.allowMarkDiffusable}
+                    validationActive={isValidated}
+                    validationObserved={isValidationApproved(validationObserved)}
+                    validationPending={Boolean(props.markValidationPending)}
+                    validationSyncPending={validationSyncPending}
+                    diffusableActive={isDraftDiffusable}
+                    diffusableObserved={isObservedDiffusable}
+                    diffusablePending={Boolean(props.markDiffusablePending)}
+                    diffusableSyncPending={hektorSyncPending || portalSyncPending}
+                    onSetValidation={props.onSetValidation}
+                    onSetDiffusable={props.onSetDiffusable}
+                  />
+                ) : null}
                 <div className="detail-side-signal">
                   <span>{dossier.numero_dossier ?? '-'}</span>
                   <strong>{dossier.numero_mandat ? `Mandat ${dossier.numero_mandat}` : 'Sans mandat'}</strong>
@@ -6295,7 +6417,7 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'diffusion' ? (
               <section className="detail-section detail-section-status">
                 <div className="section-header"><h4>Diffusion</h4></div>
-                {props.allowMarkValidation ? (
+                {props.allowMarkValidation && showDiffusionPilot ? (
                   <div className="detail-diffusable-toggle detail-action-card">
                     <div className="detail-action-head">
                       <div>
@@ -6340,7 +6462,7 @@ function DossierDetailLayout(props: {
                     )}
                   </div>
                 ) : null}
-                {props.allowMarkDiffusable ? (
+                {props.allowMarkDiffusable && showDiffusionPilot ? (
                   <div className="detail-diffusable-toggle detail-action-card">
                     <div className="detail-action-head">
                       <div>
