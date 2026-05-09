@@ -266,3 +266,10 @@ Controle:
 - verification du panneau `Actions du dossier`: `Diffusion / Modifier`, `Baisse de prix / Ajouter`, `Hektor / Ouvrir`;
 - clic sur `Diffusion / Modifier`: ouverture confirmee de la `Console passerelles`;
 - build TypeScript et Vite valides.
+
+Suppression bandeau haut detail:
+
+- le bandeau superieur de la fiche detail est retire;
+- les elements `statut`, `Detail annonce` et `Ouvrir Hektor` disparaissent de cette zone;
+- seul le bouton `Fermer` reste en haut a droite;
+- objectif: remonter le header compact de l'annonce et limiter les doublons avec `Actions du dossier`.

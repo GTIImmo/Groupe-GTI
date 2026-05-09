@@ -5856,15 +5856,8 @@ function DossierDetailLayout(props: {
   return (
     <section className="detail-screen">
       <div className="panel detail-cockpit-panel">
-        <div className="panel-head detail-cockpit-head">
-          <div className="detail-head-status">
-            <span className="detail-status-chip">{dossier.statut_annonce ?? '-'}</span>
-            <span className="detail-cockpit-eyebrow">{props.eyebrow}</span>
-          </div>
-          <div className="detail-head-actions">
-            <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>Ouvrir Hektor</button>
-            <button className="ghost-button" type="button" onClick={props.onBack}>{props.backLabel}</button>
-          </div>
+        <div className="detail-cockpit-close-row">
+          <button className="ghost-button" type="button" onClick={props.onBack}>{props.backLabel}</button>
         </div>
 
         <div className="full-detail-layout">
