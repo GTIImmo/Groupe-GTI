@@ -736,6 +736,133 @@ function actionTriggerToneFromRequest(request: DiffusionRequest | null | undefin
   return 'neutral'
 }
 
+type MandatActionSource = {
+  app_dossier_id: number
+  hektor_annonce_id: string | number
+  diffusable?: string | null
+  validation_diffusion_state?: string | null
+  numero_mandat?: string | null
+}
+
+type MandatActionItemModel = {
+  key: string
+  typeLabel: string
+  stateLabel: string
+  typeTone: ActionButtonTypeTone
+  stateTone: ActionButtonStateTone
+  onClick: (event: { stopPropagation(): void }) => void
+}
+
+function buildMandatActionModel(input: {
+  mandat: MandatActionSource
+  role: 'nego' | 'pauline'
+  requests: DiffusionRequest[]
+  currentRequest?: DiffusionRequest | null
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenDiffusionModal: (id: number) => void
+  onBeforeAction?: () => void
+}): { hasMandat: boolean; triggerTone: ActionTriggerTone; items: MandatActionItemModel[] } {
+  const hasMandat = Boolean((input.mandat.numero_mandat ?? '').trim())
+  const canOpenDiffusion = isValidationApproved(input.mandat.validation_diffusion_state)
+  const canRequestPriceDrop = isValidationApproved(input.mandat.validation_diffusion_state)
+  const activeDiffusionRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_diffusion')
+  const activePriceDropRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_baisse_prix')
+  const rowRequestType = normalizeRequestType(input.currentRequest?.request_type)
+  const run = (event: { stopPropagation(): void }, action: () => void) => {
+    event.stopPropagation()
+    input.onBeforeAction?.()
+    action()
+  }
+  const triggerTone = input.role === 'pauline'
+    ? actionTriggerToneFromRequest(input.currentRequest)
+    : actionTriggerToneFromRequest(activeDiffusionRequest) !== 'neutral'
+      ? actionTriggerToneFromRequest(activeDiffusionRequest)
+      : actionTriggerToneFromRequest(activePriceDropRequest)
+
+  if (!hasMandat) return { hasMandat, triggerTone, items: [] }
+
+  const paulineLabel = input.currentRequest ? paulineActionLabel(input.currentRequest) : null
+  const validationLabel = (() => {
+    const label = requestActionLabel(activeDiffusionRequest, 'demande_diffusion')
+    if (label === 'Demande de validation') return 'Ajouter'
+    if (label === 'A corriger') return 'Corriger'
+    if (label === 'Demande envoyée') return 'Envoyée'
+    if (label === 'Demande en traitement') return 'En cours'
+    return label
+  })()
+  const priceDropLabel = (() => {
+    const label = requestActionLabel(activePriceDropRequest, 'demande_baisse_prix')
+    if (label === 'Demande de baisse de prix') return 'Ajouter'
+    if (label === 'Baisse de prix a corriger') return 'Corriger'
+    if (label === 'Baisse de prix envoyée') return 'Envoyée'
+    if (label === 'Baisse de prix en traitement') return 'En cours'
+    return label
+  })()
+  const paulineParts = input.currentRequest
+    ? buildActionButtonParts(
+        rowRequestType === 'demande_baisse_prix' ? 'price_drop' : rowRequestType === 'demande_diffusion' ? 'validation' : 'diffusion',
+        paulineLabel ?? 'A traiter',
+      )
+    : null
+  const diffusionParts = buildActionButtonParts('diffusion', 'Modifier')
+  const validationParts = buildActionButtonParts('validation', validationLabel)
+  const priceDropParts = buildActionButtonParts('price_drop', priceDropLabel)
+
+  const items: MandatActionItemModel[] =
+    input.role === 'pauline' && input.currentRequest && paulineParts
+      ? [
+          {
+            key: `${input.currentRequest.id}-pauline`,
+            ...paulineParts,
+            onClick: (event) => run(event, () => input.onOpenRequestModal(input.mandat.app_dossier_id, input.role, rowRequestType)),
+          },
+          {
+            key: 'open-hektor',
+            typeLabel: 'Hektor',
+            stateLabel: 'Ouvrir',
+            typeTone: 'hektor',
+            stateTone: 'diffusion',
+            onClick: (event) => run(event, () => openHektorAnnonce(String(input.mandat.hektor_annonce_id))),
+          },
+        ]
+      : [
+          ...(canOpenDiffusion
+            ? [
+                {
+                  key: 'diffusion',
+                  ...diffusionParts,
+                  onClick: (event: { stopPropagation(): void }) => run(event, () => input.onOpenDiffusionModal(input.mandat.app_dossier_id)),
+                },
+              ]
+            : [
+                {
+                  key: 'validation',
+                  ...validationParts,
+                  onClick: (event: { stopPropagation(): void }) => run(event, () => input.onOpenRequestModal(input.mandat.app_dossier_id, input.role, 'demande_diffusion')),
+                },
+              ]),
+          ...(canRequestPriceDrop
+            ? [
+                {
+                  key: 'price-drop',
+                  ...priceDropParts,
+                  onClick: (event: { stopPropagation(): void }) => run(event, () => input.onOpenRequestModal(input.mandat.app_dossier_id, input.role, 'demande_baisse_prix')),
+                },
+              ]
+            : []),
+          {
+            key: 'open-hektor',
+            typeLabel: 'Hektor',
+            stateLabel: 'Ouvrir',
+            typeTone: 'hektor',
+            stateTone: 'diffusion',
+            onClick: (event) => run(event, () => openHektorAnnonce(String(input.mandat.hektor_annonce_id))),
+          },
+        ]
+
+  return { hasMandat, triggerTone, items }
+}
+
 function requestLastMessage(request: DiffusionRequest | null) {
   if (!request) return 'Aucune demande'
   return request.processing_comment || request.admin_response || request.refusal_reason || request.request_reason || request.request_comment || 'Sans message'
@@ -1460,7 +1587,7 @@ function mandateAsDossier(value: MandatRecord): Dossier {
 }
 
 function MandatActionMenu(props: {
-  mandat: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id' | 'diffusable' | 'validation_diffusion_state' | 'numero_mandat'>
+  mandat: MandatActionSource
   role: 'nego' | 'pauline'
   requests: DiffusionRequest[]
   currentRequest?: DiffusionRequest | null
@@ -1468,128 +1595,24 @@ function MandatActionMenu(props: {
   onOpenDiffusionModal: (id: number) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const hasMandat = Boolean((props.mandat.numero_mandat ?? '').trim())
-  const canOpenDiffusion = isValidationApproved(props.mandat.validation_diffusion_state)
-  const canRequestPriceDrop = isValidationApproved(props.mandat.validation_diffusion_state)
-  const activeDiffusionRequest = latestActionRequest(props.requests, props.mandat.app_dossier_id, 'demande_diffusion')
-  const activePriceDropRequest = latestActionRequest(props.requests, props.mandat.app_dossier_id, 'demande_baisse_prix')
-  const rowRequestType = normalizeRequestType(props.currentRequest?.request_type)
+  const actionModel = buildMandatActionModel({
+    mandat: props.mandat,
+    role: props.role,
+    requests: props.requests,
+    currentRequest: props.currentRequest,
+    onOpenRequestModal: props.onOpenRequestModal,
+    onOpenDiffusionModal: props.onOpenDiffusionModal,
+    onBeforeAction: () => setMenuOpen(false),
+  })
 
-  if (!hasMandat) {
+  if (!actionModel.hasMandat) {
     return <span className="table-note">Sans mandat</span>
   }
-
-  const paulineLabel = props.currentRequest ? paulineActionLabel(props.currentRequest) : null
-  const validationLabel = (() => {
-    const label = requestActionLabel(activeDiffusionRequest, 'demande_diffusion')
-    if (label === 'Demande de validation') return 'Ajouter'
-    if (label === 'A corriger') return 'Corriger'
-    if (label === 'Demande envoyée') return 'Envoyée'
-    if (label === 'Demande en traitement') return 'En cours'
-    return label
-  })()
-  const priceDropLabel = (() => {
-    const label = requestActionLabel(activePriceDropRequest, 'demande_baisse_prix')
-    if (label === 'Demande de baisse de prix') return 'Ajouter'
-    if (label === 'Baisse de prix a corriger') return 'Corriger'
-    if (label === 'Baisse de prix envoyée') return 'Envoyée'
-    if (label === 'Baisse de prix en traitement') return 'En cours'
-    return label
-  })()
-  const paulineParts = props.currentRequest
-    ? buildActionButtonParts(
-        rowRequestType === 'demande_baisse_prix' ? 'price_drop' : rowRequestType === 'demande_diffusion' ? 'validation' : 'diffusion',
-        paulineLabel ?? 'A traiter',
-      )
-    : null
-  const diffusionParts = buildActionButtonParts('diffusion', 'Modifier')
-  const validationParts = buildActionButtonParts('validation', validationLabel)
-  const priceDropParts = buildActionButtonParts('price_drop', priceDropLabel)
-  const triggerTone = props.role === 'pauline'
-    ? actionTriggerToneFromRequest(props.currentRequest)
-    : actionTriggerToneFromRequest(activeDiffusionRequest) !== 'neutral'
-      ? actionTriggerToneFromRequest(activeDiffusionRequest)
-      : actionTriggerToneFromRequest(activePriceDropRequest)
-  const menuItems =
-    props.role === 'pauline' && props.currentRequest
-      ? [
-          {
-            key: `${props.currentRequest.id}-pauline`,
-            ...paulineParts,
-            onClick: (event: { stopPropagation(): void }) => {
-              event.stopPropagation()
-              setMenuOpen(false)
-              props.onOpenRequestModal(props.mandat.app_dossier_id, props.role, rowRequestType)
-            },
-          },
-          {
-            key: 'open-hektor',
-            typeLabel: 'Hektor',
-            stateLabel: 'Ouvrir',
-            typeTone: 'hektor' as ActionButtonTypeTone,
-            stateTone: 'diffusion' as ActionButtonStateTone,
-            onClick: (event: { stopPropagation(): void }) => {
-              event.stopPropagation()
-              setMenuOpen(false)
-              openHektorAnnonce(props.mandat.hektor_annonce_id)
-            },
-          },
-        ]
-      : [
-          ...(canOpenDiffusion
-            ? [
-                {
-                  key: 'diffusion',
-                  ...diffusionParts,
-                  onClick: (event: { stopPropagation(): void }) => {
-                    event.stopPropagation()
-                    setMenuOpen(false)
-                    props.onOpenDiffusionModal(props.mandat.app_dossier_id)
-                  },
-                },
-              ]
-            : [
-                {
-                  key: 'validation',
-                  ...validationParts,
-                  onClick: (event: { stopPropagation(): void }) => {
-                    event.stopPropagation()
-                    setMenuOpen(false)
-                    props.onOpenRequestModal(props.mandat.app_dossier_id, props.role, 'demande_diffusion')
-                  },
-                },
-              ]),
-          ...(canRequestPriceDrop
-            ? [
-                {
-                  key: 'price-drop',
-                  ...priceDropParts,
-                  onClick: (event: { stopPropagation(): void }) => {
-                    event.stopPropagation()
-                    setMenuOpen(false)
-                    props.onOpenRequestModal(props.mandat.app_dossier_id, props.role, 'demande_baisse_prix')
-                  },
-                },
-              ]
-            : []),
-          {
-            key: 'open-hektor',
-            typeLabel: 'Hektor',
-            stateLabel: 'Ouvrir',
-            typeTone: 'hektor' as ActionButtonTypeTone,
-            stateTone: 'diffusion' as ActionButtonStateTone,
-            onClick: (event: { stopPropagation(): void }) => {
-              event.stopPropagation()
-              setMenuOpen(false)
-              openHektorAnnonce(props.mandat.hektor_annonce_id)
-            },
-          },
-        ]
 
   return (
     <div className="action-menu-shell">
       <button
-        className={`ghost-button button-subtle action-menu-trigger action-menu-trigger-${triggerTone}`}
+        className={`ghost-button button-subtle action-menu-trigger action-menu-trigger-${actionModel.triggerTone}`}
         type="button"
         onClick={(event) => {
           event.stopPropagation()
@@ -1633,7 +1656,7 @@ function MandatActionMenu(props: {
               Mandat {props.mandat.numero_mandat ?? '-'} · Choisis une action directe pour gerer la validation, la diffusion ou ouvrir Hektor.
             </p>
             <div className="action-menu-dialog-list">
-              {menuItems.map((item) => (
+              {actionModel.items.map((item) => (
                 <ActionButton
                   key={item.key}
                   type="button"
@@ -1649,6 +1672,51 @@ function MandatActionMenu(props: {
           </div>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function DetailDossierActionPanel(props: {
+  mandat: MandatActionSource
+  role: 'nego' | 'pauline'
+  requests: DiffusionRequest[]
+  currentRequest?: DiffusionRequest | null
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenDiffusionModal: (id: number) => void
+}) {
+  const actionModel = buildMandatActionModel({
+    mandat: props.mandat,
+    role: props.role,
+    requests: props.requests,
+    currentRequest: props.currentRequest,
+    onOpenRequestModal: props.onOpenRequestModal,
+    onOpenDiffusionModal: props.onOpenDiffusionModal,
+  })
+
+  return (
+    <div className="detail-action-console">
+      <div className="section-header"><h4>Actions du dossier</h4></div>
+      {!actionModel.hasMandat ? (
+        <p className="empty-state">Sans mandat : aucune action de validation, diffusion ou baisse de prix disponible.</p>
+      ) : (
+        <>
+          <p className="detail-action-console-copy">Meme logique que le bouton Action du listing pour ce mandat.</p>
+          <div className="action-menu-dialog-list detail-action-console-list">
+            {actionModel.items.map((item) => (
+              <ActionButton
+                key={item.key}
+                type="button"
+                typeLabel={item.typeLabel}
+                stateLabel={item.stateLabel}
+                typeTone={item.typeTone}
+                stateTone={item.stateTone}
+                helperText={actionMenuHelperText(item.typeLabel, item.stateLabel)}
+                onClick={item.onClick}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -3934,7 +4002,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={dossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -4064,6 +4132,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')}
                 requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
                 requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
+                actionRequests={selectedDossierRequests}
+                currentActionRequest={screen === 'suivi' ? selectedDossierRequest : null}
+                actionRole={screen === 'suivi' ? 'pauline' : 'nego'}
+                onOpenRequestModal={openRequestModal}
+                onOpenDiffusionModal={openDiffusionModal}
                 detailLoading={detailLoading}
                 eyebrow={screen === 'estimations' ? 'Detail estimation' : 'Detail annonce'}
                 backLabel="Fermer"
@@ -5671,6 +5744,11 @@ function DossierDetailLayout(props: {
   requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  actionRequests?: DiffusionRequest[]
+  currentActionRequest?: DiffusionRequest | null
+  actionRole?: 'nego' | 'pauline'
+  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
   eyebrow: string
   backLabel: string
@@ -5695,6 +5773,10 @@ function DossierDetailLayout(props: {
   }
   const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop'>('all')
   const dossier = props.selectedDossier
+  const actionRequests = props.actionRequests ?? []
+  const actionRole = props.actionRole ?? 'nego'
+  const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
+  const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
   const validationDraft = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
   const validationObserved = props.validationObserved ?? validationDraft
   const validationSaved = props.validationSaved ?? validationDraft
@@ -6186,21 +6268,14 @@ function DossierDetailLayout(props: {
 
             <aside className="detail-column-side">
               <section className="detail-section detail-side-quick">
-                <div className="section-header"><h4>Actions rapides</h4></div>
-                <div className="detail-side-actions">
-                  <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>
-                    <span className="detail-side-action-mark">H</span>
-                    Ouvrir Hektor
-                  </button>
-                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('diffusion')}>
-                    <span className="detail-side-action-mark">D</span>
-                    Diffusion
-                  </button>
-                  <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('history')}>
-                    <span className="detail-side-action-mark">S</span>
-                    Suivi demandes
-                  </button>
-                </div>
+                <DetailDossierActionPanel
+                  mandat={dossier}
+                  role={actionRole}
+                  requests={actionRequests}
+                  currentRequest={props.currentActionRequest}
+                  onOpenRequestModal={openRequestFromDetail}
+                  onOpenDiffusionModal={openDiffusionFromDetail}
+                />
                 <div className="detail-side-signal">
                   <span>{dossier.numero_dossier ?? '-'}</span>
                   <strong>{dossier.numero_mandat ? `Mandat ${dossier.numero_mandat}` : 'Sans mandat'}</strong>
@@ -6596,6 +6671,11 @@ function AnnonceScreen(props: {
   requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  actionRequests?: DiffusionRequest[]
+  currentActionRequest?: DiffusionRequest | null
+  actionRole?: 'nego' | 'pauline'
+  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
   onBack: () => void
 }) {

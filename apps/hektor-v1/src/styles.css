@@ -3002,6 +3002,107 @@ tbody tr.is-refreshing-row td {
   display: grid;
   gap: 8px;
 }
+.detail-action-console {
+  display: grid;
+  gap: 8px;
+}
+.detail-action-console .section-header {
+  margin-bottom: 0;
+}
+.detail-action-console-copy {
+  margin: 0;
+  color: #607481;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.detail-action-console-list {
+  display: grid;
+  gap: 8px;
+}
+.detail-action-console-list .action-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  text-align: left;
+  box-shadow: none;
+}
+.detail-action-console-list .action-menu-item-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.detail-action-console-list .action-menu-item-label {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.detail-action-console-list .action-menu-item-helper {
+  color: #5f7783;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.detail-action-console-list .action-menu-item-state {
+  flex: 0 0 auto;
+  min-width: 62px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.detail-action-console-list .action-menu-type-validation {
+  background: #e7f4e8 !important;
+  border-color: #b9dbbf !important;
+  color: #2d6a39;
+}
+.detail-action-console-list .action-menu-type-price-drop {
+  background: #eef5e4 !important;
+  border-color: #cfe0b2 !important;
+  color: #4d6c2e;
+}
+.detail-action-console-list .action-menu-type-diffusion {
+  background: #e3f0f7 !important;
+  border-color: #c3d9e6 !important;
+  color: #22566f;
+}
+.detail-action-console-list .action-menu-type-hektor {
+  background: linear-gradient(180deg, #f6efe2 0%, #ead7b7 100%) !important;
+  border-color: #d5b98a !important;
+  color: #6f4c19 !important;
+}
+.detail-action-console-list .action-menu-state-request .action-menu-item-state {
+  background: #fff;
+  color: #6c5a31;
+}
+.detail-action-console-list .action-menu-state-progress .action-menu-item-state {
+  background: #f8e7b4;
+  color: #8d620c;
+}
+.detail-action-console-list .action-menu-state-correction .action-menu-item-state {
+  background: #f5dcc0;
+  color: #9a4c02;
+}
+.detail-action-console-list .action-menu-state-rejected .action-menu-item-state {
+  background: #efd4ce;
+  color: #8d3425;
+}
+.detail-action-console-list .action-menu-state-accepted .action-menu-item-state {
+  background: #dcebd6;
+  color: #2f6a32;
+}
+.detail-action-console-list .action-menu-state-diffusion .action-menu-item-state {
+  background: #d8e9f2;
+  color: #17465e;
+}
 .detail-side-actions .ghost-button {
   justify-content: center;
   width: 100%;

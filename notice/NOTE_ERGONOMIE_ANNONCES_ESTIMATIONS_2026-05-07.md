@@ -251,3 +251,18 @@ Convergence maquette 7 pages:
 - l'onglet `Contenu annonce` ajoute une grille photos au-dessus du descriptif;
 - l'onglet `Diffusion` affiche aussi les dernieres demandes dans une table compacte;
 - les cartes sont resserrees avec des rayons plus courts pour se rapprocher de la maquette fournie.
+
+Reprise console Action listing dans le detail:
+
+- la colonne droite de la fiche detail n'invente plus ses propres raccourcis;
+- elle reutilise la meme logique metier que le bouton `Action` du listing;
+- les etats `Valider`, `Diffusion`, `Baisse de prix` et `Hektor` suivent les memes regles que dans la liste;
+- les clics ouvrent les memes modales: demande de validation, demande de baisse de prix, console diffusion ou Hektor;
+- la fiche detail peut donc afficher la meme action que la ligne de listing pour un meme mandat.
+
+Controle:
+
+- ouverture locale d'une fiche annonce active (`EM4048`);
+- verification du panneau `Actions du dossier`: `Diffusion / Modifier`, `Baisse de prix / Ajouter`, `Hektor / Ouvrir`;
+- clic sur `Diffusion / Modifier`: ouverture confirmee de la `Console passerelles`;
+- build TypeScript et Vite valides.
