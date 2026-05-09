@@ -6161,7 +6161,7 @@ function DossierDetailLayout(props: {
 
             <aside className="detail-column-side">
               <section className="detail-section detail-side-quick">
-                <div className="section-header"><h4>Pilotage</h4></div>
+                <div className="section-header"><h4>Actions rapides</h4></div>
                 <div className="detail-side-actions">
                   <button className="ghost-button button-accent" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>
                     <span className="detail-side-action-mark">H</span>

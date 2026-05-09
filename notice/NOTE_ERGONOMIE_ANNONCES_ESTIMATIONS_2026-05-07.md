@@ -214,3 +214,11 @@ Correction position Pilotage:
 - le head pleine largeur contient uniquement `photo + infos rapides`;
 - les 7 boutons restent sous le head sur toute la largeur;
 - `Pilotage` demarre ensuite dans la zone contenu, a droite de l'onglet actif.
+
+Alignement maquette de reference:
+
+- le header detail est redevenu compact, avec miniature et informations principales;
+- les onglets prennent un style de petits tabs sobres avec accent turquoise;
+- la colonne droite redevient une colonne claire `Actions rapides`, et non un bloc sombre de pilotage;
+- les couleurs reviennent vers la reference: fond blanc, lignes gris clair, accent turquoise, badges et passerelles colorees;
+- la photo grand format ne doit plus dominer le head fixe.
