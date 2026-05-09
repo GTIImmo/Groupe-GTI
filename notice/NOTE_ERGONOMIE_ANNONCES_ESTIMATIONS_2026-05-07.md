@@ -281,8 +281,16 @@ Suppression bandeau haut detail:
 Pilotage admin dans Annonces actives:
 
 - les comptes `admin` retrouvent aussi `Validation` et `Diffusion` dans la fiche detail de `Annonces actives`;
-- en `Suivi`, ces controles restent dans l'onglet `Diffusion`;
-- en `Annonces actives`, ils sont deplaces dans la colonne droite sous `Actions du dossier`;
+- la meme presentation est maintenant appliquee a `Suivi des mandats`;
+- dans les deux vues, ces controles sont places dans la colonne droite sous `Actions du dossier`;
 - l'affichage devient un bloc `Pilotage Hektor` avec deux tuiles: `Validation mandat` et `Diffusion`;
 - chaque tuile montre un etat fort puis les actions `Activer` / `Desactiver`;
 - les handlers Hektor existants sont reutilises, sans nouvelle logique metier.
+
+Publication en ligne du 2026-05-10:
+
+- l'ensemble du chantier fiche detail est publie depuis `codex/detail-cockpit` vers la branche `main`;
+- le perimetre publie reste limite a `apps/hektor-v1/src/App.tsx`, `apps/hektor-v1/src/styles.css` et cette note;
+- aucune evolution Supabase de schema ou de policy n'etait necessaire pour cette publication: les correctifs portent sur l'interface detail et ses interactions existantes;
+- verification avant publication: `npx tsc -b` puis `npm run build`;
+- verification apres publication: branche distante mise a jour et historique git coherent sur `main`.
