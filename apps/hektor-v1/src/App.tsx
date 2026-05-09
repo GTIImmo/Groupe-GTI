@@ -1387,14 +1387,14 @@ function portalBrandClass(value: string | null | undefined) {
 
 type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual'
 
-const detailTabs: Array<{ key: DetailTabKey; label: string }> = [
-  { key: 'summary', label: 'Synthese' },
-  { key: 'commercial', label: 'Commercialisation' },
-  { key: 'mandate', label: 'Mandat & contacts' },
-  { key: 'diffusion', label: 'Diffusion' },
-  { key: 'content', label: 'Contenu annonce' },
-  { key: 'history', label: 'Historique' },
-  { key: 'virtual', label: 'Visites virtuelles' },
+const detailTabs: Array<{ key: DetailTabKey; label: string; short: string }> = [
+  { key: 'summary', label: 'Synthese', short: '01' },
+  { key: 'commercial', label: 'Commercialisation', short: '02' },
+  { key: 'mandate', label: 'Mandat & contacts', short: '03' },
+  { key: 'diffusion', label: 'Diffusion', short: '04' },
+  { key: 'content', label: 'Contenu annonce', short: '05' },
+  { key: 'history', label: 'Historique', short: '06' },
+  { key: 'virtual', label: 'Visites virtuelles', short: '07' },
 ]
 
 type HeaderMetricItem = {
@@ -5785,12 +5785,13 @@ function DossierDetailLayout(props: {
                 key={tab.key}
                 className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
                 type="button"
-                onClick={() => setActiveDetailTab(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+                  onClick={() => setActiveDetailTab(tab.key)}
+                >
+                  <span>{tab.short}</span>
+                  <strong>{tab.label}</strong>
+                </button>
+              ))}
+            </nav>
 
           <div className="detail-cockpit-body">
             <main className="detail-cockpit-main">
@@ -5854,6 +5855,32 @@ function DossierDetailLayout(props: {
                     <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('mandate')}>Voir mandat & contacts</button>
                     <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('content')}>Controler l'annonce</button>
                     <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('virtual')}>Visites virtuelles</button>
+                  </div>
+                  <div className="detail-command-grid">
+                    <article className="detail-command-card is-priority">
+                      <span>Priorite</span>
+                      <strong>{!isValidationApproved(validationDraft) ? 'Valider le mandat' : isDraftDiffusable ? 'Surveiller la diffusion' : 'Activer la diffusion'}</strong>
+                      <p>{!isValidationApproved(validationDraft) ? 'Le bien doit etre valide avant une diffusion propre.' : isDraftDiffusable ? 'La diffusion est active, controle passerelles et demandes.' : 'Le mandat est pret, la diffusion reste a declencher.'}</p>
+                    </article>
+                    <article className="detail-command-card">
+                      <span>Passerelles</span>
+                      <strong>{activePortals.length ? `${activePortals.length} activee${activePortals.length > 1 ? 's' : ''}` : 'Aucune active'}</strong>
+                      <div className="detail-mini-portals">
+                        {activePortals.length > 0 ? activePortals.slice(0, 4).map((portal) => (
+                          <span key={`summary-${portal}`} className={`detail-mini-portal ${portalBrandClass(portal)}`}>{portalBrandLabel(portal)}</span>
+                        )) : <span className="detail-mini-portal is-generic">Aucune</span>}
+                      </div>
+                    </article>
+                    <article className="detail-command-card">
+                      <span>Contact</span>
+                      <strong>{primaryContact?.name || 'Aucun contact'}</strong>
+                      <p>{primaryContact?.phone || primaryContact?.email || primaryContact?.role || 'Contact detaille non disponible.'}</p>
+                    </article>
+                    <article className="detail-command-card">
+                      <span>Suivi</span>
+                      <strong>{props.linkedWorkItems.length ? `${props.linkedWorkItems.length} demande${props.linkedWorkItems.length > 1 ? 's' : ''}` : 'Aucune demande'}</strong>
+                      <p>{props.detail.next_action || props.detail.motif_blocage || 'Pas de blocage ou prochaine action renseignee.'}</p>
+                    </article>
                   </div>
                 </section>
               ) : null}
@@ -6152,6 +6179,21 @@ function DossierDetailLayout(props: {
                 <div className="detail-side-signal">
                   <span>{dossier.numero_dossier ?? '-'}</span>
                   <strong>{dossier.numero_mandat ? `Mandat ${dossier.numero_mandat}` : 'Sans mandat'}</strong>
+                </div>
+                <div className="detail-side-priority">
+                  <span>Priorite</span>
+                  <strong>{!isValidationApproved(validationDraft) ? 'Valider le mandat' : isDraftDiffusable ? 'Controler la diffusion' : 'Activer la diffusion'}</strong>
+                  <p>{primaryContact?.name ? `Contact: ${primaryContact.name}` : props.detail.next_action || 'Aucune action urgente renseignee.'}</p>
+                </div>
+                <div className="detail-side-portals">
+                  <span>Passerelles</span>
+                  <div className="detail-mini-portals">
+                    {activePortals.length > 0 ? activePortals.slice(0, 4).map((portal) => (
+                      <button key={`side-${portal}`} className={`detail-mini-portal ${portalBrandClass(portal)}`} type="button" onClick={() => setActiveDetailTab('diffusion')}>
+                        {portalBrandLabel(portal)}
+                      </button>
+                    )) : <button className="detail-mini-portal is-generic" type="button" onClick={() => setActiveDetailTab('diffusion')}>Aucune</button>}
+                  </div>
                 </div>
               </section>
 

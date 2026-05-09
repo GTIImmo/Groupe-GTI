@@ -182,3 +182,10 @@ Controle popup reel:
 - la colonne `Pilotage` est visible a droite, avec fond sombre et actions lisibles;
 - le hero ne pousse plus toute la navigation sous la ligne de flottaison;
 - le build production a ete relance apres ce controle.
+
+Reprise apres comparaison avec la maquette:
+
+- les onglets affichent des reperes numerotes pour mieux ressembler a une navigation cockpit;
+- la colonne `Pilotage` affiche maintenant une priorite metier visible dans le premier ecran;
+- les passerelles sont visibles directement dans la colonne de droite, et plus seulement dans l'onglet `Diffusion`;
+- la synthese garde les cartes operationnelles sous le hero pour le detail, mais les signaux critiques sont remontes dans le premier viewport.
