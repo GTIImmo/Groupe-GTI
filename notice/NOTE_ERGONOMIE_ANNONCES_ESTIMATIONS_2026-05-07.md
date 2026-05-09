@@ -222,3 +222,9 @@ Alignement maquette de reference:
 - la colonne droite redevient une colonne claire `Actions rapides`, et non un bloc sombre de pilotage;
 - les couleurs reviennent vers la reference: fond blanc, lignes gris clair, accent turquoise, badges et passerelles colorees;
 - la photo grand format ne doit plus dominer le head fixe.
+
+Correction header maquette:
+
+- les informations rapides `prix`, `surface`, `dossier` et `mandat` sont placees a droite du header compact;
+- la miniature reste a gauche et le titre/adresse/agence au centre;
+- le header correspond davantage a la reference fournie, avec les infos principales sur une seule bande compacte.

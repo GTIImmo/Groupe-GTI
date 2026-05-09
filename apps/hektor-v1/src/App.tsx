@@ -5840,46 +5840,49 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'summary' ? (
                 <section className="detail-section detail-summary-cockpit">
                   <div className="section-header"><h4>Synthese du dossier</h4>{props.detailLoading ? <span>Chargement...</span> : null}</div>
-                  <div className="info-grid">
-                    <InfoCard label="Statut" value={dossier.statut_annonce ?? '-'} />
-                    <InfoCard label="Diffusion" value={diffusableLabel(dossier.diffusable)} />
-                    <InfoCard label="Passerelles" value={activePortals.length ? `${activePortals.length} activee${activePortals.length > 1 ? 's' : ''}` : 'Aucune'} />
-                    <InfoCard label="Validation" value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'A valider'} />
-                    <InfoCard label="Commercial" value={dossier.commercial_nom ?? '-'} />
-                    <InfoCard label="Agence" value={dossier.agence_nom ?? '-'} />
-                    <InfoCard label="Offre" value={props.detail.offre_state ?? '-'} />
-                    <InfoCard label="Prochaine action" value={props.detail.next_action ?? '-'} />
-                  </div>
-                  <div className="detail-summary-actions">
-                    <button className="ghost-button button-accent" type="button" onClick={() => setActiveDetailTab('diffusion')}>Piloter la diffusion</button>
-                    <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('mandate')}>Voir mandat & contacts</button>
-                    <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('content')}>Controler l'annonce</button>
-                    <button className="ghost-button" type="button" onClick={() => setActiveDetailTab('virtual')}>Visites virtuelles</button>
-                  </div>
-                  <div className="detail-command-grid">
-                    <article className="detail-command-card is-priority">
-                      <span>Priorite</span>
-                      <strong>{!isValidationApproved(validationDraft) ? 'Valider le mandat' : isDraftDiffusable ? 'Surveiller la diffusion' : 'Activer la diffusion'}</strong>
-                      <p>{!isValidationApproved(validationDraft) ? 'Le bien doit etre valide avant une diffusion propre.' : isDraftDiffusable ? 'La diffusion est active, controle passerelles et demandes.' : 'Le mandat est pret, la diffusion reste a declencher.'}</p>
+                  <div className="detail-summary-board">
+                    <article className="detail-summary-visual">
+                      {primaryImage ? (
+                        <button className="detail-summary-main-image" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
+                          <img src={primaryImage} alt={dossier.titre_bien} />
+                        </button>
+                      ) : <div className="detail-photo-placeholder">Aucune photo synchronisee</div>}
                     </article>
-                    <article className="detail-command-card">
-                      <span>Passerelles</span>
-                      <strong>{activePortals.length ? `${activePortals.length} activee${activePortals.length > 1 ? 's' : ''}` : 'Aucune active'}</strong>
+                    <article className="detail-summary-card">
+                      <h5>Points cles</h5>
+                      <div className="detail-status-list">
+                        <div><span>Statut annonce</span><StatusPill value={dossier.statut_annonce ?? '-'} /></div>
+                        <div><span>Mandat</span><StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} /></div>
+                        <div><span>Diffusable</span><StatusPill value={diffusableLabel(dossier.diffusable)} /></div>
+                        <div><span>Passerelles</span><strong>{activePortals.length ? `${activePortals.length} actif${activePortals.length > 1 ? 's' : ''}` : 'Aucune'}</strong></div>
+                      </div>
+                    </article>
+                    <article className="detail-summary-card">
+                      <h5>Adresse</h5>
+                      <p>{props.address || '-'}</p>
+                      <button className="ghost-button" type="button" disabled>Voir sur la carte</button>
+                    </article>
+                    <article className="detail-summary-card">
+                      <h5>Visibilite</h5>
+                      <strong>{activePortals.length ? `${activePortals.length} portail${activePortals.length > 1 ? 's' : ''} actif${activePortals.length > 1 ? 's' : ''}` : 'Aucun portail actif'}</strong>
                       <div className="detail-mini-portals">
                         {activePortals.length > 0 ? activePortals.slice(0, 4).map((portal) => (
                           <span key={`summary-${portal}`} className={`detail-mini-portal ${portalBrandClass(portal)}`}>{portalBrandLabel(portal)}</span>
                         )) : <span className="detail-mini-portal is-generic">Aucune</span>}
                       </div>
                     </article>
-                    <article className="detail-command-card">
-                      <span>Contact</span>
-                      <strong>{primaryContact?.name || 'Aucun contact'}</strong>
-                      <p>{primaryContact?.phone || primaryContact?.email || primaryContact?.role || 'Contact detaille non disponible.'}</p>
+                    <article className="detail-summary-card is-priority">
+                      <h5>Prochaine action</h5>
+                      <strong>{!isValidationApproved(validationDraft) ? 'Valider le mandat' : isDraftDiffusable ? 'Controler la diffusion' : 'Activer la diffusion'}</strong>
+                      <p>{props.detail.next_action || props.detail.motif_blocage || "Le mandat n'est pas encore qualifie avec une prochaine action."}</p>
                     </article>
-                    <article className="detail-command-card">
-                      <span>Suivi</span>
-                      <strong>{props.linkedWorkItems.length ? `${props.linkedWorkItems.length} demande${props.linkedWorkItems.length > 1 ? 's' : ''}` : 'Aucune demande'}</strong>
-                      <p>{props.detail.next_action || props.detail.motif_blocage || 'Pas de blocage ou prochaine action renseignee.'}</p>
+                    <article className="detail-summary-alerts">
+                      <h5>Alertes & informations</h5>
+                      <div className="detail-alert-row">
+                        <span>{!isValidationApproved(validationDraft) ? 'Mandat a valider' : 'Mandat valide'}</span>
+                        <span>{Boolean(dossier.has_diffusion_error) ? 'Erreur passerelle' : 'Aucune erreur passerelle'}</span>
+                        <span>{props.linkedWorkItems.length ? `${props.linkedWorkItems.length} demande${props.linkedWorkItems.length > 1 ? 's' : ''}` : 'Aucune demande recente'}</span>
+                      </div>
                     </article>
                   </div>
                 </section>
