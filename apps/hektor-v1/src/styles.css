@@ -2618,12 +2618,13 @@ tbody tr.is-refreshing-row td {
   align-items: start;
 }
 .detail-cockpit-main {
-  display: grid;
-  gap: 10px;
+  display: contents;
   min-width: 0;
 }
 .detail-tabbar {
   display: grid;
+  grid-column: 1 / -1;
+  grid-row: 2;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   padding: 0;
@@ -2687,6 +2688,8 @@ tbody tr.is-refreshing-row td {
 }
 .detail-overview {
   display: grid;
+  grid-column: 1;
+  grid-row: 1;
   grid-template-columns: 34% minmax(0, 1fr);
   gap: 0;
   overflow: hidden;
@@ -2758,7 +2761,13 @@ tbody tr.is-refreshing-row td {
   display: grid;
   gap: 10px;
 }
+.detail-column-main {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
 .detail-column-side {
+  grid-column: 2;
+  grid-row: 1;
   align-content: start;
   height: max-content;
   position: sticky;

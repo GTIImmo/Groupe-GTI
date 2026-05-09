@@ -201,3 +201,9 @@ Correction densite popup:
 - le probleme principal restant etait l'echelle visuelle: titre, boutons, cartes et colonne droite etaient trop gros dans la popup reelle;
 - la largeur de la popup, la grille cockpit, les hauteurs de photos, les tailles de boutons et les cartes d'information ont ete resserrees;
 - l'objectif est que le premier viewport montre le bloc photo/infos, le pilotage, les passerelles et les 7 boutons sans effet de maquette agrandie.
+
+Correction structure head pleine largeur:
+
+- la grille detail place maintenant `photo + infos rapides` et `Pilotage` sur la premiere ligne du cockpit;
+- les 7 boutons de navigation occupent la ligne suivante sur toute la largeur de la popup;
+- le contenu d'onglet demarre sous cette navigation, ce qui reprend la structure de la maquette.
