@@ -5760,6 +5760,13 @@ function DossierDetailLayout(props: {
   }
   const diffusionRequestGroups = buildRequestGroups(props.requestHistoryDiffusion, props.requestMessagesDiffusion)
   const priceDropRequestGroups = buildRequestGroups(props.requestHistoryPriceDrop, props.requestMessagesPriceDrop)
+  const latestRequestSignals = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop]
+    .sort((left, right) => {
+      const leftTime = left.date ? Date.parse(left.date) : 0
+      const rightTime = right.date ? Date.parse(right.date) : 0
+      return rightTime - leftTime
+    })
+    .slice(0, 3)
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const hasMatterport = matterportModels.length > 0
@@ -6080,6 +6087,21 @@ function DossierDetailLayout(props: {
 
               {activeDetailTab === 'content' ? (
               <section className="detail-section">
+                <div className="section-header"><h4>Photos</h4><span>{props.images.length} photo{props.images.length > 1 ? 's' : ''}</span></div>
+                {props.images.length > 0 ? (
+                  <div className="detail-media-grid">
+                    {props.images.slice(0, 6).map((item) => (
+                      <button key={`content-photo-${item.url}`} className="detail-media-tile" type="button" onClick={() => props.onOpenImage?.(item.url)}>
+                        <img src={item.url} alt={item.legend || dossier.titre_bien} />
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="empty-state">Aucune photo synchronisee.</p>}
+              </section>
+              ) : null}
+
+              {activeDetailTab === 'content' ? (
+              <section className="detail-section">
                 <div className="section-header"><h4>Descriptif</h4>{props.detailLoading ? <span>Chargement...</span> : null}</div>
                 {props.texts.length > 0 ? (
                   <div className="rich-text-stack">
@@ -6199,7 +6221,9 @@ function DossierDetailLayout(props: {
                   </div>
                 </div>
               </section>
+            </aside>
 
+            <div className="detail-column-main">
               {activeDetailTab === 'diffusion' ? (
               <section className="detail-section detail-section-status">
                 <div className="section-header"><h4>Diffusion</h4></div>
@@ -6311,6 +6335,21 @@ function DossierDetailLayout(props: {
               </section>
               ) : null}
 
+              {activeDetailTab === 'diffusion' && latestRequestSignals.length > 0 ? (
+                <section className="detail-section">
+                  <div className="section-header"><h4>Dernieres demandes</h4></div>
+                  <div className="detail-request-table">
+                    {latestRequestSignals.map((item) => (
+                      <article key={`diffusion-signal-${item.requestId}-${item.id}`} className="detail-request-row">
+                        <span>{formatDate(item.date)}</span>
+                        <strong>{item.title}</strong>
+                        <StatusPill value={requestStatusLabel(item.status)} />
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               {activeDetailTab === 'history' ? (
               <section className="detail-section">
                 <div className="section-header">
@@ -6378,7 +6417,7 @@ function DossierDetailLayout(props: {
                 ) : null}
               </section>
               ) : null}
-            </aside>
+            </div>
           </div>
         </div>
       </div>

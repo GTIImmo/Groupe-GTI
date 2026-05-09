@@ -242,3 +242,12 @@ Correction comportement du panneau Actions rapides:
 - le panneau `Actions rapides` n'est plus `sticky`;
 - il reste dans le flux normal de la grille, aligne avec le contenu de l'onglet actif;
 - objectif: eviter tout effet de panneau flottant qui passe au-dessus des autres blocs pendant le scroll.
+
+Convergence maquette 7 pages:
+
+- les pages `Diffusion` et `Historique` ne sont plus rendues dans le panneau `Actions rapides`;
+- elles reprennent la zone principale de la fiche, comme les autres onglets;
+- `Actions rapides` redevient uniquement une colonne d'accompagnement;
+- l'onglet `Contenu annonce` ajoute une grille photos au-dessus du descriptif;
+- l'onglet `Diffusion` affiche aussi les dernieres demandes dans une table compacte;
+- les cartes sont resserrees avec des rayons plus courts pour se rapprocher de la maquette fournie.
