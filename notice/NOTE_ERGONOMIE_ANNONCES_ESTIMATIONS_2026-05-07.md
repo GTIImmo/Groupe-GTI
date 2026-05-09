@@ -236,3 +236,9 @@ Correction integration Actions rapides:
 - le header compact et les onglets restent pleine largeur;
 - le contenu principal et la colonne actions demarrent ensuite cote a cote, sans superposition;
 - en mobile, ces zones sont empilees dans l'ordre `head`, `tabs`, `main`, `side`.
+
+Correction comportement du panneau Actions rapides:
+
+- le panneau `Actions rapides` n'est plus `sticky`;
+- il reste dans le flux normal de la grille, aligne avec le contenu de l'onglet actif;
+- objectif: eviter tout effet de panneau flottant qui passe au-dessus des autres blocs pendant le scroll.

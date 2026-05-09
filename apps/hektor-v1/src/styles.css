@@ -2787,10 +2787,10 @@ tbody tr.is-refreshing-row td {
 }
 .detail-column-side {
   grid-area: side;
+  align-self: start;
   align-content: start;
   height: max-content;
-  position: sticky;
-  top: 14px;
+  position: static;
 }
 .detail-summary-cockpit {
   display: grid;
