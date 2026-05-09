@@ -2614,6 +2614,10 @@ tbody tr.is-refreshing-row td {
 .detail-cockpit-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-areas:
+    "head head"
+    "tabs tabs"
+    "main side";
   gap: 10px;
   align-items: start;
 }
@@ -2623,8 +2627,7 @@ tbody tr.is-refreshing-row td {
 }
 .detail-tabbar {
   display: grid;
-  grid-column: 1 / -1;
-  grid-row: 2;
+  grid-area: tabs;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   padding: 0;
@@ -2680,8 +2683,7 @@ tbody tr.is-refreshing-row td {
 }
 .detail-overview {
   display: grid;
-  grid-column: 1 / -1;
-  grid-row: 1;
+  grid-area: head;
   grid-template-columns: 74px minmax(0, 1fr);
   gap: 12px;
   overflow: hidden;
@@ -2780,12 +2782,11 @@ tbody tr.is-refreshing-row td {
   gap: 10px;
 }
 .detail-column-main {
-  grid-column: 1 / -1;
-  grid-row: 3;
+  grid-area: main;
+  min-width: 0;
 }
 .detail-column-side {
-  grid-column: 2;
-  grid-row: 3;
+  grid-area: side;
   align-content: start;
   height: max-content;
   position: sticky;
@@ -4475,6 +4476,13 @@ button.metric-card.is-active {
   .modal-panel-detail {
     width: min(100%, calc(100vw - 12px));
     max-height: calc(100vh - 12px);
+  }
+  .detail-cockpit-body {
+    grid-template-areas:
+      "head"
+      "tabs"
+      "main"
+      "side";
   }
   .detail-cockpit-panel {
     padding: 10px;

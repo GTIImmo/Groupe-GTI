@@ -228,3 +228,11 @@ Correction header maquette:
 - les informations rapides `prix`, `surface`, `dossier` et `mandat` sont placees a droite du header compact;
 - la miniature reste a gauche et le titre/adresse/agence au centre;
 - le header correspond davantage a la reference fournie, avec les infos principales sur une seule bande compacte.
+
+Correction integration Actions rapides:
+
+- le menu `Actions rapides` ne partage plus la meme zone de grille que le contenu de l'onglet actif;
+- la fiche detail utilise maintenant des zones explicites: `head`, `tabs`, `main`, `side`;
+- le header compact et les onglets restent pleine largeur;
+- le contenu principal et la colonne actions demarrent ensuite cote a cote, sans superposition;
+- en mobile, ces zones sont empilees dans l'ordre `head`, `tabs`, `main`, `side`.
