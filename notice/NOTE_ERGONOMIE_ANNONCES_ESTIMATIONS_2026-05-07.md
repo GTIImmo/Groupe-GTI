@@ -195,3 +195,9 @@ Correction ordre maquette:
 - le bloc fixe `photo + infos rapides` repasse au-dessus des 7 boutons;
 - la colonne `Pilotage` reste alignee a droite du bloc principal;
 - les boutons de navigation arrivent sous le bloc principal, comme dans la proposition visuelle.
+
+Correction densite popup:
+
+- le probleme principal restant etait l'echelle visuelle: titre, boutons, cartes et colonne droite etaient trop gros dans la popup reelle;
+- la largeur de la popup, la grille cockpit, les hauteurs de photos, les tailles de boutons et les cartes d'information ont ete resserrees;
+- l'objectif est que le premier viewport montre le bloc photo/infos, le pilotage, les passerelles et les 7 boutons sans effet de maquette agrandie.
