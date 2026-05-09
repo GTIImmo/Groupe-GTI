@@ -4254,7 +4254,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableDraft={detailDiffusableDraft}
                 diffusableObserved={detailDiffusableObserved}
                 diffusableSaved={detailDiffusableSaved}
-                adminPilotSurface={screen === 'mandats' ? 'sidebar' : screen === 'suivi' ? 'diffusion' : 'none'}
+                adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'sidebar' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
               />
             </section>

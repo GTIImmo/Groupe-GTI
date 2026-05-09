@@ -218,6 +218,10 @@ Correction position Pilotage:
 Alignement maquette de reference:
 
 - le header detail est redevenu compact, avec miniature et informations principales;
+- la fiche detail de `Suivi des mandats` reutilise maintenant le meme cockpit que `Annonces actives`, y compris pour le pilotage admin Hektor;
+- les actions `Valider` / `Diffuser` pour les admins ne sont plus affichees dans le corps de l'onglet `Diffusion` cote suivi;
+- elles sont regroupees dans la meme colonne droite `Actions du dossier` + `Pilotage Hektor`, pour garder un rendu identique entre les deux vues;
+- les regles metier existantes sont conservees: `Suivi` garde son role Pauline pour les demandes, tandis que `Annonces actives` garde son role nego.
 - les onglets prennent un style de petits tabs sobres avec accent turquoise;
 - la colonne droite redevient une colonne claire `Actions rapides`, et non un bloc sombre de pilotage;
 - les couleurs reviennent vers la reference: fond blanc, lignes gris clair, accent turquoise, badges et passerelles colorees;
