@@ -704,27 +704,90 @@ function ActionButton(props: {
   helperText?: string
   onClick: (event: { stopPropagation(): void }) => void
 }) {
+  const isExternal = props.typeTone === 'hektor'
   return (
     <button className={`action-menu-item action-menu-type-${props.typeTone} action-menu-state-${props.stateTone}`} type={props.type} onClick={props.onClick}>
+      <span className={`action-menu-item-icon action-menu-item-icon-${props.typeTone}`} aria-hidden="true">
+        <ActionGlyph typeTone={props.typeTone} />
+      </span>
       <span className="action-menu-item-main">
         <span className="action-menu-item-label">{props.typeLabel}</span>
         {props.helperText ? <span className="action-menu-item-helper">{props.helperText}</span> : null}
       </span>
       <span className="action-menu-item-state">{props.stateLabel}</span>
+      <span className={`action-menu-item-arrow ${isExternal ? 'is-external' : ''}`} aria-hidden="true">
+        {isExternal ? <ActionExternalGlyph /> : <ActionChevronGlyph />}
+      </span>
     </button>
   )
 }
 
+function ActionGlyph(props: { typeTone: ActionButtonTypeTone }) {
+  if (props.typeTone === 'diffusion') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 3L10 14" />
+        <path d="M21 3L14 21L10 14L3 10L21 3Z" />
+      </svg>
+    )
+  }
+  if (props.typeTone === 'price-drop') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 7L10 13L14 9L20 15" />
+        <path d="M14 15H20V9" />
+      </svg>
+    )
+  }
+  if (props.typeTone === 'hektor') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="currentColor" opacity="0.14" />
+        <path d="M8 6H11V10.2H13V6H16V18H13V13.3H11V18H8V6Z" fill="currentColor" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6L9 17L4 12" />
+    </svg>
+  )
+}
+
+function ActionChevronGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6L15 12L9 18" />
+    </svg>
+  )
+}
+
+function ActionExternalGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 5H19V10" />
+      <path d="M10 14L19 5" />
+      <path d="M19 14V19H5V5H10" />
+    </svg>
+  )
+}
+
 function actionMenuHelperText(typeLabel: string, stateLabel: string) {
-  if (typeLabel === 'Hektor') return "Ouvre directement la fiche du bien dans Hektor"
-  if (typeLabel === 'Diffusion') return 'Ouvre la console de diffusion et les passerelles'
-  if (stateLabel === 'Ajouter') return 'Creer une nouvelle demande'
+  if (typeLabel === 'Hektor') return 'Acceder au cockpit Hektor'
+  if (stateLabel === 'Ajouter') {
+    if (typeLabel === 'Valider') return 'Creer une demande de validation du mandat'
+    if (typeLabel === 'Baisse de prix') return 'Creer une demande de baisse de prix'
+    return 'Creer une nouvelle demande'
+  }
   if (stateLabel === 'Corriger') return 'Reprendre la demande apres retour Pauline'
   if (stateLabel === 'A traiter') return 'Ouvrir la demande a traiter dans le suivi'
   if (stateLabel === 'Envoyee' || stateLabel === 'En cours') return 'Consulter la demande deja envoyee'
   if (stateLabel === 'Modifier') return 'Ajuster les reglages et portails de diffusion'
   if (stateLabel === 'Refusee' || stateLabel === 'Rejetee') return 'Consulter le refus et le motif'
-  if (stateLabel === 'Acceptée') return 'Consulter la demande acceptée'
+  if (stateLabel === 'Acceptée') return 'Consulter la demande acceptee'
+  if (typeLabel === 'Diffusion') return "Diffuser l'annonce sur les portails"
+  if (typeLabel === 'Baisse de prix') return 'Proposer une baisse du prix'
+  if (typeLabel === 'Valider') return 'Confirmer et activer le mandat'
   return 'Ouvrir cette action'
 }
 
@@ -1695,12 +1758,17 @@ function DetailDossierActionPanel(props: {
 
   return (
     <div className="detail-action-console">
-      <div className="section-header"><h4>Actions du dossier</h4></div>
+      <div className="section-header detail-action-console-head">
+        <h4>Actions du dossier</h4>
+        <button className="detail-action-more-button" type="button" onClick={() => undefined}>
+          <span>Plus d&apos;actions</span>
+          <span aria-hidden="true">⋮</span>
+        </button>
+      </div>
       {!actionModel.hasMandat ? (
         <p className="empty-state">Sans mandat : aucune action de validation, diffusion ou baisse de prix disponible.</p>
       ) : (
         <>
-          <p className="detail-action-console-copy">Meme logique que le bouton Action du listing pour ce mandat.</p>
           <div className="action-menu-dialog-list detail-action-console-list">
             {actionModel.items.map((item) => (
               <ActionButton
@@ -1734,88 +1802,154 @@ function DetailAdminPilotPanel(props: {
   diffusableSyncPending: boolean
   onSetValidation?: (checked: boolean) => void
   onSetDiffusable?: (checked: boolean) => void
+  onOpenHektor?: () => void
 }) {
   if (!props.allowValidation && !props.allowDiffusable) return null
+  const validationTone = props.validationPending
+    ? 'is-pending'
+    : props.validationSyncPending
+      ? 'is-alert'
+      : props.validationActive
+        ? 'is-positive'
+        : 'is-neutral'
+  const diffusableTone = props.diffusablePending
+    ? 'is-pending'
+    : props.diffusableSyncPending
+      ? 'is-alert'
+      : props.diffusableActive
+        ? 'is-positive'
+        : 'is-neutral'
+  const pilotDates = {
+    validation: props.validationPending
+      ? 'Synchronisation en cours'
+      : props.validationObserved
+        ? 'Etat confirme par Hektor'
+        : 'En attente de validation',
+    diffusion: props.diffusablePending
+      ? 'Synchronisation en cours'
+      : props.diffusableObserved
+        ? 'Etat confirme par Hektor'
+        : 'Diffusion inactive cote Hektor',
+  }
 
   return (
     <div className="detail-admin-pilot">
       <div className="section-header"><h4>Pilotage Hektor</h4></div>
+      <p className="detail-admin-intro">Configurez et controlez les automatisations Hektor.</p>
       <div className="detail-admin-pilot-grid">
         {props.allowValidation ? (
-          <article className="detail-admin-tile">
-            <div className="detail-admin-tile-head">
-              <span className="detail-label">Validation mandat</span>
-              <strong className={`detail-admin-state ${props.validationActive ? 'is-positive' : 'is-warning'}`}>
-                {props.validationPending ? 'Synchronisation...' : props.validationActive ? 'Valide' : 'A valider'}
-              </strong>
+          <article className={`detail-admin-tile ${validationTone}`}>
+            <div className="detail-admin-tile-shell">
+              <div className="detail-admin-identity">
+                <span className="detail-admin-icon is-validation" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3L19 6V11C19 15.2 16.3 19 12 21C7.7 19 5 15.2 5 11V6L12 3Z" />
+                    <path d="M9.2 11.8L11.2 13.8L15.4 9.6" />
+                  </svg>
+                </span>
+                <div className="detail-admin-identity-copy">
+                  <strong>Validation mandat</strong>
+                  <span className={`detail-admin-state ${validationTone}`}>
+                    {props.validationPending ? 'Synchronisation...' : props.validationActive ? 'Active' : 'Desactivee'}
+                  </span>
+                </div>
+              </div>
+              <div className="detail-admin-control">
+                <div className="detail-admin-segmented" role="group" aria-label="Pilotage validation mandat">
+                  <button
+                    className={`detail-admin-segment is-positive ${props.validationActive ? 'is-selected' : ''}`}
+                    type="button"
+                    disabled={props.validationPending || props.validationActive}
+                    onClick={() => props.onSetValidation?.(true)}
+                  >
+                    <span className="detail-admin-segment-dot" aria-hidden="true" />
+                    <span>Activer</span>
+                  </button>
+                  <button
+                    className={`detail-admin-segment is-negative ${!props.validationActive ? 'is-selected' : ''}`}
+                    type="button"
+                    disabled={props.validationPending || !props.validationActive}
+                    onClick={() => props.onSetValidation?.(false)}
+                  >
+                    <span className="detail-admin-segment-dot" aria-hidden="true" />
+                    <span>Desactiver</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="detail-admin-copy">
-              {props.validationActive ? 'Mandat pret pour diffusion.' : 'Validation manquante avant pilotage complet.'}
-            </p>
-            <div className="detail-admin-actions">
-              <button
-                className={`detail-action-button is-positive ${props.validationActive ? 'is-selected' : ''}`}
-                type="button"
-                disabled={props.validationPending || props.validationActive}
-                onClick={() => props.onSetValidation?.(true)}
-              >
-                Activer
-              </button>
-              <button
-                className={`detail-action-button is-negative ${!props.validationActive ? 'is-selected' : ''}`}
-                type="button"
-                disabled={props.validationPending || !props.validationActive}
-                onClick={() => props.onSetValidation?.(false)}
-              >
-                Desactiver
-              </button>
+            <div className="detail-admin-meta">
+              <p className="detail-admin-copy">
+                {props.validationActive ? "L'annonce est automatiquement validee apres controle." : 'Validation manquante avant pilotage complet.'}
+              </p>
+              <div className="detail-admin-timestamps">
+                <span>{pilotDates.validation}</span>
+                <span>{props.validationSyncPending ? `Relecture : ${props.validationObserved ? 'valide' : 'non valide'}` : `Etat actuel : ${props.validationObserved ? 'valide' : 'non valide'}`}</span>
+              </div>
             </div>
-            {props.validationPending ? (
-              <div className="detail-sync-alert is-pending">Validation Hektor en cours...</div>
-            ) : props.validationSyncPending ? (
-              <div className="detail-sync-alert is-waiting">{`Relecture Hektor : ${props.validationObserved ? 'valide' : 'non valide'}`}</div>
-            ) : (
-              <div className="detail-sync-alert is-confirmed">{`Etat confirme : ${props.validationObserved ? 'valide' : 'non valide'}`}</div>
-            )}
           </article>
         ) : null}
         {props.allowDiffusable ? (
-          <article className="detail-admin-tile">
-            <div className="detail-admin-tile-head">
-              <span className="detail-label">Diffusion</span>
-              <strong className={`detail-admin-state ${props.diffusableActive ? 'is-positive' : 'is-warning'}`}>
-                {props.diffusablePending ? 'Synchronisation...' : props.diffusableActive ? 'Diffusable' : 'Desactivee'}
-              </strong>
+          <article className={`detail-admin-tile ${diffusableTone}`}>
+            <div className="detail-admin-tile-shell">
+              <div className="detail-admin-identity">
+                <span className="detail-admin-icon is-diffusion" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12V8C4 6.3 5.3 5 7 5H8.5L16.5 2V22L8.5 19H7C5.3 19 4 17.7 4 16V12Z" />
+                    <path d="M19 8C20.4 9.1 21.3 10.5 21.3 12C21.3 13.5 20.4 14.9 19 16" />
+                  </svg>
+                </span>
+                <div className="detail-admin-identity-copy">
+                  <strong>Diffusion</strong>
+                  <span className={`detail-admin-state ${diffusableTone}`}>
+                    {props.diffusablePending ? 'Synchronisation...' : props.diffusableActive ? 'Active' : 'Desactivee'}
+                  </span>
+                </div>
+              </div>
+              <div className="detail-admin-control">
+                <div className="detail-admin-segmented" role="group" aria-label="Pilotage diffusion">
+                  <button
+                    className={`detail-admin-segment is-positive ${props.diffusableActive ? 'is-selected' : ''}`}
+                    type="button"
+                    disabled={props.diffusablePending || props.diffusableActive}
+                    onClick={() => props.onSetDiffusable?.(true)}
+                  >
+                    <span className="detail-admin-segment-dot" aria-hidden="true" />
+                    <span>Activer</span>
+                  </button>
+                  <button
+                    className={`detail-admin-segment is-negative ${!props.diffusableActive ? 'is-selected' : ''}`}
+                    type="button"
+                    disabled={props.diffusablePending || !props.diffusableActive}
+                    onClick={() => props.onSetDiffusable?.(false)}
+                  >
+                    <span className="detail-admin-segment-dot" aria-hidden="true" />
+                    <span>Desactiver</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="detail-admin-copy">
-              {props.diffusableActive ? 'Annonce diffusable sur les portails.' : 'Diffusion coupee cote Hektor.'}
-            </p>
-            <div className="detail-admin-actions">
-              <button
-                className={`detail-action-button is-positive ${props.diffusableActive ? 'is-selected' : ''}`}
-                type="button"
-                disabled={props.diffusablePending || props.diffusableActive}
-                onClick={() => props.onSetDiffusable?.(true)}
-              >
-                Activer
-              </button>
-              <button
-                className={`detail-action-button is-negative ${!props.diffusableActive ? 'is-selected' : ''}`}
-                type="button"
-                disabled={props.diffusablePending || !props.diffusableActive}
-                onClick={() => props.onSetDiffusable?.(false)}
-              >
-                Desactiver
-              </button>
+            <div className="detail-admin-meta">
+              <p className="detail-admin-copy">
+                {props.diffusableActive ? "L'annonce est diffusee automatiquement sur les portails." : 'Diffusion coupee cote Hektor.'}
+              </p>
+              <div className="detail-admin-timestamps">
+                <span>{pilotDates.diffusion}</span>
+                <span>{props.diffusableSyncPending ? `Relecture : ${props.diffusableObserved ? 'diffusable' : 'non diffusable'}` : `Etat actuel : ${props.diffusableObserved ? 'diffusable' : 'non diffusable'}`}</span>
+              </div>
             </div>
-            {props.diffusablePending ? (
-              <div className="detail-sync-alert is-pending">Mise a jour diffusion en cours...</div>
-            ) : props.diffusableSyncPending ? (
-              <div className="detail-sync-alert is-waiting">{`Relecture Hektor : ${props.diffusableObserved ? 'diffusable' : 'non diffusable'}`}</div>
-            ) : (
-              <div className="detail-sync-alert is-confirmed">{`Etat confirme : ${props.diffusableObserved ? 'diffusable' : 'non diffusable'}`}</div>
-            )}
           </article>
+        ) : null}
+      </div>
+      <div className="detail-admin-footer">
+        <div className="detail-admin-footer-copy">
+          <span className="detail-admin-footer-icon" aria-hidden="true">i</span>
+          <p>Les parametres Hektor s&apos;appliquent aux controles de cette annonce.</p>
+        </div>
+        {props.onOpenHektor ? (
+          <button className="detail-admin-footer-button" type="button" onClick={props.onOpenHektor}>
+            <ActionExternalGlyph />
+            <span>Ouvrir Hektor</span>
+          </button>
         ) : null}
       </div>
     </div>
@@ -5958,6 +6092,15 @@ function DossierDetailLayout(props: {
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const hasMatterport = matterportModels.length > 0
+  const hektorActionModel = buildMandatActionModel({
+    mandat: dossier,
+    role: actionRole,
+    requests: actionRequests,
+    currentRequest: props.currentActionRequest,
+    onOpenRequestModal: openRequestFromDetail,
+    onOpenDiffusionModal: openDiffusionFromDetail,
+  })
+  const hektorActionItem = hektorActionModel.items.find((item) => item.typeTone === 'hektor')
 
   return (
     <section className="detail-screen">
@@ -6389,6 +6532,7 @@ function DossierDetailLayout(props: {
                     diffusableSyncPending={hektorSyncPending || portalSyncPending}
                     onSetValidation={props.onSetValidation}
                     onSetDiffusable={props.onSetDiffusable}
+                    onOpenHektor={hektorActionItem ? () => hektorActionItem.onClick({ stopPropagation() {} }) : undefined}
                   />
                 ) : null}
                 <div className="detail-side-signal">

@@ -294,3 +294,36 @@ Publication en ligne du 2026-05-10:
 - aucune evolution Supabase de schema ou de policy n'etait necessaire pour cette publication: les correctifs portent sur l'interface detail et ses interactions existantes;
 - verification avant publication: `npx tsc -b` puis `npm run build`;
 - verification apres publication: branche distante mise a jour et historique git coherent sur `main`.
+
+Retouche graphique actions / pilotage du 2026-05-10:
+
+- les boutons `Actions du dossier` dans la fiche detail et dans la popup `Action` du listing gardent la meme logique metier, mais leur couleur depend maintenant prioritairement de l'etat courant;
+- la famille metier (`Valider`, `Diffusion`, `Baisse de prix`, `Hektor`) reste visible via un accent lateral et non plus via tout le fond du bouton;
+- les etats `Ajouter`, `Envoyee`, `En cours`, `Corriger`, `Refusee`, `Acceptee`, `Modifier` utilisent chacun une teinte dediee pour etre reconnus plus vite;
+- le bloc `Pilotage Hektor` adopte le meme principe: tuile neutre, active, en attente ou en ecart selon l'etat observe, sans changer la logique de validation ou de diffusion.
+
+Resserrement vers la maquette de reference:
+
+- la zone `Actions du dossier` reprend maintenant un rendu carte proche de la reference: grand disque icone a gauche, titre + aide au centre, badge d'etat a droite puis chevron;
+- `Hektor` garde un rendu specifique avec monogramme dans un disque plein et icone d'ouverture externe a droite;
+- la popup `Action` du listing reutilise ce meme composant pour garder la coherence entre liste et fiche detail;
+- `Pilotage Hektor` adopte un rendu en lignes structurees, avec icone ronde, statut, controles segmentes `Activer / Desactiver` et meta d'etat a droite;
+- aucune logique metier ni regle d'activation n'a ete modifiee dans cette retouche.
+
+Corrections complementaires apres comparaison ecran / maquette:
+
+- les cartes `Actions du dossier` reviennent sur un fond blanc franc, avec une bordure coloree par etat au lieu d'un fond entierement teinte;
+- le bouton `Plus d'actions` est ajoute dans l'entete du bloc pour retrouver la composition de reference;
+- le badge `Pret a diffuser` reprend un rendu de contour turquoise sur fond blanc, au lieu d'un badge plein;
+- la carte `Hektor` redevient blanche avec monogramme plein turquoise et ouverture externe a droite;
+- le footer `Pilotage Hektor` retrouve son bouton `Ouvrir Hektor`;
+- le bloc `Pilotage Hektor` est agrandi et aere pour se rapprocher davantage de la maquette fournie.
+
+Alignement final des sous-libelles d'action avec la production:
+
+- le sous-libelle des actions depend a nouveau d'abord de l'etat reel (`Ajouter`, `Corriger`, `Envoyee`, `En cours`, `Modifier`, `Refusee`, `Acceptee`);
+- `Valider / Ajouter` affiche maintenant `Creer une demande de validation du mandat`;
+- `Baisse de prix / Ajouter` affiche maintenant `Creer une demande de baisse de prix`;
+- `Valider / Corriger` et `Baisse de prix / Corriger` gardent `Reprendre la demande apres retour Pauline`;
+- aucune regle metier n'est modifiee: seul le texte d'aide est corrige pour rester coherent avec l'etat de l'action;
+- verification avant mise en ligne: comparaison avec `origin/main`, puis `npx tsc -b` et `npm run build`.
