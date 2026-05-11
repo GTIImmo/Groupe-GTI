@@ -1615,7 +1615,7 @@ function portalBrandClass(value: string | null | undefined) {
   return 'is-generic'
 }
 
-type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual'
+type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history'
 type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor'
 
 const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
@@ -1625,7 +1625,6 @@ const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon:
   { key: 'diffusion', label: 'Diffusion', short: '04', icon: 'diffusion' },
   { key: 'content', label: 'Contenu annonce', short: '05', icon: 'content' },
   { key: 'history', label: 'Historique', short: '06', icon: 'history' },
-  { key: 'virtual', label: 'Visites virtuelles', short: '07', icon: 'virtual' },
 ]
 
 function DetailIcon({ type }: { type: DetailIconKey }) {
@@ -6565,56 +6564,8 @@ function DossierDetailLayout(props: {
                 </section>
               ) : null}
 
-              {(activeDetailTab === 'virtual' || activeDetailTab === 'mandate' || activeDetailTab === 'commercial') ? (
+              {(activeDetailTab === 'mandate' || activeDetailTab === 'commercial') ? (
               <section className="detail-section detail-section-topstack">
-                {hasMatterport ? (
-                  activeDetailTab === 'virtual' ? (
-                  <article className="detail-subsection matterport-section">
-                    <div className="section-header">
-                      <DetailSectionTitle icon="virtual" title="Visites Matterport" />
-                    </div>
-                    <div className="matterport-group-list">
-                      {matterportGroups.map((group) => {
-                        const models = group.models ?? []
-                        const single = models.length <= 1
-                        return (
-                          <article key={group.id} className="matterport-group-card">
-                            <div className="matterport-group-head">
-                              <div>
-                                <strong>{group.group_label || (group.numero_mandat ? `Mandat ${group.numero_mandat}` : 'Groupe Matterport')}</strong>
-                                <span>{models.length} visite{models.length > 1 ? 's' : ''} liee{models.length > 1 ? 's' : ''}</span>
-                              </div>
-                              <div className="matterport-state-row">
-                                <StatusPill value={matterportStateLabel(group.group_state)} />
-                                <StatusPill value={matterportVisibilityLabel(group.group_visibility)} />
-                              </div>
-                            </div>
-                            <div className="matterport-model-list">
-                              {models.map((model) => (
-                                <div key={model.matterport_model_id} className="matterport-model-row">
-                                  <div className="matterport-model-main">
-                                    <strong>{matterportModelLabel(model.label, model.matterport_name, single)}</strong>
-                                    <span>{model.matterport_name || model.matterport_model_id}</span>
-                                  </div>
-                                  <div className="matterport-model-actions">
-                                    <a className="ghost-button matterport-open-link" href={model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a>
-                                    <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
-                                      {matterportStateLabel(model.state)}
-                                    </button>
-                                    <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
-                                      {matterportVisibilityLabel(model.visibility)}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </article>
-                        )
-                      })}
-                    </div>
-                  </article>
-                  ) : null
-                ) : activeDetailTab === 'virtual' ? <p className="empty-state">Aucune visite Matterport liee a cette annonce.</p> : null}
                 {activeDetailTab === 'mandate' ? (
                 <article className="detail-subsection detail-mandate-section">
                   <div className="section-header section-header-collapsible">
@@ -6786,6 +6737,55 @@ function DossierDetailLayout(props: {
                     ))}
                   </div>
                 ) : <p className="empty-state">Aucune photo synchronisee.</p>}
+              </section>
+              ) : null}
+
+              {activeDetailTab === 'content' ? (
+              <section className="detail-section detail-virtual-section matterport-section">
+                <div className="section-header">
+                  <DetailSectionTitle icon="virtual" title="Visite virtuelle" />
+                </div>
+                {hasMatterport ? (
+                  <div className="matterport-group-list">
+                    {matterportGroups.map((group) => {
+                      const models = group.models ?? []
+                      const single = models.length <= 1
+                      return (
+                        <article key={group.id} className="matterport-group-card">
+                          <div className="matterport-group-head">
+                            <div>
+                              <strong>{group.group_label || (group.numero_mandat ? `Mandat ${group.numero_mandat}` : 'Groupe Matterport')}</strong>
+                              <span>{models.length} visite{models.length > 1 ? 's' : ''} liee{models.length > 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="matterport-state-row">
+                              <StatusPill value={matterportStateLabel(group.group_state)} />
+                              <StatusPill value={matterportVisibilityLabel(group.group_visibility)} />
+                            </div>
+                          </div>
+                          <div className="matterport-model-list">
+                            {models.map((model) => (
+                              <div key={model.matterport_model_id} className="matterport-model-row">
+                                <div className="matterport-model-main">
+                                  <strong>{matterportModelLabel(model.label, model.matterport_name, single)}</strong>
+                                  <span>{model.matterport_name || model.matterport_model_id}</span>
+                                </div>
+                                <div className="matterport-model-actions">
+                                  <a className="ghost-button matterport-open-link" href={model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a>
+                                  <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
+                                    {matterportStateLabel(model.state)}
+                                  </button>
+                                  <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
+                                    {matterportVisibilityLabel(model.visibility)}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
+                ) : <p className="empty-state">Aucune visite Matterport liee a cette annonce.</p>}
               </section>
               ) : null}
 

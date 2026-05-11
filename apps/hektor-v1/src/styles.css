@@ -2698,7 +2698,7 @@ tbody tr.is-refreshing-row td {
 .detail-tabbar {
   display: grid;
   grid-area: tabs;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   padding: 6px;
   border: 1px solid rgba(207, 220, 227, 0.86);
