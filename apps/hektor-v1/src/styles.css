@@ -8633,6 +8633,86 @@ button.metric-card.is-active {
   border-left: 5px solid rgba(197, 0, 95, 0.72);
 }
 
+/* GTI fuchsia icon accents: selective highlights without repainting the whole popup. */
+.detail-screen .detail-tab-button:hover .detail-tab-icon,
+.detail-screen .detail-tab-button.is-active .detail-tab-icon {
+  background: var(--gti-final-magenta);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(197, 0, 95, 0.22);
+}
+
+.detail-screen .detail-section-title-commercial .detail-section-icon,
+.detail-screen .detail-section-title-photo .detail-section-icon,
+.detail-screen .detail-section-title-contact .detail-section-icon,
+.detail-screen .detail-section-title-history .detail-section-icon,
+.detail-screen .detail-section-title-hektor .detail-section-icon,
+.detail-screen .detail-action-console-title-icon .detail-section-icon {
+  background:
+    linear-gradient(135deg, var(--gti-final-magenta) 0%, #9e0f53 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(197, 0, 95, 0.2);
+}
+
+.detail-screen .detail-section-title-diffusion .detail-section-icon,
+.detail-screen .detail-section-title-mandate .detail-section-icon,
+.detail-screen .detail-section-title-summary .detail-section-icon,
+.detail-screen .detail-section-title-virtual .detail-section-icon {
+  background: var(--gti-final-ink);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.detail-screen .transaction-toggle {
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  border-color: rgba(34, 35, 35, 0.12);
+  box-shadow: 0 8px 16px rgba(34, 35, 35, 0.1);
+}
+.detail-screen .transaction-toggle svg {
+  color: var(--gti-final-magenta);
+}
+.detail-screen .transaction-toggle:hover {
+  background: var(--gti-final-magenta);
+  color: #ffffff;
+  border-color: var(--gti-final-magenta);
+}
+.detail-screen .transaction-toggle:hover svg {
+  color: #ffffff;
+}
+
+.detail-screen .price-history-card::after,
+.detail-screen .detail-latest-requests-section .detail-request-row::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gti-final-magenta);
+  box-shadow: 0 0 0 4px rgba(197, 0, 95, 0.12);
+}
+.detail-screen .price-history-card {
+  position: relative;
+}
+.detail-screen .price-history-card::after {
+  position: absolute;
+  left: -6px;
+  top: 17px;
+}
+.detail-screen .detail-latest-requests-section .detail-request-row {
+  position: relative;
+}
+.detail-screen .detail-latest-requests-section .detail-request-row::before {
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.detail-screen .detail-admin-pilot > .section-header .detail-section-icon,
+.detail-screen .detail-action-extra-panel .detail-section-icon {
+  background: var(--gti-final-magenta);
+  color: #ffffff;
+}
+
 @media (max-width: 900px) {
   .hero, .panel-grid, .stats-grid, .filter-grid, .dashboard-grid, .detail-overview, .detail-cockpit-body, .detail-command-grid, .metric-grid, .info-grid, .gallery-thumbs, .kpi-strip, .admin-action-row, .admin-form-grid, .suivi-layout, .header-kpis, .detail-keyfacts, .detail-status-grid, .detail-section-topgrid, .transaction-columns, .transaction-flow, .detail-portal-badges {
     grid-template-columns: 1fr;
