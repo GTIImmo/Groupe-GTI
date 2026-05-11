@@ -11147,6 +11147,1602 @@ body {
   }
 }
 
+/* True final mandate-register art direction. Placed at EOF to override legacy passes above. */
+.mandate-register-modal {
+  width: min(1240px, calc(100vw - 32px)) !important;
+  max-width: 1240px !important;
+  padding: 10px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #eceeee 0%, #f8f9f9 38%, #ffffff 100%) !important;
+}
+
+.mandate-register-modal .panel-head {
+  min-height: 54px !important;
+  margin: 0 0 10px !important;
+  padding: 10px 12px 10px 14px !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.06) !important;
+}
+
+.mandate-register-modal .panel-head::before {
+  inset: auto 14px 0 !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, #222323, #c5005f, #a1a4a4) !important;
+}
+
+.mandate-register-modal .panel-head .eyebrow {
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #222323 !important;
+  font-size: 12px !important;
+}
+
+.mandate-register-modal .panel-head h3,
+.mandate-register-modal .panel-head .mandate-register-subtitle {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.mandate-register-modal .panel-head .button-subtle {
+  min-height: 38px !important;
+  border-color: rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #222323 !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.08) !important;
+}
+
+.mandate-register-modal .detail-stack-rich {
+  gap: 12px !important;
+}
+
+.mandate-sheet-hero-card {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(197, 0, 95, 0.18), transparent 25%),
+    linear-gradient(135deg, #171a1b 0%, #242829 56%, #343939 100%) !important;
+  box-shadow: 0 22px 48px rgba(34, 35, 35, 0.22) !important;
+}
+
+.mandate-sheet-hero-card::before {
+  z-index: 2 !important;
+  height: 5px !important;
+  background: linear-gradient(90deg, #c5005f, rgba(255,255,255,0.34), #a1a4a4) !important;
+}
+
+.mandate-sheet-hero-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
+  min-height: 254px !important;
+  gap: 0 !important;
+}
+
+.mandate-sheet-visual {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  padding: 18px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)) !important;
+}
+
+.mandate-sheet-visual::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.mandate-sheet-media {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 218px !important;
+  max-height: 232px !important;
+  border-radius: 12px !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.24) !important;
+}
+
+.mandate-sheet-media img {
+  object-fit: cover !important;
+  filter: saturate(0.96) contrast(1.02) !important;
+}
+
+.mandate-sheet-visual-caption {
+  left: 34px !important;
+  right: 34px !important;
+  bottom: 34px !important;
+  background: rgba(20, 22, 23, 0.78) !important;
+}
+
+.mandate-sheet-summary {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-content: center !important;
+  padding: 28px 32px 26px !important;
+}
+
+.mandate-sheet-summary::before {
+  inset: 34px auto 34px 0 !important;
+  width: 5px !important;
+  background: #c5005f !important;
+}
+
+.mandate-sheet-title-row {
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  flex-direction: column !important;
+}
+
+.mandate-register-kicker,
+.mandate-sheet-summary .status-pill {
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-sheet-summary > strong {
+  max-width: 760px !important;
+  color: #ffffff !important;
+  font-size: clamp(34px, 3.5vw, 56px) !important;
+  line-height: 0.98 !important;
+}
+
+.mandate-sheet-summary > p {
+  max-width: 720px !important;
+  color: rgba(255,255,255,0.68) !important;
+  font-size: 19px !important;
+}
+
+.mandate-register-link {
+  min-height: 44px !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-link:hover {
+  border-color: rgba(255,255,255,0.32) !important;
+  background: rgba(255,255,255,0.16) !important;
+  color: #ffffff !important;
+}
+
+.mandate-register-link.primary {
+  border-color: rgba(197, 0, 95, 0.72) !important;
+  background: #c5005f !important;
+}
+
+.mandate-sheet-section {
+  border: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(34, 35, 35, 0.07) !important;
+}
+
+.mandate-register-modal .mandate-current-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card {
+  grid-column: span 3 !important;
+  min-height: 62px !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(1) {
+  grid-column: span 2 !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) {
+  grid-column: span 4 !important;
+  min-height: 72px !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(197,0,95,0.16), transparent 34%),
+    linear-gradient(135deg, #222323, #333838) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) span {
+  color: rgba(255,255,255,0.58) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) strong {
+  color: #ffffff !important;
+  font-size: 22px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+  grid-column: span 6 !important;
+}
+
+.mandate-sheet-secondary-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.78fr) !important;
+}
+
+@media (max-width: 980px) {
+  .mandate-sheet-hero-layout,
+  .mandate-sheet-secondary-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mandate-sheet-summary,
+  .mandate-sheet-visual {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid .info-card,
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(1),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(5),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+    grid-column: auto !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .mandate-sheet-summary {
+    padding: 28px 18px 24px !important;
+  }
+
+  .mandate-sheet-summary > strong {
+    font-size: 31px !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* Final register mandate art direction: keep this last so it wins over legacy sheet rules. */
+.mandate-register-modal {
+  width: min(1240px, calc(100vw - 32px)) !important;
+  max-width: 1240px !important;
+  padding: 10px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #eceeee 0%, #f8f9f9 38%, #ffffff 100%) !important;
+}
+
+.mandate-register-modal .panel-head {
+  min-height: 54px !important;
+  margin: 0 0 10px !important;
+  padding: 10px 12px 10px 14px !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.06) !important;
+}
+
+.mandate-register-modal .panel-head::before {
+  inset: auto 14px 0 !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, #222323, #c5005f, #a1a4a4) !important;
+}
+
+.mandate-register-modal .panel-head .eyebrow {
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #222323 !important;
+  font-size: 12px !important;
+}
+
+.mandate-register-modal .panel-head h3,
+.mandate-register-modal .panel-head .mandate-register-subtitle {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.mandate-register-modal .panel-head .button-subtle {
+  min-height: 38px !important;
+  border-color: rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #222323 !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.08) !important;
+}
+
+.mandate-register-modal .detail-stack-rich {
+  gap: 12px !important;
+}
+
+.mandate-sheet-hero-card {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(197, 0, 95, 0.18), transparent 25%),
+    linear-gradient(135deg, #171a1b 0%, #242829 56%, #343939 100%) !important;
+  box-shadow: 0 22px 48px rgba(34, 35, 35, 0.22) !important;
+}
+
+.mandate-sheet-hero-card::before {
+  z-index: 2 !important;
+  height: 5px !important;
+  background: linear-gradient(90deg, #c5005f, rgba(255,255,255,0.34), #a1a4a4) !important;
+}
+
+.mandate-sheet-hero-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
+  min-height: 292px !important;
+  gap: 0 !important;
+}
+
+.mandate-sheet-visual {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  padding: 18px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)) !important;
+}
+
+.mandate-sheet-visual::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.mandate-sheet-media {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 218px !important;
+  max-height: 232px !important;
+  border-radius: 12px !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.24) !important;
+}
+
+.mandate-sheet-media img {
+  object-fit: cover !important;
+  filter: saturate(0.96) contrast(1.02) !important;
+}
+
+.mandate-sheet-visual-caption {
+  left: 34px !important;
+  right: 34px !important;
+  bottom: 34px !important;
+  background: rgba(20, 22, 23, 0.78) !important;
+}
+
+.mandate-sheet-summary {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-content: center !important;
+  padding: 28px 32px 26px !important;
+}
+
+.mandate-sheet-summary::before {
+  inset: 34px auto 34px 0 !important;
+  width: 5px !important;
+  background: #c5005f !important;
+}
+
+.mandate-sheet-title-row {
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  flex-direction: column !important;
+}
+
+.mandate-register-kicker {
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+}
+
+.mandate-sheet-summary .status-pill {
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-sheet-summary > strong {
+  max-width: 760px !important;
+  color: #ffffff !important;
+  font-size: clamp(34px, 3.5vw, 56px) !important;
+  line-height: 0.98 !important;
+}
+
+.mandate-sheet-summary > p {
+  max-width: 720px !important;
+  color: rgba(255,255,255,0.68) !important;
+  font-size: 19px !important;
+}
+
+.mandate-register-link {
+  min-height: 44px !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-link:hover {
+  border-color: rgba(255,255,255,0.32) !important;
+  background: rgba(255,255,255,0.16) !important;
+  color: #ffffff !important;
+}
+
+.mandate-register-link.primary {
+  border-color: rgba(197, 0, 95, 0.72) !important;
+  background: #c5005f !important;
+}
+
+.mandate-sheet-section {
+  border: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(34, 35, 35, 0.07) !important;
+}
+
+.mandate-register-modal .mandate-current-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card {
+  grid-column: span 3 !important;
+  min-height: 62px !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(1) {
+  grid-column: span 2 !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) {
+  grid-column: span 4 !important;
+  min-height: 72px !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(197,0,95,0.16), transparent 34%),
+    linear-gradient(135deg, #222323, #333838) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) span {
+  color: rgba(255,255,255,0.58) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) strong {
+  color: #ffffff !important;
+  font-size: 22px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+  grid-column: span 6 !important;
+}
+
+.mandate-sheet-secondary-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.78fr) !important;
+}
+
+@media (max-width: 980px) {
+  .mandate-sheet-hero-layout,
+  .mandate-sheet-secondary-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mandate-sheet-summary,
+  .mandate-sheet-visual {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid .info-card,
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(1),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(5),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+    grid-column: auto !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .mandate-sheet-summary {
+    padding: 28px 18px 24px !important;
+  }
+
+  .mandate-sheet-summary > strong {
+    font-size: 31px !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* Register mandate premium direction: editorial hero + bento mandate data. */
+.mandate-register-modal {
+  width: min(1240px, calc(100vw - 32px)) !important;
+  max-width: 1240px !important;
+  padding: 10px !important;
+  border: 1px solid rgba(34, 35, 35, 0.14) !important;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(180deg, #eceeee 0%, #f8f9f9 36%, #ffffff 100%) !important;
+}
+
+.mandate-register-modal .panel-head {
+  min-height: 54px !important;
+  margin: 0 0 10px !important;
+  padding: 10px 12px 10px 14px !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.06) !important;
+}
+
+.mandate-register-modal .panel-head::before {
+  inset: auto 14px 0 !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, var(--gti-final-ink), var(--gti-final-magenta), var(--gti-final-grey)) !important;
+}
+
+.mandate-register-modal .panel-head .eyebrow {
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--gti-final-ink) !important;
+  font-size: 12px !important;
+}
+
+.mandate-register-modal .panel-head h3,
+.mandate-register-modal .panel-head .mandate-register-subtitle {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.mandate-register-modal .panel-head .button-subtle {
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  border-color: rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink) !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.08) !important;
+}
+
+.mandate-register-modal .detail-stack-rich {
+  gap: 12px !important;
+}
+
+.mandate-register-modal .detail-card {
+  border-radius: 10px !important;
+}
+
+.mandate-sheet-hero-card {
+  border: 0 !important;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(197, 0, 95, 0.18), transparent 25%),
+    linear-gradient(135deg, #171a1b 0%, #242829 56%, #343939 100%) !important;
+  box-shadow: 0 22px 48px rgba(34, 35, 35, 0.22) !important;
+}
+
+.mandate-sheet-hero-card::before {
+  z-index: 2;
+  height: 5px !important;
+  background: linear-gradient(90deg, var(--gti-final-magenta), rgba(255,255,255,0.34), var(--gti-final-grey)) !important;
+}
+
+.mandate-sheet-hero-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
+  min-height: 292px !important;
+}
+
+.mandate-sheet-visual {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  padding: 18px !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)) !important;
+}
+
+.mandate-sheet-visual::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.mandate-sheet-media {
+  min-height: 256px !important;
+  border-radius: 12px !important;
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+.mandate-sheet-media img {
+  object-fit: cover !important;
+}
+
+.mandate-sheet-visual-caption {
+  left: 34px !important;
+  right: 34px !important;
+  bottom: 34px !important;
+  background: rgba(20, 22, 23, 0.78) !important;
+}
+
+.mandate-sheet-summary {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-content: center !important;
+  padding: 34px 34px 30px !important;
+}
+
+.mandate-sheet-summary::before {
+  inset: 34px auto 34px 0 !important;
+  width: 5px !important;
+  background: var(--gti-final-magenta) !important;
+}
+
+.mandate-sheet-title-row {
+  justify-content: flex-start !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+.mandate-register-kicker {
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+}
+
+.mandate-sheet-summary .tag-row {
+  gap: 7px !important;
+}
+
+.mandate-sheet-summary .status-pill {
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-sheet-summary > strong {
+  max-width: 760px;
+  color: #ffffff !important;
+  font-size: clamp(34px, 3.5vw, 56px) !important;
+  line-height: 0.98 !important;
+}
+
+.mandate-sheet-summary > p {
+  max-width: 720px;
+  color: rgba(255,255,255,0.68) !important;
+  font-size: 19px !important;
+}
+
+.mandate-sheet-actions {
+  margin-top: 8px !important;
+}
+
+.mandate-register-link {
+  min-height: 44px !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-link:hover {
+  border-color: rgba(255,255,255,0.32) !important;
+  background: rgba(255,255,255,0.16) !important;
+  color: #ffffff !important;
+}
+
+.mandate-register-link.primary {
+  border-color: rgba(197, 0, 95, 0.72) !important;
+  background: var(--gti-final-magenta) !important;
+  color: #ffffff !important;
+}
+
+.mandate-sheet-section {
+  border: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(34, 35, 35, 0.07) !important;
+}
+
+.mandate-section-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(34,35,35,0.08);
+}
+
+.mandate-section-head > .detail-label,
+.mandate-sheet-section > .detail-label {
+  background: #f3f4f4 !important;
+}
+
+.mandate-section-head > strong {
+  background:
+    linear-gradient(135deg, var(--gti-final-ink), #3a4040) !important;
+  box-shadow: 0 12px 24px rgba(34,35,35,0.14);
+}
+
+.mandate-register-modal .mandate-current-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card {
+  grid-column: span 3;
+  min-height: 86px;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(1) {
+  grid-column: span 2;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) {
+  grid-column: span 4;
+  min-height: 116px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(197,0,95,0.16), transparent 34%),
+    linear-gradient(135deg, var(--gti-final-ink), #333838) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5)::before {
+  background: var(--gti-final-magenta) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) span {
+  color: rgba(255,255,255,0.58) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) strong {
+  color: #ffffff !important;
+  font-size: 29px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+  grid-column: span 6;
+}
+
+.mandate-register-modal .info-card {
+  border-color: rgba(34,35,35,0.08) !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f6f7f7 100%) !important;
+}
+
+.mandate-register-modal .info-card::before {
+  width: 3px !important;
+}
+
+.mandate-register-modal .detail-rich-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 12px !important;
+  border-left-width: 5px !important;
+}
+
+.mandate-sheet-secondary-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.78fr) !important;
+}
+
+.mandate-price-section {
+  min-height: 100%;
+  background:
+    linear-gradient(135deg, rgba(34,35,35,0.04), rgba(255,255,255,0) 42%),
+    #ffffff !important;
+}
+
+.mandate-register-modal .timeline-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mandate-register-modal .timeline-card {
+  padding: 12px 13px !important;
+}
+
+.mandate-register-modal .timeline-card strong {
+  color: var(--gti-final-ink) !important;
+}
+
+@media (max-width: 980px) {
+  .mandate-sheet-hero-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mandate-sheet-summary,
+  .mandate-sheet-visual {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .mandate-sheet-visual {
+    min-height: 240px;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid .info-card,
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(1),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(5),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+    grid-column: auto !important;
+  }
+
+  .mandate-sheet-secondary-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .mandate-sheet-summary {
+    padding: 28px 18px 24px !important;
+  }
+
+  .mandate-sheet-summary > strong {
+    font-size: 31px !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* Register mandate detail: align the legacy mandate sheet with the annonce detail GTI design. */
+.mandate-register-modal {
+  --gti-final-ink: #222323;
+  --gti-final-ink-soft: #343838;
+  --gti-final-grey: #a1a4a4;
+  --gti-final-grey-soft: #f1f2f2;
+  --gti-final-line: rgba(34, 35, 35, 0.12);
+  --gti-final-magenta: #c5005f;
+  width: min(1180px, calc(100vw - 34px)) !important;
+  max-width: 1180px !important;
+  padding: 12px !important;
+  border: 1px solid rgba(34, 35, 35, 0.16) !important;
+  border-radius: 14px !important;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(197, 0, 95, 0.07), transparent 28%),
+    linear-gradient(180deg, #f4f5f5 0%, #ffffff 100%) !important;
+  box-shadow: 0 28px 70px rgba(34, 35, 35, 0.22) !important;
+}
+
+.mandate-register-modal.modal-panel-detail {
+  overflow-x: hidden !important;
+}
+
+.mandate-register-modal .panel-head {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 18px !important;
+  margin: 0 0 12px !important;
+  padding: 18px 22px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(34, 35, 35, 0.18) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #222323 0%, #2f3333 64%, #3c4141 100%) !important;
+  box-shadow: 0 18px 36px rgba(34, 35, 35, 0.16) !important;
+}
+
+.mandate-register-modal .panel-head::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, var(--gti-final-magenta), var(--gti-final-grey), rgba(255, 255, 255, 0.18));
+}
+
+.mandate-register-modal .panel-head .eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 8px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86) !important;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+}
+
+.mandate-register-modal .panel-head h3 {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #ffffff !important;
+  font-size: clamp(24px, 2vw, 34px) !important;
+  line-height: 1.04 !important;
+  letter-spacing: 0 !important;
+}
+
+.mandate-register-subtitle {
+  margin: 8px 0 0 !important;
+  color: rgba(255, 255, 255, 0.64) !important;
+  font-size: 14px !important;
+}
+
+.mandate-register-modal .panel-head .row-actions {
+  align-self: start;
+}
+
+.mandate-register-modal .panel-head .button-subtle {
+  min-height: 42px !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .detail-stack-rich {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.mandate-register-modal .detail-card {
+  border: 1px solid var(--gti-final-line) !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(34, 35, 35, 0.06) !important;
+}
+
+.mandate-sheet-hero-card {
+  position: relative;
+  overflow: hidden;
+  padding: 0 !important;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(197, 0, 95, 0.1), transparent 30%),
+    linear-gradient(135deg, rgba(34, 35, 35, 0.05) 0%, rgba(255, 255, 255, 0) 44%),
+    #ffffff !important;
+}
+
+.mandate-sheet-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gti-final-ink), var(--gti-final-magenta), var(--gti-final-grey));
+}
+
+.mandate-sheet-hero-layout {
+  grid-template-columns: minmax(230px, 0.34fr) minmax(0, 1fr) !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  min-height: 224px;
+}
+
+.mandate-sheet-visual {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, var(--gti-final-ink) 0%, #303535 100%);
+}
+
+.mandate-sheet-media {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 190px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 10px !important;
+  background: var(--gti-final-ink) !important;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.24) !important;
+}
+
+.mandate-sheet-media img {
+  filter: saturate(0.96) contrast(1.02);
+}
+
+.mandate-sheet-visual-caption {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: rgba(34, 35, 35, 0.72);
+  color: #ffffff;
+}
+
+.mandate-sheet-visual-caption span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mandate-sheet-visual-caption strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.mandate-sheet-summary {
+  position: relative;
+  align-content: center !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+  padding: 22px 24px !important;
+}
+
+.mandate-sheet-summary::before {
+  content: "";
+  position: absolute;
+  inset: 22px auto 22px 0;
+  width: 4px;
+  border-radius: 0 999px 999px 0;
+  background: var(--gti-final-magenta);
+}
+
+.mandate-sheet-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mandate-sheet-title-row .tag-row {
+  justify-content: flex-end;
+}
+
+.mandate-register-kicker {
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--gti-final-ink);
+  color: #ffffff !important;
+  font-size: 10px !important;
+  letter-spacing: 0.1em !important;
+}
+
+.mandate-sheet-summary > strong {
+  color: var(--gti-final-ink) !important;
+  font-size: clamp(28px, 2.6vw, 42px) !important;
+  line-height: 1.04 !important;
+  letter-spacing: 0 !important;
+}
+
+.mandate-sheet-summary > p {
+  color: #667070 !important;
+  font-size: 18px !important;
+  line-height: 1.28 !important;
+}
+
+.mandate-sheet-actions {
+  gap: 10px !important;
+  margin-top: 4px;
+}
+
+.mandate-register-link {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 8px !important;
+  border-color: rgba(34, 35, 35, 0.14) !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink) !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.07) !important;
+}
+
+.mandate-register-link:hover {
+  border-color: rgba(197, 0, 95, 0.32) !important;
+  color: var(--gti-final-magenta) !important;
+}
+
+.mandate-register-link.primary {
+  border-color: var(--gti-final-ink) !important;
+  background: var(--gti-final-ink) !important;
+  color: #ffffff !important;
+}
+
+.mandate-sheet-section {
+  position: relative;
+  overflow: hidden;
+  padding: 18px !important;
+}
+
+.mandate-sheet-section::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gti-final-grey), rgba(161, 164, 164, 0));
+}
+
+.mandate-sheet-section:nth-of-type(2)::before {
+  background: linear-gradient(90deg, var(--gti-final-magenta), rgba(197, 0, 95, 0));
+}
+
+.mandate-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.mandate-section-head > .detail-label {
+  margin: 0;
+}
+
+.mandate-section-head > strong {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--gti-final-ink);
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.mandate-sheet-section > .detail-label {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 14px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--gti-final-grey-soft);
+  color: var(--gti-final-ink) !important;
+  font-size: 11px !important;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.mandate-register-modal .info-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.mandate-register-modal .mandate-current-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+
+.mandate-register-modal .info-card {
+  position: relative;
+  min-height: 82px;
+  padding: 14px !important;
+  overflow: hidden;
+  border: 1px solid rgba(34, 35, 35, 0.1) !important;
+  border-radius: 9px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f8f8 100%) !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) {
+  grid-column: span 2;
+  background:
+    linear-gradient(135deg, rgba(34, 35, 35, 0.055), #ffffff 58%) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+  grid-column: span 3;
+}
+
+.mandate-register-modal .info-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--gti-final-grey);
+}
+
+.mandate-register-modal .info-card:nth-child(3n + 1)::before,
+.mandate-register-modal .info-card:nth-child(6n)::before {
+  background: var(--gti-final-magenta);
+}
+
+.mandate-register-modal .info-card span {
+  color: #737979 !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.mandate-register-modal .info-card strong {
+  color: var(--gti-final-ink) !important;
+  font-size: 17px !important;
+  line-height: 1.18 !important;
+}
+
+.mandate-register-modal .detail-rich-copy {
+  margin-top: 14px !important;
+  padding: 14px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-left: 4px solid var(--gti-final-magenta);
+  border-radius: 9px;
+  background: linear-gradient(90deg, rgba(197, 0, 95, 0.055), #ffffff 44%);
+}
+
+.mandate-register-modal .detail-rich-copy strong {
+  color: var(--gti-final-ink) !important;
+}
+
+.mandate-register-modal .timeline-card {
+  border: 1px solid rgba(34, 35, 35, 0.1) !important;
+  border-left: 4px solid var(--gti-final-ink) !important;
+  border-radius: 9px !important;
+  background: #ffffff !important;
+}
+
+.mandate-register-modal .timeline-card:nth-child(2n) {
+  border-left-color: var(--gti-final-magenta) !important;
+}
+
+.mandate-sheet-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.82fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.mandate-price-section {
+  grid-row: span 2;
+}
+
+.mandate-avenants-section {
+  background:
+    linear-gradient(135deg, rgba(161, 164, 164, 0.12) 0%, rgba(255, 255, 255, 0) 48%),
+    #ffffff !important;
+}
+
+.mandate-register-modal .price-history-panel {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .price-history-panel > .detail-label {
+  background: var(--gti-final-ink) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 760px) {
+  .mandate-register-modal {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 8px !important;
+    border-radius: 0 !important;
+  }
+
+  .mandate-register-modal .panel-head {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 16px !important;
+  }
+
+  .mandate-register-modal .panel-head .row-actions {
+    width: 100%;
+  }
+
+  .mandate-register-modal .panel-head .button-subtle {
+    width: 100%;
+  }
+
+  .mandate-sheet-hero-layout,
+  .mandate-register-modal .info-grid,
+  .mandate-register-modal .mandate-current-grid,
+  .mandate-sheet-secondary-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mandate-sheet-title-row,
+  .mandate-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mandate-sheet-media {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  .mandate-sheet-summary > p {
+    font-size: 15px !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(5),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(9),
+  .mandate-price-section {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+/* Detail mandat: same GTI visual universe as annonce detail, with a lighter mandate-first layout. */
+.detail-screen-mandat .detail-cockpit-panel {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(197, 0, 95, 0.08), transparent 30%),
+    linear-gradient(180deg, #f5f6f6 0%, #ffffff 100%) !important;
+}
+
+.detail-screen-mandat .detail-overview {
+  border-color: rgba(34, 35, 35, 0.2);
+  background:
+    linear-gradient(120deg, #222323 0%, #2c3030 62%, #424848 100%) !important;
+}
+
+.detail-screen-mandat .detail-overview::before {
+  height: 5px;
+  background: linear-gradient(90deg, var(--gti-final-grey) 0%, var(--gti-final-magenta) 48%, rgba(255,255,255,0.22) 100%);
+}
+
+.detail-screen-mandat .detail-property-title > span {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.detail-screen-mandat .detail-keyfact-main::before {
+  background: linear-gradient(90deg, var(--gti-final-magenta), var(--gti-final-grey));
+}
+
+.detail-screen-mandat .detail-tab-button.is-active {
+  border-color: var(--gti-final-magenta);
+  background:
+    linear-gradient(135deg, var(--gti-final-ink) 0%, #303535 100%) !important;
+}
+
+.detail-screen-mandat .detail-section-topstack {
+  gap: 14px;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.detail-screen-mandat .detail-mandate-section,
+.detail-screen-mandat .detail-contact-section {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  background:
+    linear-gradient(135deg, rgba(161, 164, 164, 0.14) 0%, rgba(255,255,255,0) 42%),
+    #ffffff !important;
+}
+
+.detail-screen-mandat .detail-mandate-section::before,
+.detail-screen-mandat .detail-contact-section::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gti-final-ink), var(--gti-final-magenta), var(--gti-final-grey));
+}
+
+.detail-screen-mandat .detail-mandate-section .section-header,
+.detail-screen-mandat .detail-contact-section .section-header {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.1);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-section-icon,
+.detail-screen-mandat .detail-contact-section .detail-section-icon {
+  border-radius: 8px;
+}
+
+.detail-screen-mandat .detail-mandate-section .section-toggle-button,
+.detail-screen-mandat .detail-contact-section .section-toggle-button {
+  border-color: rgba(34, 35, 35, 0.14);
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.07);
+}
+
+.detail-screen-mandat .detail-mandate-section .section-toggle-button:hover,
+.detail-screen-mandat .detail-contact-section .section-toggle-button:hover {
+  border-color: rgba(197, 0, 95, 0.32);
+  color: var(--gti-final-magenta);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-list {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-card {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px;
+  background: #ffffff !important;
+  box-shadow: 0 14px 26px rgba(34, 35, 35, 0.06);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-card > strong {
+  position: relative;
+  display: flex;
+  min-height: auto;
+  align-items: center;
+  padding: 14px 18px 14px 48px;
+  background:
+    linear-gradient(90deg, var(--gti-final-ink) 0%, #303535 100%);
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-card > strong::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.84);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 3px var(--gti-final-magenta);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  padding: 14px;
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-cell {
+  min-height: 66px;
+  padding: 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-left: 0;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7f8f8 100%);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-cell::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin-bottom: 9px;
+  border-radius: 999px;
+  background: var(--gti-final-grey);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-cell:nth-child(3n + 1)::before {
+  background: var(--gti-final-magenta);
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-cell span,
+.detail-screen-mandat .detail-contact-section .detail-entity-line span {
+  color: #777d7d;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-cell strong,
+.detail-screen-mandat .detail-contact-section .detail-entity-line strong {
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.detail-screen-mandat .detail-mandate-section .detail-mandat-note {
+  margin: 0 14px 14px;
+  padding: 12px;
+  border: 1px solid rgba(197, 0, 95, 0.16);
+  border-left: 4px solid var(--gti-final-magenta);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(197, 0, 95, 0.055), #ffffff 44%);
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-list {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 12px;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-card {
+  overflow: hidden;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px;
+  background: #ffffff !important;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-card-primary {
+  background:
+    linear-gradient(90deg, var(--gti-final-ink) 0 6px, transparent 6px),
+    linear-gradient(135deg, rgba(197, 0, 95, 0.07), rgba(255,255,255,0) 46%),
+    #ffffff !important;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-head {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08);
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-avatar {
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, var(--gti-final-ink) 0%, #343838 100%);
+  box-shadow: 0 10px 20px rgba(34, 35, 35, 0.12);
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-avatar.is-secondary {
+  background:
+    linear-gradient(135deg, var(--gti-final-magenta) 0%, #9e0f53 100%);
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-identity strong {
+  color: var(--gti-final-ink);
+  font-size: 15px;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-identity span {
+  color: #777d7d;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-lines {
+  gap: 9px;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-entity-line {
+  border: 1px solid rgba(34, 35, 35, 0.08);
+  border-radius: 8px;
+  background: #f8f9f9;
+}
+
+.detail-screen-mandat .detail-contact-section .detail-contact-link {
+  color: var(--gti-final-magenta);
+}
+
+@media (max-width: 760px) {
+  .detail-screen-mandat .detail-mandate-section,
+  .detail-screen-mandat .detail-contact-section {
+    padding: 12px !important;
+  }
+
+  .detail-screen-mandat .detail-mandate-section .detail-mandat-card > strong {
+    padding: 13px 14px 13px 42px;
+  }
+
+  .detail-screen-mandat .detail-mandate-section .detail-mandat-card > strong::before {
+    left: 14px;
+  }
+
+  .detail-screen-mandat .detail-contact-section .detail-contact-list,
+  .detail-screen-mandat .detail-secondary-contacts {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 /* Estimations listing: six-column layout aligned with the active listings design. */
 .panel-estimation-listing {
   overflow: hidden !important;
@@ -15968,5 +17564,693 @@ body {
 
   .content {
     padding: 16px 12px 22px !important;
+  }
+}
+
+/* EOF mandate-register premium override: this is the effective final visual pass. */
+.mandate-register-modal {
+  width: min(1240px, calc(100vw - 32px)) !important;
+  max-width: 1240px !important;
+  padding: 10px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #eceeee 0%, #f8f9f9 38%, #ffffff 100%) !important;
+}
+
+.mandate-register-modal .panel-head {
+  min-height: 54px !important;
+  margin: 0 0 10px !important;
+  padding: 10px 12px 10px 14px !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.06) !important;
+}
+
+.mandate-register-modal .panel-head h3,
+.mandate-register-modal .panel-head .mandate-register-subtitle {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.mandate-sheet-hero-card {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(197, 0, 95, 0.18), transparent 25%),
+    linear-gradient(135deg, #171a1b 0%, #242829 56%, #343939 100%) !important;
+  box-shadow: 0 22px 48px rgba(34, 35, 35, 0.22) !important;
+}
+
+.mandate-sheet-hero-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
+  min-height: 292px !important;
+  gap: 0 !important;
+}
+
+.mandate-sheet-visual {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  padding: 18px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)) !important;
+}
+
+.mandate-sheet-media {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 256px !important;
+  border-radius: 12px !important;
+}
+
+.mandate-sheet-summary {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-content: center !important;
+  padding: 34px 34px 30px !important;
+}
+
+.mandate-sheet-summary > strong {
+  max-width: 760px !important;
+  color: #ffffff !important;
+  font-size: clamp(34px, 3.5vw, 56px) !important;
+  line-height: 0.98 !important;
+}
+
+.mandate-sheet-summary > p {
+  max-width: 720px !important;
+  color: rgba(255,255,255,0.68) !important;
+  font-size: 19px !important;
+}
+
+.mandate-register-link {
+  min-height: 44px !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-link.primary {
+  border-color: rgba(197, 0, 95, 0.72) !important;
+  background: #c5005f !important;
+}
+
+.mandate-register-modal .mandate-current-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card {
+  grid-column: span 3 !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) {
+  grid-column: span 4 !important;
+  min-height: 116px !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(197,0,95,0.16), transparent 34%),
+    linear-gradient(135deg, #222323, #333838) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) span {
+  color: rgba(255,255,255,0.58) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) strong {
+  color: #ffffff !important;
+  font-size: 29px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+  grid-column: span 6 !important;
+}
+
+.mandate-sheet-secondary-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.78fr) !important;
+}
+
+@media (max-width: 980px) {
+  .mandate-sheet-hero-layout,
+  .mandate-sheet-secondary-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mandate-sheet-summary,
+  .mandate-sheet-visual {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Clean professional mandate sheet: final override after design feedback. */
+.mandate-register-modal {
+  position: relative !important;
+  width: min(1160px, calc(100vw - 28px)) !important;
+  max-width: 1160px !important;
+  padding: 14px !important;
+  border: 1px solid rgba(34, 35, 35, 0.14) !important;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(180deg, #f3f4f4 0%, #ffffff 100%) !important;
+  box-shadow: 0 28px 70px rgba(34, 35, 35, 0.22) !important;
+}
+
+.mandate-register-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 8;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(34, 35, 35, 0.9);
+  border-radius: 9px;
+  background: #222323;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(34, 35, 35, 0.24);
+}
+
+.mandate-register-close:hover {
+  border-color: rgba(197, 0, 95, 0.72);
+  background: #c5005f;
+}
+
+.mandate-register-modal .panel-head {
+  min-height: 0 !important;
+  margin: 0 0 10px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .panel-head .eyebrow,
+.mandate-register-modal .panel-head h3,
+.mandate-register-modal .panel-head .mandate-register-subtitle,
+.mandate-register-modal .panel-head .row-actions {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.mandate-register-modal .detail-stack-rich {
+  gap: 12px !important;
+}
+
+.mandate-register-modal .detail-card {
+  border-radius: 10px !important;
+}
+
+.mandate-register-modal .mandate-sheet-hero-card.detail-card {
+  overflow: hidden !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background:
+    linear-gradient(135deg, #222323 0%, #303535 58%, #3b4040 100%) !important;
+  box-shadow: 0 18px 42px rgba(34, 35, 35, 0.2) !important;
+}
+
+.mandate-register-modal .mandate-sheet-hero-card::before {
+  height: 5px !important;
+  background: linear-gradient(90deg, #c5005f 0%, #a1a4a4 44%, rgba(255,255,255,0.2) 100%) !important;
+}
+
+.mandate-register-modal .mandate-sheet-hero-layout {
+  display: grid !important;
+  grid-template-columns: 188px minmax(0, 1fr) !important;
+  min-height: 206px !important;
+  gap: 0 !important;
+}
+
+.mandate-register-modal .mandate-sheet-visual {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  padding: 18px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.mandate-register-modal .mandate-sheet-visual::before {
+  content: none !important;
+}
+
+.mandate-register-modal .mandate-sheet-media {
+  width: 152px !important;
+  height: 152px !important;
+  min-height: 152px !important;
+  max-height: 152px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2) !important;
+}
+
+.mandate-register-modal .mandate-sheet-media img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.mandate-register-modal .mandate-sheet-visual-caption {
+  left: 28px !important;
+  right: 28px !important;
+  bottom: 28px !important;
+  padding: 7px 9px !important;
+  border-radius: 8px !important;
+  background: rgba(20, 22, 23, 0.76) !important;
+}
+
+.mandate-register-modal .mandate-sheet-summary {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  align-content: center !important;
+  gap: 10px !important;
+  padding: 26px 82px 24px 24px !important;
+}
+
+.mandate-register-modal .mandate-sheet-summary::before {
+  inset: 26px auto 26px 0 !important;
+  width: 4px !important;
+  background: #c5005f !important;
+}
+
+.mandate-register-modal .mandate-sheet-title-row {
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+}
+
+.mandate-register-modal .mandate-register-kicker,
+.mandate-register-modal .mandate-sheet-summary .status-pill {
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .mandate-sheet-summary > strong {
+  color: #ffffff !important;
+  font-size: clamp(27px, 2.35vw, 38px) !important;
+  line-height: 1.02 !important;
+}
+
+.mandate-register-modal .mandate-sheet-summary > p {
+  color: rgba(255,255,255,0.66) !important;
+  font-size: 15px !important;
+}
+
+.mandate-register-modal .mandate-sheet-actions {
+  margin-top: 4px !important;
+}
+
+.mandate-register-modal .mandate-register-link {
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .mandate-register-link.primary {
+  border-color: rgba(197, 0, 95, 0.7) !important;
+  background: #c5005f !important;
+}
+
+.mandate-register-modal .mandate-sheet-section {
+  padding: 14px !important;
+  border: 1px solid rgba(34, 35, 35, 0.09) !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(34, 35, 35, 0.05) !important;
+}
+
+.mandate-register-modal .mandate-section-head {
+  margin-bottom: 10px !important;
+  padding-bottom: 9px !important;
+}
+
+.mandate-register-modal .mandate-section-head > strong {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #c5005f !important;
+  font-size: 15px !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .mandate-current-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1px 18px !important;
+  padding: 2px 0 !important;
+  border-top: 1px solid rgba(34, 35, 35, 0.08) !important;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08) !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card {
+  grid-column: auto !important;
+  min-height: 0 !important;
+  padding: 9px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.07) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card span {
+  font-size: 9px !important;
+  color: #818686 !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card strong {
+  font-size: 13px !important;
+  color: #222323 !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) {
+  grid-column: auto !important;
+  min-height: 0 !important;
+  background: transparent !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(5) strong {
+  color: #c5005f !important;
+  font-size: 14px !important;
+}
+
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+.mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+  grid-column: auto !important;
+}
+
+@media (max-width: 760px) {
+  .mandate-register-close {
+    top: 14px;
+    right: 14px;
+    min-height: 36px;
+  }
+
+  .mandate-register-modal .mandate-sheet-hero-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mandate-register-modal .mandate-sheet-visual,
+  .mandate-register-modal .mandate-sheet-summary {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .mandate-register-modal .mandate-sheet-summary {
+    padding: 18px !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mandate-register-modal .mandate-current-grid .info-card,
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(5),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(8),
+  .mandate-register-modal .mandate-current-grid .info-card:nth-child(9) {
+    grid-column: auto !important;
+  }
+}
+
+/* Specificity lock for the premium mandate hero over generic detail-card rules. */
+.mandate-register-modal .mandate-sheet-hero-card.detail-card {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(197, 0, 95, 0.18), transparent 25%),
+    linear-gradient(135deg, #171a1b 0%, #242829 56%, #343939 100%) !important;
+}
+
+.mandate-register-modal .mandate-sheet-hero-card.detail-card .mandate-sheet-summary > strong {
+  color: #ffffff !important;
+}
+
+.mandate-register-modal .mandate-sheet-hero-card.detail-card .mandate-sheet-summary > p {
+  color: rgba(255,255,255,0.68) !important;
+}
+
+/* Register mandate: reuse the same mandate/contact language as the full detail views. */
+.mandate-register-modal .mandate-register-sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.mandate-register-modal .mandate-register-section {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(34, 35, 35, 0.11);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(161, 164, 164, 0.08) 0%, rgba(255,255,255,0) 44%),
+    #ffffff;
+  box-shadow: 0 12px 24px rgba(34, 35, 35, 0.055);
+}
+
+.mandate-register-modal .mandate-register-section > .section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08);
+}
+
+.mandate-register-modal .mandate-register-section .detail-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.mandate-register-modal .mandate-register-section .detail-section-title h4 {
+  margin: 0;
+  color: #222323;
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.mandate-register-modal .mandate-register-section .detail-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #222323;
+  color: #ffffff;
+}
+
+.mandate-register-modal .mandate-register-section .detail-section-title-contact .detail-section-icon {
+  background: #c5005f;
+}
+
+.mandate-register-modal .mandate-section-amount {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(197, 0, 95, 0.08);
+  color: #c5005f;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.mandate-register-modal .mandate-register-section .detail-entity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mandate-register-modal .mandate-register-section .detail-entity-card {
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 20px rgba(34, 35, 35, 0.045);
+}
+
+.mandate-register-modal .detail-mandat-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 12px;
+  padding: 14px 14px 14px 18px;
+  background:
+    linear-gradient(90deg, #222323 0 4px, transparent 4px),
+    linear-gradient(180deg, #ffffff 0%, #f7f8f8 100%);
+}
+
+.mandate-register-modal .detail-mandat-card > strong {
+  color: #222323;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.mandate-register-modal .detail-mandat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mandate-register-modal .detail-mandat-cell {
+  display: grid;
+  align-content: center;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.09);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.mandate-register-modal .detail-mandat-cell span,
+.mandate-register-modal .detail-entity-line span {
+  color: #747a7a;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mandate-register-modal .detail-mandat-cell strong,
+.mandate-register-modal .detail-entity-line strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #222323;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.mandate-register-modal .detail-mandat-cell.is-accent {
+  border-color: rgba(197, 0, 95, 0.18);
+  background: linear-gradient(135deg, rgba(197, 0, 95, 0.06) 0%, #ffffff 72%);
+}
+
+.mandate-register-modal .detail-mandat-cell.is-accent strong {
+  color: #c5005f;
+  font-size: 14px;
+}
+
+.mandate-register-modal .detail-contact-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.mandate-register-modal .detail-contact-card-primary {
+  border-color: rgba(34, 35, 35, 0.12);
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.06) 0%, rgba(255,255,255,0) 38%),
+    #ffffff;
+}
+
+.mandate-register-modal .detail-contact-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mandate-register-modal .detail-contact-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 8px;
+  background: #222323;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.mandate-register-modal .detail-contact-avatar.is-secondary {
+  background: rgba(161, 164, 164, 0.18);
+  color: #222323;
+}
+
+.mandate-register-modal .detail-contact-identity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mandate-register-modal .detail-contact-identity strong {
+  overflow: hidden;
+  color: #222323;
+  font-size: 14px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mandate-register-modal .detail-contact-identity span {
+  color: #747a7a;
+  font-size: 12px;
+}
+
+.mandate-register-modal .detail-entity-lines {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.mandate-register-modal .detail-entity-line {
+  display: grid;
+  gap: 4px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(34, 35, 35, 0.08);
+}
+
+.mandate-register-modal .detail-entity-line-full {
+  grid-column: 1 / -1;
+}
+
+.mandate-register-modal .detail-contact-link {
+  color: #c5005f;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(197, 0, 95, 0.24);
+}
+
+.mandate-register-modal .detail-contact-note {
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid rgba(197, 0, 95, 0.14);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(197, 0, 95, 0.06) 0%, #ffffff 72%);
+}
+
+@media (max-width: 900px) {
+  .mandate-register-modal .mandate-register-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .mandate-register-modal .mandate-register-section {
+    padding: 12px;
+  }
+
+  .mandate-register-modal .mandate-register-section > .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mandate-register-modal .detail-mandat-grid,
+  .mandate-register-modal .detail-entity-lines {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

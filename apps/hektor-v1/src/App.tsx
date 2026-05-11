@@ -2241,6 +2241,7 @@ export default function App() {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
   const [forgotPasswordPending, setForgotPasswordPending] = useState(false)
   const [deepLinkHandled, setDeepLinkHandled] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [requestComment, setRequestComment] = useState('')
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
@@ -2657,6 +2658,7 @@ export default function App() {
 
   function openScreen(nextScreen: Screen) {
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
+    setMobileMenuOpen(false)
     setMandatDrilldownLabel(null)
     setActiveMandatKpiAction(null)
     setSuiviDrilldownLabel(null)
@@ -3976,13 +3978,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   return (
     <div className="app-shell">
-      <header className="side-rail">
+      <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
+        <button
+          className="mobile-nav-toggle"
+          type="button"
+          aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="main-mobile-navigation"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          <span aria-hidden="true" />
+        </button>
         <div className="brand-block">
           <p className="eyebrow">GTI Immobilier</p>
           <h1>{screenHeader.title}</h1>
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
         </div>
-        <nav className="screen-nav" aria-label="Navigation principale">
+        <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Mandats</button>
@@ -4668,9 +4680,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onOpenRequestModal={openRequestModal}
                 onOpenDiffusionModal={openDiffusionModal}
                 detailLoading={detailLoading}
-                eyebrow={screen === 'estimations' ? 'Detail estimation' : 'Detail annonce'}
+                eyebrow={screen === 'mandats' ? 'Detail mandat' : screen === 'suivi' ? 'Detail suivi' : screen === 'estimations' ? 'Detail estimation' : 'Detail annonce'}
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
+                detailVariant={screen === 'mandats' ? 'mandat' : screen === 'suivi' ? 'suivi' : 'annonce'}
                 allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
@@ -5397,6 +5410,31 @@ function MandatRegisterScreen(props: {
   const selectedAvenants = selectedDetail ? parseRegisterAvenants(selectedDetail) : []
   const selectedImages = parseJson<Array<Record<string, unknown>>>(String(selectedDetailPayload.images_preview_json ?? selectedDetail?.images_preview_json ?? '[]'), [])
   const selectedImageUrl = selectedImages.find((item) => safeText(item.url))?.url as string | undefined
+  const selectedContactItems = parseJson<Array<Record<string, unknown>>>(String(selectedDetailPayload.proprietaires_json ?? '[]'), []).map((item, index) => {
+    const coords = (item.coordonnees as Record<string, unknown> | undefined) ?? {}
+    const locality = ((item.localite as Record<string, unknown> | undefined)?.localite as Record<string, unknown> | undefined) ?? {}
+    return {
+      id: `register-contact-${index}-${safeText(item.nom)}`,
+      name: [safeText(item.civilite), safeText(item.prenom), safeText(item.nom)].filter(Boolean).join(' ') || `Contact ${index + 1}`,
+      role: Array.isArray(item.typologie) ? item.typologie.join(', ') : 'Mandant',
+      phone: safeText(coords.portable) || safeText(coords.telephone),
+      email: safeText(coords.email),
+      address: [safeText(locality.adresse), safeText(locality.code), safeText(locality.ville)].filter(Boolean).join(', '),
+      comment: sanitizeContactComment(item.commentaires as string | null | undefined),
+    }
+  })
+  const selectedMandateLines = selectedDetail ? [
+    ['Numero', selectedDetail.numero_mandat ?? '-'] as [string, string],
+    ['Type', selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'] as [string, string],
+    ['Debut', formatDate(selectedDetail.mandat_date_debut)] as [string, string],
+    ['Fin', formatDate(selectedDetail.mandat_date_fin)] as [string, string],
+    ['Montant', formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)] as [string, string],
+    ['Validation', selectedDetail.validation_diffusion_state ?? '-'] as [string, string],
+    ['Diffusable', mandateRegisterDiffusableLabel(selectedDetail.diffusable)] as [string, string],
+    ['Commercial', selectedDetail.commercial_nom ?? '-'] as [string, string],
+    ['Agence', selectedDetail.agence_nom ?? '-'] as [string, string],
+  ] : []
+  const selectedMandantsLabel = selectedDetail ? mandateRegisterMandantsLabel(selectedDetail) : ''
 
   return (
     <section className="panel-grid">
@@ -5492,6 +5530,7 @@ function MandatRegisterScreen(props: {
       {detailOpen && selectedDetail ? (
         <div className="modal-overlay" onClick={() => setDetailOpen(false)}>
           <section className="modal-panel modal-panel-detail mandate-register-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="mandate-register-close" type="button" onClick={() => setDetailOpen(false)}>Fermer</button>
             <div className="panel-head">
               <div>
                 <p className="eyebrow">Fiche mandat</p>
@@ -5505,19 +5544,27 @@ function MandatRegisterScreen(props: {
             <div className="detail-stack detail-stack-rich">
               <article className="detail-card mandate-sheet-hero-card">
                 <div className="mandate-sheet-hero-layout">
-                  <div className="mandate-sheet-media">
-                    {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
+                  <div className="mandate-sheet-visual">
+                    <div className="mandate-sheet-media">
+                      {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
+                    </div>
+                    <div className="mandate-sheet-visual-caption">
+                      <span>Mandat</span>
+                      <strong>{selectedDetail.numero_mandat ?? '-'}</strong>
+                    </div>
                   </div>
                   <div className="mandate-sheet-summary">
-                    <span className="mandate-register-kicker">Mandat {selectedDetail.numero_mandat ?? '-'}</span>
+                    <div className="mandate-sheet-title-row">
+                      <span className="mandate-register-kicker">Mandat {selectedDetail.numero_mandat ?? '-'}</span>
+                      <div className="tag-row">
+                        <StatusPill value={selectedDetail.statut_annonce} />
+                        <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
+                        {(selectedDetail.register_version_count ?? 1) > 1 ? <StatusPill value={`${selectedDetail.register_version_count} versions`} /> : null}
+                        {(selectedDetail.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`${selectedDetail.register_embedded_avenant_count} avenant${(selectedDetail.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
+                      </div>
+                    </div>
                     <strong>{selectedDetail.titre_bien}</strong>
                     <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
-                    <div className="tag-row">
-                      <StatusPill value={selectedDetail.statut_annonce} />
-                      <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
-                      {(selectedDetail.register_version_count ?? 1) > 1 ? <StatusPill value={`${selectedDetail.register_version_count} versions`} /> : null}
-                      {(selectedDetail.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`${selectedDetail.register_embedded_avenant_count} avenant${(selectedDetail.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
-                    </div>
                     <div className="mandate-sheet-actions">
                       {Boolean(selectedDetail.register_detail_available) ? (
                         <button
@@ -5536,66 +5583,126 @@ function MandatRegisterScreen(props: {
                   </div>
                 </div>
               </article>
-              <article className="detail-card mandate-sheet-section">
-                <span className="detail-label">Mandat courant</span>
-                <div className="info-grid">
-                  <InfoCard label="Numero" value={selectedDetail.numero_mandat} />
-                  <InfoCard label="Type" value={selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'} />
-                  <InfoCard label="Debut" value={formatDate(selectedDetail.mandat_date_debut)} />
-                  <InfoCard label="Fin" value={formatDate(selectedDetail.mandat_date_fin)} />
-                  <InfoCard label="Montant" value={formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)} />
-                  <InfoCard label="Validation" value={selectedDetail.validation_diffusion_state ?? '-'} />
-                  <InfoCard label="Diffusable" value={mandateRegisterDiffusableLabel(selectedDetail.diffusable)} />
-                  <InfoCard label="Commercial" value={selectedDetail.commercial_nom ?? '-'} />
-                  <InfoCard label="Agence" value={selectedDetail.agence_nom ?? '-'} />
-                </div>
-                <div className="detail-rich-copy">
-                  <strong>Mandant(s)</strong>
-                  <p>{selectedDetail.mandants_texte ?? '-'}</p>
-                  {selectedDetail.mandat_note ? (
-                    <>
-                      <strong>Note mandat</strong>
-                      <p>{selectedDetail.mandat_note}</p>
-                    </>
-                  ) : null}
-                </div>
-              </article>
-              <article className="detail-card mandate-sheet-section">
-                <PriceChangeHistoryCard
-                  source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
-                  title="Historique des prix"
-                  emptyLabel="Aucun changement de prix historisé pour ce mandat."
-                />
-              </article>
-              <article className="detail-card mandate-sheet-section">
-                <span className="detail-label">Historique des versions</span>
-                {selectedHistory.length > 0 ? (
-                  <div className="timeline-list">
-                    {selectedHistory.map((entry, index) => (
-                      <article key={String(entry.history_id ?? index)} className="timeline-card">
-                        <strong>{String(entry.label ?? `Version ${index + 1}`)}</strong>
-                        <span>{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} → {formatDate(String(entry.date_fin ?? ''))}</span>
-                        <p>{formatPrice(String(entry.montant ?? ''))} · {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}</p>
-                        {safeText(entry.note) ? <small>{String(entry.note)}</small> : null}
-                      </article>
-                    ))}
+              <div className="mandate-register-sections">
+                <article className="detail-subsection detail-mandate-section mandate-register-section">
+                  <div className="section-header">
+                    <DetailSectionTitle icon="mandate" title="Detail mandat" />
+                    <strong className="mandate-section-amount">{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</strong>
                   </div>
-                ) : <p>Aucun historique de version disponible.</p>}
-              </article>
-              <article className="detail-card mandate-sheet-section">
-                <span className="detail-label">Avenants Hektor</span>
-                {selectedAvenants.length > 0 ? (
-                  <div className="timeline-list">
-                    {selectedAvenants.map((entry, index) => (
-                      <article key={String(entry.avenant_id ?? index)} className="timeline-card">
-                        <strong>{String(entry.numero ?? 'Avenant')}</strong>
-                        <span>{formatDate(String(entry.date ?? ''))}</span>
-                        <p>{String(entry.detail ?? 'Sans detail')}</p>
-                      </article>
-                    ))}
+                  <div className="detail-entity-list detail-mandat-list">
+                    <article className="detail-entity-card detail-mandat-card">
+                      <strong>Mandat {selectedDetail.numero_mandat ?? '-'}</strong>
+                      <div className="detail-mandat-grid">
+                        {selectedMandateLines.map(([label, value]) => (
+                          <div key={`register-mandate-${label}`} className={`detail-mandat-cell ${label === 'Montant' ? 'is-accent' : ''}`}>
+                            <span>{label}</span>
+                            <strong>{value || '-'}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
                   </div>
-                ) : <p>Aucun avenant explicite dans le brut.</p>}
-              </article>
+                </article>
+                <article className="detail-subsection detail-contact-section mandate-register-section">
+                  <div className="section-header">
+                    <DetailSectionTitle icon="contact" title="Contact" />
+                    {selectedContactItems.length > 0 ? <span>{selectedContactItems.length} contact{selectedContactItems.length > 1 ? 's' : ''}</span> : null}
+                  </div>
+                  <div className="detail-entity-list detail-contact-list">
+                    {selectedContactItems.length > 0 ? selectedContactItems.map((contact, index) => (
+                      <article key={contact.id} className={`detail-entity-card detail-contact-card ${index === 0 ? 'detail-contact-card-primary' : ''}`}>
+                        <div className="detail-contact-head">
+                          <div className={`detail-contact-avatar ${index > 0 ? 'is-secondary' : ''}`}>{userInitials(contact.name, contact.email)}</div>
+                          <div className="detail-contact-identity">
+                            <strong>{contact.name}</strong>
+                            <span>{contact.role || 'Mandant'}</span>
+                          </div>
+                        </div>
+                        <div className="detail-entity-lines detail-contact-lines">
+                          <div className="detail-entity-line">
+                            <span>Telephone</span>
+                            <strong>{contact.phone ? <a href={`tel:${contact.phone}`} className="detail-contact-link">{contact.phone}</a> : '-'}</strong>
+                          </div>
+                          <div className="detail-entity-line">
+                            <span>Email</span>
+                            <strong>{contact.email ? <a href={`mailto:${contact.email}`} className="detail-contact-link">{contact.email}</a> : '-'}</strong>
+                          </div>
+                          <div className="detail-entity-line detail-entity-line-full">
+                            <span>Adresse</span>
+                            <strong>{contact.address || '-'}</strong>
+                          </div>
+                          {contact.comment ? (
+                            <div className="detail-entity-line detail-entity-line-full detail-contact-note">
+                              <span>Commentaire</span>
+                              <strong>{contact.comment}</strong>
+                            </div>
+                          ) : null}
+                        </div>
+                      </article>
+                    )) : (
+                      <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
+                        <div className="detail-contact-head">
+                          <div className="detail-contact-avatar">{userInitials(selectedMandantsLabel, null)}</div>
+                          <div className="detail-contact-identity">
+                            <strong>Mandant(s)</strong>
+                            <span>{mandateRegisterSourceLabel(selectedDetail)}</span>
+                          </div>
+                        </div>
+                        <div className="detail-entity-lines detail-contact-lines">
+                          <div className="detail-entity-line detail-entity-line-full">
+                            <span>Nom(s)</span>
+                            <strong>{selectedMandantsLabel || '-'}</strong>
+                          </div>
+                          {selectedDetail.mandat_note ? (
+                            <div className="detail-entity-line detail-entity-line-full detail-contact-note">
+                              <span>Note mandat</span>
+                              <strong>{selectedDetail.mandat_note}</strong>
+                            </div>
+                          ) : null}
+                        </div>
+                      </article>
+                    )}
+                  </div>
+                </article>
+              </div>
+              <div className="mandate-sheet-secondary-grid">
+                <article className="detail-card mandate-sheet-section mandate-price-section">
+                  <PriceChangeHistoryCard
+                    source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
+                    title="Historique des prix"
+                    emptyLabel="Aucun changement de prix historisé pour ce mandat."
+                  />
+                </article>
+                <article className="detail-card mandate-sheet-section">
+                  <span className="detail-label">Historique des versions</span>
+                  {selectedHistory.length > 0 ? (
+                    <div className="timeline-list">
+                      {selectedHistory.map((entry, index) => (
+                        <article key={String(entry.history_id ?? index)} className="timeline-card">
+                          <strong>{String(entry.label ?? `Version ${index + 1}`)}</strong>
+                          <span>{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} → {formatDate(String(entry.date_fin ?? ''))}</span>
+                          <p>{formatPrice(String(entry.montant ?? ''))} · {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}</p>
+                          {safeText(entry.note) ? <small>{String(entry.note)}</small> : null}
+                        </article>
+                      ))}
+                    </div>
+                  ) : <p>Aucun historique de version disponible.</p>}
+                </article>
+                <article className="detail-card mandate-sheet-section mandate-avenants-section">
+                  <span className="detail-label">Avenants Hektor</span>
+                  {selectedAvenants.length > 0 ? (
+                    <div className="timeline-list">
+                      {selectedAvenants.map((entry, index) => (
+                        <article key={String(entry.avenant_id ?? index)} className="timeline-card">
+                          <strong>{String(entry.numero ?? 'Avenant')}</strong>
+                          <span>{formatDate(String(entry.date ?? ''))}</span>
+                          <p>{String(entry.detail ?? 'Sans detail')}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : <p>Aucun avenant explicite dans le brut.</p>}
+                </article>
+              </div>
             </div>
           </section>
         </div>
@@ -6342,12 +6449,14 @@ function DossierDetailLayout(props: {
   adminPilotSurface?: 'none' | 'sidebar' | 'diffusion' | 'both'
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
+  detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
   const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop'>('all')
   const dossier = props.selectedDossier
+  const detailVariant = props.detailVariant ?? 'annonce'
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
@@ -6374,7 +6483,7 @@ function DossierDetailLayout(props: {
   const hasAnyHistory = props.requestHistoryDiffusion.length > 0 || props.requestHistoryPriceDrop.length > 0
   const [mandatSectionOpen, setMandatSectionOpen] = useState(true)
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
-  const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>('summary')
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
@@ -6441,7 +6550,7 @@ function DossierDetailLayout(props: {
   })
   const hektorActionItem = hektorActionModel.items.find((item) => item.typeTone === 'hektor')
   return (
-    <section className="detail-screen">
+    <section className={`detail-screen detail-screen-${detailVariant}`}>
       <div className="panel detail-cockpit-panel">
         <div className="full-detail-layout">
           <div className="detail-cockpit-body">
@@ -6451,7 +6560,7 @@ function DossierDetailLayout(props: {
                 <div className="detail-overview-summary">
                   <div className="detail-header-topline">
                     <div className="detail-property-title">
-                      <span>Dossier annonce</span>
+                      <span>{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
                       <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
                     {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
                     </div>
@@ -7268,7 +7377,7 @@ function AnnonceScreen(props: {
   detailLoading: boolean
   onBack: () => void
 }) {
-  return <DossierDetailLayout {...props} eyebrow="Annonce complete" backLabel="Retour stock" />
+  return <DossierDetailLayout {...props} eyebrow="Annonce complete" backLabel="Retour stock" detailVariant="annonce" />
 }
 
 function DossierDetailScreen(props: {
@@ -7296,6 +7405,7 @@ function DossierDetailScreen(props: {
       {...props}
       eyebrow={props.sourceScreen === 'mandats' ? 'Detail mandat' : 'Detail suivi'}
       backLabel={props.sourceScreen === 'mandats' ? 'Retour mandats' : 'Retour suivi'}
+      detailVariant={props.sourceScreen === 'mandats' ? 'mandat' : 'suivi'}
     />
   )
 }
