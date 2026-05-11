@@ -266,6 +266,14 @@ function formatPrice(value: number | string | null | undefined) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount)
 }
 
+function formatSurface(value: number | string | null | undefined) {
+  if (value == null || value === '') return '-'
+  if (typeof value === 'string' && /[a-zA-Z²]/.test(value)) return value
+  const amount = typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
+  if (Number.isNaN(amount)) return String(value)
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount)} m²`
+}
+
 function normalizeRequestedPriceInput(value: string | null | undefined) {
   const raw = (value ?? '').trim()
   if (!raw) return { raw: '', normalized: '', numeric: null as number | null }
@@ -6105,50 +6113,48 @@ function DossierDetailLayout(props: {
   return (
     <section className="detail-screen">
       <div className="panel detail-cockpit-panel">
-        <div className="detail-cockpit-close-row">
-          <button className="ghost-button" type="button" onClick={props.onBack}>{props.backLabel}</button>
-        </div>
-
         <div className="full-detail-layout">
           <div className="detail-cockpit-body">
             <main className="detail-cockpit-main">
               <section className="detail-overview">
-                <div className="detail-overview-media">
-                  {primaryImage ? (
-                    <div className="gallery gallery-compact">
-                      <button className="gallery-medium-button" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
-                        <img src={primaryImage} alt={dossier.titre_bien} />
-                      </button>
-                      {previewImages.length > 1 ? (
-                        <div className="gallery-thumbs gallery-thumbs-compact">
-                          {previewImages.slice(1, 5).map((item) => (
-                            <button key={item.url} className="gallery-thumb-button" type="button" onClick={() => props.onOpenImage?.(item.url)}>
-                              <img src={item.url} alt={item.legend || dossier.titre_bien} />
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : <div className="detail-photo-placeholder">Aucune photo synchronisee</div>}
-                </div>
+                <button className="detail-overview-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
                 <div className="detail-overview-summary">
-                  <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
-                  {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
-                  {dossier.agence_nom || dossier.commercial_nom ? (
-                    <p className="detail-summary-meta">
-                      {[dossier.agence_nom, dossier.commercial_nom].filter(Boolean).join(' · ')}
-                    </p>
-                  ) : null}
-                  <div className="detail-hero-status-row">
-                    <StatusPill value={diffusableLabel(dossier.diffusable)} />
-                    <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
-                    <StatusPill value={activePortals.length ? `${activePortals.length} passerelle${activePortals.length > 1 ? 's' : ''}` : 'Aucune passerelle'} />
+                  <div className="detail-header-topline">
+                    <div className="detail-property-title">
+                      <span>Dossier annonce</span>
+                      <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                      {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
+                    </div>
+                    {dossier.commercial_nom || dossier.agence_nom ? (
+                      <div className="detail-owner-card">
+                        <div className="detail-owner-avatar">{userInitials(dossier.commercial_nom, null)}</div>
+                        <div className="detail-owner-copy">
+                          <span>Responsable</span>
+                          <strong>{dossier.commercial_nom ?? '-'}</strong>
+                          {dossier.agence_nom ? <small>{dossier.agence_nom}</small> : null}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="detail-keyfacts">
-                    <InfoCard label="Prix" value={formatPrice(dossier.prix)} />
-                    <InfoCard label="Surface" value={props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'} />
-                    <InfoCard label="Dossier" value={dossier.numero_dossier ?? '-'} />
-                    <InfoCard label="Mandat" value={dossier.numero_mandat ?? '-'} />
+                  <div className="detail-keyfacts" aria-label="Carte d'identite du bien">
+                    <div className="detail-keyfact-grid">
+                      <div className="detail-keyfact-item">
+                        <span>Surface habitable</span>
+                        <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
+                      </div>
+                      <div className="detail-keyfact-item">
+                        <span>Type de bien</span>
+                        <strong>{propertyTypeLabel(dossier.type_bien)}</strong>
+                      </div>
+                      <div className="detail-keyfact-item detail-keyfact-reference">
+                        <span>Reference</span>
+                        <strong>{dossier.numero_dossier ?? '-'}</strong>
+                      </div>
+                    </div>
+                    <div className="detail-keyfact-main">
+                      <span>Prix annonce</span>
+                      <strong>{formatPrice(dossier.prix)}</strong>
+                    </div>
                   </div>
                 </div>
               </section>
