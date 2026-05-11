@@ -51,7 +51,7 @@ const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
-type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi' | 'maquette'
+type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 const dossierPageSize = 50
 const mandatPageSize = 50
 const workItemPageSize = 25
@@ -1391,7 +1391,6 @@ function screenContextLabel(screen: Screen) {
   if (screen === 'mandats') return 'Vue mandat'
   if (screen === 'estimations') return 'Estimations'
   if (screen === 'registre') return 'Registre'
-  if (screen === 'maquette') return 'Maquette UX'
   return 'Vue Pauline'
 }
 
@@ -2191,10 +2190,7 @@ function activeFilterEntries(filters: AppFilters) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>(() => {
-    if (typeof window === 'undefined') return 'mandats'
-    return new URLSearchParams(window.location.search).get('screen') === 'maquette' ? 'maquette' : 'mandats'
-  })
+  const [screen, setScreen] = useState<Screen>('mandats')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
   const [filters, setFilters] = useState<AppFilters>(emptyFilters)
   const [dossiers, setDossiers] = useState<Dossier[]>([])
@@ -2305,7 +2301,6 @@ export default function App() {
     return { negotiatorEmail: sessionEmail || null }
   }, [profile?.role, sessionEmail])
   const dataFilters = useMemo<AppFilters>(() => {
-    if (screen === 'maquette') return filters
     if ((screen === 'mandats' || screen === 'suivi') && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
     if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
     return filters
@@ -2367,7 +2362,6 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (screen === 'maquette') return
     if (hasSupabaseEnv && !session) return
     let cancelled = false
     Promise.all([
@@ -2410,7 +2404,6 @@ export default function App() {
   }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
-    if (screen === 'maquette') return
     if (hasSupabaseEnv && !session) return
     let cancelled = false
     loadSuiviRequestStats(dataFilters, dataScope)
@@ -2426,7 +2419,6 @@ export default function App() {
   }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
-    if (screen === 'maquette') return
     if (hasSupabaseEnv && !session) return
     let cancelled = false
     loadCommercialRequestStats(dataFilters, dataScope)
@@ -2442,7 +2434,6 @@ export default function App() {
   }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
-    if (screen === 'maquette') return
     if (hasSupabaseEnv && !session) return
     let cancelled = false
     setPageLoading(true)
@@ -3474,9 +3465,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (screen === 'registre') {
       return { title: 'Registre des mandats', copy: '' }
     }
-    if (screen === 'maquette') {
-      return { title: 'Maquette UX', copy: 'Proposition visuelle detail annonce et suivi mandat' }
-    }
     return { title: 'Suivi des mandats', copy: '' }
   }, [screen, mandatDrilldownLabel])
   const dossierCountLabel = activeFilters.length > 0 ? 'Dossiers apres filtres' : 'Tous les dossiers'
@@ -3698,7 +3686,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'warning', action: null },
       ]
     }
-    if (screen === 'maquette') return []
     return [
       { label: 'Demandes à traiter', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.pendingOrInProgress), tone: 'demandes', action: 'suivi_a_traiter' },
       { label: 'Demandes acceptées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.acceptedHistorical), tone: 'demandes', action: 'suivi_acceptees' },
@@ -3933,7 +3920,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Registre des mandats</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi des mandats</button> : null}
-          <button className={`nav-button ${screen === 'maquette' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('maquette')}>Maquette UX</button>
         </nav>
         <div className="header-user-stack">
           <div className="side-card user-card">
@@ -3953,7 +3939,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       </header>
 
       <main className="content">
-        {screen !== 'suivi' && screen !== 'maquette' ? (
+        {screen !== 'suivi' ? (
         <section className="hero">
           <div className="hero-stack">
               <div className="hero-top-row">
@@ -4431,9 +4417,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {bootLoading && dossiers.length === 0 && workItems.length === 0 ? <section className="info-banner">Chargement initial des donnees...</section> : null}
         {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
 
-        {screen === 'maquette' ? (
-          <UxMockupScreen />
-        ) : screen === 'annonces' && detailOpen ? (
+        {screen === 'annonces' && detailOpen ? (
           <AnnonceScreen selectedDossier={selectedDossier} detail={detail} address={address} images={images} texts={texts} notes={notes} contacts={contacts} mandats={mandatDetails} linkedWorkItems={linkedWorkItems} requestHistory={buildRequestHistory(selectedDossierRequest, selectedDossierRequestEvents)} requestMessages={selectedDossierRequestEvents
             .filter((event) => parseJson<{ message?: string | null }>(event.payload_json, {}).message)
             .slice()
@@ -5008,159 +4992,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div>
       ) : null}
     </div>
-  )
-}
-
-function UxMockupScreen() {
-  const rows = [
-    { title: 'Appartement T3 avec balcon', meta: 'Saint-Etienne · EM4048', mandate: '18562', owner: 'Laura Court', state: 'Diffusion a ouvrir', tone: 'warning', active: true },
-    { title: 'Maison 5 pieces avec terrain', meta: 'Firminy · EM4052', mandate: '18571', owner: 'Cassandra Quioc', state: 'Diffusee', tone: 'success', active: false },
-    { title: 'Terrain constructible', meta: 'Annonay · EM4061', mandate: 'Sans mandat', owner: 'Sabrina Blachier', state: 'Mandat manquant', tone: 'danger', active: false },
-  ]
-
-  return (
-    <section className="ux-mockup">
-      <div className="ux-mockup-intro">
-        <div>
-          <p className="eyebrow">Prototype visuel</p>
-          <h2>Detail annonce + suivi mandat</h2>
-          <p>Maquette integree pour juger la direction ergonomique avant de modifier les vrais ecrans.</p>
-        </div>
-        <div className="ux-mockup-switch" aria-label="Sections de la maquette">
-          <span className="is-active">Annonces actives</span>
-          <span>Suivi mandat</span>
-        </div>
-      </div>
-
-      <section className="ux-kpi-grid">
-        <article><span>Actives</span><strong>248</strong></article>
-        <article><span>Mandats a valider</span><strong>17</strong></article>
-        <article><span>Diffusion a ouvrir</span><strong>11</strong></article>
-        <article><span>Anomalies</span><strong>6</strong></article>
-      </section>
-
-      <section className="ux-board">
-        <article className="ux-panel ux-list-panel">
-          <div className="ux-panel-head">
-            <div>
-              <h3>Listing priorise</h3>
-              <span>Moins de colonnes, plus de decision.</span>
-            </div>
-            <button type="button">Filtres</button>
-          </div>
-          <div className="ux-list">
-            {rows.map((row) => (
-              <button key={row.title} className={`ux-row ${row.active ? 'is-active' : ''}`} type="button">
-                <span className="ux-row-main">
-                  <strong>{row.title}</strong>
-                  <small>{row.meta}</small>
-                </span>
-                <span>
-                  <strong>{row.mandate}</strong>
-                  <small>Mandat</small>
-                </span>
-                <span>
-                  <strong>{row.owner}</strong>
-                  <small>Commercial</small>
-                </span>
-                <span className={`ux-pill is-${row.tone}`}>{row.state}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-
-        <article className="ux-panel ux-detail-panel">
-          <div className="ux-panel-head">
-            <div>
-              <h3>Detail annonce</h3>
-              <span>La priorite metier reste dans le premier regard.</span>
-            </div>
-            <button type="button">Fermer</button>
-          </div>
-          <div className="ux-detail-body">
-            <section className="ux-property">
-              <div className="ux-photo" />
-              <div className="ux-property-copy">
-                <span className="ux-pill is-brand">Actif · mandat 18562</span>
-                <h3>Appartement T3 avec balcon proche centre</h3>
-                <p>12 rue des Docteurs Charcot, Saint-Etienne · Laura Court</p>
-                <div className="ux-facts">
-                  <div><span>Prix</span><strong>129 000 EUR</strong></div>
-                  <div><span>Surface</span><strong>67 m2</strong></div>
-                  <div><span>Dossier</span><strong>EM4048</strong></div>
-                  <div><span>Priorite</span><strong>Diffuser</strong></div>
-                </div>
-              </div>
-            </section>
-
-            <nav className="ux-tabs" aria-label="Navigation detail maquette">
-              <button className="is-active" type="button">Vue d'ensemble</button>
-              <button type="button">Mandat</button>
-              <button type="button">Diffusion</button>
-              <button type="button">Historique</button>
-            </nav>
-
-            <section className="ux-detail-grid">
-              <article className="ux-card">
-                <h4>Situation du dossier</h4>
-                <div className="ux-signal-list">
-                  <div><span>Mandat</span><strong>Valide, pret pour diffusion</strong><em className="ux-pill is-success">OK</em></div>
-                  <div><span>Diffusion</span><strong>Passerelles selectionnees, activation a confirmer</strong><em className="ux-pill is-warning">Action</em></div>
-                  <div><span>Contact</span><strong>Marie Dupont · 06 12 34 56 78</strong><em className="ux-pill is-neutral">Mandant</em></div>
-                </div>
-              </article>
-
-              <aside className="ux-side">
-                <article className="ux-card">
-                  <h4>Actions du dossier</h4>
-                  <button className="ux-action is-primary" type="button"><span>D</span><strong>Diffuser</strong><small>Ouvrir la console passerelles</small></button>
-                  <button className="ux-action" type="button"><span>P</span><strong>Baisse de prix</strong><small>Creer une demande si besoin</small></button>
-                  <button className="ux-action" type="button"><span>H</span><strong>Hektor</strong><small>Ouvrir la fiche source</small></button>
-                </article>
-                <article className="ux-card ux-pilot">
-                  <h4>Pilotage Hektor</h4>
-                  <div><strong>Validation mandat</strong><span className="ux-toggle"><em>Actif</em><small>Off</small></span></div>
-                  <div><strong>Diffusion</strong><span className="ux-toggle"><small>Actif</small><em>Off</em></span></div>
-                </article>
-              </aside>
-            </section>
-          </div>
-        </article>
-      </section>
-
-      <section className="ux-follow-panel">
-        <div className="ux-panel-head">
-          <div>
-            <h3>Suivi mandat</h3>
-            <span>Une file de traitement claire pour Pauline.</span>
-          </div>
-          <span className="ux-pill is-warning">4 urgents</span>
-        </div>
-        <div className="ux-follow-grid">
-          <div className="ux-request-list">
-            <button className="ux-request is-active" type="button"><strong>Demande de diffusion</strong><span>EM4048 · mandat 18562 · Laura Court</span><em className="ux-pill is-warning">A traiter</em></button>
-            <button className="ux-request" type="button"><strong>Baisse de prix</strong><span>EM4019 · mandat 18498 · Florian Thivillier</span><em className="ux-pill is-brand">En cours</em></button>
-            <button className="ux-request" type="button"><strong>Anomalie passerelle</strong><span>EM4027 · mandat 18510 · Sabrina Blachier</span><em className="ux-pill is-danger">Bloquant</em></button>
-          </div>
-          <article className="ux-card ux-decision">
-            <h4>Traitement Pauline</h4>
-            <div className="ux-decision-grid">
-              <button className="is-active" type="button"><strong>Accepter</strong><span>Valide et active le flux prevu</span></button>
-              <button type="button"><strong>Demander correction</strong><span>Retour au negociateur</span></button>
-              <button type="button"><strong>Refuser</strong><span>Bloque la demande</span></button>
-            </div>
-            <label>
-              Message Pauline
-              <textarea defaultValue="Dossier controle, mandat valide. Diffusion acceptee." />
-            </label>
-            <div className="ux-decision-actions">
-              <button type="button">Brouillon</button>
-              <button className="is-primary" type="button">Accepter et notifier</button>
-            </div>
-          </article>
-        </div>
-      </section>
-    </section>
   )
 }
 
