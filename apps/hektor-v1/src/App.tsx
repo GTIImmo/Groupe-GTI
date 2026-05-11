@@ -2222,6 +2222,7 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [mandatLoading, setMandatLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [priorityPanelOpen, setPriorityPanelOpen] = useState(false)
   const [commercialMetricsExpanded, setCommercialMetricsExpanded] = useState(false)
   const [activeMandatKpiAction, setActiveMandatKpiAction] = useState<HeaderMetricItem['action']>(null)
   const [mandatDrilldownLabel, setMandatDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
@@ -2646,6 +2647,8 @@ export default function App() {
     setActiveMandatKpiAction(null)
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(screen === 'suivi' ? 'pending_or_in_progress' : null)
+    setPriorityPanelOpen(false)
+    setCommercialMetricsExpanded(false)
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
@@ -2659,6 +2662,8 @@ export default function App() {
     setSuiviDrilldownLabel(null)
     setSuiviRequestFilter(nextScreen === 'suivi' ? 'pending_or_in_progress' : null)
     setFiltersOpen(false)
+    setPriorityPanelOpen(false)
+    setCommercialMetricsExpanded(false)
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
@@ -2683,6 +2688,7 @@ export default function App() {
             : { eyebrow: '', title: 'Demandes rejetées' }
       setScreen('suivi')
       setFiltersOpen(false)
+      setPriorityPanelOpen(false)
       setDossierPage(1)
       setMandatPage(1)
       setWorkItemPage(1)
@@ -2728,6 +2734,7 @@ export default function App() {
                                   : null
     setScreen('mandats')
     setFiltersOpen(false)
+    setPriorityPanelOpen(false)
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
@@ -2745,6 +2752,7 @@ export default function App() {
     const nextFilters = metricDrilldownFilters(filters, action)
     setScreen('registre')
     setFiltersOpen(false)
+    setPriorityPanelOpen(false)
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
@@ -3693,14 +3701,42 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       { label: 'Affaires en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.affairesEnCours), tone: 'affaires', action: null },
     ]
   }, [screen, visibleDossiersCount, workItemsTotal, workItems.length, mandatStats, commercialRequestStats, suiviRequestStats])
-  const primaryCommercialMetrics = useMemo(
-    () => headerMetrics.filter((item) => ['Annonces', 'Mandats valides', 'Correction en attente'].includes(item.label)),
-    [headerMetrics],
-  )
-  const secondaryCommercialMetrics = useMemo(
-    () => headerMetrics.filter((item) => !['Annonces', 'Mandats valides', 'Correction en attente'].includes(item.label)),
-    [headerMetrics],
-  )
+  const statsMetrics = headerMetrics
+  const viewPriorities = useMemo<Array<{
+    label: string
+    value: string
+    detail: string
+    tone: HeaderMetricItem['tone']
+    action: HeaderMetricItem['action']
+  }>>(() => {
+    const format = (value: number) => new Intl.NumberFormat('fr-FR').format(value)
+    if (screen === 'mandats') {
+      return [
+        { label: 'Diffusion à ouvrir', value: format(mandatStats.mandatNonDiffuse), detail: 'Ouvrir les portails non activés', tone: 'diffusion', action: 'mandat_non_diffuse' },
+        { label: 'Mandats à valider', value: format(mandatStats.mandatNonValide), detail: 'Vérifier et valider les nouveaux mandats', tone: 'warning', action: 'mandat_non_valide' },
+        { label: 'Erreur passerelle', value: format(workItemsTotal || workItems.length), detail: 'Corrections requises sur les portails', tone: 'warning', action: 'correction_attente' },
+      ]
+    }
+    if (screen === 'registre') {
+      return [
+        { label: 'Non validés', value: format(mandatStats.mandatNonValide), detail: 'Mandats enregistrés à contrôler', tone: 'warning', action: 'mandat_non_valide' },
+        { label: 'Non diffusables', value: format(mandatStats.mandatNonDiffuse), detail: 'Mandats à préparer avant diffusion', tone: 'diffusion', action: 'mandat_non_diffuse' },
+        { label: 'Registre', value: format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), detail: 'Mandats disponibles dans la vue', tone: 'volume', action: 'all_annonces' },
+      ]
+    }
+    if (screen === 'estimations') {
+      return [
+        { label: 'Sans mandat', value: format(mandatStats.withoutMandat), detail: 'Estimations à transformer ou qualifier', tone: 'warning', action: null },
+        { label: 'Futurs mandats', value: format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), detail: 'Projets déjà reliés à un mandat', tone: 'diffusion', action: null },
+        { label: 'Portefeuille', value: format(mandatStats.total), detail: 'Estimations visibles avec les filtres courants', tone: 'volume', action: null },
+      ]
+    }
+    return [
+      { label: 'À traiter', value: format(workItemsTotal || workItems.length), detail: 'Demandes à revoir dans les dossiers visibles', tone: 'demandes', action: 'correction_attente' },
+      { label: 'Visibles', value: format(visibleDossiersCount), detail: 'Dossiers correspondant aux filtres actuels', tone: 'volume', action: 'all_annonces' },
+      { label: 'Filtres actifs', value: format(activeFilters.length), detail: 'Critères qui réduisent le listing', tone: 'neutral', action: null },
+    ]
+  }, [activeFilters.length, mandatStats, screen, visibleDossiersCount, workItems.length, workItemsTotal])
   const isAdmin = profile?.role === 'admin'
   const inferredUserNegotiatorContext = useMemo(() => {
     if (!sessionEmail) return null
@@ -3860,6 +3896,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       .map((lines, index) => ({ id: `source-${index}`, title: 'Mandat source', lines }))
   }, [detail])
 
+  function openPriorityAction(action: HeaderMetricItem['action']) {
+    if (!action) return
+    if (screen === 'registre') {
+      openRegisterDrilldown(action)
+    } else {
+      openMandatDrilldown(action)
+    }
+    setPriorityPanelOpen(false)
+  }
+
+  const priorityPanel = priorityPanelOpen ? (
+    <div className="priority-dropdown" role="region" aria-label="Priorités de la vue">
+      {viewPriorities.map((item) => (
+        <button
+          key={item.label}
+          className={`priority-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
+          type="button"
+          onClick={() => openPriorityAction(item.action)}
+          disabled={!item.action}
+        >
+          <span className="priority-card-icon" aria-hidden="true" />
+          <span className="priority-card-copy">
+            <strong>{item.label}</strong>
+            <small>{item.detail}</small>
+          </span>
+          <em>{item.value}</em>
+        </button>
+      ))}
+    </div>
+  ) : null
+
   if (hasSupabaseEnv && recoveryMode && !bootLoading) {
     return (
       <div className="login-shell">
@@ -3915,11 +3982,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <h1>{screenHeader.title}</h1>
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
         </div>
-        <nav className="screen-nav">
-          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces actives</button>
+        <nav className="screen-nav" aria-label="Navigation principale">
+          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
-          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Registre des mandats</button>
-          {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi des mandats</button> : null}
+          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Mandats</button>
+          {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi</button> : null}
         </nav>
         <div className="header-user-stack">
           <div className="side-card user-card">
@@ -3938,19 +4005,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div>
       </header>
 
-      <main className="content">
+      <div className="workspace-shell">
+        <main className="content">
         {screen !== 'suivi' ? (
         <section className="hero">
           <div className="hero-stack">
               <div className="hero-top-row">
                 <label className="search-box">
                   <span>Recherche rapide</span>
-                  <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' ? 'Titre, dossier, mandat, commercial, ville' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
+                  <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
-                <section className="result-indicator result-indicator-compact">
-                  <span>{screen === 'annonces' ? dossierCountLabel : screen === 'mandats' ? 'Annonces actives' : screen === 'estimations' ? 'Estimations en cours' : 'Mandats enregistrés'}</span>
-                  <strong>{new Intl.NumberFormat('fr-FR').format(screen === 'annonces' ? visibleDossiersCount : screen === 'mandats' || screen === 'registre' ? (mandatsTotal || mandats.length) : mandatStats.total)}</strong>
-                </section>
                 <div className="hero-actions">
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
@@ -3958,39 +4022,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
             {screen === 'mandats' ? (
               <div className="header-kpi-stack">
-                <div className="header-kpis">
-                  {primaryCommercialMetrics.map((item) => (
-                    <article
-                      key={item.label}
-                      className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''} ${item.action && item.action === activeMandatKpiAction ? 'is-active' : ''}`}
-                      onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
-                      role={item.action ? 'button' : undefined}
-                      tabIndex={item.action ? 0 : undefined}
-                      onKeyDown={item.action ? (event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          openMandatDrilldown(item.action)
-                        }
-                      } : undefined}
-                    >
-                      <span>{item.label}</span>
-                      <strong>{item.value}</strong>
-                    </article>
-                  ))}
-                </div>
-                <div className="header-kpi-secondary-toggle">
+                <div className="header-control-row">
                   <button
                     className={`ghost-button kpi-toggle-button ${commercialMetricsExpanded ? 'is-open' : ''}`}
                     type="button"
                     onClick={() => setCommercialMetricsExpanded((value) => !value)}
                   >
-                    <span>{commercialMetricsExpanded ? 'Masquer les stats secondaires' : 'Afficher les stats secondaires'}</span>
-                    <strong>{secondaryCommercialMetrics.length}</strong>
+                    <span className="control-icon control-icon-stats" aria-hidden="true" />
+                    <span>{commercialMetricsExpanded ? 'Masquer stats' : 'Stats'}</span>
+                    <strong>{statsMetrics.length}</strong>
+                  </button>
+                  <button
+                    className={`ghost-button kpi-toggle-button priority-toggle ${priorityPanelOpen ? 'is-open' : ''}`}
+                    type="button"
+                    onClick={() => setPriorityPanelOpen((value) => !value)}
+                  >
+                    <span className="control-icon control-icon-priority" aria-hidden="true" />
+                    <span>Priorités</span>
+                    <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
+                {priorityPanel}
                 {commercialMetricsExpanded ? (
                   <div className="header-kpis header-kpis-secondary">
-                    {secondaryCommercialMetrics.map((item) => (
+                    {statsMetrics.map((item) => (
                       <article
                         key={item.label}
                         className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''} ${item.action && item.action === activeMandatKpiAction ? 'is-active' : ''}`}
@@ -4012,46 +4067,96 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : null}
               </div>
             ) : screen === 'registre' ? (
-              <div className="header-kpis">
-                {headerMetrics.map((item) => (
-                  <article
-                    key={item.label}
-                    className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
-                    onClick={item.action ? () => openRegisterDrilldown(item.action) : undefined}
-                    role={item.action ? 'button' : undefined}
-                    tabIndex={item.action ? 0 : undefined}
-                    onKeyDown={item.action ? (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        openRegisterDrilldown(item.action)
-                      }
-                    } : undefined}
+              <div className="header-kpi-stack">
+                <div className="header-control-row is-inline">
+                  <button
+                    className={`ghost-button kpi-toggle-button ${commercialMetricsExpanded ? 'is-open' : ''}`}
+                    type="button"
+                    onClick={() => setCommercialMetricsExpanded((value) => !value)}
                   >
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                  </article>
-                ))}
+                    <span className="control-icon control-icon-stats" aria-hidden="true" />
+                    <span>{commercialMetricsExpanded ? 'Masquer stats' : 'Stats'}</span>
+                    <strong>{statsMetrics.length}</strong>
+                  </button>
+                  <button
+                    className={`ghost-button kpi-toggle-button priority-toggle ${priorityPanelOpen ? 'is-open' : ''}`}
+                    type="button"
+                    onClick={() => setPriorityPanelOpen((value) => !value)}
+                  >
+                    <span className="control-icon control-icon-priority" aria-hidden="true" />
+                    <span>Priorités</span>
+                    <strong>{viewPriorities.length}</strong>
+                  </button>
+                </div>
+                {priorityPanel}
+                {commercialMetricsExpanded ? (
+                  <div className="header-kpis header-kpis-secondary">
+                    {statsMetrics.map((item) => (
+                      <article
+                        key={item.label}
+                        className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
+                        onClick={item.action ? () => openRegisterDrilldown(item.action) : undefined}
+                        role={item.action ? 'button' : undefined}
+                        tabIndex={item.action ? 0 : undefined}
+                        onKeyDown={item.action ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openRegisterDrilldown(item.action)
+                          }
+                        } : undefined}
+                      >
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : (
-              <div className="header-kpis">
-                {headerMetrics.map((item) => (
-                  <article
-                    key={item.label}
-                    className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
-                    onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
-                    role={item.action ? 'button' : undefined}
-                    tabIndex={item.action ? 0 : undefined}
-                    onKeyDown={item.action ? (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        openMandatDrilldown(item.action)
-                      }
-                    } : undefined}
+              <div className="header-kpi-stack">
+                <div className="header-control-row is-inline">
+                  <button
+                    className={`ghost-button kpi-toggle-button ${commercialMetricsExpanded ? 'is-open' : ''}`}
+                    type="button"
+                    onClick={() => setCommercialMetricsExpanded((value) => !value)}
                   >
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                  </article>
-                ))}
+                    <span className="control-icon control-icon-stats" aria-hidden="true" />
+                    <span>{commercialMetricsExpanded ? 'Masquer stats' : 'Stats'}</span>
+                    <strong>{statsMetrics.length}</strong>
+                  </button>
+                  <button
+                    className={`ghost-button kpi-toggle-button priority-toggle ${priorityPanelOpen ? 'is-open' : ''}`}
+                    type="button"
+                    onClick={() => setPriorityPanelOpen((value) => !value)}
+                  >
+                    <span className="control-icon control-icon-priority" aria-hidden="true" />
+                    <span>Priorités</span>
+                    <strong>{viewPriorities.length}</strong>
+                  </button>
+                </div>
+                {priorityPanel}
+                {commercialMetricsExpanded ? (
+                  <div className="header-kpis header-kpis-secondary">
+                    {statsMetrics.map((item) => (
+                      <article
+                        key={item.label}
+                        className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''}`}
+                        onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
+                        role={item.action ? 'button' : undefined}
+                        tabIndex={item.action ? 0 : undefined}
+                        onKeyDown={item.action ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openMandatDrilldown(item.action)
+                          }
+                        } : undefined}
+                      >
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -4874,7 +4979,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
-      </main>
+        </main>
+      </div>
 
       {userToolOpen && isAdmin ? (
         <div className="filters-overlay" onClick={() => setUserToolOpen(false)}>
@@ -5183,11 +5289,15 @@ function MandatsScreen(props: {
   mode?: 'active' | 'estimation'
 }) {
   const isEstimationMode = props.mode === 'estimation'
+  const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${isEstimationMode ? 'estimations' : 'annonces actives'}`
   return (
-    <section className="panel-grid">
-      <section className="panel panel-wide">
+    <section className={`panel-grid ${isEstimationMode ? 'panel-grid-estimation' : 'panel-grid-active-listing'}`}>
+      <section className={`panel panel-wide ${isEstimationMode ? 'panel-estimation-listing' : 'panel-active-listing'}`}>
         <div className="panel-head">
-          <div><p className="eyebrow">{props.eyebrow ?? 'Annonces'}</p><h3>{props.title ?? 'Liste des annonces'}</h3></div>
+          <div className="listing-title-stack">
+            <h3>{props.title ?? 'Liste des annonces'}</h3>
+            <span className="listing-total-label">{listingTotalLabel}</span>
+          </div>
           <div className="page-controls">
             {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
             <span>{pageLabel(props.mandatsTotal, mandatPageSize, props.mandatPage)}</span>
@@ -5200,7 +5310,7 @@ function MandatsScreen(props: {
             </label>
           </div>
         </div>
-        <div className={`table-wrap listing-table-wrap ${props.loading ? 'is-refreshing' : ''}`}>
+        <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'listing-table-estimation' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
           <table>
             <thead>
@@ -5228,14 +5338,14 @@ function MandatsScreen(props: {
                       }}
                     >
                       {isEstimationMode ? (
-                        <td><strong>{project.title}</strong><span>{project.mandate}</span><span>{project.context}</span></td>
+                        <td className="estimation-project-cell"><strong>{project.title}</strong><span>{project.mandate}</span><span>{project.context}</span></td>
                       ) : (
                         <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
                       )}
-                      <td><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
-                      <td><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
+                      <td className={isEstimationMode ? 'estimation-property-cell' : undefined}><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
+                      <td className={isEstimationMode ? 'estimation-negotiator-cell' : undefined}><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
                       {isEstimationMode ? (
-                        <td><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
+                        <td className="estimation-progress-cell"><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
                       ) : (
                         <>
                           <td><StatusPill value={item.statut_annonce} /></td>
@@ -5244,11 +5354,11 @@ function MandatsScreen(props: {
                           <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
                         </>
                       )}
-                      <td><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
+                      <td className={isEstimationMode ? 'estimation-photo-cell' : undefined}><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
                       <td>
                         <div className="row-actions">
                           {isEstimationMode ? (
-                            <button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
+                            <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
                           ) : (
                             <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
                           )}
@@ -5292,7 +5402,7 @@ function MandatRegisterScreen(props: {
     <section className="panel-grid">
       <section className="panel panel-wide">
         <div className="panel-head">
-          <div><p className="eyebrow">Registre</p><h3>Registre des mandats</h3></div>
+          <div><h3>Registre des mandats</h3></div>
           <div className="page-controls">
             {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
             <span>{pageLabel(props.mandatsTotal, mandatPageSize, props.mandatPage)}</span>
@@ -5868,6 +5978,7 @@ function SuiviMandatsScreenV2(props: {
     return <section className="panel"><p className="empty-state">Cette vue est reservee aux administrateurs.</p></section>
   }
   const [secondaryKpisOpen, setSecondaryKpisOpen] = useState(false)
+  const [priorityPanelOpen, setPriorityPanelOpen] = useState(false)
   const [activeAnomalyType, setActiveAnomalyType] = useState<MandateAnomalyType>('all')
 
   const activeSuiviFilter = props.requestFilter ?? 'pending_or_in_progress'
@@ -5971,6 +6082,11 @@ function SuiviMandatsScreenV2(props: {
   ]
   const primarySuiviKpis = suiviKpis.filter((item) => ['À traiter', 'Anomalies', 'Alerte prix'].includes(item.label))
   const secondarySuiviKpis = suiviKpis.filter((item) => ['Acceptées', 'Refusées', 'Portefeuille'].includes(item.label))
+  const suiviPriorities = [
+    { key: 'pending_or_in_progress' as const, label: 'À traiter', value: pendingRows.length, detail: 'Demandes de diffusion ou de baisse à décider', tone: 'demandes' },
+    { key: 'anomalies' as const, label: 'Anomalies', value: anomalyRows.length, detail: 'Mandats ou diffusions à corriger', tone: 'warning' },
+    { key: 'price_alert' as const, label: 'Alerte prix', value: priceAlertRows.length, detail: 'Baisses à contrôler dans Hektor', tone: 'diffusion' },
+  ]
 
   const listingTitle =
     activeSuiviFilter === 'pending_or_in_progress'
@@ -6016,16 +6132,48 @@ function SuiviMandatsScreenV2(props: {
             </article>
           ))}
         </div>
-        <div className="header-kpi-secondary-toggle">
+        <div className="header-control-row">
           <button
             className={`ghost-button kpi-toggle-button ${secondaryKpisOpen ? 'is-open' : ''}`}
             type="button"
             onClick={() => setSecondaryKpisOpen((value) => !value)}
           >
-            <span>{secondaryKpisOpen ? 'Masquer les KPI secondaires' : 'Afficher les KPI secondaires'}</span>
+            <span className="control-icon control-icon-stats" aria-hidden="true" />
+            <span>{secondaryKpisOpen ? 'Masquer stats' : 'Stats secondaires'}</span>
             <strong>{secondarySuiviKpis.length}</strong>
           </button>
+          <button
+            className={`ghost-button kpi-toggle-button priority-toggle ${priorityPanelOpen ? 'is-open' : ''}`}
+            type="button"
+            onClick={() => setPriorityPanelOpen((value) => !value)}
+          >
+            <span className="control-icon control-icon-priority" aria-hidden="true" />
+            <span>Priorités</span>
+            <strong>{suiviPriorities.length}</strong>
+          </button>
         </div>
+        {priorityPanelOpen ? (
+          <div className="priority-dropdown" role="region" aria-label="Priorités du suivi">
+            {suiviPriorities.map((item) => (
+              <button
+                key={item.key}
+                className={`priority-card tone-${item.tone} is-clickable`}
+                type="button"
+                onClick={() => {
+                  props.onSetRequestFilter(item.key)
+                  setPriorityPanelOpen(false)
+                }}
+              >
+                <span className="priority-card-icon" aria-hidden="true" />
+                <span className="priority-card-copy">
+                  <strong>{item.label}</strong>
+                  <small>{item.detail}</small>
+                </span>
+                <em>{item.value}</em>
+              </button>
+            ))}
+          </div>
+        ) : null}
         {secondaryKpisOpen ? (
           <div className="header-kpis header-kpis-secondary">
             {secondarySuiviKpis.map((item) => (
@@ -6052,7 +6200,7 @@ function SuiviMandatsScreenV2(props: {
 
       <section className="panel suivi-block suivi-block-portfolio">
         <div className="panel-head">
-          <div><p className="eyebrow">Listing unique</p><h3>{listingTitle}</h3></div>
+          <div><h3>{listingTitle}</h3></div>
           <div className="suivi-portfolio-kpis">
             <span>
               {activeSuiviFilter === 'anomalies'

@@ -19,6 +19,7 @@ apps/hektor-v1/node_modules/
 apps/hektor-v1/dist/
 apps/hektor-v1/*.tsbuildinfo
 apps/hektor-v1/vite-dev.log
+apps/hektor-v1/*.log
 
 data/*.sqlite
 phase2/*.sqlite
