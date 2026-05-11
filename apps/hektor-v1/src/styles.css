@@ -8262,6 +8262,192 @@ button.metric-card.is-active {
   color: #ffffff;
 }
 
+/* GTI view palette alignment: reuse detail popup colors without changing view structure. */
+:root {
+  --gti-final-ink: #222323;
+  --gti-final-ink-soft: #343838;
+  --gti-final-grey: #a1a4a4;
+  --gti-final-grey-soft: #f1f2f2;
+  --gti-final-line: rgba(34, 35, 35, 0.12);
+  --gti-final-magenta: #c5005f;
+  --gti-view-magenta-soft: rgba(197, 0, 95, 0.08);
+  --gti-view-ink-soft: rgba(34, 35, 35, 0.075);
+}
+
+body {
+  background:
+    radial-gradient(circle at top right, rgba(197, 0, 95, 0.055), transparent 24%),
+    radial-gradient(circle at top left, rgba(34, 35, 35, 0.07), transparent 23%),
+    linear-gradient(180deg, #f7f8f8 0%, #eef0f0 100%);
+}
+
+.side-rail {
+  border-bottom-color: var(--gti-final-magenta);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(197, 0, 95, 0.16), transparent 30%),
+    linear-gradient(135deg, var(--gti-final-ink) 0%, var(--gti-final-ink-soft) 100%);
+}
+
+.screen-nav {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.nav-button {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.82);
+}
+.nav-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+.nav-button.is-active {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  box-shadow: 0 10px 20px rgba(34, 35, 35, 0.18);
+}
+
+.user-avatar {
+  background:
+    linear-gradient(135deg, var(--gti-final-magenta) 0%, #9e0f53 100%);
+}
+.user-role-chip,
+.signout-button,
+.signout-button-inline {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.hero {
+  border-color: var(--gti-final-line);
+  background:
+    linear-gradient(135deg, var(--gti-view-ink-soft) 0%, rgba(255,255,255,0) 43%),
+    linear-gradient(160deg, var(--gti-view-magenta-soft) 0%, rgba(255,255,255,0) 52%),
+    #ffffff;
+}
+.hero-title-block h2,
+.panel-head h3,
+.header-kpi-card strong,
+.stat-card strong,
+td strong {
+  color: var(--gti-final-ink);
+}
+.hero-subline,
+.search-box span,
+.header-kpi-card span,
+.panel-note,
+th,
+td span,
+td small {
+  color: #747a7a;
+}
+
+.panel,
+.stat-card,
+.header-kpi-card,
+.register-table-wrap,
+.filters-drawer,
+.login-panel {
+  border-color: var(--gti-final-line);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+}
+
+.header-kpi-card.tone-volume,
+.header-kpi-card.tone-neutral,
+.metric-card.tone-neutral {
+  background: linear-gradient(180deg, #ffffff 0%, var(--gti-final-grey-soft) 100%);
+}
+.header-kpi-card.tone-affaires,
+.metric-card.tone-success {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(161, 164, 164, 0.18) 100%);
+}
+.header-kpi-card.tone-diffusion,
+.header-kpi-card.tone-demandes,
+.metric-card.tone-brand {
+  border-color: rgba(197, 0, 95, 0.18);
+  background: linear-gradient(180deg, #ffffff 0%, rgba(197, 0, 95, 0.075) 100%);
+}
+.header-kpi-card.tone-warning,
+.metric-card.tone-warning,
+.metric-card.tone-danger {
+  border-color: rgba(197, 0, 95, 0.22);
+  background: linear-gradient(180deg, #ffffff 0%, rgba(197, 0, 95, 0.1) 100%);
+}
+.header-kpi-card.is-active,
+button.metric-card.is-active {
+  border-color: rgba(197, 0, 95, 0.42);
+  box-shadow: 0 12px 24px rgba(197, 0, 95, 0.1);
+}
+.header-kpi-card.is-clickable:hover,
+button.metric-card:hover {
+  border-color: rgba(197, 0, 95, 0.28);
+}
+
+.search-box input,
+.filter-field select,
+.filter-field input,
+.page-jump input,
+.inline-textarea,
+.login-form input {
+  border-color: rgba(34, 35, 35, 0.14);
+  background: #ffffff;
+}
+.inline-textarea:focus,
+.filter-field select:focus,
+.filter-field input:focus,
+.search-box input:focus,
+.page-jump input:focus,
+.admin-action-row select:focus,
+.admin-action-row input:focus {
+  border-color: rgba(197, 0, 95, 0.48);
+  box-shadow: 0 0 0 4px rgba(197, 0, 95, 0.1);
+}
+
+.ghost-button:hover,
+.kpi-toggle-button:hover,
+.section-toggle-button:hover {
+  border-color: rgba(197, 0, 95, 0.3);
+}
+.button-accent {
+  border-color: var(--gti-final-magenta);
+  background: var(--gti-final-magenta);
+  color: #ffffff;
+}
+
+.listing-loading-banner {
+  border-bottom-color: var(--gti-final-line);
+  background: rgba(241, 242, 242, 0.96);
+  color: var(--gti-final-ink);
+}
+.listing-loading-banner::before {
+  background: var(--gti-final-magenta);
+}
+
+table th,
+.register-table th {
+  background: var(--gti-final-grey-soft);
+  color: #686f6f;
+}
+tbody tr:hover {
+  background: #f4f5f5;
+}
+tbody tr.is-selected {
+  background: rgba(197, 0, 95, 0.065);
+}
+
+.active-filter-chip {
+  border-color: rgba(197, 0, 95, 0.18);
+  background: rgba(197, 0, 95, 0.075);
+  color: var(--gti-final-ink);
+}
+.filters-overlay {
+  background: rgba(34, 35, 35, 0.2);
+}
+.filters-head {
+  border-bottom-color: rgba(34, 35, 35, 0.1);
+}
+
 @media (max-width: 900px) {
   .hero, .panel-grid, .stats-grid, .filter-grid, .dashboard-grid, .detail-overview, .detail-cockpit-body, .detail-command-grid, .metric-grid, .info-grid, .gallery-thumbs, .kpi-strip, .admin-action-row, .admin-form-grid, .suivi-layout, .header-kpis, .detail-keyfacts, .detail-status-grid, .detail-section-topgrid, .transaction-columns, .transaction-flow, .detail-portal-badges {
     grid-template-columns: 1fr;
