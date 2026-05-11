@@ -8718,6 +8718,179 @@ tbody tr.is-selected {
   border-radius: 10px;
 }
 
+/* Corrective pass: premium headers must never force horizontal scrolling. */
+.app-shell,
+.content,
+.panel,
+.table-wrap,
+.listing-table-wrap {
+  max-width: 100%;
+}
+
+.side-rail {
+  grid-template-columns: minmax(220px, 0.78fr) minmax(360px, 1.15fr) minmax(260px, 0.72fr);
+  gap: 12px;
+}
+.screen-nav {
+  min-width: 0;
+  max-width: 100%;
+}
+.nav-button {
+  min-width: 0;
+  padding-inline: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-card-top {
+  min-width: 0;
+}
+.user-card-actions {
+  justify-content: flex-end;
+}
+.signout-button-inline {
+  max-width: 104px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content > .hero {
+  min-width: 0;
+}
+.hero-top-row {
+  grid-template-columns: minmax(240px, 1fr) minmax(118px, 150px) auto;
+  gap: 10px;
+}
+.result-indicator-compact {
+  min-width: 118px;
+}
+.hero-actions {
+  min-width: 0;
+}
+.hero-actions .ghost-button {
+  min-width: 0;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+.header-kpis {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.suivi-header-kpis {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.header-kpi-card {
+  min-width: 0;
+  min-height: 76px;
+}
+
+/* Listing ergonomics: compact columns and always-visible action access. */
+.listing-table-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+.listing-table-wrap table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+.listing-table-wrap th,
+.listing-table-wrap td {
+  padding: 10px 7px;
+}
+.listing-table-wrap th:nth-child(1),
+.listing-table-wrap td:nth-child(1) {
+  width: 82px;
+}
+.listing-table-wrap th:nth-child(3),
+.listing-table-wrap td:nth-child(3) {
+  width: 132px;
+}
+.listing-table-wrap th:nth-child(4),
+.listing-table-wrap td:nth-child(4) {
+  width: 112px;
+}
+.listing-table-wrap th:nth-last-child(2),
+.listing-table-wrap td:nth-last-child(2) {
+  width: 64px;
+}
+.listing-table-wrap th:last-child,
+.listing-table-wrap td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  width: 118px;
+  min-width: 118px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.72) 0%, #ffffff 18%);
+  box-shadow: -8px 0 14px rgba(34, 35, 35, 0.06);
+}
+.listing-table-wrap thead th:last-child {
+  z-index: 3;
+  background: linear-gradient(90deg, rgba(241,242,242,0.72) 0%, var(--gti-final-grey-soft) 18%);
+}
+.portal-col,
+.portal-cell {
+  width: 38px;
+  min-width: 38px;
+  max-width: 38px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.portal-mark {
+  min-width: 26px;
+  width: 26px;
+  height: 26px;
+}
+.portal-mark svg {
+  width: 13px;
+  height: 13px;
+}
+.listing-thumb,
+.listing-thumb-placeholder {
+  width: 46px;
+  height: 38px;
+  min-width: 46px;
+}
+.listing-table-wrap td strong,
+.listing-table-wrap td span,
+.listing-table-wrap td small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listing-table-wrap td strong,
+.listing-table-wrap td span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+}
+.listing-table-wrap td strong {
+  -webkit-line-clamp: 2;
+}
+.listing-table-wrap td span,
+.listing-table-wrap td small {
+  -webkit-line-clamp: 1;
+}
+.listing-table-wrap .status-pill {
+  max-width: 100%;
+}
+.listing-table-wrap .row-actions {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+.listing-table-wrap .row-actions .action-menu-trigger {
+  min-width: 92px;
+  min-height: 36px;
+  padding: 8px 10px !important;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.listing-table-wrap .row-actions .action-menu-trigger-dot {
+  width: 8px;
+  height: 8px;
+}
+.listing-table-wrap .row-actions .ghost-button {
+  min-height: 36px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .hero, .panel-grid, .stats-grid, .filter-grid, .dashboard-grid, .detail-overview, .detail-cockpit-body, .detail-command-grid, .metric-grid, .info-grid, .gallery-thumbs, .kpi-strip, .admin-action-row, .admin-form-grid, .suivi-layout, .header-kpis, .detail-keyfacts, .detail-status-grid, .detail-section-topgrid, .transaction-columns, .transaction-flow, .detail-portal-badges {
     grid-template-columns: 1fr;

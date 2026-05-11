@@ -3694,11 +3694,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     ]
   }, [screen, visibleDossiersCount, workItemsTotal, workItems.length, mandatStats, commercialRequestStats, suiviRequestStats])
   const primaryCommercialMetrics = useMemo(
-    () => headerMetrics.filter((item) => ['Annonces', 'Offres en cours', 'Mandats valides', 'Correction en attente'].includes(item.label)),
+    () => headerMetrics.filter((item) => ['Annonces', 'Mandats valides', 'Correction en attente'].includes(item.label)),
     [headerMetrics],
   )
   const secondaryCommercialMetrics = useMemo(
-    () => headerMetrics.filter((item) => !['Annonces', 'Offres en cours', 'Mandats valides', 'Correction en attente'].includes(item.label)),
+    () => headerMetrics.filter((item) => !['Annonces', 'Mandats valides', 'Correction en attente'].includes(item.label)),
     [headerMetrics],
   )
   const isAdmin = profile?.role === 'admin'
@@ -5969,8 +5969,8 @@ function SuiviMandatsScreenV2(props: {
     { key: 'price_alert', label: 'Alerte prix', value: priceAlertRows.length, tone: 'demandes' },
     { key: 'portfolio', label: 'Portefeuille', value: portfolioRows.length, tone: 'neutral' },
   ]
-  const primarySuiviKpis = suiviKpis.filter((item) => ['À traiter', 'Anomalies', 'Alerte prix', 'Portefeuille'].includes(item.label))
-  const secondarySuiviKpis = suiviKpis.filter((item) => ['Acceptées', 'Refusées'].includes(item.label))
+  const primarySuiviKpis = suiviKpis.filter((item) => ['À traiter', 'Anomalies', 'Alerte prix'].includes(item.label))
+  const secondarySuiviKpis = suiviKpis.filter((item) => ['Acceptées', 'Refusées', 'Portefeuille'].includes(item.label))
 
   const listingTitle =
     activeSuiviFilter === 'pending_or_in_progress'
