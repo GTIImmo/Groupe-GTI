@@ -6694,6 +6694,13 @@ function DossierDetailLayout(props: {
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
+
+  useEffect(() => {
+    setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
+    setMandatSectionOpen(true)
+    setContactSectionOpen(false)
+  }, [dossier.app_dossier_id, detailVariant])
+
   const buildRequestGroups = (
     historyItems: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>,
     messageItems: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>,
