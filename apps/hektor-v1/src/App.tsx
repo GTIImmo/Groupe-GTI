@@ -43,6 +43,9 @@ import {
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import { DesktopLayout } from './layouts/DesktopLayout'
+import { MobileLayout } from './layouts/MobileLayout'
+import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 
 const allFilterValue = '__all__'
 const activeArchiveFilterValue = '__active__'
@@ -2222,6 +2225,7 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [mandatLoading, setMandatLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [mobileStatsOpen, setMobileStatsOpen] = useState(false)
   const [priorityPanelOpen, setPriorityPanelOpen] = useState(false)
   const [commercialMetricsExpanded, setCommercialMetricsExpanded] = useState(false)
   const [activeMandatKpiAction, setActiveMandatKpiAction] = useState<HeaderMetricItem['action']>(null)
@@ -3928,6 +3932,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ))}
     </div>
   ) : null
+  const responsiveExperience = useResponsiveExperience()
 
   if (hasSupabaseEnv && recoveryMode && !bootLoading) {
     return (
@@ -3976,7 +3981,208 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     )
   }
 
+  if (!responsiveExperience.isDesktop) {
+    const mobileScreenTitle = screenHeader.title
+    const mobileUserLabel = resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'
+    const mobileAgencyLabel = resolvedUserNegotiatorContext?.agence_nom || 'Agence non détectée'
+    const mobileMetrics = statsMetrics.slice(0, 5)
+    const mobileDetailMessages = selectedDossierRequestEvents
+      .filter((event) => parseJson<{ message?: string | null }>(event.payload_json, {}).message)
+      .slice()
+      .sort((a, b) => new Date(b.event_at).getTime() - new Date(a.event_at).getTime())
+      .map((event) => ({
+        id: `detail-message-${event.id}`,
+        author: event.actor_name || event.event_label,
+        date: event.event_at,
+        message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
+      }))
+
+    return (
+      <MobileLayout
+        currentScreen={screen}
+        title={mobileScreenTitle}
+        isAdmin={isAdmin}
+        userInitials={userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}
+        userLabel={mobileUserLabel}
+        agencyLabel={mobileAgencyLabel}
+        onNavigate={openScreen}
+        onOpenUsers={isAdmin ? () => void openUserTool() : undefined}
+        onSignOut={session ? handleSignOut : undefined}
+      >
+        <section className="mobile-command-card">
+          <label className="mobile-search-field">
+            <span>Recherche</span>
+            <input
+              value={filters.query}
+              onChange={(event) => updateFilter('query', event.target.value)}
+              placeholder={screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, négociateur...'}
+            />
+          </label>
+          <div className="mobile-command-actions">
+            <button type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Fermer filtres' : 'Filtres'}</button>
+            <button
+              className={`mobile-stats-toggle ${mobileStatsOpen ? 'is-active' : ''}`}
+              type="button"
+              onClick={() => setMobileStatsOpen((open) => !open)}
+              aria-expanded={mobileStatsOpen}
+            >
+              Stats
+              {mobileMetrics.length > 0 ? <span>{mobileMetrics.length}</span> : null}
+            </button>
+            <button type="button" onClick={resetFilters}>Réinitialiser</button>
+          </div>
+          {mobileStatsOpen && mobileMetrics.length > 0 ? (
+            <div className="mobile-metric-strip" aria-label="Indicateurs">
+              {mobileMetrics.map((item) => (
+                <button
+                  key={`mobile-metric-${item.label}`}
+                  className="mobile-metric-chip"
+                  type="button"
+                  onClick={item.action ? () => openPriorityAction(item.action) : undefined}
+                  disabled={!item.action}
+                >
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        {filtersOpen ? (
+          <div className="filters-overlay mobile-filter-overlay" onClick={() => setFiltersOpen(false)}>
+            <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
+              <div className="filters-head">
+                <div>
+                  <p className="eyebrow">Filtres mobile</p>
+                  <strong>{mobileScreenTitle}</strong>
+                </div>
+                <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
+              </div>
+              <div className="filter-grid">
+                <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
+                <FilterSelect
+                  label="Diffusable"
+                  value={filters.diffusable}
+                  onChange={(value) => updateFilter('diffusable', value)}
+                  options={[
+                    { value: 'diffusable', label: 'Oui' },
+                    { value: 'non_diffusable', label: 'Non' },
+                  ]}
+                />
+                <FilterSelect label="Passerelle" value={filters.passerelle} onChange={(value) => updateFilter('passerelle', value)} options={filterCatalog.passerelles} />
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {bootLoading && dossiers.length === 0 && workItems.length === 0 ? <section className="info-banner">Chargement initial des données...</section> : null}
+        {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
+
+        {screen === 'annonces' ? (
+          <MobileDossierCards
+            dossiers={dossiers}
+            total={dossiersTotal}
+            loading={pageLoading}
+            onFocusDossier={setSelectedDossierId}
+            onOpenDetail={() => setDetailOpen(true)}
+          />
+        ) : screen === 'mandats' ? (
+          <MobileMandatCards
+            mandats={mandats}
+            total={mandatsTotal}
+            loading={mandatLoading}
+            mode="active"
+            onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={openRequestModal}
+          />
+        ) : screen === 'estimations' ? (
+          <MobileMandatCards
+            mandats={mandats}
+            total={mandatsTotal}
+            loading={mandatLoading}
+            mode="estimation"
+            onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={openRequestModal}
+          />
+        ) : screen === 'registre' ? (
+          <MobileRegisterCards
+            mandats={mandats}
+            total={mandatsTotal}
+            loading={mandatLoading}
+            onSelectMandat={(rowId) => {
+              setSelectedRegisterRowId(rowId)
+              const row = mandats.find((item) => mandateRegisterRowKey(item) === rowId)
+              if (row?.app_dossier_id) openDossierDetailPage(row.app_dossier_id)
+            }}
+          />
+        ) : (
+          <MobileMandatCards
+            mandats={mandats}
+            total={mandatsTotal}
+            loading={requestLoading || mandatLoading}
+            mode="active"
+            onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={(id) => openRequestModal(id, 'pauline')}
+          />
+        )}
+
+        {detailOpen && selectedDossier ? (
+          <div className="mobile-detail-overlay" onClick={closeDossierDetailPage}>
+            <section className="mobile-detail-panel" onClick={(event) => event.stopPropagation()}>
+              <MobileDossierDetail
+                selectedDossier={selectedDossier}
+                detail={detail}
+                address={address}
+                images={images}
+                texts={texts}
+                notes={notes}
+                contacts={contacts}
+                mandats={mandatDetails}
+                linkedWorkItems={linkedWorkItems}
+                requestHistory={buildRequestHistory(selectedDossierRequest, selectedDossierRequestEvents)}
+                requestMessages={mobileDetailMessages}
+                requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')}
+                requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')}
+                requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
+                requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
+                actionRequests={selectedDossierRequests}
+                currentActionRequest={screen === 'suivi' ? selectedDossierRequest : null}
+                actionRole={screen === 'suivi' ? 'pauline' : 'nego'}
+                onOpenRequestModal={openRequestModal}
+                onOpenDiffusionModal={openDiffusionModal}
+                detailLoading={detailLoading}
+                eyebrow="Mobile"
+                backLabel="Fermer"
+                onBack={closeDossierDetailPage}
+                detailVariant={screen === 'mandats' ? 'mandat' : screen === 'suivi' ? 'suivi' : 'annonce'}
+                allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
+                markValidationPending={detailValidationPending}
+                validationDraft={detailValidationDraft}
+                validationObserved={detailValidationObserved}
+                validationSaved={detailValidationSaved}
+                onSetValidation={handleSetSelectedDossierValidation}
+                allowMarkDiffusable={(screen === 'suivi' || screen === 'mandats') && isAdmin}
+                markDiffusablePending={detailDiffusablePending}
+                onSetDiffusable={handleSetSelectedDossierDiffusable}
+                diffusableDraft={detailDiffusableDraft}
+                diffusableObserved={detailDiffusableObserved}
+                diffusableSaved={detailDiffusableSaved}
+                adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
+                onOpenImage={setDetailImageModalUrl}
+              />
+            </section>
+          </div>
+        ) : null}
+      </MobileLayout>
+    )
+  }
+
   return (
+    <DesktopLayout>
     <div className="app-shell">
       <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
         <button
@@ -5111,6 +5317,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div>
       ) : null}
     </div>
+    </DesktopLayout>
   )
 }
 
@@ -7407,6 +7614,409 @@ function DossierDetailScreen(props: {
       backLabel={props.sourceScreen === 'mandats' ? 'Retour mandats' : 'Retour suivi'}
       detailVariant={props.sourceScreen === 'mandats' ? 'mandat' : 'suivi'}
     />
+  )
+}
+
+function MobileDossierDetail(props: {
+  selectedDossier: Dossier | null
+  detail: DossierDetailPayload
+  address: string
+  images: Array<{ url: string; legend: string }>
+  texts: Array<{ id: string; title: string; html: string }>
+  notes: Array<{ id: string; title: string; date: string; content: string }>
+  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string }>
+  mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
+  linkedWorkItems: WorkItem[]
+  requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
+  requestMessages: Array<{ id: string; author: string; date: string; message: string }>
+  requestHistoryDiffusion: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
+  requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
+  requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  actionRequests?: DiffusionRequest[]
+  currentActionRequest?: DiffusionRequest | null
+  actionRole?: 'nego' | 'pauline'
+  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenDiffusionModal?: (id: number) => void
+  detailLoading: boolean
+  eyebrow: string
+  backLabel: string
+  onBack: () => void
+  allowMarkValidation?: boolean
+  markValidationPending?: boolean
+  validationDraft?: string | null
+  validationObserved?: string | null
+  validationSaved?: string | null
+  onSetValidation?: (checked: boolean) => void
+  allowMarkDiffusable?: boolean
+  markDiffusablePending?: boolean
+  onSetDiffusable?: (checked: boolean) => void
+  diffusableDraft?: boolean | null
+  diffusableObserved?: boolean | null
+  diffusableSaved?: boolean | null
+  adminPilotSurface?: 'none' | 'sidebar' | 'diffusion' | 'both'
+  pendingPortalKeys?: string[]
+  onOpenImage?: (url: string) => void
+  detailVariant?: 'annonce' | 'mandat' | 'suivi'
+}) {
+  const dossier = props.selectedDossier
+  if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
+
+  const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
+  const activePortals = uniquePortalKeys([...(dossier.portails_resume ?? '').split(','), ...(props.pendingPortalKeys ?? [])])
+  const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
+  const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
+  const actionRole = props.actionRole ?? 'nego'
+  const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
+  const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
+  const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop]
+    .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
+    .slice(0, 5)
+  const messageItems = [...props.requestMessagesDiffusion, ...props.requestMessagesPriceDrop, ...props.requestMessages]
+    .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
+    .slice(0, 4)
+  const firstMandat = props.mandats[0] ?? null
+  const primaryContact = props.contacts[0] ?? null
+  const detailFacts = [
+    ['Prix', formatPrice(dossier.prix)],
+    ['Surface', props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'],
+    ['Pièces', props.detail.nb_pieces ?? '-'],
+    ['Chambres', props.detail.nb_chambres ?? '-'],
+    ['Type', propertyTypeLabel(dossier.type_bien)],
+    ['Référence', dossier.numero_dossier ?? '-'],
+  ]
+  const adminValidationState = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
+  const adminDiffusableState = props.diffusableDraft ?? isDiffusableValue(dossier.diffusable)
+
+  return (
+    <article className="mobile-detail-view">
+      <header className="mobile-detail-hero">
+        <button className="mobile-detail-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
+        {primaryImage ? (
+          <button className="mobile-detail-photo" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
+            <img src={primaryImage} alt={dossier.titre_bien} />
+          </button>
+        ) : <div className="mobile-detail-photo is-empty">Photo</div>}
+        <div className="mobile-detail-title-card">
+          <span>{props.detailVariant === 'mandat' ? 'Fiche mandat' : props.detailVariant === 'suivi' ? 'Suivi mandat' : 'Détail annonce'}</span>
+          <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce ${dossier.hektor_annonce_id}`}</h2>
+          {props.address ? <p>{props.address}</p> : null}
+          <div className="mobile-status-row">
+            <StatusPill value={dossier.statut_annonce} />
+            <StatusPill value={diffusableLabel(dossier.diffusable)} />
+            {dossier.validation_diffusion_state ? <StatusPill value={dossier.validation_diffusion_state} /> : null}
+          </div>
+        </div>
+      </header>
+
+      <section className="mobile-detail-actionbar" aria-label="Actions du dossier">
+        <button className="mobile-primary-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_diffusion')}>Action métier</button>
+        <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_baisse_prix')}>Baisse prix</button>
+        {canShowDiffusion ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}>Diffusion</button> : null}
+      </section>
+
+      {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
+
+      <section className="mobile-detail-section">
+        <div className="mobile-detail-section-head">
+          <span>Synthèse</span>
+          <strong>{dossier.commercial_nom ?? '-'}</strong>
+        </div>
+        <div className="mobile-detail-facts">
+          {detailFacts.map(([label, value]) => (
+            <div key={`mobile-fact-${label}`}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="mobile-detail-portals">
+          {[
+            ['LBC', ['leboncoin', 'le bon coin', 'lbc']],
+            ['BI', ['bienici']],
+            ['GTI', ['gti', 'sitegti', 'site gti']],
+          ].map(([label, aliases]) => (
+            <span key={label as string} className="mobile-portal-chip">
+              {label as string}
+              <PortalStatusMark enabled={(aliases as string[]).some((alias) => activePortals.some((portal) => portal.includes(alias.replace(/\s+/g, '')) || portal.includes(alias)))} />
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable ? (
+        <section className="mobile-detail-section mobile-detail-pilot">
+          <div className="mobile-detail-section-head">
+            <span>Pilotage Hektor</span>
+            <strong>{props.markValidationPending || props.markDiffusablePending ? 'Synchronisation...' : 'Contrôle'}</strong>
+          </div>
+          {props.allowMarkValidation ? (
+            <label className="mobile-toggle-row">
+              <span>Mandat validé</span>
+              <input type="checkbox" checked={isValidationApproved(adminValidationState)} onChange={(event) => props.onSetValidation?.(event.target.checked)} disabled={props.markValidationPending} />
+            </label>
+          ) : null}
+          {props.allowMarkDiffusable ? (
+            <label className="mobile-toggle-row">
+              <span>Diffusable</span>
+              <input type="checkbox" checked={adminDiffusableState} onChange={(event) => props.onSetDiffusable?.(event.target.checked)} disabled={props.markDiffusablePending} />
+            </label>
+          ) : null}
+        </section>
+      ) : null}
+
+      <details className="mobile-detail-section mobile-detail-disclosure" open>
+        <summary>Mandat et contacts</summary>
+        {firstMandat ? (
+          <div className="mobile-detail-lines">
+            <strong>{firstMandat.title}</strong>
+            {firstMandat.lines.slice(0, 8).map(([label, value]) => <div key={`mobile-mandat-${label}`}><span>{label}</span><b>{value || '-'}</b></div>)}
+          </div>
+        ) : <p className="mobile-detail-muted">Aucun mandat détaillé disponible.</p>}
+        {primaryContact ? (
+          <div className="mobile-contact-card">
+            <span>{primaryContact.role || 'Contact'}</span>
+            <strong>{primaryContact.name || '-'}</strong>
+            {primaryContact.phone ? <a href={`tel:${primaryContact.phone}`}>{primaryContact.phone}</a> : null}
+            {primaryContact.email ? <a href={`mailto:${primaryContact.email}`}>{primaryContact.email}</a> : null}
+          </div>
+        ) : null}
+      </details>
+
+      <details className="mobile-detail-section mobile-detail-disclosure">
+        <summary>Contenu de l'annonce</summary>
+        {props.images.length > 1 ? (
+          <div className="mobile-detail-gallery">
+            {props.images.slice(0, 8).map((image) => (
+              <button key={image.url} type="button" onClick={() => props.onOpenImage?.(image.url)}>
+                <img src={image.url} alt={image.legend || dossier.titre_bien} loading="lazy" />
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {props.texts.slice(0, 3).map((text) => (
+          <div key={text.id} className="mobile-detail-text">
+            <strong>{text.title}</strong>
+            <p>{text.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '-'}</p>
+          </div>
+        ))}
+        {matterportModels.length > 0 ? (
+          <div className="mobile-detail-lines">
+            <strong>Visite virtuelle</strong>
+            {matterportModels.slice(0, 4).map(({ group, model }) => (
+              <div key={`${group.id}-${model.matterport_model_id}`}>
+                <span>{group.group_label ?? `Mandat ${group.numero_mandat ?? '-'}`}</span>
+                <b>{model.label || model.matterport_name || model.matterport_model_id}</b>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </details>
+
+      <details className="mobile-detail-section mobile-detail-disclosure">
+        <summary>Historique et notes</summary>
+        {requestItems.length > 0 ? requestItems.map((item) => (
+          <div key={`mobile-history-${item.id}`} className="mobile-timeline-item">
+            <span>{formatDate(item.date)}</span>
+            <strong>{item.title}</strong>
+            <p>{item.body}</p>
+          </div>
+        )) : <p className="mobile-detail-muted">Aucun historique de demande.</p>}
+        {messageItems.map((item) => (
+          <div key={`mobile-message-${item.id}`} className="mobile-timeline-item">
+            <span>{formatDate(item.date)}</span>
+            <strong>{item.author}</strong>
+            <p>{item.message}</p>
+          </div>
+        ))}
+        {props.notes.slice(0, 3).map((note) => (
+          <div key={note.id} className="mobile-timeline-item">
+            <span>{formatDate(note.date)}</span>
+            <strong>{note.title}</strong>
+            <p>{note.content}</p>
+          </div>
+        ))}
+      </details>
+
+      {props.linkedWorkItems.length > 0 ? (
+        <details className="mobile-detail-section mobile-detail-disclosure">
+          <summary>Demandes liées</summary>
+          {props.linkedWorkItems.slice(0, 5).map((item) => (
+            <div key={`mobile-work-${item.app_dossier_id}-${item.type_demande_label}-${item.date_entree_file ?? 'na'}`} className="mobile-timeline-item">
+              <span>{formatDate(item.date_entree_file)}</span>
+              <strong>{item.type_demande_label ?? '-'}</strong>
+              <p>{item.work_status ?? '-'} · {item.internal_status ?? '-'}</p>
+            </div>
+          ))}
+        </details>
+      ) : null}
+    </article>
+  )
+}
+
+function MobileMandatCards(props: {
+  mandats: MandatRecord[]
+  total: number
+  loading: boolean
+  mode: 'active' | 'estimation'
+  onOpenDetailPage: (id: number) => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline') => void
+}) {
+  const title = props.mode === 'estimation' ? 'Estimations' : 'Annonces actives'
+  const primaryLabel = props.mode === 'estimation' ? 'Voir estimation' : 'Voir le détail'
+  if (props.mandats.length === 0) {
+    return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucune ligne disponible.'}</section>
+  }
+  return (
+    <section className="mobile-card-list" aria-label={title}>
+      <div className="mobile-list-head">
+        <div>
+          <span className="mobile-section-kicker">{props.mode === 'estimation' ? 'Projets' : 'Portefeuille'}</span>
+          <h2>{title}</h2>
+        </div>
+        <span>{props.mandats.length} / {props.total}</span>
+      </div>
+      {props.mandats.map((item, index) => {
+        const hasLeboncoin = hasPortalEnabled(item, ['leboncoin', 'le bon coin', 'lbc'])
+        const hasBienici = hasPortalEnabled(item, ['bienici'])
+        const hasSiteGti = isSiteGtiEnabled(item)
+        const cardKey = [
+          props.mode,
+          item.app_dossier_id,
+          item.numero_mandat ?? 'no-mandat',
+          item.numero_dossier ?? 'no-dossier',
+          item.register_source_kind ?? 'current',
+          index,
+        ].join('-')
+        return (
+          <article key={cardKey} className="mobile-list-card">
+            <div className="mobile-card-top">
+              <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
+              <div className="mobile-list-card-main">
+                <span className="mobile-card-meta">{item.numero_mandat ? `Mandat ${item.numero_mandat}` : item.numero_dossier ?? '-'}</span>
+                <strong>{item.titre_bien}</strong>
+                <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} · {item.ville ?? item.agence_nom ?? '-'}</span>
+              </div>
+            </div>
+            <div className="mobile-card-grid">
+              <div><span className="mobile-mini-label">Prix</span><strong>{formatPrice(item.prix)}</strong></div>
+              <div><span className="mobile-mini-label">Négociateur</span><strong>{commercialDisplay(item)}</strong></div>
+            </div>
+            <div className="mobile-status-row">
+              <StatusPill value={props.mode === 'estimation' ? listingProgressLabel(item) : item.statut_annonce} />
+              <span className="mobile-portal-chip">LBC <PortalStatusMark enabled={hasLeboncoin} /></span>
+              <span className="mobile-portal-chip">BI <PortalStatusMark enabled={hasBienici} /></span>
+              <span className="mobile-portal-chip">GTI <PortalStatusMark enabled={hasSiteGti} /></span>
+            </div>
+            <div className="mobile-card-actions">
+              {props.mode === 'active' ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal(item.app_dossier_id, 'nego')}>Action métier</button> : null}
+              <button className="mobile-primary-button" type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>{primaryLabel}</button>
+            </div>
+          </article>
+        )
+      })}
+    </section>
+  )
+}
+
+function MobileRegisterCards(props: {
+  mandats: MandatRecord[]
+  total: number
+  loading: boolean
+  onSelectMandat: (registerRowId: string) => void
+}) {
+  if (props.mandats.length === 0) {
+    return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucun mandat disponible.'}</section>
+  }
+  return (
+    <section className="mobile-card-list" aria-label="Registre des mandats">
+      <div className="mobile-list-head">
+        <div>
+          <span className="mobile-section-kicker">Registre</span>
+          <h2>Mandats</h2>
+        </div>
+        <span>{props.mandats.length} / {props.total}</span>
+      </div>
+      {props.mandats.map((item) => (
+        <article key={mandateRegisterRowKey(item)} className="mobile-list-card">
+          <div className="mobile-card-top">
+            <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien || `Mandat ${item.numero_mandat ?? '-'}`} />
+            <div className="mobile-list-card-main">
+              <span className="mobile-card-meta">{mandateRegisterTypeInlineLabel(item) || mandateRegisterSourceLabel(item)}</span>
+              <strong>Mandat {item.numero_mandat ?? '-'}</strong>
+              <span className="mobile-card-subline">{mandateRegisterMandantsLabel(item)}</span>
+            </div>
+          </div>
+          <div className="mobile-card-grid">
+            <div><span className="mobile-mini-label">Montant</span><strong>{formatPrice(item.mandat_montant ?? item.prix)}</strong></div>
+            <div><span className="mobile-mini-label">Fin</span><strong>{formatDate(item.mandat_date_fin)}</strong></div>
+          </div>
+          <div className="mobile-status-row">
+            <StatusPill value={item.statut_annonce} />
+            <StatusPill value={mandateRegisterDiffusableLabel(item.diffusable)} />
+          </div>
+          <span className="mobile-card-subline">{mandateRegisterNatureLabel(item)}</span>
+          <div className="mobile-card-actions">
+            <button className="mobile-primary-button" type="button" onClick={() => props.onSelectMandat(mandateRegisterRowKey(item))}>Voir le mandat</button>
+          </div>
+        </article>
+      ))}
+    </section>
+  )
+}
+
+function MobileDossierCards(props: {
+  dossiers: Dossier[]
+  total: number
+  loading: boolean
+  onFocusDossier: (id: number) => void
+  onOpenDetail: () => void
+}) {
+  if (props.dossiers.length === 0) {
+    return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucun dossier disponible.'}</section>
+  }
+  return (
+    <section className="mobile-card-list" aria-label="Annonces">
+      <div className="mobile-list-head">
+        <div>
+          <span className="mobile-section-kicker">Stock</span>
+          <h2>Annonces</h2>
+        </div>
+        <span>{props.dossiers.length} / {props.total}</span>
+      </div>
+      {props.dossiers.map((item) => (
+        <article key={`mobile-dossier-${item.app_dossier_id}`} className="mobile-list-card">
+          <div className="mobile-card-top">
+            <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
+            <div className="mobile-list-card-main">
+              <span className="mobile-card-meta">{item.numero_dossier ?? '-'}</span>
+              <strong>{item.titre_bien}</strong>
+              <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} · {item.ville ?? '-'}</span>
+            </div>
+          </div>
+          <div className="mobile-card-grid">
+            <div><span className="mobile-mini-label">Prix</span><strong>{formatPrice(item.prix)}</strong></div>
+            <div><span className="mobile-mini-label">Négociateur</span><strong>{commercialDisplay(item)}</strong></div>
+          </div>
+          <div className="mobile-status-row">
+            <StatusPill value={item.statut_annonce} />
+            <StatusPill value={diffusableLabel(item.diffusable)} />
+          </div>
+          <div className="mobile-card-actions">
+            <button
+              className="mobile-primary-button"
+              type="button"
+              onClick={() => {
+                props.onFocusDossier(item.app_dossier_id)
+                props.onOpenDetail()
+              }}
+            >
+              Voir le détail
+            </button>
+          </div>
+        </article>
+      ))}
+    </section>
   )
 }
 
