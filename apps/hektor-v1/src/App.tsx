@@ -55,6 +55,19 @@ const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
+
+function detailVariantForScreen(screen: Screen): 'annonce' | 'mandat' | 'suivi' {
+  if (screen === 'registre') return 'mandat'
+  if (screen === 'suivi') return 'suivi'
+  return 'annonce'
+}
+
+function detailEyebrowForScreen(screen: Screen) {
+  if (screen === 'registre') return 'Detail mandat'
+  if (screen === 'suivi') return 'Detail suivi'
+  if (screen === 'estimations') return 'Detail estimation'
+  return 'Detail annonce'
+}
 const dossierPageSize = 50
 const mandatPageSize = 50
 const workItemPageSize = 25
@@ -4158,7 +4171,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 eyebrow="Mobile"
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
-                detailVariant={screen === 'mandats' ? 'mandat' : screen === 'suivi' ? 'suivi' : 'annonce'}
+                detailVariant={detailVariantForScreen(screen)}
                 allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
@@ -4886,10 +4899,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onOpenRequestModal={openRequestModal}
                 onOpenDiffusionModal={openDiffusionModal}
                 detailLoading={detailLoading}
-                eyebrow={screen === 'mandats' ? 'Detail mandat' : screen === 'suivi' ? 'Detail suivi' : screen === 'estimations' ? 'Detail estimation' : 'Detail annonce'}
+                eyebrow={detailEyebrowForScreen(screen)}
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
-                detailVariant={screen === 'mandats' ? 'mandat' : screen === 'suivi' ? 'suivi' : 'annonce'}
+                detailVariant={detailVariantForScreen(screen)}
                 allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
