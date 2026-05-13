@@ -1112,6 +1112,13 @@ function requestLastMessage(request: DiffusionRequest | null) {
   return request.processing_comment || request.admin_response || request.refusal_reason || request.request_reason || request.request_comment || 'Sans message'
 }
 
+function requestNumberLabel(request: DiffusionRequest | null | undefined) {
+  const value = safeText(request?.id)
+  if (!value) return '-'
+  if (value.startsWith('local-')) return value.replace(/^local-/, '')
+  return value.length > 8 ? value.slice(0, 8) : value
+}
+
 function requestLastActionAt(request: DiffusionRequest | null) {
   return request?.processed_at ?? request?.requested_at ?? null
 }
@@ -6755,7 +6762,7 @@ function SuiviMandatsScreenV2Legacy(props: {
                   {visibleRequests.map((item) => {
                     return (
                       <tr key={item.id} className={item.id === selectedRequest?.id ? 'is-selected' : ''} onClick={() => { setSelectedRequestId(item.id); setSelectedMandatId(item.app_dossier_id) }}>
-                        <td><strong>{requestTypeLabel(item.request_type)}</strong><span>{item.numero_mandat ?? item.numero_dossier ?? '-'}</span><span>{formatDate(item.requested_at)}</span></td>
+                        <td><strong>{requestTypeLabel(item.request_type)}</strong><span>N° demande {requestNumberLabel(item)}</span><span>{item.numero_mandat ?? item.numero_dossier ?? '-'}</span><span>{formatDate(item.requested_at)}</span></td>
                         <td>{item.requested_by_name ?? item.requested_by_label ?? item.commercial_nom ?? '-'}</td>
                         <td><strong>{item.titre_bien}</strong><span>{item.numero_dossier ?? '-'}</span></td>
                         <td><small>{requestStatusLabel(item.request_status)}</small><small>{item.processed_by_name ?? item.processed_by_label ?? '-'}</small></td>
@@ -6875,14 +6882,18 @@ function SuiviMandatsScreenV2(props: {
           const priceDropRequest = props.requests
             .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_baisse_prix' && request.request_status === 'accepted')
             .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
-          return [diffusionRequest, priceDropRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+          const cancellationRequest = props.requests
+            .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_annulation_mandat' && request.request_status === 'accepted')
+            .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
+          return [diffusionRequest, priceDropRequest, cancellationRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
         })
     : props.mandats
         .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
         .flatMap((item) => {
           const diffusionRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
           const priceDropRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_baisse_prix')
-          return [diffusionRequest, priceDropRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+          const cancellationRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_annulation_mandat')
+          return [diffusionRequest, priceDropRequest, cancellationRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
         })
 
   const pendingRows = requestRowsSource.filter((row) => row.request.request_status === 'pending' || row.request.request_status === 'in_progress')
@@ -6965,7 +6976,7 @@ function SuiviMandatsScreenV2(props: {
   const primarySuiviKpis = suiviKpis.filter((item) => ['À traiter', 'Anomalies', 'Alerte prix'].includes(item.label))
   const secondarySuiviKpis = suiviKpis.filter((item) => ['Acceptées', 'Refusées', 'Portefeuille'].includes(item.label))
   const suiviPriorities = [
-    { key: 'pending_or_in_progress' as const, label: 'À traiter', value: pendingRows.length, detail: 'Demandes de diffusion ou de baisse à décider', tone: 'demandes' },
+    { key: 'pending_or_in_progress' as const, label: 'À traiter', value: pendingRows.length, detail: 'Demandes de diffusion, baisse ou annulation à décider', tone: 'demandes' },
     { key: 'anomalies' as const, label: 'Anomalies', value: anomalyRows.length, detail: 'Mandats ou diffusions à corriger', tone: 'warning' },
     { key: 'price_alert' as const, label: 'Alerte prix', value: priceAlertRows.length, detail: 'Baisses à contrôler dans Hektor', tone: 'diffusion' },
   ]
@@ -7168,7 +7179,7 @@ function SuiviMandatsScreenV2(props: {
               <tbody>
                 {suiviRequestRows.length > 0 ? suiviRequestRows.map(({ mandat: item, request: activeRequest }) => (
                   <tr key={`${item.app_dossier_id}-${activeRequest.id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
-                    <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>{formatDate(activeRequest.requested_at)}</span></td>
+                    <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>N° demande {requestNumberLabel(activeRequest)}</span><span>{formatDate(activeRequest.requested_at)}</span></td>
                     <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                     <td>{commercialDisplay(item)}</td>
                     <td><small>{requestStatusLabel(activeRequest.request_status)}</small><StatusPill value={item.statut_annonce} /></td>
