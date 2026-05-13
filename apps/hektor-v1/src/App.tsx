@@ -66,6 +66,8 @@ type UpdateDiffusionRequestAction = {
   relaunchCount: number
   priceDropChecked?: boolean
   publishAfterPriceDrop?: boolean
+  validationChecked?: boolean
+  runValidationWorkflow?: boolean
 }
 
 function detailVariantForScreen(screen: Screen): 'annonce' | 'mandat' | 'suivi' {
@@ -1053,6 +1055,13 @@ function buildHektorAnnonceUrl(hektorAnnonceId: number | string | null | undefin
   return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(id)}`
 }
 
+function buildHektorMandatPrixUrl(hektorAnnonceId: number | string | null | undefined) {
+  if (hektorAnnonceId == null || hektorAnnonceId === '') return null
+  const id = String(hektorAnnonceId).trim()
+  if (!id) return null
+  return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(id)}`
+}
+
 function buildAppointmentAnnonceUrl(
   dossier: Pick<Dossier, 'hektor_annonce_id'> | Pick<MandatRecord, 'hektor_annonce_id'> | null | undefined,
   detail?: DossierDetailPayload | null,
@@ -1406,6 +1415,12 @@ function pageLabel(total: number, pageSize: number, page: number) {
 
 function openHektorAnnonce(hektorAnnonceId: number | string | null | undefined) {
   const url = buildHektorAnnonceUrl(hektorAnnonceId)
+  if (!url) return
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+function openHektorMandatPrix(hektorAnnonceId: number | string | null | undefined) {
+  const url = buildHektorMandatPrixUrl(hektorAnnonceId)
   if (!url) return
   window.open(url, '_blank', 'noopener,noreferrer')
 }
@@ -2348,6 +2363,14 @@ export default function App() {
     observedPrice?: number | null
     pendingAction?: UpdateDiffusionRequestAction
   }>(null)
+  const [validationCheckPrompt, setValidationCheckPrompt] = useState<null | {
+    kind: 'mismatch' | 'confirmed'
+    title: string
+    message: string
+    detail?: string | null
+    hektorAnnonceId: number | string | null
+    pendingAction?: UpdateDiffusionRequestAction
+  }>(null)
   const [diffusionModalOpen, setDiffusionModalOpen] = useState(false)
   const [diffusionModalMandatId, setDiffusionModalMandatId] = useState<number | null>(null)
   const [diffusionDraftTargets, setDiffusionDraftTargets] = useState<Record<string, boolean>>({})
@@ -2875,6 +2898,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestModalDecision(role === 'pauline' ? 'in_progress' : 'pending')
     setRequestModalRefusalReason('')
     setPriceDropCheckPrompt(null)
+    setValidationCheckPrompt(null)
     setRequestModalOpen(true)
   }
 
@@ -2888,6 +2912,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestModalDecision('in_progress')
     setRequestModalRefusalReason('')
     setPriceDropCheckPrompt(null)
+    setValidationCheckPrompt(null)
   }
 
   function openDiffusionModal(appDossierId: number) {
@@ -3017,6 +3042,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         return
       }
       setPriceDropCheckPrompt(null)
+      const isClassicValidationApproval =
+        input.status === 'accepted' &&
+        currentRequest &&
+        !isPriceDropRequest(currentRequest.request_type)
+      if (isClassicValidationApproval && !input.validationChecked) {
+        setValidationCheckPrompt({
+          kind: 'confirmed',
+          title: 'Lancer la validation Hektor ?',
+          message: 'Cette action va accepter la demande, demander Validation = oui, activer Diffusable puis appliquer les passerelles par defaut.',
+          detail: 'Clique sur Non pour accepter la demande sans lancer l automatisme Hektor.',
+          hektorAnnonceId: currentRequest.hektor_annonce_id,
+          pendingAction: { ...input, validationChecked: true },
+        })
+        return
+      }
+      setValidationCheckPrompt(null)
       if (input.status === 'accepted' && currentRequest) {
         if (isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop) {
           if (!currentMandat) {
@@ -3050,13 +3091,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 : 'Activation passerelles refusee par Hektor. La demande reste en attente.',
             )
           }
-        } else if (!isPriceDropRequest(currentRequest.request_type)) {
+        } else if (!isPriceDropRequest(currentRequest.request_type) && input.runValidationWorkflow !== false) {
           if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
             acceptanceInfoMessage = "Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation."
           }
           acceptanceResult = await acceptDiffusionRequestOnHektor({
             appDossierId: currentRequest.app_dossier_id,
           })
+          if ((acceptanceResult.failed ?? []).length > 0) {
+            const failureDetails = summarizeApplyFailures(acceptanceResult.failed)
+            setValidationCheckPrompt({
+              kind: 'mismatch',
+              title: 'Opération refusée par Hektor',
+              message: 'La demande n a pas ete acceptee : Hektor a refuse la validation ou l activation des passerelles.',
+              detail: failureDetails || acceptanceResult.waiting_message || null,
+              hektorAnnonceId: currentRequest.hektor_annonce_id,
+            })
+            return
+          }
+        } else if (!isPriceDropRequest(currentRequest.request_type)) {
+          acceptanceInfoMessage = 'Demande acceptee sans lancement de la validation Hektor.'
         }
       }
       await updateDiffusionRequest({
@@ -3236,7 +3290,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         const lateError = error instanceof Error ? error.message : 'Erreur reseau apres validation'
         setErrorMessage(`Decision enregistree, mais une relecture secondaire a echoue : ${lateError}`)
       } else {
-        setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour de demande')
+        const currentRequest = diffusionRequests.find((item) => item.id === input.requestId) ?? null
+        const message = error instanceof Error ? error.message : 'Erreur de mise a jour de demande'
+        if (input.status === 'accepted' && currentRequest && !isPriceDropRequest(currentRequest.request_type)) {
+          setValidationCheckPrompt({
+            kind: 'mismatch',
+            title: 'Opération refusée par Hektor',
+            message: 'La demande n a pas ete acceptee : Hektor a bloque la validation ou la diffusion.',
+            detail: message,
+            hektorAnnonceId: currentRequest.hektor_annonce_id,
+          })
+        } else {
+          setErrorMessage(message)
+        }
       }
     } finally {
       setRequestLoading(false)
@@ -5213,6 +5279,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       onChange={(event) => {
                         setRequestModalDecision(event.target.value)
                         setPriceDropCheckPrompt(null)
+                        setValidationCheckPrompt(null)
                       }}
                     >
                       <option value="in_progress">A traiter</option>
@@ -5244,7 +5311,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       followUpDays: requestModalDecision === 'refused' ? 2 : 0,
                       relaunchCount: requestModalRequest.relaunch_count ?? 0,
                     })}
-                    disabled={requestLoading || (requestModalDecision === 'accepted' && priceDropCheckPrompt?.kind === 'confirmed') || (requestModalDecision === 'refused' && !requestModalRefusalReason)}
+                    disabled={
+                      requestLoading ||
+                      (requestModalDecision === 'accepted' && priceDropCheckPrompt?.kind === 'confirmed') ||
+                      (requestModalDecision === 'accepted' && validationCheckPrompt?.kind === 'confirmed') ||
+                      (requestModalDecision === 'refused' && !requestModalRefusalReason)
+                    }
                   >
                     {requestLoading ? 'Enregistrement...' : requestModalDecision === 'accepted' ? (requestModalEffectiveType === 'demande_baisse_prix' ? 'Approuver la baisse' : 'Accepter') : requestModalDecision === 'refused' ? 'Refuser' : 'Enregistrer le traitement'}
                   </button>
@@ -5296,7 +5368,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <button
                       className="ghost-button button-primary"
                       type="button"
-                      onClick={() => openHektorAnnonce(priceDropCheckPrompt.hektorAnnonceId)}
+                      onClick={() => openHektorMandatPrix(priceDropCheckPrompt.hektorAnnonceId)}
                     >
                       Lien Hektor
                     </button>
@@ -5323,6 +5395,72 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         ...priceDropCheckPrompt.pendingAction,
                         priceDropChecked: true,
                         publishAfterPriceDrop: true,
+                      })}
+                    >
+                      Oui
+                    </button>
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {validationCheckPrompt && requestModalOpen && requestModalEffectiveType !== 'demande_baisse_prix' ? (
+          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
+            <section
+              className={`price-drop-popup price-drop-popup-${validationCheckPrompt.kind}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="validation-popup-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="price-drop-popup-icon" aria-hidden="true" />
+              <p className="price-drop-popup-eyebrow">Validation Hektor</p>
+              <h3 id="validation-popup-title">{validationCheckPrompt.title}</h3>
+              <p className="price-drop-popup-message">{validationCheckPrompt.message}</p>
+              {validationCheckPrompt.detail ? (
+                <p className="price-drop-popup-detail">{validationCheckPrompt.detail}</p>
+              ) : null}
+              <div className="price-drop-popup-actions">
+                {validationCheckPrompt.kind === 'mismatch' ? (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      onClick={() => setValidationCheckPrompt(null)}
+                    >
+                      Fermer
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      onClick={() => openHektorMandatPrix(validationCheckPrompt.hektorAnnonceId)}
+                    >
+                      Lien Hektor
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      disabled={requestLoading || !validationCheckPrompt.pendingAction}
+                      onClick={() => validationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...validationCheckPrompt.pendingAction,
+                        validationChecked: true,
+                        runValidationWorkflow: false,
+                      })}
+                    >
+                      Non
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      disabled={requestLoading || !validationCheckPrompt.pendingAction}
+                      onClick={() => validationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...validationCheckPrompt.pendingAction,
+                        validationChecked: true,
+                        runValidationWorkflow: true,
                       })}
                     >
                       Oui

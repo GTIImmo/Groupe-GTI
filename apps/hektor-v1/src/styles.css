@@ -603,8 +603,8 @@ body {
 }
 
 .price-drop-popup-confirmed .price-drop-popup-icon::before {
-  content: "👍";
-  font-size: 30px;
+  content: "OK";
+  font-size: 22px;
 }
 
 .price-drop-popup-eyebrow {
@@ -628,6 +628,19 @@ body {
   color: #425866;
   font-size: 15px;
   line-height: 1.45;
+}
+
+.price-drop-popup-detail {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(211, 221, 228, 0.95);
+  border-radius: 8px;
+  background: #f7fafb;
+  color: #536a78;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .price-drop-popup-prices {
