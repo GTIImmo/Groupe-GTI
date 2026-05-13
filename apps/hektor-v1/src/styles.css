@@ -4292,6 +4292,7 @@ tbody tr.is-refreshing-row td {
 .detail-mini-portal.is-gti { background: #183f4a; }
 .detail-mini-portal.is-seloger { background: #e32227; }
 .detail-mini-portal.is-generic { background: #607481; }
+.detail-mini-portal.is-overflow { background: #102a33; }
 .detail-side-quick {
   border-color: rgba(213, 224, 230, 0.96);
   background: #fff;

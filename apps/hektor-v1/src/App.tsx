@@ -1700,6 +1700,22 @@ function portalBrandClass(value: string | null | undefined) {
   return 'is-generic'
 }
 
+function portalSummaryPriority(value: string | null | undefined) {
+  const normalized = normalizePortalToken(value).replace(/\s+/g, '')
+  if (normalized.includes('leboncoin') || normalized.includes('lbc')) return 0
+  if (normalized.includes('bienici')) return 1
+  if (normalized.includes('gti') || normalized.includes('sitegti')) return 2
+  return 3
+}
+
+function sortSummaryPortals(values: string[]) {
+  return [...values].sort((left, right) => {
+    const priorityGap = portalSummaryPriority(left) - portalSummaryPriority(right)
+    if (priorityGap !== 0) return priorityGap
+    return left.localeCompare(right, 'fr', { sensitivity: 'base' })
+  })
+}
+
 type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history'
 type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor'
 
@@ -7079,6 +7095,10 @@ function DossierDetailLayout(props: {
   const showDiffusionPilot = adminPilotSurface === 'diffusion' || adminPilotSurface === 'both'
   const observedPortals = uniquePortalKeys((dossier.portails_resume ?? '').split(','))
   const activePortals = uniquePortalKeys([...observedPortals, ...(props.pendingPortalKeys ?? [])])
+  const summaryPortals = sortSummaryPortals(activePortals)
+  const visibleSummaryPortals = summaryPortals.slice(0, 4)
+  const activePortalTotal = Math.max(activePortals.length, Number(dossier.nb_portails_actifs) || 0)
+  const hiddenSummaryPortalCount = Math.max(0, activePortalTotal - visibleSummaryPortals.length)
   const portalSyncPending = (props.pendingPortalKeys ?? []).some((portal) => !observedPortals.includes(portal))
   const previewImages = props.images.slice(0, 5)
   const primaryImage = previewImages[0]?.url ?? dossier.photo_url_listing ?? null
@@ -7244,7 +7264,7 @@ function DossierDetailLayout(props: {
                         <div><span>Statut annonce</span><StatusPill value={dossier.statut_annonce ?? '-'} /></div>
                         <div><span>Mandat</span><StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} /></div>
                         <div><span>Diffusable</span><StatusPill value={diffusableLabel(dossier.diffusable)} /></div>
-                        <div><span>Passerelles</span><strong>{activePortals.length ? `${activePortals.length} actif${activePortals.length > 1 ? 's' : ''}` : 'Aucune'}</strong></div>
+                        <div><span>Passerelles</span><strong>{activePortalTotal ? `${activePortalTotal} actif${activePortalTotal > 1 ? 's' : ''}` : 'Aucune'}</strong></div>
                       </div>
                     </article>
                     <article className="detail-summary-card is-visibility">
@@ -7252,11 +7272,12 @@ function DossierDetailLayout(props: {
                         <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="visibility" /></span>
                         <h5>Visibilite</h5>
                       </div>
-                      <strong>{activePortals.length ? `${activePortals.length} portail${activePortals.length > 1 ? 's' : ''} actif${activePortals.length > 1 ? 's' : ''}` : 'Aucun portail actif'}</strong>
+                      <strong>{activePortalTotal ? `${activePortalTotal} portail${activePortalTotal > 1 ? 's' : ''} actif${activePortalTotal > 1 ? 's' : ''}` : 'Aucun portail actif'}</strong>
                       <div className="detail-mini-portals">
-                        {activePortals.length > 0 ? activePortals.slice(0, 4).map((portal) => (
+                        {visibleSummaryPortals.length > 0 ? visibleSummaryPortals.map((portal) => (
                           <span key={`summary-${portal}`} className={`detail-mini-portal ${portalBrandClass(portal)}`}>{portalBrandLabel(portal)}</span>
                         )) : <span className="detail-mini-portal is-generic">Aucune</span>}
+                        {hiddenSummaryPortalCount > 0 ? <span className="detail-mini-portal is-overflow">+{hiddenSummaryPortalCount}</span> : null}
                       </div>
                     </article>
                   </div>
