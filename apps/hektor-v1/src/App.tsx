@@ -70,6 +70,8 @@ type UpdateDiffusionRequestAction = {
   publishAfterPriceDrop?: boolean
   validationChecked?: boolean
   runValidationWorkflow?: boolean
+  cancellationChecked?: boolean
+  unpublishAfterCancellation?: boolean
 }
 
 function detailVariantForScreen(screen: Screen): 'annonce' | 'mandat' | 'suivi' {
@@ -2482,6 +2484,14 @@ export default function App() {
     hektorAnnonceId: number | string | null
     pendingAction?: UpdateDiffusionRequestAction
   }>(null)
+  const [cancellationCheckPrompt, setCancellationCheckPrompt] = useState<null | {
+    kind: 'confirmed'
+    title: string
+    message: string
+    detail?: string | null
+    hektorAnnonceId: number | string | null
+    pendingAction?: UpdateDiffusionRequestAction
+  }>(null)
   const [diffusionModalOpen, setDiffusionModalOpen] = useState(false)
   const [diffusionModalMandatId, setDiffusionModalMandatId] = useState<number | null>(null)
   const [diffusionDraftTargets, setDiffusionDraftTargets] = useState<Record<string, boolean>>({})
@@ -3012,6 +3022,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestModalRefusalReason('')
     setPriceDropCheckPrompt(null)
     setValidationCheckPrompt(null)
+    setCancellationCheckPrompt(null)
     setRequestModalOpen(true)
   }
 
@@ -3026,6 +3037,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestModalRefusalReason('')
     setPriceDropCheckPrompt(null)
     setValidationCheckPrompt(null)
+    setCancellationCheckPrompt(null)
   }
 
   function openDiffusionModal(appDossierId: number) {
@@ -3134,6 +3146,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (currentRequest && currentRequestType === 'demande_annulation_mandat') {
         setPriceDropCheckPrompt(null)
         setValidationCheckPrompt(null)
+        if (input.status === 'accepted' && !input.cancellationChecked) {
+          setCancellationCheckPrompt({
+            kind: 'confirmed',
+            title: 'Finaliser l annulation ?',
+            message: 'Demande d annulation acceptee. Voulez vous decocher Valide et Diffuse sur l annonce ?',
+            detail: 'Oui lance le decochement Hektor. Non accepte la demande sans automatisme Hektor.',
+            hektorAnnonceId: currentRequest.hektor_annonce_id,
+            pendingAction: { ...input, cancellationChecked: true },
+          })
+          return
+        }
+        setCancellationCheckPrompt(null)
         await updateDiffusionRequest({
           id: input.requestId,
           status: input.status,
@@ -3146,7 +3170,46 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           processorLabel: profile.display_name ?? profile.email,
         })
         mutationCommitted = true
-        if (input.status === 'accepted') {
+        if (input.status === 'accepted' && input.unpublishAfterCancellation) {
+          acceptanceInfoMessage = 'Demande d annulation de mandat acceptee.'
+          try {
+            const diffusableResult = await setDossierDiffusableOnHektor({
+              appDossierId: currentRequest.app_dossier_id,
+              diffusable: false,
+            })
+            const validationResult = await setDossierValidationOnHektor({
+              appDossierId: currentRequest.app_dossier_id,
+              state: 0,
+            })
+            const observedValidation = validationResult.observed_validation
+            const validationValue =
+              observedValidation && normalizeValidationState(observedValidation)
+                ? isValidationApproved(observedValidation) ? 'oui' : 'non'
+                : 'non'
+            const observedDiffusable = validationResult.observed_diffusable ?? diffusableResult.observed_diffusable
+            const diffusableValue = isDiffusableValue(observedDiffusable) ? '1' : '0'
+            await setDossierHektorState(currentRequest.app_dossier_id, {
+              validationDiffusionState: validationValue,
+              diffusable: diffusableValue === '1',
+            })
+            const patch = { validation_diffusion_state: validationValue, diffusable: diffusableValue }
+            setDossiers((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, ...patch } : item))
+            setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, ...patch } : item))
+            setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, ...patch } : current)
+            if (selectedDossier?.app_dossier_id === currentRequest.app_dossier_id) {
+              setDetailValidationDraft(validationValue)
+              setDetailValidationObserved(validationValue)
+              setDetailValidationSaved(validationValue)
+              setDetailDiffusableDraft(diffusableValue === '1')
+              setDetailDiffusableObserved(diffusableValue === '1')
+              setDetailDiffusableSaved(diffusableValue === '1')
+            }
+            acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Valide et Diffuse ont ete decoches sur Hektor.'
+          } catch (error) {
+            const hektorError = error instanceof Error ? error.message : 'Decochement Hektor impossible'
+            acceptanceInfoMessage = `Demande d annulation de mandat acceptee, mais Valide/Diffuse n ont pas pu etre decoches : ${hektorError}`
+          }
+        } else if (input.status === 'accepted') {
           acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.'
         }
         closeRequestModal()
@@ -3207,6 +3270,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         }
         return
       }
+      setCancellationCheckPrompt(null)
       const isPriceDropApproval = input.status === 'accepted' && currentRequest && currentRequestType === 'demande_baisse_prix'
       if (isPriceDropApproval && !input.priceDropChecked) {
         const requestedPrice = extractRequestedPriceFromRequest(currentRequest)
@@ -5545,6 +5609,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         setRequestModalDecision(event.target.value)
                         setPriceDropCheckPrompt(null)
                         setValidationCheckPrompt(null)
+                        setCancellationCheckPrompt(null)
                       }}
                     >
                       <option value="in_progress">A traiter</option>
@@ -5581,6 +5646,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       requestLoading ||
                       (requestModalDecision === 'accepted' && priceDropCheckPrompt?.kind === 'confirmed') ||
                       (requestModalDecision === 'accepted' && validationCheckPrompt?.kind === 'confirmed') ||
+                      (requestModalDecision === 'accepted' && cancellationCheckPrompt?.kind === 'confirmed') ||
                       (requestModalDecision === 'refused' && !requestModalRefusalReason)
                     }
                   >
@@ -5738,6 +5804,51 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </button>
                   </>
                 )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {cancellationCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_annulation_mandat' ? (
+          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
+            <section
+              className="price-drop-popup price-drop-popup-confirmed"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cancellation-popup-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="price-drop-popup-icon" aria-hidden="true" />
+              <p className="price-drop-popup-eyebrow">Annulation mandat</p>
+              <h3 id="cancellation-popup-title">{cancellationCheckPrompt.title}</h3>
+              <p className="price-drop-popup-message">{cancellationCheckPrompt.message}</p>
+              {cancellationCheckPrompt.detail ? (
+                <p className="price-drop-popup-detail">{cancellationCheckPrompt.detail}</p>
+              ) : null}
+              <div className="price-drop-popup-actions">
+                <button
+                  className="ghost-button button-subtle"
+                  type="button"
+                  disabled={requestLoading || !cancellationCheckPrompt.pendingAction}
+                  onClick={() => cancellationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                    ...cancellationCheckPrompt.pendingAction,
+                    cancellationChecked: true,
+                    unpublishAfterCancellation: false,
+                  })}
+                >
+                  Non
+                </button>
+                <button
+                  className="ghost-button button-primary"
+                  type="button"
+                  disabled={requestLoading || !cancellationCheckPrompt.pendingAction}
+                  onClick={() => cancellationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                    ...cancellationCheckPrompt.pendingAction,
+                    cancellationChecked: true,
+                    unpublishAfterCancellation: true,
+                  })}
+                >
+                  Oui
+                </button>
               </div>
             </section>
           </div>
