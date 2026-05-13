@@ -531,15 +531,29 @@ function matchesRequestType(requestType: string | null | undefined, filterValue:
   return true
 }
 
-function buildLatestRequestStatusMap(rows: Array<{ app_dossier_id: number; request_status: string | null; request_type?: string | null; requested_at?: string | null; created_at?: string | null }>) {
-  const latestByDossier = new Map<number, { request_status: string | null; request_type?: string | null; requested_at?: string | null; created_at?: string | null }>()
+function buildLatestRequestRowsByDossierAndType<T extends { app_dossier_id: number; request_type?: string | null; requested_at?: string | null; created_at?: string | null }>(rows: T[]) {
+  const latestByDossier = new Map<number, Map<string, T>>()
   for (const row of rows) {
-    const current = latestByDossier.get(row.app_dossier_id)
+    const normalizedType = normalizeBusinessState(row.request_type) || 'demande_diffusion'
+    const byType = latestByDossier.get(row.app_dossier_id) ?? new Map<string, T>()
+    const current = byType.get(normalizedType)
     const nextDate = new Date(row.requested_at ?? row.created_at ?? 0).getTime()
     const currentDate = current ? new Date(current.requested_at ?? current.created_at ?? 0).getTime() : 0
-    if (!current || nextDate >= currentDate) latestByDossier.set(row.app_dossier_id, row)
+    if (!current || nextDate >= currentDate) byType.set(normalizedType, row)
+    latestByDossier.set(row.app_dossier_id, byType)
   }
   return latestByDossier
+}
+
+function latestRequestRowsMatchScope(
+  rows: Array<{ request_status: string | null; request_type?: string | null }>,
+  requestScope: string,
+  requestType: string,
+) {
+  const scopedRows = requestType ? rows.filter((row) => matchesRequestType(row.request_type ?? null, requestType)) : rows
+  if (!requestScope && !requestType) return true
+  if (scopedRows.length === 0) return false
+  return scopedRows.some((row) => matchesRequestScope(row.request_status, requestScope))
 }
 
 function latestRequestRowsByDossierAndType<T extends { app_dossier_id: number; request_type?: string | null; requested_at?: string | null; created_at?: string | null }>(
@@ -577,11 +591,11 @@ async function resolveRequestScopedDossierIds(filters: AppFilters, scope?: DataS
 
   if (!hasSupabaseEnv || !supabase) {
     const baseRows = applyLocalDossierFilters(filterByNegotiatorEmail(mockDossiers, scope), { ...filters, requestScope: allFilterValue })
-    const latestByDossier = buildLatestRequestStatusMap(readLocalDiffusionRequests())
+    const latestByDossierAndType = buildLatestRequestRowsByDossierAndType(readLocalDiffusionRequests())
     return baseRows
       .filter((item) => {
-        const latest = latestByDossier.get(item.app_dossier_id)
-        return matchesRequestScope(latest?.request_status, requestScope) && matchesRequestType(latest?.request_type ?? null, requestType)
+        const latestRows = Array.from(latestByDossierAndType.get(item.app_dossier_id)?.values() ?? [])
+        return latestRequestRowsMatchScope(latestRows, requestScope, requestType)
       })
       .map((item) => item.app_dossier_id)
   }
@@ -620,10 +634,10 @@ async function resolveRequestScopedDossierIds(filters: AppFilters, scope?: DataS
     requestRows.push(...(data as typeof requestRows))
   }
 
-  const latestByDossier = buildLatestRequestStatusMap(requestRows)
+  const latestByDossierAndType = buildLatestRequestRowsByDossierAndType(requestRows)
   return baseIds.filter((appDossierId) => {
-    const latest = latestByDossier.get(appDossierId)
-    return matchesRequestScope(latest?.request_status, requestScope) && matchesRequestType(latest?.request_type ?? null, requestType)
+    const latestRows = Array.from(latestByDossierAndType.get(appDossierId)?.values() ?? [])
+    return latestRequestRowsMatchScope(latestRows, requestScope, requestType)
   })
 }
 
@@ -756,7 +770,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
   const passerelle = normalizeFilterValue(filters.passerelle)
   const erreurDiffusion = normalizeFilterValue(filters.erreurDiffusion)
   const priority = normalizeFilterValue(filters.priority)
-  const latestByDossier = requestScope || requestType ? buildLatestRequestStatusMap(readLocalDiffusionRequests()) : null
+  const latestByDossierAndType = requestScope || requestType ? buildLatestRequestRowsByDossierAndType(readLocalDiffusionRequests()) : null
 
   return rows.filter((item) => {
     const text = `${item.titre_bien} ${item.numero_dossier ?? ''} ${item.numero_mandat ?? ''} ${item.commercial_nom ?? ''} ${item.agence_nom ?? ''} ${item.ville ?? ''} ${item.mandants_texte ?? ''}`.toLowerCase()
@@ -783,8 +797,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
       hasAffaire &&
       (!offreStatus || (offreStatus === 'en_cours' ? hasOffreAchatEnCours(item) : hasOffreAchatRefusee(item))) &&
       (!compromisStatus || (compromisStatus === 'en_cours' ? hasCompromisEnCours(item) : hasCompromisAnnule(item))) &&
-      (!requestScope || matchesRequestScope(latestByDossier?.get(item.app_dossier_id)?.request_status, requestScope)) &&
-      (!requestType || matchesRequestType(latestByDossier?.get(item.app_dossier_id)?.request_type, requestType)) &&
+      (!(requestScope || requestType) || latestRequestRowsMatchScope(Array.from(latestByDossierAndType?.get(item.app_dossier_id)?.values() ?? []), requestScope, requestType)) &&
       (!statut || (statut === activeListingsFilterValue ? activeListingStatuses.includes(item.statut_annonce ?? '') : (item.statut_annonce ?? '') === statut)) &&
       (!validationDiffusion ||
         (validationDiffusion === '__validated__'
