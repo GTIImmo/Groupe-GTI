@@ -59,6 +59,7 @@ type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type UpdateDiffusionRequestAction = {
   requestId: string
+  requestType?: BusinessRequestType
   status: string
   response: string
   refusalReason: string
@@ -504,8 +505,13 @@ function requestPendingLabel(value: string | null | undefined) {
 
 function normalizeRequestType(value: string | null | undefined): BusinessRequestType {
   const normalized = (value ?? '').trim().toLowerCase()
-  if (normalized === 'demande_baisse_prix') return 'demande_baisse_prix'
-  if (normalized === 'demande_annulation_mandat') return 'demande_annulation_mandat'
+  if (normalized === 'demande_baisse_prix' || normalized === 'baisse_prix' || normalized === 'price_drop') return 'demande_baisse_prix'
+  if (
+    normalized === 'demande_annulation_mandat' ||
+    normalized === 'annulation_mandat' ||
+    normalized === 'demande_annulation' ||
+    normalized === 'mandate_cancellation'
+  ) return 'demande_annulation_mandat'
   return 'demande_diffusion'
 }
 
@@ -985,12 +991,13 @@ function buildMandatActionModel(input: {
   onBeforeAction?: () => void
 }): { hasMandat: boolean; triggerTone: ActionTriggerTone; items: MandatActionItemModel[] } {
   const hasMandat = Boolean((input.mandat.numero_mandat ?? '').trim())
-  const canOpenDiffusion = isValidationApproved(input.mandat.validation_diffusion_state)
-  const canRequestPriceDrop = isValidationApproved(input.mandat.validation_diffusion_state)
-  const canRequestCancellation = isValidationApproved(input.mandat.validation_diffusion_state)
   const activeDiffusionRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_diffusion')
   const activePriceDropRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_baisse_prix')
   const activeCancellationRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_annulation_mandat')
+  const hasValidationApproval = isValidationApproved(input.mandat.validation_diffusion_state)
+  const canOpenDiffusion = hasValidationApproval
+  const canRequestPriceDrop = hasValidationApproval || Boolean(activePriceDropRequest)
+  const canRequestCancellation = hasValidationApproval || Boolean(activeCancellationRequest)
   const rowRequestType = normalizeRequestType(input.currentRequest?.request_type)
   const run = (event: { stopPropagation(): void }, action: () => void) => {
     event.stopPropagation()
@@ -3116,12 +3123,91 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestLoading(true)
     setErrorMessage(null)
     let mutationCommitted = false
+    let requestTypeForCatch: BusinessRequestType | null = null
     try {
       const currentRequest = diffusionRequests.find((item) => item.id === input.requestId) ?? null
       const currentMandat = currentRequest ? mandats.find((item) => item.app_dossier_id === currentRequest.app_dossier_id) ?? null : null
+      const currentRequestType = normalizeRequestType(input.requestType ?? currentRequest?.request_type)
+      requestTypeForCatch = currentRequestType
       let acceptanceResult: Awaited<ReturnType<typeof acceptDiffusionRequestOnHektor>> | Awaited<ReturnType<typeof applyDiffusionTargetsOnHektor>> | null = null
       let acceptanceInfoMessage: string | null = null
-      const isPriceDropApproval = input.status === 'accepted' && currentRequest && isPriceDropRequest(currentRequest.request_type)
+      if (currentRequest && currentRequestType === 'demande_annulation_mandat') {
+        setPriceDropCheckPrompt(null)
+        setValidationCheckPrompt(null)
+        await updateDiffusionRequest({
+          id: input.requestId,
+          status: input.status,
+          response: input.response,
+          refusalReason: input.refusalReason,
+          followUpNeeded: input.followUpNeeded,
+          followUpAt: input.followUpNeeded ? addDaysIso(input.followUpDays) : null,
+          relaunchCount: input.relaunchCount,
+          processorId: profile.id,
+          processorLabel: profile.display_name ?? profile.email,
+        })
+        mutationCommitted = true
+        if (input.status === 'accepted') {
+          acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.'
+        }
+        closeRequestModal()
+        try {
+          setDiffusionRequests(await loadDiffusionRequests())
+        } catch (error) {
+          const refreshError = error instanceof Error ? error.message : 'rafraichissement des demandes impossible'
+          acceptanceInfoMessage = acceptanceInfoMessage
+            ? `${acceptanceInfoMessage} Rafraichissement des demandes impossible : ${refreshError}`
+            : `Decision enregistree, mais rafraichissement des demandes impossible : ${refreshError}`
+        }
+        try {
+          setDiffusionRequestEvents(await loadDiffusionRequestEvents().catch(() => []))
+        } catch (error) {
+          const eventsError = error instanceof Error ? error.message : 'rafraichissement de l historique impossible'
+          acceptanceInfoMessage = acceptanceInfoMessage
+            ? `${acceptanceInfoMessage} Historique non recharge : ${eventsError}`
+            : `Decision enregistree, mais historique non recharge : ${eventsError}`
+        }
+        const decisionEmail = buildDiffusionDecisionEmail({
+          status: input.status,
+          requestType: currentRequestType,
+          negociateurEmail:
+            currentMandat?.app_dossier_id === currentRequest.app_dossier_id
+              ? currentMandat?.negociateur_email ?? null
+              : selectedDossier?.app_dossier_id === currentRequest.app_dossier_id
+                ? selectedDossier?.negociateur_email ?? null
+                : null,
+          processorLabel: userFullName(profile),
+          processorEmail: profile.email,
+          appDossierId: currentRequest.app_dossier_id,
+          mandat:
+            currentMandat?.app_dossier_id === currentRequest.app_dossier_id
+              ? currentMandat
+              : selectedDossier?.app_dossier_id === currentRequest.app_dossier_id
+                ? selectedDossier
+                : null,
+          response: input.response,
+          refusalReason: input.refusalReason,
+        })
+        if (!decisionEmail && (input.status === 'accepted' || input.status === 'refused')) {
+          acceptanceInfoMessage = acceptanceInfoMessage
+            ? `${acceptanceInfoMessage} Email commercial non envoye : aucun negociateur email sur ce dossier`
+            : 'Decision enregistree, mais email commercial non envoye : aucun negociateur email sur ce dossier'
+        }
+        if (decisionEmail) {
+          try {
+            await sendDiffusionDecisionEmail(decisionEmail)
+          } catch (error) {
+            const mailError = error instanceof Error ? error.message : 'Envoi email impossible'
+            acceptanceInfoMessage = acceptanceInfoMessage
+              ? `${acceptanceInfoMessage} Email commercial non envoye : ${mailError}`
+              : `Decision enregistree, mais email commercial non envoye : ${mailError}`
+          }
+        }
+        if (acceptanceInfoMessage) {
+          setErrorMessage(acceptanceInfoMessage)
+        }
+        return
+      }
+      const isPriceDropApproval = input.status === 'accepted' && currentRequest && currentRequestType === 'demande_baisse_prix'
       if (isPriceDropApproval && !input.priceDropChecked) {
         const requestedPrice = extractRequestedPriceFromRequest(currentRequest)
         if (!requestedPrice.numeric) {
@@ -3157,7 +3243,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const isClassicValidationApproval =
         input.status === 'accepted' &&
         currentRequest &&
-        isValidationRequest(currentRequest.request_type)
+        currentRequestType === 'demande_diffusion'
       if (isClassicValidationApproval && !input.validationChecked) {
         setValidationCheckPrompt({
           kind: 'confirmed',
@@ -3171,7 +3257,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
       setValidationCheckPrompt(null)
       if (input.status === 'accepted' && currentRequest) {
-        if (isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop) {
+        if (currentRequestType === 'demande_baisse_prix' && input.publishAfterPriceDrop) {
           if (!currentMandat) {
             throw new Error('Mandat introuvable pour activer les passerelles de cette baisse de prix.')
           }
@@ -3203,7 +3289,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 : 'Activation passerelles refusee par Hektor. La demande reste en attente.',
             )
           }
-        } else if (isValidationRequest(currentRequest.request_type) && input.runValidationWorkflow !== false) {
+        } else if (currentRequestType === 'demande_diffusion' && input.runValidationWorkflow !== false) {
           if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
             acceptanceInfoMessage = "Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation."
           }
@@ -3221,10 +3307,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             })
             return
           }
-        } else if (isValidationRequest(currentRequest.request_type)) {
+        } else if (currentRequestType === 'demande_diffusion') {
           acceptanceInfoMessage = 'Demande acceptee sans lancement de la validation Hektor.'
-        } else if (isMandateCancellationRequest(currentRequest.request_type)) {
-          acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.'
         }
       }
       await updateDiffusionRequest({
@@ -3240,7 +3324,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       })
       mutationCommitted = true
       if (input.status === 'accepted' && currentRequest && acceptanceResult && !acceptanceResult.waiting_on_hektor) {
-        const isPriceDropPublish = isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop
+        const isPriceDropPublish = currentRequestType === 'demande_baisse_prix' && input.publishAfterPriceDrop
         const observedDiffusable = acceptanceResult.observed_diffusable
         const currentDiffusable = currentMandat?.diffusable ?? (selectedDossier?.app_dossier_id === currentRequest.app_dossier_id ? selectedDossier.diffusable : null)
         const diffusableValue =
@@ -3280,7 +3364,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             } : current)
           }
         }
-        if (!isPriceDropPublish && isValidationRequest(currentRequest.request_type)) {
+        if (!isPriceDropPublish && currentRequestType === 'demande_diffusion') {
           await setDossierHektorState(currentRequest.app_dossier_id, {
             validationDiffusionState: validationValue,
             diffusable: diffusableValue === '1',
@@ -3328,7 +3412,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         }
       }
       if (input.status === 'accepted' && currentRequest && acceptanceResult?.waiting_on_hektor) {
-        if (isValidationRequest(currentRequest.request_type)) {
+        if (currentRequestType === 'demande_diffusion') {
           await setDossierHektorState(currentRequest.app_dossier_id, {
             validationDiffusionState: acceptanceResult.observed_validation ?? acceptanceResult.validation_state ?? currentMandat?.validation_diffusion_state ?? null,
             diffusable:
@@ -3361,7 +3445,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const decisionEmail = currentRequest
         ? buildDiffusionDecisionEmail({
             status: input.status,
-            requestType: currentRequest.request_type,
+            requestType: currentRequestType,
             negociateurEmail:
               currentMandat?.app_dossier_id === currentRequest.app_dossier_id
                 ? currentMandat?.negociateur_email ?? null
@@ -3406,7 +3490,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       } else {
         const currentRequest = diffusionRequests.find((item) => item.id === input.requestId) ?? null
         const message = error instanceof Error ? error.message : 'Erreur de mise a jour de demande'
-        if (input.status === 'accepted' && currentRequest && isValidationRequest(currentRequest.request_type)) {
+        const currentRequestType = requestTypeForCatch ?? normalizeRequestType(input.requestType ?? currentRequest?.request_type)
+        if (input.status === 'accepted' && currentRequest && currentRequestType === 'demande_diffusion') {
           setValidationCheckPrompt({
             kind: 'mismatch',
             title: 'Opération refusée par Hektor',
@@ -3955,12 +4040,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return label
   }, [requestModalRequest, requestModalEffectiveType])
   const requestModalEligibleForPriceDrop = useMemo(
-    () => isValidationApproved(requestModalMandat?.validation_diffusion_state ?? null),
-    [requestModalMandat],
+    () => isValidationApproved(requestModalMandat?.validation_diffusion_state ?? null) || (requestModalEffectiveType === 'demande_baisse_prix' && Boolean(requestModalRequest)),
+    [requestModalEffectiveType, requestModalMandat, requestModalRequest],
   )
   const requestModalEligibleForCancellation = useMemo(
-    () => isValidationApproved(requestModalMandat?.validation_diffusion_state ?? null),
-    [requestModalMandat],
+    () => isValidationApproved(requestModalMandat?.validation_diffusion_state ?? null) || (requestModalEffectiveType === 'demande_annulation_mandat' && Boolean(requestModalRequest)),
+    [requestModalEffectiveType, requestModalMandat, requestModalRequest],
   )
   const requestModalRefusalOptions = useMemo(
     () => (requestModalEffectiveType === 'demande_baisse_prix' ? priceDropRefusalReasonOptions : requestModalEffectiveType === 'demande_annulation_mandat' ? cancellationRefusalReasonOptions : refusalReasonOptions),
@@ -5484,6 +5569,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     type="button"
                     onClick={() => handleUpdateDiffusionRequest({
                       requestId: requestModalRequest.id,
+                      requestType: requestModalEffectiveType,
                       status: requestModalDecision,
                       response: requestModalComment,
                       refusalReason: requestModalRefusalReason,
