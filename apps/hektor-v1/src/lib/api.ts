@@ -527,6 +527,7 @@ function matchesRequestType(requestType: string | null | undefined, filterValue:
   if (!filterValue) return true
   if (filterValue === 'demande_diffusion') return normalized === 'demande_diffusion' || normalized === ''
   if (filterValue === 'demande_baisse_prix') return normalized === 'demande_baisse_prix'
+  if (filterValue === 'demande_annulation_mandat') return normalized === 'demande_annulation_mandat'
   return true
 }
 
@@ -2145,7 +2146,18 @@ export async function createDiffusionRequest(input: {
   requesterId: string
   requesterLabel: string | null
 }): Promise<DiffusionRequest | null> {
-  const requestType = normalizeBusinessState(input.requestType) === 'demande_baisse_prix' ? 'demande_baisse_prix' : 'demande_diffusion'
+  const normalizedType = normalizeBusinessState(input.requestType)
+  const requestType = normalizedType === 'demande_baisse_prix'
+    ? 'demande_baisse_prix'
+    : normalizedType === 'demande_annulation_mandat'
+      ? 'demande_annulation_mandat'
+      : 'demande_diffusion'
+  const createdEventLabel =
+    requestType === 'demande_baisse_prix'
+      ? 'Demande de baisse de prix envoyee'
+      : requestType === 'demande_annulation_mandat'
+        ? 'Demande d annulation de mandat envoyee'
+        : 'Demande envoyee'
   if (!hasSupabaseEnv || !supabase) {
     const created = {
       id: `local-${Date.now()}`,
@@ -2178,7 +2190,7 @@ export async function createDiffusionRequest(input: {
     await insertDiffusionRequestEvent(buildDiffusionRequestEvent({
       requestId: created.id,
       eventType: 'request_created',
-      eventLabel: requestType === 'demande_baisse_prix' ? 'Demande de baisse de prix envoyee' : 'Demande envoyee',
+      eventLabel: createdEventLabel,
       actorUserId: input.requesterId,
       actorName: input.requesterLabel,
       actorRole: 'nego',
@@ -2208,7 +2220,7 @@ export async function createDiffusionRequest(input: {
   await insertDiffusionRequestEvent(buildDiffusionRequestEvent({
     requestId: created.id,
     eventType: 'request_created',
-    eventLabel: requestType === 'demande_baisse_prix' ? 'Demande de baisse de prix envoyee' : 'Demande envoyee',
+    eventLabel: createdEventLabel,
     actorUserId: input.requesterId,
     actorName: input.requesterLabel,
     actorRole: 'nego',
@@ -2234,6 +2246,12 @@ export async function updateDiffusionRequest(input: {
     const current = rows.find((row) => row.id === input.id)
     if (!current) return
     const isPriceDrop = current.request_type === 'demande_baisse_prix'
+    const isCancellation = current.request_type === 'demande_annulation_mandat'
+    const decisionLabel = input.status === 'accepted'
+      ? isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation de mandat acceptee' : 'Demande acceptee'
+      : input.status === 'refused'
+        ? isPriceDrop ? 'Baisse de prix refusee' : isCancellation ? 'Annulation de mandat refusee' : 'Demande refusee'
+        : 'Demande mise a jour'
     const now = new Date().toISOString()
     const nextRows = rows.map((row) => row.id === input.id
       ? {
@@ -2254,7 +2272,7 @@ export async function updateDiffusionRequest(input: {
     await insertDiffusionRequestEvent(buildDiffusionRequestEvent({
       requestId: input.id,
       eventType: input.status === 'accepted' ? 'accepted' : input.status === 'refused' ? 'refused' : 'request_updated',
-      eventLabel: input.status === 'accepted' ? (isPriceDrop ? 'Baisse de prix acceptee' : 'Demande acceptee') : input.status === 'refused' ? (isPriceDrop ? 'Baisse de prix refusee' : 'Demande refusee') : 'Demande mise a jour',
+      eventLabel: decisionLabel,
       actorUserId: input.processorId,
       actorName: input.processorLabel,
       actorRole: 'pauline',
@@ -2280,10 +2298,16 @@ export async function updateDiffusionRequest(input: {
   const currentRows = await loadDiffusionRequests().catch(() => [])
   const current = currentRows.find((row) => row.id === input.id) ?? null
   const isPriceDrop = current?.request_type === 'demande_baisse_prix'
+  const isCancellation = current?.request_type === 'demande_annulation_mandat'
+  const decisionLabel = input.status === 'accepted'
+    ? isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation de mandat acceptee' : 'Demande acceptee'
+    : input.status === 'refused'
+      ? isPriceDrop ? 'Baisse de prix refusee' : isCancellation ? 'Annulation de mandat refusee' : 'Demande refusee'
+      : 'Demande mise a jour'
   await insertDiffusionRequestEvent(buildDiffusionRequestEvent({
     requestId: input.id,
     eventType: input.status === 'accepted' ? 'accepted' : input.status === 'refused' ? 'refused' : 'request_updated',
-    eventLabel: input.status === 'accepted' ? (isPriceDrop ? 'Baisse de prix acceptee' : 'Demande acceptee') : input.status === 'refused' ? (isPriceDrop ? 'Baisse de prix refusee' : 'Demande refusee') : 'Demande mise a jour',
+    eventLabel: decisionLabel,
     actorUserId: input.processorId,
     actorName: input.processorLabel,
     actorRole: 'pauline',
@@ -2302,6 +2326,7 @@ export async function submitDiffusionCorrection(input: {
     const current = rows.find((row) => row.id === input.id)
     if (!current) return
     const isPriceDrop = current.request_type === 'demande_baisse_prix'
+    const isCancellation = current.request_type === 'demande_annulation_mandat'
     const nextRows = rows.map((row) => row.id === input.id
       ? {
           ...row,
@@ -2320,7 +2345,7 @@ export async function submitDiffusionCorrection(input: {
     await insertDiffusionRequestEvent(buildDiffusionRequestEvent({
       requestId: input.id,
       eventType: 'correction_submitted',
-      eventLabel: isPriceDrop ? 'Correction baisse de prix envoyee' : 'Correction envoyee',
+      eventLabel: isPriceDrop ? 'Correction baisse de prix envoyee' : isCancellation ? 'Correction annulation mandat envoyee' : 'Correction envoyee',
       actorName: input.requesterLabel,
       actorRole: 'nego',
       message: input.comment.trim() || null,
@@ -2331,6 +2356,7 @@ export async function submitDiffusionCorrection(input: {
   const currentRows = await loadDiffusionRequests().catch(() => [])
   const current = currentRows.find((row) => row.id === input.id) ?? null
   const isPriceDrop = current?.request_type === 'demande_baisse_prix'
+  const isCancellation = current?.request_type === 'demande_annulation_mandat'
   const payload = {
     request_status: 'pending',
     request_comment: input.comment.trim() || null,
@@ -2348,7 +2374,7 @@ export async function submitDiffusionCorrection(input: {
   await insertDiffusionRequestEvent(buildDiffusionRequestEvent({
     requestId: input.id,
     eventType: 'correction_submitted',
-    eventLabel: isPriceDrop ? 'Correction baisse de prix envoyee' : 'Correction envoyee',
+    eventLabel: isPriceDrop ? 'Correction baisse de prix envoyee' : isCancellation ? 'Correction annulation mandat envoyee' : 'Correction envoyee',
     actorName: input.requesterLabel,
     actorRole: 'nego',
     message: input.comment.trim() || null,

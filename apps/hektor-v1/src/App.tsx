@@ -56,6 +56,7 @@ const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
+type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type UpdateDiffusionRequestAction = {
   requestId: string
   status: string
@@ -134,15 +135,22 @@ const priceDropRefusalReasonOptions = [
   { value: 'erreur_sur_avenant', label: "Erreur sur l'avenant" },
   { value: 'autre', label: 'Autre' },
 ]
+const cancellationRefusalReasonOptions = [
+  { value: 'motif_annulation_manquant', label: "Motif d'annulation manquant" },
+  { value: 'document_mandat_manquant', label: 'Document mandat manquant' },
+  { value: 'annulation_non_conforme', label: 'Annulation non conforme' },
+  { value: 'autre', label: 'Autre' },
+]
 const requestTypeOptions = [
   { value: 'demande_diffusion', label: 'Validation' },
   { value: 'demande_baisse_prix', label: 'Baisse de prix' },
+  { value: 'demande_annulation_mandat', label: 'Annulation mandat' },
 ]
 
 function refusalReasonLabel(value: string | null | undefined) {
   const normalized = (value ?? '').trim()
   if (!normalized) return ''
-  const match = [...refusalReasonOptions, ...priceDropRefusalReasonOptions].find((option) => option.value === normalized)
+  const match = [...refusalReasonOptions, ...priceDropRefusalReasonOptions, ...cancellationRefusalReasonOptions].find((option) => option.value === normalized)
   return match?.label ?? normalized.replace(/_/g, ' ')
 }
 
@@ -465,33 +473,52 @@ function requestStatusRank(value: string | null | undefined) {
 function requestTypeLabel(value: string | null | undefined) {
   const normalized = (value ?? '').trim().toLowerCase()
   if (normalized === 'demande_baisse_prix') return 'Demande de baisse de prix'
+  if (normalized === 'demande_annulation_mandat') return 'Demande d annulation de mandat'
   if (normalized === 'demande_diffusion' || !normalized) return 'Demande de validation'
   return 'Demande'
 }
 
 function requestCreateLabel(value: string | null | undefined) {
-  return isPriceDropRequest(value) ? 'Demande de baisse de prix' : 'Demande de validation'
+  if (isPriceDropRequest(value)) return 'Demande de baisse de prix'
+  if (isMandateCancellationRequest(value)) return 'Demande d annulation de mandat'
+  return 'Demande de validation'
 }
 
 function requestAcceptedLabel(value: string | null | undefined) {
-  return isPriceDropRequest(value) ? 'Baisse de prix acceptée' : 'Demande acceptée'
+  if (isPriceDropRequest(value)) return 'Baisse de prix acceptée'
+  if (isMandateCancellationRequest(value)) return 'Annulation de mandat acceptée'
+  return 'Demande acceptée'
 }
 
 function requestRefusedLabel(value: string | null | undefined) {
-  return isPriceDropRequest(value) ? 'Baisse de prix refusee' : 'Demande refusee'
+  if (isPriceDropRequest(value)) return 'Baisse de prix refusee'
+  if (isMandateCancellationRequest(value)) return 'Annulation de mandat refusee'
+  return 'Demande refusee'
 }
 
 function requestPendingLabel(value: string | null | undefined) {
-  return isPriceDropRequest(value) ? 'Baisse de prix envoyée' : 'Demande envoyée'
+  if (isPriceDropRequest(value)) return 'Baisse de prix envoyée'
+  if (isMandateCancellationRequest(value)) return 'Annulation mandat envoyée'
+  return 'Demande envoyée'
 }
 
-function normalizeRequestType(value: string | null | undefined) {
+function normalizeRequestType(value: string | null | undefined): BusinessRequestType {
   const normalized = (value ?? '').trim().toLowerCase()
-  return normalized === 'demande_baisse_prix' ? 'demande_baisse_prix' : 'demande_diffusion'
+  if (normalized === 'demande_baisse_prix') return 'demande_baisse_prix'
+  if (normalized === 'demande_annulation_mandat') return 'demande_annulation_mandat'
+  return 'demande_diffusion'
 }
 
 function isPriceDropRequest(value: string | null | undefined) {
   return normalizeRequestType(value) === 'demande_baisse_prix'
+}
+
+function isMandateCancellationRequest(value: string | null | undefined) {
+  return normalizeRequestType(value) === 'demande_annulation_mandat'
+}
+
+function isValidationRequest(value: string | null | undefined) {
+  return normalizeRequestType(value) === 'demande_diffusion'
 }
 
 function requestTimelineDate(value: DiffusionRequest) {
@@ -516,7 +543,7 @@ function isRequestActiveStatus(value: string | null | undefined) {
   return value === 'pending' || value === 'in_progress' || value === 'waiting_commercial'
 }
 
-function latestActionRequest(requests: DiffusionRequest[], appDossierId: number, requestType: 'demande_diffusion' | 'demande_baisse_prix') {
+function latestActionRequest(requests: DiffusionRequest[], appDossierId: number, requestType: BusinessRequestType) {
   return latestDiffusionRequest(
     requests.filter((item) => {
       if (requestType === 'demande_diffusion') {
@@ -529,13 +556,19 @@ function latestActionRequest(requests: DiffusionRequest[], appDossierId: number,
   )
 }
 
-function requestActionLabel(request: DiffusionRequest | null, requestType: 'demande_diffusion' | 'demande_baisse_prix') {
-  if (!request) return requestType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : 'Demande de validation'
-  if (request.request_status === 'waiting_commercial') return requestType === 'demande_baisse_prix' ? 'Baisse de prix a corriger' : 'A corriger'
-  if (request.request_status === 'refused') return requestType === 'demande_baisse_prix' ? 'Baisse de prix a corriger' : 'A corriger'
-  if (request.request_status === 'in_progress') return requestType === 'demande_baisse_prix' ? 'Baisse de prix en traitement' : 'Demande en traitement'
+function requestActionLabel(request: DiffusionRequest | null, requestType: BusinessRequestType) {
+  if (!request) {
+    if (requestType === 'demande_baisse_prix') return 'Demande de baisse de prix'
+    if (requestType === 'demande_annulation_mandat') return 'Demande annulation mandat'
+    return 'Demande de validation'
+  }
+  if (request.request_status === 'waiting_commercial') return requestType === 'demande_baisse_prix' ? 'Baisse de prix a corriger' : requestType === 'demande_annulation_mandat' ? 'Annulation a corriger' : 'A corriger'
+  if (request.request_status === 'refused') return requestType === 'demande_baisse_prix' ? 'Baisse de prix a corriger' : requestType === 'demande_annulation_mandat' ? 'Annulation a corriger' : 'A corriger'
+  if (request.request_status === 'in_progress') return requestType === 'demande_baisse_prix' ? 'Baisse de prix en traitement' : requestType === 'demande_annulation_mandat' ? 'Annulation en traitement' : 'Demande en traitement'
   if (request.request_status === 'pending') return requestPendingLabel(requestType)
-  return requestType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : 'Demande de validation'
+  if (requestType === 'demande_baisse_prix') return 'Demande de baisse de prix'
+  if (requestType === 'demande_annulation_mandat') return 'Demande annulation mandat'
+  return 'Demande de validation'
 }
 
 function paulineActionLabel(request: DiffusionRequest | null) {
@@ -548,11 +581,11 @@ function paulineActionLabel(request: DiffusionRequest | null) {
 }
 
 function negociateurDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'validation_diffusion_state'>, request: DiffusionRequest | null) {
-  if (!isPriceDropRequest(request?.request_type) && isValidationApproved(mandat.validation_diffusion_state)) {
+  if ((!request || isValidationRequest(request.request_type)) && isValidationApproved(mandat.validation_diffusion_state)) {
     return { label: 'Diffusion', tone: 'ready', opens: 'diffusion' as const }
   }
   if (request?.request_status === 'refused' || request?.request_status === 'waiting_commercial') {
-    return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a corriger' : 'A corriger', tone: 'warning', opens: 'request' as const }
+    return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a corriger' : isMandateCancellationRequest(request?.request_type) ? 'Annulation a corriger' : 'A corriger', tone: 'warning', opens: 'request' as const }
   }
   if (request?.request_status === 'pending' || request?.request_status === 'in_progress') {
     return { label: requestPendingLabel(request?.request_type), tone: 'pending', opens: 'request' as const }
@@ -560,24 +593,30 @@ function negociateurDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'va
   if (request?.request_status === 'accepted' && isPriceDropRequest(request?.request_type)) {
     return { label: 'Baisse de prix acceptée', tone: 'ready', opens: 'request' as const }
   }
+  if (request?.request_status === 'accepted' && isMandateCancellationRequest(request?.request_type)) {
+    return { label: 'Annulation acceptée', tone: 'ready', opens: 'request' as const }
+  }
   return { label: 'Demande de validation', tone: 'idle', opens: 'request' as const }
 }
 
 function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'validation_diffusion_state'>, request: DiffusionRequest | null) {
-  if (!isPriceDropRequest(request?.request_type) && isValidationApproved(mandat.validation_diffusion_state)) {
+  if ((!request || isValidationRequest(request.request_type)) && isValidationApproved(mandat.validation_diffusion_state)) {
     return { label: 'Acceptée', tone: 'ready', opens: 'diffusion' as const }
   }
   if (request?.request_status === 'waiting_commercial') {
-    return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a corriger' : 'A corriger', tone: 'warning', opens: 'request' as const }
+    return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a corriger' : isMandateCancellationRequest(request?.request_type) ? 'Annulation a corriger' : 'A corriger', tone: 'warning', opens: 'request' as const }
   }
   if (request?.request_status === 'refused') {
     return { label: isPriceDropRequest(request?.request_type) ? 'Rejetee' : 'Refusee', tone: 'warning', opens: 'request' as const }
   }
   if (request?.request_status === 'pending' || request?.request_status === 'in_progress') {
-    return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a traiter' : 'A traiter', tone: 'pending', opens: 'request' as const }
+    return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a traiter' : isMandateCancellationRequest(request?.request_type) ? 'Annulation a traiter' : 'A traiter', tone: 'pending', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isPriceDropRequest(request?.request_type)) {
     return { label: 'Baisse de prix acceptée', tone: 'ready', opens: 'request' as const }
+  }
+  if (request?.request_status === 'accepted' && isMandateCancellationRequest(request?.request_type)) {
+    return { label: 'Annulation acceptée', tone: 'ready', opens: 'request' as const }
   }
   return { label: 'Aucune demande', tone: 'idle', opens: 'request' as const }
 }
@@ -721,7 +760,7 @@ function listingProgressLabel(item: Pick<MandatRecord, 'statut_annonce' | 'numer
   return 'Mandat validé · diffusion à ouvrir'
 }
 
-type ActionButtonTypeTone = 'validation' | 'price-drop' | 'diffusion' | 'hektor'
+type ActionButtonTypeTone = 'validation' | 'price-drop' | 'cancellation' | 'diffusion' | 'hektor'
 type ActionButtonStateTone = 'request' | 'progress' | 'correction' | 'rejected' | 'accepted' | 'diffusion'
 type ActionTriggerTone = 'neutral' | 'creation' | 'correction' | 'rejected'
 
@@ -740,7 +779,7 @@ function actionStateVariant(label: string) {
   return 'request'
 }
 
-function buildActionButtonParts(type: 'validation' | 'price_drop' | 'diffusion', stateLabel: string) {
+function buildActionButtonParts(type: 'validation' | 'price_drop' | 'cancellation' | 'diffusion', stateLabel: string) {
   if (type === 'diffusion') {
     return {
       typeLabel: 'Diffusion',
@@ -754,6 +793,14 @@ function buildActionButtonParts(type: 'validation' | 'price_drop' | 'diffusion',
       typeLabel: 'Baisse de prix',
       stateLabel,
       typeTone: 'price-drop' as ActionButtonTypeTone,
+      stateTone: actionStateVariant(stateLabel) as ActionButtonStateTone,
+    }
+  }
+  if (type === 'cancellation') {
+    return {
+      typeLabel: 'Annulation mandat',
+      stateLabel,
+      typeTone: 'cancellation' as ActionButtonTypeTone,
       stateTone: actionStateVariant(stateLabel) as ActionButtonStateTone,
     }
   }
@@ -826,6 +873,16 @@ function ActionGlyph(props: { typeTone: ActionButtonTypeTone; stateTone: ActionB
       </svg>
     )
   }
+  if (props.typeTone === 'cancellation') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 3H16L19 6V21H5V3H8Z" />
+        <path d="M15 3V7H19" />
+        <path d="M9 13H15" />
+        <path d="M10 17H14" />
+      </svg>
+    )
+  }
   if (props.typeTone === 'validation') {
     if (props.stateTone === 'accepted') {
       return (
@@ -878,6 +935,7 @@ function actionMenuHelperText(typeLabel: string, stateLabel: string) {
   if (stateLabel === 'Ajouter') {
     if (typeLabel === 'Valider') return 'Creer une demande de validation du mandat'
     if (typeLabel === 'Baisse de prix') return 'Creer une demande de baisse de prix'
+    if (typeLabel === 'Annulation mandat') return 'Creer une demande d annulation de mandat'
     return 'Creer une nouvelle demande'
   }
   if (stateLabel === 'Corriger') return 'Reprendre la demande apres retour Pauline'
@@ -922,15 +980,17 @@ function buildMandatActionModel(input: {
   role: 'nego' | 'pauline'
   requests: DiffusionRequest[]
   currentRequest?: DiffusionRequest | null
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
   onBeforeAction?: () => void
 }): { hasMandat: boolean; triggerTone: ActionTriggerTone; items: MandatActionItemModel[] } {
   const hasMandat = Boolean((input.mandat.numero_mandat ?? '').trim())
   const canOpenDiffusion = isValidationApproved(input.mandat.validation_diffusion_state)
   const canRequestPriceDrop = isValidationApproved(input.mandat.validation_diffusion_state)
+  const canRequestCancellation = isValidationApproved(input.mandat.validation_diffusion_state)
   const activeDiffusionRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_diffusion')
   const activePriceDropRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_baisse_prix')
+  const activeCancellationRequest = latestActionRequest(input.requests, input.mandat.app_dossier_id, 'demande_annulation_mandat')
   const rowRequestType = normalizeRequestType(input.currentRequest?.request_type)
   const run = (event: { stopPropagation(): void }, action: () => void) => {
     event.stopPropagation()
@@ -941,7 +1001,9 @@ function buildMandatActionModel(input: {
     ? actionTriggerToneFromRequest(input.currentRequest)
     : actionTriggerToneFromRequest(activeDiffusionRequest) !== 'neutral'
       ? actionTriggerToneFromRequest(activeDiffusionRequest)
-      : actionTriggerToneFromRequest(activePriceDropRequest)
+      : actionTriggerToneFromRequest(activePriceDropRequest) !== 'neutral'
+        ? actionTriggerToneFromRequest(activePriceDropRequest)
+        : actionTriggerToneFromRequest(activeCancellationRequest)
 
   if (!hasMandat) return { hasMandat, triggerTone, items: [] }
 
@@ -962,15 +1024,24 @@ function buildMandatActionModel(input: {
     if (label === 'Baisse de prix en traitement') return 'En cours'
     return label
   })()
+  const cancellationLabel = (() => {
+    const label = requestActionLabel(activeCancellationRequest, 'demande_annulation_mandat')
+    if (label === 'Demande annulation mandat') return 'Ajouter'
+    if (label === 'Annulation a corriger') return 'Corriger'
+    if (label === 'Annulation mandat envoyée') return 'Envoyée'
+    if (label === 'Annulation en traitement') return 'En cours'
+    return label
+  })()
   const paulineParts = input.currentRequest
     ? buildActionButtonParts(
-        rowRequestType === 'demande_baisse_prix' ? 'price_drop' : rowRequestType === 'demande_diffusion' ? 'validation' : 'diffusion',
+        rowRequestType === 'demande_baisse_prix' ? 'price_drop' : rowRequestType === 'demande_annulation_mandat' ? 'cancellation' : 'validation',
         paulineLabel ?? 'A traiter',
       )
     : null
   const diffusionParts = buildActionButtonParts('diffusion', 'Modifier')
   const validationParts = buildActionButtonParts('validation', validationLabel)
   const priceDropParts = buildActionButtonParts('price_drop', priceDropLabel)
+  const cancellationParts = buildActionButtonParts('cancellation', cancellationLabel)
 
   const items: MandatActionItemModel[] =
     input.role === 'pauline' && input.currentRequest && paulineParts
@@ -1011,6 +1082,15 @@ function buildMandatActionModel(input: {
                   key: 'price-drop',
                   ...priceDropParts,
                   onClick: (event: { stopPropagation(): void }) => run(event, () => input.onOpenRequestModal(input.mandat.app_dossier_id, input.role, 'demande_baisse_prix')),
+                },
+              ]
+            : []),
+          ...(canRequestCancellation
+            ? [
+                {
+                  key: 'mandate-cancellation',
+                  ...cancellationParts,
+                  onClick: (event: { stopPropagation(): void }) => run(event, () => input.onOpenRequestModal(input.mandat.app_dossier_id, input.role, 'demande_annulation_mandat')),
                 },
               ]
             : []),
@@ -1123,7 +1203,7 @@ function appointmentStatusLabel(value: string | null | undefined) {
 function buildAppRequestUrl(
   appDossierId: number | null | undefined,
   role: 'nego' | 'pauline' = 'nego',
-  requestType?: 'demande_diffusion' | 'demande_baisse_prix' | null,
+  requestType?: BusinessRequestType | null,
 ) {
   if (typeof window === 'undefined' || appDossierId == null) return null
   const url = new URL(window.location.origin + window.location.pathname)
@@ -1150,6 +1230,7 @@ function buildDiffusionDecisionEmail(input: {
   if (!email || (input.status !== 'accepted' && input.status !== 'refused')) return null
 
   const isPriceDrop = input.requestType === 'demande_baisse_prix'
+  const isCancellation = input.requestType === 'demande_annulation_mandat'
   const dossierLabel = input.mandat?.numero_dossier?.trim() || 'Non renseigne'
   const mandatLabel = input.mandat?.numero_mandat?.trim() || 'Non renseigne'
   const bienLabel = input.mandat?.titre_bien?.trim() || 'Bien sans titre'
@@ -1161,33 +1242,33 @@ function buildDiffusionDecisionEmail(input: {
   const appRequestUrl = buildAppRequestUrl(
     input.appDossierId,
     'nego',
-    isPriceDrop ? 'demande_baisse_prix' : 'demande_diffusion',
+    isPriceDrop ? 'demande_baisse_prix' : isCancellation ? 'demande_annulation_mandat' : 'demande_diffusion',
   )
 
   const subject = input.status === 'accepted'
-    ? `${isPriceDrop ? 'Baisse de prix acceptee' : 'Validation acceptee'} · ${dossierLabel}`
-    : `${isPriceDrop ? 'Baisse de prix refusee' : 'Validation refusee'} · ${dossierLabel}`
+    ? `${isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation mandat acceptee' : 'Validation acceptee'} · ${dossierLabel}`
+    : `${isPriceDrop ? 'Baisse de prix refusee' : isCancellation ? 'Annulation mandat refusee' : 'Validation refusee'} · ${dossierLabel}`
 
   const bodyLines = input.status === 'accepted'
     ? [
-        isPriceDrop ? 'Demande de baisse de prix acceptee.' : 'Demande de validation acceptee.',
+        isPriceDrop ? 'Demande de baisse de prix acceptee.' : isCancellation ? 'Demande d annulation de mandat acceptee.' : 'Demande de validation acceptee.',
         '',
         `Dossier : ${dossierLabel}`,
-        `Statut : ${isPriceDrop ? 'Baisse de prix acceptee' : 'Validation acceptee'}`,
+        `Statut : ${isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation mandat acceptee' : 'Validation acceptee'}`,
         trimmedResponse ? `Commentaire : ${trimmedResponse}` : null,
         '',
-        `Action : ${isPriceDrop ? "Ouvrir l'application pour suivre la demande de prix." : "Ouvrir l'application pour suivre la validation."}`,
+        `Action : ${isPriceDrop ? "Ouvrir l'application pour suivre la demande de prix." : isCancellation ? "Ouvrir l'application pour suivre la demande d'annulation de mandat." : "Ouvrir l'application pour suivre la validation."}`,
         appRequestUrl ? `Application : ${appRequestUrl}` : null,
       ]
         .filter(Boolean) as string[]
     : [
-        isPriceDrop ? 'Demande de baisse de prix refusée.' : 'Demande de validation refusee.',
+        isPriceDrop ? 'Demande de baisse de prix refusée.' : isCancellation ? 'Demande d annulation de mandat refusee.' : 'Demande de validation refusee.',
         '',
         `Dossier : ${dossierLabel}`,
         trimmedRefusalReason ? `Motif : ${trimmedRefusalReason}` : 'Motif : non précisé',
         trimmedResponse ? `Commentaire : ${trimmedResponse}` : null,
         '',
-        `Action : ${isPriceDrop ? "Completer l'avenant puis renvoyer la demande dans l'application." : "Corriger le dossier puis renvoyer la demande de validation dans l'application."}`,
+        `Action : ${isPriceDrop ? "Completer l'avenant puis renvoyer la demande dans l'application." : isCancellation ? "Corriger ou completer la demande d'annulation dans l'application." : "Corriger le dossier puis renvoyer la demande de validation dans l'application."}`,
         appRequestUrl ? `Application : ${appRequestUrl}` : null,
       ].filter(Boolean) as string[]
 
@@ -1206,8 +1287,8 @@ function buildDiffusionDecisionEmail(input: {
       }
 
   const summaryLabel = input.status === 'accepted'
-    ? (isPriceDrop ? 'Baisse de prix acceptee' : 'Validation acceptee')
-    : (trimmedRefusalReason || (isPriceDrop ? 'Baisse de prix refusee' : 'Validation refusee'))
+    ? (isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation mandat acceptee' : 'Validation acceptee')
+    : (trimmedRefusalReason || (isPriceDrop ? 'Baisse de prix refusee' : isCancellation ? 'Annulation mandat refusee' : 'Validation refusee'))
 
   const commentBlock = trimmedResponse
     ? `<div style="padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #eadfce;margin:0 0 16px 0;">
@@ -1217,8 +1298,8 @@ function buildDiffusionDecisionEmail(input: {
     : ''
 
   const actionLabel = input.status === 'accepted'
-    ? (isPriceDrop ? "Ouvrir l'application pour suivre la demande de prix." : "Ouvrir l'application pour suivre la validation.")
-    : (isPriceDrop ? "Completer l'avenant puis renvoyer la demande dans l'application." : "Corriger le dossier puis renvoyer la demande de validation dans l'application.")
+    ? (isPriceDrop ? "Ouvrir l'application pour suivre la demande de prix." : isCancellation ? "Ouvrir l'application pour suivre la demande d'annulation de mandat." : "Ouvrir l'application pour suivre la validation.")
+    : (isPriceDrop ? "Completer l'avenant puis renvoyer la demande dans l'application." : isCancellation ? "Corriger ou completer la demande d'annulation dans l'application." : "Corriger le dossier puis renvoyer la demande de validation dans l'application.")
 
   const appButton = appRequestUrl
     ? `<a href="${appRequestUrl}" style="display:inline-block;padding:12px 16px;border-radius:12px;background:${theme.cta};color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Ouvrir dans l'application</a>`
@@ -1348,7 +1429,7 @@ function buildRequestHistory(request: DiffusionRequest | null, events: Diffusion
   return history
 }
 
-function buildRequestHistoryForType(requests: DiffusionRequest[], events: DiffusionRequestEvent[], requestType: 'demande_diffusion' | 'demande_baisse_prix') {
+function buildRequestHistoryForType(requests: DiffusionRequest[], events: DiffusionRequestEvent[], requestType: BusinessRequestType) {
   return requests
     .filter((request) => normalizeRequestType(request.request_type) === requestType)
     .slice()
@@ -1364,7 +1445,7 @@ function buildRequestHistoryForType(requests: DiffusionRequest[], events: Diffus
     }))
 }
 
-function buildRequestMessagesForType(requests: DiffusionRequest[], events: DiffusionRequestEvent[], requestType: 'demande_diffusion' | 'demande_baisse_prix') {
+function buildRequestMessagesForType(requests: DiffusionRequest[], events: DiffusionRequestEvent[], requestType: BusinessRequestType) {
   const requestsForType = requests
     .filter((request) => normalizeRequestType(request.request_type) === requestType)
     .slice()
@@ -1921,7 +2002,7 @@ function MandatActionMenu(props: {
   role: 'nego' | 'pauline'
   requests: DiffusionRequest[]
   currentRequest?: DiffusionRequest | null
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -2013,7 +2094,7 @@ function DetailDossierActionPanel(props: {
   currentRequest?: DiffusionRequest | null
   nextActionLabel?: string
   nextActionDetail?: string | null
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
   renderExtraActions?: () => ReturnType<typeof DetailAdminPilotPanel>
 }) {
@@ -2349,7 +2430,7 @@ export default function App() {
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
-  const [requestModalType, setRequestModalType] = useState<'demande_diffusion' | 'demande_baisse_prix'>('demande_diffusion')
+  const [requestModalType, setRequestModalType] = useState<BusinessRequestType>('demande_diffusion')
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
@@ -2659,9 +2740,11 @@ export default function App() {
     const roleParam = params.get('role')
     const modalRole: 'nego' | 'pauline' = roleParam === 'pauline' ? 'pauline' : 'nego'
     const requestTypeParam = params.get('request_type')
-    const deepLinkRequestType: 'demande_diffusion' | 'demande_baisse_prix' | undefined =
+    const deepLinkRequestType: BusinessRequestType | undefined =
       requestTypeParam === 'demande_baisse_prix'
         ? 'demande_baisse_prix'
+        : requestTypeParam === 'demande_annulation_mandat'
+          ? 'demande_annulation_mandat'
         : requestTypeParam === 'demande_diffusion'
           ? 'demande_diffusion'
           : undefined
@@ -2902,7 +2985,7 @@ export default function App() {
     setDetailImageModalUrl(null)
   }
 
-function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego', requestType?: 'demande_diffusion' | 'demande_baisse_prix') {
+function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego', requestType?: BusinessRequestType) {
     const currentRequest = latestDiffusionRequest(diffusionRequests, appDossierId, requestType)
     const nextType = requestType ?? normalizeRequestType(currentRequest?.request_type)
     setSelectedMandatId(appDossierId)
@@ -2950,7 +3033,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDiffusionApplyResult(null)
   }
 
-  async function handleCreateDiffusionRequest(input?: { mandatId?: number | null; comment?: string; requestType?: 'demande_diffusion' | 'demande_baisse_prix'; requestedPrice?: string | null }) {
+  async function handleCreateDiffusionRequest(input?: { mandatId?: number | null; comment?: string; requestType?: BusinessRequestType; requestedPrice?: string | null }) {
     const mandatId = input?.mandatId ?? selectedMandatId
     if (!mandatId || !profile) return
     const mandat = mandats.find((item) => item.app_dossier_id === mandatId)
@@ -2958,6 +3041,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const nextType = input?.requestType ?? requestModalType
     if (nextType === 'demande_baisse_prix' && !isValidationApproved(mandat.validation_diffusion_state)) {
       setErrorMessage("Baisse de prix impossible : le mandat doit etre sous validation = oui.")
+      return
+    }
+    if (nextType === 'demande_annulation_mandat' && !isValidationApproved(mandat.validation_diffusion_state)) {
+      setErrorMessage("Annulation de mandat impossible : le mandat doit etre sous validation = oui.")
       return
     }
     const priceInput = normalizeRequestedPriceInput(input?.requestedPrice ?? requestModalPriceValue)
@@ -2973,6 +3060,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const nextComment =
         nextType === 'demande_baisse_prix'
           ? [`Demande de baisse de prix`, requestedPrice ? `Nouveau prix demande : ${requestedPrice}` : null, baseComment ? `Commentaire : ${baseComment}` : null].filter(Boolean).join('\n')
+          : nextType === 'demande_annulation_mandat'
+            ? [`Demande d annulation de mandat`, baseComment ? `Motif / contexte : ${baseComment}` : null].filter(Boolean).join('\n')
           : baseComment
       const created = await createDiffusionRequest({
         dossier: mandat,
@@ -3061,7 +3150,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const isClassicValidationApproval =
         input.status === 'accepted' &&
         currentRequest &&
-        !isPriceDropRequest(currentRequest.request_type)
+        isValidationRequest(currentRequest.request_type)
       if (isClassicValidationApproval && !input.validationChecked) {
         setValidationCheckPrompt({
           kind: 'confirmed',
@@ -3107,7 +3196,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 : 'Activation passerelles refusee par Hektor. La demande reste en attente.',
             )
           }
-        } else if (!isPriceDropRequest(currentRequest.request_type) && input.runValidationWorkflow !== false) {
+        } else if (isValidationRequest(currentRequest.request_type) && input.runValidationWorkflow !== false) {
           if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
             acceptanceInfoMessage = "Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation."
           }
@@ -3125,8 +3214,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             })
             return
           }
-        } else if (!isPriceDropRequest(currentRequest.request_type)) {
+        } else if (isValidationRequest(currentRequest.request_type)) {
           acceptanceInfoMessage = 'Demande acceptee sans lancement de la validation Hektor.'
+        } else if (isMandateCancellationRequest(currentRequest.request_type)) {
+          acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.'
         }
       }
       await updateDiffusionRequest({
@@ -3182,7 +3273,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             } : current)
           }
         }
-        if (!isPriceDropPublish) {
+        if (!isPriceDropPublish && isValidationRequest(currentRequest.request_type)) {
           await setDossierHektorState(currentRequest.app_dossier_id, {
             validationDiffusionState: validationValue,
             diffusable: diffusableValue === '1',
@@ -3230,7 +3321,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         }
       }
       if (input.status === 'accepted' && currentRequest && acceptanceResult?.waiting_on_hektor) {
-        if (!(isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop)) {
+        if (isValidationRequest(currentRequest.request_type)) {
           await setDossierHektorState(currentRequest.app_dossier_id, {
             validationDiffusionState: acceptanceResult.observed_validation ?? acceptanceResult.validation_state ?? currentMandat?.validation_diffusion_state ?? null,
             diffusable:
@@ -3283,7 +3374,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             refusalReason: input.refusalReason,
           })
         : null
-      if (!decisionEmail && currentRequest && input.status === 'accepted') {
+      if (!decisionEmail && currentRequest && (input.status === 'accepted' || input.status === 'refused')) {
         acceptanceInfoMessage = acceptanceInfoMessage
           ? `${acceptanceInfoMessage} Email commercial non envoye : aucun negociateur email sur ce dossier`
           : 'Decision enregistree, mais email commercial non envoye : aucun negociateur email sur ce dossier'
@@ -3308,7 +3399,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       } else {
         const currentRequest = diffusionRequests.find((item) => item.id === input.requestId) ?? null
         const message = error instanceof Error ? error.message : 'Erreur de mise a jour de demande'
-        if (input.status === 'accepted' && currentRequest && !isPriceDropRequest(currentRequest.request_type)) {
+        if (input.status === 'accepted' && currentRequest && isValidationRequest(currentRequest.request_type)) {
           setValidationCheckPrompt({
             kind: 'mismatch',
             title: 'Opération refusée par Hektor',
@@ -3846,15 +3937,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     [requestModalMandat, requestModalRequest],
   )
   const requestModalEffectiveType = useMemo(
-    () => (requestModalRequest?.request_type === 'demande_baisse_prix' || (!requestModalRequest && requestModalType === 'demande_baisse_prix') ? 'demande_baisse_prix' : 'demande_diffusion'),
+    () => requestModalRequest ? normalizeRequestType(requestModalRequest.request_type) : requestModalType,
     [requestModalRequest, requestModalType],
   )
+  const requestModalNegoLabel = useMemo(() => {
+    const label = requestActionLabel(requestModalRequest, requestModalEffectiveType)
+    if (label === 'Demande de validation') return 'Ajouter'
+    if (label === 'Demande de baisse de prix') return 'Ajouter'
+    if (label === 'Demande annulation mandat') return 'Ajouter'
+    return label
+  }, [requestModalRequest, requestModalEffectiveType])
   const requestModalEligibleForPriceDrop = useMemo(
     () => isValidationApproved(requestModalMandat?.validation_diffusion_state ?? null),
     [requestModalMandat],
   )
+  const requestModalEligibleForCancellation = useMemo(
+    () => isValidationApproved(requestModalMandat?.validation_diffusion_state ?? null),
+    [requestModalMandat],
+  )
   const requestModalRefusalOptions = useMemo(
-    () => (requestModalEffectiveType === 'demande_baisse_prix' ? priceDropRefusalReasonOptions : refusalReasonOptions),
+    () => (requestModalEffectiveType === 'demande_baisse_prix' ? priceDropRefusalReasonOptions : requestModalEffectiveType === 'demande_annulation_mandat' ? cancellationRefusalReasonOptions : refusalReasonOptions),
     [requestModalEffectiveType],
   )
 
@@ -4407,6 +4509,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')}
                 requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
                 requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
+                requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')}
+                requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')}
                 actionRequests={selectedDossierRequests}
                 currentActionRequest={screen === 'suivi' ? selectedDossierRequest : null}
                 actionRole={screen === 'suivi' ? 'pauline' : 'nego'}
@@ -5008,7 +5112,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={dossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -5138,6 +5242,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')}
                 requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
                 requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')}
+                requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')}
+                requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')}
                 actionRequests={selectedDossierRequests}
                 currentActionRequest={screen === 'suivi' ? selectedDossierRequest : null}
                 actionRole={screen === 'suivi' ? 'pauline' : 'nego'}
@@ -5185,18 +5291,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
             <section
-              className={`modal-panel request-modal-panel ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : 'request-modal-panel-validation'}`}
+              className={`modal-panel request-modal-panel ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'request-modal-panel-cancellation' : 'request-modal-panel-validation'}`}
               onClick={(event) => event.stopPropagation()}
             >
               <div className="panel-head request-modal-head">
                 <span
-                  className={`modal-hero-icon ${requestModalEffectiveType === 'demande_baisse_prix' ? 'modal-hero-icon-price' : 'modal-hero-icon-validation'}`}
+                  className={`modal-hero-icon ${requestModalEffectiveType === 'demande_baisse_prix' ? 'modal-hero-icon-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'modal-hero-icon-cancellation' : 'modal-hero-icon-validation'}`}
                   aria-hidden="true"
                 />
                 <div className="request-modal-title">
                   <p className="eyebrow">Gestion des demandes</p>
-                  <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : 'Demande de validation'}</h3>
+                  <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Demande d annulation de mandat' : 'Demande de validation'}</h3>
                 </div>
+                {requestModalRole === 'pauline' && requestModalEffectiveType === 'demande_annulation_mandat' ? (
+                  <button className="ghost-button button-subtle request-modal-hektor-link" type="button" onClick={() => openHektorMandatPrix(requestModalMandat.hektor_annonce_id)}>Lien Hektor</button>
+                ) : null}
                 <button className="ghost-button button-subtle request-modal-close" type="button" onClick={closeRequestModal}>Fermer</button>
               </div>
               <p className="modal-subline">{requestModalMandat.numero_dossier ?? '-'} - {requestModalMandat.numero_mandat ?? '-'} - {commercialDisplay(requestModalMandat)}</p>
@@ -5204,32 +5313,48 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <section className="request-summary-card">
                   <div className="request-summary-hero">
                     <div className="request-summary-copy">
-                      <p className="request-summary-kicker">Validation diffusion</p>
+                      <p className="request-summary-kicker">{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation mandat' : 'Validation diffusion'}</p>
                       <h4 className="request-summary-heading">
-                        {requestModalRole === 'pauline'
+                        {requestModalEffectiveType === 'demande_annulation_mandat'
+                          ? requestModalRole === 'pauline'
+                            ? 'Decision sur l annulation'
+                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                              ? 'Correction prete a renvoyer'
+                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                                ? 'Demande deja transmise'
+                                : 'Annulation en preparation'
+                          : requestModalRole === 'pauline'
                           ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
                             ? 'Relecture avant retour'
                             : 'Decision de Pauline'
-                          : requestModalState?.label?.includes('corriger')
+                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                             ? 'Correction prete a renvoyer'
-                            : requestModalState?.label?.includes('envoyee')
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
                               ? 'Demande deja transmise'
                               : 'Validation en preparation'}
                       </h4>
                       <p className="request-summary-note">
-                        {requestModalRole === 'pauline'
+                        {requestModalEffectiveType === 'demande_annulation_mandat'
+                          ? requestModalRole === 'pauline'
+                            ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
+                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                              ? 'La demande a ete completee. Tu peux la renvoyer a Pauline.'
+                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                                ? 'La demande est partie. Il reste a suivre le retour de Pauline.'
+                                : 'Explique le motif d annulation pour que Pauline controle le mandat dans Hektor.'
+                          : requestModalRole === 'pauline'
                           ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
                             ? 'Relis le dernier retour puis decide si le dossier peut repartir ou non.'
                             : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
-                          : requestModalState?.label?.includes('corriger')
+                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                             ? 'Le dossier a ete ajuste. Tu peux renvoyer une version propre a Pauline.'
-                            : requestModalState?.label?.includes('envoyee')
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
                               ? 'La demande est partie. Il reste a suivre le retour de validation.'
                               : 'Une fois approuvee, la diffusion et les passerelles par defaut seront activees automatiquement.'}
                       </p>
                     </div>
                     <div className="request-summary-state">
-                      <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : (requestModalState?.label ?? 'Demande de validation')} />
+                      <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : requestModalNegoLabel} />
                     </div>
                   </div>
                   <div className="request-summary-metrics">
@@ -5240,8 +5365,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </article>
                     <article className="request-summary-metric">
                       <span className="request-summary-metric-label">Apres accord</span>
-                      <strong>Diffusion activee</strong>
-                      <small>Passerelles par defaut appliquees</small>
+                      <strong>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Email commercial envoye' : 'Diffusion activee'}</strong>
+                      <small>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Aucun automatisme Hektor' : 'Passerelles par defaut appliquees'}</small>
                     </article>
                   </div>
                 </section>
@@ -5252,11 +5377,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <span>Type de demande</span>
                     <select
                       value={requestModalEffectiveType}
-                      onChange={(event) => setRequestModalType(event.target.value as 'demande_diffusion' | 'demande_baisse_prix')}
+                      onChange={(event) => setRequestModalType(event.target.value as BusinessRequestType)}
                       disabled={Boolean(requestModalRequest && (requestModalRequest.request_status === 'pending' || requestModalRequest.request_status === 'in_progress' || requestModalRequest.request_status === 'waiting_commercial' || requestModalRequest.request_status === 'refused'))}
                     >
                       {requestTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value} disabled={option.value === 'demande_baisse_prix' && !requestModalEligibleForPriceDrop}>
+                        <option
+                          key={option.value}
+                          value={option.value}
+                          disabled={
+                            (option.value === 'demande_baisse_prix' && !requestModalEligibleForPriceDrop) ||
+                            (option.value === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
+                          }
+                        >
                           {option.label}
                         </option>
                       ))}
@@ -5285,12 +5417,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </section>
               ) : null}
               <label className="filter-field request-message-field">
-                <span>{requestModalRole === 'pauline' ? 'Message Pauline' : requestModalState?.label?.includes('corriger') ? 'Message / correction pour Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Contexte de la baisse de prix' : 'Contexte pour Pauline'}</span>
+                <span>{requestModalRole === 'pauline' ? 'Message Pauline' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Message / correction pour Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Contexte de la baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Contexte de l annulation' : 'Contexte pour Pauline'}</span>
                 <textarea
                   className="inline-textarea"
                   value={requestModalComment}
                   onChange={(event) => setRequestModalComment(event.target.value)}
-                  placeholder={requestModalRole === 'pauline' ? (requestModalEffectiveType === 'demande_baisse_prix' ? "Exemple : avenant signe controle, baisse de prix validee." : 'Exemple : dossier controle, validation accordee.') : requestModalState?.label?.includes('corriger') ? (requestModalEffectiveType === 'demande_baisse_prix' ? "Exemple : avenant ajoute et corrige, merci de revoir la demande." : 'Exemple : pieces et informations corrigees, merci de revoir la demande.') : requestModalEffectiveType === 'demande_baisse_prix' ? "Exemple : avenant signe depose dans Hektor, merci de valider la baisse." : 'Exemple : le mandat est pret, merci de valider le bien.'}
+                  placeholder={
+                    requestModalRole === 'pauline'
+                      ? requestModalEffectiveType === 'demande_baisse_prix'
+                        ? "Exemple : avenant signe controle, baisse de prix validee."
+                        : requestModalEffectiveType === 'demande_annulation_mandat'
+                          ? 'Exemple : mandat controle dans Hektor, annulation acceptee.'
+                          : 'Exemple : dossier controle, validation accordee.'
+                      : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                        ? requestModalEffectiveType === 'demande_baisse_prix'
+                          ? "Exemple : avenant ajoute et corrige, merci de revoir la demande."
+                          : requestModalEffectiveType === 'demande_annulation_mandat'
+                            ? "Exemple : motif d'annulation complete, merci de revoir la demande."
+                            : 'Exemple : pieces et informations corrigees, merci de revoir la demande.'
+                        : requestModalEffectiveType === 'demande_baisse_prix'
+                          ? "Exemple : avenant signe depose dans Hektor, merci de valider la baisse."
+                          : requestModalEffectiveType === 'demande_annulation_mandat'
+                            ? "Exemple : merci de controler l'annulation du mandat dans Hektor."
+                            : 'Exemple : le mandat est pret, merci de valider le bien.'
+                  }
                 />
               </label>
               {requestModalRole === 'pauline' ? (
@@ -5341,18 +5491,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       (requestModalDecision === 'refused' && !requestModalRefusalReason)
                     }
                   >
-                    {requestLoading ? 'Enregistrement...' : requestModalDecision === 'accepted' ? (requestModalEffectiveType === 'demande_baisse_prix' ? 'Approuver la baisse' : 'Accepter') : requestModalDecision === 'refused' ? 'Refuser' : 'Enregistrer le traitement'}
+                    {requestLoading ? 'Enregistrement...' : requestModalDecision === 'accepted' ? (requestModalEffectiveType === 'demande_baisse_prix' ? 'Approuver la baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Accepter l annulation' : 'Accepter') : requestModalDecision === 'refused' ? 'Refuser' : 'Enregistrer le traitement'}
                   </button>
                 ) : (
                   <button
                     className="ghost-button button-primary"
                     type="button"
-                    onClick={() => requestModalState?.label?.includes('corriger') && requestModalRequest
+                    onClick={() => (requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')) && requestModalRequest
                       ? handleSubmitDiffusionCorrection({ requestId: requestModalRequest.id, comment: requestModalComment })
                       : handleCreateDiffusionRequest({ mandatId: requestModalMandat.app_dossier_id, comment: requestModalComment, requestType: requestModalEffectiveType, requestedPrice: requestModalPriceValue })}
-                    disabled={requestPending || requestModalState?.label?.includes('envoyee') || (requestModalEffectiveType === 'demande_baisse_prix' && (!requestModalEligibleForPriceDrop || !requestModalPriceValue.trim()))}
+                    disabled={
+                      requestPending ||
+                      requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ||
+                      (requestModalEffectiveType === 'demande_baisse_prix' && (!requestModalEligibleForPriceDrop || !requestModalPriceValue.trim())) ||
+                      (requestModalEffectiveType === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
+                    }
                   >
-                    {requestPending ? 'Envoi en cours...' : requestModalState?.label?.includes('corriger') ? 'Envoyer la correction' : requestModalState?.label?.includes('envoyee') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : 'Envoyer la demande de validation'}
+                    {requestPending ? 'Envoi en cours...' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Envoyer la correction' : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Envoyer la demande d annulation' : 'Envoyer la demande de validation'}
                   </button>
                 )}
               </div>
@@ -5428,7 +5583,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
-        {validationCheckPrompt && requestModalOpen && requestModalEffectiveType !== 'demande_baisse_prix' ? (
+        {validationCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_diffusion' ? (
           <div className="modal-overlay price-drop-popup-overlay" role="presentation">
             <section
               className={`price-drop-popup price-drop-popup-${validationCheckPrompt.kind}`}
@@ -5905,7 +6060,7 @@ function MandatsScreen(props: {
   requestComment: string
   onRequestCommentChange: (value: string) => void
   onCreateRequest: () => void
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
   onOpenDetailPage: (id: number) => void
   requestPending: boolean
@@ -6539,7 +6694,7 @@ function SuiviMandatsScreenV2Legacy(props: {
   stats: MandatStats
   loading: boolean
   onUpdateRequest: (input: { requestId: string; status: string; response: string; refusalReason: string; followUpNeeded: boolean; followUpDays: number; relaunchCount: number }) => void
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
 }) {
   const [comments, setComments] = useState<Record<string, string>>({})
@@ -6687,7 +6842,7 @@ function SuiviMandatsScreenV2(props: {
   stats: MandatStats
   loading: boolean
   onUpdateRequest: (input: { requestId: string; status: string; response: string; refusalReason: string; followUpNeeded: boolean; followUpDays: number; relaunchCount: number }) => void
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
   onOpenDetailPage: (id: number) => void
   selectedDossier: Dossier | null
@@ -7045,10 +7200,12 @@ function DossierDetailLayout(props: {
   requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  requestHistoryCancellation: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
+  requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   actionRequests?: DiffusionRequest[]
   currentActionRequest?: DiffusionRequest | null
   actionRole?: 'nego' | 'pauline'
-  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
   eyebrow: string
@@ -7074,7 +7231,7 @@ function DossierDetailLayout(props: {
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
-  const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop'>('all')
+  const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop' | 'cancellation'>('all')
   const dossier = props.selectedDossier
   const detailVariant = props.detailVariant ?? 'annonce'
   const actionRequests = props.actionRequests ?? []
@@ -7104,7 +7261,8 @@ function DossierDetailLayout(props: {
   const primaryImage = previewImages[0]?.url ?? dossier.photo_url_listing ?? null
   const showDiffusionHistory = historyView === 'all' || historyView === 'diffusion'
   const showPriceDropHistory = historyView === 'all' || historyView === 'price_drop'
-  const hasAnyHistory = props.requestHistoryDiffusion.length > 0 || props.requestHistoryPriceDrop.length > 0
+  const showCancellationHistory = historyView === 'all' || historyView === 'cancellation'
+  const hasAnyHistory = props.requestHistoryDiffusion.length > 0 || props.requestHistoryPriceDrop.length > 0 || props.requestHistoryCancellation.length > 0
   const [mandatSectionOpen, setMandatSectionOpen] = useState(true)
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
@@ -7161,7 +7319,8 @@ function DossierDetailLayout(props: {
   }
   const diffusionRequestGroups = buildRequestGroups(props.requestHistoryDiffusion, props.requestMessagesDiffusion)
   const priceDropRequestGroups = buildRequestGroups(props.requestHistoryPriceDrop, props.requestMessagesPriceDrop)
-  const latestRequestSignals = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop]
+  const cancellationRequestGroups = buildRequestGroups(props.requestHistoryCancellation, props.requestMessagesCancellation)
+  const latestRequestSignals = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
     .sort((left, right) => {
       const leftTime = left.date ? Date.parse(left.date) : 0
       const rightTime = right.date ? Date.parse(right.date) : 0
@@ -7763,6 +7922,7 @@ function DossierDetailLayout(props: {
                     <button className={`segment-button ${historyView === 'all' ? 'is-active' : ''}`} type="button" onClick={() => setHistoryView('all')}>Tout</button>
                     <button className={`segment-button ${historyView === 'diffusion' ? 'is-active' : ''}`} type="button" onClick={() => setHistoryView('diffusion')}>Diffusion</button>
                     <button className={`segment-button ${historyView === 'price_drop' ? 'is-active' : ''}`} type="button" onClick={() => setHistoryView('price_drop')}>Baisse de prix</button>
+                    <button className={`segment-button ${historyView === 'cancellation' ? 'is-active' : ''}`} type="button" onClick={() => setHistoryView('cancellation')}>Annulation</button>
                   </div>
                 </div>
                 {showDiffusionHistory && props.requestHistoryDiffusion.length > 0 ? (
@@ -7801,6 +7961,30 @@ function DossierDetailLayout(props: {
                           <div className="timeline-list">
                             {group.entries.map((entry) => (
                               <article key={`history-price-${entry.id}`} className={`timeline-card request-cycle-card tone-${group.cycleTone}`}>
+                                <strong>{entry.title}</strong>
+                                <span className="request-history-date">Date : {formatDate(entry.date)}</span>
+                                {entry.kind === 'summary' && entry.status ? <span>{requestStatusLabel(entry.status)}</span> : null}
+                                <p>{entry.body}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                {showCancellationHistory && props.requestHistoryCancellation.length > 0 ? (
+                  <>
+                    <span className="detail-label">Annulation mandat</span>
+                    <div className="request-group-list">
+                      {cancellationRequestGroups.map((group, index) => (
+                        <section key={`group-cancel-${group.requestId}`} className={`request-group tone-${group.cycleTone}`}>
+                          <div className="request-group-head">
+                            <span className="request-group-badge">Demande {cancellationRequestGroups.length - index}</span>
+                          </div>
+                          <div className="timeline-list">
+                            {group.entries.map((entry) => (
+                              <article key={`history-cancel-${entry.id}`} className={`timeline-card request-cycle-card tone-${group.cycleTone}`}>
                                 <strong>{entry.title}</strong>
                                 <span className="request-history-date">Date : {formatDate(entry.date)}</span>
                                 {entry.kind === 'summary' && entry.status ? <span>{requestStatusLabel(entry.status)}</span> : null}
@@ -8001,10 +8185,12 @@ function AnnonceScreen(props: {
   requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  requestHistoryCancellation: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
+  requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   actionRequests?: DiffusionRequest[]
   currentActionRequest?: DiffusionRequest | null
   actionRole?: 'nego' | 'pauline'
-  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
   onBack: () => void
@@ -8028,6 +8214,8 @@ function DossierDetailScreen(props: {
   requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  requestHistoryCancellation: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
+  requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
   onBack: () => void
@@ -8058,10 +8246,12 @@ function MobileDossierDetail(props: {
   requestMessagesDiffusion: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryPriceDrop: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  requestHistoryCancellation: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
+  requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   actionRequests?: DiffusionRequest[]
   currentActionRequest?: DiffusionRequest | null
   actionRole?: 'nego' | 'pauline'
-  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: 'demande_diffusion' | 'demande_baisse_prix') => void
+  onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
   eyebrow: string
@@ -8094,10 +8284,10 @@ function MobileDossierDetail(props: {
   const actionRole = props.actionRole ?? 'nego'
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
-  const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop]
+  const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
     .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
     .slice(0, 5)
-  const messageItems = [...props.requestMessagesDiffusion, ...props.requestMessagesPriceDrop, ...props.requestMessages]
+  const messageItems = [...props.requestMessagesDiffusion, ...props.requestMessagesPriceDrop, ...props.requestMessagesCancellation, ...props.requestMessages]
     .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
     .slice(0, 4)
   const firstMandat = props.mandats[0] ?? null
@@ -8137,6 +8327,7 @@ function MobileDossierDetail(props: {
       <section className="mobile-detail-actionbar" aria-label="Actions du dossier">
         <button className="mobile-primary-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_diffusion')}>Action métier</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_baisse_prix')}>Baisse prix</button>
+        <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_annulation_mandat')}>Annulation</button>
         {canShowDiffusion ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}>Diffusion</button> : null}
       </section>
 
