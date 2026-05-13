@@ -5168,8 +5168,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : null}
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
-            <section className="modal-panel request-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <section
+              className={`modal-panel request-modal-panel ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : 'request-modal-panel-validation'}`}
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="panel-head request-modal-head">
+                <span
+                  className={`modal-hero-icon ${requestModalEffectiveType === 'demande_baisse_prix' ? 'modal-hero-icon-price' : 'modal-hero-icon-validation'}`}
+                  aria-hidden="true"
+                />
                 <div className="request-modal-title">
                   <p className="eyebrow">Gestion des demandes</p>
                   <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : 'Demande de validation'}</h3>
@@ -5475,6 +5482,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <div className="modal-overlay" onClick={closeDiffusionModal}>
             <section className="modal-panel modal-panel-wide diffusion-modal-panel" onClick={(event) => event.stopPropagation()}>
               <div className="panel-head diffusion-modal-head">
+                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
                 <div className="diffusion-modal-title">
                   <p className="eyebrow">Diffusion</p>
                   <h3>Console passerelles</h3>
@@ -5493,19 +5501,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <strong className="diffusion-card-title">Vue de controle Hektor</strong>
                   <p className="diffusion-card-copy">Lis ici l'etat global du bien avant application, puis verifie le retour du lot juste apres.</p>
                   <div className="diffusion-state-grid diffusion-state-grid-compact">
-                    <article className="diffusion-state-item diffusion-state-item-wide">
+                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-status">
                       <span>Statut Hektor</span>
                       <strong>{diffusionModalMandat.statut_annonce ?? '-'}</strong>
                     </article>
-                    <article className="diffusion-state-item">
+                    <article className="diffusion-state-item diffusion-state-diffusable">
                       <span>Diffusable</span>
                       <strong>{diffusableLabel(diffusionModalMandat.diffusable)}</strong>
                     </article>
-                    <article className="diffusion-state-item">
+                    <article className="diffusion-state-item diffusion-state-portals">
                       <span>Passerelles actives</span>
                       <strong>{String(diffusionEnabledCount)}</strong>
                     </article>
-                    <article className="diffusion-state-item diffusion-state-item-wide">
+                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-save">
                       <span>Dernier enregistrement</span>
                       <strong>{diffusionTargetsSavedAt ? formatDate(diffusionTargetsSavedAt) : '-'}</strong>
                     </article>
