@@ -73,6 +73,12 @@ class AcceptDiffusionPayload(BaseModel):
     dryRun: bool = False
 
 
+class VerifyPriceDropPayload(BaseModel):
+    appDossierId: int = Field(gt=0)
+    requestedPrice: str | float | int | None = None
+    requestText: str | None = None
+
+
 class AppointmentRequestCreatePayload(BaseModel):
     clientName: str = Field(min_length=1, max_length=160)
     clientEmail: EmailStr | None = None

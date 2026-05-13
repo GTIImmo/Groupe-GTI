@@ -4,6 +4,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote
 
@@ -34,7 +35,19 @@ class HektorBridgeService:
 
     def _is_validation_approved(self, value: str | None) -> bool:
         normalized = self._normalize_text(value)
-        return normalized in {"oui", "valide", "validee", "validation ok", "ok"}
+        return normalized in {"1", "true", "oui", "valide", "validee", "validation ok", "validation_ok", "ok"}
+
+    def _normalize_hektor_flag(self, value: Any) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        normalized = self._normalize_text(str(value)).replace("_", " ")
+        if normalized in {"1", "true", "oui", "yes", "active", "enabled", "diffusable"}:
+            return "1"
+        if normalized in {"0", "false", "non", "no", "inactive", "disabled", "non diffusable"}:
+            return "0"
+        return str(value)
 
     def _normalize_hektor_message(self, value: str | None) -> str:
         return re.sub(r"\s+", " ", (value or "").replace("Ãƒâ€š", " ")).strip()
@@ -286,14 +299,103 @@ class HektorBridgeService:
 
     def _extract_diffusable(self, detail_payload: dict[str, Any]) -> str | None:
         if detail_payload.get("diffusable") is not None:
-            return str(detail_payload.get("diffusable"))
+            return self._normalize_hektor_flag(detail_payload.get("diffusable"))
         data = detail_payload.get("data")
         if isinstance(data, dict):
             candidates = [data.get("annonce"), data.get("keyData"), data]
             for candidate in candidates:
                 if isinstance(candidate, dict) and candidate.get("diffusable") is not None:
-                    return str(candidate.get("diffusable"))
+                    return self._normalize_hektor_flag(candidate.get("diffusable"))
         return None
+
+    def _parse_price_decimal(self, value: Any) -> Decimal | None:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        text = text.replace("\u00a0", " ").replace("\u20ac", "")
+        text = re.sub(r"[^0-9,.\-]", "", text)
+        if not text or text in {"-", ".", ","}:
+            return None
+        if "," in text and "." in text:
+            text = text.replace(".", "").replace(",", ".")
+        elif "," in text:
+            text = text.replace(",", ".")
+        try:
+            amount = Decimal(text)
+        except InvalidOperation:
+            return None
+        if amount <= 0:
+            return None
+        return amount.quantize(Decimal("1"))
+
+    def _extract_requested_price(self, requested_price: Any, request_text: str | None) -> Decimal | None:
+        direct = self._parse_price_decimal(requested_price)
+        if direct is not None:
+            return direct
+        text = unicodedata.normalize("NFD", request_text or "")
+        text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+        patterns = (
+            r"nouveau\s+prix\s+demande\s*:\s*([0-9][0-9\s.,]*)",
+            r"prix\s+demande\s*:\s*([0-9][0-9\s.,]*)",
+            r"baisse\s+de\s+prix.*?([0-9][0-9\s.,]*)",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+            if match:
+                parsed = self._parse_price_decimal(match.group(1))
+                if parsed is not None:
+                    return parsed
+        return None
+
+    def _extract_price_candidates(self, payload: Any, prefix: str = "") -> list[dict[str, Any]]:
+        candidates: list[dict[str, Any]] = []
+        preferred_keys = {
+            "prix",
+            "price",
+            "prix_public",
+            "prix_publique",
+            "prixpublic",
+            "public_price",
+            "price_public",
+        }
+        ignored_keys = {"old_value", "oldvalue", "previous_price", "ancien_prix"}
+        if isinstance(payload, dict):
+            for key, value in payload.items():
+                path = f"{prefix}.{key}" if prefix else str(key)
+                normalized_key = self._normalize_text(str(key)).replace(" ", "_")
+                if normalized_key in preferred_keys:
+                    amount = self._parse_price_decimal(value)
+                    if amount is not None:
+                        candidates.append({"path": path, "value": int(amount)})
+                elif normalized_key not in ignored_keys and isinstance(value, (dict, list)):
+                    candidates.extend(self._extract_price_candidates(value, path))
+        elif isinstance(payload, list):
+            for index, item in enumerate(payload):
+                candidates.extend(self._extract_price_candidates(item, f"{prefix}[{index}]"))
+        return candidates
+
+    def _read_observed_price(self, dossier: dict[str, Any]) -> tuple[Decimal | None, list[dict[str, Any]], str | None]:
+        annonce_id = str(dossier["hektor_annonce_id"])
+        read_error: str | None = None
+        try:
+            detail_payload = self._fetch_annonce_detail(annonce_id)
+            candidates = self._extract_price_candidates(detail_payload)
+            if candidates:
+                return Decimal(str(candidates[0]["value"])), candidates[:20], None
+        except Exception as error:
+            read_error = self._normalize_hektor_message(str(error))
+        try:
+            search_row = self._fetch_annonce_search_result(dossier)
+            candidates = self._extract_price_candidates(search_row or {})
+            if candidates:
+                return Decimal(str(candidates[0]["value"])), candidates[:20], read_error
+        except Exception as error:
+            read_error = self._normalize_hektor_message(str(error))
+        return None, [], read_error
 
     def _extract_validation_state(self, detail_payload: dict[str, Any]) -> str | None:
         def normalize_validation_value(value: Any) -> str | None:
@@ -340,6 +442,28 @@ class HektorBridgeService:
         except Exception:
             search_row = self._fetch_annonce_search_result(dossier)
             return self._extract_diffusable(search_row or {})
+
+    def verify_price_drop(self, app_dossier_id: int, requested_price: Any, request_text: str | None = None) -> dict[str, Any]:
+        dossier = self._load_dossier(app_dossier_id)
+        expected = self._extract_requested_price(requested_price, request_text)
+        if expected is None:
+            raise HTTPException(status_code=400, detail="Montant de baisse de prix introuvable dans la demande")
+        observed, candidates, read_error = self._read_observed_price(dossier)
+        matches = observed == expected if observed is not None else False
+        return {
+            "app_dossier_id": dossier["app_dossier_id"],
+            "hektor_annonce_id": str(dossier["hektor_annonce_id"]),
+            "requested_price": int(expected),
+            "observed_price": int(observed) if observed is not None else None,
+            "matches": matches,
+            "message": (
+                "Operation validee : prix Hektor conforme a la demande."
+                if matches
+                else "Operation refusee : Prix different Hektor."
+            ),
+            "price_candidates": candidates,
+            "read_error": read_error,
+        }
 
     def _set_property_validation(self, dossier: dict[str, Any], state: int, dry_run: bool) -> dict[str, Any]:
         annonce_id = str(dossier["hektor_annonce_id"])
@@ -437,28 +561,44 @@ class HektorBridgeService:
                 errors.append(f"{method} {params} => {self._normalize_hektor_message(str(error.detail))}")
         raise HTTPException(status_code=500, detail=" | ".join(errors))
 
+    def _is_already_published_message(self, message: str | None) -> bool:
+        return "listing is already published on this platform" in self._normalize_hektor_message(message).lower()
+
     def _set_diffusable_state(self, dossier: dict[str, Any], requested: bool, dry_run: bool) -> dict[str, Any]:
         annonce_id = str(dossier["hektor_annonce_id"])
         current = self._read_observed_diffusable(dossier)
         requested_value = "1" if requested else "0"
         if current == requested_value:
-            return {"changed": False, "result": "already_diffusable" if requested else "already_not_diffusable"}
+            return {
+                "changed": False,
+                "result": "already_diffusable" if requested else "already_not_diffusable",
+                "observed_diffusable": current,
+            }
         if dry_run:
-            return {"changed": True, "result": "would_patch_diffuse"}
+            return {"changed": True, "result": "would_patch_diffuse", "observed_diffusable": current}
         try:
             response_preview = self._try_diffuse_request(annonce_id)
             observed = self._read_observed_diffusable(dossier)
             if observed == requested_value:
-                return {"changed": True, "result": response_preview}
-            return {"changed": True, "result": f"diffuse_unconfirmed: observed_diffusable={observed}; response={response_preview}"}
+                return {"changed": True, "result": response_preview, "observed_diffusable": observed}
+            return {
+                "changed": True,
+                "result": f"diffuse_unconfirmed: observed_diffusable={observed}; response={response_preview}",
+                "observed_diffusable": observed,
+            }
         except HTTPException as error:
             message = self._normalize_hektor_message(str(error.detail))
             try:
-                if self._read_observed_diffusable(dossier) == requested_value:
-                    return {"changed": True, "result": f"confirmed_after_diffuse_error: {message}"}
+                observed = self._read_observed_diffusable(dossier)
+                if observed == requested_value:
+                    return {
+                        "changed": True,
+                        "result": f"confirmed_after_diffuse_error: {message}",
+                        "observed_diffusable": observed,
+                    }
             except Exception:
                 pass
-            return {"changed": True, "result": f"diffuse_unconfirmed: {message}"}
+            return {"changed": True, "result": f"diffuse_unconfirmed: {message}", "observed_diffusable": current}
 
     def _ensure_diffusable(self, dossier: dict[str, Any], dry_run: bool) -> dict[str, Any]:
         return self._set_diffusable_state(dossier, True, dry_run)
@@ -520,11 +660,13 @@ class HektorBridgeService:
         diffusable_changed = False
         diffusable_result = "not_managed_in_console"
         observed_diffusable: str | None = None
+        observed_validation: str | None = None
         if ensure_diffusable_flag:
             try:
                 ensure_result = self._ensure_diffusable(dossier, dry_run)
                 diffusable_changed = bool(ensure_result["changed"])
                 diffusable_result = self._normalize_hektor_message(str(ensure_result["result"]))
+                observed_diffusable = ensure_result.get("observed_diffusable")
                 if not dry_run:
                     try:
                         observed_diffusable = self._read_observed_diffusable(dossier)
@@ -587,7 +729,16 @@ class HektorBridgeService:
                 parsed = self._apply_portal_change("add", str(dossier["hektor_annonce_id"]), str(target["hektor_broadcast_id"]))
                 applied.append({"action": "add", "portal_key": target.get("portal_key"), "broadcast_id": target.get("hektor_broadcast_id"), "result": parsed})
             except Exception as error:
-                failed.append({"action": "add", "portal_key": target.get("portal_key"), "broadcast_id": target.get("hektor_broadcast_id"), "error": self._normalize_hektor_message(str(error))})
+                message = self._normalize_hektor_message(str(error))
+                if self._is_already_published_message(message):
+                    applied.append({
+                        "action": "add",
+                        "portal_key": target.get("portal_key"),
+                        "broadcast_id": target.get("hektor_broadcast_id"),
+                        "already_published": True,
+                    })
+                    continue
+                failed.append({"action": "add", "portal_key": target.get("portal_key"), "broadcast_id": target.get("hektor_broadcast_id"), "error": message})
 
         for target in to_remove:
             if dry_run:
@@ -602,7 +753,9 @@ class HektorBridgeService:
         observed_broadcasts: list[dict[str, Any]] = []
         if not dry_run:
             try:
-                observed_diffusable = self._read_observed_diffusable(dossier)
+                detail_payload = self._fetch_annonce_detail(str(dossier["hektor_annonce_id"]))
+                observed_diffusable = self._extract_diffusable(detail_payload)
+                observed_validation = self._extract_validation_state(detail_payload)
             except Exception as error:
                 failed.append({"action": "read-detail", "error": self._normalize_hektor_message(str(error))})
             try:
@@ -617,6 +770,7 @@ class HektorBridgeService:
             "diffusable_changed": diffusable_changed,
             "diffusable_result": diffusable_result,
             "observed_diffusable": observed_diffusable,
+            "observed_validation": observed_validation,
             "validation_state": dossier.get("validation_diffusion_state"),
             "validation_approved": self._is_validation_approved(dossier.get("validation_diffusion_state")),
             "waiting_on_hektor": False,

@@ -1261,6 +1261,49 @@ export type HektorValidationResult = {
   refresh_single_annonce?: unknown
 }
 
+export type HektorPriceDropCheckResult = {
+  app_dossier_id: number
+  hektor_annonce_id: string
+  requested_price: number
+  observed_price: number | null
+  matches: boolean
+  message: string
+  price_candidates?: Array<Record<string, unknown>>
+  read_error?: string | null
+}
+
+export async function verifyPriceDropOnHektor(input: { appDossierId: number; requestedPrice?: string | number | null; requestText?: string | null }): Promise<HektorPriceDropCheckResult> {
+  if (canUseLocalDiffusionDevApi()) {
+    const response = await fetch('/api/hektor-diffusion/price-drop-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appDossierId: input.appDossierId,
+        requestedPrice: input.requestedPrice ?? null,
+        requestText: input.requestText ?? null,
+      }),
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(extractApiErrorMessage(payload) || 'Controle du prix Hektor impossible')
+    }
+    return payload.payload as HektorPriceDropCheckResult
+  }
+  if (backendApiBaseUrl) {
+    const payload = await invokeBackendApi<{ ok: true; payload: HektorPriceDropCheckResult }>('/hektor-diffusion/price-drop-check', {
+      method: 'POST',
+      body: {
+        appDossierId: input.appDossierId,
+        requestedPrice: input.requestedPrice ?? null,
+        requestText: input.requestText ?? null,
+      },
+    })
+    return payload.payload
+  }
+  assertBackendApiConfigured()
+  throw new Error('Controle du prix Hektor indisponible')
+}
+
 export async function setDossierValidationOnHektor(input: { appDossierId: number; state: 0 | 1; dryRun?: boolean }): Promise<HektorValidationResult> {
   if (canUseLocalDiffusionDevApi()) {
     const response = await fetch('/api/hektor-diffusion/set-validation', {

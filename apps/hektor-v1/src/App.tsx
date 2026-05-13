@@ -40,6 +40,7 @@ import {
   submitDiffusionCorrection,
   updateAppUser,
   updateDiffusionRequest,
+  verifyPriceDropOnHektor,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
@@ -55,6 +56,17 @@ const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
+type UpdateDiffusionRequestAction = {
+  requestId: string
+  status: string
+  response: string
+  refusalReason: string
+  followUpNeeded: boolean
+  followUpDays: number
+  relaunchCount: number
+  priceDropChecked?: boolean
+  publishAfterPriceDrop?: boolean
+}
 
 function detailVariantForScreen(screen: Screen): 'annonce' | 'mandat' | 'suivi' {
   if (screen === 'registre') return 'mandat'
@@ -68,6 +80,23 @@ function detailEyebrowForScreen(screen: Screen) {
   if (screen === 'estimations') return 'Detail estimation'
   return 'Detail annonce'
 }
+
+const activeListingStatusTokens = new Set(['actif', 'sous offre', 'sous compromis'])
+
+function screenStatusToken(value: string | null | undefined) {
+  return (value ?? '').trim().toLowerCase()
+}
+
+function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen) {
+  if (screen === 'estimations') {
+    return rows.filter((item) => screenStatusToken(item.statut_annonce) === 'estimation')
+  }
+  if (screen === 'mandats' || screen === 'suivi') {
+    return rows.filter((item) => activeListingStatusTokens.has(screenStatusToken(item.statut_annonce)))
+  }
+  return rows
+}
+
 const dossierPageSize = 50
 const mandatPageSize = 50
 const workItemPageSize = 25
@@ -302,6 +331,15 @@ function normalizeRequestedPriceInput(value: string | null | undefined) {
   return { raw, normalized, numeric }
 }
 
+function extractRequestedPriceFromRequest(request: DiffusionRequest | null | undefined) {
+  const text = [request?.request_reason, request?.request_comment].filter(Boolean).join('\n')
+  const normalizedText = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const match =
+    normalizedText.match(/nouveau\s+prix\s+demande\s*:\s*([0-9][0-9\s.,]*)/i) ??
+    normalizedText.match(/prix\s+demande\s*:\s*([0-9][0-9\s.,]*)/i)
+  return normalizeRequestedPriceInput(match?.[1] ?? '')
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return '-'
   const date = new Date(value)
@@ -353,11 +391,17 @@ function boolLabel(value: boolean | number | string | null | undefined) {
 }
 
 function diffusableLabel(value: boolean | number | string | null | undefined) {
-  return value === true || value === 1 || value === '1' || value === 'true' ? 'Diffusable' : 'Non diffusable'
+  return isDiffusableValue(value) ? 'Diffusable' : 'Non diffusable'
 }
 
 function isDiffusableValue(value: boolean | number | string | null | undefined) {
-  return value === true || value === 1 || value === '1' || value === 'true'
+  if (value === true || value === 1) return true
+  const normalized = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+  return ['1', 'true', 'oui', 'yes', 'active', 'enabled', 'diffusable'].includes(normalized)
 }
 
 function normalizeValidationState(value: string | null | undefined) {
@@ -1612,6 +1656,17 @@ function buildPortalsResume(values: Array<string | null | undefined>) {
   return uniquePortalKeys(values).join(', ')
 }
 
+function summarizeApplyFailures(failed: Array<Record<string, unknown>> | undefined) {
+  const details = (failed ?? [])
+    .map((item) => {
+      const portal = safeText(item.portal_key) || safeText(item.broadcast_id) || 'passerelle'
+      const error = safeText(item.error)
+      return error ? `${portal}: ${error}` : portal
+    })
+    .filter(Boolean)
+  return details.join(' | ')
+}
+
 function portalBrandLabel(value: string | null | undefined) {
   const normalized = normalizePortalToken(value)
   if (normalized.includes('leboncoin') || normalized.includes('lbc')) return 'Leboncoin'
@@ -2285,6 +2340,14 @@ export default function App() {
   const [requestModalRole, setRequestModalRole] = useState<'nego' | 'pauline'>('nego')
   const [requestModalDecision, setRequestModalDecision] = useState('in_progress')
   const [requestModalRefusalReason, setRequestModalRefusalReason] = useState('')
+  const [priceDropCheckPrompt, setPriceDropCheckPrompt] = useState<null | {
+    kind: 'mismatch' | 'confirmed'
+    message: string
+    hektorAnnonceId: number | string | null
+    requestedPrice?: number | null
+    observedPrice?: number | null
+    pendingAction?: UpdateDiffusionRequestAction
+  }>(null)
   const [diffusionModalOpen, setDiffusionModalOpen] = useState(false)
   const [diffusionModalMandatId, setDiffusionModalMandatId] = useState<number | null>(null)
   const [diffusionDraftTargets, setDiffusionDraftTargets] = useState<Record<string, boolean>>({})
@@ -2468,16 +2531,17 @@ export default function App() {
     mandatsPromise
       .then((nextMandatsPage) => {
         if (cancelled) return
-        setMandats(nextMandatsPage.rows)
+        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen)
+        setMandats(scopedRows)
         setMandatsTotal(nextMandatsPage.total)
-        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], nextMandatsPage.rows)))
+        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], scopedRows)))
         if (screen === 'registre') {
           setSelectedRegisterRowId((current) => {
-            if (current && nextMandatsPage.rows.some((item) => item.register_row_id === current)) return current
-            return nextMandatsPage.rows[0]?.register_row_id ?? null
+            if (current && scopedRows.some((item) => item.register_row_id === current)) return current
+            return scopedRows[0]?.register_row_id ?? null
           })
         } else {
-          setSelectedMandatId((current) => current ?? (nextMandatsPage.rows[0]?.app_dossier_id ?? null))
+          setSelectedMandatId((current) => current ?? (scopedRows[0]?.app_dossier_id ?? null))
         }
       })
       .catch((error) => {
@@ -2810,6 +2874,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestModalRole(role)
     setRequestModalDecision(role === 'pauline' ? 'in_progress' : 'pending')
     setRequestModalRefusalReason('')
+    setPriceDropCheckPrompt(null)
     setRequestModalOpen(true)
   }
 
@@ -2822,6 +2887,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setRequestModalRole('nego')
     setRequestModalDecision('in_progress')
     setRequestModalRefusalReason('')
+    setPriceDropCheckPrompt(null)
   }
 
   function openDiffusionModal(appDossierId: number) {
@@ -2908,15 +2974,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
-  async function handleUpdateDiffusionRequest(input: {
-    requestId: string
-    status: string
-    response: string
-    refusalReason: string
-    followUpNeeded: boolean
-    followUpDays: number
-    relaunchCount: number
-  }) {
+  async function handleUpdateDiffusionRequest(input: UpdateDiffusionRequestAction) {
     if (!profile) return
     setRequestLoading(true)
     setErrorMessage(null)
@@ -2924,15 +2982,82 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     try {
       const currentRequest = diffusionRequests.find((item) => item.id === input.requestId) ?? null
       const currentMandat = currentRequest ? mandats.find((item) => item.app_dossier_id === currentRequest.app_dossier_id) ?? null : null
-      let acceptanceResult: Awaited<ReturnType<typeof acceptDiffusionRequestOnHektor>> | null = null
+      let acceptanceResult: Awaited<ReturnType<typeof acceptDiffusionRequestOnHektor>> | Awaited<ReturnType<typeof applyDiffusionTargetsOnHektor>> | null = null
       let acceptanceInfoMessage: string | null = null
-      if (input.status === 'accepted' && !isPriceDropRequest(currentRequest?.request_type) && currentRequest) {
-        if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
-          acceptanceInfoMessage = "Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation."
+      const isPriceDropApproval = input.status === 'accepted' && currentRequest && isPriceDropRequest(currentRequest.request_type)
+      if (isPriceDropApproval && !input.priceDropChecked) {
+        const requestedPrice = extractRequestedPriceFromRequest(currentRequest)
+        if (!requestedPrice.numeric) {
+          throw new Error('Montant de baisse de prix introuvable dans la demande.')
         }
-        acceptanceResult = await acceptDiffusionRequestOnHektor({
+        const requestText = [currentRequest.request_reason, currentRequest.request_comment].filter(Boolean).join('\n')
+        const check = await verifyPriceDropOnHektor({
           appDossierId: currentRequest.app_dossier_id,
+          requestedPrice: requestedPrice.normalized,
+          requestText,
         })
+        if (!check.matches) {
+          setPriceDropCheckPrompt({
+            kind: 'mismatch',
+            message: 'Opération refusée : Prix différent Hektor',
+            hektorAnnonceId: currentRequest.hektor_annonce_id,
+            requestedPrice: check.requested_price,
+            observedPrice: check.observed_price,
+          })
+          return
+        }
+        setPriceDropCheckPrompt({
+          kind: 'confirmed',
+          message: 'Opération validé ! Voulez vous diffusé et activer toute les passerelles ?',
+          hektorAnnonceId: currentRequest.hektor_annonce_id,
+          requestedPrice: check.requested_price,
+          observedPrice: check.observed_price,
+          pendingAction: { ...input, priceDropChecked: true },
+        })
+        return
+      }
+      setPriceDropCheckPrompt(null)
+      if (input.status === 'accepted' && currentRequest) {
+        if (isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop) {
+          if (!currentMandat) {
+            throw new Error('Mandat introuvable pour activer les passerelles de cette baisse de prix.')
+          }
+          const defaultPreview = await previewDefaultDiffusionTargets({ appDossierId: currentRequest.app_dossier_id })
+          const defaultTargets = (defaultPreview.targets ?? []).map((target) => ({
+            hektor_broadcast_id: String(target.hektor_broadcast_id),
+            portal_key: target.portal_key,
+            target_state: 'enabled' as const,
+          }))
+          if (defaultTargets.length === 0) {
+            throw new Error('Aucune passerelle par defaut trouvee pour ce mandat.')
+          }
+          await saveDiffusionTargets({
+            mandat: currentMandat,
+            targets: defaultTargets,
+            requestedByName: userFullName(profile),
+            requestedByRole: 'system',
+          })
+          acceptanceInfoMessage = "Baisse de prix acceptee. L'app active les passerelles par defaut sans modifier Validation ni Diffusable."
+          acceptanceResult = await applyDiffusionTargetsOnHektor({
+            appDossierId: currentRequest.app_dossier_id,
+            ensureDiffusable: false,
+          })
+          if ((acceptanceResult.failed ?? []).length > 0) {
+            const failureDetails = summarizeApplyFailures(acceptanceResult.failed)
+            throw new Error(
+              failureDetails
+                ? `Activation passerelles refusee par Hektor : ${failureDetails}. La demande reste en attente.`
+                : 'Activation passerelles refusee par Hektor. La demande reste en attente.',
+            )
+          }
+        } else if (!isPriceDropRequest(currentRequest.request_type)) {
+          if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
+            acceptanceInfoMessage = "Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation."
+          }
+          acceptanceResult = await acceptDiffusionRequestOnHektor({
+            appDossierId: currentRequest.app_dossier_id,
+          })
+        }
       }
       await updateDiffusionRequest({
         id: input.requestId,
@@ -2947,20 +3072,55 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       })
       mutationCommitted = true
       if (input.status === 'accepted' && currentRequest && acceptanceResult && !acceptanceResult.waiting_on_hektor) {
-        const diffusableValue = acceptanceResult.observed_diffusable === '1' ? '1' : '0'
+        const isPriceDropPublish = isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop
+        const observedDiffusable = acceptanceResult.observed_diffusable
+        const currentDiffusable = currentMandat?.diffusable ?? (selectedDossier?.app_dossier_id === currentRequest.app_dossier_id ? selectedDossier.diffusable : null)
+        const diffusableValue =
+          observedDiffusable != null && String(observedDiffusable).trim() !== ''
+            ? isDiffusableValue(observedDiffusable) ? '1' : '0'
+            : isDiffusableValue(currentDiffusable) ? '1' : '0'
         const validationValue =
           acceptanceResult.observed_validation && isValidationApproved(acceptanceResult.observed_validation)
             ? acceptanceResult.observed_validation
             : acceptanceResult.validation_state && isValidationApproved(acceptanceResult.validation_state)
               ? acceptanceResult.validation_state
               : currentMandat?.validation_diffusion_state ?? null
-        await setDossierHektorState(currentRequest.app_dossier_id, {
-          validationDiffusionState: validationValue,
-          diffusable: diffusableValue === '1',
-        })
-        setDossiers((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
-        setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
-        setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, diffusable: diffusableValue, validation_diffusion_state: validationValue } : current)
+        if (isPriceDropPublish) {
+          const observedStatePatch: Parameters<typeof setDossierHektorState>[1] = {}
+          if (observedDiffusable != null && String(observedDiffusable).trim() !== '') {
+            observedStatePatch.diffusable = isDiffusableValue(observedDiffusable)
+          }
+          if (acceptanceResult.observed_validation && isValidationApproved(acceptanceResult.observed_validation)) {
+            observedStatePatch.validationDiffusionState = acceptanceResult.observed_validation
+          }
+          if (typeof observedStatePatch.diffusable !== 'undefined' || typeof observedStatePatch.validationDiffusionState !== 'undefined') {
+            await setDossierHektorState(currentRequest.app_dossier_id, observedStatePatch)
+            setDossiers((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? {
+              ...item,
+              ...(typeof observedStatePatch.diffusable !== 'undefined' ? { diffusable: observedStatePatch.diffusable ? '1' : '0' } : {}),
+              ...(observedStatePatch.validationDiffusionState ? { validation_diffusion_state: observedStatePatch.validationDiffusionState } : {}),
+            } : item))
+            setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? {
+              ...item,
+              ...(typeof observedStatePatch.diffusable !== 'undefined' ? { diffusable: observedStatePatch.diffusable ? '1' : '0' } : {}),
+              ...(observedStatePatch.validationDiffusionState ? { validation_diffusion_state: observedStatePatch.validationDiffusionState } : {}),
+            } : item))
+            setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? {
+              ...current,
+              ...(typeof observedStatePatch.diffusable !== 'undefined' ? { diffusable: observedStatePatch.diffusable ? '1' : '0' } : {}),
+              ...(observedStatePatch.validationDiffusionState ? { validation_diffusion_state: observedStatePatch.validationDiffusionState } : {}),
+            } : current)
+          }
+        }
+        if (!isPriceDropPublish) {
+          await setDossierHektorState(currentRequest.app_dossier_id, {
+            validationDiffusionState: validationValue,
+            diffusable: diffusableValue === '1',
+          })
+          setDossiers((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
+          setMandats((current) => current.map((item) => item.app_dossier_id === currentRequest.app_dossier_id ? { ...item, diffusable: diffusableValue, validation_diffusion_state: validationValue } : item))
+          setSelectedDossier((current) => current && current.app_dossier_id === currentRequest.app_dossier_id ? { ...current, diffusable: diffusableValue, validation_diffusion_state: validationValue } : current)
+        }
         const acceptedBroadcasts = await loadMandatBroadcasts(currentRequest.app_dossier_id).catch(() => [])
         const acceptedPortailsResume = buildPortalsResume([
           ...acceptedBroadcasts.map((item) => item.passerelle_key),
@@ -3000,15 +3160,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         }
       }
       if (input.status === 'accepted' && currentRequest && acceptanceResult?.waiting_on_hektor) {
-        await setDossierHektorState(currentRequest.app_dossier_id, {
-          validationDiffusionState: acceptanceResult.observed_validation ?? acceptanceResult.validation_state ?? currentMandat?.validation_diffusion_state ?? null,
-          diffusable:
-            acceptanceResult.observed_diffusable === '1'
-              ? true
-              : acceptanceResult.observed_diffusable === '0'
-                ? false
-                : null,
-        })
+        if (!(isPriceDropRequest(currentRequest.request_type) && input.publishAfterPriceDrop)) {
+          await setDossierHektorState(currentRequest.app_dossier_id, {
+            validationDiffusionState: acceptanceResult.observed_validation ?? acceptanceResult.validation_state ?? currentMandat?.validation_diffusion_state ?? null,
+            diffusable:
+              isDiffusableValue(acceptanceResult.observed_diffusable)
+                ? true
+                : acceptanceResult.observed_diffusable === '0'
+                  ? false
+                  : null,
+          })
+        }
         acceptanceInfoMessage = acceptanceResult.waiting_message ?? "Demande acceptee. Hektor n'a pas encore confirme le passage du bien en diffusable."
       }
       closeRequestModal()
@@ -3475,6 +3637,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
   const mandatTotalPages = totalPages(mandatsTotal, mandatPageSize)
   const workItemTotalPages = totalPages(workItemsTotal, workItemPageSize)
+  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen), [mandats, screen])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
@@ -3522,13 +3685,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   )
   const selectedMandat = useMemo(
     () =>
-      mandats.find((item) => item.app_dossier_id === selectedMandatId) ??
+      screenMandats.find((item) => item.app_dossier_id === selectedMandatId) ??
       (selectedDossier && selectedDossier.app_dossier_id === selectedMandatId ? (selectedDossier as unknown as MandatRecord) : null),
-    [mandats, selectedDossier, selectedMandatId],
+    [screenMandats, selectedDossier, selectedMandatId],
   )
   const selectedRegisterMandat = useMemo(
-    () => mandats.find((item) => (item.register_row_id ?? null) === selectedRegisterRowId) ?? null,
-    [mandats, selectedRegisterRowId],
+    () => screenMandats.find((item) => (item.register_row_id ?? null) === selectedRegisterRowId) ?? null,
+    [screenMandats, selectedRegisterRowId],
   )
   const requestModalMandat = useMemo(
     () =>
@@ -4105,7 +4268,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'mandats' ? (
           <MobileMandatCards
-            mandats={mandats}
+            mandats={screenMandats}
             total={mandatsTotal}
             loading={mandatLoading}
             mode="active"
@@ -4114,7 +4277,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'estimations' ? (
           <MobileMandatCards
-            mandats={mandats}
+            mandats={screenMandats}
             total={mandatsTotal}
             loading={mandatLoading}
             mode="estimation"
@@ -4123,18 +4286,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
-            mandats={mandats}
+            mandats={screenMandats}
             total={mandatsTotal}
             loading={mandatLoading}
             onSelectMandat={(rowId) => {
               setSelectedRegisterRowId(rowId)
-              const row = mandats.find((item) => mandateRegisterRowKey(item) === rowId)
+              const row = screenMandats.find((item) => mandateRegisterRowKey(item) === rowId)
               if (row?.app_dossier_id) openDossierDetailPage(row.app_dossier_id)
             }}
           />
         ) : (
           <MobileMandatCards
-            mandats={mandats}
+            mandats={screenMandats}
             total={mandatsTotal}
             loading={requestLoading || mandatLoading}
             mode="active"
@@ -4768,7 +4931,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <StockScreen dossiers={dossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
           <MandatsScreen
-            mandats={mandats}
+            mandats={screenMandats}
             mandatsTotal={mandatsTotal}
             mandatPage={mandatPage}
             mandatTotalPages={mandatTotalPages}
@@ -4799,7 +4962,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'estimations' ? (
           <MandatsScreen
-            mandats={mandats}
+            mandats={screenMandats}
             mandatsTotal={mandatsTotal}
             mandatPage={mandatPage}
             mandatTotalPages={mandatTotalPages}
@@ -4830,7 +4993,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
-            mandats={mandats}
+            mandats={screenMandats}
             mandatsTotal={mandatsTotal}
             mandatPage={mandatPage}
             mandatTotalPages={mandatTotalPages}
@@ -4845,7 +5008,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : (
           <SuiviMandatsScreenV2
             isAdmin={isAdmin}
-            mandats={mandats}
+            mandats={screenMandats}
             requests={diffusionRequests}
             stats={mandatStats}
             loading={requestLoading || mandatLoading}
@@ -5045,7 +5208,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <div className="admin-form-grid request-form-grid">
                   <label className="filter-field">
                     <span>Decision Pauline</span>
-                    <select value={requestModalDecision} onChange={(event) => setRequestModalDecision(event.target.value)}>
+                    <select
+                      value={requestModalDecision}
+                      onChange={(event) => {
+                        setRequestModalDecision(event.target.value)
+                        setPriceDropCheckPrompt(null)
+                      }}
+                    >
                       <option value="in_progress">A traiter</option>
                       <option value="accepted">Accepter</option>
                       <option value="refused">Refuser</option>
@@ -5075,7 +5244,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       followUpDays: requestModalDecision === 'refused' ? 2 : 0,
                       relaunchCount: requestModalRequest.relaunch_count ?? 0,
                     })}
-                    disabled={requestLoading || (requestModalDecision === 'refused' && !requestModalRefusalReason)}
+                    disabled={requestLoading || (requestModalDecision === 'accepted' && priceDropCheckPrompt?.kind === 'confirmed') || (requestModalDecision === 'refused' && !requestModalRefusalReason)}
                   >
                     {requestLoading ? 'Enregistrement...' : requestModalDecision === 'accepted' ? (requestModalEffectiveType === 'demande_baisse_prix' ? 'Approuver la baisse' : 'Accepter') : requestModalDecision === 'refused' ? 'Refuser' : 'Enregistrer le traitement'}
                   </button>
@@ -5090,6 +5259,75 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   >
                     {requestPending ? 'Envoi en cours...' : requestModalState?.label?.includes('corriger') ? 'Envoyer la correction' : requestModalState?.label?.includes('envoyee') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : 'Envoyer la demande de validation'}
                   </button>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {priceDropCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_baisse_prix' ? (
+          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
+            <section
+              className={`price-drop-popup price-drop-popup-${priceDropCheckPrompt.kind}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="price-drop-popup-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="price-drop-popup-icon" aria-hidden="true" />
+              <p className="price-drop-popup-eyebrow">Contrôle prix Hektor</p>
+              <h3 id="price-drop-popup-title">
+                {priceDropCheckPrompt.kind === 'mismatch' ? 'Prix différent Hektor' : 'Prix confirmé'}
+              </h3>
+              <p className="price-drop-popup-message">{priceDropCheckPrompt.message}</p>
+              <div className="price-drop-popup-prices">
+                <span>Demande <strong>{formatPrice(priceDropCheckPrompt.requestedPrice)}</strong></span>
+                <span>Hektor <strong>{formatPrice(priceDropCheckPrompt.observedPrice)}</strong></span>
+              </div>
+              <div className="price-drop-popup-actions">
+                {priceDropCheckPrompt.kind === 'mismatch' ? (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      onClick={() => setPriceDropCheckPrompt(null)}
+                    >
+                      Fermer
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      onClick={() => openHektorAnnonce(priceDropCheckPrompt.hektorAnnonceId)}
+                    >
+                      Lien Hektor
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      disabled={requestLoading || !priceDropCheckPrompt.pendingAction}
+                      onClick={() => priceDropCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...priceDropCheckPrompt.pendingAction,
+                        priceDropChecked: true,
+                        publishAfterPriceDrop: false,
+                      })}
+                    >
+                      Non
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      disabled={requestLoading || !priceDropCheckPrompt.pendingAction}
+                      onClick={() => priceDropCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...priceDropCheckPrompt.pendingAction,
+                        priceDropChecked: true,
+                        publishAfterPriceDrop: true,
+                      })}
+                    >
+                      Oui
+                    </button>
+                  </>
                 )}
               </div>
             </section>

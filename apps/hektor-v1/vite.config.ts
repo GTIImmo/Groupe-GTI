@@ -531,6 +531,63 @@ function hektorDiffusionDevApi(): Plugin {
       server.middlewares.use('/api/hektor-diffusion/set-diffusable', (req, res) => {
         handleDiffusableCommand(req, res)
       })
+      server.middlewares.use('/api/hektor-diffusion/price-drop-check', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method not allowed' }))
+          return
+        }
+
+        const chunks: Buffer[] = []
+        req.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+        req.on('end', () => {
+          try {
+            const raw = Buffer.concat(chunks).toString('utf-8') || '{}'
+            const body = JSON.parse(raw) as { appDossierId?: number; requestedPrice?: string | number | null; requestText?: string | null }
+            const appDossierId = Number(body.appDossierId)
+            if (!Number.isFinite(appDossierId) || appDossierId <= 0) {
+              res.statusCode = 400
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'Invalid appDossierId' }))
+              return
+            }
+
+            const args = [scriptPath, 'price-drop-check', '--app-dossier-id', String(appDossierId)]
+            if (body.requestedPrice != null && String(body.requestedPrice).trim()) {
+              args.push('--requested-price', String(body.requestedPrice))
+            }
+            if (body.requestText != null && String(body.requestText).trim()) {
+              args.push('--request-text', String(body.requestText))
+            }
+
+            execFile(pythonPath, args, { cwd: projectRoot, timeout: 120000 }, (error, stdout, stderr) => {
+              res.setHeader('Content-Type', 'application/json')
+              if (error) {
+                res.statusCode = 500
+                res.end(JSON.stringify({
+                  ok: false,
+                  error: error.message,
+                  stderr: stderr.trim() || null,
+                  stdout: stdout.trim() || null,
+                }))
+                return
+              }
+              try {
+                res.statusCode = 200
+                res.end(JSON.stringify({ ok: true, payload: JSON.parse(stdout) }))
+              } catch {
+                res.statusCode = 200
+                res.end(JSON.stringify({ ok: true, payload: { stdout: stdout.trim() || null, stderr: stderr.trim() || null } }))
+              }
+            })
+          } catch (error) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : 'Unexpected error' }))
+          }
+        })
+      })
     },
   }
 }
