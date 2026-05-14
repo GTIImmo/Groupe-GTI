@@ -1,4 +1,4 @@
-﻿import { FormEvent, Fragment, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, Fragment, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import {
   type AppFilters,
@@ -2000,6 +2000,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
   const [uploadVisibility, setUploadVisibility] = useState<Exclude<ConsoleDocumentVisibility, 'unknown'>>('private')
   const [uploadType, setUploadType] = useState('')
   const [uploadPending, setUploadPending] = useState(false)
+  const [uploadInputVersion, setUploadInputVersion] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -2079,6 +2080,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
     }
   }
 
+  function handleUploadFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+    setUploadFile(file)
+    if (file) {
+      setMessage(null)
+      setError(null)
+    }
+  }
+
   async function handleUploadDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!uploadFile) {
@@ -2098,6 +2108,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
       })
       setUploadFile(null)
       setUploadType('')
+      setUploadInputVersion((value) => value + 1)
       setMessage('Document envoye en attente. Le PC serveur va l ajouter dans Hektor, puis rafraichir la liste.')
       window.setTimeout(() => void refreshDocuments(true), 1500)
     } catch (err) {
@@ -2141,7 +2152,17 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
       <form className="console-upload-form" onSubmit={handleUploadDocument}>
         <label className="filter-field console-upload-file">
           <span>Ajouter dans Hektor</span>
-          <input type="file" onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} />
+          <div className="console-upload-pickers">
+            <label className="ghost-button console-upload-picker">
+              Parcourir
+              <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
+            </label>
+            <label className="ghost-button console-upload-picker">
+              Camera
+              <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
+            </label>
+          </div>
+          {uploadFile ? <strong className="console-upload-selected">{uploadFile.name}</strong> : null}
         </label>
         <label className="filter-field">
           <span>Visibilite</span>
@@ -9254,5 +9275,3 @@ function MetricCard({
 function InfoCard({ label, value }: { label: string; value: string | number | null | undefined }) {
   return <article className="info-card"><span>{label}</span><strong>{value == null || value === '' ? '-' : value}</strong></article>
 }
-
-
