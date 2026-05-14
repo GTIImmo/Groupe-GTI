@@ -2981,10 +2981,11 @@ export async function loadConsoleDocuments(appDossierId: number): Promise<Consol
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase
     .from('app_console_document')
-    .select('*')
+    .select('id,app_dossier_id,hektor_annonce_id,hektor_document_id,document_type,document_name,source,visibility,storage_bucket,storage_path,storage_status,file_size,sha256,mime_type,created_at_hektor,synced_at,last_accessed_at,archive_policy,metadata_json,created_at,updated_at')
     .eq('app_dossier_id', appDossierId)
     .order('document_type', { ascending: true })
     .order('document_name', { ascending: true })
+    .limit(300)
   if (error) throw new Error(error.message)
   return (data ?? []) as ConsoleDocument[]
 }
