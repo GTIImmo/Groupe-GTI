@@ -907,3 +907,19 @@
     display: none;
   }
 }
+
+@media (max-width: 1180px) {
+  .modal-overlay {
+    z-index: 180;
+    padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .modal-panel,
+  .modal-panel-wide,
+  .request-modal-panel,
+  .diffusion-modal-panel {
+    width: min(100%, calc(100vw - 20px));
+    max-height: calc(100dvh - 20px);
+    overflow-y: auto;
+  }
+}

@@ -4773,6 +4773,554 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     )
   }
 
+  const appModals = (
+    <>
+        {detailImageModalUrl ? (
+          <div className="modal-overlay" onClick={() => setDetailImageModalUrl(null)}>
+            <section className="modal-panel modal-panel-image" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Photo</p>
+                  <h3>{selectedDossier?.titre_bien ?? 'Annonce'}</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={() => setDetailImageModalUrl(null)}>Fermer</button>
+              </div>
+              <div className="detail-image-modal-body">
+                <img src={detailImageModalUrl} alt={selectedDossier?.titre_bien ?? 'Annonce'} />
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {requestModalOpen && requestModalMandat ? (
+          <div className="modal-overlay" onClick={closeRequestModal}>
+            <section
+              className={`modal-panel request-modal-panel ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'request-modal-panel-cancellation' : 'request-modal-panel-validation'}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="panel-head request-modal-head">
+                <span
+                  className={`modal-hero-icon ${requestModalEffectiveType === 'demande_baisse_prix' ? 'modal-hero-icon-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'modal-hero-icon-cancellation' : 'modal-hero-icon-validation'}`}
+                  aria-hidden="true"
+                />
+                <div className="request-modal-title">
+                  <p className="eyebrow">Gestion des demandes</p>
+                  <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Demande d annulation de mandat' : 'Demande de validation'}</h3>
+                </div>
+                {requestModalRole === 'pauline' && requestModalEffectiveType === 'demande_annulation_mandat' ? (
+                  <button className="ghost-button button-subtle request-modal-hektor-link" type="button" onClick={() => openHektorMandatPrix(requestModalMandat.hektor_annonce_id)}>Lien Hektor</button>
+                ) : null}
+                <button className="ghost-button button-subtle request-modal-close" type="button" onClick={closeRequestModal}>Fermer</button>
+              </div>
+              <p className="modal-subline">{requestModalMandat.numero_dossier ?? '-'} - {requestModalMandat.numero_mandat ?? '-'} - {commercialDisplay(requestModalMandat)}</p>
+              {requestModalEffectiveType !== 'demande_baisse_prix' ? (
+                <section className="request-summary-card">
+                  <div className="request-summary-hero">
+                    <div className="request-summary-copy">
+                      <p className="request-summary-kicker">{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation mandat' : 'Validation diffusion'}</p>
+                      <h4 className="request-summary-heading">
+                        {requestModalEffectiveType === 'demande_annulation_mandat'
+                          ? requestModalRole === 'pauline'
+                            ? 'Decision sur l annulation'
+                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                              ? 'Correction prete a renvoyer'
+                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                                ? 'Demande deja transmise'
+                                : 'Annulation en preparation'
+                          : requestModalRole === 'pauline'
+                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
+                            ? 'Relecture avant retour'
+                            : 'Decision de Pauline'
+                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                            ? 'Correction prete a renvoyer'
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              ? 'Demande deja transmise'
+                              : 'Validation en preparation'}
+                      </h4>
+                      <p className="request-summary-note">
+                        {requestModalEffectiveType === 'demande_annulation_mandat'
+                          ? requestModalRole === 'pauline'
+                            ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
+                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                              ? 'La demande a ete completee. Tu peux la renvoyer a Pauline.'
+                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                                ? 'La demande est partie. Il reste a suivre le retour de Pauline.'
+                                : 'Explique le motif d annulation pour que Pauline controle le mandat dans Hektor.'
+                          : requestModalRole === 'pauline'
+                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
+                            ? 'Relis le dernier retour puis decide si le dossier peut repartir ou non.'
+                            : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
+                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                            ? 'Le dossier a ete ajuste. Tu peux renvoyer une version propre a Pauline.'
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              ? 'La demande est partie. Il reste a suivre le retour de validation.'
+                              : 'Une fois approuvee, la diffusion et les passerelles par defaut seront activees automatiquement.'}
+                      </p>
+                    </div>
+                    <div className="request-summary-state">
+                      <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : requestModalNegoLabel} />
+                    </div>
+                  </div>
+                  <div className="request-summary-metrics">
+                    <article className="request-summary-metric">
+                      <span className="request-summary-metric-label">Dossier</span>
+                      <strong>{requestModalMandat.numero_dossier ?? '-'}</strong>
+                      <small>Mandat {requestModalMandat.numero_mandat ?? '-'}</small>
+                    </article>
+                    <article className="request-summary-metric">
+                      <span className="request-summary-metric-label">Apres accord</span>
+                      <strong>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Email commercial envoye' : 'Diffusion activee'}</strong>
+                      <small>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Aucun automatisme Hektor' : 'Passerelles par defaut appliquees'}</small>
+                    </article>
+                  </div>
+                </section>
+              ) : null}
+              {requestModalRole !== 'pauline' ? (
+                <div className="admin-form-grid request-form-grid">
+                  <label className="filter-field">
+                    <span>Type de demande</span>
+                    <select
+                      value={requestModalEffectiveType}
+                      onChange={(event) => setRequestModalType(event.target.value as BusinessRequestType)}
+                      disabled={Boolean(requestModalRequest && (requestModalRequest.request_status === 'pending' || requestModalRequest.request_status === 'in_progress' || requestModalRequest.request_status === 'waiting_commercial' || requestModalRequest.request_status === 'refused'))}
+                    >
+                      {requestTypeOptions.map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                          disabled={
+                            (option.value === 'demande_baisse_prix' && !requestModalEligibleForPriceDrop) ||
+                            (option.value === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
+                          }
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {requestModalEffectiveType === 'demande_baisse_prix' ? (
+                    <label className="filter-field">
+                      <span>Nouveau prix demande</span>
+                      <input value={requestModalPriceValue} onChange={(event) => setRequestModalPriceValue(event.target.value)} placeholder="Exemple : 129000" />
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+              {requestModalRequest ? (
+                <section className="detail-card request-history-card">
+                  <span className="detail-label">Historique et echanges</span>
+                  <div className="timeline-list">
+                    {buildRequestHistory(requestModalRequest, requestModalEvents).map((entry) => (
+                      <article key={entry.id} className="timeline-card">
+                        <strong>{entry.title}</strong>
+                        <span>{formatDate(entry.date)}</span>
+                        <p>{entry.body}</p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              <label className="filter-field request-message-field">
+                <span>{requestModalRole === 'pauline' ? 'Message Pauline' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Message / correction pour Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Contexte de la baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Contexte de l annulation' : 'Contexte pour Pauline'}</span>
+                <textarea
+                  className="inline-textarea"
+                  value={requestModalComment}
+                  onChange={(event) => setRequestModalComment(event.target.value)}
+                  placeholder={
+                    requestModalRole === 'pauline'
+                      ? requestModalEffectiveType === 'demande_baisse_prix'
+                        ? "Exemple : avenant signe controle, baisse de prix validee."
+                        : requestModalEffectiveType === 'demande_annulation_mandat'
+                          ? 'Exemple : mandat controle dans Hektor, annulation acceptee.'
+                          : 'Exemple : dossier controle, validation accordee.'
+                      : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                        ? requestModalEffectiveType === 'demande_baisse_prix'
+                          ? "Exemple : avenant ajoute et corrige, merci de revoir la demande."
+                          : requestModalEffectiveType === 'demande_annulation_mandat'
+                            ? "Exemple : motif d'annulation complete, merci de revoir la demande."
+                            : 'Exemple : pieces et informations corrigees, merci de revoir la demande.'
+                        : requestModalEffectiveType === 'demande_baisse_prix'
+                          ? "Exemple : avenant signe depose dans Hektor, merci de valider la baisse."
+                          : requestModalEffectiveType === 'demande_annulation_mandat'
+                            ? "Exemple : merci de controler l'annulation du mandat dans Hektor."
+                            : 'Exemple : le mandat est pret, merci de valider le bien.'
+                  }
+                />
+              </label>
+              {requestModalRole === 'pauline' ? (
+                <div className="admin-form-grid request-form-grid">
+                  <label className="filter-field">
+                    <span>Decision Pauline</span>
+                    <select
+                      value={requestModalDecision}
+                      onChange={(event) => {
+                        setRequestModalDecision(event.target.value)
+                        setPriceDropCheckPrompt(null)
+                        setValidationCheckPrompt(null)
+                        setCancellationCheckPrompt(null)
+                      }}
+                    >
+                      <option value="in_progress">A traiter</option>
+                      <option value="accepted">Accepter</option>
+                      <option value="refused">Refuser</option>
+                    </select>
+                  </label>
+                  <label className="filter-field">
+                    <span>Motif de refus</span>
+                    <select value={requestModalRefusalReason} onChange={(event) => setRequestModalRefusalReason(event.target.value)}>
+                      <option value="">Choisir un motif</option>
+                      {requestModalRefusalOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+              <div className="modal-actions">
+                <button className="ghost-button button-subtle" type="button" onClick={closeRequestModal}>Annuler</button>
+                {requestModalRole === 'pauline' && requestModalRequest ? (
+                  <button
+                    className="ghost-button button-primary"
+                    type="button"
+                    onClick={() => handleUpdateDiffusionRequest({
+                      requestId: requestModalRequest.id,
+                      requestType: requestModalEffectiveType,
+                      status: requestModalDecision,
+                      response: requestModalComment,
+                      refusalReason: requestModalRefusalReason,
+                      followUpNeeded: requestModalDecision === 'refused',
+                      followUpDays: requestModalDecision === 'refused' ? 2 : 0,
+                      relaunchCount: requestModalRequest.relaunch_count ?? 0,
+                    })}
+                    disabled={
+                      requestLoading ||
+                      (requestModalDecision === 'accepted' && priceDropCheckPrompt?.kind === 'confirmed') ||
+                      (requestModalDecision === 'accepted' && validationCheckPrompt?.kind === 'confirmed') ||
+                      (requestModalDecision === 'accepted' && cancellationCheckPrompt?.kind === 'confirmed') ||
+                      (requestModalDecision === 'refused' && !requestModalRefusalReason)
+                    }
+                  >
+                    {requestLoading ? 'Enregistrement...' : requestModalDecision === 'accepted' ? (requestModalEffectiveType === 'demande_baisse_prix' ? 'Approuver la baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Accepter l annulation' : 'Accepter') : requestModalDecision === 'refused' ? 'Refuser' : 'Enregistrer le traitement'}
+                  </button>
+                ) : (
+                  <button
+                    className="ghost-button button-primary"
+                    type="button"
+                    onClick={() => (requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')) && requestModalRequest
+                      ? handleSubmitDiffusionCorrection({ requestId: requestModalRequest.id, comment: requestModalComment })
+                      : handleCreateDiffusionRequest({ mandatId: requestModalMandat.app_dossier_id, comment: requestModalComment, requestType: requestModalEffectiveType, requestedPrice: requestModalPriceValue })}
+                    disabled={
+                      requestPending ||
+                      requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ||
+                      (requestModalEffectiveType === 'demande_baisse_prix' && (!requestModalEligibleForPriceDrop || !requestModalPriceValue.trim())) ||
+                      (requestModalEffectiveType === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
+                    }
+                  >
+                    {requestPending ? 'Envoi en cours...' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Envoyer la correction' : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Envoyer la demande d annulation' : 'Envoyer la demande de validation'}
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {priceDropCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_baisse_prix' ? (
+          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
+            <section
+              className={`price-drop-popup price-drop-popup-${priceDropCheckPrompt.kind}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="price-drop-popup-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="price-drop-popup-icon" aria-hidden="true" />
+              <p className="price-drop-popup-eyebrow">Contrôle prix Hektor</p>
+              <h3 id="price-drop-popup-title">
+                {priceDropCheckPrompt.kind === 'mismatch' ? 'Prix différent Hektor' : 'Prix confirmé'}
+              </h3>
+              <p className="price-drop-popup-message">{priceDropCheckPrompt.message}</p>
+              <div className="price-drop-popup-prices">
+                <span>Demande <strong>{formatPrice(priceDropCheckPrompt.requestedPrice)}</strong></span>
+                <span>Hektor <strong>{formatPrice(priceDropCheckPrompt.observedPrice)}</strong></span>
+              </div>
+              <div className="price-drop-popup-actions">
+                {priceDropCheckPrompt.kind === 'mismatch' ? (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      onClick={() => setPriceDropCheckPrompt(null)}
+                    >
+                      Fermer
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      onClick={() => openHektorMandatPrix(priceDropCheckPrompt.hektorAnnonceId)}
+                    >
+                      Lien Hektor
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      disabled={requestLoading || !priceDropCheckPrompt.pendingAction}
+                      onClick={() => priceDropCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...priceDropCheckPrompt.pendingAction,
+                        priceDropChecked: true,
+                        publishAfterPriceDrop: false,
+                      })}
+                    >
+                      Non
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      disabled={requestLoading || !priceDropCheckPrompt.pendingAction}
+                      onClick={() => priceDropCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...priceDropCheckPrompt.pendingAction,
+                        priceDropChecked: true,
+                        publishAfterPriceDrop: true,
+                      })}
+                    >
+                      Oui
+                    </button>
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {validationCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_diffusion' ? (
+          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
+            <section
+              className={`price-drop-popup price-drop-popup-${validationCheckPrompt.kind}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="validation-popup-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="price-drop-popup-icon" aria-hidden="true" />
+              <p className="price-drop-popup-eyebrow">Validation Hektor</p>
+              <h3 id="validation-popup-title">{validationCheckPrompt.title}</h3>
+              <p className="price-drop-popup-message">{validationCheckPrompt.message}</p>
+              {validationCheckPrompt.detail ? (
+                <p className="price-drop-popup-detail">{validationCheckPrompt.detail}</p>
+              ) : null}
+              <div className="price-drop-popup-actions">
+                {validationCheckPrompt.kind === 'mismatch' ? (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      onClick={() => setValidationCheckPrompt(null)}
+                    >
+                      Fermer
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      onClick={() => openHektorMandatPrix(validationCheckPrompt.hektorAnnonceId)}
+                    >
+                      Lien Hektor
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      disabled={requestLoading || !validationCheckPrompt.pendingAction}
+                      onClick={() => validationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...validationCheckPrompt.pendingAction,
+                        validationChecked: true,
+                        runValidationWorkflow: false,
+                      })}
+                    >
+                      Non
+                    </button>
+                    <button
+                      className="ghost-button button-primary"
+                      type="button"
+                      disabled={requestLoading || !validationCheckPrompt.pendingAction}
+                      onClick={() => validationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                        ...validationCheckPrompt.pendingAction,
+                        validationChecked: true,
+                        runValidationWorkflow: true,
+                      })}
+                    >
+                      Oui
+                    </button>
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {cancellationCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_annulation_mandat' ? (
+          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
+            <section
+              className="price-drop-popup price-drop-popup-confirmed"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cancellation-popup-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="price-drop-popup-icon" aria-hidden="true" />
+              <p className="price-drop-popup-eyebrow">Annulation mandat</p>
+              <h3 id="cancellation-popup-title">{cancellationCheckPrompt.title}</h3>
+              <p className="price-drop-popup-message">{cancellationCheckPrompt.message}</p>
+              {cancellationCheckPrompt.detail ? (
+                <p className="price-drop-popup-detail">{cancellationCheckPrompt.detail}</p>
+              ) : null}
+              <div className="price-drop-popup-actions">
+                <button
+                  className="ghost-button button-subtle"
+                  type="button"
+                  disabled={requestLoading || !cancellationCheckPrompt.pendingAction}
+                  onClick={() => cancellationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                    ...cancellationCheckPrompt.pendingAction,
+                    cancellationChecked: true,
+                    unpublishAfterCancellation: false,
+                  })}
+                >
+                  Non
+                </button>
+                <button
+                  className="ghost-button button-primary"
+                  type="button"
+                  disabled={requestLoading || !cancellationCheckPrompt.pendingAction}
+                  onClick={() => cancellationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
+                    ...cancellationCheckPrompt.pendingAction,
+                    cancellationChecked: true,
+                    unpublishAfterCancellation: true,
+                  })}
+                >
+                  Oui
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {diffusionModalOpen && diffusionModalMandat ? (
+          <div className="modal-overlay" onClick={closeDiffusionModal}>
+            <section className="modal-panel modal-panel-wide diffusion-modal-panel" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head diffusion-modal-head">
+                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
+                <div className="diffusion-modal-title">
+                  <p className="eyebrow">Diffusion</p>
+                  <h3>Console passerelles</h3>
+                </div>
+                <button className="ghost-button diffusion-close-button" type="button" onClick={closeDiffusionModal}>Fermer</button>
+              </div>
+              <p className="diffusion-subline">
+                {diffusionModalMandat.numero_dossier ?? '-'} · {diffusionModalMandat.numero_mandat ?? '-'} · {commercialDisplay(diffusionModalMandat)}
+              </p>
+              <div className="diffusion-head-strip">
+                <StatusPill value={diffusionModalMandat.statut_annonce} />
+              </div>
+              <section className="diffusion-console">
+                <article className="detail-card diffusion-status-panel">
+                  <span className="detail-label">Etat diffusion</span>
+                  <strong className="diffusion-card-title">Vue de controle Hektor</strong>
+                  <p className="diffusion-card-copy">Lis ici l'etat global du bien avant application, puis verifie le retour du lot juste apres.</p>
+                  <div className="diffusion-state-grid diffusion-state-grid-compact">
+                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-status">
+                      <span>Statut Hektor</span>
+                      <strong>{diffusionModalMandat.statut_annonce ?? '-'}</strong>
+                    </article>
+                    <article className="diffusion-state-item diffusion-state-diffusable">
+                      <span>Diffusable</span>
+                      <strong>{diffusableLabel(diffusionModalMandat.diffusable)}</strong>
+                    </article>
+                    <article className="diffusion-state-item diffusion-state-portals">
+                      <span>Passerelles actives</span>
+                      <strong>{String(diffusionEnabledCount)}</strong>
+                    </article>
+                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-save">
+                      <span>Dernier enregistrement</span>
+                      <strong>{diffusionTargetsSavedAt ? formatDate(diffusionTargetsSavedAt) : '-'}</strong>
+                    </article>
+                  </div>
+                  {diffusionHasUnsavedChanges ? (
+                    <div className="detail-sync-alert is-pending">Des modifications sont en attente d'enregistrement.</div>
+                  ) : null}
+                  {diffusionApplyResult ? (
+                    <div className="diffusion-result-note">
+                      <strong>{diffusionApplyResult.dry_run ? 'Simulation Hektor' : 'Application Hektor'}</strong>
+                      <span>Ajouts : {diffusionApplyResult.to_add_count} · Retraits : {diffusionApplyResult.to_remove_count}</span>
+                      <span>Succes : {diffusionApplyResult.applied.length} · Erreurs : {diffusionApplyResult.failed.length}</span>
+                    </div>
+                  ) : null}
+                </article>
+                <article className="detail-card diffusion-portals-panel">
+                  <span className="detail-label">Passerelles</span>
+                  <strong className="diffusion-card-title">Selection des portails</strong>
+                  <span className="panel-note">Coche uniquement les portails a laisser actifs. La console enverra les ajouts et retraits correspondants sur Hektor.</span>
+                  {diffusionTargetsLoading ? <p className="empty-state">Chargement des cibles en cours...</p> : null}
+                  {diffusionPortalRows.length > 0 ? (
+                    <div className="diffusion-portal-list">
+                      {diffusionPortalRows.map((portal) => {
+                        const targetEnabled = diffusionDraftTargets[portal.portalKey] ?? portal.observedEnabled
+                        const isDirty = targetEnabled !== portal.observedEnabled
+                        return (
+                          <label key={portal.portalKey} className={`diffusion-portal-row ${isDirty ? 'is-dirty' : ''}`}>
+                            <div className="diffusion-portal-meta">
+                              <strong>{portal.portalKey}</strong>
+                              <small>{portal.details[0] ?? '-'}</small>
+                              {isDirty ? <div className="detail-sync-alert is-waiting">En attente de mise a jour Hektor... La modification a bien ete envoyee.</div> : null}
+                            </div>
+                            <div className="diffusion-portal-toggle">
+                              <span>{targetEnabled ? 'Activee' : 'Inactive'}</span>
+                              <input
+                                type="checkbox"
+                                checked={targetEnabled}
+                                onChange={(event) => setDiffusionDraftTargets((current) => ({ ...current, [portal.portalKey]: event.target.checked }))}
+                              />
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="empty-state">
+                      {isValidationApproved(diffusionModalMandat.validation_diffusion_state)
+                        ? "Aucune passerelle n'est configuree pour ce mandat. Le mapping agence n'a pas ete trouve."
+                        : "Aucune passerelle configuree pour ce mandat. L'app peut tenter Diffuse puis les portails meme si Hektor indique validation = non."}
+                    </p>
+                  )}
+                </article>
+                <article className="detail-card diffusion-feedback-panel">
+                  <span className="detail-label">Retour d'application</span>
+                  <strong className="diffusion-card-title">Execution du lot</strong>
+                  {diffusionApplyResult ? (
+                    <>
+                      <strong>{diffusionApplyResult.dry_run ? 'Simulation executee' : 'Application executee'}</strong>
+                      <span>{diffusionApplyResult.waiting_on_hektor ? (diffusionApplyResult.waiting_message ?? 'En attente de mise a jour Hektor.') : 'La console a tente diffusable puis applique les passerelles sur Hektor.'}</span>
+                      <span>Ajouts vises : {diffusionApplyResult.to_add_count} - Retraits vises : {diffusionApplyResult.to_remove_count}</span>
+                      <span>Actions reussies : {diffusionApplyResult.applied.length} - Actions en attente : {diffusionApplyResult.pending?.length ?? 0} - Actions en erreur : {diffusionApplyResult.failed.length}</span>
+                    </>
+                  ) : (
+                    <span>Aucune execution Hektor sur ce lot depuis l'ouverture de la console.</span>
+                  )}
+                </article>
+              </section>
+              <div className="modal-actions">
+                <button className="ghost-button button-subtle" type="button" onClick={closeDiffusionModal}>Fermer</button>
+                <button
+                  className="ghost-button button-accent"
+                  type="button"
+                  onClick={handleCommitDiffusionTargets}
+                  disabled={diffusionApplyPending || diffusionTargetsSaving || diffusionTargetsLoading || !profile}
+                >
+                  {diffusionApplyPending || diffusionTargetsSaving ? 'Activation...' : 'Activer la diffusion et appliquer'}
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+    </>
+  )
+
   if (!responsiveExperience.isDesktop) {
     const mobileScreenTitle = screenHeader.title
     const mobileUserLabel = resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'
@@ -4790,7 +5338,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }))
 
     return (
-      <MobileLayout
+      <>
+        <MobileLayout
         currentScreen={screen}
         title={mobileScreenTitle}
         isAdmin={isAdmin}
@@ -4971,7 +5520,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
-      </MobileLayout>
+        </MobileLayout>
+        {appModals}
+      </>
     )
   }
 
@@ -5704,548 +6255,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
-        {detailImageModalUrl ? (
-          <div className="modal-overlay" onClick={() => setDetailImageModalUrl(null)}>
-            <section className="modal-panel modal-panel-image" onClick={(event) => event.stopPropagation()}>
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">Photo</p>
-                  <h3>{selectedDossier?.titre_bien ?? 'Annonce'}</h3>
-                </div>
-                <button className="ghost-button button-subtle" type="button" onClick={() => setDetailImageModalUrl(null)}>Fermer</button>
-              </div>
-              <div className="detail-image-modal-body">
-                <img src={detailImageModalUrl} alt={selectedDossier?.titre_bien ?? 'Annonce'} />
-              </div>
-            </section>
-          </div>
-        ) : null}
-        {requestModalOpen && requestModalMandat ? (
-          <div className="modal-overlay" onClick={closeRequestModal}>
-            <section
-              className={`modal-panel request-modal-panel ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'request-modal-panel-cancellation' : 'request-modal-panel-validation'}`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="panel-head request-modal-head">
-                <span
-                  className={`modal-hero-icon ${requestModalEffectiveType === 'demande_baisse_prix' ? 'modal-hero-icon-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'modal-hero-icon-cancellation' : 'modal-hero-icon-validation'}`}
-                  aria-hidden="true"
-                />
-                <div className="request-modal-title">
-                  <p className="eyebrow">Gestion des demandes</p>
-                  <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Demande d annulation de mandat' : 'Demande de validation'}</h3>
-                </div>
-                {requestModalRole === 'pauline' && requestModalEffectiveType === 'demande_annulation_mandat' ? (
-                  <button className="ghost-button button-subtle request-modal-hektor-link" type="button" onClick={() => openHektorMandatPrix(requestModalMandat.hektor_annonce_id)}>Lien Hektor</button>
-                ) : null}
-                <button className="ghost-button button-subtle request-modal-close" type="button" onClick={closeRequestModal}>Fermer</button>
-              </div>
-              <p className="modal-subline">{requestModalMandat.numero_dossier ?? '-'} - {requestModalMandat.numero_mandat ?? '-'} - {commercialDisplay(requestModalMandat)}</p>
-              {requestModalEffectiveType !== 'demande_baisse_prix' ? (
-                <section className="request-summary-card">
-                  <div className="request-summary-hero">
-                    <div className="request-summary-copy">
-                      <p className="request-summary-kicker">{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation mandat' : 'Validation diffusion'}</p>
-                      <h4 className="request-summary-heading">
-                        {requestModalEffectiveType === 'demande_annulation_mandat'
-                          ? requestModalRole === 'pauline'
-                            ? 'Decision sur l annulation'
-                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                              ? 'Correction prete a renvoyer'
-                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                                ? 'Demande deja transmise'
-                                : 'Annulation en preparation'
-                          : requestModalRole === 'pauline'
-                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
-                            ? 'Relecture avant retour'
-                            : 'Decision de Pauline'
-                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                            ? 'Correction prete a renvoyer'
-                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                              ? 'Demande deja transmise'
-                              : 'Validation en preparation'}
-                      </h4>
-                      <p className="request-summary-note">
-                        {requestModalEffectiveType === 'demande_annulation_mandat'
-                          ? requestModalRole === 'pauline'
-                            ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
-                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                              ? 'La demande a ete completee. Tu peux la renvoyer a Pauline.'
-                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                                ? 'La demande est partie. Il reste a suivre le retour de Pauline.'
-                                : 'Explique le motif d annulation pour que Pauline controle le mandat dans Hektor.'
-                          : requestModalRole === 'pauline'
-                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
-                            ? 'Relis le dernier retour puis decide si le dossier peut repartir ou non.'
-                            : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
-                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                            ? 'Le dossier a ete ajuste. Tu peux renvoyer une version propre a Pauline.'
-                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                              ? 'La demande est partie. Il reste a suivre le retour de validation.'
-                              : 'Une fois approuvee, la diffusion et les passerelles par defaut seront activees automatiquement.'}
-                      </p>
-                    </div>
-                    <div className="request-summary-state">
-                      <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : requestModalNegoLabel} />
-                    </div>
-                  </div>
-                  <div className="request-summary-metrics">
-                    <article className="request-summary-metric">
-                      <span className="request-summary-metric-label">Dossier</span>
-                      <strong>{requestModalMandat.numero_dossier ?? '-'}</strong>
-                      <small>Mandat {requestModalMandat.numero_mandat ?? '-'}</small>
-                    </article>
-                    <article className="request-summary-metric">
-                      <span className="request-summary-metric-label">Apres accord</span>
-                      <strong>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Email commercial envoye' : 'Diffusion activee'}</strong>
-                      <small>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Aucun automatisme Hektor' : 'Passerelles par defaut appliquees'}</small>
-                    </article>
-                  </div>
-                </section>
-              ) : null}
-              {requestModalRole !== 'pauline' ? (
-                <div className="admin-form-grid request-form-grid">
-                  <label className="filter-field">
-                    <span>Type de demande</span>
-                    <select
-                      value={requestModalEffectiveType}
-                      onChange={(event) => setRequestModalType(event.target.value as BusinessRequestType)}
-                      disabled={Boolean(requestModalRequest && (requestModalRequest.request_status === 'pending' || requestModalRequest.request_status === 'in_progress' || requestModalRequest.request_status === 'waiting_commercial' || requestModalRequest.request_status === 'refused'))}
-                    >
-                      {requestTypeOptions.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                          disabled={
-                            (option.value === 'demande_baisse_prix' && !requestModalEligibleForPriceDrop) ||
-                            (option.value === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
-                          }
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {requestModalEffectiveType === 'demande_baisse_prix' ? (
-                    <label className="filter-field">
-                      <span>Nouveau prix demande</span>
-                      <input value={requestModalPriceValue} onChange={(event) => setRequestModalPriceValue(event.target.value)} placeholder="Exemple : 129000" />
-                    </label>
-                  ) : null}
-                </div>
-              ) : null}
-              {requestModalRequest ? (
-                <section className="detail-card request-history-card">
-                  <span className="detail-label">Historique et echanges</span>
-                  <div className="timeline-list">
-                    {buildRequestHistory(requestModalRequest, requestModalEvents).map((entry) => (
-                      <article key={entry.id} className="timeline-card">
-                        <strong>{entry.title}</strong>
-                        <span>{formatDate(entry.date)}</span>
-                        <p>{entry.body}</p>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-              <label className="filter-field request-message-field">
-                <span>{requestModalRole === 'pauline' ? 'Message Pauline' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Message / correction pour Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Contexte de la baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Contexte de l annulation' : 'Contexte pour Pauline'}</span>
-                <textarea
-                  className="inline-textarea"
-                  value={requestModalComment}
-                  onChange={(event) => setRequestModalComment(event.target.value)}
-                  placeholder={
-                    requestModalRole === 'pauline'
-                      ? requestModalEffectiveType === 'demande_baisse_prix'
-                        ? "Exemple : avenant signe controle, baisse de prix validee."
-                        : requestModalEffectiveType === 'demande_annulation_mandat'
-                          ? 'Exemple : mandat controle dans Hektor, annulation acceptee.'
-                          : 'Exemple : dossier controle, validation accordee.'
-                      : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                        ? requestModalEffectiveType === 'demande_baisse_prix'
-                          ? "Exemple : avenant ajoute et corrige, merci de revoir la demande."
-                          : requestModalEffectiveType === 'demande_annulation_mandat'
-                            ? "Exemple : motif d'annulation complete, merci de revoir la demande."
-                            : 'Exemple : pieces et informations corrigees, merci de revoir la demande.'
-                        : requestModalEffectiveType === 'demande_baisse_prix'
-                          ? "Exemple : avenant signe depose dans Hektor, merci de valider la baisse."
-                          : requestModalEffectiveType === 'demande_annulation_mandat'
-                            ? "Exemple : merci de controler l'annulation du mandat dans Hektor."
-                            : 'Exemple : le mandat est pret, merci de valider le bien.'
-                  }
-                />
-              </label>
-              {requestModalRole === 'pauline' ? (
-                <div className="admin-form-grid request-form-grid">
-                  <label className="filter-field">
-                    <span>Decision Pauline</span>
-                    <select
-                      value={requestModalDecision}
-                      onChange={(event) => {
-                        setRequestModalDecision(event.target.value)
-                        setPriceDropCheckPrompt(null)
-                        setValidationCheckPrompt(null)
-                        setCancellationCheckPrompt(null)
-                      }}
-                    >
-                      <option value="in_progress">A traiter</option>
-                      <option value="accepted">Accepter</option>
-                      <option value="refused">Refuser</option>
-                    </select>
-                  </label>
-                  <label className="filter-field">
-                    <span>Motif de refus</span>
-                    <select value={requestModalRefusalReason} onChange={(event) => setRequestModalRefusalReason(event.target.value)}>
-                      <option value="">Choisir un motif</option>
-                      {requestModalRefusalOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </label>
-                </div>
-              ) : null}
-              <div className="modal-actions">
-                <button className="ghost-button button-subtle" type="button" onClick={closeRequestModal}>Annuler</button>
-                {requestModalRole === 'pauline' && requestModalRequest ? (
-                  <button
-                    className="ghost-button button-primary"
-                    type="button"
-                    onClick={() => handleUpdateDiffusionRequest({
-                      requestId: requestModalRequest.id,
-                      requestType: requestModalEffectiveType,
-                      status: requestModalDecision,
-                      response: requestModalComment,
-                      refusalReason: requestModalRefusalReason,
-                      followUpNeeded: requestModalDecision === 'refused',
-                      followUpDays: requestModalDecision === 'refused' ? 2 : 0,
-                      relaunchCount: requestModalRequest.relaunch_count ?? 0,
-                    })}
-                    disabled={
-                      requestLoading ||
-                      (requestModalDecision === 'accepted' && priceDropCheckPrompt?.kind === 'confirmed') ||
-                      (requestModalDecision === 'accepted' && validationCheckPrompt?.kind === 'confirmed') ||
-                      (requestModalDecision === 'accepted' && cancellationCheckPrompt?.kind === 'confirmed') ||
-                      (requestModalDecision === 'refused' && !requestModalRefusalReason)
-                    }
-                  >
-                    {requestLoading ? 'Enregistrement...' : requestModalDecision === 'accepted' ? (requestModalEffectiveType === 'demande_baisse_prix' ? 'Approuver la baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Accepter l annulation' : 'Accepter') : requestModalDecision === 'refused' ? 'Refuser' : 'Enregistrer le traitement'}
-                  </button>
-                ) : (
-                  <button
-                    className="ghost-button button-primary"
-                    type="button"
-                    onClick={() => (requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')) && requestModalRequest
-                      ? handleSubmitDiffusionCorrection({ requestId: requestModalRequest.id, comment: requestModalComment })
-                      : handleCreateDiffusionRequest({ mandatId: requestModalMandat.app_dossier_id, comment: requestModalComment, requestType: requestModalEffectiveType, requestedPrice: requestModalPriceValue })}
-                    disabled={
-                      requestPending ||
-                      requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ||
-                      (requestModalEffectiveType === 'demande_baisse_prix' && (!requestModalEligibleForPriceDrop || !requestModalPriceValue.trim())) ||
-                      (requestModalEffectiveType === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
-                    }
-                  >
-                    {requestPending ? 'Envoi en cours...' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Envoyer la correction' : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Envoyer la demande d annulation' : 'Envoyer la demande de validation'}
-                  </button>
-                )}
-              </div>
-            </section>
-          </div>
-        ) : null}
-        {priceDropCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_baisse_prix' ? (
-          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
-            <section
-              className={`price-drop-popup price-drop-popup-${priceDropCheckPrompt.kind}`}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="price-drop-popup-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="price-drop-popup-icon" aria-hidden="true" />
-              <p className="price-drop-popup-eyebrow">Contrôle prix Hektor</p>
-              <h3 id="price-drop-popup-title">
-                {priceDropCheckPrompt.kind === 'mismatch' ? 'Prix différent Hektor' : 'Prix confirmé'}
-              </h3>
-              <p className="price-drop-popup-message">{priceDropCheckPrompt.message}</p>
-              <div className="price-drop-popup-prices">
-                <span>Demande <strong>{formatPrice(priceDropCheckPrompt.requestedPrice)}</strong></span>
-                <span>Hektor <strong>{formatPrice(priceDropCheckPrompt.observedPrice)}</strong></span>
-              </div>
-              <div className="price-drop-popup-actions">
-                {priceDropCheckPrompt.kind === 'mismatch' ? (
-                  <>
-                    <button
-                      className="ghost-button button-subtle"
-                      type="button"
-                      onClick={() => setPriceDropCheckPrompt(null)}
-                    >
-                      Fermer
-                    </button>
-                    <button
-                      className="ghost-button button-primary"
-                      type="button"
-                      onClick={() => openHektorMandatPrix(priceDropCheckPrompt.hektorAnnonceId)}
-                    >
-                      Lien Hektor
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      className="ghost-button button-subtle"
-                      type="button"
-                      disabled={requestLoading || !priceDropCheckPrompt.pendingAction}
-                      onClick={() => priceDropCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
-                        ...priceDropCheckPrompt.pendingAction,
-                        priceDropChecked: true,
-                        publishAfterPriceDrop: false,
-                      })}
-                    >
-                      Non
-                    </button>
-                    <button
-                      className="ghost-button button-primary"
-                      type="button"
-                      disabled={requestLoading || !priceDropCheckPrompt.pendingAction}
-                      onClick={() => priceDropCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
-                        ...priceDropCheckPrompt.pendingAction,
-                        priceDropChecked: true,
-                        publishAfterPriceDrop: true,
-                      })}
-                    >
-                      Oui
-                    </button>
-                  </>
-                )}
-              </div>
-            </section>
-          </div>
-        ) : null}
-        {validationCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_diffusion' ? (
-          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
-            <section
-              className={`price-drop-popup price-drop-popup-${validationCheckPrompt.kind}`}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="validation-popup-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="price-drop-popup-icon" aria-hidden="true" />
-              <p className="price-drop-popup-eyebrow">Validation Hektor</p>
-              <h3 id="validation-popup-title">{validationCheckPrompt.title}</h3>
-              <p className="price-drop-popup-message">{validationCheckPrompt.message}</p>
-              {validationCheckPrompt.detail ? (
-                <p className="price-drop-popup-detail">{validationCheckPrompt.detail}</p>
-              ) : null}
-              <div className="price-drop-popup-actions">
-                {validationCheckPrompt.kind === 'mismatch' ? (
-                  <>
-                    <button
-                      className="ghost-button button-subtle"
-                      type="button"
-                      onClick={() => setValidationCheckPrompt(null)}
-                    >
-                      Fermer
-                    </button>
-                    <button
-                      className="ghost-button button-primary"
-                      type="button"
-                      onClick={() => openHektorMandatPrix(validationCheckPrompt.hektorAnnonceId)}
-                    >
-                      Lien Hektor
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      className="ghost-button button-subtle"
-                      type="button"
-                      disabled={requestLoading || !validationCheckPrompt.pendingAction}
-                      onClick={() => validationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
-                        ...validationCheckPrompt.pendingAction,
-                        validationChecked: true,
-                        runValidationWorkflow: false,
-                      })}
-                    >
-                      Non
-                    </button>
-                    <button
-                      className="ghost-button button-primary"
-                      type="button"
-                      disabled={requestLoading || !validationCheckPrompt.pendingAction}
-                      onClick={() => validationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
-                        ...validationCheckPrompt.pendingAction,
-                        validationChecked: true,
-                        runValidationWorkflow: true,
-                      })}
-                    >
-                      Oui
-                    </button>
-                  </>
-                )}
-              </div>
-            </section>
-          </div>
-        ) : null}
-        {cancellationCheckPrompt && requestModalOpen && requestModalEffectiveType === 'demande_annulation_mandat' ? (
-          <div className="modal-overlay price-drop-popup-overlay" role="presentation">
-            <section
-              className="price-drop-popup price-drop-popup-confirmed"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="cancellation-popup-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="price-drop-popup-icon" aria-hidden="true" />
-              <p className="price-drop-popup-eyebrow">Annulation mandat</p>
-              <h3 id="cancellation-popup-title">{cancellationCheckPrompt.title}</h3>
-              <p className="price-drop-popup-message">{cancellationCheckPrompt.message}</p>
-              {cancellationCheckPrompt.detail ? (
-                <p className="price-drop-popup-detail">{cancellationCheckPrompt.detail}</p>
-              ) : null}
-              <div className="price-drop-popup-actions">
-                <button
-                  className="ghost-button button-subtle"
-                  type="button"
-                  disabled={requestLoading || !cancellationCheckPrompt.pendingAction}
-                  onClick={() => cancellationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
-                    ...cancellationCheckPrompt.pendingAction,
-                    cancellationChecked: true,
-                    unpublishAfterCancellation: false,
-                  })}
-                >
-                  Non
-                </button>
-                <button
-                  className="ghost-button button-primary"
-                  type="button"
-                  disabled={requestLoading || !cancellationCheckPrompt.pendingAction}
-                  onClick={() => cancellationCheckPrompt.pendingAction && handleUpdateDiffusionRequest({
-                    ...cancellationCheckPrompt.pendingAction,
-                    cancellationChecked: true,
-                    unpublishAfterCancellation: true,
-                  })}
-                >
-                  Oui
-                </button>
-              </div>
-            </section>
-          </div>
-        ) : null}
-        {diffusionModalOpen && diffusionModalMandat ? (
-          <div className="modal-overlay" onClick={closeDiffusionModal}>
-            <section className="modal-panel modal-panel-wide diffusion-modal-panel" onClick={(event) => event.stopPropagation()}>
-              <div className="panel-head diffusion-modal-head">
-                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
-                <div className="diffusion-modal-title">
-                  <p className="eyebrow">Diffusion</p>
-                  <h3>Console passerelles</h3>
-                </div>
-                <button className="ghost-button diffusion-close-button" type="button" onClick={closeDiffusionModal}>Fermer</button>
-              </div>
-              <p className="diffusion-subline">
-                {diffusionModalMandat.numero_dossier ?? '-'} · {diffusionModalMandat.numero_mandat ?? '-'} · {commercialDisplay(diffusionModalMandat)}
-              </p>
-              <div className="diffusion-head-strip">
-                <StatusPill value={diffusionModalMandat.statut_annonce} />
-              </div>
-              <section className="diffusion-console">
-                <article className="detail-card diffusion-status-panel">
-                  <span className="detail-label">Etat diffusion</span>
-                  <strong className="diffusion-card-title">Vue de controle Hektor</strong>
-                  <p className="diffusion-card-copy">Lis ici l'etat global du bien avant application, puis verifie le retour du lot juste apres.</p>
-                  <div className="diffusion-state-grid diffusion-state-grid-compact">
-                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-status">
-                      <span>Statut Hektor</span>
-                      <strong>{diffusionModalMandat.statut_annonce ?? '-'}</strong>
-                    </article>
-                    <article className="diffusion-state-item diffusion-state-diffusable">
-                      <span>Diffusable</span>
-                      <strong>{diffusableLabel(diffusionModalMandat.diffusable)}</strong>
-                    </article>
-                    <article className="diffusion-state-item diffusion-state-portals">
-                      <span>Passerelles actives</span>
-                      <strong>{String(diffusionEnabledCount)}</strong>
-                    </article>
-                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-save">
-                      <span>Dernier enregistrement</span>
-                      <strong>{diffusionTargetsSavedAt ? formatDate(diffusionTargetsSavedAt) : '-'}</strong>
-                    </article>
-                  </div>
-                  {diffusionHasUnsavedChanges ? (
-                    <div className="detail-sync-alert is-pending">Des modifications sont en attente d'enregistrement.</div>
-                  ) : null}
-                  {diffusionApplyResult ? (
-                    <div className="diffusion-result-note">
-                      <strong>{diffusionApplyResult.dry_run ? 'Simulation Hektor' : 'Application Hektor'}</strong>
-                      <span>Ajouts : {diffusionApplyResult.to_add_count} · Retraits : {diffusionApplyResult.to_remove_count}</span>
-                      <span>Succes : {diffusionApplyResult.applied.length} · Erreurs : {diffusionApplyResult.failed.length}</span>
-                    </div>
-                  ) : null}
-                </article>
-                <article className="detail-card diffusion-portals-panel">
-                  <span className="detail-label">Passerelles</span>
-                  <strong className="diffusion-card-title">Selection des portails</strong>
-                  <span className="panel-note">Coche uniquement les portails a laisser actifs. La console enverra les ajouts et retraits correspondants sur Hektor.</span>
-                  {diffusionTargetsLoading ? <p className="empty-state">Chargement des cibles en cours...</p> : null}
-                  {diffusionPortalRows.length > 0 ? (
-                    <div className="diffusion-portal-list">
-                      {diffusionPortalRows.map((portal) => {
-                        const targetEnabled = diffusionDraftTargets[portal.portalKey] ?? portal.observedEnabled
-                        const isDirty = targetEnabled !== portal.observedEnabled
-                        return (
-                          <label key={portal.portalKey} className={`diffusion-portal-row ${isDirty ? 'is-dirty' : ''}`}>
-                            <div className="diffusion-portal-meta">
-                              <strong>{portal.portalKey}</strong>
-                              <small>{portal.details[0] ?? '-'}</small>
-                              {isDirty ? <div className="detail-sync-alert is-waiting">En attente de mise a jour Hektor... La modification a bien ete envoyee.</div> : null}
-                            </div>
-                            <div className="diffusion-portal-toggle">
-                              <span>{targetEnabled ? 'Activee' : 'Inactive'}</span>
-                              <input
-                                type="checkbox"
-                                checked={targetEnabled}
-                                onChange={(event) => setDiffusionDraftTargets((current) => ({ ...current, [portal.portalKey]: event.target.checked }))}
-                              />
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <p className="empty-state">
-                      {isValidationApproved(diffusionModalMandat.validation_diffusion_state)
-                        ? "Aucune passerelle n'est configuree pour ce mandat. Le mapping agence n'a pas ete trouve."
-                        : "Aucune passerelle configuree pour ce mandat. L'app peut tenter Diffuse puis les portails meme si Hektor indique validation = non."}
-                    </p>
-                  )}
-                </article>
-                <article className="detail-card diffusion-feedback-panel">
-                  <span className="detail-label">Retour d'application</span>
-                  <strong className="diffusion-card-title">Execution du lot</strong>
-                  {diffusionApplyResult ? (
-                    <>
-                      <strong>{diffusionApplyResult.dry_run ? 'Simulation executee' : 'Application executee'}</strong>
-                      <span>{diffusionApplyResult.waiting_on_hektor ? (diffusionApplyResult.waiting_message ?? 'En attente de mise a jour Hektor.') : 'La console a tente diffusable puis applique les passerelles sur Hektor.'}</span>
-                      <span>Ajouts vises : {diffusionApplyResult.to_add_count} - Retraits vises : {diffusionApplyResult.to_remove_count}</span>
-                      <span>Actions reussies : {diffusionApplyResult.applied.length} - Actions en attente : {diffusionApplyResult.pending?.length ?? 0} - Actions en erreur : {diffusionApplyResult.failed.length}</span>
-                    </>
-                  ) : (
-                    <span>Aucune execution Hektor sur ce lot depuis l'ouverture de la console.</span>
-                  )}
-                </article>
-              </section>
-              <div className="modal-actions">
-                <button className="ghost-button button-subtle" type="button" onClick={closeDiffusionModal}>Fermer</button>
-                <button
-                  className="ghost-button button-accent"
-                  type="button"
-                  onClick={handleCommitDiffusionTargets}
-                  disabled={diffusionApplyPending || diffusionTargetsSaving || diffusionTargetsLoading || !profile}
-                >
-                  {diffusionApplyPending || diffusionTargetsSaving ? 'Activation...' : 'Activer la diffusion et appliquer'}
-                </button>
-              </div>
-            </section>
-          </div>
-        ) : null}
+        {appModals}
         </main>
       </div>
 
