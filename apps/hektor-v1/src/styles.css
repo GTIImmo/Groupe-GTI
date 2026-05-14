@@ -8096,6 +8096,162 @@ button.metric-card.is-active {
   background: linear-gradient(135deg, rgba(197, 0, 95, 0.06) 0%, #ffffff 72%);
 }
 
+.detail-screen .detail-console-documents-section {
+  padding: 0;
+}
+.console-documents-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.console-documents-head {
+  align-items: center;
+}
+.console-documents-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.console-documents-message,
+.console-documents-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+.console-documents-message {
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  background: linear-gradient(180deg, #ffffff 0%, var(--gti-final-grey-soft) 100%);
+  color: var(--gti-final-ink);
+}
+.console-documents-error {
+  border: 1px solid rgba(197, 0, 95, 0.26);
+  background: rgba(197, 0, 95, 0.08);
+  color: var(--gti-final-magenta);
+}
+.console-upload-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(120px, 0.55fr) minmax(180px, 0.9fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.console-upload-form .ghost-button {
+  min-height: 40px;
+}
+.console-documents-list {
+  display: grid;
+  gap: 8px;
+}
+.console-document-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(34, 35, 35, 0.045);
+}
+.console-document-cloud_available {
+  border-color: rgba(34, 35, 35, 0.12);
+  background:
+    linear-gradient(90deg, rgba(34, 35, 35, 0.08) 0 4px, transparent 4px),
+    #ffffff;
+}
+.console-document-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--gti-final-grey-soft);
+  color: var(--gti-final-ink);
+}
+.console-document-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.console-document-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.console-document-main strong {
+  overflow: hidden;
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.console-document-main span {
+  overflow: hidden;
+  color: #747a7a;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.console-document-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 176px;
+}
+.console-document-actions .ghost-button {
+  min-height: 34px;
+  padding: 7px 11px;
+}
+.console-document-actions .console-document-delete {
+  border-color: rgba(197, 0, 95, 0.24);
+  color: var(--gti-final-magenta);
+}
+.console-document-actions .console-document-delete:hover {
+  border-color: rgba(197, 0, 95, 0.42);
+  background: rgba(197, 0, 95, 0.08);
+}
+.mobile-console-documents {
+  padding: 12px;
+}
+.mobile-console-documents .console-documents-panel {
+  gap: 10px;
+}
+.mobile-console-documents .section-header {
+  align-items: start;
+}
+.mobile-console-documents .console-documents-summary {
+  justify-content: flex-start;
+}
+.mobile-console-documents .console-upload-form,
+.console-documents-panel.is-compact .console-upload-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+.mobile-console-documents .console-document-row,
+.console-documents-panel.is-compact .console-document-row {
+  grid-template-columns: 34px minmax(0, 1fr);
+}
+.mobile-console-documents .console-document-row .status-pill,
+.console-documents-panel.is-compact .console-document-row .status-pill,
+.mobile-console-documents .console-document-actions,
+.console-documents-panel.is-compact .console-document-actions {
+  grid-column: 2;
+  justify-content: flex-start;
+}
+.mobile-console-documents .console-document-main strong,
+.console-documents-panel.is-compact .console-document-main strong {
+  white-space: normal;
+}
+
 /* Price history: financial timeline. */
 .detail-screen .price-history-list {
   position: relative;

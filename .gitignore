@@ -39,6 +39,17 @@ notice/Hektor API v2 - Documentation *.html
 storage_state.json
 playwright/.auth/
 
+Console/.env
+Console/storage_state.json
+Console/token_dump.json
+Console/debug_graphql_headers.json
+Console/debug_tabs_urls.json
+Console/debug_login.html
+Console/debug_login_url.txt
+Console/login_failed.png
+Console/exports/
+Console/logs/
+
 .DS_Store
 Thumbs.db
 ~$*

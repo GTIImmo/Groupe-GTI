@@ -1,0 +1,18 @@
+{
+  "name": "hektor_sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "login": "node playwright_login.js",
+    "worker": "node console_job_worker.js",
+    "worker:once": "node console_job_worker.js --once",
+    "sync:enqueue": "node enqueue_console_sync_jobs.js",
+    "worker:install": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./install_console_worker_task.ps1"
+  },
+  "dependencies": {
+    "dotenv": "16.4.5",
+    "playwright": "1.46.1",
+    "xlsx": "^0.18.5"
+  }
+}

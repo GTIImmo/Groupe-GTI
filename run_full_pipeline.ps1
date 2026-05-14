@@ -2,6 +2,8 @@ param(
     [switch]$PushAndroidFront,
     [switch]$SkipAndroid,
     [switch]$FullRebuildSupabase,
+    [switch]$EnqueueConsoleDocuments,
+    [switch]$EnqueueAllConsoleDocumentsLocal,
     [string]$GitHubOwner = "GTIImmo",
     [string]$GitHubRepo = "vitrine",
     [string]$GitHubBranch = "main",
@@ -103,6 +105,26 @@ Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
 )
+
+if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
+    $nodeCandidates = @(
+        $env:CONSOLE_NODE_EXE,
+        "C:\Program Files\nodejs\node.exe",
+        "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+    $nodeExe = if ($nodeCandidates.Count -gt 0) { $nodeCandidates[0] } else { "node.exe" }
+    $consoleScript = Join-Path $projectRoot "Console\enqueue_console_sync_jobs.js"
+    if (-not (Test-Path -LiteralPath $consoleScript)) {
+        throw "Console enqueue script not found: $consoleScript"
+    }
+    $scope = if ($EnqueueAllConsoleDocumentsLocal) { "all-local" } else { "daily-cloud" }
+    Write-RunLog "START enqueue console documents ($scope)"
+    & $nodeExe $consoleScript "--scope" $scope
+    if ($LASTEXITCODE -ne 0) {
+        throw "Step failed: enqueue console documents (exit code $LASTEXITCODE)"
+    }
+    Write-RunLog "DONE  enqueue console documents ($scope)"
+}
 
 Invoke-Step -Label "phase2 sync Matterport links to supabase" -Arguments @(
     "phase2\sync\sync_matterport_models.py",

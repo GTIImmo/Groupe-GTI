@@ -41,9 +41,14 @@ import {
   updateAppUser,
   updateDiffusionRequest,
   verifyPriceDropOnHektor,
+  loadConsoleDocuments,
+  createPrepareConsoleDocumentJob,
+  createUploadDocumentToHektorJob,
+  createDeleteDocumentFromHektorJob,
+  createConsoleDocumentSignedUrl,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -1948,6 +1953,247 @@ function DetailSectionTitle({ icon, title }: { icon: DetailIconKey; title: strin
       <span className="detail-section-icon" aria-hidden="true"><DetailIcon type={icon} /></span>
       <h4>{title}</h4>
     </span>
+  )
+}
+
+function consoleDocumentStatusLabel(status: ConsoleDocument['storage_status']) {
+  switch (status) {
+    case 'cloud_available':
+      return 'Cloud'
+    case 'local_only':
+      return 'A preparer'
+    case 'pending_upload':
+      return 'En attente'
+    case 'uploading':
+      return 'Upload'
+    case 'archived_cloud_removed':
+      return 'Archive cloud'
+    case 'missing':
+      return 'Introuvable'
+    case 'error':
+      return 'Erreur'
+    default:
+      return status || '-'
+  }
+}
+
+function consoleDocumentVisibilityLabel(value: ConsoleDocumentVisibility | null | undefined) {
+  if (value === 'private') return 'Prive'
+  if (value === 'shared') return 'Partage'
+  return 'Console'
+}
+
+function formatFileSize(bytes: number | null | undefined) {
+  if (!bytes || bytes <= 0) return '-'
+  if (bytes < 1024) return `${bytes} o`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} Mo`
+}
+
+function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier; compact?: boolean }) {
+  const [documents, setDocuments] = useState<ConsoleDocument[]>([])
+  const [loading, setLoading] = useState(false)
+  const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
+  const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<string>>(() => new Set())
+  const [busyDocumentId, setBusyDocumentId] = useState<string | null>(null)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadVisibility, setUploadVisibility] = useState<Exclude<ConsoleDocumentVisibility, 'unknown'>>('private')
+  const [uploadType, setUploadType] = useState('')
+  const [uploadPending, setUploadPending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const refreshDocuments = async (silent = false) => {
+    if (!silent) setLoading(true)
+    try {
+      const rows = await loadConsoleDocuments(dossier.app_dossier_id)
+      setDocuments(rows)
+      setPendingDocumentIds((current) => {
+        const next = new Set(current)
+        for (const item of rows) {
+          if (item.storage_status === 'cloud_available') next.delete(item.id)
+        }
+        return next
+      })
+      setDeletingDocumentIds((current) => {
+        const visibleIds = new Set(rows.map((item) => item.id))
+        const next = new Set(current)
+        for (const id of next) {
+          if (!visibleIds.has(id)) next.delete(id)
+        }
+        return next
+      })
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de chargement des documents Console')
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    setDocuments([])
+    setPendingDocumentIds(new Set())
+    setDeletingDocumentIds(new Set())
+    setMessage(null)
+    setError(null)
+    void refreshDocuments()
+  }, [dossier.app_dossier_id])
+
+  useEffect(() => {
+    if (!pendingDocumentIds.size && !deletingDocumentIds.size && !documents.some((item) => item.storage_status === 'pending_upload' || item.storage_status === 'uploading')) return
+    const timer = window.setInterval(() => void refreshDocuments(true), 8000)
+    return () => window.clearInterval(timer)
+  }, [pendingDocumentIds, deletingDocumentIds, documents, dossier.app_dossier_id])
+
+  const cloudCount = documents.filter((item) => item.storage_status === 'cloud_available').length
+  const localCount = documents.filter((item) => item.storage_status !== 'cloud_available').length
+
+  async function handleOpenDocument(document: ConsoleDocument) {
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      const url = await createConsoleDocumentSignedUrl(document)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      void refreshDocuments(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible d ouvrir le document')
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
+  async function handlePrepareDocument(document: ConsoleDocument) {
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      await createPrepareConsoleDocumentJob({ document, priority: 30 })
+      setPendingDocumentIds((current) => new Set([...current, document.id]))
+      setMessage('Preparation demandee. Le PC serveur va envoyer le fichier dans le cloud.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de demander la preparation')
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
+  async function handleUploadDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!uploadFile) {
+      setError('Choisis un fichier avant de lancer l upload.')
+      return
+    }
+    setUploadPending(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await createUploadDocumentToHektorJob({
+        dossier,
+        file: uploadFile,
+        visibility: uploadVisibility,
+        documentType: uploadType.trim() || null,
+        priority: 20,
+      })
+      setUploadFile(null)
+      setUploadType('')
+      setMessage('Document envoye en attente. Le PC serveur va l ajouter dans Hektor, puis rafraichir la liste.')
+      window.setTimeout(() => void refreshDocuments(true), 1500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de creer la demande upload Hektor')
+    } finally {
+      setUploadPending(false)
+    }
+  }
+
+  async function handleDeleteDocument(document: ConsoleDocument) {
+    const confirmed = window.confirm(`Supprimer ce document dans Hektor ?\n\n${document.document_name}`)
+    if (!confirmed) return
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      await createDeleteDocumentFromHektorJob({ document, priority: 15 })
+      setDeletingDocumentIds((current) => new Set([...current, document.id]))
+      setMessage('Suppression demandee. Le PC serveur va supprimer le document dans Hektor, puis rafraichir la liste.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de creer la demande de suppression Hektor')
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
+  return (
+    <section className={`console-documents-panel ${compact ? 'is-compact' : ''}`}>
+      <div className="section-header console-documents-head">
+        <DetailSectionTitle icon="mandate" title="Documents Hektor Console" />
+        <div className="console-documents-summary">
+          <StatusPill value={`${documents.length} doc${documents.length > 1 ? 's' : ''}`} />
+          <StatusPill value={`${cloudCount} cloud`} />
+          {localCount > 0 ? <StatusPill value={`${localCount} a preparer`} /> : null}
+        </div>
+      </div>
+
+      {message ? <p className="console-documents-message">{message}</p> : null}
+      {error ? <p className="console-documents-error">{error}</p> : null}
+
+      <form className="console-upload-form" onSubmit={handleUploadDocument}>
+        <label className="filter-field console-upload-file">
+          <span>Ajouter dans Hektor</span>
+          <input type="file" onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} />
+        </label>
+        <label className="filter-field">
+          <span>Visibilite</span>
+          <select value={uploadVisibility} onChange={(event) => setUploadVisibility(event.target.value as Exclude<ConsoleDocumentVisibility, 'unknown'>)}>
+            <option value="private">Prive</option>
+            <option value="shared">Partage</option>
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Type</span>
+          <input value={uploadType} onChange={(event) => setUploadType(event.target.value)} placeholder="Mandat, DPE, facture..." />
+        </label>
+        <button className="ghost-button button-primary" type="submit" disabled={uploadPending || !uploadFile}>
+          {uploadPending ? 'Demande...' : 'Envoyer'}
+        </button>
+      </form>
+
+      {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}
+      {!loading && documents.length === 0 ? <p className="empty-state">Aucun document Console indexe pour ce dossier.</p> : null}
+      {documents.length > 0 ? (
+        <div className="console-documents-list">
+          {documents.map((document) => {
+            const preparing = pendingDocumentIds.has(document.id)
+            const deleting = deletingDocumentIds.has(document.id)
+            const canOpen = document.storage_status === 'cloud_available'
+            const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
+            return (
+              <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
+                <span className="console-document-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+                <div className="console-document-main">
+                  <strong>{document.document_name}</strong>
+                  <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
+                </div>
+                <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
+                <div className="console-document-actions">
+                  {canOpen ? (
+                    <button className="ghost-button" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>Ouvrir</button>
+                  ) : (
+                    <button className="ghost-button" type="button" onClick={() => void handlePrepareDocument(document)} disabled={!canPrepare || busyDocumentId === document.id}>
+                      {preparing ? 'En attente' : 'Preparer'}
+                    </button>
+                  )}
+                  <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
+                    {deleting ? 'Suppression' : 'Supprimer'}
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      ) : null}
+    </section>
   )
 }
 
@@ -7828,6 +8074,12 @@ function DossierDetailLayout(props: {
               ) : null}
 
               {activeDetailTab === 'content' ? (
+              <section className="detail-section detail-console-documents-section">
+                <ConsoleDocumentsPanel dossier={dossier} />
+              </section>
+              ) : null}
+
+              {activeDetailTab === 'content' ? (
               <section className="detail-section detail-virtual-section matterport-section">
                 <div className="section-header">
                   <DetailSectionTitle icon="virtual" title="Visite virtuelle" />
@@ -8540,6 +8792,10 @@ function MobileDossierDetail(props: {
       </section>
 
       {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
+
+      <section className="mobile-detail-section mobile-console-documents">
+        <ConsoleDocumentsPanel dossier={dossier} compact />
+      </section>
 
       <section className="mobile-detail-section">
         <div className="mobile-detail-section-head">

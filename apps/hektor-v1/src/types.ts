@@ -387,3 +387,78 @@ export type DiffusionTarget = {
   last_apply_status: string | null
   last_apply_error: string | null
 }
+
+export type ConsoleDocumentStorageStatus =
+  | 'cloud_available'
+  | 'local_only'
+  | 'pending_upload'
+  | 'uploading'
+  | 'archived_cloud_removed'
+  | 'missing'
+  | 'error'
+
+export type ConsoleDocumentVisibility = 'private' | 'shared' | 'unknown'
+
+export type ConsoleDocument = {
+  id: string
+  app_dossier_id: number | null
+  hektor_annonce_id: string
+  hektor_document_id: string | null
+  document_type: string | null
+  document_name: string
+  source: string | null
+  visibility: ConsoleDocumentVisibility
+  storage_bucket: string | null
+  storage_path: string | null
+  storage_status: ConsoleDocumentStorageStatus
+  file_size: number | null
+  sha256: string | null
+  mime_type: string | null
+  created_at_hektor: string | null
+  synced_at: string | null
+  last_accessed_at: string | null
+  archive_policy: string | null
+  metadata_json: Record<string, unknown> | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type ConsoleJobStatus = 'pending' | 'running' | 'done' | 'error'
+
+export type ConsoleJobType =
+  | 'sync_console_documents'
+  | 'prepare_document_cloud'
+  | 'upload_document_to_hektor'
+  | 'delete_document_from_hektor'
+  | 'refresh_console_data'
+  | 'archive_cloud_documents'
+
+export type ConsoleJob = {
+  id: string
+  job_type: ConsoleJobType
+  app_dossier_id: number | null
+  hektor_annonce_id: string | null
+  payload_json: Record<string, unknown> | null
+  status: ConsoleJobStatus
+  priority: number
+  requested_by: string | null
+  requested_at: string
+  started_at: string | null
+  finished_at: string | null
+  worker_id: string | null
+  attempt_count: number
+  error_message: string | null
+  result_json: Record<string, unknown> | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type ConsoleJobLog = {
+  id: string
+  job_id: string | null
+  step: string | null
+  status: string | null
+  message: string | null
+  payload_preview: string | null
+  created_at: string
+}

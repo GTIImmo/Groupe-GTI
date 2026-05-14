@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -2966,4 +2966,147 @@ export async function sendPasswordResetEmail(input: { email: string }) {
     throw new Error(payload?.error ?? 'Unable to send password reset email')
   }
   return payload as { ok: true }
+}
+
+const consoleDocumentsBucket = 'hektor-console-documents'
+
+async function requireSupabaseUserId() {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) throw new Error(error?.message ?? 'Utilisateur non authentifie')
+  return data.user.id
+}
+
+export async function loadConsoleDocuments(appDossierId: number): Promise<ConsoleDocument[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_console_document')
+    .select('*')
+    .eq('app_dossier_id', appDossierId)
+    .order('document_type', { ascending: true })
+    .order('document_name', { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ConsoleDocument[]
+}
+
+export async function createPrepareConsoleDocumentJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'prepare_document_cloud',
+      app_dossier_id: input.document.app_dossier_id,
+      hektor_annonce_id: input.document.hektor_annonce_id,
+      payload_json: {
+        document_id: input.document.id,
+        document_name: input.document.document_name,
+      },
+      priority: input.priority ?? 50,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create document preparation job')
+  return data as ConsoleJob
+}
+
+export async function createUploadDocumentToHektorJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  file: File
+  visibility: Exclude<ConsoleDocumentVisibility, 'unknown'>
+  documentType?: string | null
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const jobId = crypto.randomUUID()
+  const storagePath = `temp/uploads/${jobId}/${input.file.name.replace(/[\\/:*?"<>|]+/g, '_')}`
+  const { data: jobData, error: jobError } = await supabase
+    .from('app_console_job')
+    .insert({
+      id: jobId,
+      job_type: 'upload_document_to_hektor',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        visibility: input.visibility,
+        document_type: input.documentType ?? null,
+        original_filename: input.file.name,
+        mime_type: input.file.type || null,
+        file_size: input.file.size,
+        temp_storage_bucket: consoleDocumentsBucket,
+        temp_storage_path: storagePath,
+      },
+      priority: input.priority ?? 40,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (jobError || !jobData) throw new Error(jobError?.message ?? 'Unable to create Hektor upload job')
+
+  const { error: uploadError } = await supabase.storage
+    .from(consoleDocumentsBucket)
+    .upload(storagePath, input.file, {
+      cacheControl: '3600',
+      contentType: input.file.type || undefined,
+      upsert: false,
+    })
+  if (uploadError) {
+    await supabase.rpc('app_console_fail_own_pending_job', {
+      target_job_id: jobData.id,
+      failure_message: uploadError.message,
+    })
+    throw new Error(uploadError.message)
+  }
+
+  const { data: updatedJob, error: updateError } = await supabase
+    .from('app_console_job')
+    .select('*')
+    .eq('id', jobData.id)
+    .single()
+  if (updateError || !updatedJob) throw new Error(updateError?.message ?? 'Unable to reload Hektor upload job')
+  return updatedJob as ConsoleJob
+}
+
+export async function createDeleteDocumentFromHektorJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'delete_document_from_hektor',
+      app_dossier_id: input.document.app_dossier_id,
+      hektor_annonce_id: input.document.hektor_annonce_id,
+      payload_json: {
+        document_id: input.document.id,
+        document_name: input.document.document_name,
+      },
+      priority: input.priority ?? 25,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor delete job')
+  return data as ConsoleJob
+}
+
+export async function createConsoleDocumentSignedUrl(document: ConsoleDocument, expiresIn = 300): Promise<string> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  if (document.storage_status !== 'cloud_available' || !document.storage_path) {
+    throw new Error('Document non disponible dans le cloud')
+  }
+  const { data, error } = await supabase.storage
+    .from(document.storage_bucket || consoleDocumentsBucket)
+    .createSignedUrl(document.storage_path, expiresIn)
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'Unable to create signed URL')
+  const { error: touchError } = await supabase.rpc('app_console_touch_document', { document_id: document.id })
+  if (touchError) throw new Error(touchError.message)
+  return data.signedUrl
 }
