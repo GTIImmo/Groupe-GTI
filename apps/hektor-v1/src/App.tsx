@@ -8912,7 +8912,7 @@ function MobileDossierDetail(props: {
         </section>
       ) : null}
 
-      <details className="mobile-detail-section mobile-detail-disclosure" open>
+      <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Commercialisation</summary>
         <div className="mobile-detail-embedded">
           <PriceChangeHistoryCard
@@ -8970,7 +8970,7 @@ function MobileDossierDetail(props: {
         </div>
       </details>
 
-      <details className="mobile-detail-section mobile-detail-disclosure" open>
+      <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
