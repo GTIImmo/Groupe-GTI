@@ -1058,9 +1058,14 @@ export async function loadWorkItemsPage({
 
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'exact' = 'exact'
+  const countMode: 'planned' = 'planned'
   const query = applyWorkItemFiltersToQuery(
-    applyNegotiatorScopeToQuery(supabase.from('app_work_items_current').select('*', { count: countMode }), scope),
+    applyNegotiatorScopeToQuery(
+      supabase
+        .from('app_work_items_current')
+        .select('app_dossier_id,hektor_annonce_id,archive,numero_dossier,numero_mandat,titre_bien,commercial_nom,type_demande_label,work_status,internal_status,priority,validation_diffusion_state,etat_visibilite,motif_blocage,has_open_blocker,next_action,date_relance_prevue,date_entree_file,date_derniere_action,age_jours', { count: countMode }),
+      scope,
+    ),
     filters,
   )
     .order('has_open_blocker', { ascending: false })
