@@ -2157,7 +2157,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
               Parcourir
               <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
             </label>
-            <label className="ghost-button console-upload-picker">
+            <label className="ghost-button console-upload-picker console-upload-camera">
               Camera
               <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
             </label>
@@ -8814,10 +8814,6 @@ function MobileDossierDetail(props: {
 
       {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
 
-      <section className="mobile-detail-section mobile-console-documents">
-        <ConsoleDocumentsPanel dossier={dossier} compact />
-      </section>
-
       <section className="mobile-detail-section">
         <div className="mobile-detail-section-head">
           <span>Synthèse</span>
@@ -8886,6 +8882,9 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Contenu de l'annonce</summary>
+        <div className="mobile-console-documents">
+          <ConsoleDocumentsPanel dossier={dossier} compact />
+        </div>
         {props.images.length > 1 ? (
           <div className="mobile-detail-gallery">
             {props.images.slice(0, 8).map((image) => (

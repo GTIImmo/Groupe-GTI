@@ -8174,6 +8174,11 @@ button.metric-card.is-active {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+@media (hover: hover) and (pointer: fine) {
+  .console-upload-camera {
+    display: none;
+  }
+}
 .console-documents-list {
   display: grid;
   gap: 8px;
@@ -8250,7 +8255,7 @@ button.metric-card.is-active {
   background: rgba(197, 0, 95, 0.08);
 }
 .mobile-console-documents {
-  padding: 12px;
+  padding: 8px 0 14px;
 }
 .mobile-console-documents .console-documents-panel {
   gap: 10px;
@@ -8265,9 +8270,20 @@ button.metric-card.is-active {
 .console-documents-panel.is-compact .console-upload-form {
   grid-template-columns: minmax(0, 1fr);
 }
+.mobile-console-documents .console-upload-pickers,
+.console-documents-panel.is-compact .console-upload-pickers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.mobile-console-documents .console-upload-picker,
+.console-documents-panel.is-compact .console-upload-picker {
+  min-width: 0;
+  width: 100%;
+}
 .mobile-console-documents .console-document-row,
 .console-documents-panel.is-compact .console-document-row {
   grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
 }
 .mobile-console-documents .console-document-row .status-pill,
 .console-documents-panel.is-compact .console-document-row .status-pill,
