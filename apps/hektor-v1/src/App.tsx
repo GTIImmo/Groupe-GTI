@@ -1997,6 +1997,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
   const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<string>>(() => new Set())
   const [busyDocumentId, setBusyDocumentId] = useState<string | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadLabel, setUploadLabel] = useState('')
   const [uploadVisibility, setUploadVisibility] = useState<Exclude<ConsoleDocumentVisibility, 'unknown'>>('private')
   const [uploadType, setUploadType] = useState('')
   const [uploadPending, setUploadPending] = useState(false)
@@ -2084,6 +2085,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
     const file = event.target.files?.[0] ?? null
     setUploadFile(file)
     if (file) {
+      const extensionIndex = file.name.lastIndexOf('.')
+      setUploadLabel(extensionIndex > 0 ? file.name.slice(0, extensionIndex) : file.name)
       setMessage(null)
       setError(null)
     }
@@ -2103,10 +2106,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
         dossier,
         file: uploadFile,
         visibility: uploadVisibility,
+        documentLabel: uploadLabel.trim() || null,
         documentType: uploadType.trim() || null,
         priority: 20,
       })
       setUploadFile(null)
+      setUploadLabel('')
       setUploadType('')
       setUploadInputVersion((value) => value + 1)
       setMessage('Document envoye en attente. Le PC serveur va l ajouter dans Hektor, puis rafraichir la liste.')
@@ -2163,6 +2168,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
             </label>
           </div>
           {uploadFile ? <strong className="console-upload-selected">{uploadFile.name}</strong> : null}
+        </label>
+        <label className="filter-field">
+          <span>Libelle</span>
+          <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
         </label>
         <label className="filter-field">
           <span>Visibilite</span>

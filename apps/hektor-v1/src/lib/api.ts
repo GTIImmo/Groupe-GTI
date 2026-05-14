@@ -2975,6 +2975,24 @@ export async function sendPasswordResetEmail(input: { email: string }) {
 
 const consoleDocumentsBucket = 'hektor-console-documents'
 
+function safeUploadFilename(name: string, fallback: string) {
+  const clean = name
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return clean || fallback
+}
+
+function filenameExtension(name: string) {
+  const match = name.match(/(\.[a-z0-9]{1,12})$/i)
+  return match ? match[1] : ''
+}
+
+function filenameStem(name: string) {
+  const extension = filenameExtension(name)
+  return extension ? name.slice(0, -extension.length) : name
+}
+
 async function requireSupabaseUserId() {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const { data, error } = await supabase.auth.getUser()
@@ -3024,13 +3042,18 @@ export async function createUploadDocumentToHektorJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
   file: File
   visibility: Exclude<ConsoleDocumentVisibility, 'unknown'>
+  documentLabel?: string | null
   documentType?: string | null
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
   const jobId = crypto.randomUUID()
-  const storagePath = `temp/uploads/${jobId}/${input.file.name.replace(/[\\/:*?"<>|]+/g, '_')}`
+  const originalName = safeUploadFilename(input.file.name, 'document')
+  const extension = filenameExtension(originalName)
+  const requestedLabel = filenameStem(safeUploadFilename(input.documentLabel ?? '', ''))
+  const uploadFilename = safeUploadFilename(requestedLabel ? `${requestedLabel}${extension}` : originalName, originalName)
+  const storagePath = `temp/uploads/${jobId}/${uploadFilename}`
   const { data: jobData, error: jobError } = await supabase
     .from('app_console_job')
     .insert({
@@ -3041,7 +3064,9 @@ export async function createUploadDocumentToHektorJob(input: {
       payload_json: {
         visibility: input.visibility,
         document_type: input.documentType ?? null,
-        original_filename: input.file.name,
+        original_filename: uploadFilename,
+        source_filename: input.file.name,
+        document_label: requestedLabel || filenameStem(originalName),
         mime_type: input.file.type || null,
         file_size: input.file.size,
         temp_storage_bucket: consoleDocumentsBucket,
