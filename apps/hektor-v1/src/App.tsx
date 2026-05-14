@@ -2141,89 +2141,97 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
   }
 
   return (
-    <section className={`console-documents-panel ${compact ? 'is-compact' : ''}`}>
-      <div className="section-header console-documents-head">
-        <DetailSectionTitle icon="mandate" title="Documents Hektor Console" />
+    <details className={`console-documents-panel ${compact ? 'is-compact' : ''}`}>
+      <summary className="console-documents-head">
+        <span className="console-documents-title">
+          <span className="console-documents-title-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+          <span>
+            <strong>Documents Hektor Console</strong>
+            <small>Ajouter, consulter et preparer les documents</small>
+          </span>
+        </span>
         <div className="console-documents-summary">
           <StatusPill value={`${documents.length} doc${documents.length > 1 ? 's' : ''}`} />
           <StatusPill value={`${cloudCount} cloud`} />
           {localCount > 0 ? <StatusPill value={`${localCount} a preparer`} /> : null}
         </div>
-      </div>
+      </summary>
 
-      {message ? <p className="console-documents-message">{message}</p> : null}
-      {error ? <p className="console-documents-error">{error}</p> : null}
+      <div className="console-documents-body">
+        {message ? <p className="console-documents-message">{message}</p> : null}
+        {error ? <p className="console-documents-error">{error}</p> : null}
 
-      <form className="console-upload-form" onSubmit={handleUploadDocument}>
-        <label className="filter-field console-upload-file">
-          <span>Ajouter dans Hektor</span>
-          <div className="console-upload-pickers">
-            <label className="ghost-button console-upload-picker">
-              Parcourir
-              <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
-            </label>
-            <label className="ghost-button console-upload-picker console-upload-camera">
-              Camera
-              <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
-            </label>
-          </div>
-          {uploadFile ? <strong className="console-upload-selected">{uploadFile.name}</strong> : null}
-        </label>
-        <label className="filter-field">
-          <span>Libelle</span>
-          <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
-        </label>
-        <label className="filter-field">
-          <span>Visibilite</span>
-          <select value={uploadVisibility} onChange={(event) => setUploadVisibility(event.target.value as Exclude<ConsoleDocumentVisibility, 'unknown'>)}>
-            <option value="private">Prive</option>
-            <option value="shared">Partage</option>
-          </select>
-        </label>
-        <label className="filter-field">
-          <span>Type</span>
-          <input value={uploadType} onChange={(event) => setUploadType(event.target.value)} placeholder="Mandat, DPE, facture..." />
-        </label>
-        <button className="ghost-button button-primary" type="submit" disabled={uploadPending || !uploadFile}>
-          {uploadPending ? 'Demande...' : 'Envoyer'}
-        </button>
-      </form>
+        <form className="console-upload-form" onSubmit={handleUploadDocument}>
+          <label className="filter-field console-upload-file">
+            <span>Ajouter dans Hektor</span>
+            <div className="console-upload-pickers">
+              <label className="ghost-button console-upload-picker">
+                Parcourir
+                <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
+              </label>
+              <label className="ghost-button console-upload-picker console-upload-camera">
+                Camera
+                <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
+              </label>
+            </div>
+            {uploadFile ? <strong className="console-upload-selected">{uploadFile.name}</strong> : null}
+          </label>
+          <label className="filter-field">
+            <span>Libelle</span>
+            <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
+          </label>
+          <label className="filter-field">
+            <span>Visibilite</span>
+            <select value={uploadVisibility} onChange={(event) => setUploadVisibility(event.target.value as Exclude<ConsoleDocumentVisibility, 'unknown'>)}>
+              <option value="private">Prive</option>
+              <option value="shared">Partage</option>
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>Type</span>
+            <input value={uploadType} onChange={(event) => setUploadType(event.target.value)} placeholder="Mandat, DPE, facture..." />
+          </label>
+          <button className="ghost-button button-primary console-upload-submit" type="submit" disabled={uploadPending || !uploadFile}>
+            {uploadPending ? 'Demande...' : 'Envoyer'}
+          </button>
+        </form>
 
-      {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}
-      {!loading && documents.length === 0 ? <p className="empty-state">Aucun document Console indexe pour ce dossier.</p> : null}
-      {documents.length > 0 ? (
-        <div className="console-documents-list">
-          {documents.map((document) => {
-            const preparing = pendingDocumentIds.has(document.id)
-            const deleting = deletingDocumentIds.has(document.id)
-            const canOpen = document.storage_status === 'cloud_available'
-            const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
-            return (
-              <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
-                <span className="console-document-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
-                <div className="console-document-main">
-                  <strong>{document.document_name}</strong>
-                  <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
-                </div>
-                <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
-                <div className="console-document-actions">
-                  {canOpen ? (
-                    <button className="ghost-button" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>Ouvrir</button>
-                  ) : (
-                    <button className="ghost-button" type="button" onClick={() => void handlePrepareDocument(document)} disabled={!canPrepare || busyDocumentId === document.id}>
-                      {preparing ? 'En attente' : 'Preparer'}
+        {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}
+        {!loading && documents.length === 0 ? <p className="empty-state">Aucun document Console indexe pour ce dossier.</p> : null}
+        {documents.length > 0 ? (
+          <div className="console-documents-list">
+            {documents.map((document) => {
+              const preparing = pendingDocumentIds.has(document.id)
+              const deleting = deletingDocumentIds.has(document.id)
+              const canOpen = document.storage_status === 'cloud_available'
+              const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
+              return (
+                <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
+                  <span className="console-document-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+                  <div className="console-document-main">
+                    <strong>{document.document_name}</strong>
+                    <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
+                  </div>
+                  <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
+                  <div className="console-document-actions">
+                    {canOpen ? (
+                      <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>Ouvrir</button>
+                    ) : (
+                      <button className="ghost-button console-document-prepare" type="button" onClick={() => void handlePrepareDocument(document)} disabled={!canPrepare || busyDocumentId === document.id}>
+                        {preparing ? 'En attente' : 'Preparer'}
+                      </button>
+                    )}
+                    <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
+                      {deleting ? 'Suppression' : 'Supprimer'}
                     </button>
-                  )}
-                  <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
-                    {deleting ? 'Suppression' : 'Supprimer'}
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      ) : null}
-    </section>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ) : null}
+      </div>
+    </details>
   )
 }
 

@@ -8101,11 +8101,89 @@ button.metric-card.is-active {
 }
 .console-documents-panel {
   display: grid;
-  gap: 12px;
   min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(34, 35, 35, 0.05);
 }
 .console-documents-head {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  background:
+    linear-gradient(90deg, rgba(197, 0, 95, 0.12) 0 4px, transparent 4px),
+    linear-gradient(180deg, #ffffff 0%, #f7f8f8 100%);
+}
+.console-documents-head::-webkit-details-marker {
+  display: none;
+}
+.console-documents-head::after {
+  content: "+";
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(34, 35, 35, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1;
+}
+.console-documents-panel[open] .console-documents-head::after {
+  content: "-";
+}
+.console-documents-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.console-documents-title-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--gti-final-grey-soft);
+  color: var(--gti-final-ink);
+}
+.console-documents-title-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.console-documents-title strong,
+.console-documents-title small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.console-documents-title strong {
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  line-height: 1.2;
+}
+.console-documents-title small {
+  margin-top: 2px;
+  color: #747a7a;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.console-documents-body {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid rgba(34, 35, 35, 0.08);
 }
 .console-documents-summary {
   display: flex;
@@ -8140,7 +8218,7 @@ button.metric-card.is-active {
   padding: 12px;
   border: 1px solid rgba(34, 35, 35, 0.1);
   border-radius: 8px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
 }
 .console-upload-form .ghost-button {
   min-height: 40px;
@@ -8155,7 +8233,14 @@ button.metric-card.is-active {
   justify-content: center;
   min-width: 96px;
   overflow: hidden;
+  border-color: rgba(34, 35, 35, 0.16);
+  background: #ffffff;
+  color: var(--gti-final-ink);
   cursor: pointer;
+}
+.console-upload-picker:hover {
+  border-color: rgba(197, 0, 95, 0.32);
+  background: rgba(197, 0, 95, 0.06);
 }
 .console-upload-picker input {
   position: absolute;
@@ -8178,6 +8263,9 @@ button.metric-card.is-active {
   .console-upload-camera {
     display: none;
   }
+}
+.console-upload-submit {
+  min-width: 98px;
 }
 .console-documents-list {
   display: grid;
@@ -8245,6 +8333,26 @@ button.metric-card.is-active {
 .console-document-actions .ghost-button {
   min-height: 34px;
   padding: 7px 11px;
+  border-radius: 8px;
+  font-weight: 850;
+}
+.console-document-actions .console-document-open {
+  border-color: rgba(34, 35, 35, 0.18);
+  background: #ffffff;
+  color: var(--gti-final-ink);
+}
+.console-document-actions .console-document-open:hover {
+  border-color: rgba(34, 35, 35, 0.32);
+  background: var(--gti-final-grey-soft);
+}
+.console-document-actions .console-document-prepare {
+  border-color: rgba(197, 0, 95, 0.22);
+  background: rgba(197, 0, 95, 0.06);
+  color: var(--gti-final-magenta);
+}
+.console-document-actions .console-document-prepare:hover {
+  border-color: rgba(197, 0, 95, 0.38);
+  background: rgba(197, 0, 95, 0.1);
 }
 .console-document-actions .console-document-delete {
   border-color: rgba(197, 0, 95, 0.24);
@@ -8263,8 +8371,21 @@ button.metric-card.is-active {
 .mobile-console-documents .section-header {
   align-items: start;
 }
+.mobile-console-documents .console-documents-head,
+.console-documents-panel.is-compact .console-documents-head {
+  align-items: flex-start;
+}
+.mobile-console-documents .console-documents-title,
+.console-documents-panel.is-compact .console-documents-title {
+  align-items: flex-start;
+}
+.mobile-console-documents .console-documents-title small,
+.console-documents-panel.is-compact .console-documents-title small {
+  white-space: normal;
+}
 .mobile-console-documents .console-documents-summary {
   justify-content: flex-start;
+  grid-column: 1 / -1;
 }
 .mobile-console-documents .console-upload-form,
 .console-documents-panel.is-compact .console-upload-form {
@@ -8291,6 +8412,12 @@ button.metric-card.is-active {
 .console-documents-panel.is-compact .console-document-actions {
   grid-column: 2;
   justify-content: flex-start;
+  min-width: 0;
+  width: 100%;
+}
+.mobile-console-documents .console-document-actions .ghost-button,
+.console-documents-panel.is-compact .console-document-actions .ghost-button {
+  flex: 1 1 0;
 }
 .mobile-console-documents .console-document-main strong,
 .console-documents-panel.is-compact .console-document-main strong {
