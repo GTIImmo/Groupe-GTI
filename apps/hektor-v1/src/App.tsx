@@ -1990,6 +1990,14 @@ function formatFileSize(bytes: number | null | undefined) {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} Mo`
 }
 
+function consoleDocumentIconType(document: Pick<ConsoleDocument, 'mime_type' | 'document_name' | 'document_type'>): DetailIconKey {
+  const text = `${document.mime_type ?? ''} ${document.document_name ?? ''} ${document.document_type ?? ''}`.toLowerCase()
+  if (text.includes('image/') || /\.(jpe?g|png|webp|gif)$/i.test(document.document_name ?? '')) return 'photo'
+  if (text.includes('dpe') || text.includes('diagnostic')) return 'hektor'
+  if (text.includes('mandat')) return 'mandate'
+  return 'content'
+}
+
 function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier; compact?: boolean }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   const [loading, setLoading] = useState(false)
@@ -2162,36 +2170,74 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
         {error ? <p className="console-documents-error">{error}</p> : null}
 
         <form className="console-upload-form" onSubmit={handleUploadDocument}>
-          <label className="filter-field console-upload-file">
-            <span>Ajouter dans Hektor</span>
-            <div className="console-upload-pickers">
-              <label className="ghost-button console-upload-picker">
-                Parcourir
-                <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
-              </label>
-              <label className="ghost-button console-upload-picker console-upload-camera">
-                Camera
-                <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
-              </label>
+          <div className="console-upload-card-head">
+            <span className="console-upload-card-icon" aria-hidden="true"><DetailIcon type="actions" /></span>
+            <div>
+              <strong>Ajouter un document</strong>
+              <small>Le fichier sera envoye dans Hektor puis indexe dans l'app.</small>
             </div>
-            {uploadFile ? <strong className="console-upload-selected">{uploadFile.name}</strong> : null}
+          </div>
+
+          <label className="console-upload-file">
+            <span className="console-upload-label">Fichier</span>
+            <div className={`console-upload-dropzone ${uploadFile ? 'has-file' : ''}`}>
+              <span className="console-upload-dropzone-icon" aria-hidden="true"><DetailIcon type={uploadFile ? consoleDocumentIconType({ mime_type: uploadFile.type, document_name: uploadFile.name, document_type: uploadType }) : 'content'} /></span>
+              <span className="console-upload-dropzone-copy">
+                <strong>{uploadFile ? uploadFile.name : 'Choisir un fichier'}</strong>
+                <small>{uploadFile ? formatFileSize(uploadFile.size) : 'PDF, image, document ou photo mobile'}</small>
+              </span>
+              <span className="console-upload-pickers">
+                <label className="ghost-button console-upload-picker">
+                  <span aria-hidden="true"><DetailIcon type="content" /></span>
+                  Parcourir
+                  <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
+                </label>
+                <label className="ghost-button console-upload-picker console-upload-camera">
+                  <span aria-hidden="true"><DetailIcon type="photo" /></span>
+                  Camera
+                  <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
+                </label>
+              </span>
+            </div>
           </label>
+
           <label className="filter-field">
             <span>Libelle</span>
             <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
           </label>
-          <label className="filter-field">
+
+          <fieldset className="console-visibility-field">
             <span>Visibilite</span>
-            <select value={uploadVisibility} onChange={(event) => setUploadVisibility(event.target.value as Exclude<ConsoleDocumentVisibility, 'unknown'>)}>
-              <option value="private">Prive</option>
-              <option value="shared">Partage</option>
-            </select>
-          </label>
+            <div className="console-segmented-control">
+              <button className={uploadVisibility === 'private' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('private')}>
+                <span aria-hidden="true"><DetailIcon type="visibility" /></span>
+                Prive
+              </button>
+              <button className={uploadVisibility === 'shared' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('shared')}>
+                <span aria-hidden="true"><DetailIcon type="contact" /></span>
+                Partage
+              </button>
+            </div>
+          </fieldset>
+
           <label className="filter-field">
             <span>Type</span>
-            <input value={uploadType} onChange={(event) => setUploadType(event.target.value)} placeholder="Mandat, DPE, facture..." />
+            <select value={uploadType} onChange={(event) => setUploadType(event.target.value)}>
+              <option value="">Autre</option>
+              <option value="DPE">DPE</option>
+              <option value="Mandat">Mandat</option>
+              <option value="Diagnostic">Diagnostic</option>
+              <option value="Plan">Plan</option>
+              <option value="Facture">Facture</option>
+              <option value="Photo">Photo</option>
+              <option value="Taxe fonciere">Taxe fonciere</option>
+              <option value="Bon de visite">Bon de visite</option>
+              <option value="Piece identite">Piece identite</option>
+            </select>
           </label>
+
           <button className="ghost-button button-primary console-upload-submit" type="submit" disabled={uploadPending || !uploadFile}>
+            <span aria-hidden="true"><DetailIcon type="hektor" /></span>
             {uploadPending ? 'Demande...' : 'Envoyer'}
           </button>
         </form>
@@ -2207,7 +2253,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
               const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
               return (
                 <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
-                  <span className="console-document-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+                  <span className="console-document-icon" aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
                   <div className="console-document-main">
                     <strong>{document.document_name}</strong>
                     <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
@@ -2215,13 +2261,18 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
                   <div className="console-document-actions">
                     {canOpen ? (
-                      <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>Ouvrir</button>
+                      <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>
+                        <span aria-hidden="true"><DetailIcon type="content" /></span>
+                        Ouvrir
+                      </button>
                     ) : (
                       <button className="ghost-button console-document-prepare" type="button" onClick={() => void handlePrepareDocument(document)} disabled={!canPrepare || busyDocumentId === document.id}>
+                        <span aria-hidden="true"><DetailIcon type="hektor" /></span>
                         {preparing ? 'En attente' : 'Preparer'}
                       </button>
                     )}
                     <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
+                      <span aria-hidden="true"><DetailIcon type="actions" /></span>
                       {deleting ? 'Suppression' : 'Supprimer'}
                     </button>
                   </div>

@@ -8212,16 +8212,117 @@ button.metric-card.is-active {
 }
 .console-upload-form {
   display: grid;
-  grid-template-columns: minmax(210px, 1.25fr) minmax(180px, 1fr) minmax(120px, 0.55fr) minmax(150px, 0.75fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(260px, 1.15fr) minmax(180px, 0.85fr) minmax(190px, 0.8fr) minmax(150px, 0.65fr) auto;
+  gap: 12px;
   align-items: end;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid rgba(34, 35, 35, 0.1);
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
 }
+.console-upload-card-head {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.console-upload-card-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(197, 0, 95, 0.08);
+  color: var(--gti-final-magenta);
+}
+.console-upload-card-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.console-upload-card-head strong,
+.console-upload-card-head small {
+  display: block;
+}
+.console-upload-card-head strong {
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  line-height: 1.2;
+}
+.console-upload-card-head small {
+  margin-top: 2px;
+  color: #747a7a;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.25;
+}
 .console-upload-form .ghost-button {
   min-height: 40px;
+}
+.console-upload-label,
+.console-visibility-field > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #747a7a;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.console-upload-file {
+  display: grid;
+  min-width: 0;
+}
+.console-upload-dropzone {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 56px;
+  padding: 8px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.console-upload-dropzone.has-file {
+  border-color: rgba(197, 0, 95, 0.2);
+  background: rgba(197, 0, 95, 0.035);
+}
+.console-upload-dropzone-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--gti-final-grey-soft);
+  color: var(--gti-final-ink);
+}
+.console-upload-dropzone-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.console-upload-dropzone-copy {
+  min-width: 0;
+}
+.console-upload-dropzone-copy strong,
+.console-upload-dropzone-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.console-upload-dropzone-copy strong {
+  color: var(--gti-final-ink);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+.console-upload-dropzone-copy small {
+  margin-top: 2px;
+  color: #747a7a;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 .console-upload-pickers {
   display: flex;
@@ -8230,13 +8331,22 @@ button.metric-card.is-active {
 }
 .console-upload-picker {
   position: relative;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
   justify-content: center;
-  min-width: 96px;
+  min-width: 108px;
   overflow: hidden;
   border-color: rgba(34, 35, 35, 0.16);
   background: #ffffff;
   color: var(--gti-final-ink);
   cursor: pointer;
+}
+.console-upload-picker svg,
+.console-upload-submit svg,
+.console-document-actions svg {
+  width: 15px;
+  height: 15px;
 }
 .console-upload-picker:hover {
   border-color: rgba(197, 0, 95, 0.32);
@@ -8248,23 +8358,55 @@ button.metric-card.is-active {
   opacity: 0;
   pointer-events: none;
 }
-.console-upload-selected {
-  display: block;
-  overflow: hidden;
-  max-width: 100%;
-  color: var(--gti-final-ink);
-  font-size: 11px;
-  font-weight: 750;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 @media (hover: hover) and (pointer: fine) {
   .console-upload-camera {
     display: none;
   }
 }
+.console-visibility-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.console-segmented-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  min-height: 40px;
+  padding: 3px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  background: var(--gti-final-grey-soft);
+}
+.console-segmented-control button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #5f6666;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.console-segmented-control button.is-active {
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  box-shadow: 0 5px 14px rgba(34, 35, 35, 0.08);
+}
+.console-segmented-control svg {
+  width: 14px;
+  height: 14px;
+}
 .console-upload-submit {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
   min-width: 98px;
 }
 .console-documents-list {
@@ -8331,6 +8473,10 @@ button.metric-card.is-active {
   min-width: 176px;
 }
 .console-document-actions .ghost-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
   min-height: 34px;
   padding: 7px 11px;
   border-radius: 8px;
@@ -8391,10 +8537,23 @@ button.metric-card.is-active {
 .console-documents-panel.is-compact .console-upload-form {
   grid-template-columns: minmax(0, 1fr);
 }
+.mobile-console-documents .console-upload-card-head,
+.console-documents-panel.is-compact .console-upload-card-head {
+  align-items: flex-start;
+}
+.mobile-console-documents .console-upload-card-head small,
+.console-documents-panel.is-compact .console-upload-card-head small {
+  max-width: 260px;
+}
+.mobile-console-documents .console-upload-dropzone,
+.console-documents-panel.is-compact .console-upload-dropzone {
+  grid-template-columns: 38px minmax(0, 1fr);
+}
 .mobile-console-documents .console-upload-pickers,
 .console-documents-panel.is-compact .console-upload-pickers {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-column: 1 / -1;
 }
 .mobile-console-documents .console-upload-picker,
 .console-documents-panel.is-compact .console-upload-picker {
