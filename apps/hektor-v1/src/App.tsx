@@ -2215,7 +2215,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
               </button>
               <button className={uploadVisibility === 'shared' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('shared')}>
                 <span aria-hidden="true"><DetailIcon type="contact" /></span>
-                Partage
+                Public
               </button>
             </div>
           </fieldset>
