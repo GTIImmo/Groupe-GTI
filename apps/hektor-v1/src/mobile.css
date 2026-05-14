@@ -831,10 +831,113 @@
   background: #f8f9f9;
 }
 
+.mobile-contact-stack,
+.mobile-detail-timeline,
+.mobile-transaction-stack {
+  display: grid;
+  gap: 10px;
+}
+
 .mobile-contact-card a {
   color: var(--mobile-magenta);
   font-weight: 850;
   text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.mobile-detail-lines small {
+  display: grid;
+  gap: 4px;
+  color: #747a7a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.mobile-detail-lines small a {
+  color: var(--mobile-magenta);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.mobile-rich-text {
+  color: #4b5050;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.mobile-rich-text p,
+.mobile-rich-text ul,
+.mobile-rich-text ol {
+  margin: 0 0 8px;
+}
+
+.mobile-rich-text :last-child {
+  margin-bottom: 0;
+}
+
+.mobile-detail-embedded {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mobile-detail-embedded .detail-section,
+.mobile-detail-embedded .detail-card,
+.mobile-detail-embedded .detail-subsection,
+.mobile-detail-embedded .appointment-annonce-section {
+  min-width: 0;
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.mobile-detail-embedded .section-header,
+.mobile-detail-embedded .appointment-annonce-header {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mobile-detail-embedded .info-grid,
+.mobile-detail-embedded .appointment-annonce-grid,
+.mobile-detail-embedded .price-change-grid {
+  grid-template-columns: 1fr;
+}
+
+.mobile-transaction-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(34, 35, 35, 0.08);
+  border-radius: 14px;
+  background: #f8f9f9;
+}
+
+.mobile-transaction-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-transaction-head > span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #222323;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.mobile-transaction-head strong {
+  color: var(--mobile-ink);
+  font-size: 14px;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 

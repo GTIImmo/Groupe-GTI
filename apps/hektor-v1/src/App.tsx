@@ -8786,12 +8786,8 @@ function MobileDossierDetail(props: {
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
     .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
-    .slice(0, 5)
   const messageItems = [...props.requestMessagesDiffusion, ...props.requestMessagesPriceDrop, ...props.requestMessagesCancellation, ...props.requestMessages]
     .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
-    .slice(0, 4)
-  const firstMandat = props.mandats[0] ?? null
-  const primaryContact = props.contacts[0] ?? null
   const detailFacts = [
     ['Prix', formatPrice(dossier.prix)],
     ['Surface', props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'],
@@ -8799,6 +8795,41 @@ function MobileDossierDetail(props: {
     ['Chambres', props.detail.nb_chambres ?? '-'],
     ['Type', propertyTypeLabel(dossier.type_bien)],
     ['Référence', dossier.numero_dossier ?? '-'],
+  ]
+  const featureFacts = [
+    ['Type', propertyTypeLabel(dossier.type_bien)],
+    ['Surface habitable', props.detail.surface_habitable_detail ?? '-'],
+    ['Terrain', props.detail.surface_terrain_detail ?? '-'],
+    ['Pieces', props.detail.nb_pieces ?? '-'],
+    ['Chambres', props.detail.nb_chambres ?? '-'],
+    ['Etage', props.detail.etage_detail ?? '-'],
+    ['Terrasse', props.detail.terrasse_detail ?? '-'],
+    ['Garage / box', props.detail.garage_box_detail ?? '-'],
+    ['Ascenseur', props.detail.ascenseur_detail ?? '-'],
+  ]
+  const offerFacts = [
+    ['ID', props.detail.offre_id ?? '-'],
+    ['Etat', props.detail.offre_state ?? '-'],
+    ['Statut source', props.detail.offre_raw_status ?? '-'],
+    ['Date', formatDate(props.detail.offre_event_date)],
+    ['Montant', formatPrice(props.detail.offre_montant)],
+    ['Acquereur', props.detail.offre_acquereur_nom ?? '-'],
+  ]
+  const compromisFacts = [
+    ['ID', props.detail.compromis_id ?? '-'],
+    ['Etat', props.detail.compromis_state ?? '-'],
+    ['Date debut', formatDate(props.detail.compromis_date_start)],
+    ['Date fin', formatDate(props.detail.compromis_date_end)],
+    ['Date acte', formatDate(props.detail.date_signature_acte)],
+    ['Sequestre', formatPrice(props.detail.compromis_sequestre)],
+  ]
+  const saleFacts = [
+    ['ID', props.detail.vente_id ?? '-'],
+    ['Date vente', formatDate(props.detail.vente_date)],
+    ['Prix', formatPrice(props.detail.vente_prix)],
+    ['Honoraires', formatPrice(props.detail.vente_honoraires)],
+    ['Commission agence', formatPrice(props.detail.vente_commission_agence)],
+    ['Notaires', props.detail.vente_notaires_resume ?? '-'],
   ]
   const adminValidationState = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
   const adminDiffusableState = props.diffusableDraft ?? isDiffusableValue(dossier.diffusable)
@@ -8882,21 +8913,85 @@ function MobileDossierDetail(props: {
       ) : null}
 
       <details className="mobile-detail-section mobile-detail-disclosure" open>
+        <summary>Commercialisation</summary>
+        <div className="mobile-detail-embedded">
+          <PriceChangeHistoryCard
+            source={props.detail.price_change_events_json ? props.detail : dossier}
+            title="Historique des prix"
+            emptyLabel="Aucun changement de prix historise pour cette annonce."
+          />
+        </div>
+        <div className="mobile-transaction-stack">
+          <article className="mobile-transaction-card">
+            <div className="mobile-transaction-head">
+              <span>01</span>
+              <strong>Offre</strong>
+              <StatusPill value={props.detail.offre_state ?? 'Non renseigne'} />
+            </div>
+            <div className="mobile-detail-lines">
+              {offerFacts.map(([label, value]) => <div key={`mobile-offer-${label}`}><span>{label}</span><b>{value || '-'}</b></div>)}
+            </div>
+          </article>
+          <article className="mobile-transaction-card">
+            <div className="mobile-transaction-head">
+              <span>02</span>
+              <strong>Compromis</strong>
+              <StatusPill value={props.detail.compromis_state ?? 'Non renseigne'} />
+            </div>
+            <div className="mobile-detail-lines">
+              {compromisFacts.map(([label, value]) => <div key={`mobile-compromis-${label}`}><span>{label}</span><b>{value || '-'}</b></div>)}
+            </div>
+          </article>
+          <article className="mobile-transaction-card">
+            <div className="mobile-transaction-head">
+              <span>03</span>
+              <strong>Vente</strong>
+              <StatusPill value={props.detail.vente_id ? 'Vente renseignee' : 'Non renseigne'} />
+            </div>
+            <div className="mobile-detail-lines">
+              {saleFacts.map(([label, value]) => <div key={`mobile-sale-${label}`}><span>{label}</span><b>{value || '-'}</b></div>)}
+            </div>
+          </article>
+        </div>
+        <div className="mobile-detail-embedded">
+          <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
+        </div>
+      </details>
+
+      <details className="mobile-detail-section mobile-detail-disclosure">
+        <summary>Caracteristiques</summary>
+        <div className="mobile-detail-facts">
+          {featureFacts.map(([label, value]) => (
+            <div key={`mobile-feature-${label}`}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      <details className="mobile-detail-section mobile-detail-disclosure" open>
         <summary>Mandat et contacts</summary>
-        {firstMandat ? (
-          <div className="mobile-detail-lines">
-            <strong>{firstMandat.title}</strong>
-            {firstMandat.lines.slice(0, 8).map(([label, value]) => <div key={`mobile-mandat-${label}`}><span>{label}</span><b>{value || '-'}</b></div>)}
+        {props.mandats.length > 0 ? props.mandats.map((mandat) => (
+          <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
+            <strong>{mandat.title}</strong>
+            {mandat.lines.map(([label, value]) => <div key={`mobile-mandat-${mandat.id}-${label}`}><span>{label}</span><b>{value || '-'}</b></div>)}
           </div>
-        ) : <p className="mobile-detail-muted">Aucun mandat détaillé disponible.</p>}
-        {primaryContact ? (
-          <div className="mobile-contact-card">
-            <span>{primaryContact.role || 'Contact'}</span>
-            <strong>{primaryContact.name || '-'}</strong>
-            {primaryContact.phone ? <a href={`tel:${primaryContact.phone}`}>{primaryContact.phone}</a> : null}
-            {primaryContact.email ? <a href={`mailto:${primaryContact.email}`}>{primaryContact.email}</a> : null}
+        )) : <p className="mobile-detail-muted">Aucun mandat detaille disponible.</p>}
+        {props.contacts.length > 0 ? (
+          <div className="mobile-contact-stack">
+            {props.contacts.map((contact) => (
+              <div key={`mobile-contact-${contact.id}`} className="mobile-contact-card">
+                <span>{contact.role || 'Contact'}</span>
+                <strong>{contact.name || '-'}</strong>
+                {contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
+                {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
+                {contact.address ? <p>{contact.address}</p> : null}
+                {contact.comment ? <p>{contact.comment}</p> : null}
+              </div>
+            ))}
           </div>
-        ) : null}
+        ) : <p className="mobile-detail-muted">Aucun contact detaille.</p>}
       </details>
 
       <details className="mobile-detail-section mobile-detail-disclosure">
@@ -8904,28 +8999,58 @@ function MobileDossierDetail(props: {
         <div className="mobile-console-documents">
           <ConsoleDocumentsPanel dossier={dossier} compact />
         </div>
-        {props.images.length > 1 ? (
+        {props.images.length > 0 ? (
           <div className="mobile-detail-gallery">
-            {props.images.slice(0, 8).map((image) => (
+            {props.images.map((image) => (
               <button key={image.url} type="button" onClick={() => props.onOpenImage?.(image.url)}>
                 <img src={image.url} alt={image.legend || dossier.titre_bien} loading="lazy" />
               </button>
             ))}
           </div>
         ) : null}
-        {props.texts.slice(0, 3).map((text) => (
+        {props.texts.map((text) => (
           <div key={text.id} className="mobile-detail-text">
             <strong>{text.title}</strong>
-            <p>{text.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '-'}</p>
+            <div className="mobile-rich-text" dangerouslySetInnerHTML={{ __html: text.html || '-' }} />
           </div>
         ))}
         {matterportModels.length > 0 ? (
           <div className="mobile-detail-lines">
             <strong>Visite virtuelle</strong>
-            {matterportModels.slice(0, 4).map(({ group, model }) => (
+            {matterportModels.map(({ group, model }) => (
               <div key={`${group.id}-${model.matterport_model_id}`}>
                 <span>{group.group_label ?? `Mandat ${group.numero_mandat ?? '-'}`}</span>
-                <b>{model.label || model.matterport_name || model.matterport_model_id}</b>
+                <b>{matterportModelLabel(model.label, model.matterport_name, false)}</b>
+                <small>
+                  {matterportStateLabel(model.state)} - {matterportVisibilityLabel(model.visibility)}
+                  {model.matterport_url ? <a href={model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a> : null}
+                </small>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </details>
+
+      <details className="mobile-detail-section mobile-detail-disclosure">
+        <summary>Diffusion</summary>
+        {activePortals.length > 0 ? (
+          <div className="mobile-detail-lines">
+            <strong>Portails actifs</strong>
+            {activePortals.map((portal) => (
+              <div key={`mobile-portal-${portal}`}>
+                <span>{portal}</span>
+                <b>{portalBrandLabel(portal)}</b>
+              </div>
+            ))}
+          </div>
+        ) : <p className="mobile-detail-muted">Aucun portail actif detecte.</p>}
+        {requestItems.length > 0 ? (
+          <div className="mobile-detail-timeline">
+            {requestItems.map((item) => (
+              <div key={`mobile-diffusion-history-${item.id}`} className="mobile-timeline-item">
+                <span>{formatDate(item.date)}</span>
+                <strong>{item.title}</strong>
+                <p>{item.body}</p>
               </div>
             ))}
           </div>
@@ -8948,7 +9073,7 @@ function MobileDossierDetail(props: {
             <p>{item.message}</p>
           </div>
         ))}
-        {props.notes.slice(0, 3).map((note) => (
+        {props.notes.map((note) => (
           <div key={note.id} className="mobile-timeline-item">
             <span>{formatDate(note.date)}</span>
             <strong>{note.title}</strong>
@@ -8960,7 +9085,7 @@ function MobileDossierDetail(props: {
       {props.linkedWorkItems.length > 0 ? (
         <details className="mobile-detail-section mobile-detail-disclosure">
           <summary>Demandes liées</summary>
-          {props.linkedWorkItems.slice(0, 5).map((item) => (
+          {props.linkedWorkItems.map((item) => (
             <div key={`mobile-work-${item.app_dossier_id}-${item.type_demande_label}-${item.date_entree_file ?? 'na'}`} className="mobile-timeline-item">
               <span>{formatDate(item.date_entree_file)}</span>
               <strong>{item.type_demande_label ?? '-'}</strong>
