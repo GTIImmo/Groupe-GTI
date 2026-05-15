@@ -267,11 +267,170 @@ a tous les scripts Python lances par la sync immediate.
 
 ## Limites connues
 
-Le formulaire actuel ouvre le wizard et valide le type par defaut `Appartement`.
+Le formulaire historique ouvrait le wizard et validait le type par defaut `Appartement`.
 
 Les champs libres transmis dans le payload, par exemple titre, ville, prix ou surface, sont conserves dans le resultat de job mais ne sont pas encore injectes dans le wizard Hektor.
 
 L'annonce creee est donc une base Hektor active/non brouillon a completer ensuite dans Hektor ou dans un futur flux d'enrichissement.
+
+## Correctif complementaire - 2026-05-16 : creation HTTP directe
+
+Le worker tente maintenant la creation Hektor sans ouvrir Playwright.
+
+Flux prioritaire :
+
+```text
+GET  /admin/xmlrpc.php?mode=ajoutebien&offredem=0&idType=2&statutAnnonce=2
+POST /admin/xmlrpc.php
+     mode=ajoutebien_wizardBien
+     offredem=0
+     idType=2
+     statutAnnonce=2
+     idann={idannWizard}
+     programme_neuf=0
+GET  /admin/xmlrpc.php?mode=upval&champ=etatAnnonce&val=1&id={idannWizard}
+GET  /admin/xmlrpc.php?mode=upval&champ=diffusable&val=0&id={idannWizard}
+GET  /admin/xmlrpc.php?mode=upval&champ=partage&val=0&id={idannWizard}
+```
+
+Objectif :
+
+```text
+creation annonce app
+=> contexte negociateur Hektor
+=> commandes HTML directes
+=> annonce active/non brouillon
+=> diffusion desactivee
+```
+
+Playwright reste uniquement en secours si la commande directe echoue avant qu'un `idannWizard` soit cree. Si Hektor a deja cree un identifiant annonce et qu'une etape suivante echoue, le worker ne relance pas Playwright afin d'eviter une double creation.
+
+Point separe : le changement de contexte negociateur peut encore utiliser Playwright en secours si l'autologin HTTP Hektor ne renvoie pas un token verifiable. Dans ce cas Playwright sert uniquement a prendre l'identite Hektor du negociateur, puis la creation annonce reste executee par commandes HTTP directes.
+
+Correction d'identite Hektor :
+
+```text
+le token Hektor reste la source principale d'identite
+le localStorage impersonate est conserve comme information secondaire
+les marqueurs impersonate 0 / 1 ne doivent pas masquer le token actif
+```
+
+Variables utiles :
+
+```text
+CONSOLE_CREATE_HEKTOR_HTTP_DIRECT=true
+CONSOLE_CREATE_HEKTOR_PLAYWRIGHT_FALLBACK=true
+CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT=true
+```
+
+## Correctif complementaire - 2026-05-16 : workers separes
+
+Le worker unique a ete separe logiquement en deux roles :
+
+```text
+actions
+  creation annonce
+  modification annonce
+  ajout mandant
+  upload document
+  suppression document
+  suppression annonce
+  preparation document cloud
+
+sync
+  refresh_console_data
+  archive_cloud_documents
+```
+
+Le worker `actions` poll toutes les 5 secondes et reprend immediatement un nouveau job prioritaire apres chaque job termine.
+
+Le worker `sync` poll toutes les 60 secondes et traite les taches lentes.
+
+Migration Supabase appliquee :
+
+```text
+supabase/patch_console_worker_split_2026-05-16.sql
+```
+
+Cette migration modifie `public.app_console_claim_next_job(p_worker_id, p_worker_kind)` afin que :
+
+```text
+worker actions -> ne prend jamais refresh_console_data / archive_cloud_documents
+worker sync    -> ne prend que refresh_console_data / archive_cloud_documents
+```
+
+Commandes locales :
+
+```powershell
+.\run_console_worker.ps1 -WorkerKind actions
+.\run_console_worker.ps1 -WorkerKind sync
+```
+
+Installation Windows :
+
+```powershell
+.\install_console_worker_task.ps1 -WorkerKind actions
+.\install_console_worker_task.ps1 -WorkerKind sync
+```
+
+Si Windows refuse la creation de taches planifiees sans droits administrateur, utiliser l'installation au demarrage utilisateur :
+
+```powershell
+.\install_console_worker_startup_shortcuts.ps1
+```
+
+Ce script cree deux raccourcis dans le dossier Startup Windows :
+
+```text
+Hektor Console Worker Actions.lnk
+Hektor Console Worker Sync.lnk
+```
+
+Ils relancent les deux workers a la prochaine connexion Windows de l'utilisateur.
+
+## Test reel HTTP direct - 2026-05-16
+
+Test effectue via le worker `actions` :
+
+```text
+creation job = 414ebfbf-f97a-4830-aaa9-d083c2a77052
+hektor_annonce_id = 62250
+negociateur = Emmanuelle PEREIRA / idUser 51
+transport = http_direct
+is_draft = false
+is_broadcasted = false
+is_valid = false
+created_at_hektor = 2026-05-16T01:43:53
+```
+
+Routes confirmees pendant le test :
+
+```text
+GET  ajoutebien                         status 200
+POST ajoutebien_wizardBien              status 200
+GET  upval etatAnnonce = 1              status 200
+GET  upval diffusable = 0               status 200
+GET  upval partage = 0                  status 200
+```
+
+Nettoyage effectue :
+
+```text
+delete job = 34ad7125-93eb-4663-a7d0-40dde23dff43
+annonce 62250 supprimee dans Hektor
+after_found = false
+documents indexes = 0
+fichiers locaux supprimes = 0
+fichiers cloud supprimes = 0
+```
+
+Conclusion :
+
+```text
+OK - la creation ne depend plus de Playwright.
+OK - Playwright peut encore servir uniquement au contexte negociateur si Hektor ne confirme pas l'autologin HTTP.
+OK - le worker actions traite creation et suppression sans attendre le worker sync.
+```
 
 ## Impact sur les documents et uploads
 

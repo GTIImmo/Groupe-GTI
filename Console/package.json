@@ -6,6 +6,8 @@
   "scripts": {
     "login": "node playwright_login.js",
     "worker": "node console_job_worker.js",
+    "worker:actions": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./run_console_worker.ps1 -WorkerKind actions",
+    "worker:sync": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./run_console_worker.ps1 -WorkerKind sync",
     "worker:once": "node console_job_worker.js --once",
     "sync:enqueue": "node enqueue_console_sync_jobs.js",
     "worker:install": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./install_console_worker_task.ps1"

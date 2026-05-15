@@ -1,6 +1,9 @@
 param(
   [switch]$Once,
-  [switch]$DisableHektorActions
+  [switch]$DisableHektorActions,
+  [ValidateSet("actions", "sync", "all")]
+  [string]$WorkerKind = "actions",
+  [switch]$SyncWorker
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,9 +17,19 @@ if (-not (Test-Path -LiteralPath $logDir)) {
 }
 
 $env:CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS = if ($DisableHektorActions) { "false" } else { "true" }
-$env:CONSOLE_WORKER_ID = "$env:COMPUTERNAME:scheduled"
+if ($SyncWorker) {
+  $WorkerKind = "sync"
+}
+$env:CONSOLE_WORKER_KIND = $WorkerKind
+$env:CONSOLE_WORKER_ID = "$($env:COMPUTERNAME):$($WorkerKind):scheduled"
+if (-not $env:CONSOLE_WORKER_POLL_INTERVAL_MS) {
+  $env:CONSOLE_WORKER_POLL_INTERVAL_MS = if ($WorkerKind -eq "sync") { "60000" } else { "5000" }
+}
 if (-not $env:CONSOLE_HEKTOR_SESSION_REFRESH_MS) {
   $env:CONSOLE_HEKTOR_SESSION_REFRESH_MS = "7200000"
+}
+if (-not $env:CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT) {
+  $env:CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT = "true"
 }
 if (-not $env:CONSOLE_LOCAL_ARCHIVE_ROOT) {
   $env:CONSOLE_LOCAL_ARCHIVE_ROOT = "C:\HektorConsoleDocuments"
@@ -41,7 +54,9 @@ if ($Once) {
 }
 
 Write-Host "Demarrage worker Console Hektor..."
+Write-Host "Type worker: $env:CONSOLE_WORKER_KIND"
+Write-Host "Polling: $env:CONSOLE_WORKER_POLL_INTERVAL_MS ms"
 Write-Host "Actions Hektor: $env:CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS"
 Write-Host "Archive locale: $env:CONSOLE_LOCAL_ARCHIVE_ROOT"
-$logPath = Join-Path $logDir ("console_worker_{0}.log" -f $PID)
+$logPath = Join-Path $logDir ("console_worker_{0}_{1}.log" -f $WorkerKind, $PID)
 & $nodeExe $arguments 2>&1 | Tee-Object -FilePath $logPath -Append

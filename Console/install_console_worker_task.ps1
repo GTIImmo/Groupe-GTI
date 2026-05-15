@@ -1,5 +1,8 @@
 param(
-  [string]$TaskName = "Hektor Console Worker",
+  [string]$TaskName = "",
+  [ValidateSet("actions", "sync", "all")]
+  [string]$WorkerKind = "actions",
+  [switch]$SyncWorker,
   [switch]$AtStartup,
   [switch]$WhatIf
 )
@@ -8,17 +11,24 @@ $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $runnerPath = Join-Path $scriptDir "run_console_worker.ps1"
+if ($SyncWorker) {
+  $WorkerKind = "sync"
+}
+if (-not $TaskName) {
+  $TaskName = if ($WorkerKind -eq "sync") { "Hektor Console Worker Sync" } else { "Hektor Console Worker" }
+}
 
 if (-not (Test-Path -LiteralPath $runnerPath)) {
   throw "Runner introuvable: $runnerPath"
 }
 
 $powerShellPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
-$taskArguments = "-NoProfile -ExecutionPolicy Bypass -File `"$runnerPath`""
+$taskArguments = "-NoProfile -ExecutionPolicy Bypass -File `"$runnerPath`" -WorkerKind $WorkerKind"
 
 if ($WhatIf) {
   Write-Host "Tache planifiee non creee (WhatIf)."
   Write-Host "Nom: $TaskName"
+  Write-Host "Type worker: $WorkerKind"
   Write-Host "Declencheur: $(if ($AtStartup) { 'Au demarrage Windows' } else { 'A la connexion utilisateur' })"
   Write-Host "Commande: $powerShellPath $taskArguments"
   exit 0
@@ -47,4 +57,5 @@ Register-ScheduledTask `
   -Force | Out-Null
 
 Write-Host "Tache planifiee creee: $TaskName"
+Write-Host "Type worker: $WorkerKind"
 Write-Host "Le worker demarrera $(if ($AtStartup) { 'au demarrage Windows' } else { 'a la connexion utilisateur' })."

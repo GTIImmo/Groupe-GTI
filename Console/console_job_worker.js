@@ -18,10 +18,30 @@ const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolv
 const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\HektorConsoleDocuments";
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
-const WORKER_ID = process.env.CONSOLE_WORKER_ID || `${os.hostname()}:${process.pid}`;
-const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || 60000);
+const RAW_WORKER_KIND = String(process.env.CONSOLE_WORKER_KIND || process.env.CONSOLE_WORKER_MODE || "actions").toLowerCase();
+const WORKER_KIND = ["actions", "sync", "all"].includes(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actions";
+const ACTION_JOB_TYPES = new Set([
+  "sync_console_documents",
+  "prepare_document_cloud",
+  "upload_document_to_hektor",
+  "delete_document_from_hektor",
+  "link_hektor_mandant",
+  "create_hektor_mandant_contact",
+  "update_hektor_annonce_fields",
+  "delete_hektor_annonce",
+  "create_hektor_draft_annonce",
+]);
+const SYNC_JOB_TYPES = new Set([
+  "refresh_console_data",
+  "archive_cloud_documents",
+]);
+const WORKER_ID = process.env.CONSOLE_WORKER_ID || `${os.hostname()}:${WORKER_KIND}:${process.pid}`;
+const DEFAULT_POLL_INTERVAL_MS = WORKER_KIND === "sync" ? 60000 : 5000;
+const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
 const ENABLE_HEKTOR_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS || "").toLowerCase() === "true";
+const CREATE_HEKTOR_HTTP_DIRECT = String(process.env.CONSOLE_CREATE_HEKTOR_HTTP_DIRECT || "true").toLowerCase() !== "false";
+const CREATE_HEKTOR_PLAYWRIGHT_FALLBACK = String(process.env.CONSOLE_CREATE_HEKTOR_PLAYWRIGHT_FALLBACK || "true").toLowerCase() !== "false";
 const CLOUD_STATUSES = new Set(["Actif", "Sous offre", "Sous compromis", "Estimation"]);
 const PROPERTY_LISTING_QUERY = `
 query PropertyListing($filters: AnnonceSearchInput!) {
@@ -194,6 +214,35 @@ function decodeJwtPayload(token) {
   }
 }
 
+function extractImpersonateUserId(value) {
+  const raw = String(value || "").trim();
+  const validId = (candidate) => {
+    const text = String(candidate == null ? "" : candidate).trim();
+    return /^[1-9]\d*$/.test(text) ? text : null;
+  };
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return validId(raw);
+  try {
+    const parsed = JSON.parse(raw);
+    const queue = [parsed];
+    while (queue.length) {
+      const item = queue.shift();
+      if (!item || typeof item !== "object") continue;
+      for (const key of ["idUser", "userId", "id_user", "id"]) {
+        const found = validId(item[key]);
+        if (found) return found;
+      }
+      for (const value of Object.values(item)) {
+        if (value && typeof value === "object") queue.push(value);
+      }
+    }
+  } catch (_) {
+    // Some Hektor builds store a compact non-JSON impersonation marker.
+  }
+  const match = raw.match(/(?:idUser|userId|id_user|id)["'\s:=]+(\d+)/i);
+  return match ? validId(match[1]) : null;
+}
+
 function readHektorStorageState() {
   if (!fs.existsSync(STORAGE_STATE_PATH)) throw new Error(`Session console introuvable: ${STORAGE_STATE_PATH}`);
   return JSON.parse(fs.readFileSync(STORAGE_STATE_PATH, "utf-8"));
@@ -234,12 +283,17 @@ function currentHektorSessionIdentity() {
     const decoded = decodeJwtPayload(tokenEntry && tokenEntry.value);
     const payload = decoded && decoded.data ? decoded.data : decoded;
     if (!payload) return null;
+    const tokenUserId = payload.userId == null ? null : String(payload.userId);
+    const impersonateUserId = extractImpersonateUserId(impersonateEntry && impersonateEntry.value);
     return {
-      userId: payload.userId == null ? null : String(payload.userId),
+      userId: tokenUserId || impersonateUserId,
+      tokenUserId,
+      impersonateUserId,
       userObjectId: payload.userObjectId == null ? null : String(payload.userObjectId),
-      role: payload.role || null,
+      role: payload.role || (impersonateUserId ? "IMPERSONATED" : null),
+      tokenRole: payload.role || null,
       alias: payload.alias || payload.userAlias || null,
-      impersonate: impersonateEntry ? impersonateEntry.value : null,
+      impersonate: impersonateEntry ? "present" : null,
     };
   } catch (_) {
     return null;
@@ -610,7 +664,7 @@ function localArchiveMetadata(filePath) {
 async function claimNextJob() {
   const rows = await supabaseRequest("rpc/app_console_claim_next_job", {
     method: "POST",
-    body: JSON.stringify({ p_worker_id: WORKER_ID }),
+    body: JSON.stringify({ p_worker_id: WORKER_ID, p_worker_kind: WORKER_KIND }),
   });
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
@@ -817,6 +871,13 @@ async function switchHektorUserContextWithPlaywright(idUser) {
     await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
     await page.waitForFunction((expectedId) => {
+      const matchesImpersonate = (raw) => {
+        const value = String(raw || "").trim();
+        if (!value) return false;
+        if (value === String(expectedId)) return true;
+        return new RegExp(`(?:idUser|userId|id_user|id)["'\\s:=]+${String(expectedId)}\\b`, "i").test(value);
+      };
+      if (matchesImpersonate(localStorage.getItem("impersonate"))) return true;
       const raw = localStorage.getItem("token") || "";
       const token = raw.replace(/^Bearer\s+/i, "");
       const part = token.split(".")[1];
@@ -886,8 +947,9 @@ async function switchHektorUserContext(idUser) {
   const token = localStorageItems.get("token");
   const decoded = decodeJwtPayload(token);
   const payload = decoded && decoded.data ? decoded.data : decoded;
-  if (!token || !payload || String(payload.userId || "") !== targetId) {
-    if (String(process.env.CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT || "").toLowerCase() === "true") {
+  const impersonateUserId = extractImpersonateUserId(localStorageItems.get("impersonate"));
+  if ((!token || !payload || String(payload.userId || "") !== targetId) && impersonateUserId !== targetId) {
+    if (String(process.env.CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT || "true").toLowerCase() !== "false") {
       await switchHektorUserContextWithPlaywright(targetId);
       return;
     }
@@ -1181,6 +1243,135 @@ async function createHektorAnnonceWithPlaywright(job, payload) {
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
+}
+
+async function createHektorAnnonceWithHttpDirect(job, payload) {
+  const offredem = String(payload.offredem ?? payload.offer_demand ?? 0);
+  const idType = String(payload.hektor_id_type ?? payload.idType ?? payload.id_type ?? 2);
+  const statutAnnonce = String(payload.statutAnnonce ?? payload.statut_annonce ?? payload.status_annonce ?? 2);
+  const programmeNeuf = String(payload.programme_neuf ?? 0);
+  const captured = [];
+  let idannWizard = null;
+  const fetchAfterAnnonceId = async (url, options) => {
+    try {
+      return await hektorFetch(url, options);
+    } catch (error) {
+      if (idannWizard) error.createdHektorAnnonceId = idannWizard;
+      throw error;
+    }
+  };
+
+  await logJob(job.id, "hektor_annonce_http", "running", "Creation annonce via commande HTML directe", {
+    offredem,
+    idType,
+    statutAnnonce,
+    programme_neuf: programmeNeuf,
+  });
+
+  const createUrl = `${XMLRPC_URL}?${new URLSearchParams({
+    mode: "ajoutebien",
+    offredem,
+    idType,
+    statutAnnonce,
+  }).toString()}`;
+  const createResponse = await hektorFetch(createUrl, {
+    headers: { Referer: `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien` },
+    timeoutMs: 60000,
+  });
+  captured.push({
+    method: "GET",
+    mode: "ajoutebien",
+    status: createResponse.response.status,
+    bytes: createResponse.buffer.length,
+  });
+
+  idannWizard = extractWizardAnnonceId(createResponse.text);
+  if (!idannWizard) {
+    const error = new Error("Commande ajoutebien executee mais idannWizard introuvable dans la reponse Hektor");
+    error.createdHektorAnnonceId = null;
+    throw error;
+  }
+
+  const wizardBody = new URLSearchParams({
+    mode: "ajoutebien_wizardBien",
+    offredem,
+    idType,
+    statutAnnonce,
+    idann: idannWizard,
+    programme_neuf: programmeNeuf,
+  });
+  const wizardResponse = await fetchAfterAnnonceId(XMLRPC_URL, {
+    method: "POST",
+    body: wizardBody,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien`,
+    },
+    timeoutMs: 60000,
+  });
+  captured.push({
+    method: "POST",
+    mode: "ajoutebien_wizardBien",
+    status: wizardResponse.response.status,
+    bytes: wizardResponse.buffer.length,
+  });
+
+  const activationCommands = [
+    { champ: "etatAnnonce", val: "1" },
+    { champ: "diffusable", val: "0" },
+    { champ: "partage", val: "0" },
+  ];
+  for (const command of activationCommands) {
+    const response = await fetchAfterAnnonceId(`${XMLRPC_URL}?${new URLSearchParams({
+      mode: "upval",
+      champ: command.champ,
+      val: command.val,
+      id: idannWizard,
+    }).toString()}`, {
+      headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(idannWizard)}` },
+      timeoutMs: 30000,
+    });
+    captured.push({
+      method: "GET",
+      mode: "upval",
+      champ: command.champ,
+      val: command.val,
+      status: response.response.status,
+      preview: response.text.slice(0, 80),
+    });
+  }
+
+  await logJob(job.id, "hektor_annonce_http", "done", "Annonce creee et activee via commandes HTML directes", {
+    idannWizard,
+    captured,
+  });
+
+  return {
+    idannWizard,
+    captured,
+    transport: "http_direct",
+  };
+}
+
+async function createHektorAnnonce(job, payload) {
+  if (CREATE_HEKTOR_HTTP_DIRECT) {
+    try {
+      return await createHektorAnnonceWithHttpDirect(job, payload);
+    } catch (error) {
+      const createdId = error && error.createdHektorAnnonceId ? error.createdHektorAnnonceId : null;
+      await logJob(job.id, "hektor_annonce_http", "error", "Creation HTTP directe Hektor echouee", {
+        error: error && error.message ? error.message : String(error),
+        created_hektor_annonce_id: createdId,
+        playwright_fallback: CREATE_HEKTOR_PLAYWRIGHT_FALLBACK && !createdId,
+      });
+      if (createdId || !CREATE_HEKTOR_PLAYWRIGHT_FALLBACK) throw error;
+    }
+  }
+  const result = await createHektorAnnonceWithPlaywright(job, payload);
+  return {
+    ...result,
+    transport: "playwright_fallback",
+  };
 }
 
 function annonceCreationScore(property, beforeIds, startedAtMs) {
@@ -1724,6 +1915,32 @@ function extractHektorFormValues(html, groupName) {
     }
   }
   return values;
+}
+
+function extractWizardAnnonceId(html) {
+  let source = String(html || "");
+  try {
+    const parsed = JSON.parse(source);
+    if (typeof parsed === "string") source = parsed;
+  } catch (_) {
+    // Hektor sometimes returns raw HTML and sometimes a JSON-encoded HTML string.
+  }
+  const inputMatch = source.match(/<input\b[^>]*(?:id|name)\s*=\s*["']idannWizard["'][^>]*>/i);
+  if (inputMatch) {
+    const value = attrValue(inputMatch[0], "value");
+    if (/^\d+$/.test(String(value || ""))) return String(value);
+  }
+  const patterns = [
+    /\bidannWizard\b\s*[:=]\s*["']?(\d+)["']?/i,
+    /\bidann\b\s*[:=]\s*["']?(\d+)["']?/i,
+    /name\s*=\s*["']idannWizard["'][\s\S]{0,160}?value\s*=\s*["'](\d+)["']/i,
+    /value\s*=\s*["'](\d+)["'][\s\S]{0,160}?name\s*=\s*["']idannWizard["']/i,
+  ];
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (match && /^\d+$/.test(match[1])) return String(match[1]);
+  }
+  return null;
 }
 
 async function postHektorMefUpdate(job, annonceId, groupName, readMode, overrides) {
@@ -2286,7 +2503,7 @@ async function handleCreateHektorDraftAnnonce(job) {
   const before = await fetchLatestHektorProperties(1, false);
   const beforeIds = new Set(before.map((property) => String(property.id)));
 
-  const wizardResult = await createHektorAnnonceWithPlaywright(job, payload);
+  const wizardResult = await createHektorAnnonce(job, payload);
   const idannWizard = wizardResult.idannWizard;
 
   let created = null;
@@ -2345,6 +2562,12 @@ async function handleCreateHektorDraftAnnonce(job) {
 async function runHandler(job) {
   if (!ENABLE_HEKTOR_ACTIONS) {
     throw new Error("Console worker protected: set CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS=true to execute Hektor actions.");
+  }
+  if (WORKER_KIND === "actions" && SYNC_JOB_TYPES.has(job.job_type)) {
+    throw new Error(`Worker actions ne doit pas executer le job lent: ${job.job_type}. Appliquer la migration app_console_claim_next_job.`);
+  }
+  if (WORKER_KIND === "sync" && !SYNC_JOB_TYPES.has(job.job_type)) {
+    throw new Error(`Worker sync ne doit pas executer le job action: ${job.job_type}. Appliquer la migration app_console_claim_next_job.`);
   }
 
   switch (job.job_type) {
@@ -2405,6 +2628,7 @@ async function processOnce() {
   if (!job) return false;
 
   await logJob(job.id, "claim", "running", `Job claimed by ${WORKER_ID}`, {
+    worker_kind: WORKER_KIND,
     job_type: job.job_type,
     app_dossier_id: job.app_dossier_id,
     hektor_annonce_id: job.hektor_annonce_id,
@@ -2431,8 +2655,11 @@ async function main() {
   console.log(JSON.stringify({
     worker: WORKER_ID,
     pollIntervalMs: POLL_INTERVAL_MS,
+    workerKind: WORKER_KIND,
     enableHektorActions: ENABLE_HEKTOR_ACTIONS,
     mode: once ? "once" : "permanent",
+    actionJobTypes: Array.from(ACTION_JOB_TYPES),
+    syncJobTypes: Array.from(SYNC_JOB_TYPES),
   }));
 
   if (once) {
@@ -2443,7 +2670,8 @@ async function main() {
   while (true) {
     try {
       const processed = await processOnce();
-      if (!processed) await sleep(POLL_INTERVAL_MS);
+      if (processed) continue;
+      await sleep(POLL_INTERVAL_MS);
     } catch (error) {
       console.error(error && error.stack ? error.stack : error);
       await sleep(POLL_INTERVAL_MS);
