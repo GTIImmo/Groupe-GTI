@@ -439,6 +439,7 @@ export type ConsoleJobType =
   | 'prepare_document_cloud'
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
+  | 'delete_hektor_annonce'
   | 'create_hektor_draft_annonce'
   | 'refresh_console_data'
   | 'archive_cloud_documents'

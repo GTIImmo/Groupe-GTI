@@ -329,6 +329,12 @@
   color: var(--mobile-magenta);
 }
 
+.mobile-danger-button {
+  border-color: rgba(185, 74, 72, 0.25) !important;
+  background: #fff4f2 !important;
+  color: #9f3535 !important;
+}
+
 .mobile-metric-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -46,6 +46,7 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
+  createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createConsoleDocumentSignedUrl,
 } from './lib/api'
@@ -2799,6 +2800,10 @@ export default function App() {
   const [draftAnnonceRoomCount, setDraftAnnonceRoomCount] = useState('')
   const [draftAnnonceBedroomCount, setDraftAnnonceBedroomCount] = useState('')
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
+  const [deleteAnnonceTarget, setDeleteAnnonceTarget] = useState<Dossier | null>(null)
+  const [deleteAnnonceReason, setDeleteAnnonceReason] = useState('')
+  const [deleteAnnonceConfirmText, setDeleteAnnonceConfirmText] = useState('')
+  const [deleteAnnoncePending, setDeleteAnnoncePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
@@ -3492,6 +3497,52 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d annonce Hektor')
     } finally {
       setDraftAnnoncePending(false)
+    }
+  }
+
+  function openDeleteAnnonceModal(dossier: Dossier) {
+    if (!isAdmin) return
+    setDeleteAnnonceTarget(dossier)
+    setDeleteAnnonceReason('')
+    setDeleteAnnonceConfirmText('')
+    setNoticeMessage(null)
+    setErrorMessage(null)
+  }
+
+  function closeDeleteAnnonceModal() {
+    if (deleteAnnoncePending) return
+    setDeleteAnnonceTarget(null)
+    setDeleteAnnonceReason('')
+    setDeleteAnnonceConfirmText('')
+  }
+
+  async function handleDeleteHektorAnnonce(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!deleteAnnonceTarget) return
+    const expected = `SUPPRIMER ${deleteAnnonceTarget.hektor_annonce_id}`
+    if (deleteAnnonceConfirmText.trim() !== expected) {
+      setErrorMessage(`Confirmation incorrecte. Tape exactement : ${expected}`)
+      return
+    }
+    setDeleteAnnoncePending(true)
+    setNoticeMessage(null)
+    setErrorMessage(null)
+    try {
+      const job = await createDeleteHektorAnnonceJob({
+        dossier: deleteAnnonceTarget,
+        reason: deleteAnnonceReason,
+        confirmText: deleteAnnonceConfirmText,
+        priority: 5,
+      })
+      setDeleteAnnonceTarget(null)
+      setDeleteAnnonceReason('')
+      setDeleteAnnonceConfirmText('')
+      setDetailOpen(false)
+      setNoticeMessage(`Suppression envoyee au PC serveur. Job ${job.id.slice(0, 8)} en attente.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de suppression Hektor')
+    } finally {
+      setDeleteAnnoncePending(false)
     }
   }
 
@@ -5063,6 +5114,50 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {deleteAnnonceTarget ? (
+          <div className="modal-overlay" onClick={closeDeleteAnnonceModal}>
+            <section className="modal-panel delete-annonce-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head delete-annonce-head">
+                <span className="modal-hero-icon modal-hero-icon-danger" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Administration Hektor</p>
+                  <h3>Supprimer l'annonce</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={closeDeleteAnnonceModal} disabled={deleteAnnoncePending}>Fermer</button>
+              </div>
+              <form className="delete-annonce-form" onSubmit={handleDeleteHektorAnnonce}>
+                <section className="delete-annonce-warning">
+                  <strong>{deleteAnnonceTarget.titre_bien || deleteAnnonceTarget.numero_dossier || `Annonce ${deleteAnnonceTarget.hektor_annonce_id}`}</strong>
+                  <span>Cette demande supprime l'annonce dans Hektor avec une session administrateur, puis nettoie Supabase et les fichiers locaux connus.</span>
+                </section>
+                <label className="filter-field">
+                  <span>Raison interne</span>
+                  <textarea className="inline-textarea" value={deleteAnnonceReason} onChange={(event) => setDeleteAnnonceReason(event.target.value)} placeholder="Erreur de creation, doublon, test..." />
+                </label>
+                <label className="filter-field">
+                  <span>Confirmation</span>
+                  <input
+                    value={deleteAnnonceConfirmText}
+                    onChange={(event) => setDeleteAnnonceConfirmText(event.target.value)}
+                    placeholder={`Tape : SUPPRIMER ${deleteAnnonceTarget.hektor_annonce_id}`}
+                    autoComplete="off"
+                    required
+                  />
+                </label>
+                <div className="modal-actions">
+                  <button className="ghost-button button-subtle" type="button" onClick={closeDeleteAnnonceModal} disabled={deleteAnnoncePending}>Annuler</button>
+                  <button
+                    className="ghost-button button-danger"
+                    type="submit"
+                    disabled={deleteAnnoncePending || deleteAnnonceConfirmText.trim() !== `SUPPRIMER ${deleteAnnonceTarget.hektor_annonce_id}`}
+                  >
+                    {deleteAnnoncePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
             <section
@@ -5790,6 +5885,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableSaved={detailDiffusableSaved}
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
+                onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
               />
             </section>
           </div>
@@ -6527,6 +6623,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableSaved={detailDiffusableSaved}
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
+                onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
               />
             </section>
           </div>
@@ -7996,6 +8093,7 @@ function DossierDetailLayout(props: {
   adminPilotSurface?: 'none' | 'sidebar' | 'diffusion' | 'both'
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
+  onDeleteAnnonce?: (dossier: Dossier) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   if (!props.selectedDossier) {
@@ -8133,6 +8231,12 @@ function DossierDetailLayout(props: {
                           {dossier.agence_nom ? <small>{dossier.agence_nom}</small> : null}
                         </div>
                       </div>
+                    ) : null}
+                    {props.onDeleteAnnonce ? (
+                      <button className="detail-delete-annonce-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>
+                        <span aria-hidden="true"><DetailIcon type="alert" /></span>
+                        <strong>Supprimer</strong>
+                      </button>
                     ) : null}
                   </div>
                   <div className="detail-keyfacts" aria-label="Carte d'identite du bien">
@@ -9048,6 +9152,7 @@ function MobileDossierDetail(props: {
   adminPilotSurface?: 'none' | 'sidebar' | 'diffusion' | 'both'
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
+  onDeleteAnnonce?: (dossier: Dossier) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   const dossier = props.selectedDossier
@@ -9136,6 +9241,7 @@ function MobileDossierDetail(props: {
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_baisse_prix')}>Baisse prix</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_annulation_mandat')}>Annulation</button>
         {canShowDiffusion ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}>Diffusion</button> : null}
+        {props.onDeleteAnnonce ? <button className="mobile-ghost-button mobile-danger-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>Supprimer</button> : null}
       </section>
 
       {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}

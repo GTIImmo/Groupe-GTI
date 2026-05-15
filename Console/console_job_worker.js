@@ -972,6 +972,43 @@ async function fetchLatestHektorProperties(page = 1, archived = false) {
     : [];
 }
 
+async function fetchHektorPropertyById(hektorAnnonceId, options = {}) {
+  const id = String(hektorAnnonceId || "").trim();
+  if (!id) return null;
+  const maxPages = Number(options.maxPages || 8);
+  for (const archived of [false, true]) {
+    for (let page = 1; page <= maxPages; page += 1) {
+      const properties = await fetchLatestHektorProperties(page, archived);
+      const found = properties.find((property) => String(property.id) === id);
+      if (found) return { property: found, archived, page };
+      if (properties.length < 50) break;
+    }
+  }
+  return null;
+}
+
+async function ensureAdminHektorSession(job, reason) {
+  let current = currentHektorSessionIdentity();
+  if (!current || current.role !== "ADMIN") {
+    await logJob(job.id, "hektor_context", "running", "Retour session administrateur Hektor", {
+      reason,
+      current_user_id: current && current.userId ? current.userId : null,
+      current_role: current && current.role ? current.role : null,
+    });
+    await refreshHektorSession(reason || "admin_required");
+    current = currentHektorSessionIdentity();
+  }
+  if (!current || current.role !== "ADMIN") {
+    throw new Error(`Session Hektor administrateur requise, session actuelle: ${current && current.role ? current.role : "inconnue"}`);
+  }
+  await logJob(job.id, "hektor_context", "done", "Session Hektor administrateur active", {
+    user_id: current.userId || null,
+    role: current.role || null,
+    alias: current.alias || null,
+  });
+  return current;
+}
+
 async function createHektorAnnonceWithPlaywright(job, payload) {
   const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
   let browser = null;
@@ -1478,6 +1515,197 @@ async function handleDeleteDocumentFromHektor(job) {
   };
 }
 
+async function loadConsoleDocumentsForAnnonce(hektorAnnonceId) {
+  const params = new URLSearchParams({
+    select: "id,storage_path,metadata_json,document_name",
+    hektor_annonce_id: `eq.${String(hektorAnnonceId)}`,
+  });
+  const rows = await supabaseRequest(`app_console_document?${params.toString()}`, { method: "GET" });
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function cleanupConsoleDocumentsForAnnonce(hektorAnnonceId) {
+  const rows = await loadConsoleDocumentsForAnnonce(hektorAnnonceId);
+  const deletedStorage = [];
+  const deletedLocal = [];
+  for (const document of rows) {
+    if (document.storage_path) {
+      await deleteStorageObject(document.storage_path);
+      deletedStorage.push(document.storage_path);
+    }
+    const metadata = document.metadata_json || {};
+    const localPath = metadata.local_archive_path;
+    if (isReadableFile(localPath)) {
+      fs.unlinkSync(localPath);
+      deletedLocal.push(localPath);
+    }
+  }
+  await supabaseRequest(`app_console_document?hektor_annonce_id=eq.${encodeURIComponent(String(hektorAnnonceId))}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+  return {
+    indexed_documents: rows.length,
+    storage_objects_deleted: deletedStorage.length,
+    local_files_deleted: deletedLocal.length,
+  };
+}
+
+async function deleteSupabaseRows(table, filters) {
+  const results = [];
+  for (const [column, value] of filters) {
+    if (value == null || String(value).trim() === "") continue;
+    try {
+      await supabaseRequest(`${table}?${column}=eq.${encodeURIComponent(String(value))}`, {
+        method: "DELETE",
+        prefer: "return=minimal",
+      });
+      results.push({ table, column, status: "done" });
+    } catch (error) {
+      const message = error && error.message ? error.message : String(error);
+      results.push({ table, column, status: "error", error: message });
+    }
+  }
+  return results;
+}
+
+async function cleanupSupabaseAnnonceRows(appDossierId, hektorAnnonceId) {
+  const filters = [
+    ["app_dossier_id", appDossierId],
+    ["hektor_annonce_id", hektorAnnonceId],
+  ];
+  const tables = [
+    "app_work_item_current",
+    "app_dossier_detail_current",
+    "app_mandat_broadcast_current",
+    "app_mandat_register_current",
+    "app_diffusion_target",
+    "app_dossier_current",
+  ];
+  const results = [];
+  for (const table of tables) {
+    results.push(...await deleteSupabaseRows(table, filters));
+  }
+  return results;
+}
+
+async function runDeletedAnnonceLocalCleanup(job, hektorAnnonceId, appDossierId) {
+  const args = ["phase2/sync/delete_local_annonce.py", "--id-annonce", String(hektorAnnonceId)];
+  if (appDossierId != null) args.push("--app-dossier-id", String(appDossierId));
+  const output = await runProjectPythonScript(args);
+  let parsed = null;
+  try {
+    parsed = JSON.parse(output.stdout || "{}");
+  } catch (_) {
+    parsed = { stdout: output.stdout || null, stderr: output.stderr || null };
+  }
+  await logJob(job.id, "local_cleanup", "done", "Caches locaux nettoyes pour annonce supprimee", parsed);
+  return parsed;
+}
+
+async function insertDeletedAnnonceLog(job, payload) {
+  try {
+    await supabaseRequest("app_console_deleted_annonce_log", {
+      method: "POST",
+      body: JSON.stringify([{
+        job_id: job.id,
+        app_dossier_id: payload.app_dossier_id == null ? null : payload.app_dossier_id,
+        hektor_annonce_id: String(payload.hektor_annonce_id),
+        requested_by: job.requested_by || null,
+        reason: payload.reason || null,
+        before_json: payload.before_json || null,
+        result_json: payload.result_json || null,
+      }]),
+    });
+  } catch (error) {
+    await logJob(job.id, "delete_audit", "error", "Journal de suppression non ecrit", {
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
+
+async function handleDeleteHektorAnnonce(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  const appDossierId = job.app_dossier_id == null ? payload.app_dossier_id : job.app_dossier_id;
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required");
+  const expectedConfirm = `SUPPRIMER ${hektorAnnonceId}`;
+  if (payload.confirm_text !== expectedConfirm) {
+    throw new Error(`Confirmation suppression invalide pour annonce ${hektorAnnonceId}`);
+  }
+
+  await ensureAdminHektorSession(job, "delete_annonce_admin_login");
+  await logJob(job.id, "hektor_annonce_delete", "running", "Verification annonce avant suppression", {
+    hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+  });
+  const before = await fetchHektorPropertyById(hektorAnnonceId);
+  const deleteUrl = `${XMLRPC_URL}?mode=supprimeannonce&id=${encodeURIComponent(hektorAnnonceId)}&path=undefined`;
+  await hektorFetch(deleteUrl, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
+    },
+  });
+  await sleep(2500);
+  const after = await fetchHektorPropertyById(hektorAnnonceId);
+  if (after && after.archived === false) {
+    throw new Error(`Suppression Hektor non confirmee pour annonce ${hektorAnnonceId}`);
+  }
+  await logJob(job.id, "hektor_annonce_delete", "done", "Suppression Hektor envoyee et verifiee", {
+    hektor_annonce_id: hektorAnnonceId,
+    before_found: Boolean(before),
+    after_found: Boolean(after),
+    after_archived: after ? after.archived : null,
+  });
+
+  const cleanup = {
+    documents: null,
+    supabase_rows: null,
+    local: null,
+    errors: [],
+  };
+  try {
+    cleanup.documents = await cleanupConsoleDocumentsForAnnonce(hektorAnnonceId);
+  } catch (error) {
+    cleanup.errors.push({ step: "documents", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    cleanup.supabase_rows = await cleanupSupabaseAnnonceRows(appDossierId, hektorAnnonceId);
+  } catch (error) {
+    cleanup.errors.push({ step: "supabase_rows", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    cleanup.local = await runDeletedAnnonceLocalCleanup(job, hektorAnnonceId, appDossierId);
+  } catch (error) {
+    cleanup.errors.push({ step: "local", error: error && error.message ? error.message : String(error) });
+  }
+
+  const result = {
+    deleted_hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+    before_property: before && before.property ? {
+      id: before.property.id,
+      folderNumber: before.property.folderNumber || null,
+      status: before.property.status || null,
+      isArchived: before.property.isArchived === true,
+      isDraft: before.property.isDraft === true,
+      isBroadcasted: before.property.isBroadcasted === true,
+      isValid: before.property.isValid === true,
+    } : null,
+    after_found: Boolean(after),
+    cleanup,
+  };
+
+  await insertDeletedAnnonceLog(job, {
+    hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+    reason: payload.reason || null,
+    before_json: before && before.property ? before.property : null,
+    result_json: result,
+  });
+  return result;
+}
+
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const startedAtMs = Date.now();
@@ -1571,6 +1799,8 @@ async function runHandler(job) {
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
       return handleDeleteDocumentFromHektor(job);
+    case "delete_hektor_annonce":
+      return handleDeleteHektorAnnonce(job);
     case "create_hektor_draft_annonce":
       return handleCreateHektorDraftAnnonce(job);
     case "refresh_console_data":

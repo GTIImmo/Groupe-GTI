@@ -1193,6 +1193,67 @@ body {
   border-color: var(--gti-final-ink);
   background: var(--gti-final-ink);
 }
+.button-danger {
+  border-color: rgba(185, 74, 72, 0.34) !important;
+  background: #b94a48 !important;
+  color: #ffffff !important;
+}
+.button-danger:hover {
+  background: #9f3535 !important;
+}
+.modal-hero-icon-danger {
+  background: linear-gradient(135deg, #b94a48 0%, #e36f5d 100%);
+}
+.delete-annonce-modal {
+  max-width: 560px;
+}
+.delete-annonce-head {
+  align-items: center;
+}
+.delete-annonce-form {
+  display: grid;
+  gap: 14px;
+}
+.delete-annonce-warning {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(185, 74, 72, 0.24);
+  border-radius: 14px;
+  background: #fff4f2;
+  color: #713232;
+}
+.delete-annonce-warning strong {
+  color: #8f2f2f;
+  font-size: 15px;
+}
+.delete-annonce-warning span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.detail-delete-annonce-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(185, 74, 72, 0.24);
+  border-radius: 999px;
+  background: #fff4f2;
+  color: #9f3535;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.detail-delete-annonce-button svg {
+  width: 16px;
+  height: 16px;
+}
+.detail-delete-annonce-button:hover {
+  border-color: rgba(185, 74, 72, 0.44);
+  background: #ffe9e5;
+}
 .mobile-draft-button {
   border-color: var(--gti-final-magenta) !important;
   background: var(--gti-final-magenta) !important;

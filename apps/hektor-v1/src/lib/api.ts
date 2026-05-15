@@ -3198,6 +3198,25 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+export async function createDeleteHektorAnnonceJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  reason?: string
+  confirmText: string
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_console_create_delete_annonce_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    delete_reason: input.reason?.trim() || null,
+    confirm_text: input.confirmText.trim(),
+    delete_priority: input.priority ?? 5,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor annonce delete job')
+  return data as ConsoleJob
+}
+
 export type HektorDraftAnnonceJobInput = {
   title?: string | null
   agenceNom?: string | null
