@@ -1560,6 +1560,229 @@ async function fetchHektorProspectsList(hektorAnnonceId) {
   return hektorFetch(`${XMLRPC_URL}?mode=div_display_prospects_liste&id=${id}`);
 }
 
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function attrValue(tag, name) {
+  const match = String(tag || "").match(new RegExp(`${name}\\\\s*=\\\\s*([\"'])(.*?)\\\\1`, "i"));
+  return match ? decodeHtmlEntities(match[2]) : null;
+}
+
+function extractHektorFormValues(html, groupName) {
+  const values = new URLSearchParams();
+  const source = String(html || "");
+  const fieldRegex = /<textarea\b[^>]*>[\s\S]*?<\/textarea>|<select\b[^>]*>[\s\S]*?<\/select>|<input\b[^>]*>/gi;
+  let match;
+  while ((match = fieldRegex.exec(source))) {
+    const field = match[0];
+    const name = attrValue(field, "name");
+    if (!name) continue;
+    const fieldGroup = attrValue(field, "group");
+    if (groupName && fieldGroup && fieldGroup !== groupName) continue;
+    const lower = field.toLowerCase();
+    if (lower.startsWith("<input")) {
+      const type = (attrValue(field, "type") || "text").toLowerCase();
+      if (["button", "submit", "file", "image", "reset"].includes(type)) continue;
+      if ((type === "radio" || type === "checkbox") && !/\bchecked\b/i.test(field)) continue;
+      values.append(name, attrValue(field, "value") || "");
+      continue;
+    }
+    if (lower.startsWith("<textarea")) {
+      const body = (field.match(/<textarea\b[^>]*>([\s\S]*?)<\/textarea>/i) || [])[1] || "";
+      values.append(name, decodeHtmlEntities(body));
+      continue;
+    }
+    if (lower.startsWith("<select")) {
+      const options = Array.from(field.matchAll(/<option\b[^>]*>[\s\S]*?<\/option>/gi)).map((optionMatch) => optionMatch[0]);
+      const selected = options.find((option) => /\bselected\b/i.test(option)) || options[0];
+      if (!selected) continue;
+      values.append(name, attrValue(selected, "value") || "");
+    }
+  }
+  return values;
+}
+
+async function postHektorMefUpdate(job, annonceId, groupName, readMode, overrides) {
+  const id = encodeURIComponent(String(annonceId));
+  const group = encodeURIComponent(groupName);
+  const html = await hektorFetch(`${XMLRPC_URL}?mode=${readMode}&idAnnonce=${id}&group=${group}&consultMode=editer&ajax=ajax`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  const values = extractHektorFormValues(html.text, groupName);
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value == null) continue;
+    values.set(key, String(value));
+  }
+  values.set("mode", "update_annonce_MEF");
+  values.set("idann", String(annonceId));
+  values.set("MEFgroup", groupName);
+
+  await logJob(job.id, "hektor_annonce_update", "running", `Sauvegarde groupe ${groupName}`, {
+    hektor_annonce_id: String(annonceId),
+    group: groupName,
+    fields: Object.keys(overrides),
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: values,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  let parsed = null;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = null;
+  }
+  if (parsed && String(parsed.result) !== "1") {
+    throw new Error(`Hektor update_annonce_MEF ${groupName} refuse: ${response.text.slice(0, 500)}`);
+  }
+  return {
+    group: groupName,
+    fields: Object.keys(overrides),
+    response: parsed || response.text.slice(0, 300),
+  };
+}
+
+async function postHektorPrincipalTextUpdate(job, annonceId, fields) {
+  const title = fields.title == null ? null : String(fields.title);
+  const body = fields.description == null ? null : String(fields.description);
+  if (title == null && body == null) return null;
+
+  const id = encodeURIComponent(String(annonceId));
+  const current = await hektorFetch(`${XMLRPC_URL}?mode=chargeAnnonceText&modeText=editer&typeText=principal&fromCallback=false&idann=${id}&lang=fr`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  const values = extractHektorFormValues(current.text, null);
+  const payload = new URLSearchParams();
+  payload.set("mode", "annonce-update_infos_textes");
+  payload.set("idann", String(annonceId));
+  payload.set("idModule", "0");
+  payload.set("titre", title == null ? values.get("titre") || "" : title);
+  payload.set("corps", body == null ? values.get("corps_ann") || "" : body);
+
+  await logJob(job.id, "hektor_annonce_update", "running", "Sauvegarde texte principal", {
+    hektor_annonce_id: String(annonceId),
+    fields: Object.keys(fields).filter((key) => fields[key] != null),
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: payload,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  const parsed = JSON.parse(response.text);
+  if (String(parsed.result) !== "1") {
+    throw new Error(`Hektor annonce-update_infos_textes refuse: ${response.text.slice(0, 500)}`);
+  }
+  return {
+    group: "principal_text",
+    fields: Object.keys(fields).filter((key) => fields[key] != null),
+    response: parsed,
+  };
+}
+
+function normalizeHektorAnnonceUpdatePayload(payload) {
+  const fields = payload && payload.fields_json && typeof payload.fields_json === "object" ? payload.fields_json : payload.fields || payload;
+  const clean = {};
+  const textKeys = ["title", "description"];
+  const numberKeys = ["price", "net_seller_price", "surface", "carrez_surface", "room_count", "bedroom_count"];
+  for (const key of textKeys) {
+    if (fields[key] == null) continue;
+    const value = String(fields[key]).trim();
+    if (value) clean[key] = value;
+  }
+  for (const key of numberKeys) {
+    if (fields[key] == null) continue;
+    const value = String(fields[key]).replace(",", ".").trim();
+    if (value && !/^-?\d+(\.\d+)?$/.test(value)) throw new Error(`Champ numerique invalide: ${key}`);
+    if (value) clean[key] = value;
+  }
+  return clean;
+}
+
+async function handleUpdateHektorAnnonceFields(job) {
+  const payload = safeJsonParse(job.payload_json);
+  let dossier = null;
+  try {
+    dossier = await loadDossier(job);
+  } catch (error) {
+    if (!job.hektor_annonce_id || !(payload.hektor_user_id || payload.hektor_id_user || payload.target_hektor_user_id)) throw error;
+    dossier = {
+      app_dossier_id: job.app_dossier_id || payload.app_dossier_id || null,
+      hektor_annonce_id: String(job.hektor_annonce_id),
+      negociateur_email: payload.hektor_user_email || null,
+    };
+  }
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const annonceId = String(dossier.hektor_annonce_id);
+  const fields = normalizeHektorAnnonceUpdatePayload(payload);
+  const results = [];
+
+  const textResult = await postHektorPrincipalTextUpdate(job, annonceId, {
+    title: fields.title,
+    description: fields.description,
+  });
+  if (textResult) results.push(textResult);
+
+  const agInterieur = {};
+  if (fields.room_count != null) agInterieur.nbpieces = fields.room_count;
+  if (fields.bedroom_count != null) agInterieur.NB_CHAMBRES = fields.bedroom_count;
+  if (fields.surface != null) agInterieur.surfappart = fields.surface;
+  if (fields.carrez_surface != null) agInterieur.SURF_CARREZ = fields.carrez_surface;
+  if (Object.keys(agInterieur).length) {
+    results.push(await postHektorMefUpdate(job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur));
+  }
+
+  const mandatInfo = {};
+  if (fields.price != null) mandatInfo.prix = fields.price;
+  if (fields.net_seller_price != null) mandatInfo.PRIXNETVENDEUR = fields.net_seller_price;
+  if (Object.keys(mandatInfo).length) {
+    results.push(await postHektorMefUpdate(job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo));
+  }
+
+  if (!results.length) throw new Error("Aucun champ annonce modifiable fourni");
+
+  let immediateSync = null;
+  try {
+    immediateSync = await runCreatedAnnonceImmediateSync(job, annonceId);
+  } catch (syncError) {
+    immediateSync = {
+      status: "error",
+      error: syncError && syncError.message ? syncError.message : String(syncError),
+    };
+    await logJob(job.id, "hektor_annonce_update_sync", "error", "Sync immediate apres modification annonce echouee", {
+      hektor_annonce_id: annonceId,
+      error: immediateSync.error,
+    });
+  }
+
+  return {
+    status: "updated",
+    hektor_annonce_id: annonceId,
+    updated_groups: results,
+    immediate_sync: immediateSync,
+  };
+}
+
 async function handleLinkHektorMandant(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -1900,6 +2123,8 @@ async function runHandler(job) {
       return handleDeleteDocumentFromHektor(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
+    case "update_hektor_annonce_fields":
+      return handleUpdateHektorAnnonceFields(job);
     case "delete_hektor_annonce":
       return handleDeleteHektorAnnonce(job);
     case "create_hektor_draft_annonce":

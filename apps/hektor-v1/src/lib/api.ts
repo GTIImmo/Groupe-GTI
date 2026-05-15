@@ -3226,6 +3226,46 @@ export async function createLinkHektorMandantJob(input: {
   return data as ConsoleJob
 }
 
+export type HektorAnnonceUpdateFields = {
+  title?: string | null
+  description?: string | null
+  price?: string | number | null
+  netSellerPrice?: string | number | null
+  surface?: string | number | null
+  carrezSurface?: string | number | null
+  roomCount?: string | number | null
+  bedroomCount?: string | number | null
+}
+
+export async function createUpdateHektorAnnonceFieldsJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  fields: HektorAnnonceUpdateFields
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanFields = {
+    title: input.fields.title?.trim() || null,
+    description: input.fields.description?.trim() || null,
+    price: input.fields.price == null ? null : String(input.fields.price).trim() || null,
+    net_seller_price: input.fields.netSellerPrice == null ? null : String(input.fields.netSellerPrice).trim() || null,
+    surface: input.fields.surface == null ? null : String(input.fields.surface).trim() || null,
+    carrez_surface: input.fields.carrezSurface == null ? null : String(input.fields.carrezSurface).trim() || null,
+    room_count: input.fields.roomCount == null ? null : String(input.fields.roomCount).trim() || null,
+    bedroom_count: input.fields.bedroomCount == null ? null : String(input.fields.bedroomCount).trim() || null,
+  }
+  const updateFields = Object.fromEntries(Object.entries(cleanFields).filter(([, value]) => value !== null))
+  if (Object.keys(updateFields).length === 0) throw new Error('Aucune modification a envoyer')
+  const { data, error } = await supabase.rpc('app_console_create_update_annonce_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    update_fields: updateFields,
+    update_priority: input.priority ?? 15,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor annonce update job')
+  return data as ConsoleJob
+}
+
 export async function createDeleteHektorAnnonceJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   reason?: string
@@ -3245,7 +3285,7 @@ export async function createDeleteHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
-const hektorActionJobTypes: ConsoleJobType[] = ['create_hektor_draft_annonce', 'delete_hektor_annonce']
+const hektorActionJobTypes: ConsoleJobType[] = ['create_hektor_draft_annonce', 'delete_hektor_annonce', 'update_hektor_annonce_fields']
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
   if (!hasSupabaseEnv || !supabase) return []
