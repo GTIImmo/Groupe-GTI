@@ -910,28 +910,39 @@ function hektorGraphQLAuthorizationHeader() {
 }
 
 async function hektorFetch(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Cookie: hektorCookieHeader(),
-      Referer: ADMIN_URL,
-      Origin: HEKTOR_BASE_URL.replace(/\/+$/, ""),
-      "X-Requested-With": "XMLHttpRequest",
-      ...(options.headers || {}),
-    },
-  });
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const text = buffer.toString("utf-8");
-  if (!response.ok) throw new Error(`Hektor ${response.status} on ${url}: ${text.slice(0, 300)}`);
-  if (isHektorLoginPage(text) && !url.includes("upload_uploadeddoc.php")) {
-    throw new Error("Session Hektor expiree ou invalide");
+  const timeoutMs = Number(options.timeoutMs || 45000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: {
+        Cookie: hektorCookieHeader(),
+        Referer: ADMIN_URL,
+        Origin: HEKTOR_BASE_URL.replace(/\/+$/, ""),
+        "X-Requested-With": "XMLHttpRequest",
+        ...(options.headers || {}),
+      },
+    });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const text = buffer.toString("utf-8");
+    if (!response.ok) throw new Error(`Hektor ${response.status} on ${url}: ${text.slice(0, 300)}`);
+    if (isHektorLoginPage(text) && !url.includes("upload_uploadeddoc.php")) {
+      throw new Error("Session Hektor expiree ou invalide");
+    }
+    return {
+      response,
+      buffer,
+      text,
+      mimeType: response.headers.get("content-type") || "application/octet-stream",
+    };
+  } catch (error) {
+    if (error && error.name === "AbortError") throw new Error(`Hektor timeout ${timeoutMs}ms on ${url}`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return {
-    response,
-    buffer,
-    text,
-    mimeType: response.headers.get("content-type") || "application/octet-stream",
-  };
 }
 
 async function hektorGraphQL(variables) {
@@ -985,6 +996,18 @@ async function fetchHektorPropertyById(hektorAnnonceId, options = {}) {
     }
   }
   return null;
+}
+
+async function fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, step) {
+  try {
+    return await fetchHektorPropertyById(hektorAnnonceId, { maxPages: 2 });
+  } catch (error) {
+    await logJob(job.id, step, "error", "Verification GraphQL Hektor ignoree apres erreur", {
+      hektor_annonce_id: String(hektorAnnonceId),
+      error: error && error.message ? error.message : String(error),
+    });
+    return null;
+  }
 }
 
 async function ensureAdminHektorSession(job, reason) {
@@ -1639,7 +1662,7 @@ async function handleDeleteHektorAnnonce(job) {
     hektor_annonce_id: hektorAnnonceId,
     app_dossier_id: appDossierId || null,
   });
-  const before = await fetchHektorPropertyById(hektorAnnonceId);
+  const before = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_delete_verify_before");
   const deleteUrl = `${XMLRPC_URL}?mode=supprimeannonce&id=${encodeURIComponent(hektorAnnonceId)}&path=undefined`;
   await hektorFetch(deleteUrl, {
     headers: {
@@ -1647,7 +1670,7 @@ async function handleDeleteHektorAnnonce(job) {
     },
   });
   await sleep(2500);
-  const after = await fetchHektorPropertyById(hektorAnnonceId);
+  const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_delete_verify_after");
   if (after && after.archived === false) {
     throw new Error(`Suppression Hektor non confirmee pour annonce ${hektorAnnonceId}`);
   }
