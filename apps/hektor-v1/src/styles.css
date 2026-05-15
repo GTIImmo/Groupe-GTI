@@ -9135,6 +9135,61 @@ button.metric-card.is-active {
 .detail-screen .detail-contact-section .detail-mandant-link-feedback.is-error {
   color: #b42318;
 }
+.mobile-mandant-link-form {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 12px;
+  border: 1px solid rgba(197, 0, 95, 0.18);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.mobile-mandant-link-form label {
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+.mobile-mandant-link-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.mobile-mandant-link-controls input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid rgba(34, 35, 35, 0.16);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  font-weight: 750;
+}
+.mobile-mandant-link-controls button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--gti-final-pink);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+.mobile-mandant-link-controls button:disabled {
+  opacity: 0.72;
+}
+.mobile-mandant-link-form small,
+.mobile-mandant-link-feedback {
+  color: #747a7a;
+  font-size: 12px;
+  font-weight: 750;
+}
+.mobile-mandant-link-feedback.is-success {
+  color: #1b7f4d;
+}
+.mobile-mandant-link-feedback.is-error {
+  color: #b42318;
+}
 .detail-screen .detail-contact-section .detail-contact-card-primary:only-child {
   grid-column: 1 / -1;
 }
