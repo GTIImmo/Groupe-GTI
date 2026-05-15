@@ -33,6 +33,7 @@ import {
   loadMandatStats,
   loadCommercialRequestStats,
   loadSuiviRequestStats,
+  loadHektorNegotiatorOptions,
   loadUserNegotiatorContext,
   loadUserProfile,
   loadWorkItemsPage,
@@ -49,7 +50,7 @@ import {
   createConsoleDocumentSignedUrl,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -2789,6 +2790,7 @@ export default function App() {
   const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
   const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
+  const [draftAnnonceNegotiatorId, setDraftAnnonceNegotiatorId] = useState('')
   const [draftAnnonceAddress, setDraftAnnonceAddress] = useState('')
   const [draftAnnoncePostalCode, setDraftAnnoncePostalCode] = useState('')
   const [draftAnnonceCity, setDraftAnnonceCity] = useState('')
@@ -2797,6 +2799,7 @@ export default function App() {
   const [draftAnnonceRoomCount, setDraftAnnonceRoomCount] = useState('')
   const [draftAnnonceBedroomCount, setDraftAnnonceBedroomCount] = useState('')
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
+  const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
   const [appUsers, setAppUsers] = useState<UserProfile[]>([])
@@ -2875,6 +2878,17 @@ export default function App() {
     if (profile?.role !== 'commercial') return undefined
     return { negotiatorEmail: sessionEmail || null }
   }, [profile?.role, sessionEmail])
+  const draftNegotiatorOptions = useMemo(() => {
+    const selectedAgency = draftAnnonceAgency.trim()
+    return hektorNegotiators.filter((item) => {
+      if (profile?.role === 'commercial') return normalizeEmail(item.email) === sessionEmail
+      if (!selectedAgency) return true
+      return !item.agenceNom || item.agenceNom === selectedAgency
+    })
+  }, [draftAnnonceAgency, hektorNegotiators, profile?.role, sessionEmail])
+  const selectedDraftNegotiator = useMemo(() => {
+    return hektorNegotiators.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
+  }, [draftAnnonceNegotiatorId, hektorNegotiators])
   const dataFilters = useMemo<AppFilters>(() => {
     if ((screen === 'mandats' || screen === 'suivi') && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
     if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
@@ -2959,6 +2973,33 @@ export default function App() {
       cancelled = true
     }
   }, [session])
+
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    let cancelled = false
+    loadHektorNegotiatorOptions(dataScope)
+      .then((rows) => {
+        if (!cancelled) setHektorNegotiators(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setHektorNegotiators([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session, dataScope])
+
+  useEffect(() => {
+    if (!draftAnnonceModalOpen) return
+    if (profile?.role === 'commercial') {
+      const ownNegotiator = hektorNegotiators.find((item) => normalizeEmail(item.email) === sessionEmail)
+      setDraftAnnonceNegotiatorId(ownNegotiator?.idUser ?? '')
+      return
+    }
+    if (draftAnnonceNegotiatorId && !draftNegotiatorOptions.some((item) => item.idUser === draftAnnonceNegotiatorId)) {
+      setDraftAnnonceNegotiatorId('')
+    }
+  }, [draftAnnonceModalOpen, draftAnnonceNegotiatorId, draftNegotiatorOptions, hektorNegotiators, profile?.role, sessionEmail])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -3391,7 +3432,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function openDraftAnnonceModal() {
     const agency = userNegotiatorContext?.agence_nom || (filters.agency !== allFilterValue ? filters.agency : '')
+    const ownNegotiator = hektorNegotiators.find((item) => normalizeEmail(item.email) === sessionEmail)
     setDraftAnnonceAgency(agency === allFilterValue ? '' : agency)
+    setDraftAnnonceNegotiatorId(profile?.role === 'commercial' ? (ownNegotiator?.idUser ?? '') : '')
     setDraftAnnonceTitle('')
     setDraftAnnonceAddress('')
     setDraftAnnoncePostalCode('')
@@ -3417,6 +3460,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage('Choisis une agence avant de creer le brouillon Hektor.')
       return
     }
+    if (!selectedDraftNegotiator) {
+      setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera le brouillon.')
+      return
+    }
     setDraftAnnoncePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
@@ -3424,6 +3471,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const job = await createHektorDraftAnnonceJob({
         title: draftAnnonceTitle,
         agenceNom: draftAnnonceAgency,
+        hektorUserId: selectedDraftNegotiator.idUser,
+        hektorUserLabel: selectedDraftNegotiator.label,
+        hektorUserEmail: selectedDraftNegotiator.email,
         propertyType: 'Appartement',
         offerType: 'sale',
         address: draftAnnonceAddress,
@@ -4946,6 +4996,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </select>
                 </label>
                 <label className="filter-field">
+                  <span>Negociateur Hektor</span>
+                  <select
+                    value={draftAnnonceNegotiatorId}
+                    onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)}
+                    disabled={profile?.role === 'commercial'}
+                    required
+                  >
+                    <option value="">{profile?.role === 'commercial' ? 'Acces personnel' : 'Choisir'}</option>
+                    {draftNegotiatorOptions.map((negotiator) => (
+                      <option key={negotiator.idUser} value={negotiator.idUser}>
+                        {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="filter-field">
                   <span>Type Hektor</span>
                   <select value="Appartement" disabled>
                     <option value="Appartement">Appartement</option>
@@ -4989,7 +5055,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </section>
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
-                  <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim()}>
+                  <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
                     {draftAnnoncePending ? 'Creation...' : 'Creer le brouillon'}
                   </button>
                 </div>

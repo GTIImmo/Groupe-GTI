@@ -251,6 +251,15 @@ export type UserNegotiatorContext = {
   commercial_nom: string | null
   negociateur_email: string | null
   agence_nom: string | null
+  hektor_user_id?: string | null
+}
+
+export type HektorNegotiatorOption = {
+  idUser: string
+  label: string
+  email: string | null
+  agenceNom: string | null
+  commercialId: string | null
 }
 
 export type MandatRecord = {

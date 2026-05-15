@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -1546,13 +1546,14 @@ export async function loadUserNegotiatorContext(email: string | null | undefined
           commercial_nom: row.commercial_nom ?? null,
           negociateur_email: row.negociateur_email ?? null,
           agence_nom: row.agence_nom ?? null,
+          hektor_user_id: row.commercial_id == null ? null : String(row.commercial_id),
         }
       : null
   }
 
   const { data, error } = await supabase
     .from('app_dossiers_current')
-    .select('commercial_nom,negociateur_email,agence_nom')
+    .select('commercial_id,commercial_nom,negociateur_email,agence_nom')
     .eq('negociateur_email', normalized)
     .limit(1)
     .maybeSingle()
@@ -1565,7 +1566,76 @@ export async function loadUserNegotiatorContext(email: string | null | undefined
     throw new Error(error.message)
   }
 
-  return (data as UserNegotiatorContext | null) ?? null
+  const context = (data as (UserNegotiatorContext & { commercial_id?: string | null }) | null) ?? null
+  return context
+    ? {
+        commercial_nom: context.commercial_nom ?? null,
+        negociateur_email: context.negociateur_email ?? null,
+        agence_nom: context.agence_nom ?? null,
+        hektor_user_id: context.hektor_user_id ?? context.commercial_id ?? null,
+      }
+    : null
+}
+
+export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Promise<HektorNegotiatorOption[]> {
+  if (!hasSupabaseEnv || !supabase) {
+    return uniqSorted(mockDossiers.map((item) => item.negociateur_email))
+      .map<HektorNegotiatorOption | null>((email) => {
+        const row = mockDossiers.find((item) => item.negociateur_email === email)
+        return row && row.commercial_id
+          ? {
+              idUser: String(row.commercial_id),
+              label: row.commercial_nom ?? email ?? String(row.commercial_id),
+              email: email ?? null,
+              agenceNom: row.agence_nom ?? null,
+              commercialId: row.commercial_id == null ? null : String(row.commercial_id),
+            }
+          : null
+      })
+      .filter((item): item is HektorNegotiatorOption => Boolean(item))
+  }
+
+  const [directoryResult, dossierResult] = await Promise.all([
+    supabase
+      .from('app_user_directory')
+      .select('id_user,display_name,email,user_type')
+      .eq('user_type', 'NEGO')
+      .order('display_name', { ascending: true })
+      .limit(500),
+    supabase
+      .from('app_dossiers_current')
+      .select('commercial_id,commercial_nom,negociateur_email,agence_nom')
+      .limit(4000),
+  ])
+
+  if (directoryResult.error) throw new Error(directoryResult.error.message)
+  if (dossierResult.error) throw new Error(dossierResult.error.message)
+
+  const dossierByEmail = new Map<string, { commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>()
+  for (const row of (dossierResult.data ?? []) as Array<{ commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>) {
+    const email = normalizeEmail(row.negociateur_email)
+    if (!email || dossierByEmail.has(email)) continue
+    dossierByEmail.set(email, row)
+  }
+
+  const wantedEmail = normalizeEmail(scope?.negotiatorEmail)
+  return ((directoryResult.data ?? []) as Array<{ id_user?: string | number | null; display_name?: string | null; email?: string | null }>)
+    .map((row) => {
+      const idUser = row.id_user == null ? '' : String(row.id_user).trim()
+      if (!idUser) return null
+      const email = normalizeEmail(row.email)
+      if (wantedEmail && email !== wantedEmail) return null
+      const dossier = email ? dossierByEmail.get(email) : undefined
+      const label = (dossier?.commercial_nom ?? row.display_name ?? row.email ?? idUser).trim()
+      return {
+        idUser,
+        label: label || idUser,
+        email: row.email ?? dossier?.negociateur_email ?? null,
+        agenceNom: dossier?.agence_nom ?? null,
+        commercialId: dossier?.commercial_id == null ? null : String(dossier.commercial_id),
+      }
+    })
+    .filter((item): item is HektorNegotiatorOption => Boolean(item))
 }
 
 export async function loadMandatsPage({
@@ -3131,6 +3201,9 @@ export async function createDeleteDocumentFromHektorJob(input: {
 export type HektorDraftAnnonceJobInput = {
   title?: string | null
   agenceNom?: string | null
+  hektorUserId?: string | null
+  hektorUserLabel?: string | null
+  hektorUserEmail?: string | null
   propertyType?: string | null
   offerType?: 'sale' | 'rental'
   address?: string | null
@@ -3151,6 +3224,9 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
     draft_payload: {
       title: input.title?.trim() || null,
       agence_nom: input.agenceNom?.trim() || null,
+      hektor_user_id: input.hektorUserId?.trim() || null,
+      hektor_user_label: input.hektorUserLabel?.trim() || null,
+      hektor_user_email: input.hektorUserEmail?.trim() || null,
       property_type: input.propertyType?.trim() || 'Appartement',
       hektor_id_type: '2',
       offer_type: input.offerType ?? 'sale',

@@ -125,6 +125,55 @@ function safeJsonParse(value, fallback = {}) {
   }
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function decodeJwtPayload(token) {
+  const clean = String(token || "").replace(/^Bearer\s+/i, "").trim();
+  const part = clean.split(".")[1];
+  if (!part) return null;
+  try {
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+    return JSON.parse(Buffer.from(padded, "base64").toString("utf-8"));
+  } catch (_) {
+    return null;
+  }
+}
+
+function readHektorStorageState() {
+  if (!fs.existsSync(STORAGE_STATE_PATH)) throw new Error(`Session console introuvable: ${STORAGE_STATE_PATH}`);
+  return JSON.parse(fs.readFileSync(STORAGE_STATE_PATH, "utf-8"));
+}
+
+function hektorOriginLocalStorage(state) {
+  const origins = Array.isArray(state.origins) ? state.origins : [];
+  const hektorOrigin = HEKTOR_BASE_URL.replace(/\/+$/, "");
+  const origin = origins.find((item) => item.origin === hektorOrigin);
+  return origin && Array.isArray(origin.localStorage) ? origin.localStorage : [];
+}
+
+function currentHektorSessionIdentity() {
+  try {
+    const state = readHektorStorageState();
+    const localStorage = hektorOriginLocalStorage(state);
+    const tokenEntry = localStorage.find((item) => item.name === "token");
+    const impersonateEntry = localStorage.find((item) => item.name === "impersonate");
+    const payload = decodeJwtPayload(tokenEntry && tokenEntry.value);
+    if (!payload) return null;
+    return {
+      userId: payload.userId == null ? null : String(payload.userId),
+      userObjectId: payload.userObjectId == null ? null : String(payload.userObjectId),
+      role: payload.role || null,
+      alias: payload.alias || payload.userAlias || null,
+      impersonate: impersonateEntry ? impersonateEntry.value : null,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 function storagePathEncode(value) {
   return String(value).split("/").map((part) => encodeURIComponent(part)).join("/");
 }
@@ -439,7 +488,7 @@ async function finishJob(jobId, status, result, errorMessage) {
 async function loadDossier(job) {
   if (job.app_dossier_id == null && !job.hektor_annonce_id) throw new Error("Job without dossier or annonce id");
   const params = new URLSearchParams({
-    select: "app_dossier_id,hektor_annonce_id,archive,statut_annonce,agence_nom",
+    select: "app_dossier_id,hektor_annonce_id,archive,statut_annonce,agence_nom,commercial_id,commercial_nom,negociateur_email",
     limit: "1",
   });
   if (job.app_dossier_id != null) params.set("app_dossier_id", `eq.${job.app_dossier_id}`);
@@ -447,6 +496,179 @@ async function loadDossier(job) {
   const rows = await supabaseRequest(`app_dossier_current?${params.toString()}`, { method: "GET" });
   if (!Array.isArray(rows) || !rows.length) throw new Error(`Dossier introuvable: ${job.app_dossier_id || job.hektor_annonce_id}`);
   return rows[0];
+}
+
+async function loadAppUserProfile(userId) {
+  if (!userId) return null;
+  const params = new URLSearchParams({
+    select: "id,email,display_name,role,is_active",
+    id: `eq.${userId}`,
+    limit: "1",
+  });
+  const rows = await supabaseRequest(`app_user_profile?${params.toString()}`, { method: "GET" });
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function loadHektorDirectoryUserByEmail(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  const params = new URLSearchParams({
+    select: "id_user,display_name,email,user_type",
+    user_type: "eq.NEGO",
+    email: `ilike.${normalized}`,
+    limit: "1",
+  });
+  const rows = await supabaseRequest(`app_user_directory?${params.toString()}`, { method: "GET" });
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function loadHektorDirectoryUserById(idUser) {
+  if (idUser == null || String(idUser).trim() === "") return null;
+  const params = new URLSearchParams({
+    select: "id_user,display_name,email,user_type",
+    user_type: "eq.NEGO",
+    id_user: `eq.${String(idUser).trim()}`,
+    limit: "1",
+  });
+  const rows = await supabaseRequest(`app_user_directory?${params.toString()}`, { method: "GET" });
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
+  const directId = payload.hektor_user_id || payload.hektor_id_user || payload.target_hektor_user_id;
+  if (directId) {
+    const directoryUser = await loadHektorDirectoryUserById(directId).catch(() => null);
+    return {
+      idUser: String(directId),
+      label: (directoryUser && directoryUser.display_name) || payload.hektor_user_label || payload.negociateur_label || null,
+      email: (directoryUser && directoryUser.email) || payload.hektor_user_email || null,
+      source: "payload",
+    };
+  }
+
+  const emails = [];
+  if (options.preferDossierOwner && dossier && dossier.negociateur_email) emails.push(dossier.negociateur_email);
+  if (payload.hektor_user_email || payload.negociateur_email) emails.push(payload.hektor_user_email || payload.negociateur_email);
+  if (job.requested_by) {
+    const profile = await loadAppUserProfile(job.requested_by).catch(() => null);
+    if (profile && profile.email) emails.push(profile.email);
+  }
+  if (dossier && dossier.negociateur_email) emails.push(dossier.negociateur_email);
+
+  const seen = new Set();
+  for (const email of emails) {
+    const normalized = normalizeEmail(email);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    const directoryUser = await loadHektorDirectoryUserByEmail(normalized).catch(() => null);
+    if (directoryUser && directoryUser.id_user) {
+      return {
+        idUser: String(directoryUser.id_user),
+        label: directoryUser.display_name || null,
+        email: directoryUser.email || normalized,
+        source: "email",
+      };
+    }
+  }
+
+  return null;
+}
+
+async function switchHektorUserContext(idUser) {
+  const targetId = String(idUser || "").trim();
+  if (!targetId) throw new Error("idUser Hektor requis pour changer de contexte");
+
+  const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
+  let browser = null;
+  try {
+    browser = await chromium.launch({ headless });
+    const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
+    const page = await context.newPage();
+    await page.goto(`${ADMIN_URL}?call=authenticate&mode=autologin&idUser=${encodeURIComponent(targetId)}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+    await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
+    await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
+    await page.waitForFunction((expectedId) => {
+      const raw = localStorage.getItem("token") || "";
+      const token = raw.replace(/^Bearer\s+/i, "");
+      const part = token.split(".")[1];
+      if (!part) return false;
+      try {
+        const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+        const payload = JSON.parse(atob(padded));
+        return String(payload.userId || "") === String(expectedId);
+      } catch (_) {
+        return false;
+      }
+    }, targetId, { timeout: 45000 });
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    lastHektorLoginAt = Date.now();
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
+async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
+  const target = await resolveHektorExecutionUser(job, dossier, payload, options);
+  if (!target || !target.idUser) {
+    await logJob(job.id, "hektor_context", "running", "Aucun contexte negociateur cible resolu, session courante conservee", {
+      prefer_dossier_owner: Boolean(options.preferDossierOwner),
+      hektor_annonce_id: dossier && dossier.hektor_annonce_id ? String(dossier.hektor_annonce_id) : null,
+    });
+    return null;
+  }
+
+  let current = currentHektorSessionIdentity();
+  if (current && current.userId === String(target.idUser)) {
+    await logJob(job.id, "hektor_context", "done", "Contexte Hektor negociateur deja actif", {
+      id_user: target.idUser,
+      label: target.label,
+      source: target.source,
+    });
+    return target;
+  }
+
+  if (!current) {
+    await logJob(job.id, "hektor_context", "running", "Session Hektor illisible, reconnexion avant contexte negociateur", {
+      target_id_user: target.idUser,
+    });
+    await refreshHektorSession("context_switch_missing_session");
+    current = currentHektorSessionIdentity();
+  }
+
+  if (current && current.role && current.role !== "ADMIN") {
+    await logJob(job.id, "hektor_context", "running", "Retour session admin avant changement de negociateur", {
+      current_user_id: current.userId,
+      current_role: current.role,
+      target_id_user: target.idUser,
+    });
+    await refreshHektorSession("context_switch_admin_login");
+    current = currentHektorSessionIdentity();
+  }
+
+  await logJob(job.id, "hektor_context", "running", "Changement de contexte Hektor negociateur", {
+    current_user_id: current && current.userId ? current.userId : null,
+    current_role: current && current.role ? current.role : null,
+    target_id_user: target.idUser,
+    target_label: target.label,
+    source: target.source,
+  });
+  await switchHektorUserContext(target.idUser);
+
+  const after = currentHektorSessionIdentity();
+  if (!after || after.userId !== String(target.idUser)) {
+    throw new Error(`Changement de contexte Hektor non confirme pour idUser ${target.idUser}`);
+  }
+  await logJob(job.id, "hektor_context", "done", "Contexte Hektor negociateur actif", {
+    id_user: after.userId,
+    role: after.role,
+    alias: after.alias,
+    target_label: target.label,
+  });
+  return target;
 }
 
 function hektorCookieHeader() {
@@ -906,6 +1128,7 @@ async function handlePrepareDocumentCloud(job) {
 async function handleUploadDocumentToHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload, { preferDossierOwner: true });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "document.pdf");
   const visibility = payload.visibility === "shared" ? "shared" : "private";
@@ -949,6 +1172,7 @@ async function handleUploadDocumentToHektor(job) {
 async function handleDeleteDocumentFromHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload, { preferDossierOwner: true });
   const documentId = payload.document_id;
   if (!documentId) throw new Error("payload_json.document_id required");
   const document = await loadConsoleDocumentById(documentId);
@@ -1004,10 +1228,13 @@ async function handleDeleteDocumentFromHektor(job) {
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const startedAtMs = Date.now();
+  await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false });
 
   await logJob(job.id, "hektor_draft", "running", "Lecture GraphQL avant creation brouillon", {
     property_type: payload.property_type || "Appartement",
     agence_nom: payload.agence_nom || null,
+    hektor_user_id: payload.hektor_user_id || null,
+    hektor_user_label: payload.hektor_user_label || null,
   });
   const before = await fetchLatestHektorProperties(1, false);
   const beforeIds = new Set(before.map((property) => String(property.id)));
