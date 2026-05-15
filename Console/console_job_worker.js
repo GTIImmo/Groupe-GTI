@@ -3,6 +3,7 @@ const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
+const { chromium } = require("playwright");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", "apps", "hektor-v1", ".env") });
@@ -60,7 +61,9 @@ function sleep(ms) {
 
 function isHektorSessionError(error) {
   const message = error && error.message ? error.message : String(error || "");
-  return message.includes("Hektor 403") || message.includes("Session Hektor expiree");
+  return message.includes("Hektor 403")
+    || message.includes("Session Hektor expiree")
+    || message.includes("Missing HTTP_AUTHORIZATION");
 }
 
 function runNodeScript(scriptPath) {
@@ -457,6 +460,35 @@ function hektorCookieHeader() {
     .join("; ");
 }
 
+function hektorGraphQLAuthorizationHeader() {
+  try {
+    if (fs.existsSync(STORAGE_STATE_PATH)) {
+      const state = JSON.parse(fs.readFileSync(STORAGE_STATE_PATH, "utf-8"));
+      const origins = Array.isArray(state.origins) ? state.origins : [];
+      const hektorOrigin = HEKTOR_BASE_URL.replace(/\/+$/, "");
+      const origin = origins.find((item) => item.origin === hektorOrigin);
+      const localStorage = origin && Array.isArray(origin.localStorage) ? origin.localStorage : [];
+      const tokenEntry = localStorage.find((item) => item.name === "token");
+      if (tokenEntry && tokenEntry.value) {
+        return String(tokenEntry.value).startsWith("Bearer ") ? String(tokenEntry.value) : `Bearer ${tokenEntry.value}`;
+      }
+    }
+  } catch (_) {
+    // Fall back to token_dump.json below.
+  }
+
+  const tokenPath = path.resolve(__dirname, "token_dump.json");
+  if (!fs.existsSync(tokenPath)) return null;
+  try {
+    const dump = JSON.parse(fs.readFileSync(tokenPath, "utf-8"));
+    const token = dump && dump.localStorage ? dump.localStorage.token : null;
+    if (!token) return null;
+    return String(token).startsWith("Bearer ") ? String(token) : `Bearer ${token}`;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function hektorFetch(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -483,6 +515,7 @@ async function hektorFetch(url, options = {}) {
 }
 
 async function hektorGraphQL(variables) {
+  const authorization = hektorGraphQLAuthorizationHeader();
   const result = await hektorFetch(`${HEKTOR_BASE_URL.replace(/\/+$/, "")}/ws/GraphQL_Web`, {
     method: "POST",
     body: JSON.stringify({
@@ -490,7 +523,10 @@ async function hektorGraphQL(variables) {
       query: PROPERTY_LISTING_QUERY,
       variables,
     }),
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(authorization ? { Authorization: authorization } : {}),
+    },
   });
   const payload = JSON.parse(result.text);
   if (payload.errors && payload.errors.length) {
@@ -514,6 +550,61 @@ async function fetchLatestHektorProperties(page = 1, archived = false) {
   return payload && payload.data && payload.data.listing && Array.isArray(payload.data.listing.properties)
     ? payload.data.listing.properties
     : [];
+}
+
+async function createHektorDraftWithPlaywright(job, payload) {
+  const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
+  let browser = null;
+  try {
+    browser = await chromium.launch({ headless });
+    const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
+    const page = await context.newPage();
+    const captured = [];
+    page.on("requestfinished", async (request) => {
+      const requestUrl = request.url();
+      if (!requestUrl.includes("xmlrpc.php") && !requestUrl.includes("GraphQL_Web")) return;
+      const response = await request.response().catch(() => null);
+      captured.push({
+        method: request.method(),
+        url: requestUrl.replace(/\?.*$/, ""),
+        status: response ? response.status() : null,
+        postData: String(request.postData() || "").slice(0, 220),
+      });
+    });
+
+    await page.goto(`${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+    await page.waitForSelector("#WizardNext", { timeout: 30000 });
+    await page.waitForFunction(() => typeof window.saveBrouillon === "function", null, { timeout: 30000 });
+
+    const idannWizard = await page.locator("#idannWizard").inputValue();
+    await logJob(job.id, "hektor_draft", "running", "Sauvegarde brouillon via Playwright", {
+      idannWizard,
+      property_type: payload.property_type || "Appartement",
+    });
+
+    await page.evaluate(() => {
+      if (typeof window.setDeepCache !== "function") window.setDeepCache = () => {};
+      window.saveBrouillon();
+    });
+    await page.waitForTimeout(9000);
+    await context.storageState({ path: STORAGE_STATE_PATH });
+
+    return {
+      idannWizard,
+      captured: captured.slice(-12),
+    };
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    if (message.includes("Timeout") || message.includes("Navigation") || message.includes("ERR_ABORTED")) {
+      throw new Error(`Session Hektor expiree ou invalide: ${message.slice(0, 500)}`);
+    }
+    throw error;
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
 }
 
 function draftCreationScore(property, beforeIds, startedAtMs) {
@@ -913,9 +1004,6 @@ async function handleDeleteDocumentFromHektor(job) {
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const startedAtMs = Date.now();
-  const idType = String(payload.hektor_id_type || payload.idType || "2");
-  const offredem = payload.offer_type === "rental" ? "1" : "0";
-  const statutAnnonce = String(payload.statut_annonce || "2");
 
   await logJob(job.id, "hektor_draft", "running", "Lecture GraphQL avant creation brouillon", {
     property_type: payload.property_type || "Appartement",
@@ -924,41 +1012,8 @@ async function handleCreateHektorDraftAnnonce(job) {
   const before = await fetchLatestHektorProperties(1, false);
   const beforeIds = new Set(before.map((property) => String(property.id)));
 
-  const wizardPageUrl = `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien`;
-  await hektorFetch(wizardPageUrl, { headers: { Accept: "text/html,*/*" } });
-
-  const wizardUrl = `${XMLRPC_URL}?mode=ajoutebien&offredem=${encodeURIComponent(offredem)}&idType=${encodeURIComponent(idType)}&statutAnnonce=${encodeURIComponent(statutAnnonce)}`;
-  const wizard = await hektorFetch(wizardUrl, { headers: { Accept: "text/html,*/*" } });
-  const idannWizard = extractInputValue(wizard.text, "idannWizard") || extractInputValue(wizard.text, "idann");
-  const currentStepWizard = extractInputValue(wizard.text, "currentStepWizard") || "1";
-  const statusAnnonceWizard = extractInputValue(wizard.text, "statusAnnonceWizard") || statutAnnonce;
-  const offredemWizard = extractInputValue(wizard.text, "offredemWizard") || offredem;
-  const idtypeWizard = extractInputValue(wizard.text, "idtypeWizard") || idType;
-
-  if (!idannWizard) {
-    throw new Error("Creation brouillon Hektor: idannWizard introuvable dans le wizard");
-  }
-
-  await logJob(job.id, "hektor_draft", "running", "Sauvegarde etape wizard brouillon", {
-    idannWizard,
-    currentStepWizard,
-    idtypeWizard,
-    statusAnnonceWizard,
-  });
-
-  const form = new URLSearchParams();
-  form.set("mode", "ajoutebien_wizardBien");
-  form.set("offredem", offredemWizard);
-  form.set("idType", idtypeWizard);
-  form.set("statutAnnonce", statusAnnonceWizard);
-  form.set("idann", idannWizard);
-  form.set("programme_neuf", String(payload.programme_neuf || "0"));
-  form.set("currentStepWizard", currentStepWizard);
-  await hektorFetch(XMLRPC_URL, {
-    method: "POST",
-    body: form,
-    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-  });
+  const wizardResult = await createHektorDraftWithPlaywright(job, payload);
+  const idannWizard = wizardResult.idannWizard;
 
   let created = null;
   for (let attempt = 1; attempt <= 6; attempt += 1) {
