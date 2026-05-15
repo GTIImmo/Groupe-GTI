@@ -98,18 +98,37 @@ function runProjectPythonScript(args, options = {}) {
     SUPABASE_SERVICE_ROLE_KEY,
   };
   return new Promise((resolve, reject) => {
+    let settled = false;
     const child = spawn(PYTHON_EXE, args, {
       cwd: PROJECT_ROOT,
       env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });
+    const timeoutMs = Number(options.timeoutMs || 0);
+    const timeout = timeoutMs > 0 ? setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (!child.killed) child.kill("SIGKILL");
+      }, 5000).unref();
+      reject(new Error(`Python ${args.join(" ")} timeout apres ${timeoutMs}ms`));
+    }, timeoutMs) : null;
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      reject(error);
+    });
     child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
       if (code === 0) {
         resolve({
           stdout: stdout.slice(-Number(options.previewSize || 1800)),
@@ -1109,18 +1128,22 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
     {
       label: "refresh_single_annonce",
       args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
+      timeoutMs: 120000,
     },
     {
       label: "build_case_index",
       args: ["build_case_index.py"],
+      timeoutMs: 180000,
     },
     {
       label: "phase2_bootstrap",
       args: ["phase2/bootstrap_phase2.py"],
+      timeoutMs: 120000,
     },
     {
       label: "phase2_refresh_views",
       args: ["phase2/refresh_views.py"],
+      timeoutMs: 120000,
     },
     {
       label: "phase2_push_supabase_delta",
@@ -1131,6 +1154,7 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
         "--work-item-batch-size", "50",
         "--filter-batch-size", "50",
       ],
+      timeoutMs: 180000,
     },
   ];
 
@@ -1140,7 +1164,7 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
       hektor_annonce_id: id,
       args: step.args,
     });
-    const output = await runProjectPythonScript(step.args);
+    const output = await runProjectPythonScript(step.args, { timeoutMs: step.timeoutMs });
     completed.push({ step: step.label, stdout: output.stdout || null, stderr: output.stderr || null });
     await logJob(job.id, "hektor_annonce_sync", "done", `Sync immediate terminee: ${step.label}`, {
       hektor_annonce_id: id,

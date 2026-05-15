@@ -86,3 +86,14 @@ Regles :
 Ce correctif ne supprime pas l'ancien handler worker `link_hektor_mandant`. Il reste disponible pour compatibilite technique, mais l'interface utilisateur ne demande plus d'ID contact Hektor.
 
 Le worker garde la logique de session Hektor existante : si la session expire, il relance le login Playwright puis retente la commande une fois.
+
+## Correctif apres test second mandant
+
+Test reel effectue sur l'annonce Hektor `62243` :
+
+- premier mandant test cree et associe : contact Hektor `603484`
+- deuxieme mandant test cree et associe : contact Hektor `603485`
+
+Le test a confirme que Hektor accepte plusieurs mandants sur la meme annonce.
+
+Un garde-fou a aussi ete ajoute au worker : chaque script Python de synchro immediate a maintenant un timeout. Si la derniere etape de push Supabase se fige, le worker ne reste plus bloque indefiniment et peut continuer a traiter les prochaines jobs.
