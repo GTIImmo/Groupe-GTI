@@ -16,6 +16,8 @@ const XMLRPC_URL = `${ADMIN_URL}xmlrpc.php`;
 const STORAGE_BUCKET = process.env.CONSOLE_STORAGE_BUCKET || "hektor-console-documents";
 const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "storage_state.json");
 const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\HektorConsoleDocuments";
+const PROJECT_ROOT = path.resolve(__dirname, "..");
+const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
 const WORKER_ID = process.env.CONSOLE_WORKER_ID || `${os.hostname()}:${process.pid}`;
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || 60000);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
@@ -85,6 +87,37 @@ function runNodeScript(scriptPath) {
         return;
       }
       reject(new Error(`Script ${path.basename(scriptPath)} failed with code ${code}: ${stderr || stdout}`.slice(0, 3000)));
+    });
+  });
+}
+
+function runProjectPythonScript(args, options = {}) {
+  const childEnv = {
+    ...process.env,
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+  };
+  return new Promise((resolve, reject) => {
+    const child = spawn(PYTHON_EXE, args, {
+      cwd: PROJECT_ROOT,
+      env: childEnv,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({
+          stdout: stdout.slice(-Number(options.previewSize || 1800)),
+          stderr: stderr.slice(-Number(options.previewSize || 1800)),
+        });
+        return;
+      }
+      reject(new Error(`Python ${args.join(" ")} failed with code ${code}: ${stderr || stdout}`.slice(0, 3000)));
     });
   });
 }
@@ -1006,6 +1039,61 @@ function annonceCreationScore(property, beforeIds, startedAtMs) {
   return score;
 }
 
+async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
+  const id = String(hektorAnnonceId || "").trim();
+  if (!id) return { status: "skipped", reason: "missing_hektor_annonce_id" };
+
+  const steps = [
+    {
+      label: "refresh_single_annonce",
+      args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
+    },
+    {
+      label: "build_case_index",
+      args: ["build_case_index.py"],
+    },
+    {
+      label: "phase2_bootstrap",
+      args: ["phase2/bootstrap_phase2.py"],
+    },
+    {
+      label: "phase2_refresh_views",
+      args: ["phase2/refresh_views.py"],
+    },
+    {
+      label: "phase2_push_supabase_delta",
+      args: [
+        "phase2/sync/push_upgrade_to_supabase.py",
+        "--dossier-batch-size", "50",
+        "--detail-batch-size", "25",
+        "--work-item-batch-size", "50",
+        "--filter-batch-size", "50",
+      ],
+    },
+  ];
+
+  const completed = [];
+  for (const step of steps) {
+    await logJob(job.id, "hektor_annonce_sync", "running", `Sync immediate: ${step.label}`, {
+      hektor_annonce_id: id,
+      args: step.args,
+    });
+    const output = await runProjectPythonScript(step.args);
+    completed.push({ step: step.label, stdout: output.stdout || null, stderr: output.stderr || null });
+    await logJob(job.id, "hektor_annonce_sync", "done", `Sync immediate terminee: ${step.label}`, {
+      hektor_annonce_id: id,
+      stdout: output.stdout || null,
+      stderr: output.stderr || null,
+    });
+  }
+
+  return {
+    status: "done",
+    hektor_annonce_id: id,
+    steps: completed.map((item) => item.step),
+  };
+}
+
 function isHektorLoginPage(text) {
   const normalized = String(text || "").slice(0, 20000).toLowerCase();
   return (
@@ -1432,6 +1520,20 @@ async function handleCreateHektorDraftAnnonce(job) {
     isValid: created.isValid,
   });
 
+  let immediateSync = null;
+  try {
+    immediateSync = await runCreatedAnnonceImmediateSync(job, created.id);
+  } catch (syncError) {
+    immediateSync = {
+      status: "error",
+      error: syncError && syncError.message ? syncError.message : String(syncError),
+    };
+    await logJob(job.id, "hektor_annonce_sync", "error", "Sync immediate annonce creee echouee", {
+      hektor_annonce_id: String(created.id),
+      error: immediateSync.error,
+    });
+  }
+
   return {
     hektor_annonce_id: String(created.id),
     wizard_id: String(idannWizard),
@@ -1441,6 +1543,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     folder_number: created.folderNumber || null,
     created_at_hektor: created.createdAt || null,
     property_type: created.type && created.type.name ? created.type.name : payload.property_type || null,
+    immediate_sync: immediateSync,
     requested_payload: {
       title: payload.title || null,
       agence_nom: payload.agence_nom || null,

@@ -163,6 +163,68 @@ OK - la diffusion reste inactive.
 OK - la validation reste inactive.
 ```
 
+## Correctif complementaire : apparition immediate dans l'app
+
+Apres confirmation GraphQL de la creation Hektor, le worker anticipe maintenant la prochaine synchronisation quotidienne.
+
+Il lance automatiquement la mini-chaine locale suivante :
+
+```text
+phase2/sync/refresh_single_annonce.py --id-annonce {hektor_annonce_id}
+build_case_index.py
+phase2/bootstrap_phase2.py
+phase2/refresh_views.py
+phase2/sync/push_upgrade_to_supabase.py
+```
+
+Objectif :
+
+```text
+creation annonce dans l'app
+=> creation Hektor
+=> refresh local API Hektor cible
+=> recalcul Phase 2
+=> push delta Supabase
+=> annonce visible dans l'app sans attendre la sync quotidienne
+```
+
+Les logs du job utilisent l'etape :
+
+```text
+hektor_annonce_sync
+```
+
+Le resultat du job contient maintenant :
+
+```text
+immediate_sync.status = done | error | skipped
+```
+
+Important : cette sync immediate est volontairement non bloquante pour eviter une double creation.
+
+Si Hektor cree bien l'annonce mais que le refresh/push Supabase echoue, le job reste termine avec l'id Hektor et `immediate_sync.status = error`. Il ne faut pas relancer automatiquement le job de creation, car cela pourrait creer une deuxieme annonce. Dans ce cas, relancer seulement la sync ciblee ou la sync quotidienne.
+
+## Test sync immediate
+
+Un test complementaire a cree l'annonce :
+
+```text
+hektor_annonce_id = 62244
+folder_number = V480062244
+job = 93163a51-fd19-44ec-9f4b-475d90d71409
+```
+
+La creation Hektor, `refresh_single_annonce`, `build_case_index`, `phase2/bootstrap_phase2.py` et `phase2/refresh_views.py` ont reussi.
+
+Le premier essai de push Supabase a echoue car le script enfant Python recevait `VITE_SUPABASE_URL`, mais pas `SUPABASE_URL`. Le worker a ete corrige pour transmettre explicitement :
+
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+a tous les scripts Python lances par la sync immediate.
+
 ## Limites connues
 
 Le formulaire actuel ouvre le wizard et valide le type par defaut `Appartement`.
