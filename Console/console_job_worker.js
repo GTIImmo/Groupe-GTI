@@ -939,7 +939,7 @@ async function fetchLatestHektorProperties(page = 1, archived = false) {
     : [];
 }
 
-async function createHektorDraftWithPlaywright(job, payload) {
+async function createHektorAnnonceWithPlaywright(job, payload) {
   const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
   let browser = null;
   try {
@@ -964,17 +964,17 @@ async function createHektorDraftWithPlaywright(job, payload) {
       timeout: 60000,
     });
     await page.waitForSelector("#WizardNext", { timeout: 30000 });
-    await page.waitForFunction(() => typeof window.saveBrouillon === "function", null, { timeout: 30000 });
+    await page.waitForFunction(() => typeof window.saveAndQuitte === "function", null, { timeout: 30000 });
 
     const idannWizard = await page.locator("#idannWizard").inputValue();
-    await logJob(job.id, "hektor_draft", "running", "Sauvegarde brouillon via Playwright", {
+    await logJob(job.id, "hektor_annonce", "running", "Enregistrement et finalisation annonce via Playwright", {
       idannWizard,
       property_type: payload.property_type || "Appartement",
     });
 
     await page.evaluate(() => {
       if (typeof window.setDeepCache !== "function") window.setDeepCache = () => {};
-      window.saveBrouillon();
+      window.saveAndQuitte();
     });
     await page.waitForTimeout(9000);
     await context.storageState({ path: STORAGE_STATE_PATH });
@@ -994,9 +994,9 @@ async function createHektorDraftWithPlaywright(job, payload) {
   }
 }
 
-function draftCreationScore(property, beforeIds, startedAtMs) {
+function annonceCreationScore(property, beforeIds, startedAtMs) {
   if (!property || beforeIds.has(String(property.id))) return -1;
-  if (property.isDraft !== true || property.isBroadcasted !== false || property.isValid !== false) return -1;
+  if (property.isArchived === true || property.isDraft === true) return -1;
   const createdAtMs = property.createdAt ? Date.parse(property.createdAt) : 0;
   const recentEnough = !Number.isFinite(createdAtMs) || !createdAtMs || createdAtMs >= startedAtMs - (10 * 60 * 1000);
   if (!recentEnough) return -1;
@@ -1395,7 +1395,7 @@ async function handleCreateHektorDraftAnnonce(job) {
   const startedAtMs = Date.now();
   await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false });
 
-  await logJob(job.id, "hektor_draft", "running", "Lecture GraphQL avant creation brouillon", {
+  await logJob(job.id, "hektor_annonce", "running", "Lecture GraphQL avant creation annonce", {
     property_type: payload.property_type || "Appartement",
     agence_nom: payload.agence_nom || null,
     hektor_user_id: payload.hektor_user_id || null,
@@ -1404,7 +1404,7 @@ async function handleCreateHektorDraftAnnonce(job) {
   const before = await fetchLatestHektorProperties(1, false);
   const beforeIds = new Set(before.map((property) => String(property.id)));
 
-  const wizardResult = await createHektorDraftWithPlaywright(job, payload);
+  const wizardResult = await createHektorAnnonceWithPlaywright(job, payload);
   const idannWizard = wizardResult.idannWizard;
 
   let created = null;
@@ -1412,7 +1412,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     await sleep(attempt === 1 ? 1800 : 2500);
     const latest = await fetchLatestHektorProperties(1, false);
     const candidates = latest
-      .map((property) => ({ property, score: draftCreationScore(property, beforeIds, startedAtMs) }))
+      .map((property) => ({ property, score: annonceCreationScore(property, beforeIds, startedAtMs) }))
       .filter((item) => item.score >= 0)
       .sort((left, right) => right.score - left.score);
     if (candidates.length) {
@@ -1422,10 +1422,10 @@ async function handleCreateHektorDraftAnnonce(job) {
   }
 
   if (!created) {
-    throw new Error(`Creation brouillon Hektor non confirmee par GraphQL apres sauvegarde wizard ${idannWizard}`);
+    throw new Error(`Creation annonce Hektor non confirmee par GraphQL apres enregistrement wizard ${idannWizard}`);
   }
 
-  await logJob(job.id, "hektor_draft", "done", "Brouillon Hektor confirme par GraphQL", {
+  await logJob(job.id, "hektor_annonce", "done", "Annonce Hektor finalisee confirmee par GraphQL", {
     hektor_annonce_id: String(created.id),
     isDraft: created.isDraft,
     isBroadcasted: created.isBroadcasted,

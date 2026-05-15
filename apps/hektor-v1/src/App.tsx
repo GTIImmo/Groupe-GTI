@@ -3457,11 +3457,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draftAnnonceAgency.trim()) {
-      setErrorMessage('Choisis une agence avant de creer le brouillon Hektor.')
+      setErrorMessage('Choisis une agence avant de creer l annonce Hektor.')
       return
     }
     if (!selectedDraftNegotiator) {
-      setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera le brouillon.')
+      setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera l annonce.')
       return
     }
     setDraftAnnoncePending(true)
@@ -3487,9 +3487,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         priority: 10,
       })
       setDraftAnnonceModalOpen(false)
-      setNoticeMessage(`Demande envoyee au PC serveur. Job brouillon Hektor ${job.id.slice(0, 8)} en attente.`)
+      setNoticeMessage(`Demande envoyee au PC serveur. Job annonce Hektor ${job.id.slice(0, 8)} en attente.`)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de brouillon Hektor')
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d annonce Hektor')
     } finally {
       setDraftAnnoncePending(false)
     }
@@ -4978,11 +4978,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
                 <div>
                   <p className="eyebrow">Console Hektor</p>
-                  <h3>Nouveau brouillon annonce</h3>
+                  <h3>Nouvelle annonce Hektor</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Fermer</button>
               </div>
-              <p className="modal-subline">Cette action cree uniquement un brouillon non valide et non diffuse dans Hektor.</p>
+              <p className="modal-subline">Cette action cree l annonce dans Hektor avec le contexte negociateur selectionne, sans diffusion automatique.</p>
               <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
                 <label className="filter-field draft-annonce-field-wide">
                   <span>Titre / repere interne</span>
@@ -5047,16 +5047,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <label className="filter-field draft-annonce-field-wide">
                   <span>Note</span>
-                  <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer le brouillon ensuite" />
+                  <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
                 </label>
                 <section className="draft-annonce-warning">
-                  <strong>Brouillon seulement</strong>
+                  <strong>Creation sans diffusion</strong>
                   <span>L'enrichissement complet, la validation et la diffusion resteront des actions separees.</span>
                 </section>
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
                   <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
-                    {draftAnnoncePending ? 'Creation...' : 'Creer le brouillon'}
+                    {draftAnnoncePending ? 'Creation...' : 'Creer l annonce'}
                   </button>
                 </div>
               </form>
@@ -5853,7 +5853,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <div className="hero-actions">
-                  {canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouveau brouillon</button> : null}
+                  {canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
                 </div>
