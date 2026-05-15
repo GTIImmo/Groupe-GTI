@@ -3198,6 +3198,34 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+export async function createLinkHektorMandantJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  contactId: string
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'link_hektor_mandant',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        contact_id: cleanContactId,
+        hektor_user_email: input.dossier.negociateur_email ?? null,
+      },
+      priority: input.priority ?? 18,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor mandant link job')
+  return data as ConsoleJob
+}
+
 export async function createDeleteHektorAnnonceJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   reason?: string

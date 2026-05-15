@@ -680,12 +680,11 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
   }
 
   const emails = [];
+  const profile = job.requested_by ? await loadAppUserProfile(job.requested_by).catch(() => null) : null;
+  if (options.preferRequester && profile && profile.role === "commercial" && profile.email) emails.push(profile.email);
   if (options.preferDossierOwner && dossier && dossier.negociateur_email) emails.push(dossier.negociateur_email);
   if (payload.hektor_user_email || payload.negociateur_email) emails.push(payload.hektor_user_email || payload.negociateur_email);
-  if (job.requested_by) {
-    const profile = await loadAppUserProfile(job.requested_by).catch(() => null);
-    if (profile && profile.email) emails.push(profile.email);
-  }
+  if (profile && profile.email) emails.push(profile.email);
   if (dossier && dossier.negociateur_email) emails.push(dossier.negociateur_email);
 
   const seen = new Set();
@@ -812,6 +811,9 @@ async function switchHektorUserContext(idUser) {
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
   const target = await resolveHektorExecutionUser(job, dossier, payload, options);
   if (!target || !target.idUser) {
+    if (options.required) {
+      throw new Error("Contexte negociateur Hektor requis pour cette ecriture");
+    }
     await logJob(job.id, "hektor_context", "running", "Aucun contexte negociateur cible resolu, session courante conservee", {
       prefer_dossier_owner: Boolean(options.preferDossierOwner),
       hektor_annonce_id: dossier && dossier.hektor_annonce_id ? String(dossier.hektor_annonce_id) : null,
@@ -1441,7 +1443,7 @@ async function handlePrepareDocumentCloud(job) {
 async function handleUploadDocumentToHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferDossierOwner: true });
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "document.pdf");
   const visibility = payload.visibility === "shared" ? "shared" : "private";
@@ -1485,7 +1487,7 @@ async function handleUploadDocumentToHektor(job) {
 async function handleDeleteDocumentFromHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferDossierOwner: true });
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const documentId = payload.document_id;
   if (!documentId) throw new Error("payload_json.document_id required");
   const document = await loadConsoleDocumentById(documentId);
@@ -1535,6 +1537,80 @@ async function handleDeleteDocumentFromHektor(job) {
     hektor_uploaded_document_id: String(hektorUploadedDocumentId),
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     indexed: entries.length,
+  };
+}
+
+function hektorProspectLinkedInHtml(html, contactId, annonceId) {
+  const text = String(html || "");
+  const contact = String(contactId || "").trim();
+  const annonce = String(annonceId || "").trim();
+  if (!contact || !annonce) return false;
+  return (
+    text.includes(`changeInfo${contact}_${annonce}`) ||
+    text.includes(`changeDate${contact}_${annonce}`) ||
+    text.includes(`degroupproprioForAnnonce('${contact}', '${annonce}'`) ||
+    text.includes(`degroupproprioForAnnonce("${contact}", "${annonce}"`) ||
+    text.includes(`navigateToProspect('${contact}'`) ||
+    text.includes(`navigateToProspect("${contact}"`)
+  );
+}
+
+async function fetchHektorProspectsList(hektorAnnonceId) {
+  const id = encodeURIComponent(String(hektorAnnonceId));
+  return hektorFetch(`${XMLRPC_URL}?mode=div_display_prospects_liste&id=${id}`);
+}
+
+async function handleLinkHektorMandant(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const contactId = String(payload.contact_id || payload.hektor_contact_id || "").trim();
+  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+
+  const annonceId = String(dossier.hektor_annonce_id);
+  const before = await fetchHektorProspectsList(annonceId);
+  if (hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
+    return {
+      status: "already_linked",
+      hektor_annonce_id: annonceId,
+      hektor_contact_id: contactId,
+    };
+  }
+
+  await logJob(job.id, "hektor_mandant", "running", "Association mandant/proprietaire dans Hektor", {
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+  });
+
+  await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(contactId)}&idann=${encodeURIComponent(annonceId)}`);
+  await sleep(1800);
+
+  const after = await fetchHektorProspectsList(annonceId);
+  if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
+    throw new Error(`Association mandant non confirmee pour contact ${contactId} sur annonce ${annonceId}`);
+  }
+
+  let immediateSync = null;
+  try {
+    immediateSync = await runCreatedAnnonceImmediateSync(job, annonceId);
+  } catch (syncError) {
+    immediateSync = {
+      status: "error",
+      error: syncError && syncError.message ? syncError.message : String(syncError),
+    };
+    await logJob(job.id, "hektor_mandant_sync", "error", "Sync immediate apres association mandant echouee", {
+      hektor_annonce_id: annonceId,
+      hektor_contact_id: contactId,
+      error: immediateSync.error,
+    });
+  }
+
+  return {
+    status: "linked",
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+    immediate_sync: immediateSync,
   };
 }
 
@@ -1732,7 +1808,7 @@ async function handleDeleteHektorAnnonce(job) {
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const startedAtMs = Date.now();
-  await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false });
+  await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false, required: true });
 
   await logJob(job.id, "hektor_annonce", "running", "Lecture GraphQL avant creation annonce", {
     property_type: payload.property_type || "Appartement",
@@ -1822,6 +1898,8 @@ async function runHandler(job) {
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
       return handleDeleteDocumentFromHektor(job);
+    case "link_hektor_mandant":
+      return handleLinkHektorMandant(job);
     case "delete_hektor_annonce":
       return handleDeleteHektorAnnonce(job);
     case "create_hektor_draft_annonce":

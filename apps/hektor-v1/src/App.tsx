@@ -46,6 +46,7 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
+  createLinkHektorMandantJob,
   createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createConsoleDocumentSignedUrl,
@@ -4824,6 +4825,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         email: safeText(coords.email),
         address: [safeText(locality.adresse), safeText(locality.code), safeText(locality.ville)].filter(Boolean).join(', '),
         comment: sanitizeContactComment(item.commentaires as string | null | undefined),
+        sourceId: safeText(item.id),
+        archive: safeText(item.archive),
+        dateCreated: safeText(item.dateenr),
+        dateUpdated: safeText(item.datemaj),
+        negotiatorId: safeText(item.id_negociateur),
       }
     })
   }, [detail])
@@ -8058,7 +8064,7 @@ function DossierDetailLayout(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string }>
+  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -8135,6 +8141,10 @@ function DossierDetailLayout(props: {
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
+  const [mandantContactId, setMandantContactId] = useState('')
+  const [mandantLinkPending, setMandantLinkPending] = useState(false)
+  const [mandantLinkMessage, setMandantLinkMessage] = useState<string | null>(null)
+  const [mandantLinkError, setMandantLinkError] = useState<string | null>(null)
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
 
@@ -8142,7 +8152,32 @@ function DossierDetailLayout(props: {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
     setMandatSectionOpen(true)
     setContactSectionOpen(false)
+    setMandantContactId('')
+    setMandantLinkMessage(null)
+    setMandantLinkError(null)
+    setMandantLinkPending(false)
   }, [dossier.app_dossier_id, detailVariant])
+
+  const handleLinkMandant = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const contactId = mandantContactId.trim()
+    setMandantLinkMessage(null)
+    setMandantLinkError(null)
+    if (!/^\d+$/.test(contactId)) {
+      setMandantLinkError('Indique un ID contact Hektor numerique.')
+      return
+    }
+    setMandantLinkPending(true)
+    try {
+      const job = await createLinkHektorMandantJob({ dossier, contactId, priority: 18 })
+      setMandantContactId('')
+      setMandantLinkMessage(`Demande envoyee au PC serveur (${job.status}).`)
+    } catch (error) {
+      setMandantLinkError(error instanceof Error ? error.message : 'Association mandant impossible.')
+    } finally {
+      setMandantLinkPending(false)
+    }
+  }
 
   const buildRequestGroups = (
     historyItems: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>,
@@ -8390,7 +8425,7 @@ function DossierDetailLayout(props: {
                 {activeDetailTab === 'mandate' ? (
                 <article className="detail-subsection detail-contact-section">
                   <div className="section-header section-header-collapsible">
-                    <DetailSectionTitle icon="contact" title="Detail contact" />
+                    <DetailSectionTitle icon="contact" title="Mandants / proprietaires" />
                     {secondaryContacts.length > 0 ? (
                       <button className="section-toggle-button" type="button" onClick={() => setContactSectionOpen((value) => !value)}>
                         {contactSectionOpen ? 'Masquer la liste des mandants' : `Liste des mandants (${secondaryContacts.length + 1})`}
@@ -8399,6 +8434,30 @@ function DossierDetailLayout(props: {
                   </div>
                   {primaryContact ? (
                     <div className="detail-entity-list detail-contact-list">
+                      <div className="detail-contact-summary-strip">
+                        <span className="detail-contact-source-badge">API AnnonceById</span>
+                        <strong>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
+                        <small>{props.detail.mandants_texte || primaryContact.name}</small>
+                      </div>
+                      <form className="detail-mandant-link-form" onSubmit={handleLinkMandant}>
+                        <label htmlFor={`mandant-contact-${dossier.app_dossier_id}`}>Associer un contact Hektor</label>
+                        <div className="detail-mandant-link-controls">
+                          <input
+                            id={`mandant-contact-${dossier.app_dossier_id}`}
+                            value={mandantContactId}
+                            onChange={(event) => setMandantContactId(event.target.value)}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="ID contact"
+                          />
+                          <button type="submit" disabled={mandantLinkPending}>
+                            {mandantLinkPending ? 'Envoi...' : 'Associer'}
+                          </button>
+                        </div>
+                        <small>Action executee par le PC serveur dans le contexte negociateur.</small>
+                        {mandantLinkMessage ? <span className="detail-mandant-link-feedback is-success">{mandantLinkMessage}</span> : null}
+                        {mandantLinkError ? <span className="detail-mandant-link-feedback is-error">{mandantLinkError}</span> : null}
+                      </form>
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
                         <div className="detail-contact-head">
                           <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
@@ -8413,12 +8472,20 @@ function DossierDetailLayout(props: {
                             <strong>{primaryContact.role || '-'}</strong>
                           </div>
                           <div className="detail-entity-line">
+                            <span>ID Hektor</span>
+                            <strong>{primaryContact.sourceId || '-'}</strong>
+                          </div>
+                          <div className="detail-entity-line">
                             <span>Telephone</span>
                             <strong>{primaryContact.phone ? <a href={`tel:${primaryContact.phone}`} className="detail-contact-link">{primaryContact.phone}</a> : '-'}</strong>
                           </div>
                           <div className="detail-entity-line">
                             <span>Email</span>
                             <strong>{primaryContact.email ? <a href={`mailto:${primaryContact.email}`} className="detail-contact-link">{primaryContact.email}</a> : '-'}</strong>
+                          </div>
+                          <div className="detail-entity-line">
+                            <span>MAJ Hektor</span>
+                            <strong>{formatDate(primaryContact.dateUpdated) || '-'}</strong>
                           </div>
                           <div className="detail-entity-line detail-entity-line-full">
                             <span>Adresse</span>
@@ -8449,12 +8516,20 @@ function DossierDetailLayout(props: {
                                   <strong>{contact.role || '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line">
+                                  <span>ID Hektor</span>
+                                  <strong>{contact.sourceId || '-'}</strong>
+                                </div>
+                                <div className="detail-entity-line">
                                   <span>Telephone</span>
                                   <strong>{contact.phone ? <a href={`tel:${contact.phone}`} className="detail-contact-link">{contact.phone}</a> : '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line">
                                   <span>Email</span>
                                   <strong>{contact.email ? <a href={`mailto:${contact.email}`} className="detail-contact-link">{contact.email}</a> : '-'}</strong>
+                                </div>
+                                <div className="detail-entity-line">
+                                  <span>MAJ Hektor</span>
+                                  <strong>{formatDate(contact.dateUpdated) || '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line detail-entity-line-full">
                                   <span>Adresse</span>
@@ -8472,7 +8547,29 @@ function DossierDetailLayout(props: {
                         </div>
                       ) : null}
                     </div>
-                  ) : <p className="empty-state">Aucun contact detaille.</p>}
+                  ) : (
+                    <div className="detail-entity-list detail-contact-list">
+                      <form className="detail-mandant-link-form detail-mandant-link-form-empty" onSubmit={handleLinkMandant}>
+                        <label htmlFor={`mandant-contact-${dossier.app_dossier_id}`}>Associer un contact Hektor</label>
+                        <div className="detail-mandant-link-controls">
+                          <input
+                            id={`mandant-contact-${dossier.app_dossier_id}`}
+                            value={mandantContactId}
+                            onChange={(event) => setMandantContactId(event.target.value)}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="ID contact"
+                          />
+                          <button type="submit" disabled={mandantLinkPending}>
+                            {mandantLinkPending ? 'Envoi...' : 'Associer'}
+                          </button>
+                        </div>
+                        <small>Aucun mandant synchronise pour l'instant. Le PC serveur executera l'association dans Hektor.</small>
+                        {mandantLinkMessage ? <span className="detail-mandant-link-feedback is-success">{mandantLinkMessage}</span> : null}
+                        {mandantLinkError ? <span className="detail-mandant-link-feedback is-error">{mandantLinkError}</span> : null}
+                      </form>
+                    </div>
+                  )}
                 </article>
                 ) : null}
               </section>
@@ -9056,7 +9153,7 @@ function AnnonceScreen(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string }>
+  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -9085,7 +9182,7 @@ function DossierDetailScreen(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string }>
+  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -9117,7 +9214,7 @@ function MobileDossierDetail(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string }>
+  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>

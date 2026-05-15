@@ -113,6 +113,46 @@ Brouillon seulement -> Creation sans diffusion
 
 Le formulaire precise maintenant que la creation se fait dans le contexte negociateur selectionne, sans diffusion automatique.
 
+## Regle de contexte Hektor pour les ecritures
+
+Toute ecriture metier envoyee a Hektor depuis l'app doit etre executee avec le contexte Hektor du negociateur concerne.
+
+Regle retenue :
+
+```text
+commercial connecte dans l'app
+=> utiliser son acces negociateur Hektor
+
+admin / manager connecte dans l'app
+=> choisir le negociateur Hektor cible dans l'app
+=> executer l'action dans ce contexte negociateur
+```
+
+Cette regle concerne notamment :
+
+```text
+creation annonce
+modification annonce
+ajout / association mandant
+modification contact
+upload document Hektor
+suppression document Hektor
+```
+
+Exception volontaire :
+
+```text
+suppression annonce Hektor
+=> action administrative
+=> retour en session ADMIN Hektor obligatoire
+```
+
+Correctif worker applique :
+
+- les ecritures creation annonce, upload document et suppression document exigent maintenant un contexte negociateur resolu ;
+- si le worker ne sait pas determiner le `idUser` Hektor cible, le job passe en erreur au lieu d'utiliser par accident la session Hektor courante ;
+- les futurs jobs de modification annonce / contact devront appeler le meme garde-fou `ensureHektorExecutionContext(..., { required: true })`.
+
 ## Test effectue
 
 Job Supabase de test :
@@ -235,7 +275,7 @@ L'annonce creee est donc une base Hektor active/non brouillon a completer ensuit
 
 ## Impact sur les documents et uploads
 
-Aucun changement n'a ete fait sur :
+Le flux document continue d'utiliser les jobs existants :
 
 ```text
 upload_document_to_hektor
@@ -245,4 +285,75 @@ prepare_document_cloud
 archive_cloud_documents
 ```
 
-Le correctif est limite au flux de creation annonce.
+Depuis le correctif de contexte Hektor, les ecritures metier sont executees avec le bon contexte negociateur :
+
+```text
+commercial app    -> acces Hektor du commercial demandeur
+admin / manager   -> negociateur cible transmis par le payload ou le dossier
+suppression annonce -> admin uniquement
+```
+
+## Correctif mandants / proprietaires
+
+Audit Playwright du 15/05/2026 :
+
+`chargeannonce_contacts` ne correspond pas aux mandants/proprietaires du mandat. Cette route sert aux contacts annexes de l'annonce comme notaire, syndic, diagnostiqueur ou confrere.
+
+Les mandants/proprietaires sont geres dans l'ecran Hektor `chargeannonce_MandatPrix`.
+
+Flux HTML observe :
+
+```text
+xmlrpc.php?mode=div_display_prospects_liste&id={hektor_annonce_id}
+xmlrpc.php?mode=selectnouveauproprio_sup&id={hektor_contact_id}&idann={hektor_annonce_id}
+```
+
+Un nouveau job console a ete prepare :
+
+```text
+link_hektor_mandant
+```
+
+Role du job :
+
+```text
+App -> app_console_job(link_hektor_mandant)
+PC serveur -> se place dans le contexte Hektor negociateur
+PC serveur -> appelle selectnouveauproprio_sup
+PC serveur -> verifie div_display_prospects_liste
+PC serveur -> relance une sync ciblee pour faire remonter le mandant dans l'app
+```
+
+Point important sur les identifiants :
+
+```text
+hektor_negociateur_id local peut correspondre a userObjectId Hektor
+autologin Hektor attend idUser
+la resolution fiable se fait par email via exports_ap/hektor_users_directory.json
+```
+
+Exemple confirme pendant l'audit :
+
+```text
+Emmanuelle Pereira
+email = pereira@gti-immobilier.fr
+idUser autologin = 51
+userObjectId Hektor = 26
+```
+
+Ne pas reutiliser directement `hektor_negociateur_id` comme `idUser` autologin sans resolution par email.
+
+## Modification future des annonces
+
+Pour les prochaines modifications de fiche annonce, garder la meme regle :
+
+```text
+creation annonce       -> contexte negociateur obligatoire
+modification annonce   -> contexte negociateur obligatoire
+upload document        -> contexte negociateur obligatoire
+suppression document   -> contexte negociateur obligatoire
+association mandant    -> contexte negociateur obligatoire
+suppression annonce    -> contexte administrateur uniquement
+```
+
+Les endpoints de modification de champs annonce ne sont pas encore figes. Il faut les capturer proprement avec Playwright avant automatisation pour eviter d'envoyer des commandes HTML partielles ou dans un mauvais contexte.
