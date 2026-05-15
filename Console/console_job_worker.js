@@ -637,6 +637,81 @@ async function finishJob(jobId, status, result, errorMessage) {
   });
 }
 
+async function enqueueRefreshConsoleDataJob(parentJob, hektorAnnonceId, options = {}) {
+  const id = String(hektorAnnonceId || "").trim();
+  if (!id) return { status: "skipped", reason: "missing_hektor_annonce_id" };
+
+  const existingParams = new URLSearchParams({
+    select: "id,status,priority,requested_at",
+    job_type: "eq.refresh_console_data",
+    hektor_annonce_id: `eq.${id}`,
+    status: "in.(pending,running)",
+    order: "requested_at.desc",
+    limit: "1",
+  });
+  const existing = await supabaseRequest(`app_console_job?${existingParams.toString()}`, { method: "GET" });
+  if (Array.isArray(existing) && existing.length) {
+    const current = existing[0];
+    await logJob(parentJob.id, "sync_queue", "done", "Sync data deja en attente pour cette annonce", {
+      hektor_annonce_id: id,
+      sync_job_id: current.id,
+      sync_status: current.status,
+    });
+    return {
+      status: "already_queued",
+      job_id: current.id,
+      job_status: current.status,
+      hektor_annonce_id: id,
+    };
+  }
+
+  const payload = {
+    reason: options.reason || parentJob.job_type,
+    parent_job_id: parentJob.id,
+    parent_job_type: parentJob.job_type,
+    hektor_annonce_id: id,
+  };
+  const rows = await supabaseRequest("app_console_job", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_type: "refresh_console_data",
+      app_dossier_id: parentJob.app_dossier_id || options.appDossierId || null,
+      hektor_annonce_id: id,
+      payload_json: payload,
+      status: "pending",
+      priority: options.priority || 80,
+      requested_by: parentJob.requested_by || null,
+      requested_at: new Date().toISOString(),
+    }]),
+  });
+  const created = Array.isArray(rows) ? rows[0] : null;
+  await logJob(parentJob.id, "sync_queue", "done", "Sync data differee creee", {
+    hektor_annonce_id: id,
+    sync_job_id: created ? created.id : null,
+    priority: options.priority || 80,
+  });
+  return {
+    status: "queued",
+    job_id: created ? created.id : null,
+    hektor_annonce_id: id,
+    priority: options.priority || 80,
+  };
+}
+
+async function enqueueRefreshConsoleDataJobBestEffort(parentJob, hektorAnnonceId, options = {}) {
+  try {
+    return await enqueueRefreshConsoleDataJob(parentJob, hektorAnnonceId, options);
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    await logJob(parentJob.id, "sync_queue", "error", "Creation sync data differee echouee", {
+      hektor_annonce_id: String(hektorAnnonceId || ""),
+      error: message,
+    });
+    return { status: "error", error: message, hektor_annonce_id: String(hektorAnnonceId || "") };
+  }
+}
+
 async function loadDossier(job) {
   if (job.app_dossier_id == null && !job.hektor_annonce_id) throw new Error("Job without dossier or annonce id");
   const params = new URLSearchParams({
@@ -1177,6 +1252,24 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
     status: "done",
     hektor_annonce_id: id,
     steps: completed.map((item) => item.step),
+  };
+}
+
+async function handleRefreshConsoleData(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for refresh_console_data");
+  await logJob(job.id, "refresh_console_data", "running", "Synchronisation differee des donnees annonce", {
+    hektor_annonce_id: hektorAnnonceId,
+    reason: payload.reason || null,
+    parent_job_id: payload.parent_job_id || null,
+  });
+  const result = await runCreatedAnnonceImmediateSync(job, hektorAnnonceId);
+  return {
+    ...result,
+    status: "synced",
+    reason: payload.reason || null,
+    parent_job_id: payload.parent_job_id || null,
   };
 }
 
@@ -1785,25 +1878,16 @@ async function handleUpdateHektorAnnonceFields(job) {
 
   if (!results.length) throw new Error("Aucun champ annonce modifiable fourni");
 
-  let immediateSync = null;
-  try {
-    immediateSync = await runCreatedAnnonceImmediateSync(job, annonceId);
-  } catch (syncError) {
-    immediateSync = {
-      status: "error",
-      error: syncError && syncError.message ? syncError.message : String(syncError),
-    };
-    await logJob(job.id, "hektor_annonce_update_sync", "error", "Sync immediate apres modification annonce echouee", {
-      hektor_annonce_id: annonceId,
-      error: immediateSync.error,
-    });
-  }
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "update_hektor_annonce_fields",
+    priority: 80,
+  });
 
   return {
     status: "updated",
     hektor_annonce_id: annonceId,
     updated_groups: results,
-    immediate_sync: immediateSync,
+    sync_job: syncJob,
   };
 }
 
@@ -1838,26 +1922,16 @@ async function handleLinkHektorMandant(job) {
     throw new Error(`Association mandant non confirmee pour contact ${contactId} sur annonce ${annonceId}`);
   }
 
-  let immediateSync = null;
-  try {
-    immediateSync = await runCreatedAnnonceImmediateSync(job, annonceId);
-  } catch (syncError) {
-    immediateSync = {
-      status: "error",
-      error: syncError && syncError.message ? syncError.message : String(syncError),
-    };
-    await logJob(job.id, "hektor_mandant_sync", "error", "Sync immediate apres association mandant echouee", {
-      hektor_annonce_id: annonceId,
-      hektor_contact_id: contactId,
-      error: immediateSync.error,
-    });
-  }
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "link_hektor_mandant",
+    priority: 80,
+  });
 
   return {
     status: "linked",
     hektor_annonce_id: annonceId,
     hektor_contact_id: contactId,
-    immediate_sync: immediateSync,
+    sync_job: syncJob,
   };
 }
 
@@ -1989,20 +2063,10 @@ async function handleCreateHektorMandantContact(job) {
     throw new Error(`Creation contact OK mais association mandant non confirmee pour ${created.contactId}`);
   }
 
-  let immediateSync = null;
-  try {
-    immediateSync = await runCreatedAnnonceImmediateSync(job, annonceId);
-  } catch (syncError) {
-    immediateSync = {
-      status: "error",
-      error: syncError && syncError.message ? syncError.message : String(syncError),
-    };
-    await logJob(job.id, "hektor_mandant_sync", "error", "Sync immediate apres creation mandant echouee", {
-      hektor_annonce_id: annonceId,
-      hektor_contact_id: created.contactId,
-      error: immediateSync.error,
-    });
-  }
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "create_hektor_mandant_contact",
+    priority: 80,
+  });
 
   return {
     status: "created_and_linked",
@@ -2013,7 +2077,7 @@ async function handleCreateHektorMandantContact(job) {
       prenom: created.firstName,
       email: created.email,
     },
-    immediate_sync: immediateSync,
+    sync_job: syncJob,
   };
 }
 
@@ -2250,19 +2314,10 @@ async function handleCreateHektorDraftAnnonce(job) {
     isValid: created.isValid,
   });
 
-  let immediateSync = null;
-  try {
-    immediateSync = await runCreatedAnnonceImmediateSync(job, created.id);
-  } catch (syncError) {
-    immediateSync = {
-      status: "error",
-      error: syncError && syncError.message ? syncError.message : String(syncError),
-    };
-    await logJob(job.id, "hektor_annonce_sync", "error", "Sync immediate annonce creee echouee", {
-      hektor_annonce_id: String(created.id),
-      error: immediateSync.error,
-    });
-  }
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, created.id, {
+    reason: "create_hektor_draft_annonce",
+    priority: 80,
+  });
 
   return {
     hektor_annonce_id: String(created.id),
@@ -2273,7 +2328,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     folder_number: created.folderNumber || null,
     created_at_hektor: created.createdAt || null,
     property_type: created.type && created.type.name ? created.type.name : payload.property_type || null,
-    immediate_sync: immediateSync,
+    sync_job: syncJob,
     requested_payload: {
       title: payload.title || null,
       agence_nom: payload.agence_nom || null,
@@ -2312,7 +2367,7 @@ async function runHandler(job) {
     case "create_hektor_draft_annonce":
       return handleCreateHektorDraftAnnonce(job);
     case "refresh_console_data":
-      return handleSyncConsoleDocuments(job);
+      return handleRefreshConsoleData(job);
     case "archive_cloud_documents":
       throw new Error("archive_cloud_documents handler will be implemented after first storage sizing validation");
     default:

@@ -97,3 +97,22 @@ Test reel effectue sur l'annonce Hektor `62243` :
 Le test a confirme que Hektor accepte plusieurs mandants sur la meme annonce.
 
 Un garde-fou a aussi ete ajoute au worker : chaque script Python de synchro immediate a maintenant un timeout. Si la derniere etape de push Supabase se fige, le worker ne reste plus bloque indefiniment et peut continuer a traiter les prochaines jobs.
+
+## Separation action Hektor / synchro donnees
+
+La synchro lourde n'est plus executee directement dans la job d'action Hektor pour :
+
+- `create_hektor_draft_annonce`
+- `update_hektor_annonce_fields`
+- `link_hektor_mandant`
+- `create_hektor_mandant_contact`
+
+Ces jobs font maintenant uniquement l'action Hektor, la verification metier, puis creent une job separee :
+
+```text
+refresh_console_data
+```
+
+Cette job est creee avec une priorite plus basse (`80`) que les actions utilisateur. Le worker traite donc d'abord les actions Hektor en attente, puis les synchronisations de donnees.
+
+Les jobs documentaires restent differentes : upload/suppression document Hektor actualisent deja le catalogue documentaire directement dans leur job, sans lancer la grosse synchro Phase 2.
