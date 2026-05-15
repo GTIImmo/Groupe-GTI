@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -3243,6 +3243,33 @@ export async function createDeleteHektorAnnonceJob(input: {
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor annonce delete job')
   return data as ConsoleJob
+}
+
+const hektorActionJobTypes: ConsoleJobType[] = ['create_hektor_draft_annonce', 'delete_hektor_annonce']
+
+export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .select('*')
+    .in('job_type', hektorActionJobTypes)
+    .in('status', ['pending', 'running'])
+    .order('requested_at', { ascending: false })
+    .limit(25)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ConsoleJob[]
+}
+
+export async function loadConsoleJobsByIds(ids: string[]): Promise<ConsoleJob[]> {
+  if (!hasSupabaseEnv || !supabase || ids.length === 0) return []
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)))
+  if (uniqueIds.length === 0) return []
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .select('*')
+    .in('id', uniqueIds)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ConsoleJob[]
 }
 
 export type HektorDraftAnnonceJobInput = {

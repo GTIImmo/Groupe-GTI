@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, Fragment, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import {
   type AppFilters,
@@ -50,9 +50,11 @@ import {
   createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createConsoleDocumentSignedUrl,
+  loadActiveHektorActionJobs,
+  loadConsoleJobsByIds,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -1549,6 +1551,36 @@ function commercialDisplay(value: { commercial_nom?: string | null }) {
   return (value.commercial_nom ?? '').trim() || '-'
 }
 
+function isConsoleJobActive(job: Pick<ConsoleJob, 'status'>) {
+  return job.status === 'pending' || job.status === 'running'
+}
+
+function consoleJobShortId(job: Pick<ConsoleJob, 'id'>) {
+  return job.id.slice(0, 8)
+}
+
+function hektorActionJobTitle(job: ConsoleJob) {
+  const payload = job.payload_json ?? {}
+  const result = job.result_json ?? {}
+  if (job.job_type === 'delete_hektor_annonce') {
+    return `Suppression ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
+  const folder = typeof result.folder_number === 'string' ? result.folder_number : null
+  const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : null
+  return folder ? `Creation ${folder}` : title ? `Creation ${title}` : 'Creation annonce Hektor'
+}
+
+function hektorActionJobDetail(job: ConsoleJob) {
+  const payload = job.payload_json ?? {}
+  const result = job.result_json ?? {}
+  const agency = typeof payload.agence_nom === 'string' ? payload.agence_nom : null
+  const negotiator = typeof payload.hektor_user_label === 'string' ? payload.hektor_user_label : null
+  const folder = typeof result.folder_number === 'string' ? result.folder_number : null
+  if (job.status === 'error') return job.error_message || 'Action Hektor en erreur'
+  if (folder) return `${folder} synchronise dans l'app`
+  return [negotiator, agency].filter(Boolean).join(' - ') || `Job ${consoleJobShortId(job)}`
+}
+
 function userInitials(displayName?: string | null, email?: string | null) {
   const source = (displayName ?? '').trim() || (email ?? '').split('@')[0] || 'U'
   const parts = source.split(/[\s._-]+/).filter(Boolean)
@@ -2734,6 +2766,9 @@ export default function App() {
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [dossiersTotal, setDossiersTotal] = useState(0)
   const [dossierPage, setDossierPage] = useState(1)
+  const [dataReloadKey, setDataReloadKey] = useState(0)
+  const [hektorActionJobs, setHektorActionJobs] = useState<ConsoleJob[]>([])
+  const hektorActionJobsRef = useRef<ConsoleJob[]>([])
   const [mandats, setMandats] = useState<MandatRecord[]>([])
   const [mandatsTotal, setMandatsTotal] = useState(0)
   const [mandatPage, setMandatPage] = useState(1)
@@ -2879,6 +2914,22 @@ export default function App() {
     failed: Array<Record<string, unknown>>
     pending?: Array<Record<string, unknown>>
   }>(null)
+
+  function updateHektorActionJobs(updater: (current: ConsoleJob[]) => ConsoleJob[]) {
+    setHektorActionJobs((current) => {
+      const next = updater(current)
+      hektorActionJobsRef.current = next
+      return next
+    })
+  }
+
+  function rememberHektorActionJob(job: ConsoleJob) {
+    updateHektorActionJobs((current) => {
+      const withoutSame = current.filter((item) => item.id !== job.id)
+      return [job, ...withoutSame].slice(0, 12)
+    })
+  }
+
   const sessionEmail = normalizeEmail(session?.user.email ?? profile?.email ?? null)
   const dataScope = useMemo<DataScope | undefined>(() => {
     if (profile?.role !== 'commercial') return undefined
@@ -2900,6 +2951,11 @@ export default function App() {
     if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
     return filters
   }, [filters, screen])
+  const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter(isConsoleJobActive), [hektorActionJobs])
+  const activeDeleteAnnonceJobs = useMemo(() => activeHektorActionJobs.filter((job) => job.job_type === 'delete_hektor_annonce'), [activeHektorActionJobs])
+  const deletingAppDossierIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => Number(job.app_dossier_id)).filter((value) => Number.isFinite(value))), [activeDeleteAnnonceJobs])
+  const deletingHektorAnnonceIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '')).filter(Boolean)), [activeDeleteAnnonceJobs])
+  const visibleDossiers = useMemo(() => dossiers.filter((item) => !deletingAppDossierIds.has(item.app_dossier_id) && !deletingHektorAnnonceIds.has(String(item.hektor_annonce_id))), [dossiers, deletingAppDossierIds, deletingHektorAnnonceIds])
 
   useEffect(() => {
     if (!hasSupabaseEnv) {
@@ -3058,6 +3114,49 @@ export default function App() {
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
+    let refreshQueued = false
+    async function refreshHektorActionJobs() {
+      try {
+        const trackedIds = hektorActionJobsRef.current.map((job) => job.id)
+        const [activeJobs, trackedJobs] = await Promise.all([
+          loadActiveHektorActionJobs(),
+          loadConsoleJobsByIds(trackedIds),
+        ])
+        if (cancelled) return
+        updateHektorActionJobs((current) => {
+          const previousById = new Map(current.map((job) => [job.id, job]))
+          const nextById = new Map(current.map((job) => [job.id, job]))
+          for (const job of [...activeJobs, ...trackedJobs]) nextById.set(job.id, job)
+          const transitioned = [...nextById.values()].some((job) => {
+            const previous = previousById.get(job.id)
+            return previous && isConsoleJobActive(previous) && !isConsoleJobActive(job)
+          })
+          if (transitioned && !refreshQueued) {
+            refreshQueued = true
+            window.setTimeout(() => {
+              refreshQueued = false
+              setDataReloadKey((value) => value + 1)
+            }, 600)
+          }
+          return [...nextById.values()]
+            .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime())
+            .slice(0, 12)
+        })
+      } catch (error) {
+        if (!cancelled) console.warn('Hektor action jobs refresh failed', error)
+      }
+    }
+    void refreshHektorActionJobs()
+    const interval = window.setInterval(refreshHektorActionJobs, 5000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    let cancelled = false
     setPageLoading(true)
     setMandatLoading(true)
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
@@ -3110,7 +3209,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen])
+  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen, dataReloadKey])
 
   useEffect(() => {
     if (selectedDossierId == null) return
@@ -3492,8 +3591,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         note: draftAnnonceNote,
         priority: 10,
       })
+      rememberHektorActionJob(job)
       setDraftAnnonceModalOpen(false)
-      setNoticeMessage(`Demande envoyee au PC serveur. Job annonce Hektor ${job.id.slice(0, 8)} en attente.`)
+      setNoticeMessage(`Creation affichee en suivi. Job annonce Hektor ${job.id.slice(0, 8)} en attente.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d annonce Hektor')
     } finally {
@@ -3535,11 +3635,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         confirmText: deleteAnnonceConfirmText,
         priority: 5,
       })
+      const deletedAppDossierId = deleteAnnonceTarget.app_dossier_id
+      rememberHektorActionJob(job)
+      setDossiers((current) => current.filter((item) => item.app_dossier_id !== deletedAppDossierId))
+      setMandats((current) => current.filter((item) => item.app_dossier_id !== deletedAppDossierId))
+      setWorkItems((current) => current.filter((item) => item.app_dossier_id !== deletedAppDossierId))
+      setSelectedDossierId((current) => current === deletedAppDossierId ? null : current)
+      setSelectedDossier((current) => current?.app_dossier_id === deletedAppDossierId ? null : current)
       setDeleteAnnonceTarget(null)
       setDeleteAnnonceReason('')
       setDeleteAnnonceConfirmText('')
       setDetailOpen(false)
-      setNoticeMessage(`Suppression envoyee au PC serveur. Job ${job.id.slice(0, 8)} en attente.`)
+      setNoticeMessage(`Annonce masquee. Suppression Hektor en arriere-plan, job ${job.id.slice(0, 8)}.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de suppression Hektor')
     } finally {
@@ -5800,9 +5907,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
         {screen === 'annonces' ? (
           <MobileDossierCards
-            dossiers={dossiers}
+            dossiers={visibleDossiers}
             total={dossiersTotal}
             loading={pageLoading}
+            hektorActionJobs={activeHektorActionJobs}
             onFocusDossier={setSelectedDossierId}
             onOpenDetail={() => setDetailOpen(true)}
           />
@@ -6475,7 +6583,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
             }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
-          <StockScreen dossiers={dossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
+          <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
           <MandatsScreen
             mandats={screenMandats}
@@ -6807,6 +6915,7 @@ function StockScreen(props: {
   dossiersTotal: number
   dossierPage: number
   dossierTotalPages: number
+  hektorActionJobs: ConsoleJob[]
   onPrevDossier: () => void
   onNextDossier: () => void
   onGoToDossierPage: (page: number) => void
@@ -6845,6 +6954,17 @@ function StockScreen(props: {
           </div>
         </div>
         <p className="panel-note">La liste affiche 50 dossiers par page sur {new Intl.NumberFormat('fr-FR').format(props.dossiersTotal)} dossiers au total.</p>
+        {props.hektorActionJobs.length > 0 ? (
+          <div className="hektor-job-strip">
+            {props.hektorActionJobs.map((job) => (
+              <article key={job.id} className={`hektor-job-card hektor-job-card-${job.job_type === 'delete_hektor_annonce' ? 'delete' : 'create'}`}>
+                <span>{job.job_type === 'delete_hektor_annonce' ? 'Suppression en cours' : 'Creation en cours'}</span>
+                <strong>{hektorActionJobTitle(job)}</strong>
+                <small>{hektorActionJobDetail(job)}</small>
+              </article>
+            ))}
+          </div>
+        ) : null}
         <div className="table-wrap">
           {props.dossiers.length > 0 ? (
             <table>
@@ -9743,10 +9863,11 @@ function MobileDossierCards(props: {
   dossiers: Dossier[]
   total: number
   loading: boolean
+  hektorActionJobs: ConsoleJob[]
   onFocusDossier: (id: number) => void
   onOpenDetail: () => void
 }) {
-  if (props.dossiers.length === 0) {
+  if (props.dossiers.length === 0 && props.hektorActionJobs.length === 0) {
     return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucun dossier disponible.'}</section>
   }
   return (
@@ -9758,6 +9879,13 @@ function MobileDossierCards(props: {
         </div>
         <span>{props.dossiers.length} / {props.total}</span>
       </div>
+      {props.hektorActionJobs.map((job) => (
+        <article key={`mobile-hektor-job-${job.id}`} className={`mobile-list-card mobile-hektor-job-card mobile-hektor-job-card-${job.job_type === 'delete_hektor_annonce' ? 'delete' : 'create'}`}>
+          <span className="mobile-card-meta">{job.job_type === 'delete_hektor_annonce' ? 'Suppression en cours' : 'Creation en cours'}</span>
+          <strong>{hektorActionJobTitle(job)}</strong>
+          <span className="mobile-card-subline">{hektorActionJobDetail(job)}</span>
+        </article>
+      ))}
       {props.dossiers.map((item) => (
         <article key={`mobile-dossier-${item.app_dossier_id}`} className="mobile-list-card">
           <div className="mobile-card-top">

@@ -9190,6 +9190,58 @@ button.metric-card.is-active {
 .mobile-mandant-link-feedback.is-error {
   color: #b42318;
 }
+.hektor-job-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.hektor-job-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(34, 35, 35, 0.06);
+}
+.hektor-job-card span {
+  color: var(--gti-final-pink);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hektor-job-card strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hektor-job-card small {
+  min-width: 0;
+  overflow: hidden;
+  color: #747a7a;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hektor-job-card-create {
+  border-left: 4px solid #1b7f4d;
+}
+.hektor-job-card-delete {
+  border-left: 4px solid #b42318;
+}
+.mobile-hektor-job-card {
+  border-left: 4px solid #1b7f4d;
+}
+.mobile-hektor-job-card-delete {
+  border-left-color: #b42318;
+}
 .detail-screen .detail-contact-section .detail-contact-card-primary:only-child {
   grid-column: 1 / -1;
 }
