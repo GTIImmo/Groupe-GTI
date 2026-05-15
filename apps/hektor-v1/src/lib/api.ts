@@ -3128,6 +3128,47 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+export type HektorDraftAnnonceJobInput = {
+  title?: string | null
+  agenceNom?: string | null
+  propertyType?: string | null
+  offerType?: 'sale' | 'rental'
+  address?: string | null
+  postalCode?: string | null
+  city?: string | null
+  price?: string | number | null
+  surface?: string | number | null
+  roomCount?: string | number | null
+  bedroomCount?: string | number | null
+  note?: string | null
+  priority?: number
+}
+
+export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_console_create_draft_annonce_job', {
+    draft_payload: {
+      title: input.title?.trim() || null,
+      agence_nom: input.agenceNom?.trim() || null,
+      property_type: input.propertyType?.trim() || 'Appartement',
+      hektor_id_type: '2',
+      offer_type: input.offerType ?? 'sale',
+      address: input.address?.trim() || null,
+      postal_code: input.postalCode?.trim() || null,
+      city: input.city?.trim() || null,
+      price: input.price == null ? null : String(input.price).trim() || null,
+      surface: input.surface == null ? null : String(input.surface).trim() || null,
+      room_count: input.roomCount == null ? null : String(input.roomCount).trim() || null,
+      bedroom_count: input.bedroomCount == null ? null : String(input.bedroomCount).trim() || null,
+      note: input.note?.trim() || null,
+    },
+    draft_priority: input.priority ?? 20,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor draft annonce job')
+  return data as ConsoleJob
+}
+
 export async function createConsoleDocumentSignedUrl(document: ConsoleDocument, expiresIn = 300): Promise<string> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   if (document.storage_status !== 'cloud_available' || !document.storage_path) {

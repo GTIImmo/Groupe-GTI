@@ -45,6 +45,7 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
+  createHektorDraftAnnonceJob,
   createConsoleDocumentSignedUrl,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
@@ -2765,6 +2766,7 @@ export default function App() {
   const [suiviRequestFilter, setSuiviRequestFilter] = useState<'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null>('pending_or_in_progress')
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestPending, setRequestPending] = useState(false)
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -2783,6 +2785,18 @@ export default function App() {
   const [requestModalComment, setRequestModalComment] = useState('')
   const [requestModalType, setRequestModalType] = useState<BusinessRequestType>('demande_diffusion')
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
+  const [draftAnnonceModalOpen, setDraftAnnonceModalOpen] = useState(false)
+  const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
+  const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
+  const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
+  const [draftAnnonceAddress, setDraftAnnonceAddress] = useState('')
+  const [draftAnnoncePostalCode, setDraftAnnoncePostalCode] = useState('')
+  const [draftAnnonceCity, setDraftAnnonceCity] = useState('')
+  const [draftAnnoncePrice, setDraftAnnoncePrice] = useState('')
+  const [draftAnnonceSurface, setDraftAnnonceSurface] = useState('')
+  const [draftAnnonceRoomCount, setDraftAnnonceRoomCount] = useState('')
+  const [draftAnnonceBedroomCount, setDraftAnnonceBedroomCount] = useState('')
+  const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
   const [appUsers, setAppUsers] = useState<UserProfile[]>([])
@@ -3373,6 +3387,62 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setPriceDropCheckPrompt(null)
     setValidationCheckPrompt(null)
     setCancellationCheckPrompt(null)
+  }
+
+  function openDraftAnnonceModal() {
+    const agency = userNegotiatorContext?.agence_nom || (filters.agency !== allFilterValue ? filters.agency : '')
+    setDraftAnnonceAgency(agency === allFilterValue ? '' : agency)
+    setDraftAnnonceTitle('')
+    setDraftAnnonceAddress('')
+    setDraftAnnoncePostalCode('')
+    setDraftAnnonceCity('')
+    setDraftAnnoncePrice('')
+    setDraftAnnonceSurface('')
+    setDraftAnnonceRoomCount('')
+    setDraftAnnonceBedroomCount('')
+    setDraftAnnonceNote('')
+    setNoticeMessage(null)
+    setErrorMessage(null)
+    setDraftAnnonceModalOpen(true)
+  }
+
+  function closeDraftAnnonceModal() {
+    if (draftAnnoncePending) return
+    setDraftAnnonceModalOpen(false)
+  }
+
+  async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!draftAnnonceAgency.trim()) {
+      setErrorMessage('Choisis une agence avant de creer le brouillon Hektor.')
+      return
+    }
+    setDraftAnnoncePending(true)
+    setNoticeMessage(null)
+    setErrorMessage(null)
+    try {
+      const job = await createHektorDraftAnnonceJob({
+        title: draftAnnonceTitle,
+        agenceNom: draftAnnonceAgency,
+        propertyType: 'Appartement',
+        offerType: 'sale',
+        address: draftAnnonceAddress,
+        postalCode: draftAnnoncePostalCode,
+        city: draftAnnonceCity,
+        price: draftAnnoncePrice,
+        surface: draftAnnonceSurface,
+        roomCount: draftAnnonceRoomCount,
+        bedroomCount: draftAnnonceBedroomCount,
+        note: draftAnnonceNote,
+        priority: 10,
+      })
+      setDraftAnnonceModalOpen(false)
+      setNoticeMessage(`Demande envoyee au PC serveur. Job brouillon Hektor ${job.id.slice(0, 8)} en attente.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de brouillon Hektor')
+    } finally {
+      setDraftAnnoncePending(false)
+    }
   }
 
   function openDiffusionModal(appDossierId: number) {
@@ -4297,6 +4367,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   const detail = useMemo(() => detailPayload(selectedDossier), [selectedDossier])
+  const canCreateHektorDraftAnnonce = profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'commercial'
   const visibleDossiersCount = dossiersTotal || dossiers.length
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
   const mandatTotalPages = totalPages(mandatsTotal, mandatPageSize)
@@ -4847,6 +4918,82 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="detail-image-modal-body">
                 <img src={detailImageModalUrl} alt={selectedDossier?.titre_bien ?? 'Annonce'} />
               </div>
+            </section>
+          </div>
+        ) : null}
+        {draftAnnonceModalOpen ? (
+          <div className="modal-overlay" onClick={closeDraftAnnonceModal}>
+            <section className="modal-panel modal-panel-wide draft-annonce-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head draft-annonce-head">
+                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Console Hektor</p>
+                  <h3>Nouveau brouillon annonce</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Fermer</button>
+              </div>
+              <p className="modal-subline">Cette action cree uniquement un brouillon non valide et non diffuse dans Hektor.</p>
+              <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
+                <label className="filter-field draft-annonce-field-wide">
+                  <span>Titre / repere interne</span>
+                  <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
+                </label>
+                <label className="filter-field">
+                  <span>Agence</span>
+                  <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)} required>
+                    <option value="">Choisir</option>
+                    {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
+                  </select>
+                </label>
+                <label className="filter-field">
+                  <span>Type Hektor</span>
+                  <select value="Appartement" disabled>
+                    <option value="Appartement">Appartement</option>
+                  </select>
+                </label>
+                <label className="filter-field">
+                  <span>Adresse</span>
+                  <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
+                </label>
+                <label className="filter-field">
+                  <span>Code postal</span>
+                  <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
+                </label>
+                <label className="filter-field">
+                  <span>Ville</span>
+                  <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
+                </label>
+                <label className="filter-field">
+                  <span>Prix</span>
+                  <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
+                </label>
+                <label className="filter-field">
+                  <span>Surface</span>
+                  <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
+                </label>
+                <label className="filter-field">
+                  <span>Pieces</span>
+                  <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
+                </label>
+                <label className="filter-field">
+                  <span>Chambres</span>
+                  <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
+                </label>
+                <label className="filter-field draft-annonce-field-wide">
+                  <span>Note</span>
+                  <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer le brouillon ensuite" />
+                </label>
+                <section className="draft-annonce-warning">
+                  <strong>Brouillon seulement</strong>
+                  <span>L'enrichissement complet, la validation et la diffusion resteront des actions separees.</span>
+                </section>
+                <div className="modal-actions">
+                  <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
+                  <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim()}>
+                    {draftAnnoncePending ? 'Creation...' : 'Creer le brouillon'}
+                  </button>
+                </div>
+              </form>
             </section>
           </div>
         ) : null}
@@ -5419,6 +5566,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             />
           </label>
           <div className="mobile-command-actions">
+            {canCreateHektorDraftAnnonce ? <button className="mobile-draft-button" type="button" onClick={openDraftAnnonceModal}>Nouveau</button> : null}
             <button type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Fermer filtres' : 'Filtres'}</button>
             <button
               className={`mobile-stats-toggle ${mobileStatsOpen ? 'is-active' : ''}`}
@@ -5480,6 +5628,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : null}
 
         {bootLoading && dossiers.length === 0 && workItems.length === 0 ? <section className="info-banner">Chargement initial des données...</section> : null}
+        {noticeMessage ? <section className="info-banner">{noticeMessage}</section> : null}
         {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
 
         {screen === 'annonces' ? (
@@ -5638,6 +5787,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <div className="hero-actions">
+                  {canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouveau brouillon</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
                 </div>
@@ -6142,6 +6292,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div> : null}
 
         {bootLoading && dossiers.length === 0 && workItems.length === 0 ? <section className="info-banner">Chargement initial des donnees...</section> : null}
+        {noticeMessage ? <section className="info-banner">{noticeMessage}</section> : null}
         {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
 
         {screen === 'annonces' && detailOpen ? (

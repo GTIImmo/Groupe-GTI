@@ -20,6 +20,31 @@ const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || 6
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
 const ENABLE_HEKTOR_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS || "").toLowerCase() === "true";
 const CLOUD_STATUSES = new Set(["Actif", "Sous offre", "Sous compromis", "Estimation"]);
+const PROPERTY_LISTING_QUERY = `
+query PropertyListing($filters: AnnonceSearchInput!) {
+  listing: properties(filters: $filters) {
+    metadata { total perPage currentPage nextPage }
+    properties: nodes {
+      id
+      folderNumber
+      createdAt
+      datemaj
+      status
+      isArchived
+      isDraft
+      isMasked
+      isBroadcasted
+      isValid
+      price(force: true)
+      surface
+      roomCount
+      adresse
+      ville { nom }
+      villeprivee { nom }
+      type { name }
+    }
+  }
+}`;
 
 let hektorLoginPromise = null;
 let lastHektorLoginAt = fs.existsSync(STORAGE_STATE_PATH) ? fs.statSync(STORAGE_STATE_PATH).mtimeMs : 0;
@@ -217,6 +242,20 @@ function parseQuotedArgs(argsText) {
     args.push(decodeHtml((match[1] || match[2] || "").replace(/\\'/g, "'").replace(/\\"/g, '"')));
   }
   return args;
+}
+
+function extractInputValue(html, key) {
+  const escaped = String(key).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`<input[^>]*(?:id|name)=["']${escaped}["'][^>]*value=["']([^"']*)["'][^>]*>`, "i"),
+    new RegExp(`<input[^>]*value=["']([^"']*)["'][^>]*(?:id|name)=["']${escaped}["'][^>]*>`, "i"),
+    new RegExp(`${escaped}\\s*=\\s*["']([^"']+)["']`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = String(html || "").match(pattern);
+    if (match) return decodeHtml(match[1]);
+  }
+  return "";
 }
 
 function extractDocumentEntries(html, source, visibility) {
@@ -441,6 +480,52 @@ async function hektorFetch(url, options = {}) {
     text,
     mimeType: response.headers.get("content-type") || "application/octet-stream",
   };
+}
+
+async function hektorGraphQL(variables) {
+  const result = await hektorFetch(`${HEKTOR_BASE_URL.replace(/\/+$/, "")}/ws/GraphQL_Web`, {
+    method: "POST",
+    body: JSON.stringify({
+      operationName: "PropertyListing",
+      query: PROPERTY_LISTING_QUERY,
+      variables,
+    }),
+    headers: { "Content-Type": "application/json" },
+  });
+  const payload = JSON.parse(result.text);
+  if (payload.errors && payload.errors.length) {
+    throw new Error(`GraphQL Hektor: ${payload.errors.map((item) => item.message || String(item)).join("; ")}`);
+  }
+  return payload;
+}
+
+async function fetchLatestHektorProperties(page = 1, archived = false) {
+  const payload = await hektorGraphQL({
+    filters: {
+      limit: 50,
+      offers: ["SALE"],
+      status: "ALL",
+      page,
+      order: "LATEST",
+      sources: ["local"],
+      archived,
+    },
+  });
+  return payload && payload.data && payload.data.listing && Array.isArray(payload.data.listing.properties)
+    ? payload.data.listing.properties
+    : [];
+}
+
+function draftCreationScore(property, beforeIds, startedAtMs) {
+  if (!property || beforeIds.has(String(property.id))) return -1;
+  if (property.isDraft !== true || property.isBroadcasted !== false || property.isValid !== false) return -1;
+  const createdAtMs = property.createdAt ? Date.parse(property.createdAt) : 0;
+  const recentEnough = !Number.isFinite(createdAtMs) || !createdAtMs || createdAtMs >= startedAtMs - (10 * 60 * 1000);
+  if (!recentEnough) return -1;
+  let score = createdAtMs || startedAtMs;
+  if (property.folderNumber == null) score += 1000;
+  if (Number(property.price || 0) === 0) score += 1000;
+  return score;
 }
 
 function isHektorLoginPage(text) {
@@ -825,6 +910,103 @@ async function handleDeleteDocumentFromHektor(job) {
   };
 }
 
+async function handleCreateHektorDraftAnnonce(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const startedAtMs = Date.now();
+  const idType = String(payload.hektor_id_type || payload.idType || "2");
+  const offredem = payload.offer_type === "rental" ? "1" : "0";
+  const statutAnnonce = String(payload.statut_annonce || "2");
+
+  await logJob(job.id, "hektor_draft", "running", "Lecture GraphQL avant creation brouillon", {
+    property_type: payload.property_type || "Appartement",
+    agence_nom: payload.agence_nom || null,
+  });
+  const before = await fetchLatestHektorProperties(1, false);
+  const beforeIds = new Set(before.map((property) => String(property.id)));
+
+  const wizardPageUrl = `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien`;
+  await hektorFetch(wizardPageUrl, { headers: { Accept: "text/html,*/*" } });
+
+  const wizardUrl = `${XMLRPC_URL}?mode=ajoutebien&offredem=${encodeURIComponent(offredem)}&idType=${encodeURIComponent(idType)}&statutAnnonce=${encodeURIComponent(statutAnnonce)}`;
+  const wizard = await hektorFetch(wizardUrl, { headers: { Accept: "text/html,*/*" } });
+  const idannWizard = extractInputValue(wizard.text, "idannWizard") || extractInputValue(wizard.text, "idann");
+  const currentStepWizard = extractInputValue(wizard.text, "currentStepWizard") || "1";
+  const statusAnnonceWizard = extractInputValue(wizard.text, "statusAnnonceWizard") || statutAnnonce;
+  const offredemWizard = extractInputValue(wizard.text, "offredemWizard") || offredem;
+  const idtypeWizard = extractInputValue(wizard.text, "idtypeWizard") || idType;
+
+  if (!idannWizard) {
+    throw new Error("Creation brouillon Hektor: idannWizard introuvable dans le wizard");
+  }
+
+  await logJob(job.id, "hektor_draft", "running", "Sauvegarde etape wizard brouillon", {
+    idannWizard,
+    currentStepWizard,
+    idtypeWizard,
+    statusAnnonceWizard,
+  });
+
+  const form = new URLSearchParams();
+  form.set("mode", "ajoutebien_wizardBien");
+  form.set("offredem", offredemWizard);
+  form.set("idType", idtypeWizard);
+  form.set("statutAnnonce", statusAnnonceWizard);
+  form.set("idann", idannWizard);
+  form.set("programme_neuf", String(payload.programme_neuf || "0"));
+  form.set("currentStepWizard", currentStepWizard);
+  await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: form,
+    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+  });
+
+  let created = null;
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    await sleep(attempt === 1 ? 1800 : 2500);
+    const latest = await fetchLatestHektorProperties(1, false);
+    const candidates = latest
+      .map((property) => ({ property, score: draftCreationScore(property, beforeIds, startedAtMs) }))
+      .filter((item) => item.score >= 0)
+      .sort((left, right) => right.score - left.score);
+    if (candidates.length) {
+      created = candidates[0].property;
+      break;
+    }
+  }
+
+  if (!created) {
+    throw new Error(`Creation brouillon Hektor non confirmee par GraphQL apres sauvegarde wizard ${idannWizard}`);
+  }
+
+  await logJob(job.id, "hektor_draft", "done", "Brouillon Hektor confirme par GraphQL", {
+    hektor_annonce_id: String(created.id),
+    isDraft: created.isDraft,
+    isBroadcasted: created.isBroadcasted,
+    isValid: created.isValid,
+  });
+
+  return {
+    hektor_annonce_id: String(created.id),
+    wizard_id: String(idannWizard),
+    is_draft: created.isDraft === true,
+    is_broadcasted: created.isBroadcasted === true,
+    is_valid: created.isValid === true,
+    folder_number: created.folderNumber || null,
+    created_at_hektor: created.createdAt || null,
+    property_type: created.type && created.type.name ? created.type.name : payload.property_type || null,
+    requested_payload: {
+      title: payload.title || null,
+      agence_nom: payload.agence_nom || null,
+      city: payload.city || null,
+      postal_code: payload.postal_code || null,
+      price: payload.price || null,
+      surface: payload.surface || null,
+      room_count: payload.room_count || null,
+      bedroom_count: payload.bedroom_count || null,
+    },
+  };
+}
+
 async function runHandler(job) {
   if (!ENABLE_HEKTOR_ACTIONS) {
     throw new Error("Console worker protected: set CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS=true to execute Hektor actions.");
@@ -839,6 +1021,8 @@ async function runHandler(job) {
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
       return handleDeleteDocumentFromHektor(job);
+    case "create_hektor_draft_annonce":
+      return handleCreateHektorDraftAnnonce(job);
     case "refresh_console_data":
       return handleSyncConsoleDocuments(job);
     case "archive_cloud_documents":
