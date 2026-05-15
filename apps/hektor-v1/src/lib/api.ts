@@ -3226,6 +3226,45 @@ export async function createLinkHektorMandantJob(input: {
   return data as ConsoleJob
 }
 
+export type HektorMandantContactInput = {
+  civility?: string | null
+  lastName: string
+  firstName?: string | null
+  email: string
+  phone?: string | null
+  address?: string | null
+  postalCode?: string | null
+  city?: string | null
+}
+
+export async function createHektorMandantContactJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  contact: HektorMandantContactInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const payload = {
+    civilite: input.contact.civility?.trim() || null,
+    last_name: input.contact.lastName.trim(),
+    first_name: input.contact.firstName?.trim() || null,
+    email: input.contact.email.trim(),
+    phone: input.contact.phone?.trim() || null,
+    address: input.contact.address?.trim() || null,
+    postal_code: input.contact.postalCode?.trim() || null,
+    city: input.contact.city?.trim() || null,
+    hektor_user_email: input.dossier.negociateur_email ?? null,
+  }
+  const { data, error } = await supabase.rpc('app_console_create_mandant_contact_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    contact_payload: payload,
+    job_priority: input.priority ?? 18,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor mandant contact job')
+  return data as ConsoleJob
+}
+
 export type HektorAnnonceUpdateFields = {
   title?: string | null
   description?: string | null
@@ -3285,7 +3324,7 @@ export async function createDeleteHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
-const hektorActionJobTypes: ConsoleJobType[] = ['create_hektor_draft_annonce', 'delete_hektor_annonce', 'update_hektor_annonce_fields']
+const hektorActionJobTypes: ConsoleJobType[] = ['create_hektor_draft_annonce', 'delete_hektor_annonce', 'update_hektor_annonce_fields', 'create_hektor_mandant_contact']
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
   if (!hasSupabaseEnv || !supabase) return []

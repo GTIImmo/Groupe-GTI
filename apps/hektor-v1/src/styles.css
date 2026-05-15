@@ -9190,6 +9190,177 @@ button.metric-card.is-active {
 .mobile-mandant-link-feedback.is-error {
   color: #b42318;
 }
+.hektor-inline-form {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.09), rgba(15, 104, 116, 0.06) 42%, rgba(255, 255, 255, 0) 70%),
+    #ffffff;
+  box-shadow: 0 14px 34px rgba(34, 35, 35, 0.07);
+}
+.hektor-inline-form.is-compact {
+  margin-top: 0;
+  padding: 12px;
+  box-shadow: none;
+}
+.hektor-inline-form-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.hektor-inline-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--gti-final-pink);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 950;
+}
+.hektor-mandant-create-form .hektor-inline-icon {
+  background: #0f6874;
+}
+.hektor-inline-form-head div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.hektor-inline-form-head strong {
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+.hektor-inline-form-head small {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 750;
+}
+.hektor-inline-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+.hektor-mandant-create-form .hektor-inline-grid {
+  grid-template-columns: 96px repeat(4, minmax(120px, 1fr));
+}
+.hektor-inline-grid label,
+.hektor-inline-textarea {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.hektor-inline-grid label span,
+.hektor-inline-textarea span {
+  color: #687070;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hektor-inline-grid input,
+.hektor-inline-grid select,
+.hektor-inline-textarea textarea {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(34, 35, 35, 0.16);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  font-weight: 800;
+  outline: none;
+}
+.hektor-inline-grid input:focus,
+.hektor-inline-grid select:focus,
+.hektor-inline-textarea textarea:focus {
+  border-color: rgba(197, 0, 95, 0.48);
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.1);
+}
+.hektor-inline-textarea textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+.hektor-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.hektor-inline-actions button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: var(--gti-final-ink);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+.hektor-mandant-create-form .hektor-inline-actions button {
+  background: #0f6874;
+}
+.hektor-inline-actions button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+.hektor-inline-feedback {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 800;
+}
+.hektor-inline-feedback.is-success {
+  color: #1b7f4d;
+}
+.hektor-inline-feedback.is-error {
+  color: #b42318;
+}
+.mobile-hektor-edit-section {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+@media (max-width: 1120px) {
+  .hektor-inline-grid,
+  .hektor-mandant-create-form .hektor-inline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hektor-inline-grid label.is-small {
+    grid-column: span 1;
+  }
+}
+@media (max-width: 640px) {
+  .hektor-inline-form,
+  .hektor-inline-form.is-compact {
+    padding: 12px;
+  }
+  .hektor-inline-form-head {
+    align-items: flex-start;
+  }
+  .hektor-inline-grid,
+  .hektor-mandant-create-form .hektor-inline-grid {
+    grid-template-columns: 1fr;
+  }
+  .hektor-inline-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .hektor-inline-actions button {
+    width: 100%;
+  }
+}
 .hektor-job-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

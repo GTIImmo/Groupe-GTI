@@ -46,7 +46,8 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
-  createLinkHektorMandantJob,
+  createHektorMandantContactJob,
+  createUpdateHektorAnnonceFieldsJob,
   createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createConsoleDocumentSignedUrl,
@@ -68,6 +69,211 @@ const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
+
+function numericDraft(value: unknown): string {
+  return String(value ?? '').replace(/[^\d,.-]/g, '').trim()
+}
+
+function HektorAnnonceUpdateForm(props: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix'>
+  detail: Pick<DossierDetailPayload, 'surface_habitable_detail' | 'surface' | 'nb_pieces' | 'nb_chambres'>
+  compact?: boolean
+}) {
+  const { dossier, detail } = props
+  const [title, setTitle] = useState(dossier.titre_bien ?? '')
+  const [description, setDescription] = useState('')
+  const [price, setPrice] = useState(numericDraft(dossier.prix))
+  const [surface, setSurface] = useState(numericDraft(detail.surface_habitable_detail ?? detail.surface))
+  const [roomCount, setRoomCount] = useState(numericDraft(detail.nb_pieces))
+  const [bedroomCount, setBedroomCount] = useState(numericDraft(detail.nb_chambres))
+  const [pending, setPending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setTitle(dossier.titre_bien ?? '')
+    setDescription('')
+    setPrice(numericDraft(dossier.prix))
+    setSurface(numericDraft(detail.surface_habitable_detail ?? detail.surface))
+    setRoomCount(numericDraft(detail.nb_pieces))
+    setBedroomCount(numericDraft(detail.nb_chambres))
+    setMessage(null)
+    setError(null)
+    setPending(false)
+  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setMessage(null)
+    setError(null)
+    setPending(true)
+    try {
+      const job = await createUpdateHektorAnnonceFieldsJob({
+        dossier,
+        fields: {
+          title,
+          description,
+          price,
+          surface,
+          roomCount,
+          bedroomCount,
+        },
+        priority: 14,
+      })
+      setMessage(`Modification envoyee au PC serveur (${job.status}).`)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Modification Hektor impossible.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <form className={`hektor-inline-form hektor-annonce-update-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
+      <div className="hektor-inline-form-head">
+        <span className="hektor-inline-icon" aria-hidden="true">H</span>
+        <div>
+          <strong>Modifier dans Hektor</strong>
+          <small>Le PC serveur applique la modification puis resynchronise l'annonce.</small>
+        </div>
+      </div>
+      <div className="hektor-inline-grid">
+        <label>
+          <span>Titre</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Titre visible" />
+        </label>
+        <label>
+          <span>Prix public</span>
+          <input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" placeholder="Prix" />
+        </label>
+        <label>
+          <span>Surface</span>
+          <input value={surface} onChange={(event) => setSurface(event.target.value)} inputMode="decimal" placeholder="m2" />
+        </label>
+        <label>
+          <span>Pieces</span>
+          <input value={roomCount} onChange={(event) => setRoomCount(event.target.value)} inputMode="numeric" placeholder="Pieces" />
+        </label>
+        <label>
+          <span>Chambres</span>
+          <input value={bedroomCount} onChange={(event) => setBedroomCount(event.target.value)} inputMode="numeric" placeholder="Chambres" />
+        </label>
+      </div>
+      <label className="hektor-inline-textarea">
+        <span>Description principale</span>
+        <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Laisser vide pour ne pas changer le texte principal" />
+      </label>
+      <div className="hektor-inline-actions">
+        <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer vers Hektor'}</button>
+        {message ? <span className="hektor-inline-feedback is-success">{message}</span> : null}
+        {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
+      </div>
+    </form>
+  )
+}
+
+function HektorMandantContactForm(props: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  compact?: boolean
+}) {
+  const [civility, setCivility] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [pending, setPending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCivility('')
+    setLastName('')
+    setFirstName('')
+    setEmail('')
+    setPhone('')
+    setMessage(null)
+    setError(null)
+    setPending(false)
+  }, [props.dossier.app_dossier_id])
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setMessage(null)
+    setError(null)
+    if (!lastName.trim() || !email.trim()) {
+      setError('Nom et email sont obligatoires pour créer le contact Hektor.')
+      return
+    }
+    setPending(true)
+    try {
+      const job = await createHektorMandantContactJob({
+        dossier: props.dossier,
+        contact: {
+          civility,
+          lastName,
+          firstName,
+          email,
+          phone,
+        },
+        priority: 18,
+      })
+      setCivility('')
+      setLastName('')
+      setFirstName('')
+      setEmail('')
+      setPhone('')
+      setMessage(`Contact mandant envoye au PC serveur (${job.status}).`)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Creation du mandant impossible.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <form className={`hektor-inline-form hektor-mandant-create-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
+      <div className="hektor-inline-form-head">
+        <span className="hektor-inline-icon" aria-hidden="true">+</span>
+        <div>
+          <strong>Créer un mandant Hektor</strong>
+          <small>Le contact est créé puis associé automatiquement à cette annonce.</small>
+        </div>
+      </div>
+      <div className="hektor-inline-grid">
+        <label className="is-small">
+          <span>Civilite</span>
+          <select value={civility} onChange={(event) => setCivility(event.target.value)}>
+            <option value="">-</option>
+            <option value="M.">M.</option>
+            <option value="Mme.">Mme.</option>
+            <option value="Mlle.">Mlle.</option>
+          </select>
+        </label>
+        <label>
+          <span>Nom</span>
+          <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Nom" required />
+        </label>
+        <label>
+          <span>Prenom</span>
+          <input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Prenom" />
+        </label>
+        <label>
+          <span>Email</span>
+          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="email@exemple.fr" required />
+        </label>
+        <label>
+          <span>Telephone</span>
+          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
+        </label>
+      </div>
+      <div className="hektor-inline-actions">
+        <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Créer et associer'}</button>
+        {message ? <span className="hektor-inline-feedback is-success">{message}</span> : null}
+        {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
+      </div>
+    </form>
+  )
+}
 type UpdateDiffusionRequestAction = {
   requestId: string
   requestType?: BusinessRequestType
@@ -8261,10 +8467,6 @@ function DossierDetailLayout(props: {
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
-  const [mandantContactId, setMandantContactId] = useState('')
-  const [mandantLinkPending, setMandantLinkPending] = useState(false)
-  const [mandantLinkMessage, setMandantLinkMessage] = useState<string | null>(null)
-  const [mandantLinkError, setMandantLinkError] = useState<string | null>(null)
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
 
@@ -8272,32 +8474,7 @@ function DossierDetailLayout(props: {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
     setMandatSectionOpen(true)
     setContactSectionOpen(false)
-    setMandantContactId('')
-    setMandantLinkMessage(null)
-    setMandantLinkError(null)
-    setMandantLinkPending(false)
   }, [dossier.app_dossier_id, detailVariant])
-
-  const handleLinkMandant = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const contactId = mandantContactId.trim()
-    setMandantLinkMessage(null)
-    setMandantLinkError(null)
-    if (!/^\d+$/.test(contactId)) {
-      setMandantLinkError('Indique un ID contact Hektor numerique.')
-      return
-    }
-    setMandantLinkPending(true)
-    try {
-      const job = await createLinkHektorMandantJob({ dossier, contactId, priority: 18 })
-      setMandantContactId('')
-      setMandantLinkMessage(`Demande envoyee au PC serveur (${job.status}).`)
-    } catch (error) {
-      setMandantLinkError(error instanceof Error ? error.message : 'Association mandant impossible.')
-    } finally {
-      setMandantLinkPending(false)
-    }
-  }
 
   const buildRequestGroups = (
     historyItems: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>,
@@ -8469,6 +8646,7 @@ function DossierDetailLayout(props: {
                       </div>
                     </article>
                   </div>
+                  <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} />
                 </section>
               ) : null}
 
@@ -8559,25 +8737,7 @@ function DossierDetailLayout(props: {
                         <strong>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
                         <small>{props.detail.mandants_texte || primaryContact.name}</small>
                       </div>
-                      <form className="detail-mandant-link-form" onSubmit={handleLinkMandant}>
-                        <label htmlFor={`mandant-contact-${dossier.app_dossier_id}`}>Ajouter / associer un mandant</label>
-                        <div className="detail-mandant-link-controls">
-                          <input
-                            id={`mandant-contact-${dossier.app_dossier_id}`}
-                            value={mandantContactId}
-                            onChange={(event) => setMandantContactId(event.target.value)}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            placeholder="ID contact"
-                          />
-                          <button type="submit" disabled={mandantLinkPending}>
-                            {mandantLinkPending ? 'Envoi...' : 'Associer'}
-                          </button>
-                        </div>
-                        <small>Indique l'ID contact Hektor du proprietaire. Le PC serveur l'associe ensuite comme mandant.</small>
-                        {mandantLinkMessage ? <span className="detail-mandant-link-feedback is-success">{mandantLinkMessage}</span> : null}
-                        {mandantLinkError ? <span className="detail-mandant-link-feedback is-error">{mandantLinkError}</span> : null}
-                      </form>
+                      <HektorMandantContactForm dossier={dossier} />
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
                         <div className="detail-contact-head">
                           <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
@@ -8669,25 +8829,7 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : (
                     <div className="detail-entity-list detail-contact-list">
-                      <form className="detail-mandant-link-form detail-mandant-link-form-empty" onSubmit={handleLinkMandant}>
-                        <label htmlFor={`mandant-contact-${dossier.app_dossier_id}`}>Ajouter / associer un mandant</label>
-                        <div className="detail-mandant-link-controls">
-                          <input
-                            id={`mandant-contact-${dossier.app_dossier_id}`}
-                            value={mandantContactId}
-                            onChange={(event) => setMandantContactId(event.target.value)}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            placeholder="ID contact"
-                          />
-                          <button type="submit" disabled={mandantLinkPending}>
-                            {mandantLinkPending ? 'Envoi...' : 'Associer'}
-                          </button>
-                        </div>
-                        <small>Aucun mandant synchronise pour l'instant. Indique l'ID contact Hektor du proprietaire.</small>
-                        {mandantLinkMessage ? <span className="detail-mandant-link-feedback is-success">{mandantLinkMessage}</span> : null}
-                        {mandantLinkError ? <span className="detail-mandant-link-feedback is-error">{mandantLinkError}</span> : null}
-                      </form>
+                      <HektorMandantContactForm dossier={dossier} />
                     </div>
                   )}
                 </article>
@@ -9382,10 +9524,6 @@ function MobileDossierDetail(props: {
   const actionRole = props.actionRole ?? 'nego'
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
-  const [mandantContactId, setMandantContactId] = useState('')
-  const [mandantLinkPending, setMandantLinkPending] = useState(false)
-  const [mandantLinkMessage, setMandantLinkMessage] = useState<string | null>(null)
-  const [mandantLinkError, setMandantLinkError] = useState<string | null>(null)
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
     .sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime())
   const messageItems = [...props.requestMessagesDiffusion, ...props.requestMessagesPriceDrop, ...props.requestMessagesCancellation, ...props.requestMessages]
@@ -9435,34 +9573,6 @@ function MobileDossierDetail(props: {
   ]
   const adminValidationState = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
   const adminDiffusableState = props.diffusableDraft ?? isDiffusableValue(dossier.diffusable)
-
-  useEffect(() => {
-    setMandantContactId('')
-    setMandantLinkMessage(null)
-    setMandantLinkError(null)
-    setMandantLinkPending(false)
-  }, [dossier.app_dossier_id])
-
-  const handleMobileLinkMandant = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const contactId = mandantContactId.trim()
-    setMandantLinkMessage(null)
-    setMandantLinkError(null)
-    if (!/^\d+$/.test(contactId)) {
-      setMandantLinkError('Indique un ID contact Hektor numerique.')
-      return
-    }
-    setMandantLinkPending(true)
-    try {
-      const job = await createLinkHektorMandantJob({ dossier, contactId, priority: 18 })
-      setMandantContactId('')
-      setMandantLinkMessage(`Demande envoyee au PC serveur (${job.status}).`)
-    } catch (error) {
-      setMandantLinkError(error instanceof Error ? error.message : 'Association mandant impossible.')
-    } finally {
-      setMandantLinkPending(false)
-    }
-  }
 
   return (
     <article className="mobile-detail-view">
@@ -9520,6 +9630,10 @@ function MobileDossierDetail(props: {
             </span>
           ))}
         </div>
+      </section>
+
+      <section className="mobile-detail-section mobile-hektor-edit-section">
+        <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact />
       </section>
 
       {canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable ? (
@@ -9603,25 +9717,7 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
-        <form className="mobile-mandant-link-form" onSubmit={handleMobileLinkMandant}>
-          <label htmlFor={`mobile-mandant-contact-${dossier.app_dossier_id}`}>Ajouter / associer un mandant</label>
-          <div className="mobile-mandant-link-controls">
-            <input
-              id={`mobile-mandant-contact-${dossier.app_dossier_id}`}
-              value={mandantContactId}
-              onChange={(event) => setMandantContactId(event.target.value)}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="ID contact Hektor"
-            />
-            <button type="submit" disabled={mandantLinkPending}>
-              {mandantLinkPending ? 'Envoi...' : 'Associer'}
-            </button>
-          </div>
-          <small>Le PC serveur ajoute ce contact comme mandant dans Hektor.</small>
-          {mandantLinkMessage ? <span className="mobile-mandant-link-feedback is-success">{mandantLinkMessage}</span> : null}
-          {mandantLinkError ? <span className="mobile-mandant-link-feedback is-error">{mandantLinkError}</span> : null}
-        </form>
+        <HektorMandantContactForm dossier={dossier} compact />
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
             <strong>{mandat.title}</strong>

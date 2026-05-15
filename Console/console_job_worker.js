@@ -1837,6 +1837,162 @@ async function handleLinkHektorMandant(job) {
   };
 }
 
+function cleanString(value) {
+  const text = String(value || "").trim();
+  return text || null;
+}
+
+function replaceParam(values, name, value) {
+  values.delete(name);
+  values.append(name, value == null ? "" : String(value));
+}
+
+async function fetchHektorManualMandantForm() {
+  const body = new URLSearchParams({
+    mode: "contacts-actions-addManuelContactFromOtherObject",
+    idNego: "",
+    statut: "contact_seule",
+    metier: "",
+    inputId: "",
+    qualification: "3",
+    ihmCenter: "",
+  });
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: ADMIN_URL,
+    },
+  });
+  const parsed = JSON.parse(response.text);
+  return String(parsed || "");
+}
+
+async function createHektorMandantContact(job, annonceId, payload) {
+  const lastName = cleanString(payload.last_name || payload.nom || payload.name);
+  const firstName = cleanString(payload.first_name || payload.prenom);
+  const email = cleanString(payload.email);
+  const phone = cleanString(payload.phone || payload.telephone || payload.mobile);
+  const civility = cleanString(payload.civility || payload.civilite) || "";
+  const address = cleanString(payload.address || payload.adresse);
+  const city = cleanString(payload.city || payload.ville);
+  const postalCode = cleanString(payload.postal_code || payload.code_postal || payload.code);
+
+  if (!lastName) throw new Error("Nom mandant requis");
+  if (!email) throw new Error("Email mandant requis");
+
+  const formHtml = await fetchHektorManualMandantForm();
+  const values = extractHektorFormValues(formHtml, null);
+  values.set("mode", "contacts-actions-insertManuelContactFromOtherObject");
+  values.set("statut", "1");
+  values.set("qualification", "3");
+  values.set("saveOrUpdate", "mandantOnAnnonce");
+  values.set("saveOrUpdateValue", String(annonceId));
+  values.set("civilite", civility);
+  values.set("nom", lastName);
+  values.set("prenom", firstName || "");
+  replaceParam(values, "label_email[]", "email");
+  replaceParam(values, "id_email[]", "");
+  replaceParam(values, "email[]", email);
+  if (phone) {
+    replaceParam(values, "label_telephone[]", "portable");
+    replaceParam(values, "id_telephone[]", "");
+    replaceParam(values, "telephone[]", phone);
+  }
+  if (address) values.set("adresse", address);
+  if (city) values.set("ville", city);
+  if (postalCode) values.set("code", postalCode);
+
+  await logJob(job.id, "hektor_mandant_create", "running", "Creation contact mandant dans Hektor", {
+    hektor_annonce_id: String(annonceId),
+    nom: lastName,
+    prenom: firstName,
+    email,
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: values,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(String(annonceId))}`,
+    },
+  });
+  const parsed = JSON.parse(response.text);
+  const contactId = String(parsed || "").trim();
+  if (!/^\d+$/.test(contactId)) {
+    throw new Error(`Creation contact mandant non confirmee: ${response.text.slice(0, 500)}`);
+  }
+  return {
+    contactId,
+    lastName,
+    firstName,
+    email,
+  };
+}
+
+async function handleCreateHektorMandantContact(job) {
+  const payload = safeJsonParse(job.payload_json);
+  let dossier = null;
+  try {
+    dossier = await loadDossier(job);
+  } catch (error) {
+    if (!job.hektor_annonce_id || !(payload.hektor_user_id || payload.hektor_id_user || payload.target_hektor_user_id)) throw error;
+    dossier = {
+      app_dossier_id: job.app_dossier_id || payload.app_dossier_id || null,
+      hektor_annonce_id: String(job.hektor_annonce_id),
+      negociateur_email: payload.hektor_user_email || null,
+    };
+  }
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const annonceId = String(dossier.hektor_annonce_id);
+  const created = await createHektorMandantContact(job, annonceId, payload);
+  await sleep(1800);
+
+  let after = await fetchHektorProspectsList(annonceId);
+  if (!hektorProspectLinkedInHtml(after.text, created.contactId, annonceId)) {
+    await logJob(job.id, "hektor_mandant_create", "running", "Association automatique absente, tentative association mandant", {
+      hektor_annonce_id: annonceId,
+      hektor_contact_id: created.contactId,
+    });
+    await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(created.contactId)}&idann=${encodeURIComponent(annonceId)}`);
+    await sleep(1800);
+    after = await fetchHektorProspectsList(annonceId);
+  }
+  if (!hektorProspectLinkedInHtml(after.text, created.contactId, annonceId)) {
+    throw new Error(`Creation contact OK mais association mandant non confirmee pour ${created.contactId}`);
+  }
+
+  let immediateSync = null;
+  try {
+    immediateSync = await runCreatedAnnonceImmediateSync(job, annonceId);
+  } catch (syncError) {
+    immediateSync = {
+      status: "error",
+      error: syncError && syncError.message ? syncError.message : String(syncError),
+    };
+    await logJob(job.id, "hektor_mandant_sync", "error", "Sync immediate apres creation mandant echouee", {
+      hektor_annonce_id: annonceId,
+      hektor_contact_id: created.contactId,
+      error: immediateSync.error,
+    });
+  }
+
+  return {
+    status: "created_and_linked",
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: created.contactId,
+    contact: {
+      nom: created.lastName,
+      prenom: created.firstName,
+      email: created.email,
+    },
+    immediate_sync: immediateSync,
+  };
+}
+
 async function loadConsoleDocumentsForAnnonce(hektorAnnonceId) {
   const params = new URLSearchParams({
     select: "id,storage_path,metadata_json,document_name",
@@ -2123,6 +2279,8 @@ async function runHandler(job) {
       return handleDeleteDocumentFromHektor(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
+    case "create_hektor_mandant_contact":
+      return handleCreateHektorMandantContact(job);
     case "update_hektor_annonce_fields":
       return handleUpdateHektorAnnonceFields(job);
     case "delete_hektor_annonce":
