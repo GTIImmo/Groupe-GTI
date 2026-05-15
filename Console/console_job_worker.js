@@ -154,13 +154,33 @@ function hektorOriginLocalStorage(state) {
   return origin && Array.isArray(origin.localStorage) ? origin.localStorage : [];
 }
 
+function ensureHektorOrigin(state) {
+  if (!Array.isArray(state.origins)) state.origins = [];
+  const hektorOrigin = HEKTOR_BASE_URL.replace(/\/+$/, "");
+  let origin = state.origins.find((item) => item.origin === hektorOrigin);
+  if (!origin) {
+    origin = { origin: hektorOrigin, localStorage: [] };
+    state.origins.push(origin);
+  }
+  if (!Array.isArray(origin.localStorage)) origin.localStorage = [];
+  return origin;
+}
+
+function setHektorLocalStorageValue(state, name, value) {
+  const origin = ensureHektorOrigin(state);
+  const current = origin.localStorage.find((item) => item.name === name);
+  if (current) current.value = value;
+  else origin.localStorage.push({ name, value });
+}
+
 function currentHektorSessionIdentity() {
   try {
     const state = readHektorStorageState();
     const localStorage = hektorOriginLocalStorage(state);
     const tokenEntry = localStorage.find((item) => item.name === "token");
     const impersonateEntry = localStorage.find((item) => item.name === "impersonate");
-    const payload = decodeJwtPayload(tokenEntry && tokenEntry.value);
+    const decoded = decodeJwtPayload(tokenEntry && tokenEntry.value);
+    const payload = decoded && decoded.data ? decoded.data : decoded;
     if (!payload) return null;
     return {
       userId: payload.userId == null ? null : String(payload.userId),
@@ -172,6 +192,86 @@ function currentHektorSessionIdentity() {
   } catch (_) {
     return null;
   }
+}
+
+function cookieJarFromStorageState(state) {
+  const jar = new Map();
+  const now = Date.now() / 1000;
+  for (const cookie of Array.isArray(state.cookies) ? state.cookies : []) {
+    if (cookie.expires && cookie.expires > 0 && cookie.expires <= now) continue;
+    jar.set(cookie.name, { ...cookie });
+  }
+  return jar;
+}
+
+function cookieHeaderFromJar(jar) {
+  return Array.from(jar.values()).map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+}
+
+function setCookieHeaders(headers) {
+  if (headers && typeof headers.getSetCookie === "function") return headers.getSetCookie();
+  const combined = headers && typeof headers.get === "function" ? headers.get("set-cookie") : null;
+  if (!combined) return [];
+  return combined.split(/,(?=[^;,]+=)/g);
+}
+
+function absorbSetCookieHeaders(jar, headers) {
+  for (const raw of setCookieHeaders(headers)) {
+    const first = String(raw || "").split(";")[0];
+    const eq = first.indexOf("=");
+    if (eq <= 0) continue;
+    const name = first.slice(0, eq).trim();
+    const value = first.slice(eq + 1).trim();
+    const existing = jar.get(name) || {
+      name,
+      domain: new URL(HEKTOR_BASE_URL).hostname,
+      path: "/",
+      expires: -1,
+      httpOnly: false,
+      secure: true,
+      sameSite: "Lax",
+    };
+    jar.set(name, { ...existing, value });
+  }
+}
+
+function saveCookieJarToStorageState(state, jar) {
+  const byName = new Map(Array.from(jar.entries()));
+  const nextCookies = [];
+  const seen = new Set();
+  for (const cookie of Array.isArray(state.cookies) ? state.cookies : []) {
+    if (byName.has(cookie.name)) {
+      nextCookies.push(byName.get(cookie.name));
+      seen.add(cookie.name);
+    } else {
+      nextCookies.push(cookie);
+    }
+  }
+  for (const [name, cookie] of byName.entries()) {
+    if (!seen.has(name)) nextCookies.push(cookie);
+  }
+  state.cookies = nextCookies;
+}
+
+function decodeJsString(value) {
+  return String(value || "")
+    .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\(['"\\])/g, "$1")
+    .replace(/\\\\/g, "\\");
+}
+
+function extractLocalStorageSetItems(html) {
+  const output = new Map();
+  const pattern = /localStorage\.setItem\(\s*(['"])([^'"]+)\1\s*,\s*(['"])((?:\\.|(?!\3)[\s\S])*?)\3\s*\)/g;
+  let match;
+  while ((match = pattern.exec(String(html || "")))) {
+    output.set(match[2], decodeJsString(match[4]));
+  }
+  return output;
 }
 
 function storagePathEncode(value) {
@@ -574,7 +674,7 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
   return null;
 }
 
-async function switchHektorUserContext(idUser) {
+async function switchHektorUserContextWithPlaywright(idUser) {
   const targetId = String(idUser || "").trim();
   if (!targetId) throw new Error("idUser Hektor requis pour changer de contexte");
 
@@ -609,6 +709,71 @@ async function switchHektorUserContext(idUser) {
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
+}
+
+async function hektorHtmlRequestWithJar(jar, url) {
+  const response = await fetch(url, {
+    redirect: "manual",
+    headers: {
+      Cookie: cookieHeaderFromJar(jar),
+      Referer: ADMIN_URL,
+      "User-Agent": "Mozilla/5.0 ConsoleWorker/1.0",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  });
+  absorbSetCookieHeaders(jar, response.headers);
+  const text = await response.text();
+  if (response.status >= 500) throw new Error(`Hektor ${response.status} on context switch`);
+  return {
+    status: response.status,
+    location: response.headers.get("location"),
+    text,
+  };
+}
+
+async function switchHektorUserContext(idUser) {
+  const targetId = String(idUser || "").trim();
+  if (!targetId) throw new Error("idUser Hektor requis pour changer de contexte");
+
+  const state = readHektorStorageState();
+  const jar = cookieJarFromStorageState(state);
+  const htmlParts = [];
+  const autolog = await hektorHtmlRequestWithJar(jar, `${ADMIN_URL}?call=authenticate&mode=autologin&idUser=${encodeURIComponent(targetId)}`);
+  htmlParts.push(autolog.text);
+
+  if (autolog.location) {
+    const redirectedUrl = new URL(autolog.location, ADMIN_URL).toString();
+    const redirected = await hektorHtmlRequestWithJar(jar, redirectedUrl);
+    htmlParts.push(redirected.text);
+  }
+
+  const admin = await hektorHtmlRequestWithJar(jar, ADMIN_URL);
+  htmlParts.push(admin.text);
+
+  const localStorageItems = new Map();
+  for (const html of htmlParts) {
+    for (const [name, value] of extractLocalStorageSetItems(html).entries()) {
+      localStorageItems.set(name, value);
+    }
+  }
+
+  const token = localStorageItems.get("token");
+  const decoded = decodeJwtPayload(token);
+  const payload = decoded && decoded.data ? decoded.data : decoded;
+  if (!token || !payload || String(payload.userId || "") !== targetId) {
+    if (String(process.env.CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT || "").toLowerCase() === "true") {
+      await switchHektorUserContextWithPlaywright(targetId);
+      return;
+    }
+    throw new Error(`Switch HTTP Hektor non confirme pour idUser ${targetId}`);
+  }
+
+  saveCookieJarToStorageState(state, jar);
+  for (const [name, value] of localStorageItems.entries()) {
+    setHektorLocalStorageValue(state, name, value);
+  }
+  fs.writeFileSync(STORAGE_STATE_PATH, JSON.stringify(state, null, 2), "utf-8");
+  lastHektorLoginAt = Date.now();
 }
 
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
