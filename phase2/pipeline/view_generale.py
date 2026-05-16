@@ -253,7 +253,7 @@ SELECT
     m.type AS mandat_type_source,
     m.date_enregistrement AS mandat_date_enregistrement,
     m.montant AS mandat_montant,
-    m.mandants_texte,
+    COALESCE(NULLIF(TRIM(m.mandants_texte), ''), NULLIF(TRIM(det.proprietaires_resume), '')) AS mandants_texte,
     m.note AS mandat_note,
     __SQL_VALIDATION_DIFFUSION_GENERALE__ AS validation_diffusion_state,
     __SQL_ETAT_VISIBILITE__ AS etat_visibilite,

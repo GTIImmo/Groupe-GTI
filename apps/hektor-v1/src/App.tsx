@@ -8679,6 +8679,7 @@ function DossierDetailLayout(props: {
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
+  const contactSummaryLabel = props.detail.mandants_texte || props.contacts.map((contact) => contact.name).filter(Boolean).join(' | ')
 
   useEffect(() => {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
@@ -8855,6 +8856,19 @@ function DossierDetailLayout(props: {
                         {hiddenSummaryPortalCount > 0 ? <span className="detail-mini-portal is-overflow">+{hiddenSummaryPortalCount}</span> : null}
                       </div>
                     </article>
+                    {props.contacts.length > 0 ? (
+                      <article className="detail-summary-card is-contact">
+                        <div className="detail-summary-card-head">
+                          <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
+                          <h5>Mandants</h5>
+                        </div>
+                        <strong>{props.contacts.length} contact{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
+                        <p>{contactSummaryLabel || primaryContact?.name || '-'}</p>
+                        <button className="section-toggle-button" type="button" onClick={() => setActiveDetailTab('mandate')}>
+                          Voir contacts
+                        </button>
+                      </article>
+                    ) : null}
                   </div>
                   <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} />
                 </section>
