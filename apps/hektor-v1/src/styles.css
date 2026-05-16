@@ -9255,6 +9255,48 @@ button.metric-card.is-active {
 .hektor-mandant-create-form .hektor-inline-grid {
   grid-template-columns: 96px repeat(4, minmax(120px, 1fr));
 }
+.hektor-mandant-edit-form {
+  margin-top: 14px;
+  padding: 10px;
+  background:
+    linear-gradient(135deg, rgba(15, 104, 116, 0.08), rgba(197, 0, 95, 0.05) 48%, rgba(255, 255, 255, 0) 78%),
+    #ffffff;
+  box-shadow: none;
+}
+.hektor-mandant-edit-form .hektor-inline-grid {
+  grid-template-columns: 90px repeat(3, minmax(120px, 1fr));
+}
+.hektor-contact-edit-toggle {
+  justify-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid rgba(15, 104, 116, 0.22);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: rgba(15, 104, 116, 0.09);
+  color: #0f6874;
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+.hektor-contact-edit-toggle span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: #0f6874;
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1;
+}
+.hektor-contact-edit-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 .hektor-inline-grid label,
 .hektor-inline-textarea {
   display: grid;
@@ -9334,7 +9376,8 @@ button.metric-card.is-active {
 }
 @media (max-width: 1120px) {
   .hektor-inline-grid,
-  .hektor-mandant-create-form .hektor-inline-grid {
+  .hektor-mandant-create-form .hektor-inline-grid,
+  .hektor-mandant-edit-form .hektor-inline-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .hektor-inline-grid label.is-small {
@@ -9350,7 +9393,8 @@ button.metric-card.is-active {
     align-items: flex-start;
   }
   .hektor-inline-grid,
-  .hektor-mandant-create-form .hektor-inline-grid {
+  .hektor-mandant-create-form .hektor-inline-grid,
+  .hektor-mandant-edit-form .hektor-inline-grid {
     grid-template-columns: 1fr;
   }
   .hektor-inline-actions {

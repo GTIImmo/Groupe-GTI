@@ -48,6 +48,7 @@ import {
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
   createHektorMandantContactJob,
+  createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
   createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
@@ -60,6 +61,26 @@ import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DetailedDo
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
+
+type DetailContact = {
+  id: string
+  name: string
+  role: string
+  phone: string
+  email: string
+  address: string
+  postalCode: string
+  city: string
+  civility: string
+  firstName: string
+  lastName: string
+  comment: string
+  sourceId?: string
+  archive?: string
+  dateCreated?: string
+  dateUpdated?: string
+  negotiatorId?: string
+}
 
 const allFilterValue = '__all__'
 const activeArchiveFilterValue = '__active__'
@@ -277,6 +298,134 @@ function HektorMandantContactForm(props: {
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
       </div>
     </form>
+  )
+}
+
+function HektorMandantContactEditForm(props: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  contact: DetailContact
+  compact?: boolean
+  onJobCreated?: (job: ConsoleJob) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [civility, setCivility] = useState(props.contact.civility ?? '')
+  const [lastName, setLastName] = useState(props.contact.lastName ?? '')
+  const [firstName, setFirstName] = useState(props.contact.firstName ?? '')
+  const [email, setEmail] = useState(props.contact.email ?? '')
+  const [phone, setPhone] = useState(props.contact.phone ?? '')
+  const [address, setAddress] = useState(props.contact.address ?? '')
+  const [postalCode, setPostalCode] = useState(props.contact.postalCode ?? '')
+  const [city, setCity] = useState(props.contact.city ?? '')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setOpen(false)
+    setCivility(props.contact.civility ?? '')
+    setLastName(props.contact.lastName ?? '')
+    setFirstName(props.contact.firstName ?? '')
+    setEmail(props.contact.email ?? '')
+    setPhone(props.contact.phone ?? '')
+    setAddress(props.contact.address ?? '')
+    setPostalCode(props.contact.postalCode ?? '')
+    setCity(props.contact.city ?? '')
+    setPending(false)
+    setError(null)
+  }, [props.contact.sourceId, props.dossier.app_dossier_id])
+
+  const canEdit = Boolean(props.contact.sourceId && /^\d+$/.test(props.contact.sourceId))
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+    if (!canEdit || !props.contact.sourceId) {
+      setError('ID contact Hektor manquant.')
+      return
+    }
+    if (!lastName.trim() || !email.trim()) {
+      setError('Nom et email sont obligatoires pour modifier le contact Hektor.')
+      return
+    }
+    setPending(true)
+    try {
+      const job = await createUpdateHektorMandantContactJob({
+        dossier: props.dossier,
+        contactId: props.contact.sourceId,
+        contact: {
+          civility,
+          lastName,
+          firstName,
+          email,
+          phone,
+          address,
+          postalCode,
+          city,
+        },
+        priority: 16,
+      })
+      props.onJobCreated?.(job)
+      setOpen(false)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Modification du mandant impossible.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className={`hektor-inline-form hektor-mandant-edit-form ${props.compact ? 'is-compact' : ''}`}>
+      <button className="hektor-contact-edit-toggle" type="button" disabled={!canEdit} onClick={() => setOpen((value) => !value)}>
+        <span aria-hidden="true">✎</span>
+        {open ? 'Fermer' : 'Modifier'}
+      </button>
+      {open ? (
+        <form onSubmit={handleSubmit}>
+          <div className="hektor-inline-grid">
+            <label className="is-small">
+              <span>Civilite</span>
+              <select value={civility} onChange={(event) => setCivility(event.target.value)}>
+                <option value="">-</option>
+                <option value="M.">M.</option>
+                <option value="Mme.">Mme.</option>
+                <option value="Mlle.">Mlle.</option>
+              </select>
+            </label>
+            <label>
+              <span>Nom</span>
+              <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+            </label>
+            <label>
+              <span>Prenom</span>
+              <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+            </label>
+            <label>
+              <span>Email</span>
+              <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
+            </label>
+            <label>
+              <span>Telephone</span>
+              <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" />
+            </label>
+            <label>
+              <span>Adresse</span>
+              <input value={address} onChange={(event) => setAddress(event.target.value)} />
+            </label>
+            <label className="is-small">
+              <span>CP</span>
+              <input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} inputMode="numeric" />
+            </label>
+            <label>
+              <span>Ville</span>
+              <input value={city} onChange={(event) => setCity(event.target.value)} />
+            </label>
+          </div>
+          <div className="hektor-inline-actions">
+            <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer la modification'}</button>
+            {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
+          </div>
+        </form>
+      ) : null}
+    </div>
   )
 }
 type UpdateDiffusionRequestAction = {
@@ -1795,7 +1944,7 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') {
     return `Modification ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
-  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') {
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') {
     const contact = typeof payload.last_name === 'string' && payload.last_name.trim() ? payload.last_name.trim() : null
     return contact ? `Mandant ${contact}` : 'Mandant Hektor'
   }
@@ -1810,14 +1959,14 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
   if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
-  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
   return 'Creation en cours'
 }
 
 function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
-  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
   if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud') return 'document'
   return 'create'
 }
@@ -1834,6 +1983,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
+  if (job.job_type === 'update_hektor_mandant_contact') return 'Modification puis resynchronisation'
   if (folder) return `${folder} synchronise dans l'app`
   return [negotiator, agency].filter(Boolean).join(' - ') || `Job ${consoleJobShortId(job)}`
 }
@@ -1878,6 +2028,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (!job || job.job_type === 'create_hektor_draft_annonce') return 'Annonce disponible'
     if (job.job_type === 'update_hektor_annonce_fields') return 'Modification terminee'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
+    if (job.job_type === 'update_hektor_mandant_contact') return 'Mandant modifie'
     if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
     if (job.job_type === 'prepare_document_cloud') return 'Document pret'
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
@@ -5372,13 +5523,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return parseJson<Array<Record<string, unknown>>>(detail.proprietaires_json, []).map((item, index) => {
       const coords = (item.coordonnees as Record<string, unknown> | undefined) ?? {}
       const locality = ((item.localite as Record<string, unknown> | undefined)?.localite as Record<string, unknown> | undefined) ?? {}
+      const postalCode = safeText(locality.code)
+      const city = safeText(locality.ville)
+      const civility = safeText(item.civilite)
+      const firstName = safeText(item.prenom)
+      const lastName = safeText(item.nom)
       return {
-        id: `${index}-${safeText(item.nom)}`,
-        name: [safeText(item.civilite), safeText(item.prenom), safeText(item.nom)].filter(Boolean).join(' ') || `Contact ${index + 1}`,
+        id: `${index}-${lastName}`,
+        name: [civility, firstName, lastName].filter(Boolean).join(' ') || `Contact ${index + 1}`,
         role: Array.isArray(item.typologie) ? item.typologie.join(', ') : '',
         phone: safeText(coords.portable) || safeText(coords.telephone),
         email: safeText(coords.email),
-        address: [safeText(locality.adresse), safeText(locality.code), safeText(locality.ville)].filter(Boolean).join(', '),
+        address: safeText(locality.adresse),
+        postalCode,
+        city,
+        civility,
+        firstName,
+        lastName,
         comment: sanitizeContactComment(item.commentaires as string | null | undefined),
         sourceId: safeText(item.id),
         archive: safeText(item.archive),
@@ -8646,7 +8807,7 @@ function DossierDetailLayout(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
+  contacts: DetailContact[]
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -9040,7 +9201,7 @@ function DossierDetailLayout(props: {
                           </div>
                           <div className="detail-entity-line detail-entity-line-full">
                             <span>Adresse</span>
-                            <strong>{primaryContact.address || '-'}</strong>
+                            <strong>{[primaryContact.address, primaryContact.postalCode, primaryContact.city].filter(Boolean).join(', ') || '-'}</strong>
                           </div>
                           {primaryContact.comment ? (
                             <div className="detail-entity-line detail-entity-line-full detail-contact-note">
@@ -9049,6 +9210,7 @@ function DossierDetailLayout(props: {
                             </div>
                           ) : null}
                         </div>
+                        <HektorMandantContactEditForm dossier={dossier} contact={primaryContact} onJobCreated={props.onHektorActionJobCreated} />
                       </article>
                       {contactSectionOpen && secondaryContacts.length > 0 ? (
                         <div className="detail-secondary-contacts">
@@ -9084,7 +9246,7 @@ function DossierDetailLayout(props: {
                                 </div>
                                 <div className="detail-entity-line detail-entity-line-full">
                                   <span>Adresse</span>
-                                  <strong>{contact.address || '-'}</strong>
+                                  <strong>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ') || '-'}</strong>
                                 </div>
                                 {contact.comment ? (
                                   <div className="detail-entity-line detail-entity-line-full detail-contact-note">
@@ -9093,6 +9255,7 @@ function DossierDetailLayout(props: {
                                   </div>
                                 ) : null}
                               </div>
+                              <HektorMandantContactEditForm dossier={dossier} contact={contact} onJobCreated={props.onHektorActionJobCreated} />
                             </article>
                           ))}
                         </div>
@@ -9686,7 +9849,7 @@ function AnnonceScreen(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
+  contacts: DetailContact[]
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -9716,7 +9879,7 @@ function DossierDetailScreen(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
+  contacts: DetailContact[]
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -9749,7 +9912,7 @@ function MobileDossierDetail(props: {
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
-  contacts: Array<{ id: string; name: string; role: string; phone: string; email: string; address: string; comment: string; sourceId?: string; archive?: string; dateCreated?: string; dateUpdated?: string; negotiatorId?: string }>
+  contacts: DetailContact[]
   mandats: Array<{ id: string; title: string; lines: Array<[string, string]> }>
   linkedWorkItems: WorkItem[]
   requestHistory: Array<{ id: string | number; title: string; date: string | null | undefined; body: string }>
@@ -10006,8 +10169,9 @@ function MobileDossierDetail(props: {
                 <strong>{contact.name || '-'}</strong>
                 {contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
                 {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
-                {contact.address ? <p>{contact.address}</p> : null}
+                {[contact.address, contact.postalCode, contact.city].filter(Boolean).length ? <p>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')}</p> : null}
                 {contact.comment ? <p>{contact.comment}</p> : null}
+                <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} />
               </div>
             ))}
           </div>

@@ -441,6 +441,7 @@ export type ConsoleJobType =
   | 'delete_document_from_hektor'
   | 'link_hektor_mandant'
   | 'create_hektor_mandant_contact'
+  | 'update_hektor_mandant_contact'
   | 'update_hektor_annonce_fields'
   | 'delete_hektor_annonce'
   | 'create_hektor_draft_annonce'

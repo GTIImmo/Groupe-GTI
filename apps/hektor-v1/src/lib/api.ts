@@ -3282,6 +3282,40 @@ export async function createHektorMandantContactJob(input: {
   return data as ConsoleJob
 }
 
+export async function createUpdateHektorMandantContactJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  contactId: string
+  contact: HektorMandantContactInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const payload = {
+    hektor_contact_id: cleanContactId,
+    contact_id: cleanContactId,
+    civilite: input.contact.civility?.trim() || null,
+    last_name: input.contact.lastName.trim(),
+    first_name: input.contact.firstName?.trim() || null,
+    email: input.contact.email.trim(),
+    phone: input.contact.phone?.trim() || null,
+    address: input.contact.address?.trim() || null,
+    postal_code: input.contact.postalCode?.trim() || null,
+    city: input.contact.city?.trim() || null,
+    hektor_user_email: input.dossier.negociateur_email ?? null,
+  }
+  const { data, error } = await supabase.rpc('app_console_create_update_mandant_contact_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    target_contact_id: cleanContactId,
+    contact_payload: payload,
+    job_priority: input.priority ?? 16,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor mandant update job')
+  return data as ConsoleJob
+}
+
 export type HektorAnnonceUpdateFields = {
   title?: string | null
   description?: string | null
@@ -3346,6 +3380,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'delete_hektor_annonce',
   'update_hektor_annonce_fields',
   'create_hektor_mandant_contact',
+  'update_hektor_mandant_contact',
   'link_hektor_mandant',
   'prepare_document_cloud',
   'upload_document_to_hektor',

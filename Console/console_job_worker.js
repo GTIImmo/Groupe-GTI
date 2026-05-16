@@ -24,6 +24,7 @@ const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, 
 const ACTION_JOB_TYPES = new Set([
   "link_hektor_mandant",
   "create_hektor_mandant_contact",
+  "update_hektor_mandant_contact",
   "update_hektor_annonce_fields",
   "create_hektor_draft_annonce",
 ]);
@@ -1936,7 +1937,7 @@ function decodeHtmlEntities(value) {
 }
 
 function attrValue(tag, name) {
-  const match = String(tag || "").match(new RegExp(`${name}\\\\s*=\\\\s*([\"'])(.*?)\\\\1`, "i"));
+  const match = String(tag || "").match(new RegExp(`${name}\\s*=\\s*([\"'])(.*?)\\1`, "i"));
   return match ? decodeHtmlEntities(match[2]) : null;
 }
 
@@ -2246,6 +2247,11 @@ function replaceParam(values, name, value) {
   values.append(name, value == null ? "" : String(value));
 }
 
+function replaceFirstArrayParam(values, name, value) {
+  values.delete(name);
+  values.append(name, value == null ? "" : String(value));
+}
+
 async function fetchHektorManualMandantForm() {
   const body = new URLSearchParams({
     mode: "contacts-actions-addManuelContactFromOtherObject",
@@ -2266,6 +2272,23 @@ async function fetchHektorManualMandantForm() {
   });
   const parsed = JSON.parse(response.text);
   return String(parsed || "");
+}
+
+async function fetchHektorContactEditForm(contactId) {
+  const id = encodeURIComponent(String(contactId));
+  const group = "contacts,pilotage_accueil_contact,mefContacts/accueilContact";
+  const response = await hektorFetch(`${XMLRPC_URL}?mode=contacts-ihmChargeGroupe&id=${id}&consultMode=editer&ajax=true&group=${encodeURIComponent(group)}`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${id}`,
+    },
+  });
+  try {
+    const parsed = JSON.parse(response.text);
+    if (typeof parsed === "string") return parsed;
+  } catch (_) {
+    // The same endpoint can return either raw HTML or a JSON-encoded HTML string.
+  }
+  return String(response.text || "");
 }
 
 async function createHektorMandantContact(job, annonceId, payload) {
@@ -2378,6 +2401,144 @@ async function handleCreateHektorMandantContact(job) {
       prenom: created.firstName,
       email: created.email,
     },
+    sync_job: syncJob,
+  };
+}
+
+async function updateHektorMandantContact(job, annonceId, contactId, payload) {
+  const lastName = cleanString(payload.last_name || payload.nom || payload.name);
+  const firstName = payload.first_name !== undefined || payload.prenom !== undefined
+    ? cleanString(payload.first_name || payload.prenom) || ""
+    : null;
+  const email = cleanString(payload.email);
+  const phone = payload.phone !== undefined || payload.telephone !== undefined || payload.mobile !== undefined
+    ? cleanString(payload.phone || payload.telephone || payload.mobile) || ""
+    : null;
+  const civility = payload.civility !== undefined || payload.civilite !== undefined
+    ? cleanString(payload.civility || payload.civilite) || ""
+    : null;
+  const address = payload.address !== undefined || payload.adresse !== undefined
+    ? cleanString(payload.address || payload.adresse) || ""
+    : null;
+  const city = payload.city !== undefined || payload.ville !== undefined
+    ? cleanString(payload.city || payload.ville) || ""
+    : null;
+  const postalCode = payload.postal_code !== undefined || payload.code_postal !== undefined || payload.code !== undefined
+    ? cleanString(payload.postal_code || payload.code_postal || payload.code) || ""
+    : null;
+
+  if (!lastName) throw new Error("Nom mandant requis");
+  if (!email) throw new Error("Email mandant requis");
+
+  const formHtml = await fetchHektorContactEditForm(contactId);
+  const values = extractHektorFormValues(formHtml, "mefContacts/contacts_full_accueil");
+  if (!values.has("nom")) {
+    throw new Error(`Formulaire edition contact Hektor introuvable pour ${contactId}`);
+  }
+
+  values.set("nom", lastName);
+  if (firstName !== null) values.set("prenom", firstName);
+  if (civility !== null) values.set("civilite", civility);
+  replaceFirstArrayParam(values, "email[]", email);
+  if (!values.has("label_email[]")) replaceFirstArrayParam(values, "label_email[]", "email");
+  if (!values.has("id_email[]")) replaceFirstArrayParam(values, "id_email[]", "");
+  if (phone !== null) {
+    replaceFirstArrayParam(values, "telephone[]", phone);
+    if (!values.has("label_telephone[]")) replaceFirstArrayParam(values, "label_telephone[]", "portable");
+    if (!values.has("id_telephone[]")) replaceFirstArrayParam(values, "id_telephone[]", "");
+  }
+  if (address !== null) values.set("adresse", address);
+  if (city !== null) values.set("ville", city);
+  if (postalCode !== null) values.set("code", postalCode);
+
+  const body = new URLSearchParams();
+  body.set("mode", "contacts-saveDataEditContact");
+  body.set("group", "mefContacts/contacts_full_accueil");
+  body.set("idContact", String(contactId));
+  for (const [key, value] of values.entries()) body.append(key, value);
+
+  await logJob(job.id, "hektor_mandant_update", "running", "Modification contact mandant dans Hektor", {
+    hektor_annonce_id: String(annonceId),
+    hektor_contact_id: String(contactId),
+    fields: Object.keys(payload || {}).filter((key) => payload[key] != null),
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+    },
+  });
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = response.text;
+  }
+  const parsedText = typeof parsed === "string" ? parsed : JSON.stringify(parsed);
+  if (/emailErrors|erreur|error/i.test(parsedText) && !/content_mefContacts/i.test(parsedText)) {
+    throw new Error(`Modification contact Hektor refusee: ${parsedText.slice(0, 500)}`);
+  }
+
+  return {
+    hektor_contact_id: String(contactId),
+    hektor_annonce_id: String(annonceId),
+    contact: {
+      civilite: civility,
+      nom: lastName,
+      prenom: firstName,
+      email,
+      telephone: phone,
+      adresse: address,
+      code: postalCode,
+      ville: city,
+    },
+  };
+}
+
+async function handleUpdateHektorMandantContact(job) {
+  const payload = safeJsonParse(job.payload_json);
+  let dossier = null;
+  try {
+    dossier = await loadDossier(job);
+  } catch (error) {
+    if (!job.hektor_annonce_id || !(payload.hektor_user_id || payload.hektor_id_user || payload.target_hektor_user_id || payload.hektor_user_email)) throw error;
+    dossier = {
+      app_dossier_id: job.app_dossier_id || payload.app_dossier_id || null,
+      hektor_annonce_id: String(job.hektor_annonce_id),
+      negociateur_email: payload.hektor_user_email || null,
+    };
+  }
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const annonceId = String(dossier.hektor_annonce_id);
+  const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+
+  const before = await fetchHektorProspectsList(annonceId);
+  if (!hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
+    throw new Error(`Le contact ${contactId} n'est pas lie comme mandant de l'annonce ${annonceId}`);
+  }
+
+  const updated = await updateHektorMandantContact(job, annonceId, contactId, payload);
+  await sleep(1200);
+
+  const after = await fetchHektorProspectsList(annonceId);
+  if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
+    throw new Error(`Modification contact OK mais association mandant non confirmee pour ${contactId}`);
+  }
+
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "update_hektor_mandant_contact",
+    priority: 80,
+  });
+
+  return {
+    status: "updated",
+    ...updated,
     sync_job: syncJob,
   };
 }
@@ -2680,6 +2841,8 @@ async function runHandler(job) {
       return handleLinkHektorMandant(job);
     case "create_hektor_mandant_contact":
       return handleCreateHektorMandantContact(job);
+    case "update_hektor_mandant_contact":
+      return handleUpdateHektorMandantContact(job);
     case "update_hektor_annonce_fields":
       return handleUpdateHektorAnnonceFields(job);
     case "delete_hektor_annonce":
