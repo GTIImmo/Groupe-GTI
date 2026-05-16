@@ -1435,12 +1435,14 @@ async function createHektorAnnonce(job, payload) {
       return await createHektorAnnonceWithHttpDirect(job, payload);
     } catch (error) {
       const createdId = error && error.createdHektorAnnonceId ? error.createdHektorAnnonceId : null;
+      const sessionExpired = isHektorSessionError(error);
       await logJob(job.id, "hektor_annonce_http", "error", "Creation HTTP directe Hektor echouee", {
         error: error && error.message ? error.message : String(error),
         created_hektor_annonce_id: createdId,
-        playwright_fallback: CREATE_HEKTOR_PLAYWRIGHT_FALLBACK && !createdId,
+        playwright_fallback: CREATE_HEKTOR_PLAYWRIGHT_FALLBACK && !createdId && !sessionExpired,
+        session_retry: sessionExpired,
       });
-      if (createdId || !CREATE_HEKTOR_PLAYWRIGHT_FALLBACK) throw error;
+      if (createdId || sessionExpired || !CREATE_HEKTOR_PLAYWRIGHT_FALLBACK) throw error;
     }
   }
   const result = await createHektorAnnonceWithPlaywright(job, payload);
