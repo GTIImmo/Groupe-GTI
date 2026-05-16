@@ -2015,9 +2015,15 @@ function hektorCreatedAnnonceId(job: ConsoleJob) {
 
 function hektorActionProgress(job: ConsoleJob, syncJob: ConsoleJob | null, appDossier?: Dossier | null) {
   if (job.status === 'error' || syncJob?.status === 'error') return 'error'
+  const syncJobId = hektorJobSyncJobId(job)
+  if (syncJobId && syncJob?.status !== 'done') {
+    if (job.status === 'done') return 'syncing'
+    if (job.status === 'running') return 'creating'
+    return 'queued'
+  }
+  if (syncJobId && syncJob?.status === 'done') return 'available'
   if (appDossier) return 'available'
   if (job.job_type !== 'create_hektor_draft_annonce' && job.status === 'done') return 'available'
-  if (syncJob?.status === 'done') return 'available'
   if (job.status === 'done') return 'syncing'
   if (job.status === 'running') return 'creating'
   return 'queued'
@@ -3811,7 +3817,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDossierId, session])
+  }, [selectedDossierId, session, dataReloadKey])
 
   useEffect(() => {
     if (deepLinkHandled || bootLoading || (hasSupabaseEnv && !session)) return
