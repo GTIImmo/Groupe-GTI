@@ -2109,6 +2109,56 @@ function normalizeHektorAnnonceUpdatePayload(payload) {
   return clean;
 }
 
+async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
+  const cleanFields = normalizeHektorAnnonceUpdatePayload(fields);
+  const results = [];
+
+  const textResult = await postHektorPrincipalTextUpdate(job, annonceId, {
+    title: cleanFields.title,
+    description: cleanFields.description,
+  });
+  if (textResult) results.push(textResult);
+
+  const agInterieur = {};
+  if (cleanFields.room_count != null) agInterieur.nbpieces = cleanFields.room_count;
+  if (cleanFields.bedroom_count != null) agInterieur.NB_CHAMBRES = cleanFields.bedroom_count;
+  if (cleanFields.surface != null) agInterieur.surfappart = cleanFields.surface;
+  if (cleanFields.carrez_surface != null) agInterieur.SURF_CARREZ = cleanFields.carrez_surface;
+  if (Object.keys(agInterieur).length) {
+    results.push(await postHektorMefUpdate(job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur));
+  }
+
+  const mandatInfo = {};
+  if (cleanFields.price != null) mandatInfo.prix = cleanFields.price;
+  if (cleanFields.net_seller_price != null) mandatInfo.PRIXNETVENDEUR = cleanFields.net_seller_price;
+  if (Object.keys(mandatInfo).length) {
+    results.push(await postHektorMefUpdate(job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo));
+  }
+
+  return results;
+}
+
+async function applyCreatedAnnonceInitialFields(job, annonceId, payload) {
+  const fields = normalizeHektorAnnonceUpdatePayload(payload);
+  if (!Object.keys(fields).length) {
+    return { status: "skipped", reason: "no_initial_fields" };
+  }
+
+  await logJob(job.id, "hektor_annonce_initial_fields", "running", "Application des champs saisis apres creation Hektor", {
+    hektor_annonce_id: String(annonceId),
+    fields: Object.keys(fields),
+  });
+  const results = await applyHektorAnnonceFieldUpdates(job, annonceId, fields);
+  if (!results.length) {
+    return { status: "skipped", reason: "no_supported_initial_fields", fields: Object.keys(fields) };
+  }
+  await logJob(job.id, "hektor_annonce_initial_fields", "done", "Champs initiaux sauvegardes dans Hektor", {
+    hektor_annonce_id: String(annonceId),
+    updated_groups: results.map((item) => item.group),
+  });
+  return { status: "updated", updated_groups: results };
+}
+
 async function handleUpdateHektorAnnonceFields(job) {
   const payload = safeJsonParse(job.payload_json);
   let dossier = null;
@@ -2125,30 +2175,7 @@ async function handleUpdateHektorAnnonceFields(job) {
   await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
 
   const annonceId = String(dossier.hektor_annonce_id);
-  const fields = normalizeHektorAnnonceUpdatePayload(payload);
-  const results = [];
-
-  const textResult = await postHektorPrincipalTextUpdate(job, annonceId, {
-    title: fields.title,
-    description: fields.description,
-  });
-  if (textResult) results.push(textResult);
-
-  const agInterieur = {};
-  if (fields.room_count != null) agInterieur.nbpieces = fields.room_count;
-  if (fields.bedroom_count != null) agInterieur.NB_CHAMBRES = fields.bedroom_count;
-  if (fields.surface != null) agInterieur.surfappart = fields.surface;
-  if (fields.carrez_surface != null) agInterieur.SURF_CARREZ = fields.carrez_surface;
-  if (Object.keys(agInterieur).length) {
-    results.push(await postHektorMefUpdate(job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur));
-  }
-
-  const mandatInfo = {};
-  if (fields.price != null) mandatInfo.prix = fields.price;
-  if (fields.net_seller_price != null) mandatInfo.PRIXNETVENDEUR = fields.net_seller_price;
-  if (Object.keys(mandatInfo).length) {
-    results.push(await postHektorMefUpdate(job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo));
-  }
+  const results = await applyHektorAnnonceFieldUpdates(job, annonceId, payload);
 
   if (!results.length) throw new Error("Aucun champ annonce modifiable fourni");
 
@@ -2562,6 +2589,21 @@ async function handleCreateHektorDraftAnnonce(job) {
 
   const wizardResult = await createHektorAnnonce(job, payload);
   const idannWizard = wizardResult.idannWizard;
+  let initialFieldsUpdate = { status: "skipped", reason: "not_started" };
+
+  try {
+    await sleep(1200);
+    initialFieldsUpdate = await applyCreatedAnnonceInitialFields(job, idannWizard, payload);
+  } catch (error) {
+    initialFieldsUpdate = {
+      status: "error",
+      error: error && error.message ? error.message : String(error),
+    };
+    await logJob(job.id, "hektor_annonce_initial_fields", "error", "Creation faite, mais champs initiaux non sauvegardes dans Hektor", {
+      hektor_annonce_id: String(idannWizard),
+      error: initialFieldsUpdate.error,
+    });
+  }
 
   let created = null;
   for (let attempt = 1; attempt <= 6; attempt += 1) {
@@ -2602,6 +2644,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     folder_number: created.folderNumber || null,
     created_at_hektor: created.createdAt || null,
     property_type: created.type && created.type.name ? created.type.name : payload.property_type || null,
+    initial_fields_update: initialFieldsUpdate,
     sync_job: syncJob,
     requested_payload: {
       title: payload.title || null,
