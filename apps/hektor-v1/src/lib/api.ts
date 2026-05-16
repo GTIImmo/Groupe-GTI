@@ -3341,7 +3341,16 @@ export async function createDeleteHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
-const hektorActionJobTypes: ConsoleJobType[] = ['create_hektor_draft_annonce', 'delete_hektor_annonce', 'update_hektor_annonce_fields', 'create_hektor_mandant_contact', 'link_hektor_mandant']
+const hektorActionJobTypes: ConsoleJobType[] = [
+  'create_hektor_draft_annonce',
+  'delete_hektor_annonce',
+  'update_hektor_annonce_fields',
+  'create_hektor_mandant_contact',
+  'link_hektor_mandant',
+  'prepare_document_cloud',
+  'upload_document_to_hektor',
+  'delete_document_from_hektor',
+]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
   if (!hasSupabaseEnv || !supabase) return []

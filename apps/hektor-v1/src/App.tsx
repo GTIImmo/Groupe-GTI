@@ -79,6 +79,7 @@ function HektorAnnonceUpdateForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix'>
   detail: Pick<DossierDetailPayload, 'surface_habitable_detail' | 'surface' | 'nb_pieces' | 'nb_chambres'>
   compact?: boolean
+  onJobCreated?: (job: ConsoleJob) => void
 }) {
   const { dossier, detail } = props
   const [title, setTitle] = useState(dossier.titre_bien ?? '')
@@ -121,7 +122,8 @@ function HektorAnnonceUpdateForm(props: {
         },
         priority: 14,
       })
-      setMessage(`Modification envoyee au PC serveur (${job.status}).`)
+      props.onJobCreated?.(job)
+      setMessage(null)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Modification Hektor impossible.')
     } finally {
@@ -176,6 +178,7 @@ function HektorAnnonceUpdateForm(props: {
 function HektorMandantContactForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   compact?: boolean
+  onJobCreated?: (job: ConsoleJob) => void
 }) {
   const [civility, setCivility] = useState('')
   const [lastName, setLastName] = useState('')
@@ -223,7 +226,8 @@ function HektorMandantContactForm(props: {
       setFirstName('')
       setEmail('')
       setPhone('')
-      setMessage(`Contact mandant envoye au PC serveur (${job.status}).`)
+      props.onJobCreated?.(job)
+      setMessage(null)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Creation du mandant impossible.')
     } finally {
@@ -1769,8 +1773,24 @@ function consoleJobShortId(job: Pick<ConsoleJob, 'id'>) {
 function hektorActionJobTitle(job: ConsoleJob) {
   const payload = job.payload_json ?? {}
   const result = job.result_json ?? {}
+  const documentName = typeof payload.document_name === 'string' && payload.document_name.trim()
+    ? payload.document_name.trim()
+    : typeof payload.original_filename === 'string' && payload.original_filename.trim()
+      ? payload.original_filename.trim()
+      : typeof payload.document_label === 'string' && payload.document_label.trim()
+        ? payload.document_label.trim()
+        : null
   if (job.job_type === 'delete_hektor_annonce') {
     return `Suppression ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
+  if (job.job_type === 'delete_document_from_hektor') {
+    return documentName ? `Suppression ${documentName}` : 'Suppression document'
+  }
+  if (job.job_type === 'upload_document_to_hektor') {
+    return documentName ? `Ajout ${documentName}` : 'Ajout document Hektor'
+  }
+  if (job.job_type === 'prepare_document_cloud') {
+    return documentName ? `Preparation ${documentName}` : 'Preparation document'
   }
   if (job.job_type === 'update_hektor_annonce_fields') {
     return `Modification ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
@@ -1786,15 +1806,19 @@ function hektorActionJobTitle(job: ConsoleJob) {
 
 function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
+  if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
+  if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
+  if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
   return 'Creation en cours'
 }
 
 function hektorActionJobTone(job: ConsoleJob) {
-  if (job.job_type === 'delete_hektor_annonce') return 'delete'
+  if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
+  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud') return 'document'
   return 'create'
 }
 
@@ -1805,6 +1829,11 @@ function hektorActionJobDetail(job: ConsoleJob) {
   const negotiator = typeof payload.hektor_user_label === 'string' ? payload.hektor_user_label : null
   const folder = typeof result.folder_number === 'string' ? result.folder_number : null
   if (job.status === 'error') return job.error_message || 'Action Hektor en erreur'
+  if (job.job_type === 'upload_document_to_hektor') return 'Document envoye au PC serveur'
+  if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
+  if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
+  if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
   if (folder) return `${folder} synchronise dans l'app`
   return [negotiator, agency].filter(Boolean).join(' - ') || `Job ${consoleJobShortId(job)}`
 }
@@ -1837,16 +1866,26 @@ function hektorCreatedAnnonceId(job: ConsoleJob) {
 function hektorActionProgress(job: ConsoleJob, syncJob: ConsoleJob | null, appDossier?: Dossier | null) {
   if (job.status === 'error' || syncJob?.status === 'error') return 'error'
   if (appDossier) return 'available'
+  if (job.job_type !== 'create_hektor_draft_annonce' && job.status === 'done') return 'available'
   if (syncJob?.status === 'done') return 'available'
   if (job.status === 'done') return 'syncing'
   if (job.status === 'running') return 'creating'
   return 'queued'
 }
 
-function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgress>) {
-  if (progress === 'available') return 'Annonce disponible'
+function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgress>, job?: ConsoleJob) {
+  if (progress === 'available') {
+    if (!job || job.job_type === 'create_hektor_draft_annonce') return 'Annonce disponible'
+    if (job.job_type === 'update_hektor_annonce_fields') return 'Modification terminee'
+    if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
+    if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
+    if (job.job_type === 'prepare_document_cloud') return 'Document pret'
+    if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
+    if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
+    return 'Action terminee'
+  }
   if (progress === 'syncing') return 'Ajout dans l app'
-  if (progress === 'creating') return 'Creation Hektor'
+  if (progress === 'creating') return job && job.job_type !== 'create_hektor_draft_annonce' ? 'Commande Hektor' : 'Creation Hektor'
   if (progress === 'error') return 'Action a verifier'
   return 'En attente'
 }
@@ -1868,6 +1907,8 @@ function HektorActionStatusPopup(props: {
   const mainProgress = hektorActionProgress(mainJob, mainSyncJob, mainDossier)
   const isAvailable = mainProgress === 'available'
   const isError = mainProgress === 'error'
+  const canOpenApp = isAvailable && mainJob.job_type !== 'delete_hektor_annonce'
+  const canOpenHektor = Boolean(mainAnnonceId) && mainJob.job_type !== 'delete_hektor_annonce'
 
   return (
     <aside className={`hektor-action-popup hektor-action-popup-${mainProgress}`} aria-live="polite">
@@ -1875,7 +1916,7 @@ function HektorActionStatusPopup(props: {
         <span className="hektor-action-popup-icon" aria-hidden="true">{isError ? '!' : isAvailable ? 'OK' : 'H'}</span>
         <div>
           <p className="hektor-action-popup-eyebrow">Suivi Hektor</p>
-          <h3>{hektorActionProgressLabel(mainProgress)}</h3>
+          <h3>{hektorActionProgressLabel(mainProgress, mainJob)}</h3>
         </div>
         <button className="hektor-action-popup-close" type="button" onClick={() => props.onDismiss(mainJob.id)} aria-label="Masquer le suivi">x</button>
       </div>
@@ -1895,10 +1936,10 @@ function HektorActionStatusPopup(props: {
       </div>
 
       <div className="hektor-action-popup-actions">
-        {isAvailable ? (
+        {canOpenApp ? (
           <button className="ghost-button button-primary" type="button" onClick={() => props.onOpenAppDossier(mainJob)}>Ouvrir l'annonce</button>
         ) : null}
-        {mainAnnonceId ? <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(mainAnnonceId)}>Hektor</button> : null}
+        {canOpenHektor && mainAnnonceId ? <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(mainAnnonceId)}>Hektor</button> : null}
       </div>
 
       {primaryJobs.length > 1 ? (
@@ -2368,7 +2409,7 @@ function consoleDocumentIconType(document: Pick<ConsoleDocument, 'mime_type' | '
   return 'content'
 }
 
-function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier; compact?: boolean }) {
+function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -2449,9 +2490,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
     setMessage(null)
     setError(null)
     try {
-      await createPrepareConsoleDocumentJob({ document, priority: 30 })
+      const job = await createPrepareConsoleDocumentJob({ document, priority: 30 })
+      onJobCreated?.(job)
       setPendingDocumentIds((current) => new Set([...current, document.id]))
-      setMessage('Preparation demandee. Le PC serveur va envoyer le fichier dans le cloud.')
+      setMessage(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de demander la preparation')
     } finally {
@@ -2480,7 +2522,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
     setMessage(null)
     setError(null)
     try {
-      await createUploadDocumentToHektorJob({
+      const job = await createUploadDocumentToHektorJob({
         dossier,
         file: uploadFile,
         visibility: uploadVisibility,
@@ -2488,11 +2530,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
         documentType: uploadType.trim() || null,
         priority: 20,
       })
+      onJobCreated?.(job)
       setUploadFile(null)
       setUploadLabel('')
       setUploadType('')
       setUploadInputVersion((value) => value + 1)
-      setMessage('Document envoye en attente. Le PC serveur va l ajouter dans Hektor, puis rafraichir la liste.')
+      setMessage(null)
       window.setTimeout(() => void refreshDocuments(true), 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de creer la demande upload Hektor')
@@ -2508,9 +2551,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false }: { dossier: Dossier;
     setMessage(null)
     setError(null)
     try {
-      await createDeleteDocumentFromHektorJob({ document, priority: 15 })
+      const job = await createDeleteDocumentFromHektorJob({ document, priority: 15 })
+      onJobCreated?.(job)
       setDeletingDocumentIds((current) => new Set([...current, document.id]))
-      setMessage('Suppression demandee. Le PC serveur va supprimer le document dans Hektor, puis rafraichir la liste.')
+      setMessage(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de creer la demande de suppression Hektor')
     } finally {
@@ -3502,7 +3546,7 @@ export default function App() {
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     const idsToResolve = visibleHektorActionPopupJobs
-      .filter((job) => job.job_type === 'create_hektor_draft_annonce' && job.status === 'done')
+      .filter((job) => job.status === 'done')
       .map(hektorCreatedAnnonceId)
       .filter((id): id is string => Boolean(id))
       .filter((id) => !hektorActionLinkedDossiers[id])
@@ -6404,6 +6448,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
+                onHektorActionJobCreated={rememberHektorActionJob}
               />
             </section>
           </div>
@@ -6991,7 +7036,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -7148,6 +7193,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
+                onHektorActionJobCreated={rememberHektorActionJob}
               />
             </section>
           </div>
@@ -8636,6 +8682,7 @@ function DossierDetailLayout(props: {
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   if (!props.selectedDossier) {
@@ -8870,7 +8917,7 @@ function DossierDetailLayout(props: {
                       </article>
                     ) : null}
                   </div>
-                  <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} />
+                  <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} onJobCreated={props.onHektorActionJobCreated} />
                 </section>
               ) : null}
 
@@ -8961,7 +9008,7 @@ function DossierDetailLayout(props: {
                         <strong>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
                         <small>{props.detail.mandants_texte || primaryContact.name}</small>
                       </div>
-                      <HektorMandantContactForm dossier={dossier} />
+                      <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
                         <div className="detail-contact-head">
                           <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
@@ -9053,7 +9100,7 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : (
                     <div className="detail-entity-list detail-contact-list">
-                      <HektorMandantContactForm dossier={dossier} />
+                      <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
                     </div>
                   )}
                 </article>
@@ -9078,7 +9125,7 @@ function DossierDetailLayout(props: {
 
               {activeDetailTab === 'content' ? (
               <section className="detail-section detail-console-documents-section">
-                <ConsoleDocumentsPanel dossier={dossier} />
+                <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
               </section>
               ) : null}
 
@@ -9655,6 +9702,7 @@ function AnnonceScreen(props: {
   actionRole?: 'nego' | 'pauline'
   onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailLoading: boolean
   onBack: () => void
 }) {
@@ -9679,6 +9727,7 @@ function DossierDetailScreen(props: {
   requestMessagesPriceDrop: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   requestHistoryCancellation: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
   onBack: () => void
@@ -9736,6 +9785,7 @@ function MobileDossierDetail(props: {
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   const dossier = props.selectedDossier
@@ -9857,7 +9907,7 @@ function MobileDossierDetail(props: {
       </section>
 
       <section className="mobile-detail-section mobile-hektor-edit-section">
-        <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact />
+        <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact onJobCreated={props.onHektorActionJobCreated} />
       </section>
 
       {canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable ? (
@@ -9941,7 +9991,7 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
-        <HektorMandantContactForm dossier={dossier} compact />
+        <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
             <strong>{mandat.title}</strong>
@@ -9967,7 +10017,7 @@ function MobileDossierDetail(props: {
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Contenu de l'annonce</summary>
         <div className="mobile-console-documents">
-          <ConsoleDocumentsPanel dossier={dossier} compact />
+          <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
         </div>
         {props.images.length > 0 ? (
           <div className="mobile-detail-gallery">
