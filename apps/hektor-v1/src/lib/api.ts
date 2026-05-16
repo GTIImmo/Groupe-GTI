@@ -1169,6 +1169,23 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
   }
 }
 
+export async function loadDossierByHektorAnnonceId(hektorAnnonceId: string | number, scope?: DataScope | null): Promise<Dossier | null> {
+  if (!hasSupabaseEnv || !supabase) {
+    return filterByNegotiatorEmail(mockDossiers, scope).find((item) => String(item.hektor_annonce_id) === String(hektorAnnonceId)) ?? null
+  }
+
+  const { data, error } = await applyNegotiatorScopeToQuery(
+    supabase
+      .from('app_dossiers_current')
+      .select('*')
+      .eq('hektor_annonce_id', hektorAnnonceId)
+      .limit(1),
+    scope,
+  )
+  if (error) throw new Error(error.message)
+  return ((data ?? [])[0] as Dossier | undefined) ?? null
+}
+
 export async function setDossierDiffusable(appDossierId: number, diffusable: boolean): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const now = new Date().toISOString()

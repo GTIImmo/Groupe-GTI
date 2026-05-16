@@ -19,6 +19,7 @@ import {
   loadDiffusionTargets,
   previewDefaultDiffusionTargets,
   loadDossierDetail,
+  loadDossierByHektorAnnonceId,
   loadDossiersPage,
   loadFilterCatalog,
   loadMandatFilterCatalog,
@@ -1808,6 +1809,110 @@ function hektorActionJobDetail(job: ConsoleJob) {
   return [negotiator, agency].filter(Boolean).join(' - ') || `Job ${consoleJobShortId(job)}`
 }
 
+function isPrimaryHektorActionJob(job: ConsoleJob) {
+  return job.job_type !== 'refresh_console_data'
+}
+
+function hektorJobSyncJobId(job: ConsoleJob) {
+  const syncJob = job.result_json?.sync_job
+  if (!syncJob || typeof syncJob !== 'object') return null
+  const id = (syncJob as { id?: unknown }).id
+  return typeof id === 'string' && id.trim() ? id : null
+}
+
+function hektorActionRelatedJobIds(jobs: ConsoleJob[]) {
+  return Array.from(new Set(jobs.flatMap((job) => [job.id, hektorJobSyncJobId(job)].filter((id): id is string => Boolean(id)))))
+}
+
+function hektorCreatedAnnonceId(job: ConsoleJob) {
+  const resultId = job.result_json?.hektor_annonce_id
+  const payloadId = job.payload_json?.hektor_annonce_id
+  const source = resultId ?? job.hektor_annonce_id ?? payloadId
+  const value = String(source ?? '').trim()
+  return value || null
+}
+
+function hektorActionProgress(job: ConsoleJob, syncJob: ConsoleJob | null, appDossier?: Dossier | null) {
+  if (job.status === 'error' || syncJob?.status === 'error') return 'error'
+  if (appDossier) return 'available'
+  if (syncJob?.status === 'done') return 'available'
+  if (job.status === 'done') return 'syncing'
+  if (job.status === 'running') return 'creating'
+  return 'queued'
+}
+
+function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgress>) {
+  if (progress === 'available') return 'Annonce disponible'
+  if (progress === 'syncing') return 'Ajout dans l app'
+  if (progress === 'creating') return 'Creation Hektor'
+  if (progress === 'error') return 'Action a verifier'
+  return 'En attente'
+}
+
+function HektorActionStatusPopup(props: {
+  jobs: ConsoleJob[]
+  linkedDossiers: Record<string, Dossier>
+  onDismiss: (jobId: string) => void
+  onOpenAppDossier: (job: ConsoleJob) => void
+}) {
+  const primaryJobs = props.jobs.filter(isPrimaryHektorActionJob).slice(0, 3)
+  if (primaryJobs.length === 0) return null
+  const jobsById = new Map(props.jobs.map((job) => [job.id, job]))
+  const mainJob = primaryJobs[0]
+  const mainSyncJobId = hektorJobSyncJobId(mainJob)
+  const mainSyncJob = mainSyncJobId ? jobsById.get(mainSyncJobId) ?? null : null
+  const mainAnnonceId = hektorCreatedAnnonceId(mainJob)
+  const mainDossier = mainAnnonceId ? props.linkedDossiers[mainAnnonceId] : null
+  const mainProgress = hektorActionProgress(mainJob, mainSyncJob, mainDossier)
+  const isAvailable = mainProgress === 'available'
+  const isError = mainProgress === 'error'
+
+  return (
+    <aside className={`hektor-action-popup hektor-action-popup-${mainProgress}`} aria-live="polite">
+      <div className="hektor-action-popup-head">
+        <span className="hektor-action-popup-icon" aria-hidden="true">{isError ? '!' : isAvailable ? 'OK' : 'H'}</span>
+        <div>
+          <p className="hektor-action-popup-eyebrow">Suivi Hektor</p>
+          <h3>{hektorActionProgressLabel(mainProgress)}</h3>
+        </div>
+        <button className="hektor-action-popup-close" type="button" onClick={() => props.onDismiss(mainJob.id)} aria-label="Masquer le suivi">x</button>
+      </div>
+
+      <div className="hektor-action-popup-main">
+        <strong>{hektorActionJobTitle(mainJob)}</strong>
+        <span>{hektorActionJobDetail(mainJob)}</span>
+      </div>
+
+      <div className="hektor-action-steps">
+        <span className={mainJob.status === 'done' ? 'is-done' : mainJob.status === 'running' ? 'is-current' : isError ? 'is-error' : ''}>
+          <i aria-hidden="true" /> Hektor
+        </span>
+        <span className={isAvailable ? 'is-done' : mainProgress === 'syncing' ? 'is-current' : mainSyncJob?.status === 'error' ? 'is-error' : ''}>
+          <i aria-hidden="true" /> App
+        </span>
+      </div>
+
+      <div className="hektor-action-popup-actions">
+        {isAvailable ? (
+          <button className="ghost-button button-primary" type="button" onClick={() => props.onOpenAppDossier(mainJob)}>Ouvrir l'annonce</button>
+        ) : null}
+        {mainAnnonceId ? <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(mainAnnonceId)}>Hektor</button> : null}
+      </div>
+
+      {primaryJobs.length > 1 ? (
+        <div className="hektor-action-popup-queue">
+          {primaryJobs.slice(1).map((job) => (
+            <button key={job.id} type="button" onClick={() => props.onDismiss(job.id)}>
+              <span>{hektorActionJobLabel(job)}</span>
+              <strong>{hektorActionJobTitle(job)}</strong>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </aside>
+  )
+}
+
 function userInitials(displayName?: string | null, email?: string | null) {
   const source = (displayName ?? '').trim() || (email ?? '').split('@')[0] || 'U'
   const parts = source.split(/[\s._-]+/).filter(Boolean)
@@ -2996,6 +3101,8 @@ export default function App() {
   const [dataReloadKey, setDataReloadKey] = useState(0)
   const [hektorActionJobs, setHektorActionJobs] = useState<ConsoleJob[]>([])
   const hektorActionJobsRef = useRef<ConsoleJob[]>([])
+  const [dismissedHektorActionJobIds, setDismissedHektorActionJobIds] = useState<string[]>([])
+  const [hektorActionLinkedDossiers, setHektorActionLinkedDossiers] = useState<Record<string, Dossier>>({})
   const [mandats, setMandats] = useState<MandatRecord[]>([])
   const [mandatsTotal, setMandatsTotal] = useState(0)
   const [mandatPage, setMandatPage] = useState(1)
@@ -3155,6 +3262,7 @@ export default function App() {
       const withoutSame = current.filter((item) => item.id !== job.id)
       return [job, ...withoutSame].slice(0, 12)
     })
+    setDismissedHektorActionJobIds((current) => current.filter((id) => id !== job.id))
   }
 
   const sessionEmail = normalizeEmail(session?.user.email ?? profile?.email ?? null)
@@ -3178,7 +3286,15 @@ export default function App() {
     if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
     return filters
   }, [filters, screen])
-  const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter(isConsoleJobActive), [hektorActionJobs])
+  const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter((job) => isPrimaryHektorActionJob(job) && isConsoleJobActive(job)), [hektorActionJobs])
+  const visibleHektorActionPopupJobs = useMemo(() => {
+    const dismissed = new Set(dismissedHektorActionJobIds)
+    return hektorActionJobs
+      .filter((job) => !dismissed.has(job.id))
+      .filter((job) => isConsoleJobActive(job) || job.status === 'done' || job.status === 'error')
+      .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime())
+      .slice(0, 8)
+  }, [dismissedHektorActionJobIds, hektorActionJobs])
   const activeDeleteAnnonceJobs = useMemo(() => activeHektorActionJobs.filter((job) => job.job_type === 'delete_hektor_annonce'), [activeHektorActionJobs])
   const deletingAppDossierIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => Number(job.app_dossier_id)).filter((value) => Number.isFinite(value))), [activeDeleteAnnonceJobs])
   const deletingHektorAnnonceIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '')).filter(Boolean)), [activeDeleteAnnonceJobs])
@@ -3344,7 +3460,7 @@ export default function App() {
     let refreshQueued = false
     async function refreshHektorActionJobs() {
       try {
-        const trackedIds = hektorActionJobsRef.current.map((job) => job.id)
+        const trackedIds = hektorActionRelatedJobIds(hektorActionJobsRef.current)
         const [activeJobs, trackedJobs] = await Promise.all([
           loadActiveHektorActionJobs(),
           loadConsoleJobsByIds(trackedIds),
@@ -3380,6 +3496,38 @@ export default function App() {
       window.clearInterval(interval)
     }
   }, [session])
+
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    const idsToResolve = visibleHektorActionPopupJobs
+      .filter((job) => job.job_type === 'create_hektor_draft_annonce' && job.status === 'done')
+      .map(hektorCreatedAnnonceId)
+      .filter((id): id is string => Boolean(id))
+      .filter((id) => !hektorActionLinkedDossiers[id])
+    if (idsToResolve.length === 0) return
+    let cancelled = false
+    async function resolveCreatedDossiers() {
+      const resolvedEntries: Array<[string, Dossier]> = []
+      for (const id of Array.from(new Set(idsToResolve))) {
+        try {
+          const dossier = await loadDossierByHektorAnnonceId(id, dataScope)
+          if (dossier) resolvedEntries.push([id, dossier])
+        } catch (error) {
+          console.warn('Hektor created dossier lookup failed', error)
+        }
+      }
+      if (cancelled || resolvedEntries.length === 0) return
+      setHektorActionLinkedDossiers((current) => {
+        const next = { ...current }
+        for (const [id, dossier] of resolvedEntries) next[id] = dossier
+        return next
+      })
+    }
+    void resolveCreatedDossiers()
+    return () => {
+      cancelled = true
+    }
+  }, [dataScope, hektorActionLinkedDossiers, session, visibleHektorActionPopupJobs])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -3786,6 +3934,33 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceModalOpen(false)
   }
 
+  function dismissHektorActionPopup(jobId: string) {
+    const job = hektorActionJobsRef.current.find((item) => item.id === jobId)
+    const relatedIds = job ? [job.id, hektorJobSyncJobId(job)].filter((id): id is string => Boolean(id)) : [jobId]
+    setDismissedHektorActionJobIds((current) => Array.from(new Set([...current, ...relatedIds])))
+  }
+
+  async function openHektorActionAppDossier(job: ConsoleJob) {
+    const hektorAnnonceId = hektorCreatedAnnonceId(job)
+    if (!hektorAnnonceId) return
+    let dossier: Dossier | null = hektorActionLinkedDossiers[hektorAnnonceId] ?? null
+    if (!dossier) {
+      dossier = await loadDossierByHektorAnnonceId(hektorAnnonceId, dataScope)
+      if (dossier) {
+        setHektorActionLinkedDossiers((current) => ({ ...current, [hektorAnnonceId]: dossier as Dossier }))
+      }
+    }
+    if (!dossier) {
+      setNoticeMessage("L'annonce est creee dans Hektor. Elle n'est pas encore visible dans l'app, la synchronisation continue.")
+      return
+    }
+    setScreen('annonces')
+    setSelectedDossierId(dossier.app_dossier_id)
+    setDataReloadKey((value) => value + 1)
+    setDetailOpen(true)
+    dismissHektorActionPopup(job.id)
+  }
+
   async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draftAnnonceAgency.trim()) {
@@ -3820,7 +3995,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       })
       rememberHektorActionJob(job)
       setDraftAnnonceModalOpen(false)
-      setNoticeMessage(`Creation affichee en suivi. Job annonce Hektor ${job.id.slice(0, 8)} en attente.`)
+      setNoticeMessage(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d annonce Hektor')
     } finally {
@@ -6232,6 +6407,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </div>
         ) : null}
         </MobileLayout>
+        <HektorActionStatusPopup
+          jobs={visibleHektorActionPopupJobs}
+          linkedDossiers={hektorActionLinkedDossiers}
+          onDismiss={dismissHektorActionPopup}
+          onOpenAppDossier={(job) => void openHektorActionAppDossier(job)}
+        />
         {appModals}
       </>
     )
@@ -6969,6 +7150,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        <HektorActionStatusPopup
+          jobs={visibleHektorActionPopupJobs}
+          linkedDossiers={hektorActionLinkedDossiers}
+          onDismiss={dismissHektorActionPopup}
+          onOpenAppDossier={(job) => void openHektorActionAppDossier(job)}
+        />
         {appModals}
         </main>
       </div>

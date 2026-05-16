@@ -9425,6 +9425,238 @@ button.metric-card.is-active {
 .mobile-hektor-job-card-delete {
   border-left-color: #b42318;
 }
+.hektor-action-popup {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 74;
+  width: min(420px, calc(100vw - 28px));
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(30, 41, 59, 0.14);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(13, 76, 92, 0.08) 0%, rgba(255, 255, 255, 0.98) 42%),
+    linear-gradient(180deg, #ffffff 0%, #f7fbfc 100%);
+  box-shadow:
+    0 26px 70px rgba(10, 18, 28, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  animation: hektor-action-popup-in 180ms ease-out both;
+}
+.hektor-action-popup::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  border-radius: 8px 0 0 8px;
+  background: linear-gradient(180deg, var(--gti-final-pink), #1b7f4d);
+}
+.hektor-action-popup-error::before {
+  background: #b42318;
+}
+.hektor-action-popup-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hektor-action-popup-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #182f3a;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 950;
+  box-shadow: 0 12px 28px rgba(24, 47, 58, 0.22);
+}
+.hektor-action-popup-available .hektor-action-popup-icon {
+  background: #1b7f4d;
+}
+.hektor-action-popup-error .hektor-action-popup-icon {
+  background: #b42318;
+}
+.hektor-action-popup-eyebrow {
+  margin: 0 0 2px;
+  color: #7a6570;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hektor-action-popup h3 {
+  margin: 0;
+  color: #172c37;
+  font-size: 20px;
+  line-height: 1.14;
+}
+.hektor-action-popup-close {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(30, 41, 59, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5e6b73;
+  font-weight: 900;
+  cursor: pointer;
+}
+.hektor-action-popup-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.hektor-action-popup-main strong {
+  min-width: 0;
+  color: #172c37;
+  font-size: 15px;
+  font-weight: 950;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hektor-action-popup-main span {
+  color: #657781;
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.hektor-action-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.hektor-action-steps span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(30, 41, 59, 0.10);
+  border-radius: 8px;
+  background: #f4f7f8;
+  color: #687983;
+  font-size: 12px;
+  font-weight: 850;
+}
+.hektor-action-steps i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #b8c4ca;
+}
+.hektor-action-steps .is-current {
+  background: #eef7fb;
+  color: #17475a;
+}
+.hektor-action-steps .is-current i {
+  background: #1d5fd1;
+  box-shadow: 0 0 0 4px rgba(29, 95, 209, 0.12);
+}
+.hektor-action-steps .is-done {
+  background: #edf8f1;
+  color: #1b6743;
+}
+.hektor-action-steps .is-done i {
+  background: #1b7f4d;
+}
+.hektor-action-steps .is-error {
+  background: #fff0ed;
+  color: #8f2f23;
+}
+.hektor-action-steps .is-error i {
+  background: #b42318;
+}
+.hektor-action-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hektor-action-popup-actions .ghost-button {
+  min-height: 36px;
+  border-radius: 8px;
+}
+.hektor-action-popup-queue {
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+.hektor-action-popup-queue button {
+  display: grid;
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #526570;
+  text-align: left;
+  cursor: pointer;
+}
+.hektor-action-popup-queue span {
+  color: var(--gti-final-pink);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hektor-action-popup-queue strong {
+  min-width: 0;
+  color: #283b45;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@keyframes hektor-action-popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 760px) {
+  .hektor-action-popup {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+    padding: 15px;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -16px 44px rgba(10, 18, 28, 0.22);
+  }
+  .hektor-action-popup::before {
+    width: 100%;
+    height: 4px;
+    inset: 0 0 auto;
+    border-radius: 8px 8px 0 0;
+  }
+  .hektor-action-popup h3 {
+    font-size: 18px;
+  }
+  .hektor-action-popup-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .hektor-action-steps {
+    gap: 6px;
+  }
+  .hektor-action-popup-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .hektor-action-popup-actions .ghost-button {
+    width: 100%;
+  }
+}
 .detail-screen .detail-contact-section .detail-contact-card-primary:only-child {
   grid-column: 1 / -1;
 }
