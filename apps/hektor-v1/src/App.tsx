@@ -9120,7 +9120,13 @@ function DossierDetailLayout(props: {
           <div className="detail-cockpit-body">
             <main className="detail-cockpit-main">
               <section className="detail-overview">
-                <button className="detail-overview-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
+                <div className="detail-overview-actions">
+                  <button className={`detail-overview-edit ${hektorFieldEditOpen ? 'is-active' : ''}`} type="button" onClick={() => (hektorFieldEditOpen ? closeHektorInlineEdit() : setHektorFieldEditOpen(true))} aria-pressed={hektorFieldEditOpen}>
+                    <span aria-hidden="true">M</span>
+                    {hektorFieldEditOpen ? 'Annuler' : 'Modifier'}
+                  </button>
+                  <button className="detail-overview-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
+                </div>
                 <div className="detail-overview-summary">
                   <div className="detail-header-topline">
                     <div className="detail-property-title">
@@ -9134,10 +9140,6 @@ function DossierDetailLayout(props: {
                         ) : (
                           <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
                         )}
-                        <button className={`hektor-field-edit-button ${hektorFieldEditOpen ? 'is-active' : ''}`} type="button" onClick={() => (hektorFieldEditOpen ? closeHektorInlineEdit() : setHektorFieldEditOpen(true))} aria-label={hektorFieldEditOpen ? 'Annuler la modification Hektor' : 'Modifier les champs Hektor'}>
-                          <span aria-hidden="true">M</span>
-                          {hektorFieldEditOpen ? 'Annuler' : 'Modifier'}
-                        </button>
                       </div>
                     {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
                     </div>
@@ -9167,7 +9169,6 @@ function DossierDetailLayout(props: {
                         ) : (
                           <>
                             <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
-                            <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier la surface">M</button>
                           </>
                         )}
                       </div>
@@ -9187,7 +9188,6 @@ function DossierDetailLayout(props: {
                       ) : (
                         <>
                           <strong>{formatPrice(dossier.prix)}</strong>
-                          <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier le prix">M</button>
                         </>
                       )}
                     </div>

@@ -9455,6 +9455,72 @@ button.metric-card.is-active {
 .detail-editable-title-row h2 {
   min-width: 0;
 }
+.detail-overview-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-overview-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid rgba(197, 0, 95, 0.26);
+  border-radius: 10px;
+  padding: 7px 11px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--gti-final-magenta);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(21, 32, 43, 0.09);
+}
+.detail-overview-edit:hover {
+  border-color: rgba(197, 0, 95, 0.4);
+  background: #ffffff;
+}
+.detail-overview-edit.is-active {
+  border-color: rgba(34, 35, 35, 0.22);
+  background: var(--gti-final-ink);
+  color: #ffffff;
+}
+.detail-overview-edit span {
+  position: relative;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--gti-final-magenta);
+  color: transparent;
+}
+.detail-overview-edit.is-active span {
+  background: rgba(255, 255, 255, 0.18);
+}
+.detail-overview-edit span::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: 5px;
+  width: 11px;
+  height: 3px;
+  border-radius: 999px;
+  background: #ffffff;
+  transform: rotate(-35deg);
+}
+.detail-overview-actions .detail-overview-close {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  flex: 0 0 auto;
+}
 .hektor-field-edit-button,
 .mobile-hektor-field-edit-button {
   display: inline-flex;
@@ -9549,7 +9615,6 @@ button.metric-card.is-active {
 .detail-keyfact-main,
 .detail-keyfact-item {
   position: relative;
-  padding-right: 44px;
 }
 .detail-field-edit-panel {
   margin-top: 14px;
@@ -20868,5 +20933,50 @@ body {
     margin-bottom: -16px;
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+/* Detail popup global edit trigger: one action next to close, no per-field edit buttons. */
+.detail-screen .detail-overview-actions {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 12 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.detail-screen .detail-overview-actions .detail-overview-close {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: auto !important;
+  flex: 0 0 auto !important;
+}
+.detail-screen .detail-overview-summary {
+  padding-right: 170px !important;
+}
+
+@media (max-width: 760px) {
+  .detail-screen .detail-overview-edit {
+    width: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    font-size: 0;
+  }
+  .detail-screen .detail-overview-edit span {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+  }
+  .detail-screen .detail-overview-edit span::before {
+    top: 18px;
+    left: 13px;
+  }
+  .detail-screen .detail-overview-summary {
+    padding: 58px 12px 14px !important;
   }
 }
