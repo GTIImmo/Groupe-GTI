@@ -57,6 +57,79 @@ async function findPageOnDomain(context, expectedDomain, timeoutMs = 90000) {
 }
 
 // ✅ Robust goto with retry for ERR_NETWORK_CHANGED and similar transient errors
+async function waitVisible(locator, timeout = 5000) {
+  try {
+    await locator.waitFor({ state: "visible", timeout });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function tryOpenAdminDirect(context, adminUrl, expectedDomain) {
+  const directPage = await context.newPage();
+  try {
+    console.log("Trying direct Hektor admin:", adminUrl);
+    await gotoWithRetry(directPage, adminUrl, { tries: 2, waitUntil: "domcontentloaded", timeout: 30000 });
+    await directPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+    const loginVisible = await waitVisible(directPage.locator('input[type="password"]').first(), 1200);
+    if (hostIncludes(directPage.url(), expectedDomain) && !loginVisible) {
+      console.log("Direct admin reached:", directPage.url());
+      return directPage;
+    }
+  } catch (error) {
+    console.log("Direct admin attempt failed:", error.message);
+  }
+  await directPage.close().catch(() => {});
+  return null;
+}
+
+async function clickHektorAccessFromPortal(page, context) {
+  console.log("Opening Hektor from Ma Boite Immo portal...");
+
+  const hektorMenu = page.locator('a:has-text("Hektor"), button:has-text("Hektor"), text=Hektor').first();
+  if (await waitVisible(hektorMenu, 10000)) {
+    await safeClick(page, hektorMenu);
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(800);
+  }
+
+  const dialog = page.locator('[role="dialog"][aria-modal="true"]').first();
+  let accessBtn = null;
+
+  if (await waitVisible(dialog, 5000)) {
+    const adminCard = dialog.locator(':has-text("ADMIN")').first();
+    if (await waitVisible(adminCard, 5000)) {
+      accessBtn = adminCard.locator("a,button").filter({ hasText: /J.?y acc/i }).first();
+    } else {
+      accessBtn = dialog.locator("a,button").filter({ hasText: /J.?y acc/i }).first();
+    }
+  } else {
+    console.log("No Hektor modal detected; using visible Hektor access card.");
+    const hektorCard = page.locator(':has-text("Mon logiciel de transaction")').first();
+    if (await waitVisible(hektorCard, 5000)) {
+      accessBtn = hektorCard.locator("a,button").filter({ hasText: /J.?y acc/i }).first();
+    }
+    if (!accessBtn || !(await waitVisible(accessBtn, 2000))) {
+      accessBtn = page.locator("a,button").filter({ hasText: /J.?y acc/i }).first();
+    }
+  }
+
+  if (!accessBtn || !(await waitVisible(accessBtn, 15000))) {
+    throw new Error("Hektor access button not found on Ma Boite Immo portal");
+  }
+
+  const popupPromise = context.waitForEvent("page", { timeout: 15000 }).catch(() => null);
+  console.log("Clicking Hektor access button...");
+  await safeClick(page, accessBtn);
+
+  const popup = await popupPromise;
+  if (popup) {
+    await popup.waitForLoadState("domcontentloaded", { timeout: 60000 }).catch(() => {});
+    console.log("Popup opened:", popup.url());
+  }
+}
+
 async function gotoWithRetry(page, url, opts = {}) {
   const tries = opts.tries ?? 4;
   const waitUntil = opts.waitUntil ?? "domcontentloaded";
@@ -160,6 +233,9 @@ async function gotoWithRetry(page, url, opts = {}) {
     await page.waitForLoadState("networkidle", { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(1200);
 
+    let landed = await tryOpenAdminDirect(context, ADMIN_URL, EXPECT_DOMAIN);
+
+    if (!landed) {
     // B) Click menu "Hektor"
     const hektorMenu = page.locator("text=Hektor").first();
     await hektorMenu.waitFor({ state: "visible", timeout: 30000 });
@@ -167,7 +243,10 @@ async function gotoWithRetry(page, url, opts = {}) {
 
     // Wait HeadlessUI dialog
     const dialog = page.locator('[role="dialog"][aria-modal="true"]').first();
-    await dialog.waitFor({ state: "visible", timeout: 30000 });
+    if (!(await waitVisible(dialog, 7000))) {
+      await clickHektorAccessFromPortal(page, context);
+      landed = await findPageOnDomain(context, EXPECT_DOMAIN, 90000);
+    } else {
     await page.waitForTimeout(400);
 
     // C) Click ADMIN / J’y accède
@@ -193,7 +272,9 @@ async function gotoWithRetry(page, url, opts = {}) {
 
     // D) Find any tab on expected domain
     console.log("⏳ Waiting to reach domain (any tab):", EXPECT_DOMAIN);
-    const landed = await findPageOnDomain(context, EXPECT_DOMAIN, 90000);
+    landed = await findPageOnDomain(context, EXPECT_DOMAIN, 90000);
+    }
+    }
 
     if (!landed) {
       const urls = context.pages().map(p => p.url());

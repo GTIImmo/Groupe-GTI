@@ -986,6 +986,38 @@ async function switchHektorUserContext(idUser) {
   lastHektorLoginAt = Date.now();
 }
 
+async function returnHektorDefaultContext() {
+  const state = readHektorStorageState();
+  const jar = cookieJarFromStorageState(state);
+  const htmlParts = [];
+
+  const autolog = await hektorHtmlRequestWithJar(jar, `${ADMIN_URL}?call=authenticate&mode=autologin&type=DEFAULT`);
+  htmlParts.push(autolog.text);
+
+  if (autolog.location) {
+    const redirectedUrl = new URL(autolog.location, ADMIN_URL).toString();
+    const redirected = await hektorHtmlRequestWithJar(jar, redirectedUrl);
+    htmlParts.push(redirected.text);
+  }
+
+  const admin = await hektorHtmlRequestWithJar(jar, ADMIN_URL);
+  htmlParts.push(admin.text);
+
+  const localStorageItems = new Map();
+  for (const html of htmlParts) {
+    for (const [name, value] of extractLocalStorageSetItems(html).entries()) {
+      localStorageItems.set(name, value);
+    }
+  }
+
+  saveCookieJarToStorageState(state, jar);
+  for (const [name, value] of localStorageItems.entries()) {
+    setHektorLocalStorageValue(state, name, value);
+  }
+  fs.writeFileSync(STORAGE_STATE_PATH, JSON.stringify(state, null, 2), "utf-8");
+  lastHektorLoginAt = Date.now();
+}
+
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
   const target = await resolveHektorExecutionUser(job, dossier, payload, options);
   if (!target || !target.idUser) {
@@ -1023,7 +1055,17 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
       current_role: current.role,
       target_id_user: target.idUser,
     });
-    await refreshHektorSession("context_switch_admin_login");
+    try {
+      await returnHektorDefaultContext();
+      current = currentHektorSessionIdentity();
+    } catch (error) {
+      await logJob(job.id, "hektor_context", "running", "Retour admin direct impossible, relance Playwright", {
+        error: error && error.message ? error.message : String(error),
+      });
+    }
+    if (!current || current.role !== "ADMIN") {
+      await refreshHektorSession("context_switch_admin_login");
+    }
     current = currentHektorSessionIdentity();
   }
 
