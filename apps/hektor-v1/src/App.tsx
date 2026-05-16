@@ -2041,10 +2041,26 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
     return 'Action terminee'
   }
-  if (progress === 'syncing') return 'Ajout dans l app'
+  if (progress === 'syncing') {
+    if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
+    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact') return "Mise a jour de l'app"
+    if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
+    if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
+    return "Mise a jour de l'app"
+  }
   if (progress === 'creating') return job && job.job_type !== 'create_hektor_draft_annonce' ? 'Commande Hektor' : 'Creation Hektor'
   if (progress === 'error') return 'Action a verifier'
   return 'En attente'
+}
+
+function hektorActionWaitingLabel(job: ConsoleJob) {
+  if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
+  if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
+  if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
+  if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute dans Hektor. Synchronisation app en cours...'
+  if (job.job_type === 'delete_document_from_hektor') return 'Document supprime dans Hektor. Mise a jour app en cours...'
+  return 'Commande Hektor terminee. Mise a jour de l app en cours...'
 }
 
 function HektorActionStatusPopup(props: {
@@ -2064,6 +2080,7 @@ function HektorActionStatusPopup(props: {
   const mainProgress = hektorActionProgress(mainJob, mainSyncJob, mainDossier)
   const isAvailable = mainProgress === 'available'
   const isError = mainProgress === 'error'
+  const isWaitingForAppSync = mainProgress === 'syncing' && mainJob.status === 'done'
   const canOpenApp = isAvailable && mainJob.job_type !== 'delete_hektor_annonce'
   const canOpenHektor = Boolean(mainAnnonceId) && mainJob.job_type !== 'delete_hektor_annonce'
 
@@ -2080,7 +2097,7 @@ function HektorActionStatusPopup(props: {
 
       <div className="hektor-action-popup-main">
         <strong>{hektorActionJobTitle(mainJob)}</strong>
-        <span>{hektorActionJobDetail(mainJob)}</span>
+        <span>{isWaitingForAppSync ? hektorActionWaitingLabel(mainJob) : hektorActionJobDetail(mainJob)}</span>
       </div>
 
       <div className="hektor-action-steps">
@@ -2095,6 +2112,9 @@ function HektorActionStatusPopup(props: {
       <div className="hektor-action-popup-actions">
         {canOpenApp ? (
           <button className="ghost-button button-primary" type="button" onClick={() => props.onOpenAppDossier(mainJob)}>Ouvrir l'annonce</button>
+        ) : null}
+        {isWaitingForAppSync ? (
+          <button className="ghost-button button-primary is-waiting" type="button" disabled>Actualisation app...</button>
         ) : null}
         {canOpenHektor && mainAnnonceId ? <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(mainAnnonceId)}>Hektor</button> : null}
       </div>

@@ -9630,6 +9630,10 @@ button.metric-card.is-active {
   min-height: 36px;
   border-radius: 8px;
 }
+.hektor-action-popup-actions .ghost-button.is-waiting {
+  cursor: wait;
+  opacity: 0.78;
+}
 .hektor-action-popup-queue {
   display: grid;
   gap: 6px;
