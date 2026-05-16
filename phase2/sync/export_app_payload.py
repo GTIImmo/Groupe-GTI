@@ -855,7 +855,7 @@ def build_mandat_register_rows(
     target_annonce_ids = {
         normalize_text(row.get("hektor_annonce_id"))
         for row in active_rows
-        if normalize_text(row.get("hektor_annonce_id"))
+        if dossier_ids is not None and normalize_text(row.get("hektor_annonce_id"))
     }
     active_by_key = {
         (normalize_text(row.get("hektor_annonce_id")), normalize_text(row.get("numero_mandat"))): row
@@ -874,7 +874,7 @@ def build_mandat_register_rows(
     }
 
     register_rows: list[dict[str, object]] = []
-    if target_annonce_ids:
+    if dossier_ids is not None and target_annonce_ids:
         placeholders = ",".join("?" for _ in target_annonce_ids)
         raw_rows = fetch_rows(
             con,
