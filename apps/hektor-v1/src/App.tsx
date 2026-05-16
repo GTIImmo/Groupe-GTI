@@ -8970,6 +8970,13 @@ function DossierDetailLayout(props: {
   const [mandatSectionOpen, setMandatSectionOpen] = useState(true)
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
   const [hektorFieldEditOpen, setHektorFieldEditOpen] = useState(false)
+  const [hektorInlineTitle, setHektorInlineTitle] = useState(dossier.titre_bien ?? '')
+  const [hektorInlinePrice, setHektorInlinePrice] = useState(numericDraft(dossier.prix))
+  const [hektorInlineSurface, setHektorInlineSurface] = useState(numericDraft(props.detail.surface_habitable_detail ?? props.detail.surface))
+  const [hektorInlineRoomCount, setHektorInlineRoomCount] = useState(numericDraft(props.detail.nb_pieces))
+  const [hektorInlineBedroomCount, setHektorInlineBedroomCount] = useState(numericDraft(props.detail.nb_chambres))
+  const [hektorInlinePending, setHektorInlinePending] = useState(false)
+  const [hektorInlineError, setHektorInlineError] = useState<string | null>(null)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
   const primaryContact = props.contacts[0] ?? null
@@ -8981,7 +8988,67 @@ function DossierDetailLayout(props: {
     setMandatSectionOpen(true)
     setContactSectionOpen(false)
     setHektorFieldEditOpen(false)
+    setHektorInlineError(null)
+    setHektorInlinePending(false)
   }, [dossier.app_dossier_id, detailVariant])
+
+  useEffect(() => {
+    if (hektorFieldEditOpen) return
+    setHektorInlineTitle(dossier.titre_bien ?? '')
+    setHektorInlinePrice(numericDraft(dossier.prix))
+    setHektorInlineSurface(numericDraft(props.detail.surface_habitable_detail ?? props.detail.surface))
+    setHektorInlineRoomCount(numericDraft(props.detail.nb_pieces))
+    setHektorInlineBedroomCount(numericDraft(props.detail.nb_chambres))
+    setHektorInlineError(null)
+  }, [
+    hektorFieldEditOpen,
+    dossier.app_dossier_id,
+    dossier.titre_bien,
+    dossier.prix,
+    props.detail.surface_habitable_detail,
+    props.detail.surface,
+    props.detail.nb_pieces,
+    props.detail.nb_chambres,
+  ])
+
+  const resetHektorInlineDraft = () => {
+    setHektorInlineTitle(dossier.titre_bien ?? '')
+    setHektorInlinePrice(numericDraft(dossier.prix))
+    setHektorInlineSurface(numericDraft(props.detail.surface_habitable_detail ?? props.detail.surface))
+    setHektorInlineRoomCount(numericDraft(props.detail.nb_pieces))
+    setHektorInlineBedroomCount(numericDraft(props.detail.nb_chambres))
+    setHektorInlineError(null)
+  }
+
+  const closeHektorInlineEdit = () => {
+    resetHektorInlineDraft()
+    setHektorFieldEditOpen(false)
+  }
+
+  const submitHektorInlineEdit = async () => {
+    setHektorInlineError(null)
+    setHektorInlinePending(true)
+    try {
+      const job = await createUpdateHektorAnnonceFieldsJob({
+        dossier,
+        fields: {
+          title: hektorInlineTitle,
+          description: '',
+          price: hektorInlinePrice,
+          surface: hektorInlineSurface,
+          roomCount: hektorInlineRoomCount,
+          bedroomCount: hektorInlineBedroomCount,
+        },
+        priority: 14,
+      })
+      props.onHektorActionJobCreated?.(job)
+      setHektorFieldEditOpen(false)
+    } catch (submitError) {
+      setHektorInlineError(submitError instanceof Error ? submitError.message : 'Modification Hektor impossible.')
+    } finally {
+      setHektorInlinePending(false)
+    }
+  }
 
   const buildRequestGroups = (
     historyItems: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>,
@@ -9059,10 +9126,17 @@ function DossierDetailLayout(props: {
                     <div className="detail-property-title">
                       <span>{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
                       <div className="detail-editable-title-row">
-                        <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
-                        <button className="hektor-field-edit-button" type="button" onClick={() => setHektorFieldEditOpen((value) => !value)} aria-label="Modifier le titre dans Hektor">
+                        {hektorFieldEditOpen ? (
+                          <label className="detail-inline-field detail-inline-title-field">
+                            <span>Titre</span>
+                            <input value={hektorInlineTitle} onChange={(event) => setHektorInlineTitle(event.target.value)} placeholder="Titre visible dans Hektor" />
+                          </label>
+                        ) : (
+                          <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                        )}
+                        <button className={`hektor-field-edit-button ${hektorFieldEditOpen ? 'is-active' : ''}`} type="button" onClick={() => (hektorFieldEditOpen ? closeHektorInlineEdit() : setHektorFieldEditOpen(true))} aria-label={hektorFieldEditOpen ? 'Annuler la modification Hektor' : 'Modifier les champs Hektor'}>
                           <span aria-hidden="true">M</span>
-                          Modifier
+                          {hektorFieldEditOpen ? 'Annuler' : 'Modifier'}
                         </button>
                       </div>
                     {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
@@ -9088,8 +9162,14 @@ function DossierDetailLayout(props: {
                     <div className="detail-keyfact-grid">
                       <div className="detail-keyfact-item">
                         <span>Surface habitable</span>
-                        <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
-                        <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier la surface">M</button>
+                        {hektorFieldEditOpen ? (
+                          <input className="detail-inline-fact-input" value={hektorInlineSurface} onChange={(event) => setHektorInlineSurface(event.target.value)} inputMode="decimal" aria-label="Surface habitable" />
+                        ) : (
+                          <>
+                            <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
+                            <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier la surface">M</button>
+                          </>
+                        )}
                       </div>
                       <div className="detail-keyfact-item">
                         <span>Type de bien</span>
@@ -9102,13 +9182,35 @@ function DossierDetailLayout(props: {
                     </div>
                     <div className="detail-keyfact-main">
                       <span>Prix annonce</span>
-                      <strong>{formatPrice(dossier.prix)}</strong>
-                      <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier le prix">M</button>
+                      {hektorFieldEditOpen ? (
+                        <input className="detail-inline-fact-input is-price" value={hektorInlinePrice} onChange={(event) => setHektorInlinePrice(event.target.value)} inputMode="decimal" aria-label="Prix annonce" />
+                      ) : (
+                        <>
+                          <strong>{formatPrice(dossier.prix)}</strong>
+                          <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier le prix">M</button>
+                        </>
+                      )}
                     </div>
                   </div>
                   {hektorFieldEditOpen ? (
-                    <div className="detail-field-edit-panel">
-                      <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorFieldEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+                    <div className="detail-inline-edit-bar">
+                      <div className="detail-inline-edit-copy">
+                        <strong>Champs modifiables</strong>
+                        <small>Les valeurs encadrees seront envoyees a Hektor puis resynchronisees dans l app.</small>
+                      </div>
+                      <label className="detail-inline-mini-field">
+                        <span>Pieces</span>
+                        <input value={hektorInlineRoomCount} onChange={(event) => setHektorInlineRoomCount(event.target.value)} inputMode="numeric" />
+                      </label>
+                      <label className="detail-inline-mini-field">
+                        <span>Chambres</span>
+                        <input value={hektorInlineBedroomCount} onChange={(event) => setHektorInlineBedroomCount(event.target.value)} inputMode="numeric" />
+                      </label>
+                      <div className="detail-inline-edit-actions">
+                        <button type="button" onClick={submitHektorInlineEdit} disabled={hektorInlinePending}>{hektorInlinePending ? 'Envoi...' : 'Enregistrer'}</button>
+                        <button type="button" onClick={closeHektorInlineEdit} disabled={hektorInlinePending}>Annuler</button>
+                      </div>
+                      {hektorInlineError ? <span className="detail-inline-edit-error">{hektorInlineError}</span> : null}
                     </div>
                   ) : null}
                 </div>
@@ -9257,8 +9359,12 @@ function DossierDetailLayout(props: {
                   <div className="section-header section-header-collapsible">
                     <DetailSectionTitle icon="contact" title="Mandants / proprietaires" />
                     {secondaryContacts.length > 0 ? (
-                      <button className="section-toggle-button" type="button" onClick={() => setContactSectionOpen((value) => !value)}>
-                        {contactSectionOpen ? 'Masquer la liste des mandants' : `Liste des mandants (${secondaryContacts.length + 1})`}
+                      <button className={`mandants-toggle-button ${contactSectionOpen ? 'is-open' : ''}`} type="button" onClick={() => setContactSectionOpen((value) => !value)} aria-expanded={contactSectionOpen}>
+                        <span className="mandants-toggle-icon" aria-hidden="true">{contactSectionOpen ? '-' : '+'}</span>
+                        <span className="mandants-toggle-copy">
+                          <strong>{contactSectionOpen ? 'Masquer les autres vendeurs' : `Voir ${secondaryContacts.length} autre${secondaryContacts.length > 1 ? 's' : ''} vendeur${secondaryContacts.length > 1 ? 's' : ''}`}</strong>
+                          <small>{props.contacts.length} mandants lies a cette annonce</small>
+                        </span>
                       </button>
                     ) : null}
                   </div>
