@@ -9525,17 +9525,17 @@ button.metric-card.is-active {
   z-index: 150;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 18px;
   background: rgba(12, 18, 24, 0.48);
   backdrop-filter: blur(4px);
 }
 .detail-edit-popup {
   display: grid;
-  gap: 16px;
-  width: min(860px, calc(100vw - 32px));
-  max-height: min(780px, calc(100vh - 48px));
+  gap: 18px;
+  width: min(1380px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
   overflow: auto;
-  padding: 22px;
+  padding: 26px;
   border: 1px solid rgba(197, 0, 95, 0.16);
   border-radius: 12px;
   background:
@@ -9545,18 +9545,18 @@ button.metric-card.is-active {
 }
 .detail-edit-popup-head {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: start;
-  padding-bottom: 14px;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
   border-bottom: 1px solid rgba(34, 35, 35, 0.1);
 }
 .detail-edit-popup-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   border-radius: 12px;
   background: var(--gti-final-magenta);
   color: #ffffff;
@@ -9577,7 +9577,7 @@ button.metric-card.is-active {
 .detail-edit-popup-head h3 {
   margin: 0;
   color: var(--gti-final-ink);
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1.15;
 }
 .detail-edit-popup-head p {
@@ -9589,35 +9589,15 @@ button.metric-card.is-active {
 }
 .detail-edit-popup-close {
   align-self: start;
-}
-.detail-edit-popup-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-.detail-edit-popup-summary div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid rgba(34, 35, 35, 0.1);
-  border-radius: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.14);
   background: #ffffff;
-}
-.detail-edit-popup-summary span {
-  color: #687070;
-  font-size: 10px;
-  font-weight: 950;
-  text-transform: uppercase;
-}
-.detail-edit-popup-summary strong {
-  min-width: 0;
-  overflow: hidden;
   color: var(--gti-final-ink);
-  font-size: 14px;
-  font-weight: 950;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(21, 32, 43, 0.08);
+}
+.detail-edit-popup-close:hover {
+  border-color: rgba(197, 0, 95, 0.24);
+  background: #fff7fb;
+  color: var(--gti-final-magenta);
 }
 .detail-edit-popup .hektor-inline-form {
   margin-top: 0;
@@ -21102,12 +21082,20 @@ body {
     grid-column: 1 / -1;
     justify-self: end;
   }
-  .detail-edit-popup-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 /* Hektor creation and edit sheets: compact professional data-entry surfaces. */
+.detail-edit-popup .detail-edit-popup-close {
+  border: 1px solid rgba(34, 35, 35, 0.14) !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink) !important;
+  box-shadow: 0 8px 18px rgba(21, 32, 43, 0.08) !important;
+}
+.detail-edit-popup .detail-edit-popup-close:hover {
+  border-color: rgba(197, 0, 95, 0.24) !important;
+  background: #fff7fb !important;
+  color: var(--gti-final-magenta) !important;
+}
 .draft-annonce-modal {
   width: min(980px, calc(100vw - 32px));
   max-width: 980px;
@@ -21265,15 +21253,15 @@ body {
 }
 .detail-edit-popup-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
-  gap: 14px;
+  grid-template-columns: minmax(620px, 1.18fr) minmax(420px, 0.82fr);
+  gap: 18px;
   align-items: start;
 }
 .detail-edit-popup-section {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
-  padding: 14px;
+  padding: 18px;
   border: 1px solid rgba(34, 35, 35, 0.1);
   border-radius: 12px;
   background: #ffffff;
@@ -21285,7 +21273,7 @@ body {
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
-  padding-bottom: 10px;
+  padding: 0 0 14px;
   border-bottom: 1px solid rgba(34, 35, 35, 0.08);
 }
 .detail-edit-popup-section-head span {
@@ -21303,7 +21291,7 @@ body {
 .detail-edit-popup-section-head strong {
   min-width: 0;
   color: var(--gti-final-ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 950;
   text-align: right;
 }
@@ -21311,6 +21299,22 @@ body {
   padding: 0;
   border: 0;
   background: transparent;
+}
+.detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-grid {
+  grid-template-columns: repeat(4, minmax(96px, 1fr)) !important;
+  gap: 12px;
+}
+.detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-grid label:first-child {
+  grid-column: 1 / -1 !important;
+}
+.detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-textarea {
+  min-width: 0;
+}
+.detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-actions {
+  padding-top: 2px;
+}
+.detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-actions button {
+  min-width: 156px;
 }
 .detail-edit-popup-mandants .hektor-mandant-add-card {
   min-height: 70px;
@@ -21320,6 +21324,9 @@ body {
   display: grid;
   gap: 10px;
   min-width: 0;
+  max-height: calc(100vh - 390px);
+  overflow: auto;
+  padding-right: 3px;
 }
 .detail-edit-mandant-card {
   display: grid;
@@ -21380,6 +21387,9 @@ body {
   .detail-edit-popup-grid {
     grid-template-columns: 1fr;
   }
+  .detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -21410,5 +21420,8 @@ body {
   .draft-annonce-form .modal-actions {
     margin: 2px -16px -16px;
     padding: 14px 16px;
+  }
+  .detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-grid {
+    grid-template-columns: 1fr !important;
   }
 }

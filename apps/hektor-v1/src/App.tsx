@@ -9838,12 +9838,6 @@ function DossierDetailLayout(props: {
               </div>
               <button className="request-modal-close detail-edit-popup-close" type="button" onClick={() => setHektorEditModalOpen(false)}>Fermer</button>
             </div>
-            <div className="detail-edit-popup-summary">
-              <div><span>Prix actuel</span><strong>{formatPrice(dossier.prix)}</strong></div>
-              <div><span>Surface</span><strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong></div>
-              <div><span>Pieces</span><strong>{props.detail.nb_pieces ?? '-'}</strong></div>
-              <div><span>Chambres</span><strong>{props.detail.nb_chambres ?? '-'}</strong></div>
-            </div>
             <div className="detail-edit-popup-grid">
               <section className="detail-edit-popup-section">
                 <div className="detail-edit-popup-section-head">
