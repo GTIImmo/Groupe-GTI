@@ -834,8 +834,29 @@ def build_register_detail_payload(
     return json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
 
 
-def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) -> list[dict[str, object]]:
-    active_rows = enrich_offer_transaction_fields(con, fetch_rows(con, build_limited_sql(SQL_DOSSIERS_BASE, None)))
+def build_mandat_register_rows(
+    con: sqlite3.Connection,
+    *,
+    limit: int | None,
+    dossier_ids: list[int] | None = None,
+) -> list[dict[str, object]]:
+    active_rows = enrich_offer_transaction_fields(
+        con,
+        fetch_rows_by_ids(
+            con,
+            base_sql=SQL_DOSSIERS_BASE,
+            id_column="app_dossier_id",
+            ids=dossier_ids,
+            limit=None,
+        ),
+    )
+    if dossier_ids is not None and not active_rows:
+        return []
+    target_annonce_ids = {
+        normalize_text(row.get("hektor_annonce_id"))
+        for row in active_rows
+        if normalize_text(row.get("hektor_annonce_id"))
+    }
     active_by_key = {
         (normalize_text(row.get("hektor_annonce_id")), normalize_text(row.get("numero_mandat"))): row
         for row in active_rows
@@ -853,7 +874,15 @@ def build_mandat_register_rows(con: sqlite3.Connection, *, limit: int | None) ->
     }
 
     register_rows: list[dict[str, object]] = []
-    raw_rows = fetch_rows(con, build_limited_sql(SQL_REGISTER_RAW_BASE, None))
+    if target_annonce_ids:
+        placeholders = ",".join("?" for _ in target_annonce_ids)
+        raw_rows = fetch_rows(
+            con,
+            f"SELECT * FROM ({SQL_REGISTER_RAW_BASE}) AS base WHERE CAST(hektor_annonce_id AS TEXT) IN ({placeholders})",
+            tuple(sorted(target_annonce_ids)),
+        )
+    else:
+        raw_rows = fetch_rows(con, build_limited_sql(SQL_REGISTER_RAW_BASE, None))
     price_change_by_annonce = build_price_change_by_annonce(
         con,
         [normalize_text(row.get("hektor_annonce_id")) for row in raw_rows if normalize_text(row.get("hektor_annonce_id"))],
@@ -1251,10 +1280,15 @@ def build_payload(
     limit: int | None = 200,
     dossier_ids: list[int] | None = None,
     include_filter_catalog: bool = True,
+    connection: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
-    con = sqlite3.connect(PHASE2_DB)
+    con = connection or sqlite3.connect(PHASE2_DB)
+    owns_connection = connection is None
+    attached_hektor = False
     try:
-        con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
+        if owns_connection:
+            con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
+            attached_hektor = True
         summary_row = con.execute(SQL_SUMMARY).fetchone()
         summary_cols = [col[0] for col in con.execute(SQL_SUMMARY).description]
         dossier_rows = fetch_rows_by_ids(
@@ -1275,7 +1309,7 @@ def build_payload(
             ids=dossier_ids,
             limit=limit,
         )
-        mandat_register_rows = build_mandat_register_rows(con, limit=limit)
+        mandat_register_rows = build_mandat_register_rows(con, limit=limit, dossier_ids=dossier_ids)
         broadcasts = fetch_rows_by_ids(
             con,
             base_sql=SQL_BROADCASTS_BASE,
@@ -1300,11 +1334,13 @@ def build_payload(
             "filter_catalog": build_filter_catalog_from_db(con) if include_filter_catalog else build_filter_catalog(dossiers, work_items),
         }
     finally:
-        try:
-            con.execute("DETACH DATABASE hektor")
-        except sqlite3.Error:
-            pass
-        con.close()
+        if attached_hektor:
+            try:
+                con.execute("DETACH DATABASE hektor")
+            except sqlite3.Error:
+                pass
+        if owns_connection:
+            con.close()
 
     return payload
 

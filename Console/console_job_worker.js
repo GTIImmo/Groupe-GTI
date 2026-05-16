@@ -1430,31 +1430,12 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
       timeoutMs: 120000,
     },
     {
-      label: "build_case_index",
-      args: ["build_case_index.py"],
-      timeoutMs: 180000,
-    },
-    {
-      label: "phase2_bootstrap",
-      args: ["phase2/bootstrap_phase2.py"],
-      timeoutMs: 120000,
-    },
-    {
-      label: "phase2_refresh_views",
-      args: ["phase2/refresh_views.py"],
-      timeoutMs: 120000,
-    },
-    {
-      label: "phase2_push_supabase_delta",
+      label: "phase2_push_single_annonce_direct",
       args: [
-        "phase2/sync/push_upgrade_to_supabase.py",
+        "phase2/sync/push_single_annonce_to_supabase.py",
         "--hektor-annonce-id", id,
-        "--dossier-batch-size", "50",
-        "--detail-batch-size", "25",
-        "--work-item-batch-size", "50",
-        "--filter-batch-size", "50",
       ],
-      timeoutMs: 180000,
+      timeoutMs: 90000,
     },
   ];
 

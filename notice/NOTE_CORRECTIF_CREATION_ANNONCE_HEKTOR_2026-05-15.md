@@ -540,6 +540,60 @@ OK - les sessions Hektor sont separees par worker.
 A optimiser plus tard - sync_light doit devenir un vrai upsert direct annonce -> Supabase sans bootstrap/refresh_views complet.
 ```
 
+## Correctif 16/05/2026 - refresh annonce unique direct Supabase
+
+Le `sync_light` ne relance plus la chaine complete :
+
+```text
+build_case_index global
+bootstrap_phase2 global
+refresh_views global
+push_upgrade_to_supabase cible
+```
+
+Nouveau flux utilise par `refresh_console_data` :
+
+```text
+1. refresh_single_annonce.py --id-annonce {id}
+   -> relit uniquement l'annonce Hektor dans la base locale
+
+2. push_single_annonce_to_supabase.py --hektor-annonce-id {id}
+   -> reconstruit seulement le case index de cette annonce
+   -> met a jour app_dossier local pour cette annonce
+   -> regenere les work items automatiques de cette annonce
+   -> cree des vues SQLite temporaires pour cette annonce
+   -> upsert directement Supabase :
+      app_dossier_current
+      app_dossier_detail_current
+      app_work_item_current
+      app_mandat_broadcast_current
+      app_mandat_register_current
+```
+
+Point de securite important :
+
+```text
+Les vues locales persistantes ne sont pas supprimees ni reconstruites.
+Les tables globales ne sont pas purgees.
+Le refresh quotidien complet garde son role de consolidation globale.
+```
+
+Temps mesure sur annonce existante `62163` :
+
+```text
+push direct Supabase seul          4.19 s
+lecture Hektor + push direct       7.11 s
+ancien sync_light cible       154 a 172 s
+```
+
+Conclusion :
+
+```text
+OK - l'utilisateur voit les changements beaucoup plus vite apres creation/modification/mandant/suppression.
+OK - le worker sync_light reste separe des actions utilisateur.
+OK - le refresh complet quotidien reste disponible pour recalage global.
+```
+
 ## Impact sur les documents et uploads
 
 Le flux document continue d'utiliser les jobs existants :

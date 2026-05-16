@@ -5,14 +5,14 @@ import argparse
 from hektor_pipeline.common import Settings, connect_db, init_db, now_utc_iso
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Build the first consolidated dossier index.")
-    _ = parser.parse_args()
-
-    settings = Settings.from_env()
-    conn = connect_db(settings.db_path)
-    init_db(conn)
-
+def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None) -> int:
+    cleaned_ids = sorted({str(value or "").strip() for value in (hektor_annonce_ids or []) if str(value or "").strip()})
+    target_where = ""
+    target_params: list[str] = []
+    if cleaned_ids:
+        placeholders = ",".join("?" for _ in cleaned_ids)
+        target_where = f"WHERE ids.hektor_annonce_id IN ({placeholders})"
+        target_params = cleaned_ids
     query = """
     INSERT INTO case_dossier_source(
         hektor_annonce_id, no_dossier, no_mandat, hektor_agence_id, hektor_negociateur_id,
@@ -259,13 +259,37 @@ def main() -> int:
             )
         )
        AND mf.rn = 1
-    """
+    __TARGET_WHERE__
+    """.replace("__TARGET_WHERE__", target_where)
 
-    conn.execute("DELETE FROM case_dossier_source")
-    conn.execute(query, (now_utc_iso(),))
+    if cleaned_ids:
+        placeholders = ",".join("?" for _ in cleaned_ids)
+        conn.execute(f"DELETE FROM case_dossier_source WHERE hektor_annonce_id IN ({placeholders})", cleaned_ids)
+    else:
+        conn.execute("DELETE FROM case_dossier_source")
+    conn.execute(query, (now_utc_iso(), *target_params))
     conn.commit()
 
-    count = conn.execute("SELECT COUNT(*) FROM case_dossier_source").fetchone()[0]
+    if cleaned_ids:
+        placeholders = ",".join("?" for _ in cleaned_ids)
+        count = conn.execute(
+            f"SELECT COUNT(*) FROM case_dossier_source WHERE hektor_annonce_id IN ({placeholders})",
+            cleaned_ids,
+        ).fetchone()[0]
+    else:
+        count = conn.execute("SELECT COUNT(*) FROM case_dossier_source").fetchone()[0]
+    return int(count)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Build the first consolidated dossier index.")
+    parser.add_argument("--id-annonce", action="append", default=[], help="Limit rebuild to one Hektor annonce id. Can be repeated.")
+    args = parser.parse_args()
+
+    settings = Settings.from_env()
+    conn = connect_db(settings.db_path)
+    init_db(conn)
+    count = build_case_dossier_source(conn, args.id_annonce)
     print(f"Built case_dossier_source with {count} rows in {settings.db_path}")
     return 0
 
