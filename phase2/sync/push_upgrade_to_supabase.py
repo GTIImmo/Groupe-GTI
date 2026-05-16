@@ -625,6 +625,27 @@ def fetch_local_app_dossier_ids() -> list[int]:
         con.close()
 
 
+def resolve_app_dossier_ids_from_hektor_annonce_ids(hektor_annonce_ids: list[str]) -> list[int]:
+    cleaned = sorted({str(value).strip() for value in hektor_annonce_ids if str(value).strip()})
+    if not cleaned:
+        return []
+    placeholders = ",".join("?" for _ in cleaned)
+    con = sqlite3.connect(PHASE2_DB)
+    try:
+        rows = con.execute(
+            f"""
+            SELECT id
+            FROM app_dossier
+            WHERE CAST(hektor_annonce_id AS TEXT) IN ({placeholders})
+            ORDER BY id
+            """,
+            cleaned,
+        ).fetchall()
+        return [int(row[0]) for row in rows]
+    finally:
+        con.close()
+
+
 def fetch_source_watermark() -> str | None:
     con = sqlite3.connect(PHASE2_DB)
     try:
@@ -726,6 +747,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--work-item-batch-size", type=int, default=DEFAULT_WORK_ITEM_BATCH_SIZE)
     parser.add_argument("--filter-batch-size", type=int, default=DEFAULT_FILTER_BATCH_SIZE)
     parser.add_argument("--full-rebuild", action="store_true")
+    parser.add_argument("--dossier-id", action="append", default=[], help="Limit push to one app_dossier_id. Can be repeated.")
+    parser.add_argument("--hektor-annonce-id", action="append", default=[], help="Resolve and limit push to one Hektor annonce id. Can be repeated.")
     return parser.parse_args()
 
 
@@ -750,6 +773,13 @@ def main() -> None:
     if isinstance(latest_notes, dict):
         latest_source_watermark = normalize_sqlite_timestamp(latest_notes.get("source_watermark"))
 
+    targeted_dossier_ids = sorted({
+        int(value)
+        for value in args.dossier_id
+        if str(value).strip()
+    } | set(resolve_app_dossier_ids_from_hektor_annonce_ids(args.hektor_annonce_id)))
+    targeted_push = bool(targeted_dossier_ids)
+
     local_ids = set(fetch_local_app_dossier_ids())
     remote_dossiers = client.fetch_all_rows(path="app_dossier_current", select="app_dossier_id", order="app_dossier_id.asc")
     remote_ids = {int(row["app_dossier_id"]) for row in remote_dossiers if row.get("app_dossier_id") is not None}
@@ -757,7 +787,10 @@ def main() -> None:
     stale_ids: list[int] = []
     baseline_adopted = False
 
-    if args.full_rebuild:
+    if targeted_push:
+        candidate_ids = [value for value in targeted_dossier_ids if value in local_ids]
+        stale_ids = []
+    elif args.full_rebuild:
         candidate_ids = sorted(local_ids)
         stale_ids = sorted(remote_ids - local_ids)
     elif latest_source_watermark is None and remote_has_rows:
@@ -787,10 +820,11 @@ def main() -> None:
 
     current_filter_catalog: list[dict[str, object]] = []
     filters_should_refresh = (
-        args.full_rebuild
+        not targeted_push
+        and (args.full_rebuild
         or bool(candidate_ids)
         or bool(stale_ids)
-        or (latest_completed_run is None and not baseline_adopted)
+        or (latest_completed_run is None and not baseline_adopted))
     )
 
     delta_run_id = client.insert_delta_run(
@@ -802,6 +836,9 @@ def main() -> None:
             "source_watermark": source_watermark,
             "previous_source_watermark": latest_source_watermark,
             "candidate_count": len(candidate_ids),
+            "targeted_push": targeted_push,
+            "targeted_dossier_ids": targeted_dossier_ids,
+            "targeted_hektor_annonce_ids": args.hektor_annonce_id,
         },
     )
 
@@ -918,7 +955,15 @@ def main() -> None:
             if current_filter_catalog:
                 client.insert_rows(path="app_filter_catalog_current_store", rows=current_filter_catalog, batch_size=args.filter_batch_size)
 
-        client.delete_all_rows(path="app_mandat_register_current", filter_expr="register_row_id=not.is.null")
+        if targeted_push:
+            register_replace_ids = sorted({
+                int(row["app_dossier_id"])
+                for row in current_mandat_register_rows
+                if row.get("app_dossier_id") is not None
+            } | set(targeted_dossier_ids))
+            client.delete_rows_by_ids(path="app_mandat_register_current", column="app_dossier_id", ids=register_replace_ids)
+        else:
+            client.delete_all_rows(path="app_mandat_register_current", filter_expr="register_row_id=not.is.null")
         if current_mandat_register_rows:
             client.insert_rows(
                 path="app_mandat_register_current",
@@ -952,6 +997,7 @@ def main() -> None:
                     "mandat_register_replaced": len(current_mandat_register_rows),
                     "deleted_dossiers": len(stale_ids),
                     "mode": "full_rebuild" if args.full_rebuild else "upgrade",
+                    "targeted_push": targeted_push,
                     "baseline_adopted": baseline_adopted,
                 },
                 ensure_ascii=True,

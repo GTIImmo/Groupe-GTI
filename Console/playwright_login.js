@@ -106,7 +106,9 @@ async function gotoWithRetry(page, url, opts = {}) {
   const PASSWORD      = must("HEKTOR_PASSWORD").trim();
 
   // Outputs
-  const storagePath   = path.resolve(BASE_DIR, "storage_state.json");
+  const storagePath   = process.env.CONSOLE_STORAGE_STATE_PATH
+    ? path.resolve(process.env.CONSOLE_STORAGE_STATE_PATH)
+    : path.resolve(BASE_DIR, "storage_state.json");
   const tokenDumpPath = path.resolve(BASE_DIR, "token_dump.json");
   const gqlHeadersOut = path.resolve(BASE_DIR, "debug_graphql_headers.json");
   const tabsDumpPath  = path.resolve(BASE_DIR, "debug_tabs_urls.json");

@@ -325,52 +325,118 @@ CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT=true
 
 ## Correctif complementaire - 2026-05-16 : workers separes
 
-Le worker unique a ete separe logiquement en deux roles :
+Le worker unique a ete separe logiquement en plusieurs roles prudents :
 
 ```text
 actions
   creation annonce
   modification annonce
   ajout mandant
-  upload document
-  suppression document
-  suppression annonce
-  preparation document cloud
 
-sync
+documents
+  upload document
+  preparation cloud
+  suppression document
+  sync documents console
+
+admin
+  suppression annonce
+
+sync_light
   refresh_console_data
+
+sync_full
   archive_cloud_documents
 ```
 
-Le worker `actions` poll toutes les 5 secondes et reprend immediatement un nouveau job prioritaire apres chaque job termine.
+Ce qui n'a pas ete fait volontairement :
 
-Le worker `sync` poll toutes les 60 secondes et traite les taches lentes.
+```text
+actions_2
+```
+
+Raison : le test montre que les actions courantes sont deja rapides. Le vrai gain est de ne plus melanger documents, suppression admin et sync lourde avec les actions negociateur.
+
+Chaque worker utilise maintenant une session Hektor separee :
+
+```text
+Console/sessions/storage_state_actions.json
+Console/sessions/storage_state_documents.json
+Console/sessions/storage_state_admin.json
+Console/sessions/storage_state_sync_light.json
+Console/sessions/storage_state_sync_full.json
+```
+
+Le worker `actions` poll toutes les 5 secondes.
+Le worker `documents` poll toutes les 5 secondes.
+Le worker `admin` poll toutes les 5 secondes.
+Le worker `sync_light` poll toutes les 10 secondes.
+Le worker `sync_full` poll toutes les 60 secondes.
 
 Migration Supabase appliquee :
 
 ```text
 supabase/patch_console_worker_split_2026-05-16.sql
+supabase/patch_console_worker_kinds_2026-05-16.sql
 ```
 
 Cette migration modifie `public.app_console_claim_next_job(p_worker_id, p_worker_kind)` afin que :
 
 ```text
-worker actions -> ne prend jamais refresh_console_data / archive_cloud_documents
-worker sync    -> ne prend que refresh_console_data / archive_cloud_documents
+worker actions    -> creation/modification/mandant
+worker documents  -> documents uniquement
+worker admin      -> suppression annonce
+worker sync_light -> refresh_console_data
+worker sync_full  -> archive_cloud_documents
 ```
+
+## Correctif complementaire - 2026-05-16 : push Supabase cible
+
+Le push Supabase appele apres une action Hektor est maintenant limite a l'annonce concernee quand c'est possible :
+
+```text
+phase2/sync/push_upgrade_to_supabase.py --hektor-annonce-id {id}
+```
+
+Le script resout l'annonce Hektor vers son `app_dossier_id`, puis ne pousse que ce dossier dans les tables courantes.
+
+Objectif :
+
+```text
+ne plus remplacer tout le registre mandat ni recalculer tout le push apres une simple action utilisateur
+```
+
+## Correctif complementaire - 2026-05-16 : affichage web/mobile
+
+Les cartes de jobs visibles dans l'app distinguent maintenant :
+
+```text
+Creation en cours
+Modification en cours
+Mandant en cours
+Suppression en cours
+```
+
+Le rendu mobile utilise les memes libelles et des couleurs distinctes pour que l'utilisateur comprenne l'action en attente sans ouvrir les logs.
 
 Commandes locales :
 
 ```powershell
 .\run_console_worker.ps1 -WorkerKind actions
-.\run_console_worker.ps1 -WorkerKind sync
+.\run_console_worker.ps1 -WorkerKind documents
+.\run_console_worker.ps1 -WorkerKind admin
+.\run_console_worker.ps1 -WorkerKind sync_light
+.\run_console_worker.ps1 -WorkerKind sync_full
 ```
 
 Installation Windows :
 
 ```powershell
 .\install_console_worker_task.ps1 -WorkerKind actions
-.\install_console_worker_task.ps1 -WorkerKind sync
+.\install_console_worker_task.ps1 -WorkerKind documents
+.\install_console_worker_task.ps1 -WorkerKind admin
+.\install_console_worker_task.ps1 -WorkerKind sync_light
+.\install_console_worker_task.ps1 -WorkerKind sync_full
 ```
 
 Si Windows refuse la creation de taches planifiees sans droits administrateur, utiliser l'installation au demarrage utilisateur :
@@ -379,14 +445,17 @@ Si Windows refuse la creation de taches planifiees sans droits administrateur, u
 .\install_console_worker_startup_shortcuts.ps1
 ```
 
-Ce script cree deux raccourcis dans le dossier Startup Windows :
+Ce script cree les raccourcis dans le dossier Startup Windows :
 
 ```text
 Hektor Console Worker Actions.lnk
-Hektor Console Worker Sync.lnk
+Hektor Console Worker Documents.lnk
+Hektor Console Worker Admin.lnk
+Hektor Console Worker Sync Light.lnk
+Hektor Console Worker Sync Full.lnk
 ```
 
-Ils relancent les deux workers a la prochaine connexion Windows de l'utilisateur.
+Ils relancent les workers specialises a la prochaine connexion Windows de l'utilisateur.
 
 ## Test reel HTTP direct - 2026-05-16
 
@@ -430,6 +499,45 @@ Conclusion :
 OK - la creation ne depend plus de Playwright.
 OK - Playwright peut encore servir uniquement au contexte negociateur si Hektor ne confirme pas l'autologin HTTP.
 OK - le worker actions traite creation et suppression sans attendre le worker sync.
+```
+
+## Test workers specialises - 2026-05-16
+
+Test final apres separation `actions/documents/admin/sync_light/sync_full` :
+
+```text
+annonce test = 62254
+mandant test = 603489
+creation annonce      total  9.3 s  worker actions
+ajout mandant         total  9.5 s  worker actions
+modification annonce  total  5.9 s  worker actions
+suppression annonce   total 21.6 s  worker admin
+```
+
+Comparaison au test precedent :
+
+```text
+creation annonce      16.4 s ->  9.3 s
+ajout mandant          8.6 s ->  9.5 s
+modification annonce   9.5 s ->  5.9 s
+suppression annonce   41.0 s -> 21.6 s
+```
+
+Le `sync_light` cible bien l'annonce et ne bloque plus les actions utilisateur, mais il reste lourd car il lance encore la chaine Phase 2 :
+
+```text
+creation_sync_light   total 154.4 s
+mandant_sync_light    total 167.5 s
+update_sync_light     total 171.9 s
+```
+
+Conclusion technique :
+
+```text
+OK - les actions utilisateur sont plus rapides et bien isolees.
+OK - la suppression passe par le worker admin.
+OK - les sessions Hektor sont separees par worker.
+A optimiser plus tard - sync_light doit devenir un vrai upsert direct annonce -> Supabase sans bootstrap/refresh_views complet.
 ```
 
 ## Impact sur les documents et uploads

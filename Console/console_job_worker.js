@@ -13,30 +13,44 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const HEKTOR_BASE_URL = process.env.HEKTOR_BASE_URL || "https://groupe-gti-immobilier.la-boite-immo.com";
 const ADMIN_URL = `${HEKTOR_BASE_URL.replace(/\/+$/, "")}/admin/`;
 const XMLRPC_URL = `${ADMIN_URL}xmlrpc.php`;
+const RAW_WORKER_KIND = String(process.env.CONSOLE_WORKER_KIND || process.env.CONSOLE_WORKER_MODE || "actions").toLowerCase();
+const WORKER_KINDS = new Set(["actions", "documents", "admin", "sync_light", "sync_full", "sync", "all"]);
+const WORKER_KIND = WORKER_KINDS.has(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actions";
 const STORAGE_BUCKET = process.env.CONSOLE_STORAGE_BUCKET || "hektor-console-documents";
-const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "storage_state.json");
+const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "sessions", `storage_state_${WORKER_KIND}.json`);
 const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\HektorConsoleDocuments";
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
-const RAW_WORKER_KIND = String(process.env.CONSOLE_WORKER_KIND || process.env.CONSOLE_WORKER_MODE || "actions").toLowerCase();
-const WORKER_KIND = ["actions", "sync", "all"].includes(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actions";
 const ACTION_JOB_TYPES = new Set([
+  "link_hektor_mandant",
+  "create_hektor_mandant_contact",
+  "update_hektor_annonce_fields",
+  "create_hektor_draft_annonce",
+]);
+const DOCUMENT_JOB_TYPES = new Set([
   "sync_console_documents",
   "prepare_document_cloud",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
-  "link_hektor_mandant",
-  "create_hektor_mandant_contact",
-  "update_hektor_annonce_fields",
-  "delete_hektor_annonce",
-  "create_hektor_draft_annonce",
 ]);
-const SYNC_JOB_TYPES = new Set([
+const ADMIN_JOB_TYPES = new Set([
+  "delete_hektor_annonce",
+]);
+const SYNC_LIGHT_JOB_TYPES = new Set([
   "refresh_console_data",
+]);
+const SYNC_FULL_JOB_TYPES = new Set([
   "archive_cloud_documents",
 ]);
+const ALL_JOB_TYPES_BY_KIND = {
+  actions: ACTION_JOB_TYPES,
+  documents: DOCUMENT_JOB_TYPES,
+  admin: ADMIN_JOB_TYPES,
+  sync_light: SYNC_LIGHT_JOB_TYPES,
+  sync_full: SYNC_FULL_JOB_TYPES,
+};
 const WORKER_ID = process.env.CONSOLE_WORKER_ID || `${os.hostname()}:${WORKER_KIND}:${process.pid}`;
-const DEFAULT_POLL_INTERVAL_MS = WORKER_KIND === "sync" ? 60000 : 5000;
+const DEFAULT_POLL_INTERVAL_MS = ["sync", "sync_full"].includes(WORKER_KIND) ? 60000 : WORKER_KIND === "sync_light" ? 10000 : 5000;
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
 const ENABLE_HEKTOR_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS || "").toLowerCase() === "true";
@@ -661,6 +675,13 @@ function localArchiveMetadata(filePath) {
   };
 }
 
+function workerCanHandleJob(jobType) {
+  if (WORKER_KIND === "all") return true;
+  if (WORKER_KIND === "sync") return SYNC_LIGHT_JOB_TYPES.has(jobType) || SYNC_FULL_JOB_TYPES.has(jobType);
+  const allowed = ALL_JOB_TYPES_BY_KIND[WORKER_KIND];
+  return allowed ? allowed.has(jobType) : false;
+}
+
 async function claimNextJob() {
   const rows = await supabaseRequest("rpc/app_console_claim_next_job", {
     method: "POST",
@@ -860,6 +881,7 @@ async function switchHektorUserContextWithPlaywright(idUser) {
 
   const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
   let browser = null;
+  let confirmed = false;
   try {
     browser = await chromium.launch({ headless });
     const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
@@ -870,7 +892,7 @@ async function switchHektorUserContextWithPlaywright(idUser) {
     });
     await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
     await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
-    await page.waitForFunction((expectedId) => {
+    confirmed = await page.waitForFunction((expectedId) => {
       const matchesImpersonate = (raw) => {
         const value = String(raw || "").trim();
         if (!value) return false;
@@ -890,9 +912,10 @@ async function switchHektorUserContextWithPlaywright(idUser) {
       } catch (_) {
         return false;
       }
-    }, targetId, { timeout: 45000 });
+    }, targetId, { timeout: 12000 }).then(() => true).catch(() => false);
     await context.storageState({ path: STORAGE_STATE_PATH });
     lastHektorLoginAt = Date.now();
+    return confirmed;
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
@@ -950,8 +973,7 @@ async function switchHektorUserContext(idUser) {
   const impersonateUserId = extractImpersonateUserId(localStorageItems.get("impersonate"));
   if ((!token || !payload || String(payload.userId || "") !== targetId) && impersonateUserId !== targetId) {
     if (String(process.env.CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT || "true").toLowerCase() !== "false") {
-      await switchHektorUserContextWithPlaywright(targetId);
-      return;
+      return switchHektorUserContextWithPlaywright(targetId);
     }
     throw new Error(`Switch HTTP Hektor non confirme pour idUser ${targetId}`);
   }
@@ -1012,10 +1034,21 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     target_label: target.label,
     source: target.source,
   });
-  await switchHektorUserContext(target.idUser);
+  const switchConfirmed = await switchHektorUserContext(target.idUser);
 
   const after = currentHektorSessionIdentity();
   if (!after || after.userId !== String(target.idUser)) {
+    if (String(process.env.CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT || "true").toLowerCase() !== "false") {
+      await logJob(job.id, "hektor_context", "done", "Contexte Hektor envoye mais identite locale non verifiable", {
+        target_id_user: target.idUser,
+        target_label: target.label,
+        source: target.source,
+        switch_confirmed: Boolean(switchConfirmed),
+        visible_user_id: after && after.userId ? after.userId : null,
+        visible_role: after && after.role ? after.role : null,
+      });
+      return target;
+    }
     throw new Error(`Changement de contexte Hektor non confirme pour idUser ${target.idUser}`);
   }
   await logJob(job.id, "hektor_context", "done", "Contexte Hektor negociateur actif", {
@@ -1415,6 +1448,7 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
       label: "phase2_push_supabase_delta",
       args: [
         "phase2/sync/push_upgrade_to_supabase.py",
+        "--hektor-annonce-id", id,
         "--dossier-batch-size", "50",
         "--detail-batch-size", "25",
         "--work-item-batch-size", "50",
@@ -2563,11 +2597,8 @@ async function runHandler(job) {
   if (!ENABLE_HEKTOR_ACTIONS) {
     throw new Error("Console worker protected: set CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS=true to execute Hektor actions.");
   }
-  if (WORKER_KIND === "actions" && SYNC_JOB_TYPES.has(job.job_type)) {
-    throw new Error(`Worker actions ne doit pas executer le job lent: ${job.job_type}. Appliquer la migration app_console_claim_next_job.`);
-  }
-  if (WORKER_KIND === "sync" && !SYNC_JOB_TYPES.has(job.job_type)) {
-    throw new Error(`Worker sync ne doit pas executer le job action: ${job.job_type}. Appliquer la migration app_console_claim_next_job.`);
+  if (!workerCanHandleJob(job.job_type)) {
+    throw new Error(`Worker ${WORKER_KIND} ne doit pas executer le job ${job.job_type}. Appliquer la migration app_console_claim_next_job.`);
   }
 
   switch (job.job_type) {
@@ -2658,8 +2689,12 @@ async function main() {
     workerKind: WORKER_KIND,
     enableHektorActions: ENABLE_HEKTOR_ACTIONS,
     mode: once ? "once" : "permanent",
+    storageStatePath: STORAGE_STATE_PATH,
     actionJobTypes: Array.from(ACTION_JOB_TYPES),
-    syncJobTypes: Array.from(SYNC_JOB_TYPES),
+    documentJobTypes: Array.from(DOCUMENT_JOB_TYPES),
+    adminJobTypes: Array.from(ADMIN_JOB_TYPES),
+    syncLightJobTypes: Array.from(SYNC_LIGHT_JOB_TYPES),
+    syncFullJobTypes: Array.from(SYNC_FULL_JOB_TYPES),
   }));
 
   if (once) {

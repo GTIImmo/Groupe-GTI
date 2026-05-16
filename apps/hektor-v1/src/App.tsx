@@ -1771,9 +1771,30 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce') {
     return `Suppression ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
+  if (job.job_type === 'update_hektor_annonce_fields') {
+    return `Modification ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') {
+    const contact = typeof payload.last_name === 'string' && payload.last_name.trim() ? payload.last_name.trim() : null
+    return contact ? `Mandant ${contact}` : 'Mandant Hektor'
+  }
   const folder = typeof result.folder_number === 'string' ? result.folder_number : null
   const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : null
   return folder ? `Creation ${folder}` : title ? `Creation ${title}` : 'Creation annonce Hektor'
+}
+
+function hektorActionJobLabel(job: ConsoleJob) {
+  if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
+  if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
+  return 'Creation en cours'
+}
+
+function hektorActionJobTone(job: ConsoleJob) {
+  if (job.job_type === 'delete_hektor_annonce') return 'delete'
+  if (job.job_type === 'update_hektor_annonce_fields') return 'update'
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
+  return 'create'
 }
 
 function hektorActionJobDetail(job: ConsoleJob) {
@@ -7163,8 +7184,8 @@ function StockScreen(props: {
         {props.hektorActionJobs.length > 0 ? (
           <div className="hektor-job-strip">
             {props.hektorActionJobs.map((job) => (
-              <article key={job.id} className={`hektor-job-card hektor-job-card-${job.job_type === 'delete_hektor_annonce' ? 'delete' : 'create'}`}>
-                <span>{job.job_type === 'delete_hektor_annonce' ? 'Suppression en cours' : 'Creation en cours'}</span>
+              <article key={job.id} className={`hektor-job-card hektor-job-card-${hektorActionJobTone(job)}`}>
+                <span>{hektorActionJobLabel(job)}</span>
                 <strong>{hektorActionJobTitle(job)}</strong>
                 <small>{hektorActionJobDetail(job)}</small>
               </article>
@@ -9976,8 +9997,8 @@ function MobileDossierCards(props: {
         <span>{props.dossiers.length} / {props.total}</span>
       </div>
       {props.hektorActionJobs.map((job) => (
-        <article key={`mobile-hektor-job-${job.id}`} className={`mobile-list-card mobile-hektor-job-card mobile-hektor-job-card-${job.job_type === 'delete_hektor_annonce' ? 'delete' : 'create'}`}>
-          <span className="mobile-card-meta">{job.job_type === 'delete_hektor_annonce' ? 'Suppression en cours' : 'Creation en cours'}</span>
+        <article key={`mobile-hektor-job-${job.id}`} className={`mobile-list-card mobile-hektor-job-card mobile-hektor-job-card-${hektorActionJobTone(job)}`}>
+          <span className="mobile-card-meta">{hektorActionJobLabel(job)}</span>
           <strong>{hektorActionJobTitle(job)}</strong>
           <span className="mobile-card-subline">{hektorActionJobDetail(job)}</span>
         </article>

@@ -9404,11 +9404,23 @@ button.metric-card.is-active {
 .hektor-job-card-create {
   border-left: 4px solid #1b7f4d;
 }
+.hektor-job-card-update {
+  border-left: 4px solid #1d5fd1;
+}
+.hektor-job-card-contact {
+  border-left: 4px solid var(--gti-final-pink);
+}
 .hektor-job-card-delete {
   border-left: 4px solid #b42318;
 }
 .mobile-hektor-job-card {
   border-left: 4px solid #1b7f4d;
+}
+.mobile-hektor-job-card-update {
+  border-left-color: #1d5fd1;
+}
+.mobile-hektor-job-card-contact {
+  border-left-color: var(--gti-final-pink);
 }
 .mobile-hektor-job-card-delete {
   border-left-color: #b42318;

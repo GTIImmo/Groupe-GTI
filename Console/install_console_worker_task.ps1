@@ -1,6 +1,6 @@
 param(
   [string]$TaskName = "",
-  [ValidateSet("actions", "sync", "all")]
+  [ValidateSet("actions", "documents", "admin", "sync_light", "sync_full", "sync", "all")]
   [string]$WorkerKind = "actions",
   [switch]$SyncWorker,
   [switch]$AtStartup,
@@ -12,10 +12,13 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $runnerPath = Join-Path $scriptDir "run_console_worker.ps1"
 if ($SyncWorker) {
-  $WorkerKind = "sync"
+  $WorkerKind = "sync_light"
 }
 if (-not $TaskName) {
-  $TaskName = if ($WorkerKind -eq "sync") { "Hektor Console Worker Sync" } else { "Hektor Console Worker" }
+  $TaskName = "Hektor Console Worker $WorkerKind"
+  if ($WorkerKind -eq "actions") {
+    $TaskName = "Hektor Console Worker"
+  }
 }
 
 if (-not (Test-Path -LiteralPath $runnerPath)) {

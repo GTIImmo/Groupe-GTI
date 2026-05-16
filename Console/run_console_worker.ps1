@@ -1,7 +1,7 @@
 param(
   [switch]$Once,
   [switch]$DisableHektorActions,
-  [ValidateSet("actions", "sync", "all")]
+  [ValidateSet("actions", "documents", "admin", "sync_light", "sync_full", "sync", "all")]
   [string]$WorkerKind = "actions",
   [switch]$SyncWorker
 )
@@ -18,12 +18,12 @@ if (-not (Test-Path -LiteralPath $logDir)) {
 
 $env:CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS = if ($DisableHektorActions) { "false" } else { "true" }
 if ($SyncWorker) {
-  $WorkerKind = "sync"
+  $WorkerKind = "sync_light"
 }
 $env:CONSOLE_WORKER_KIND = $WorkerKind
 $env:CONSOLE_WORKER_ID = "$($env:COMPUTERNAME):$($WorkerKind):scheduled"
 if (-not $env:CONSOLE_WORKER_POLL_INTERVAL_MS) {
-  $env:CONSOLE_WORKER_POLL_INTERVAL_MS = if ($WorkerKind -eq "sync") { "60000" } else { "5000" }
+  $env:CONSOLE_WORKER_POLL_INTERVAL_MS = if ($WorkerKind -in @("sync", "sync_full")) { "60000" } elseif ($WorkerKind -eq "sync_light") { "10000" } else { "5000" }
 }
 if (-not $env:CONSOLE_HEKTOR_SESSION_REFRESH_MS) {
   $env:CONSOLE_HEKTOR_SESSION_REFRESH_MS = "7200000"
@@ -31,8 +31,19 @@ if (-not $env:CONSOLE_HEKTOR_SESSION_REFRESH_MS) {
 if (-not $env:CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT) {
   $env:CONSOLE_HEKTOR_CONTEXT_SWITCH_FALLBACK_PLAYWRIGHT = "true"
 }
+if (-not $env:CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT) {
+  $env:CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT = "true"
+}
 if (-not $env:CONSOLE_LOCAL_ARCHIVE_ROOT) {
   $env:CONSOLE_LOCAL_ARCHIVE_ROOT = "C:\HektorConsoleDocuments"
+}
+
+$sessionDir = Join-Path $scriptDir "sessions"
+if (-not (Test-Path -LiteralPath $sessionDir)) {
+  New-Item -ItemType Directory -Path $sessionDir | Out-Null
+}
+if (-not $env:CONSOLE_STORAGE_STATE_PATH) {
+  $env:CONSOLE_STORAGE_STATE_PATH = Join-Path $sessionDir ("storage_state_{0}.json" -f $WorkerKind)
 }
 
 $nodeCandidates = @(
@@ -42,7 +53,11 @@ $nodeCandidates = @(
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
 $nodeExe = if ($nodeCandidates.Count -gt 0) { $nodeCandidates[0] } else { "node.exe" }
 
-$storageStatePath = Join-Path $scriptDir "storage_state.json"
+$storageStatePath = $env:CONSOLE_STORAGE_STATE_PATH
+$legacyStorageStatePath = Join-Path $scriptDir "storage_state.json"
+if (-not (Test-Path -LiteralPath $storageStatePath) -and (Test-Path -LiteralPath $legacyStorageStatePath)) {
+  Copy-Item -LiteralPath $legacyStorageStatePath -Destination $storageStatePath -Force
+}
 if (-not (Test-Path -LiteralPath $storageStatePath)) {
   Write-Host "Session Hektor absente, lancement du login Playwright..."
   & $nodeExe playwright_login.js
@@ -56,6 +71,7 @@ if ($Once) {
 Write-Host "Demarrage worker Console Hektor..."
 Write-Host "Type worker: $env:CONSOLE_WORKER_KIND"
 Write-Host "Polling: $env:CONSOLE_WORKER_POLL_INTERVAL_MS ms"
+Write-Host "Session Hektor: $env:CONSOLE_STORAGE_STATE_PATH"
 Write-Host "Actions Hektor: $env:CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS"
 Write-Host "Archive locale: $env:CONSOLE_LOCAL_ARCHIVE_ROOT"
 $logPath = Join-Path $logDir ("console_worker_{0}_{1}.log" -f $WorkerKind, $PID)

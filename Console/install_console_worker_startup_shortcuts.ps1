@@ -14,8 +14,20 @@ $shortcuts = @(
     WorkerKind = "actions"
   },
   @{
-    Name = "Hektor Console Worker Sync.lnk"
-    WorkerKind = "sync"
+    Name = "Hektor Console Worker Documents.lnk"
+    WorkerKind = "documents"
+  },
+  @{
+    Name = "Hektor Console Worker Admin.lnk"
+    WorkerKind = "admin"
+  },
+  @{
+    Name = "Hektor Console Worker Sync Light.lnk"
+    WorkerKind = "sync_light"
+  },
+  @{
+    Name = "Hektor Console Worker Sync Full.lnk"
+    WorkerKind = "sync_full"
   }
 )
 
