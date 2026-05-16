@@ -1816,7 +1816,9 @@ function isPrimaryHektorActionJob(job: ConsoleJob) {
 function hektorJobSyncJobId(job: ConsoleJob) {
   const syncJob = job.result_json?.sync_job
   if (!syncJob || typeof syncJob !== 'object') return null
-  const id = (syncJob as { id?: unknown }).id
+  const id = (syncJob as { id?: unknown; job_id?: unknown; sync_job_id?: unknown }).id
+    ?? (syncJob as { job_id?: unknown }).job_id
+    ?? (syncJob as { sync_job_id?: unknown }).sync_job_id
   return typeof id === 'string' && id.trim() ? id : null
 }
 
