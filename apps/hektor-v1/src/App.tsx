@@ -9098,10 +9098,6 @@ function DossierDetailLayout(props: {
             <main className="detail-cockpit-main">
               <section className="detail-overview">
                 <div className="detail-overview-actions">
-                  <button className="detail-overview-edit" type="button" onClick={() => setHektorEditModalOpen(true)}>
-                    <span aria-hidden="true">M</span>
-                    Modifier
-                  </button>
                   <button className="detail-overview-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
                 </div>
                 <div className="detail-overview-summary">
@@ -9295,15 +9291,21 @@ function DossierDetailLayout(props: {
                 <article className="detail-subsection detail-contact-section">
                   <div className="section-header section-header-collapsible">
                     <DetailSectionTitle icon="contact" title="Mandants / proprietaires" />
-                    {secondaryContacts.length > 0 ? (
-                      <button className={`mandants-toggle-button ${contactSectionOpen ? 'is-open' : ''}`} type="button" onClick={() => setContactSectionOpen((value) => !value)} aria-expanded={contactSectionOpen}>
-                        <span className="mandants-toggle-icon" aria-hidden="true">{contactSectionOpen ? '-' : '+'}</span>
-                        <span className="mandants-toggle-copy">
-                          <strong>{contactSectionOpen ? 'Masquer les autres vendeurs' : `Voir ${secondaryContacts.length} autre${secondaryContacts.length > 1 ? 's' : ''} vendeur${secondaryContacts.length > 1 ? 's' : ''}`}</strong>
-                          <small>{props.contacts.length} mandants lies a cette annonce</small>
-                        </span>
+                    <div className="section-header-actions">
+                      <button className="hektor-context-action-button hektor-context-action-button-contact" type="button" onClick={() => setHektorEditModalOpen(true)}>
+                        <span aria-hidden="true"><DetailIcon type="contact" /></span>
+                        <strong>Modifier contacts</strong>
                       </button>
-                    ) : null}
+                      {secondaryContacts.length > 0 ? (
+                        <button className={`mandants-toggle-button ${contactSectionOpen ? 'is-open' : ''}`} type="button" onClick={() => setContactSectionOpen((value) => !value)} aria-expanded={contactSectionOpen}>
+                          <span className="mandants-toggle-icon" aria-hidden="true">{contactSectionOpen ? '-' : '+'}</span>
+                          <span className="mandants-toggle-copy">
+                            <strong>{contactSectionOpen ? 'Masquer les autres vendeurs' : `Voir ${secondaryContacts.length} autre${secondaryContacts.length > 1 ? 's' : ''} vendeur${secondaryContacts.length > 1 ? 's' : ''}`}</strong>
+                            <small>{props.contacts.length} mandants lies a cette annonce</small>
+                          </span>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   {primaryContact ? (
                     <div className="detail-entity-list detail-contact-list">
@@ -9411,6 +9413,22 @@ function DossierDetailLayout(props: {
                   )}
                 </article>
                 ) : null}
+              </section>
+              ) : null}
+
+              {activeDetailTab === 'content' ? (
+              <section className="detail-section detail-hektor-content-tools">
+                <div className="hektor-context-panel">
+                  <span className="hektor-context-panel-icon" aria-hidden="true"><DetailIcon type="content" /></span>
+                  <div>
+                    <strong>Contenu annonce Hektor</strong>
+                    <small>Titre, prix, surface, pieces, chambres et descriptif principal.</small>
+                  </div>
+                  <button className="hektor-context-action-button hektor-context-action-button-content" type="button" onClick={() => setHektorEditModalOpen(true)}>
+                    <span aria-hidden="true"><DetailIcon type="content" /></span>
+                    <strong>Modifier l'annonce</strong>
+                  </button>
+                </div>
               </section>
               ) : null}
 
@@ -10251,15 +10269,6 @@ function MobileDossierDetail(props: {
             </div>
           ))}
         </div>
-        <button className="mobile-hektor-field-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
-          <span aria-hidden="true">M</span>
-          Modifier les champs Hektor
-        </button>
-        {mobileHektorEditOpen ? (
-          <div className="mobile-detail-embedded">
-            <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
-          </div>
-        ) : null}
         <div className="mobile-detail-portals">
           {[
             ['LBC', ['leboncoin', 'le bon coin', 'lbc']],
@@ -10381,6 +10390,15 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Contenu de l'annonce</summary>
+        <button className="mobile-hektor-field-edit-button mobile-hektor-content-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
+          <span aria-hidden="true">M</span>
+          Modifier l'annonce
+        </button>
+        {mobileHektorEditOpen ? (
+          <div className="mobile-detail-embedded">
+            <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+          </div>
+        ) : null}
         <div className="mobile-console-documents">
           <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
         </div>
