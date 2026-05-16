@@ -5817,20 +5817,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Fermer</button>
               </div>
-              <p className="modal-subline">Cette action cree l annonce dans Hektor avec le contexte negociateur selectionne, sans diffusion automatique.</p>
               <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
-                <section className="draft-annonce-intro">
-                  <div>
-                    <span>01</span>
-                    <strong>Contexte Hektor</strong>
-                    <small>Le brouillon est cree avec l acces negociateur choisi.</small>
-                  </div>
-                  <div>
-                    <span>02</span>
-                    <strong>Bien initial</strong>
-                    <small>Les champs servent a pre-remplir Hektor puis l app se synchronise.</small>
-                  </div>
-                </section>
                 <label className="filter-field draft-annonce-field-wide">
                   <span>Titre / repere interne</span>
                   <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
@@ -5908,10 +5895,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <span>Note</span>
                   <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
                 </label>
-                <section className="draft-annonce-warning">
-                  <strong>Creation sans diffusion</strong>
-                  <span>L'enrichissement complet, la validation et la diffusion resteront des actions separees.</span>
-                </section>
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
                   <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
@@ -8969,14 +8952,7 @@ function DossierDetailLayout(props: {
   const hasAnyHistory = props.requestHistoryDiffusion.length > 0 || props.requestHistoryPriceDrop.length > 0 || props.requestHistoryCancellation.length > 0
   const [mandatSectionOpen, setMandatSectionOpen] = useState(true)
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
-  const [hektorFieldEditOpen, setHektorFieldEditOpen] = useState(false)
-  const [hektorInlineTitle, setHektorInlineTitle] = useState(dossier.titre_bien ?? '')
-  const [hektorInlinePrice, setHektorInlinePrice] = useState(numericDraft(dossier.prix))
-  const [hektorInlineSurface, setHektorInlineSurface] = useState(numericDraft(props.detail.surface_habitable_detail ?? props.detail.surface))
-  const [hektorInlineRoomCount, setHektorInlineRoomCount] = useState(numericDraft(props.detail.nb_pieces))
-  const [hektorInlineBedroomCount, setHektorInlineBedroomCount] = useState(numericDraft(props.detail.nb_chambres))
-  const [hektorInlinePending, setHektorInlinePending] = useState(false)
-  const [hektorInlineError, setHektorInlineError] = useState<string | null>(null)
+  const [hektorEditModalOpen, setHektorEditModalOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
   const primaryContact = props.contacts[0] ?? null
@@ -8987,68 +8963,8 @@ function DossierDetailLayout(props: {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
     setMandatSectionOpen(true)
     setContactSectionOpen(false)
-    setHektorFieldEditOpen(false)
-    setHektorInlineError(null)
-    setHektorInlinePending(false)
+    setHektorEditModalOpen(false)
   }, [dossier.app_dossier_id, detailVariant])
-
-  useEffect(() => {
-    if (hektorFieldEditOpen) return
-    setHektorInlineTitle(dossier.titre_bien ?? '')
-    setHektorInlinePrice(numericDraft(dossier.prix))
-    setHektorInlineSurface(numericDraft(props.detail.surface_habitable_detail ?? props.detail.surface))
-    setHektorInlineRoomCount(numericDraft(props.detail.nb_pieces))
-    setHektorInlineBedroomCount(numericDraft(props.detail.nb_chambres))
-    setHektorInlineError(null)
-  }, [
-    hektorFieldEditOpen,
-    dossier.app_dossier_id,
-    dossier.titre_bien,
-    dossier.prix,
-    props.detail.surface_habitable_detail,
-    props.detail.surface,
-    props.detail.nb_pieces,
-    props.detail.nb_chambres,
-  ])
-
-  const resetHektorInlineDraft = () => {
-    setHektorInlineTitle(dossier.titre_bien ?? '')
-    setHektorInlinePrice(numericDraft(dossier.prix))
-    setHektorInlineSurface(numericDraft(props.detail.surface_habitable_detail ?? props.detail.surface))
-    setHektorInlineRoomCount(numericDraft(props.detail.nb_pieces))
-    setHektorInlineBedroomCount(numericDraft(props.detail.nb_chambres))
-    setHektorInlineError(null)
-  }
-
-  const closeHektorInlineEdit = () => {
-    resetHektorInlineDraft()
-    setHektorFieldEditOpen(false)
-  }
-
-  const submitHektorInlineEdit = async () => {
-    setHektorInlineError(null)
-    setHektorInlinePending(true)
-    try {
-      const job = await createUpdateHektorAnnonceFieldsJob({
-        dossier,
-        fields: {
-          title: hektorInlineTitle,
-          description: '',
-          price: hektorInlinePrice,
-          surface: hektorInlineSurface,
-          roomCount: hektorInlineRoomCount,
-          bedroomCount: hektorInlineBedroomCount,
-        },
-        priority: 14,
-      })
-      props.onHektorActionJobCreated?.(job)
-      setHektorFieldEditOpen(false)
-    } catch (submitError) {
-      setHektorInlineError(submitError instanceof Error ? submitError.message : 'Modification Hektor impossible.')
-    } finally {
-      setHektorInlinePending(false)
-    }
-  }
 
   const buildRequestGroups = (
     historyItems: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>,
@@ -9121,9 +9037,9 @@ function DossierDetailLayout(props: {
             <main className="detail-cockpit-main">
               <section className="detail-overview">
                 <div className="detail-overview-actions">
-                  <button className={`detail-overview-edit ${hektorFieldEditOpen ? 'is-active' : ''}`} type="button" onClick={() => (hektorFieldEditOpen ? closeHektorInlineEdit() : setHektorFieldEditOpen(true))} aria-pressed={hektorFieldEditOpen}>
+                  <button className="detail-overview-edit" type="button" onClick={() => setHektorEditModalOpen(true)}>
                     <span aria-hidden="true">M</span>
-                    {hektorFieldEditOpen ? 'Annuler' : 'Modifier'}
+                    Modifier
                   </button>
                   <button className="detail-overview-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
                 </div>
@@ -9132,14 +9048,7 @@ function DossierDetailLayout(props: {
                     <div className="detail-property-title">
                       <span>{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
                       <div className="detail-editable-title-row">
-                        {hektorFieldEditOpen ? (
-                          <label className="detail-inline-field detail-inline-title-field">
-                            <span>Titre</span>
-                            <input value={hektorInlineTitle} onChange={(event) => setHektorInlineTitle(event.target.value)} placeholder="Titre visible dans Hektor" />
-                          </label>
-                        ) : (
-                          <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
-                        )}
+                        <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
                       </div>
                     {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
                     </div>
@@ -9164,13 +9073,7 @@ function DossierDetailLayout(props: {
                     <div className="detail-keyfact-grid">
                       <div className="detail-keyfact-item">
                         <span>Surface habitable</span>
-                        {hektorFieldEditOpen ? (
-                          <input className="detail-inline-fact-input" value={hektorInlineSurface} onChange={(event) => setHektorInlineSurface(event.target.value)} inputMode="decimal" aria-label="Surface habitable" />
-                        ) : (
-                          <>
-                            <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
-                          </>
-                        )}
+                        <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
                       </div>
                       <div className="detail-keyfact-item">
                         <span>Type de bien</span>
@@ -9183,36 +9086,9 @@ function DossierDetailLayout(props: {
                     </div>
                     <div className="detail-keyfact-main">
                       <span>Prix annonce</span>
-                      {hektorFieldEditOpen ? (
-                        <input className="detail-inline-fact-input is-price" value={hektorInlinePrice} onChange={(event) => setHektorInlinePrice(event.target.value)} inputMode="decimal" aria-label="Prix annonce" />
-                      ) : (
-                        <>
-                          <strong>{formatPrice(dossier.prix)}</strong>
-                        </>
-                      )}
+                      <strong>{formatPrice(dossier.prix)}</strong>
                     </div>
                   </div>
-                  {hektorFieldEditOpen ? (
-                    <div className="detail-inline-edit-bar">
-                      <div className="detail-inline-edit-copy">
-                        <strong>Champs modifiables</strong>
-                        <small>Les valeurs encadrees seront envoyees a Hektor puis resynchronisees dans l app.</small>
-                      </div>
-                      <label className="detail-inline-mini-field">
-                        <span>Pieces</span>
-                        <input value={hektorInlineRoomCount} onChange={(event) => setHektorInlineRoomCount(event.target.value)} inputMode="numeric" />
-                      </label>
-                      <label className="detail-inline-mini-field">
-                        <span>Chambres</span>
-                        <input value={hektorInlineBedroomCount} onChange={(event) => setHektorInlineBedroomCount(event.target.value)} inputMode="numeric" />
-                      </label>
-                      <div className="detail-inline-edit-actions">
-                        <button type="button" onClick={submitHektorInlineEdit} disabled={hektorInlinePending}>{hektorInlinePending ? 'Envoi...' : 'Enregistrer'}</button>
-                        <button type="button" onClick={closeHektorInlineEdit} disabled={hektorInlinePending}>Annuler</button>
-                      </div>
-                      {hektorInlineError ? <span className="detail-inline-edit-error">{hektorInlineError}</span> : null}
-                    </div>
-                  ) : null}
                 </div>
               </section>
 
@@ -9889,6 +9765,59 @@ function DossierDetailLayout(props: {
           </div>
         </div>
       </div>
+      {hektorEditModalOpen ? (
+        <div className="modal-overlay detail-edit-popup-overlay" onClick={() => setHektorEditModalOpen(false)}>
+          <section className="modal-panel detail-edit-popup" onClick={(event) => event.stopPropagation()}>
+            <div className="detail-edit-popup-head">
+              <div className="detail-edit-popup-icon" aria-hidden="true">M</div>
+              <div>
+                <span>Modification Hektor</span>
+                <h3>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h3>
+                <p>Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.</p>
+              </div>
+              <button className="request-modal-close detail-edit-popup-close" type="button" onClick={() => setHektorEditModalOpen(false)}>Fermer</button>
+            </div>
+            <div className="detail-edit-popup-summary">
+              <div><span>Prix actuel</span><strong>{formatPrice(dossier.prix)}</strong></div>
+              <div><span>Surface</span><strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong></div>
+              <div><span>Pieces</span><strong>{props.detail.nb_pieces ?? '-'}</strong></div>
+              <div><span>Chambres</span><strong>{props.detail.nb_chambres ?? '-'}</strong></div>
+            </div>
+            <div className="detail-edit-popup-grid">
+              <section className="detail-edit-popup-section">
+                <div className="detail-edit-popup-section-head">
+                  <span>Annonce</span>
+                  <strong>Informations du bien</strong>
+                </div>
+                <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorEditModalOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+              </section>
+              <section className="detail-edit-popup-section detail-edit-popup-mandants">
+                <div className="detail-edit-popup-section-head">
+                  <span>Vendeurs</span>
+                  <strong>Mandants associes</strong>
+                </div>
+                <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
+                {props.contacts.length > 0 ? (
+                  <div className="detail-edit-mandant-list">
+                    {props.contacts.map((contact) => (
+                      <article key={`edit-popup-contact-${contact.id}`} className="detail-edit-mandant-card">
+                        <div className="detail-edit-mandant-card-head">
+                          <div className={`detail-contact-avatar ${contact === primaryContact ? '' : 'is-secondary'}`}>{userInitials(contact.name, contact.email)}</div>
+                          <div>
+                            <strong>{contact.name || 'Mandant'}</strong>
+                            <span>{contact.email || contact.phone || contact.role || '-'}</span>
+                          </div>
+                        </div>
+                        <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} />
+                      </article>
+                    ))}
+                  </div>
+                ) : <p className="detail-edit-popup-empty">Aucun mandant detaille dans l app.</p>}
+              </section>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }
