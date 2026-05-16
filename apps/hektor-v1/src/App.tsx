@@ -2069,20 +2069,30 @@ function HektorActionStatusPopup(props: {
   onDismiss: (jobId: string) => void
   onOpenAppDossier: (job: ConsoleJob) => void
 }) {
+  const [openButtonReadyJobId, setOpenButtonReadyJobId] = useState<string | null>(null)
   const primaryJobs = props.jobs.filter(isPrimaryHektorActionJob).slice(0, 3)
-  if (primaryJobs.length === 0) return null
   const jobsById = new Map(props.jobs.map((job) => [job.id, job]))
-  const mainJob = primaryJobs[0]
-  const mainSyncJobId = hektorJobSyncJobId(mainJob)
+  const mainJob = primaryJobs[0] ?? null
+  const mainSyncJobId = mainJob ? hektorJobSyncJobId(mainJob) : null
   const mainSyncJob = mainSyncJobId ? jobsById.get(mainSyncJobId) ?? null : null
-  const mainAnnonceId = hektorCreatedAnnonceId(mainJob)
+  const mainAnnonceId = mainJob ? hektorCreatedAnnonceId(mainJob) : null
   const mainDossier = mainAnnonceId ? props.linkedDossiers[mainAnnonceId] : null
-  const mainProgress = hektorActionProgress(mainJob, mainSyncJob, mainDossier)
+  const mainProgress = mainJob ? hektorActionProgress(mainJob, mainSyncJob, mainDossier) : 'queued'
   const isAvailable = mainProgress === 'available'
   const isError = mainProgress === 'error'
-  const isWaitingForAppSync = mainProgress === 'syncing' && mainJob.status === 'done'
-  const canOpenApp = isAvailable && mainJob.job_type !== 'delete_hektor_annonce'
-  const canOpenHektor = Boolean(mainAnnonceId) && mainJob.job_type !== 'delete_hektor_annonce'
+  const isWaitingForAppSync = Boolean(mainJob && mainProgress === 'syncing' && mainJob.status === 'done')
+  const canShowOpenDelay = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && openButtonReadyJobId !== mainJob.id)
+  const canOpenApp = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && openButtonReadyJobId === mainJob.id)
+  const canOpenHektor = Boolean(mainJob && mainAnnonceId && mainJob.job_type !== 'delete_hektor_annonce')
+
+  useEffect(() => {
+    setOpenButtonReadyJobId(null)
+    if (!mainJob || !isAvailable || mainJob.job_type === 'delete_hektor_annonce') return
+    const timer = window.setTimeout(() => setOpenButtonReadyJobId(mainJob.id), 1200)
+    return () => window.clearTimeout(timer)
+  }, [isAvailable, mainJob?.id, mainJob?.job_type])
+
+  if (!mainJob) return null
 
   return (
     <aside className={`hektor-action-popup hektor-action-popup-${mainProgress}`} aria-live="polite">
@@ -2097,7 +2107,7 @@ function HektorActionStatusPopup(props: {
 
       <div className="hektor-action-popup-main">
         <strong>{hektorActionJobTitle(mainJob)}</strong>
-        <span>{isWaitingForAppSync ? hektorActionWaitingLabel(mainJob) : hektorActionJobDetail(mainJob)}</span>
+        <span>{isWaitingForAppSync ? hektorActionWaitingLabel(mainJob) : canShowOpenDelay ? "Tout est synchronise. Patientez, preparation de l'ouverture..." : hektorActionJobDetail(mainJob)}</span>
       </div>
 
       <div className="hektor-action-steps">
@@ -2115,6 +2125,12 @@ function HektorActionStatusPopup(props: {
         ) : null}
         {isWaitingForAppSync ? (
           <button className="ghost-button button-primary is-waiting" type="button" disabled>Actualisation app...</button>
+        ) : null}
+        {canShowOpenDelay ? (
+          <button className="ghost-button button-primary is-waiting hektor-action-wait-button" type="button" disabled>
+            <span className="hektor-action-wait-spinner" aria-hidden="true" />
+            Patientez...
+          </button>
         ) : null}
         {canOpenHektor && mainAnnonceId ? <button className="ghost-button" type="button" onClick={() => openHektorAnnonce(mainAnnonceId)}>Hektor</button> : null}
       </div>
