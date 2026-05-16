@@ -2784,6 +2784,49 @@ async function handleCreateHektorDraftAnnonce(job) {
     throw new Error(`Creation annonce Hektor non confirmee par GraphQL apres enregistrement wizard ${idannWizard}`);
   }
 
+  let initialMandantCreate = { status: "skipped", reason: "not_requested" };
+  const initialMandantPayload = payload.initial_mandant || payload.initialMandant || null;
+  if (initialMandantPayload && (cleanString(initialMandantPayload.last_name || initialMandantPayload.nom || initialMandantPayload.name) || cleanString(initialMandantPayload.email))) {
+    try {
+      const createdContact = await createHektorMandantContact(job, created.id, {
+        ...initialMandantPayload,
+        hektor_user_email: payload.hektor_user_email || null,
+      });
+      await sleep(1800);
+      let afterMandant = await fetchHektorProspectsList(created.id);
+      if (!hektorProspectLinkedInHtml(afterMandant.text, createdContact.contactId, created.id)) {
+        await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(createdContact.contactId)}&idann=${encodeURIComponent(String(created.id))}`);
+        await sleep(1800);
+        afterMandant = await fetchHektorProspectsList(created.id);
+      }
+      if (!hektorProspectLinkedInHtml(afterMandant.text, createdContact.contactId, created.id)) {
+        throw new Error(`Creation contact OK mais association mandant non confirmee pour ${createdContact.contactId}`);
+      }
+      initialMandantCreate = {
+        status: "created_and_linked",
+        hektor_contact_id: createdContact.contactId,
+        contact: {
+          nom: createdContact.lastName,
+          prenom: createdContact.firstName,
+          email: createdContact.email,
+        },
+      };
+      await logJob(job.id, "hektor_mandant_create", "done", "Mandant initial cree et associe a l annonce", {
+        hektor_annonce_id: String(created.id),
+        hektor_contact_id: createdContact.contactId,
+      });
+    } catch (error) {
+      initialMandantCreate = {
+        status: "error",
+        error: error && error.message ? error.message : String(error),
+      };
+      await logJob(job.id, "hektor_mandant_create", "error", "Annonce creee, mais mandant initial non associe", {
+        hektor_annonce_id: String(created.id),
+        error: initialMandantCreate.error,
+      });
+    }
+  }
+
   await logJob(job.id, "hektor_annonce", "done", "Annonce Hektor finalisee confirmee par GraphQL", {
     hektor_annonce_id: String(created.id),
     isDraft: created.isDraft,
@@ -2806,6 +2849,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     created_at_hektor: created.createdAt || null,
     property_type: created.type && created.type.name ? created.type.name : payload.property_type || null,
     initial_fields_update: initialFieldsUpdate,
+    initial_mandant_create: initialMandantCreate,
     sync_job: syncJob,
     requested_payload: {
       title: payload.title || null,
@@ -2816,6 +2860,12 @@ async function handleCreateHektorDraftAnnonce(job) {
       surface: payload.surface || null,
       room_count: payload.room_count || null,
       bedroom_count: payload.bedroom_count || null,
+      initial_mandant: initialMandantPayload ? {
+        last_name: initialMandantPayload.last_name || initialMandantPayload.nom || null,
+        first_name: initialMandantPayload.first_name || initialMandantPayload.prenom || null,
+        email: initialMandantPayload.email || null,
+        phone: initialMandantPayload.phone || initialMandantPayload.telephone || null,
+      } : null,
     },
   };
 }

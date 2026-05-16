@@ -3428,6 +3428,7 @@ export type HektorDraftAnnonceJobInput = {
   roomCount?: string | number | null
   bedroomCount?: string | number | null
   note?: string | null
+  initialMandant?: HektorMandantContactInput | null
   priority?: number
 }
 
@@ -3452,6 +3453,16 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       room_count: input.roomCount == null ? null : String(input.roomCount).trim() || null,
       bedroom_count: input.bedroomCount == null ? null : String(input.bedroomCount).trim() || null,
       note: input.note?.trim() || null,
+      initial_mandant: input.initialMandant ? {
+        civilite: input.initialMandant.civility?.trim() || null,
+        last_name: input.initialMandant.lastName.trim(),
+        first_name: input.initialMandant.firstName?.trim() || null,
+        email: input.initialMandant.email.trim(),
+        phone: input.initialMandant.phone?.trim() || null,
+        address: input.initialMandant.address?.trim() || null,
+        postal_code: input.initialMandant.postalCode?.trim() || null,
+        city: input.initialMandant.city?.trim() || null,
+      } : null,
     },
     draft_priority: input.priority ?? 20,
   })

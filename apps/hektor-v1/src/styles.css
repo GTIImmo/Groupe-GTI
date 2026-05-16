@@ -21197,6 +21197,72 @@ body {
   border-top: 1px solid rgba(34, 35, 35, 0.1);
   background: #f8fafb;
 }
+.draft-mandant-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid rgba(15, 104, 116, 0.16);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(15, 104, 116, 0.07), rgba(197, 0, 95, 0.04) 56%, rgba(255, 255, 255, 0) 78%),
+    #ffffff;
+  box-shadow: 0 12px 28px rgba(34, 35, 35, 0.05);
+}
+.draft-mandant-panel.is-open {
+  border-color: rgba(15, 104, 116, 0.28);
+}
+.draft-mandant-toggle {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+  border: 0;
+  padding: 12px;
+  background: transparent;
+  color: var(--gti-final-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.draft-mandant-toggle > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #0f6874;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 850;
+}
+.draft-mandant-toggle strong {
+  min-width: 0;
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+.draft-mandant-toggle small {
+  justify-self: end;
+  min-width: 0;
+  color: #687070;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.draft-mandant-fields {
+  display: grid;
+  grid-template-columns: 96px repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+.draft-mandant-fields .filter-field {
+  grid-column: auto;
+  min-height: 0;
+  box-shadow: none;
+}
 .detail-edit-popup-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
@@ -21308,6 +21374,9 @@ body {
   .draft-annonce-form .filter-field {
     grid-column: span 6;
   }
+  .draft-mandant-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .detail-edit-popup-grid {
     grid-template-columns: 1fr;
   }
@@ -21326,6 +21395,17 @@ body {
   }
   .draft-annonce-form .filter-field {
     grid-column: 1 / -1;
+  }
+  .draft-mandant-toggle {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .draft-mandant-toggle small {
+    grid-column: 2;
+    justify-self: start;
+    white-space: normal;
+  }
+  .draft-mandant-fields {
+    grid-template-columns: 1fr;
   }
   .draft-annonce-form .modal-actions {
     margin: 2px -16px -16px;

@@ -3429,6 +3429,12 @@ export default function App() {
   const [draftAnnonceRoomCount, setDraftAnnonceRoomCount] = useState('')
   const [draftAnnonceBedroomCount, setDraftAnnonceBedroomCount] = useState('')
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
+  const [draftMandantOpen, setDraftMandantOpen] = useState(false)
+  const [draftMandantCivility, setDraftMandantCivility] = useState('')
+  const [draftMandantLastName, setDraftMandantLastName] = useState('')
+  const [draftMandantFirstName, setDraftMandantFirstName] = useState('')
+  const [draftMandantEmail, setDraftMandantEmail] = useState('')
+  const [draftMandantPhone, setDraftMandantPhone] = useState('')
   const [deleteAnnonceTarget, setDeleteAnnonceTarget] = useState<Dossier | null>(null)
   const [deleteAnnonceReason, setDeleteAnnonceReason] = useState('')
   const [deleteAnnonceConfirmText, setDeleteAnnonceConfirmText] = useState('')
@@ -4183,6 +4189,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceRoomCount('')
     setDraftAnnonceBedroomCount('')
     setDraftAnnonceNote('')
+    setDraftMandantOpen(false)
+    setDraftMandantCivility('')
+    setDraftMandantLastName('')
+    setDraftMandantFirstName('')
+    setDraftMandantEmail('')
+    setDraftMandantPhone('')
     setNoticeMessage(null)
     setErrorMessage(null)
     setDraftAnnonceModalOpen(true)
@@ -4230,6 +4242,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera l annonce.')
       return
     }
+    const hasInitialMandant = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
+    if (hasInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
+      setErrorMessage('Pour ajouter un mandant initial, renseigne au minimum le nom et l email.')
+      setDraftMandantOpen(true)
+      return
+    }
     setDraftAnnoncePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
@@ -4250,6 +4268,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         roomCount: draftAnnonceRoomCount,
         bedroomCount: draftAnnonceBedroomCount,
         note: draftAnnonceNote,
+        initialMandant: hasInitialMandant ? {
+          civility: draftMandantCivility,
+          lastName: draftMandantLastName,
+          firstName: draftMandantFirstName,
+          email: draftMandantEmail,
+          phone: draftMandantPhone,
+        } : null,
         priority: 10,
       })
       rememberHektorActionJob(job)
@@ -5895,6 +5920,42 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <span>Note</span>
                   <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
                 </label>
+                <section className={`draft-mandant-panel ${draftMandantOpen ? 'is-open' : ''}`}>
+                  <button className="draft-mandant-toggle" type="button" onClick={() => setDraftMandantOpen((value) => !value)}>
+                    <span aria-hidden="true">{draftMandantOpen ? '-' : '+'}</span>
+                    <strong>Ajouter un mandant initial</strong>
+                    <small>{draftMandantOpen ? 'Nom et email minimum' : 'Optionnel, ferme par defaut'}</small>
+                  </button>
+                  {draftMandantOpen ? (
+                    <div className="draft-mandant-fields">
+                      <label className="filter-field is-small">
+                        <span>Civilite</span>
+                        <select value={draftMandantCivility} onChange={(event) => setDraftMandantCivility(event.target.value)}>
+                          <option value="">-</option>
+                          <option value="M.">M.</option>
+                          <option value="Mme.">Mme.</option>
+                          <option value="Mlle.">Mlle.</option>
+                        </select>
+                      </label>
+                      <label className="filter-field">
+                        <span>Nom</span>
+                        <input value={draftMandantLastName} onChange={(event) => setDraftMandantLastName(event.target.value)} placeholder="Nom du vendeur" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Prenom</span>
+                        <input value={draftMandantFirstName} onChange={(event) => setDraftMandantFirstName(event.target.value)} placeholder="Prenom" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Email</span>
+                        <input value={draftMandantEmail} onChange={(event) => setDraftMandantEmail(event.target.value)} type="email" placeholder="email@exemple.fr" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Telephone</span>
+                        <input value={draftMandantPhone} onChange={(event) => setDraftMandantPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
+                      </label>
+                    </div>
+                  ) : null}
+                </section>
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
                   <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
