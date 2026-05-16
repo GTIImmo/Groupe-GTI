@@ -100,6 +100,8 @@ function HektorAnnonceUpdateForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix'>
   detail: Pick<DossierDetailPayload, 'surface_habitable_detail' | 'surface' | 'nb_pieces' | 'nb_chambres'>
   compact?: boolean
+  fieldPanel?: boolean
+  onCancel?: () => void
   onJobCreated?: (job: ConsoleJob) => void
 }) {
   const { dossier, detail } = props
@@ -145,6 +147,7 @@ function HektorAnnonceUpdateForm(props: {
       })
       props.onJobCreated?.(job)
       setMessage(null)
+      props.onCancel?.()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Modification Hektor impossible.')
     } finally {
@@ -153,12 +156,12 @@ function HektorAnnonceUpdateForm(props: {
   }
 
   return (
-    <form className={`hektor-inline-form hektor-annonce-update-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
+    <form className={`hektor-inline-form hektor-annonce-update-form ${props.compact ? 'is-compact' : ''} ${props.fieldPanel ? 'is-field-panel' : ''}`} onSubmit={handleSubmit}>
       <div className="hektor-inline-form-head">
-        <span className="hektor-inline-icon" aria-hidden="true">H</span>
+        <span className="hektor-inline-icon" aria-hidden="true">M</span>
         <div>
-          <strong>Modifier dans Hektor</strong>
-          <small>Le PC serveur applique la modification puis resynchronise l'annonce.</small>
+          <strong>Modifier les champs Hektor</strong>
+          <small>Prix, surface, pieces, chambres et texte principal.</small>
         </div>
       </div>
       <div className="hektor-inline-grid">
@@ -189,6 +192,7 @@ function HektorAnnonceUpdateForm(props: {
       </label>
       <div className="hektor-inline-actions">
         <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer vers Hektor'}</button>
+        {props.onCancel ? <button className="button-subtle" type="button" onClick={props.onCancel} disabled={pending}>Fermer</button> : null}
         {message ? <span className="hektor-inline-feedback is-success">{message}</span> : null}
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
       </div>
@@ -199,8 +203,10 @@ function HektorAnnonceUpdateForm(props: {
 function HektorMandantContactForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   compact?: boolean
+  initialOpen?: boolean
   onJobCreated?: (job: ConsoleJob) => void
 }) {
+  const [open, setOpen] = useState(Boolean(props.initialOpen))
   const [civility, setCivility] = useState('')
   const [lastName, setLastName] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -211,6 +217,7 @@ function HektorMandantContactForm(props: {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    setOpen(Boolean(props.initialOpen))
     setCivility('')
     setLastName('')
     setFirstName('')
@@ -219,7 +226,7 @@ function HektorMandantContactForm(props: {
     setMessage(null)
     setError(null)
     setPending(false)
-  }, [props.dossier.app_dossier_id])
+  }, [props.dossier.app_dossier_id, props.initialOpen])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -249,6 +256,7 @@ function HektorMandantContactForm(props: {
       setPhone('')
       props.onJobCreated?.(job)
       setMessage(null)
+      setOpen(false)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Creation du mandant impossible.')
     } finally {
@@ -257,6 +265,15 @@ function HektorMandantContactForm(props: {
   }
 
   return (
+    <div className={`hektor-mandant-create-shell ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
+      {!open ? (
+        <button className="hektor-mandant-add-card" type="button" onClick={() => setOpen(true)}>
+          <span aria-hidden="true">+</span>
+          <strong>Ajouter un mandant</strong>
+          <small>Nouveau contact Hektor associe a cette annonce</small>
+        </button>
+      ) : null}
+      {open ? (
     <form className={`hektor-inline-form hektor-mandant-create-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">+</span>
@@ -294,10 +311,13 @@ function HektorMandantContactForm(props: {
       </div>
       <div className="hektor-inline-actions">
         <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Créer et associer'}</button>
+        <button className="button-subtle" type="button" onClick={() => setOpen(false)} disabled={pending}>Annuler</button>
         {message ? <span className="hektor-inline-feedback is-success">{message}</span> : null}
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
       </div>
     </form>
+      ) : null}
+    </div>
   )
 }
 
@@ -5799,10 +5819,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
               <p className="modal-subline">Cette action cree l annonce dans Hektor avec le contexte negociateur selectionne, sans diffusion automatique.</p>
               <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
+                <section className="draft-annonce-intro">
+                  <div>
+                    <span>01</span>
+                    <strong>Contexte Hektor</strong>
+                    <small>Le brouillon est cree avec l acces negociateur choisi.</small>
+                  </div>
+                  <div>
+                    <span>02</span>
+                    <strong>Bien initial</strong>
+                    <small>Les champs servent a pre-remplir Hektor puis l app se synchronise.</small>
+                  </div>
+                </section>
                 <label className="filter-field draft-annonce-field-wide">
                   <span>Titre / repere interne</span>
                   <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
                 </label>
+                <div className="draft-annonce-section-title">
+                  <span>Compte</span>
+                  <strong>Qui porte l annonce</strong>
+                </div>
                 <label className="filter-field">
                   <span>Agence</span>
                   <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)} required>
@@ -5832,6 +5868,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <option value="Appartement">Appartement</option>
                   </select>
                 </label>
+                <div className="draft-annonce-section-title">
+                  <span>Localisation</span>
+                  <strong>Adresse privee</strong>
+                </div>
                 <label className="filter-field">
                   <span>Adresse</span>
                   <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
@@ -5844,6 +5884,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <span>Ville</span>
                   <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
                 </label>
+                <div className="draft-annonce-section-title">
+                  <span>Valeurs</span>
+                  <strong>Prix et caracteristiques</strong>
+                </div>
                 <label className="filter-field">
                   <span>Prix</span>
                   <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
@@ -8925,6 +8969,7 @@ function DossierDetailLayout(props: {
   const hasAnyHistory = props.requestHistoryDiffusion.length > 0 || props.requestHistoryPriceDrop.length > 0 || props.requestHistoryCancellation.length > 0
   const [mandatSectionOpen, setMandatSectionOpen] = useState(true)
   const [contactSectionOpen, setContactSectionOpen] = useState(false)
+  const [hektorFieldEditOpen, setHektorFieldEditOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
   const primaryContact = props.contacts[0] ?? null
@@ -8935,6 +8980,7 @@ function DossierDetailLayout(props: {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
     setMandatSectionOpen(true)
     setContactSectionOpen(false)
+    setHektorFieldEditOpen(false)
   }, [dossier.app_dossier_id, detailVariant])
 
   const buildRequestGroups = (
@@ -9012,7 +9058,13 @@ function DossierDetailLayout(props: {
                   <div className="detail-header-topline">
                     <div className="detail-property-title">
                       <span>{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
-                      <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                      <div className="detail-editable-title-row">
+                        <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                        <button className="hektor-field-edit-button" type="button" onClick={() => setHektorFieldEditOpen((value) => !value)} aria-label="Modifier le titre dans Hektor">
+                          <span aria-hidden="true">M</span>
+                          Modifier
+                        </button>
+                      </div>
                     {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
                     </div>
                     {dossier.commercial_nom || dossier.agence_nom ? (
@@ -9037,6 +9089,7 @@ function DossierDetailLayout(props: {
                       <div className="detail-keyfact-item">
                         <span>Surface habitable</span>
                         <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
+                        <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier la surface">M</button>
                       </div>
                       <div className="detail-keyfact-item">
                         <span>Type de bien</span>
@@ -9050,8 +9103,14 @@ function DossierDetailLayout(props: {
                     <div className="detail-keyfact-main">
                       <span>Prix annonce</span>
                       <strong>{formatPrice(dossier.prix)}</strong>
+                      <button className="hektor-field-mini-edit" type="button" onClick={() => setHektorFieldEditOpen(true)} aria-label="Modifier le prix">M</button>
                     </div>
                   </div>
+                  {hektorFieldEditOpen ? (
+                    <div className="detail-field-edit-panel">
+                      <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorFieldEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+                    </div>
+                  ) : null}
                 </div>
               </section>
 
@@ -9120,7 +9179,6 @@ function DossierDetailLayout(props: {
                       </article>
                     ) : null}
                   </div>
-                  <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} onJobCreated={props.onHektorActionJobCreated} />
                 </section>
               ) : null}
 
@@ -9305,7 +9363,7 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : (
                     <div className="detail-entity-list detail-contact-list">
-                      <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
+                      <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} />
                     </div>
                   )}
                 </article>
@@ -9994,6 +10052,12 @@ function MobileDossierDetail(props: {
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   const dossier = props.selectedDossier
+  const [mobileHektorEditOpen, setMobileHektorEditOpen] = useState(false)
+
+  useEffect(() => {
+    setMobileHektorEditOpen(false)
+  }, [dossier?.app_dossier_id])
+
   if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
 
   const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
@@ -10097,6 +10161,15 @@ function MobileDossierDetail(props: {
             </div>
           ))}
         </div>
+        <button className="mobile-hektor-field-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
+          <span aria-hidden="true">M</span>
+          Modifier les champs Hektor
+        </button>
+        {mobileHektorEditOpen ? (
+          <div className="mobile-detail-embedded">
+            <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+          </div>
+        ) : null}
         <div className="mobile-detail-portals">
           {[
             ['LBC', ['leboncoin', 'le bon coin', 'lbc']],
@@ -10109,10 +10182,6 @@ function MobileDossierDetail(props: {
             </span>
           ))}
         </div>
-      </section>
-
-      <section className="mobile-detail-section mobile-hektor-edit-section">
-        <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact onJobCreated={props.onHektorActionJobCreated} />
       </section>
 
       {canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable ? (
@@ -10196,7 +10265,7 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
-        <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
+        <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} />
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
             <strong>{mandat.title}</strong>
