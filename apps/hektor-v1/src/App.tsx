@@ -82,6 +82,9 @@ type DetailContact = {
   lastName: string
   comment: string
   sourceId?: string
+  sourceIds?: string[]
+  refCouple?: string
+  members?: DetailContact[]
   archive?: string
   dateCreated?: string
   dateUpdated?: string
@@ -829,6 +832,7 @@ function formatDraftDate(value: string) {
 }
 
 function mandateContactName(contact: DetailContact) {
+  if (isCoupleContact(contact)) return contact.name
   return [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name
 }
 
@@ -843,16 +847,30 @@ function splitMandantFallbackName(value: string) {
 function buildMandatDocumentMandants(contacts: DetailContact[], fallbackLabel: string): MandatDocumentMandant[] {
   const activeContacts = contacts.filter((contact) => mandateContactName(contact) || contact.email || contact.phone || contact.address)
   if (activeContacts.length) {
-    return activeContacts.map((contact, index) => ({
+    return activeContacts.flatMap((contact, index) => {
+      if (isCoupleContact(contact) && contact.members?.length) {
+        return contact.members.map((member, memberIndex) => ({
+          id: `${contact.id || contact.sourceId || `mandant-${index + 1}`}-member-${member.sourceId || memberIndex + 1}`,
+          civilite: member.civility,
+          nom: member.lastName || member.name,
+          prenom: member.firstName,
+          qualite: 'Mandant',
+          adresse: [member.address || contact.address, member.postalCode || contact.postalCode, member.city || contact.city].filter(Boolean).join(', '),
+          telephone: member.phone || contact.phone,
+          email: member.email || contact.email,
+        }))
+      }
+      return [{
       id: contact.id || contact.sourceId || `mandant-${index + 1}`,
-      civilite: contact.civility,
-      nom: contact.lastName || contact.name,
-      prenom: contact.firstName,
+      civilite: isCoupleContact(contact) ? '' : contact.civility,
+      nom: isCoupleContact(contact) ? contact.name : contact.lastName || contact.name,
+      prenom: isCoupleContact(contact) ? '' : contact.firstName,
       qualite: contact.role || 'Mandant',
       adresse: [contact.address, contact.postalCode, contact.city].filter(Boolean).join(', '),
       telephone: contact.phone,
       email: contact.email,
-    }))
+      }]
+    })
   }
   const fallback = splitMandantFallbackName(fallbackLabel)
   return [{
@@ -903,7 +921,7 @@ function buildMandatDocumentDraft(
     .map((contact) => mandateContactName(contact))
     .filter(Boolean)
     .join(' et ')
-  const mandantsLibelle = firstNonEmpty(detail.mandants_texte, detail.proprietaires_resume, contactLabel)
+  const mandantsLibelle = firstNonEmpty(detail.mandants_texte, contactLabel, detail.proprietaires_resume)
   const mandants = buildMandatDocumentMandants(contacts, mandantsLibelle)
   const rawHonoraires = firstNonEmpty(
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES'),
@@ -1374,6 +1392,14 @@ function MandatDocumentEditor(props: {
   }, [open])
 
   const selectedSignatureRecipients = draft.signatureRecipients.filter((recipient) => recipient.selected)
+  const hasActiveMandate = hasActiveMandateForDocument({
+    statut_annonce: props.dossier.statut_annonce,
+    numero_mandat: props.dossier.numero_mandat,
+    mandat_date_fin: props.detail.mandat_date_fin,
+    mandat_numero_source: props.detail.mandat_numero_source,
+  })
+  const documentTitle = hasActiveMandate ? 'Avenant au mandat' : 'Mandat de vente'
+  const documentActionLabel = hasActiveMandate ? 'Preparer avenant' : 'Preparer le mandat'
   const missingFields = [
     !draft.numeroMandat ? 'numero mandat' : '',
     !draft.mandantsLibelle && draft.mandants.every((mandant) => !mandatMandantDisplayName(mandant)) ? 'mandant' : '',
@@ -1494,11 +1520,11 @@ function MandatDocumentEditor(props: {
       <div className="mandat-document-editor-head">
         <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
         <div>
-          <strong>Mandat de vente</strong>
+          <strong>{documentTitle}</strong>
           <small>{missingFields.length ? `${missingFields.length} element${missingFields.length > 1 ? 's' : ''} a completer avant signature` : 'Document pret a verifier avant signature'}</small>
         </div>
         <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((value) => !value)}>
-          {open ? 'Retour fiche' : 'Preparer le mandat'}
+          {open ? 'Retour fiche' : documentActionLabel}
         </button>
       </div>
       {open ? (
@@ -1987,6 +2013,226 @@ function sanitizeContactComment(value: string | null | undefined) {
     .trim()
 }
 
+function normalizeContactText(value: unknown) {
+  return safeText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function normalizeContactPhone(value: string) {
+  return value.replace(/[^\d+]/g, '')
+}
+
+function isGenericContactName(contact: Pick<DetailContact, 'name' | 'firstName' | 'lastName'>) {
+  const name = normalizeContactText(contact.name)
+  const firstName = normalizeContactText(contact.firstName)
+  const lastName = normalizeContactText(contact.lastName)
+  if (firstName || lastName) return false
+  return new Set(['m mme', 'mr mme', 'm mr mme', 'monsieur madame', 'monsieur mme', 'mr', 'mme']).has(name)
+}
+
+function contactTypologies(item: Record<string, unknown>) {
+  const rawTypologies = Array.isArray(item.typologie) ? item.typologie : [item.typologie]
+  return rawTypologies.map((value) => normalizeContactText(value)).filter(Boolean)
+}
+
+function contactRoleLabel(typologies: string[]) {
+  if (typologies.includes('mandant')) return 'mandant'
+  if (typologies.includes('proprietaire')) return 'proprietaire'
+  return typologies.join(', ')
+}
+
+function isCoupleContact(contact: Pick<DetailContact, 'refCouple' | 'sourceIds' | 'members'>) {
+  return Boolean(contact.refCouple && ((contact.sourceIds?.length ?? 0) > 1 || (contact.members?.length ?? 0) > 1))
+}
+
+function contactMergeKey(contact: DetailContact) {
+  if (contact.refCouple) return `couple:${contact.refCouple}`
+  const firstName = normalizeContactText(contact.firstName)
+  const lastName = normalizeContactText(contact.lastName)
+  if (firstName && lastName) return `name:${firstName}:${lastName}`
+  const email = normalizeEmail(contact.email)
+  if (email) return `email:${email}`
+  const phone = normalizeContactPhone(contact.phone)
+  if (phone) return `phone:${phone}`
+  if (!isGenericContactName(contact)) {
+    const name = normalizeContactText(contact.name)
+    if (name) return `display:${name}`
+  }
+  return contact.sourceId ? `source:${contact.sourceId}` : contact.id
+}
+
+function contactDateTimestamp(value: string | undefined) {
+  if (!value) return 0
+  const timestamp = new Date(value).getTime()
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
+function mergeContactComments(...comments: string[]) {
+  const seen = new Set<string>()
+  return comments
+    .flatMap((comment) => comment.split(/\r?\n+/))
+    .map((line) => line.trim())
+    .filter((line) => {
+      const key = normalizeContactText(line)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .join('\n')
+}
+
+function detailContactMember(contact: DetailContact): DetailContact {
+  const member = { ...contact }
+  delete member.members
+  member.sourceIds = contact.sourceId ? [contact.sourceId] : []
+  return member
+}
+
+function contactPersonDisplayName(contact: DetailContact) {
+  return [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name
+}
+
+function contactCivilityToken(contact: DetailContact) {
+  const normalized = normalizeContactText(contact.civility)
+  if (['m', 'mr', 'monsieur'].includes(normalized)) return 'M.'
+  if (['mme', 'madame'].includes(normalized)) return 'Mme'
+  return contact.civility
+}
+
+function mergeCoupleContactName(primary: DetailContact, secondary: DetailContact) {
+  const people = [primary, secondary].filter((contact) => contact.firstName || contact.lastName || contact.name)
+  const lastNames = Array.from(new Set(people.map((contact) => normalizeContactText(contact.lastName)).filter(Boolean)))
+  const civilityTokens = Array.from(new Set(people.map(contactCivilityToken).filter(Boolean)))
+  const hasMonsieur = civilityTokens.includes('M.')
+  const hasMadame = civilityTokens.includes('Mme')
+  if (hasMonsieur && hasMadame && lastNames.length === 1) {
+    const sharedLastName = people.find((contact) => contact.lastName)?.lastName || ''
+    return `M. et Mme ${sharedLastName}`.trim()
+  }
+  if (hasMonsieur && hasMadame) {
+    return people.map(contactPersonDisplayName).filter(Boolean).join(' et ') || 'M. et Mme'
+  }
+  const names = people.map(contactPersonDisplayName).filter(Boolean)
+  if (names.length > 1) return names.join(' et ')
+  return names[0] || 'M. et Mme'
+}
+
+function mergeContactNames(primary: DetailContact, secondary: DetailContact) {
+  const names = [primary.name, secondary.name]
+    .map((name) => name.trim())
+    .filter(Boolean)
+  const uniqueNames = names.filter((name, index) => {
+    const normalized = normalizeContactText(name)
+    return normalized && names.findIndex((item) => normalizeContactText(item) === normalized) === index
+  })
+  if (primary.refCouple || secondary.refCouple) {
+    return mergeCoupleContactName(primary, secondary) || uniqueNames.join(' / ') || 'M. et Mme'
+  }
+  return uniqueNames[0] || 'Contact'
+}
+
+function detailContactCompletenessScore(contact: DetailContact) {
+  return [
+    contact.email,
+    contact.phone,
+    contact.address,
+    contact.postalCode,
+    contact.city,
+    contact.firstName,
+    contact.lastName,
+    contact.comment,
+  ].filter(Boolean).length
+}
+
+function mergeDetailContacts(current: DetailContact, incoming: DetailContact): DetailContact {
+  const incomingScore = detailContactCompletenessScore(incoming)
+  const currentScore = detailContactCompletenessScore(current)
+  const incomingIsPrimary =
+    incomingScore > currentScore ||
+    (incomingScore === currentScore && contactDateTimestamp(incoming.dateUpdated) > contactDateTimestamp(current.dateUpdated))
+  const primary = incomingIsPrimary ? incoming : current
+  const secondary = incomingIsPrimary ? current : incoming
+  const members = [
+    ...(current.members?.length ? current.members : [detailContactMember(current)]),
+    ...(incoming.members?.length ? incoming.members : [detailContactMember(incoming)]),
+  ].filter((member, index, rows) => {
+    const key = member.sourceId || contactMergeKey(member)
+    return rows.findIndex((row) => (row.sourceId || contactMergeKey(row)) === key) === index
+  })
+  const sourceIds = Array.from(new Set(members.map((member) => member.sourceId).filter(Boolean) as string[]))
+  const refCouple = firstNonEmpty(primary.refCouple, secondary.refCouple)
+  return {
+    ...primary,
+    id: primary.id || secondary.id,
+    name: mergeContactNames(primary, secondary),
+    role: refCouple && sourceIds.length > 1 ? 'mandants maries' : primary.role || secondary.role,
+    phone: firstNonEmpty(primary.phone, secondary.phone),
+    email: firstNonEmpty(primary.email, secondary.email),
+    address: firstNonEmpty(primary.address, secondary.address),
+    postalCode: firstNonEmpty(primary.postalCode, secondary.postalCode),
+    city: firstNonEmpty(primary.city, secondary.city),
+    civility: firstNonEmpty(primary.civility, secondary.civility),
+    firstName: firstNonEmpty(primary.firstName, secondary.firstName),
+    lastName: firstNonEmpty(primary.lastName, secondary.lastName),
+    comment: mergeContactComments(primary.comment, secondary.comment),
+    sourceId: primary.sourceId || secondary.sourceId,
+    sourceIds,
+    members,
+    refCouple,
+    archive: firstNonEmpty(primary.archive, secondary.archive),
+    dateCreated: firstNonEmpty(primary.dateCreated, secondary.dateCreated),
+    dateUpdated: firstNonEmpty(primary.dateUpdated, secondary.dateUpdated),
+    negotiatorId: firstNonEmpty(primary.negotiatorId, secondary.negotiatorId),
+  }
+}
+
+function buildDetailContactsFromProprietaires(value: string | null | undefined, idPrefix = 'contact') {
+  const contacts = new Map<string, DetailContact>()
+  parseJson<Array<Record<string, unknown>>>(value, []).forEach((item, index) => {
+    const coords = (item.coordonnees as Record<string, unknown> | undefined) ?? {}
+    const locality = ((item.localite as Record<string, unknown> | undefined)?.localite as Record<string, unknown> | undefined) ?? {}
+    const postalCode = safeText(locality.code)
+    const city = safeText(locality.ville)
+    const civility = safeText(item.civilite)
+    const firstName = safeText(item.prenom)
+    const lastName = safeText(item.nom)
+    const typologies = contactTypologies(item)
+    const sourceId = safeText(item.id)
+    const contact: DetailContact = {
+      id: `${idPrefix}-${index}-${sourceId || normalizeContactText([firstName, lastName].filter(Boolean).join(' '))}`,
+      name: [civility, firstName, lastName].filter(Boolean).join(' ') || `Contact ${index + 1}`,
+      role: contactRoleLabel(typologies),
+      phone: safeText(coords.portable) || safeText(coords.telephone),
+      email: safeText(coords.email),
+      address: safeText(locality.adresse),
+      postalCode,
+      city,
+      civility,
+      firstName,
+      lastName,
+      comment: sanitizeContactComment(item.commentaires as string | null | undefined),
+      sourceId,
+      sourceIds: sourceId ? [sourceId] : [],
+      refCouple: safeText(item.refCouple),
+      archive: safeText(item.archive),
+      dateCreated: safeText(item.dateenr),
+      dateUpdated: safeText(item.datemaj),
+      negotiatorId: safeText(item.id_negociateur),
+    }
+    const hasUsableData = Boolean(contact.firstName || contact.lastName || contact.phone || contact.email || contact.address || contact.comment)
+    if (!hasUsableData || (isGenericContactName(contact) && !contact.phone && !contact.email && !contact.address && !contact.comment)) return
+    const key = contactMergeKey(contact)
+    const existing = contacts.get(key)
+    contacts.set(key, existing ? mergeDetailContacts(existing, contact) : contact)
+  })
+  return Array.from(contacts.values())
+}
+
 function boolLabel(value: boolean | number | string | null | undefined) {
   if (value === null || value === undefined || value === '') return '-'
   if (value === true || value === 1 || value === '1' || value === 'true') return 'Oui'
@@ -2250,6 +2496,14 @@ function mandateLifecycleState(item: Pick<MandatRecord, 'statut_annonce' | 'mand
   if (status.includes('offre') || status.includes('compromis')) return 'En cours'
   if (status === 'actif' && isMandateEndDateStillValid(item.mandat_date_fin)) return 'En cours'
   return 'Annulé'
+}
+
+function hasActiveMandateForDocument(item: Pick<Dossier, 'statut_annonce' | 'numero_mandat'> & Pick<DossierDetailPayload, 'mandat_date_fin' | 'mandat_numero_source'>) {
+  const mandateNumber = firstNonEmpty(item.numero_mandat, item.mandat_numero_source)
+  return Boolean(mandateNumber) && mandateLifecycleState({
+    statut_annonce: item.statut_annonce,
+    mandat_date_fin: item.mandat_date_fin,
+  }) === 'En cours'
 }
 
 function mandateLifecycleRowClass(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin'>) {
@@ -7092,34 +7346,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       .filter((item) => item.url && !seen.has(item.url) && seen.add(item.url))
   }, [detail])
   const contacts = useMemo(() => {
-    return parseJson<Array<Record<string, unknown>>>(detail.proprietaires_json, []).map((item, index) => {
-      const coords = (item.coordonnees as Record<string, unknown> | undefined) ?? {}
-      const locality = ((item.localite as Record<string, unknown> | undefined)?.localite as Record<string, unknown> | undefined) ?? {}
-      const postalCode = safeText(locality.code)
-      const city = safeText(locality.ville)
-      const civility = safeText(item.civilite)
-      const firstName = safeText(item.prenom)
-      const lastName = safeText(item.nom)
-      return {
-        id: `${index}-${lastName}`,
-        name: [civility, firstName, lastName].filter(Boolean).join(' ') || `Contact ${index + 1}`,
-        role: Array.isArray(item.typologie) ? item.typologie.join(', ') : '',
-        phone: safeText(coords.portable) || safeText(coords.telephone),
-        email: safeText(coords.email),
-        address: safeText(locality.adresse),
-        postalCode,
-        city,
-        civility,
-        firstName,
-        lastName,
-        comment: sanitizeContactComment(item.commentaires as string | null | undefined),
-        sourceId: safeText(item.id),
-        archive: safeText(item.archive),
-        dateCreated: safeText(item.dateenr),
-        dateUpdated: safeText(item.datemaj),
-        negotiatorId: safeText(item.id_negociateur),
-      }
-    })
+    return buildDetailContactsFromProprietaires(detail.proprietaires_json, 'detail-contact')
   }, [detail])
   const notes = useMemo(() => {
     const list = parseJson<Array<Record<string, unknown>>>(detail.notes_json, [])
@@ -9412,19 +9639,7 @@ function MandatRegisterScreen(props: {
   const selectedAvenants = selectedDetail ? parseRegisterAvenants(selectedDetail) : []
   const selectedImages = parseJson<Array<Record<string, unknown>>>(String(selectedDetailPayload.images_preview_json ?? selectedDetail?.images_preview_json ?? '[]'), [])
   const selectedImageUrl = selectedImages.find((item) => safeText(item.url))?.url as string | undefined
-  const selectedContactItems = parseJson<Array<Record<string, unknown>>>(String(selectedDetailPayload.proprietaires_json ?? '[]'), []).map((item, index) => {
-    const coords = (item.coordonnees as Record<string, unknown> | undefined) ?? {}
-    const locality = ((item.localite as Record<string, unknown> | undefined)?.localite as Record<string, unknown> | undefined) ?? {}
-    return {
-      id: `register-contact-${index}-${safeText(item.nom)}`,
-      name: [safeText(item.civilite), safeText(item.prenom), safeText(item.nom)].filter(Boolean).join(' ') || `Contact ${index + 1}`,
-      role: Array.isArray(item.typologie) ? item.typologie.join(', ') : 'Mandant',
-      phone: safeText(coords.portable) || safeText(coords.telephone),
-      email: safeText(coords.email),
-      address: [safeText(locality.adresse), safeText(locality.code), safeText(locality.ville)].filter(Boolean).join(', '),
-      comment: sanitizeContactComment(item.commentaires as string | null | undefined),
-    }
-  })
+  const selectedContactItems = buildDetailContactsFromProprietaires(String(selectedDetailPayload.proprietaires_json ?? '[]'), 'register-contact')
   const selectedMandateLines = selectedDetail ? [
     ['Numero', selectedDetail.numero_mandat ?? '-'] as [string, string],
     ['Type', selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'] as [string, string],
@@ -9631,7 +9846,7 @@ function MandatRegisterScreen(props: {
                           </div>
                           <div className="detail-entity-line detail-entity-line-full">
                             <span>Adresse</span>
-                            <strong>{contact.address || '-'}</strong>
+                            <strong>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ') || '-'}</strong>
                           </div>
                           {contact.comment ? (
                             <div className="detail-entity-line detail-entity-line-full detail-contact-note">
