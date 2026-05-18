@@ -764,6 +764,7 @@ type MandatDocumentDraft = {
   typeMandat: string
   mandantsLibelle: string
   mandants: MandatDocumentMandant[]
+  signatureRecipients: MandatSignatureRecipient[]
   bienTitre: string
   bienType: string
   bienAdresse: string
@@ -789,6 +790,17 @@ type MandatDocumentMandant = {
   adresse: string
   telephone: string
   email: string
+}
+
+type MandatSignatureRecipient = {
+  id: string
+  sourceMandantId: string
+  selected: boolean
+  nomComplet: string
+  role: string
+  email: string
+  telephone: string
+  mode: 'email' | 'sms' | 'email_sms'
 }
 
 function firstNonEmpty(...values: unknown[]) {
@@ -864,6 +876,23 @@ function mandatMandantsLabel(mandants: MandatDocumentMandant[], fallback: string
   return names.length ? names.join(' et ') : fallback
 }
 
+function buildMandatSignatureRecipients(mandants: MandatDocumentMandant[]): MandatSignatureRecipient[] {
+  return mandants.map((mandant, index) => ({
+    id: `signature-${mandant.id || index + 1}`,
+    sourceMandantId: mandant.id || `mandant-${index + 1}`,
+    selected: true,
+    nomComplet: mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`,
+    role: mandant.qualite || 'Mandant',
+    email: mandant.email,
+    telephone: mandant.telephone,
+    mode: mandant.email && mandant.telephone ? 'email_sms' : mandant.telephone ? 'sms' : 'email',
+  }))
+}
+
+function signatureRecipientLabel(recipient: MandatSignatureRecipient) {
+  return recipient.nomComplet || recipient.email || recipient.telephone || 'Destinataire'
+}
+
 function buildMandatDocumentDraft(
   dossier: Dossier,
   detail: DossierDetailPayload,
@@ -875,6 +904,7 @@ function buildMandatDocumentDraft(
     .filter(Boolean)
     .join(' et ')
   const mandantsLibelle = firstNonEmpty(detail.mandants_texte, detail.proprietaires_resume, contactLabel)
+  const mandants = buildMandatDocumentMandants(contacts, mandantsLibelle)
   const rawHonoraires = firstNonEmpty(
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES'),
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES_ACQUEREUR'),
@@ -887,7 +917,8 @@ function buildMandatDocumentDraft(
     dateSignature: todayInputDate(),
     typeMandat: firstNonEmpty(detail.mandat_type, detail.mandat_type_source, 'Mandat de vente'),
     mandantsLibelle,
-    mandants: buildMandatDocumentMandants(contacts, mandantsLibelle),
+    mandants,
+    signatureRecipients: buildMandatSignatureRecipients(mandants),
     bienTitre: firstNonEmpty(dossier.titre_bien, detail.texte_principal_titre),
     bienType: firstNonEmpty(dossier.type_bien, rawDetailProp(detail, 'bien', 'type')),
     bienAdresse: firstNonEmpty(address, detail.adresse_privee_listing, detail.adresse_detail),
@@ -950,6 +981,10 @@ function buildMandatDocumentPayload(draft: MandatDocumentDraft, dossier: Dossier
       inclure_couverture: draft.inclureCouverture,
       execution_anticipee_demandee: draft.executionAnticipee || null,
       signature_electronique: true,
+    },
+    signature: {
+      destinataires: draft.signatureRecipients,
+      destinataires_selectionnes: draft.signatureRecipients.filter((recipient) => recipient.selected),
     },
   }
 }
@@ -1318,7 +1353,7 @@ function MandatDocumentEditor(props: {
   )
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<MandatDocumentDraft>(initialDraft)
-  const [activeTab, setActiveTab] = useState<'mandants' | 'bien' | 'prix' | 'clauses' | 'apercu'>('mandants')
+  const [activeTab, setActiveTab] = useState<'mandants' | 'bien' | 'prix' | 'clauses' | 'signature' | 'apercu'>('mandants')
   const [message, setMessage] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
 
@@ -1329,6 +1364,16 @@ function MandatDocumentEditor(props: {
     setMessage(null)
   }, [initialDraft])
 
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
+  const selectedSignatureRecipients = draft.signatureRecipients.filter((recipient) => recipient.selected)
   const missingFields = [
     !draft.numeroMandat ? 'numero mandat' : '',
     !draft.mandantsLibelle && draft.mandants.every((mandant) => !mandatMandantDisplayName(mandant)) ? 'mandant' : '',
@@ -1337,6 +1382,8 @@ function MandatDocumentEditor(props: {
     !draft.honorairesTtc ? 'honoraires' : '',
     !draft.honorairesCharge ? 'charge honoraires' : '',
     !draft.dateSignature ? 'date de signature' : '',
+    !selectedSignatureRecipients.length ? 'signataire' : '',
+    selectedSignatureRecipients.some((recipient) => !recipient.email && !recipient.telephone) ? 'coordonnees signataire' : '',
   ].filter(Boolean)
   const payload = buildMandatDocumentPayload(draft, props.dossier)
 
@@ -1352,6 +1399,52 @@ function MandatDocumentEditor(props: {
       ))
       return { ...current, mandants: nextMandants, mandantsLibelle: mandatMandantsLabel(nextMandants, current.mandantsLibelle) }
     })
+    setMessage(null)
+  }
+
+  const updateSignatureRecipient = <K extends keyof MandatSignatureRecipient>(index: number, key: K, value: MandatSignatureRecipient[K]) => {
+    setDraft((current) => ({
+      ...current,
+      signatureRecipients: current.signatureRecipients.map((recipient, recipientIndex) => (
+        recipientIndex === index ? { ...recipient, [key]: value } : recipient
+      )),
+    }))
+    setMessage(null)
+  }
+
+  const syncSignatureRecipientsFromMandants = () => {
+    setDraft((current) => ({
+      ...current,
+      signatureRecipients: buildMandatSignatureRecipients(current.mandants),
+    }))
+    setMessage('Destinataires recalcules depuis les mandants.')
+  }
+
+  const addSignatureRecipient = () => {
+    setDraft((current) => ({
+      ...current,
+      signatureRecipients: [
+        ...current.signatureRecipients,
+        {
+          id: `signature-${Date.now()}`,
+          sourceMandantId: '',
+          selected: true,
+          nomComplet: '',
+          role: 'Signataire',
+          email: '',
+          telephone: '',
+          mode: 'email',
+        },
+      ],
+    }))
+    setMessage(null)
+  }
+
+  const removeSignatureRecipient = (index: number) => {
+    setDraft((current) => ({
+      ...current,
+      signatureRecipients: current.signatureRecipients.filter((_recipient, recipientIndex) => recipientIndex !== index),
+    }))
     setMessage(null)
   }
 
@@ -1405,7 +1498,7 @@ function MandatDocumentEditor(props: {
           <small>{missingFields.length ? `${missingFields.length} champ${missingFields.length > 1 ? 's' : ''} a completer avant generation` : 'Pret pour une generation de test'}</small>
         </div>
         <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((value) => !value)}>
-          {open ? 'Fermer' : 'Editer'}
+          {open ? 'Fermer la page' : 'Ouvrir la page'}
         </button>
       </div>
       {open ? (
@@ -1417,6 +1510,7 @@ function MandatDocumentEditor(props: {
                 ['bien', 'Bien'],
                 ['prix', 'Prix'],
                 ['clauses', 'Clauses'],
+                ['signature', 'Signature'],
                 ['apercu', 'Controle'],
               ].map(([value, label]) => (
                 <button key={value} className={activeTab === value ? 'is-active' : ''} type="button" onClick={() => setActiveTab(value as typeof activeTab)}>
@@ -1482,12 +1576,47 @@ function MandatDocumentEditor(props: {
                 <label className="is-wide"><span>Clause particuliere</span><textarea value={draft.clauseParticuliere} onChange={(event) => updateDraft('clauseParticuliere', event.target.value)} rows={5} /></label>
               </div>
             ) : null}
+            {activeTab === 'signature' ? (
+              <div className="mandat-document-panel">
+                <div className="mandat-signature-summary">
+                  <div>
+                    <strong>{selectedSignatureRecipients.length} destinataire{selectedSignatureRecipients.length > 1 ? 's' : ''} selectionne{selectedSignatureRecipients.length > 1 ? 's' : ''}</strong>
+                    <small>Preselection depuis les mandants, modifiable avant envoi ImmoSign.</small>
+                  </div>
+                  <button className="ghost-button button-subtle" type="button" onClick={syncSignatureRecipientsFromMandants}>
+                    Reprendre mandants
+                  </button>
+                </div>
+                <div className="mandat-signature-recipients">
+                  {draft.signatureRecipients.map((recipient, index) => (
+                    <section key={recipient.id || index} className={`mandat-signature-recipient-card ${recipient.selected ? 'is-selected' : ''}`}>
+                      <div className="mandat-signature-recipient-head">
+                        <label className="mandat-signature-toggle">
+                          <input type="checkbox" checked={recipient.selected} onChange={(event) => updateSignatureRecipient(index, 'selected', event.target.checked)} />
+                          <span>{signatureRecipientLabel(recipient)}</span>
+                        </label>
+                        <button className="ghost-button button-subtle" type="button" onClick={() => removeSignatureRecipient(index)}>Retirer</button>
+                      </div>
+                      <div className="mandat-document-form-grid">
+                        <label className="is-wide"><span>Nom affiché</span><input value={recipient.nomComplet} onChange={(event) => updateSignatureRecipient(index, 'nomComplet', event.target.value)} /></label>
+                        <label><span>Role</span><input value={recipient.role} onChange={(event) => updateSignatureRecipient(index, 'role', event.target.value)} /></label>
+                        <label><span>Canal</span><select value={recipient.mode} onChange={(event) => updateSignatureRecipient(index, 'mode', event.target.value as MandatSignatureRecipient['mode'])}><option value="email">Email</option><option value="sms">SMS</option><option value="email_sms">Email + SMS</option></select></label>
+                        <label><span>Email</span><input value={recipient.email} onChange={(event) => updateSignatureRecipient(index, 'email', event.target.value)} /></label>
+                        <label><span>Telephone</span><input value={recipient.telephone} onChange={(event) => updateSignatureRecipient(index, 'telephone', event.target.value)} /></label>
+                      </div>
+                    </section>
+                  ))}
+                </div>
+                <button className="ghost-button" type="button" onClick={addSignatureRecipient}>Ajouter un destinataire</button>
+              </div>
+            ) : null}
             {activeTab === 'apercu' ? (
               <div className="mandat-document-panel">
                 <div className="mandat-document-checklist">
                   <strong>Controle avant document final</strong>
                   <p>{missingFields.length ? `Champs obligatoires a completer : ${missingFields.join(', ')}.` : 'Toutes les donnees principales sont renseignees.'}</p>
                   <p>{draft.mandants.length} mandant{draft.mandants.length > 1 ? 's' : ''} dans le document. Le modele complet source est utilise pour le rendu imprimable.</p>
+                  <p>{selectedSignatureRecipients.length} destinataire{selectedSignatureRecipients.length > 1 ? 's' : ''} prepare{selectedSignatureRecipients.length > 1 ? 's' : ''} pour ImmoSign.</p>
                 </div>
               </div>
             ) : null}
