@@ -49,6 +49,7 @@ import {
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
   createSyncHektorPhotosJob,
+  createUploadHektorPhotoJob,
   createHektorMandantContactJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
@@ -65,6 +66,7 @@ import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePho
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
+import mandatTemplateHtml from './mandat-template.html?raw'
 
 type DetailContact = {
   id: string
@@ -761,6 +763,7 @@ type MandatDocumentDraft = {
   dateSignature: string
   typeMandat: string
   mandantsLibelle: string
+  mandants: MandatDocumentMandant[]
   bienTitre: string
   bienType: string
   bienAdresse: string
@@ -775,6 +778,17 @@ type MandatDocumentDraft = {
   clauseParticuliere: string
   executionAnticipee: 'oui' | 'non' | ''
   inclureCouverture: boolean
+}
+
+type MandatDocumentMandant = {
+  id: string
+  civilite: string
+  nom: string
+  prenom: string
+  qualite: string
+  adresse: string
+  telephone: string
+  email: string
 }
 
 function firstNonEmpty(...values: unknown[]) {
@@ -802,6 +816,54 @@ function formatDraftDate(value: string) {
   return inputDateToFrench(value).replace(/-/g, '/')
 }
 
+function mandateContactName(contact: DetailContact) {
+  return [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name
+}
+
+function splitMandantFallbackName(value: string) {
+  const normalized = value.trim()
+  if (!normalized) return { nom: '', prenom: '' }
+  const parts = normalized.split(/\s+/)
+  if (parts.length === 1) return { nom: parts[0], prenom: '' }
+  return { nom: parts.slice(1).join(' '), prenom: parts[0] }
+}
+
+function buildMandatDocumentMandants(contacts: DetailContact[], fallbackLabel: string): MandatDocumentMandant[] {
+  const activeContacts = contacts.filter((contact) => mandateContactName(contact) || contact.email || contact.phone || contact.address)
+  if (activeContacts.length) {
+    return activeContacts.map((contact, index) => ({
+      id: contact.id || contact.sourceId || `mandant-${index + 1}`,
+      civilite: contact.civility,
+      nom: contact.lastName || contact.name,
+      prenom: contact.firstName,
+      qualite: contact.role || 'Mandant',
+      adresse: [contact.address, contact.postalCode, contact.city].filter(Boolean).join(', '),
+      telephone: contact.phone,
+      email: contact.email,
+    }))
+  }
+  const fallback = splitMandantFallbackName(fallbackLabel)
+  return [{
+    id: 'mandant-1',
+    civilite: '',
+    nom: fallback.nom,
+    prenom: fallback.prenom,
+    qualite: 'Mandant',
+    adresse: '',
+    telephone: '',
+    email: '',
+  }]
+}
+
+function mandatMandantDisplayName(mandant: MandatDocumentMandant) {
+  return [mandant.civilite, mandant.prenom, mandant.nom].filter(Boolean).join(' ').trim()
+}
+
+function mandatMandantsLabel(mandants: MandatDocumentMandant[], fallback: string) {
+  const names = mandants.map(mandatMandantDisplayName).filter(Boolean)
+  return names.length ? names.join(' et ') : fallback
+}
+
 function buildMandatDocumentDraft(
   dossier: Dossier,
   detail: DossierDetailPayload,
@@ -809,9 +871,10 @@ function buildMandatDocumentDraft(
   address: string,
 ): MandatDocumentDraft {
   const contactLabel = contacts
-    .map((contact) => [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name)
+    .map((contact) => mandateContactName(contact))
     .filter(Boolean)
     .join(' et ')
+  const mandantsLibelle = firstNonEmpty(detail.mandants_texte, detail.proprietaires_resume, contactLabel)
   const rawHonoraires = firstNonEmpty(
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES'),
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES_ACQUEREUR'),
@@ -823,7 +886,8 @@ function buildMandatDocumentDraft(
     numeroMandat: firstNonEmpty(dossier.numero_mandat, detail.mandat_numero_source),
     dateSignature: todayInputDate(),
     typeMandat: firstNonEmpty(detail.mandat_type, detail.mandat_type_source, 'Mandat de vente'),
-    mandantsLibelle: firstNonEmpty(detail.mandants_texte, detail.proprietaires_resume, contactLabel),
+    mandantsLibelle,
+    mandants: buildMandatDocumentMandants(contacts, mandantsLibelle),
     bienTitre: firstNonEmpty(dossier.titre_bien, detail.texte_principal_titre),
     bienType: firstNonEmpty(dossier.type_bien, rawDetailProp(detail, 'bien', 'type')),
     bienAdresse: firstNonEmpty(address, detail.adresse_privee_listing, detail.adresse_detail),
@@ -842,6 +906,7 @@ function buildMandatDocumentDraft(
 }
 
 function buildMandatDocumentPayload(draft: MandatDocumentDraft, dossier: Dossier) {
+  const mandantsLibelle = mandatMandantsLabel(draft.mandants, draft.mandantsLibelle)
   return {
     mandat: {
       numero: draft.numeroMandat,
@@ -852,7 +917,8 @@ function buildMandatDocumentPayload(draft: MandatDocumentDraft, dossier: Dossier
       preavis_jours: 15,
       clause_particuliere: draft.clauseParticuliere,
     },
-    mandants_libelle: draft.mandantsLibelle,
+    mandants: draft.mandants,
+    mandants_libelle: mandantsLibelle,
     bien: {
       titre: draft.bienTitre,
       type: draft.bienType,
@@ -870,7 +936,12 @@ function buildMandatDocumentPayload(draft: MandatDocumentDraft, dossier: Dossier
       mode_paiement: 'virement',
     },
     agence: {
-      nom: dossier.agence_nom ?? '',
+      nom: dossier.agence_nom || 'GROUPE GTI',
+      adresse: '22 rue Jean Jaures',
+      code_postal: '42700',
+      ville: 'Firminy',
+      telephone: '',
+      email: '',
     },
     negociateur: {
       nom_complet: dossier.commercial_nom ?? '',
@@ -927,7 +998,7 @@ function checkedEntity(active: boolean) {
   return active ? '&#9745;' : '&#9744;'
 }
 
-function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, contacts: DetailContact[]) {
+function mandatPreviewHtmlLegacy(draft: MandatDocumentDraft, dossier: Dossier, contacts: DetailContact[]) {
   const payload = buildMandatDocumentPayload(draft, dossier)
   const chargeAcquereur = payload.honoraires.charge === 'acquereur'
   const chargeMandant = payload.honoraires.charge === 'mandant'
@@ -1144,6 +1215,96 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, contact
 </html>`
 }
 
+function mandatTemplateLookup(source: unknown, path: string) {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current == null) return ''
+    if (Array.isArray(current)) return current[Number(key)] ?? ''
+    if (typeof current === 'object') return (current as Record<string, unknown>)[key]
+    return ''
+  }, source)
+}
+
+function mandatMandantsHtml(mandants: MandatDocumentMandant[], fallback: string) {
+  const rows = mandants.length ? mandants : buildMandatDocumentMandants([], fallback)
+  return rows.map((mandant, index) => {
+    const name = mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`
+    const details = [
+      mandant.qualite,
+      mandant.adresse ? `Adresse : ${mandant.adresse}` : '',
+      mandant.telephone ? `Telephone : ${mandant.telephone}` : '',
+      mandant.email ? `Email : ${mandant.email}` : '',
+    ].filter(Boolean)
+    return `<div style="border:1px solid #eeeeee;background:#ffffff;margin:${index === 0 ? '0' : '7px'} 0 0 0;padding:7px 9px;">
+      <strong>${escapeHtml(name)}</strong>
+      ${details.map((detail) => `<div style="color:#444;font-size:9.6px;margin-top:3px;">${escapeHtml(detail)}</div>`).join('')}
+    </div>`
+  }).join('')
+}
+
+function renderMandatTemplate(draft: MandatDocumentDraft, dossier: Dossier) {
+  const payload = buildMandatDocumentPayload(draft, dossier)
+  const chargeAcquereur = payload.honoraires.charge === 'acquereur'
+  const chargeMandant = payload.honoraires.charge === 'mandant'
+  const executionYes = payload.options.execution_anticipee_demandee === 'oui'
+  const executionNo = payload.options.execution_anticipee_demandee === 'non'
+  const htmlValues: Record<string, string> = {
+    mandants_libelle: mandatMandantsHtml(draft.mandants, payload.mandants_libelle),
+  }
+  let html = mandatTemplateHtml
+  if (!draft.inclureCouverture) {
+    html = html.replace(/<section data-section="couverture"[\s\S]*?<\/section>\s*/, '')
+  }
+  html = html.replace(/\{\{([^}]+)\}\}/g, (_match, rawKey: string) => {
+    const key = String(rawKey).trim()
+    if (key === '...') return ''
+    if (htmlValues[key]) return htmlValues[key]
+    const value = mandatTemplateLookup(payload, key)
+    return textOrPlaceholder(value)
+  })
+  html = html
+    .replace('<span style="font-size:10px;vertical-align:middle">&#9744;</span> MANDANT', `<span style="font-size:10px;vertical-align:middle">${checkedEntity(chargeMandant)}</span> MANDANT`)
+    .replace('<span style="font-size:10px;vertical-align:middle">&#9744;</span> ACQU&Eacute;REUR', `<span style="font-size:10px;vertical-align:middle">${checkedEntity(chargeAcquereur)}</span> ACQU&Eacute;REUR`)
+    .replace(' En cochant cette case, le MANDANT DEMANDE', ` ${checkedEntity(executionYes)} En cochant cette case, le MANDANT DEMANDE`)
+    .replace("En cochant cette case, le MANDANT INDIQUE QU'IL NE SOUHAITE PAS", `${checkedEntity(executionNo)} En cochant cette case, le MANDANT INDIQUE QU'IL NE SOUHAITE PAS`)
+    .replace(
+      /<div style="border:1px dotted #c7c7c7;height:58px;margin:5px 0 8px 0;">CHAMP LIBRE<\/div>/,
+      `<div style="border:1px dotted #c7c7c7;min-height:58px;margin:5px 0 8px 0;padding:8px 10px;">${formatFreeTextHtml(draft.clauseParticuliere, 'Aucune clause particuliere renseignee.')}</div>`,
+    )
+  return html
+}
+
+function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contacts: DetailContact[]) {
+  const body = renderMandatTemplate(draft, dossier)
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Mandat de vente ${escapeHtml(draft.numeroMandat || '')}</title>
+  <style>
+    *{box-sizing:border-box}
+    html{background:#e9eef2}
+    body{margin:0;background:#e9eef2;color:#111}
+    .mandat-print-root{padding:18px 0}
+    section[data-section],section[data-source]{position:relative;width:210mm;min-height:297mm;margin:0 auto 18px;padding:13mm 14mm;background:#fff;box-shadow:0 18px 60px rgba(15,23,42,.18);break-after:page;page-break-after:always}
+    section[data-section]::after,section[data-source]::after{content:"Page " counter(page);position:absolute;right:14mm;bottom:7mm;color:#777;font:700 8px Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase}
+    section[data-section]{counter-increment:page}
+    section[data-source]{counter-increment:page}
+    section[data-section]:last-of-type,section[data-source]:last-of-type{break-after:auto;page-break-after:auto}
+    img{max-width:100%}
+    @page{size:A4;margin:0}
+    @media print{
+      html,body{background:#fff}
+      .mandat-print-root{padding:0}
+      section[data-section],section[data-source]{width:210mm;min-height:297mm;margin:0;padding:13mm 14mm;box-shadow:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="mandat-print-root">${body}</main>
+</body>
+</html>`
+}
+
 function MandatDocumentEditor(props: {
   dossier: Dossier
   detail: DossierDetailPayload
@@ -1157,18 +1318,20 @@ function MandatDocumentEditor(props: {
   )
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<MandatDocumentDraft>(initialDraft)
+  const [activeTab, setActiveTab] = useState<'mandants' | 'bien' | 'prix' | 'clauses' | 'apercu'>('mandants')
   const [message, setMessage] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
 
   useEffect(() => {
     setDraft(initialDraft)
     setOpen(false)
+    setActiveTab('mandants')
     setMessage(null)
   }, [initialDraft])
 
   const missingFields = [
     !draft.numeroMandat ? 'numero mandat' : '',
-    !draft.mandantsLibelle ? 'mandant' : '',
+    !draft.mandantsLibelle && draft.mandants.every((mandant) => !mandatMandantDisplayName(mandant)) ? 'mandant' : '',
     !draft.bienAdresse ? 'adresse du bien' : '',
     !draft.prixVente ? 'prix de vente' : '',
     !draft.honorairesTtc ? 'honoraires' : '',
@@ -1179,6 +1342,35 @@ function MandatDocumentEditor(props: {
 
   const updateDraft = <K extends keyof MandatDocumentDraft>(key: K, value: MandatDocumentDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }))
+    setMessage(null)
+  }
+
+  const updateMandant = <K extends keyof MandatDocumentMandant>(index: number, key: K, value: MandatDocumentMandant[K]) => {
+    setDraft((current) => {
+      const nextMandants = current.mandants.map((mandant, mandantIndex) => (
+        mandantIndex === index ? { ...mandant, [key]: value } : mandant
+      ))
+      return { ...current, mandants: nextMandants, mandantsLibelle: mandatMandantsLabel(nextMandants, current.mandantsLibelle) }
+    })
+    setMessage(null)
+  }
+
+  const addMandant = () => {
+    setDraft((current) => ({
+      ...current,
+      mandants: [
+        ...current.mandants,
+        { id: `mandant-${Date.now()}`, civilite: '', nom: '', prenom: '', qualite: 'Mandant', adresse: '', telephone: '', email: '' },
+      ],
+    }))
+    setMessage(null)
+  }
+
+  const removeMandant = (index: number) => {
+    setDraft((current) => {
+      const nextMandants = current.mandants.filter((_mandant, mandantIndex) => mandantIndex !== index)
+      return { ...current, mandants: nextMandants, mandantsLibelle: mandatMandantsLabel(nextMandants, current.mandantsLibelle) }
+    })
     setMessage(null)
   }
 
@@ -1219,28 +1411,86 @@ function MandatDocumentEditor(props: {
       {open ? (
         <div className="mandat-document-editor-body">
           <div className="mandat-document-form">
-            <div className="mandat-document-form-grid">
-              <label><span>N mandat</span><input value={draft.numeroMandat} onChange={(event) => updateDraft('numeroMandat', event.target.value)} /></label>
-              <label><span>Date signature</span><input type="date" value={draft.dateSignature} onChange={(event) => updateDraft('dateSignature', event.target.value)} /></label>
-              <label><span>Type mandat</span><input value={draft.typeMandat} onChange={(event) => updateDraft('typeMandat', event.target.value)} /></label>
-              <label><span>Occupation</span><select value={draft.etatOccupation} onChange={(event) => updateDraft('etatOccupation', event.target.value as MandatDocumentDraft['etatOccupation'])}><option value="">A choisir</option><option value="libre">Libre</option><option value="loue">Loue</option><option value="occupe">Occupe par le mandant</option></select></label>
-              <label className="is-wide"><span>Mandants</span><textarea value={draft.mandantsLibelle} onChange={(event) => updateDraft('mandantsLibelle', event.target.value)} rows={2} /></label>
-              <label className="is-wide"><span>Designation du bien</span><input value={draft.bienTitre} onChange={(event) => updateDraft('bienTitre', event.target.value)} /></label>
-              <label><span>Type de bien</span><input value={draft.bienType} onChange={(event) => updateDraft('bienType', event.target.value)} /></label>
-              <label><span>Pieces</span><input value={draft.nombrePieces} onChange={(event) => updateDraft('nombrePieces', event.target.value)} /></label>
-              <label><span>Surface habitable</span><input value={draft.surfaceHabitable} onChange={(event) => updateDraft('surfaceHabitable', event.target.value)} /></label>
-              <label><span>Surface terrain</span><input value={draft.surfaceTerrain} onChange={(event) => updateDraft('surfaceTerrain', event.target.value)} /></label>
-              <label className="is-wide"><span>Adresse complete</span><input value={draft.bienAdresse} onChange={(event) => updateDraft('bienAdresse', event.target.value)} /></label>
-              <label><span>Prix de vente</span><input value={draft.prixVente} onChange={(event) => updateDraft('prixVente', event.target.value)} /></label>
-              <label><span>Net vendeur</span><input value={draft.prixNetVendeur} onChange={(event) => updateDraft('prixNetVendeur', event.target.value)} /></label>
-              <label><span>Honoraires TTC</span><input value={draft.honorairesTtc} onChange={(event) => updateDraft('honorairesTtc', event.target.value)} /></label>
-              <label><span>Charge honoraires</span><select value={draft.honorairesCharge} onChange={(event) => updateDraft('honorairesCharge', event.target.value as MandatDocumentDraft['honorairesCharge'])}><option value="">A choisir</option><option value="acquereur">Acquereur</option><option value="mandant">Mandant</option></select></label>
-              <label className="is-wide"><span>Clause particuliere</span><textarea value={draft.clauseParticuliere} onChange={(event) => updateDraft('clauseParticuliere', event.target.value)} rows={3} /></label>
+            <div className="mandat-document-tabs" role="tablist" aria-label="Sections du mandat">
+              {[
+                ['mandants', 'Mandants'],
+                ['bien', 'Bien'],
+                ['prix', 'Prix'],
+                ['clauses', 'Clauses'],
+                ['apercu', 'Controle'],
+              ].map(([value, label]) => (
+                <button key={value} className={activeTab === value ? 'is-active' : ''} type="button" onClick={() => setActiveTab(value as typeof activeTab)}>
+                  {label}
+                </button>
+              ))}
             </div>
-            <div className="mandat-document-options">
-              <label><input type="checkbox" checked={draft.inclureCouverture} onChange={(event) => updateDraft('inclureCouverture', event.target.checked)} /><span>Couverture incluse</span></label>
-              <label><span>Execution anticipee</span><select value={draft.executionAnticipee} onChange={(event) => updateDraft('executionAnticipee', event.target.value as MandatDocumentDraft['executionAnticipee'])}><option value="">Non renseigne</option><option value="oui">Demandee</option><option value="non">Refusee</option></select></label>
-            </div>
+            {activeTab === 'mandants' ? (
+              <div className="mandat-document-panel">
+                <div className="mandat-document-form-grid">
+                  <label><span>N mandat</span><input value={draft.numeroMandat} onChange={(event) => updateDraft('numeroMandat', event.target.value)} /></label>
+                  <label><span>Date signature</span><input type="date" value={draft.dateSignature} onChange={(event) => updateDraft('dateSignature', event.target.value)} /></label>
+                  <label className="is-wide"><span>Libelle global</span><textarea value={draft.mandantsLibelle} onChange={(event) => updateDraft('mandantsLibelle', event.target.value)} rows={2} /></label>
+                </div>
+                <div className="mandat-document-mandants">
+                  {draft.mandants.map((mandant, index) => (
+                    <section key={mandant.id || index} className="mandat-document-mandant-card">
+                      <div className="mandat-document-mandant-head">
+                        <strong>Mandant {index + 1}</strong>
+                        {draft.mandants.length > 1 ? <button className="ghost-button button-subtle" type="button" onClick={() => removeMandant(index)}>Retirer</button> : null}
+                      </div>
+                      <div className="mandat-document-form-grid">
+                        <label><span>Civilite</span><input value={mandant.civilite} onChange={(event) => updateMandant(index, 'civilite', event.target.value)} /></label>
+                        <label><span>Qualite</span><input value={mandant.qualite} onChange={(event) => updateMandant(index, 'qualite', event.target.value)} /></label>
+                        <label><span>Prenom</span><input value={mandant.prenom} onChange={(event) => updateMandant(index, 'prenom', event.target.value)} /></label>
+                        <label><span>Nom</span><input value={mandant.nom} onChange={(event) => updateMandant(index, 'nom', event.target.value)} /></label>
+                        <label className="is-wide"><span>Adresse</span><input value={mandant.adresse} onChange={(event) => updateMandant(index, 'adresse', event.target.value)} /></label>
+                        <label><span>Telephone</span><input value={mandant.telephone} onChange={(event) => updateMandant(index, 'telephone', event.target.value)} /></label>
+                        <label><span>Email</span><input value={mandant.email} onChange={(event) => updateMandant(index, 'email', event.target.value)} /></label>
+                      </div>
+                    </section>
+                  ))}
+                </div>
+                <button className="ghost-button" type="button" onClick={addMandant}>Ajouter un mandant</button>
+              </div>
+            ) : null}
+            {activeTab === 'bien' ? (
+              <div className="mandat-document-panel mandat-document-form-grid">
+                <label><span>Type mandat</span><input value={draft.typeMandat} onChange={(event) => updateDraft('typeMandat', event.target.value)} /></label>
+                <label><span>Occupation</span><select value={draft.etatOccupation} onChange={(event) => updateDraft('etatOccupation', event.target.value as MandatDocumentDraft['etatOccupation'])}><option value="">A choisir</option><option value="libre">Libre</option><option value="loue">Loue</option><option value="occupe">Occupe par le mandant</option></select></label>
+                <label className="is-wide"><span>Designation du bien</span><input value={draft.bienTitre} onChange={(event) => updateDraft('bienTitre', event.target.value)} /></label>
+                <label><span>Type de bien</span><input value={draft.bienType} onChange={(event) => updateDraft('bienType', event.target.value)} /></label>
+                <label><span>Pieces</span><input value={draft.nombrePieces} onChange={(event) => updateDraft('nombrePieces', event.target.value)} /></label>
+                <label><span>Surface habitable</span><input value={draft.surfaceHabitable} onChange={(event) => updateDraft('surfaceHabitable', event.target.value)} /></label>
+                <label><span>Surface terrain</span><input value={draft.surfaceTerrain} onChange={(event) => updateDraft('surfaceTerrain', event.target.value)} /></label>
+                <label className="is-wide"><span>Adresse complete</span><input value={draft.bienAdresse} onChange={(event) => updateDraft('bienAdresse', event.target.value)} /></label>
+              </div>
+            ) : null}
+            {activeTab === 'prix' ? (
+              <div className="mandat-document-panel mandat-document-form-grid">
+                <label><span>Prix de vente</span><input value={draft.prixVente} onChange={(event) => updateDraft('prixVente', event.target.value)} /></label>
+                <label><span>Net vendeur</span><input value={draft.prixNetVendeur} onChange={(event) => updateDraft('prixNetVendeur', event.target.value)} /></label>
+                <label><span>Honoraires TTC</span><input value={draft.honorairesTtc} onChange={(event) => updateDraft('honorairesTtc', event.target.value)} /></label>
+                <label><span>Charge honoraires</span><select value={draft.honorairesCharge} onChange={(event) => updateDraft('honorairesCharge', event.target.value as MandatDocumentDraft['honorairesCharge'])}><option value="">A choisir</option><option value="acquereur">Acquereur</option><option value="mandant">Mandant</option></select></label>
+              </div>
+            ) : null}
+            {activeTab === 'clauses' ? (
+              <div className="mandat-document-panel">
+                <div className="mandat-document-options">
+                  <label><input type="checkbox" checked={draft.inclureCouverture} onChange={(event) => updateDraft('inclureCouverture', event.target.checked)} /><span>Couverture incluse</span></label>
+                  <label><span>Execution anticipee</span><select value={draft.executionAnticipee} onChange={(event) => updateDraft('executionAnticipee', event.target.value as MandatDocumentDraft['executionAnticipee'])}><option value="">Non renseigne</option><option value="oui">Demandee</option><option value="non">Refusee</option></select></label>
+                </div>
+                <label className="is-wide"><span>Clause particuliere</span><textarea value={draft.clauseParticuliere} onChange={(event) => updateDraft('clauseParticuliere', event.target.value)} rows={5} /></label>
+              </div>
+            ) : null}
+            {activeTab === 'apercu' ? (
+              <div className="mandat-document-panel">
+                <div className="mandat-document-checklist">
+                  <strong>Controle avant document final</strong>
+                  <p>{missingFields.length ? `Champs obligatoires a completer : ${missingFields.join(', ')}.` : 'Toutes les donnees principales sont renseignees.'}</p>
+                  <p>{draft.mandants.length} mandant{draft.mandants.length > 1 ? 's' : ''} dans le document. Le modele complet source est utilise pour le rendu imprimable.</p>
+                </div>
+              </div>
+            ) : null}
             {missingFields.length ? <p className="mandat-document-warning">A completer : {missingFields.join(', ')}.</p> : null}
             {message ? <p className="mandat-document-message">{message}</p> : null}
             <div className="mandat-document-actions">
@@ -2864,6 +3114,9 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'upload_document_to_hektor') {
     return documentName ? `Ajout ${documentName}` : 'Ajout document Hektor'
   }
+  if (job.job_type === 'upload_hektor_photo') {
+    return documentName ? `Ajout photo ${documentName}` : 'Ajout photo Hektor'
+  }
   if (job.job_type === 'prepare_document_cloud') {
     return documentName ? `Preparation ${documentName}` : 'Preparation document'
   }
@@ -2890,6 +3143,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
+  if (job.job_type === 'upload_hektor_photo') return 'Ajout photo'
   if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
@@ -2904,7 +3158,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
-  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'sync_hektor_photos') return 'document'
+  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'sync_hektor_photos') return 'document'
   return 'create'
 }
 
@@ -2917,6 +3171,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.status === 'error') return job.error_message || 'Action Hektor en erreur'
   if (job.job_type.startsWith('matterport_')) return 'Commande envoyee au worker Matterport local'
   if (job.job_type === 'upload_document_to_hektor') return 'Document envoye au PC serveur'
+  if (job.job_type === 'upload_hektor_photo') return 'Photo envoyee au PC serveur'
   if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
@@ -2977,6 +3232,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
     if (job.job_type === 'update_hektor_mandant_contact') return 'Mandant modifie'
     if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
+    if (job.job_type === 'upload_hektor_photo') return 'Photo ajoutee'
     if (job.job_type === 'prepare_document_cloud') return 'Document pret'
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
     if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
@@ -2989,6 +3245,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
+    if (job.job_type === 'upload_hektor_photo') return 'Mise a jour galerie'
     if (job.job_type === 'sync_hektor_photos') return 'Synchronisation photos'
     return "Mise a jour de l'app"
   }
@@ -3004,6 +3261,7 @@ function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
   if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
   if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute dans Hektor. Synchronisation app en cours...'
+  if (job.job_type === 'upload_hektor_photo') return 'Photo ajoutee dans Hektor. Mise a jour de la galerie en cours...'
   if (job.job_type === 'delete_document_from_hektor') return 'Document supprime dans Hektor. Mise a jour app en cours...'
   if (job.job_type === 'sync_hektor_photos') return 'Photos Hektor lues. Mise a jour de la galerie app en cours...'
   return 'Commande Hektor terminee. Mise a jour de l app en cours...'
@@ -3855,6 +4113,10 @@ function ConsolePhotosPanel({
   const [photos, setPhotos] = useState<ConsolePhoto[]>([])
   const [loading, setLoading] = useState(false)
   const [syncPending, setSyncPending] = useState(false)
+  const [uploadPending, setUploadPending] = useState(false)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoVisible, setPhotoVisible] = useState(true)
+  const [fileInputKey, setFileInputKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const refreshPhotos = async (silent = false) => {
@@ -3891,6 +4153,34 @@ function ConsolePhotosPanel({
     }
   }
 
+  async function handleUploadPhoto(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!photoFile) {
+      setError('Choisis une photo a ajouter dans Hektor')
+      return
+    }
+    setUploadPending(true)
+    setError(null)
+    try {
+      const job = await createUploadHektorPhotoJob({
+        dossier,
+        file: photoFile,
+        visible: photoVisible,
+        priority: 18,
+      })
+      onJobCreated?.(job)
+      setPhotoFile(null)
+      setPhotoVisible(true)
+      setFileInputKey((value) => value + 1)
+      window.setTimeout(() => void refreshPhotos(true), 9000)
+      window.setTimeout(() => void refreshPhotos(true), 22000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible d envoyer la photo vers Hektor')
+    } finally {
+      setUploadPending(false)
+    }
+  }
+
   const visiblePhotos = photos.filter((photo) => photo.visible)
   const hiddenPhotos = photos.filter((photo) => !photo.visible)
   const sourcePhotos = photos.length ? photos : apiImages.map((image, index) => ({
@@ -3917,7 +4207,7 @@ function ConsolePhotosPanel({
       <div className="console-photos-head">
         <div>
           <strong>Photos Hektor</strong>
-          <small>{photos.length ? 'Index Console actif : visibles, masquees et legendes.' : 'Affichage actuel depuis les URLs API. Lance la synchro pour lire aussi la Console.'}</small>
+          <small>{photos.length ? 'Galerie Console active : visibles, masquees et legendes.' : 'Affichage API actuel. Tu peux ajouter une photo ou actualiser la galerie Console.'}</small>
         </div>
         <div className="console-photos-actions">
           {photos.length ? <StatusPill value={`${visiblePhotos.length} visibles`} /> : <StatusPill value={`${apiImages.length} API`} />}
@@ -3928,6 +4218,35 @@ function ConsolePhotosPanel({
           </button>
         </div>
       </div>
+      <form className="console-photo-upload-card" onSubmit={(event) => void handleUploadPhoto(event)}>
+        <div className="console-photo-upload-copy">
+          <span aria-hidden="true"><DetailIcon type="photo" /></span>
+          <div>
+            <strong>Ajouter une photo</strong>
+            <small>La photo part d abord en stockage temporaire prive, puis le PC serveur l envoie dans Hektor.</small>
+          </div>
+        </div>
+        <div className="console-photo-upload-controls">
+          <label className="console-photo-file-button">
+            <input
+              key={fileInputKey}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+              disabled={uploadPending}
+            />
+            <span>{photoFile ? photoFile.name : 'Choisir une photo'}</span>
+          </label>
+          <div className="console-photo-visibility" role="radiogroup" aria-label="Visibilite photo Hektor">
+            <button className={photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(true)} disabled={uploadPending}>Visible</button>
+            <button className={!photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(false)} disabled={uploadPending}>Masquee</button>
+          </div>
+          <button className="console-photo-upload-submit" type="submit" disabled={uploadPending || !photoFile}>
+            <span aria-hidden="true"><DetailIcon type="photo" /></span>
+            {uploadPending ? 'Envoi...' : 'Envoyer'}
+          </button>
+        </div>
+      </form>
       {error ? <p className="console-documents-error">{error}</p> : null}
       {loading ? <p className="empty-state">Chargement des photos Console...</p> : null}
       {!loading && galleryPhotos.length === 0 ? <p className="empty-state">Aucune photo synchronisee.</p> : null}

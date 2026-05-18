@@ -3128,6 +3128,64 @@ export async function createSyncHektorPhotosJob(input: {
   return data as ConsoleJob
 }
 
+export async function createUploadHektorPhotoJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  file: File
+  visible: boolean
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const jobId = crypto.randomUUID()
+  const originalName = safeUploadFilename(input.file.name, 'photo.jpg')
+  const storagePath = `temp/photos/${jobId}/${originalName}`
+  const { data: jobData, error: jobError } = await supabase
+    .from('app_console_job')
+    .insert({
+      id: jobId,
+      job_type: 'upload_hektor_photo',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        visible: input.visible,
+        original_filename: originalName,
+        source_filename: input.file.name,
+        mime_type: input.file.type || null,
+        file_size: input.file.size,
+        temp_storage_bucket: consoleDocumentsBucket,
+        temp_storage_path: storagePath,
+      },
+      priority: input.priority ?? 18,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (jobError || !jobData) throw new Error(jobError?.message ?? 'Unable to create Hektor photo upload job')
+
+  const { error: uploadError } = await supabase.storage
+    .from(consoleDocumentsBucket)
+    .upload(storagePath, input.file, {
+      cacheControl: '3600',
+      contentType: input.file.type || undefined,
+      upsert: false,
+    })
+  if (uploadError) {
+    await supabase.rpc('app_console_fail_own_pending_job', {
+      target_job_id: jobData.id,
+      failure_message: uploadError.message,
+    })
+    throw new Error(uploadError.message)
+  }
+
+  const { data: updatedJob, error: updateError } = await supabase
+    .from('app_console_job')
+    .select('*')
+    .eq('id', jobData.id)
+    .single()
+  if (updateError || !updatedJob) throw new Error(updateError?.message ?? 'Unable to reload Hektor photo upload job')
+  return updatedJob as ConsoleJob
+}
+
 export async function createPrepareConsoleDocumentJob(input: {
   document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
   priority?: number
@@ -3534,6 +3592,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'upload_document_to_hektor',
   'delete_document_from_hektor',
   'sync_hektor_photos',
+  'upload_hektor_photo',
 ]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {

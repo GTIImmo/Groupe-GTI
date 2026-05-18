@@ -5527,6 +5527,36 @@ tbody tr.is-refreshing-row td {
   display: grid;
   gap: 12px;
 }
+.mandat-document-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(210, 218, 224, 0.95);
+  border-radius: 10px;
+  background: #eef4f6;
+}
+.mandat-document-tabs button {
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #526975;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.mandat-document-tabs button.is-active {
+  background: #ffffff;
+  color: #1f1f23;
+  box-shadow: 0 6px 18px rgba(21, 32, 43, 0.09);
+}
+.mandat-document-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
 .mandat-document-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5563,6 +5593,33 @@ tbody tr.is-refreshing-row td {
 }
 .mandat-document-form textarea {
   resize: vertical;
+}
+.mandat-document-mandants {
+  display: grid;
+  gap: 10px;
+}
+.mandat-document-mandant-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(210, 218, 224, 0.95);
+  border-radius: 10px;
+  background: #ffffff;
+}
+.mandat-document-mandant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mandat-document-mandant-head strong {
+  color: #17313d;
+  font-size: 13px;
+}
+.mandat-document-mandant-head .ghost-button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 12px;
 }
 .mandat-document-options {
   display: flex;
@@ -5605,6 +5662,24 @@ tbody tr.is-refreshing-row td {
 }
 .mandat-document-actions .ghost-button {
   min-height: 38px;
+}
+.mandat-document-checklist {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid rgba(0, 116, 129, 0.23);
+  border-radius: 10px;
+  background: rgba(229, 249, 252, 0.82);
+  color: #164957;
+}
+.mandat-document-checklist strong {
+  color: #0f3946;
+  font-size: 13px;
+}
+.mandat-document-checklist p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
 }
 .mandat-document-preview {
   display: grid;
@@ -9269,6 +9344,135 @@ button.metric-card.is-active {
   justify-content: flex-end;
   gap: 8px;
 }
+.console-photo-upload-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(49, 112, 124, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(25, 35, 38, 0.06);
+}
+.console-photo-upload-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.console-photo-upload-copy > span {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #2f707c;
+  color: #ffffff;
+}
+.console-photo-upload-copy svg,
+.console-photo-upload-submit svg {
+  width: 17px;
+  height: 17px;
+}
+.console-photo-upload-copy strong,
+.console-photo-upload-copy small {
+  display: block;
+}
+.console-photo-upload-copy strong {
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+.console-photo-upload-copy small {
+  margin-top: 2px;
+  color: #697273;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+.console-photo-upload-controls {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.console-photo-file-button {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 38px;
+  overflow: hidden;
+  border: 1px solid rgba(34, 35, 35, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--gti-final-ink);
+  cursor: pointer;
+}
+.console-photo-file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.console-photo-file-button span {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.console-photo-visibility {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #f4f7f7;
+}
+.console-photo-visibility button {
+  min-height: 31px;
+  min-width: 68px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #526265;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.console-photo-visibility button.is-active {
+  background: #ffffff;
+  color: #c5005f;
+  box-shadow: 0 5px 14px rgba(34, 35, 35, 0.08);
+}
+.console-photo-upload-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  background: #c5005f;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(197, 0, 95, 0.18);
+}
+.console-photo-upload-submit:disabled,
+.console-photo-visibility button:disabled,
+.console-photo-file-button:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
 .console-photos-sync {
   min-height: 34px;
   padding: 0 12px;
@@ -9348,6 +9552,27 @@ button.metric-card.is-active {
 }
 .console-photos-panel.is-compact .console-photos-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.console-photos-panel.is-compact .console-photo-upload-controls {
+  grid-template-columns: 1fr;
+}
+.console-photos-panel.is-compact .console-photo-visibility,
+.console-photos-panel.is-compact .console-photo-upload-submit {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .console-photos-head,
+  .console-photo-upload-copy {
+    align-items: flex-start;
+  }
+  .console-photo-upload-controls {
+    grid-template-columns: 1fr;
+  }
+  .console-photo-visibility,
+  .console-photo-upload-submit {
+    width: 100%;
+  }
 }
 
 /* Price history: financial timeline. */
@@ -22137,6 +22362,9 @@ body {
   }
   .mandat-document-editor-body {
     padding: 12px;
+  }
+  .mandat-document-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .mandat-document-form-grid {
     grid-template-columns: 1fr;

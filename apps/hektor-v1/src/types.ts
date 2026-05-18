@@ -458,6 +458,7 @@ export type ConsoleJobType =
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
   | 'sync_hektor_photos'
+  | 'upload_hektor_photo'
   | 'link_hektor_mandant'
   | 'create_hektor_mandant_contact'
   | 'update_hektor_mandant_contact'

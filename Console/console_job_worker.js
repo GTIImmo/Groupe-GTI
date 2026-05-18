@@ -37,6 +37,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "upload_document_to_hektor",
   "delete_document_from_hektor",
   "sync_hektor_photos",
+  "upload_hektor_photo",
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
@@ -2030,6 +2031,107 @@ async function handleUploadDocumentToHektor(job) {
   };
 }
 
+async function writeTempUploadFile(buffer, filename) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hektor-console-upload-"));
+  const safe = safeFilename(filename, "upload.bin");
+  const filePath = path.join(tempDir, safe);
+  fs.writeFileSync(filePath, buffer);
+  return { tempDir, filePath };
+}
+
+async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, beforeCount) {
+  const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
+  const visible = payload.visible !== false;
+  const selector = visible ? "#fileupload" : "#fileuploadHidden";
+  const pageUrl = `${ADMIN_URL}?page=/mes-biens/mon-bien/photos&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`;
+  let browser = null;
+  try {
+    browser = await chromium.launch({ headless });
+    const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
+    const page = await context.newPage();
+    const captured = [];
+    page.on("requestfinished", async (request) => {
+      const requestUrl = request.url();
+      if (!/upload|vignette|photo|xmlrpc/i.test(requestUrl)) return;
+      const response = await request.response().catch(() => null);
+      captured.push({
+        method: request.method(),
+        url: requestUrl.replace(/\?.*$/, ""),
+        status: response ? response.status() : null,
+        postData: String(request.postData() || "").slice(0, 220),
+      });
+    });
+
+    await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForSelector(selector, { timeout: 45000 });
+    await page.waitForFunction(() => typeof window.uploadPhotoInit === "function" || document.querySelector("#fileupload"), null, { timeout: 30000 }).catch(() => {});
+    const input = page.locator(selector).first();
+    await input.setInputFiles(filePath);
+
+    let entries = [];
+    const deadline = Date.now() + 55000;
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(3000);
+      entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id).catch(() => []);
+      if (entries.length > beforeCount) break;
+    }
+
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    return {
+      entries,
+      captured: captured.slice(-12),
+    };
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    if (message.includes("Timeout") || message.includes("Navigation") || message.includes("ERR_ABORTED")) {
+      throw new Error(`Session Hektor expiree ou upload photo non disponible: ${message.slice(0, 500)}`);
+    }
+    throw error;
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
+async function handleUploadHektorPhoto(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+  const tempPath = payload.temp_storage_path;
+  const filename = safeFilename(payload.original_filename, "photo.jpg");
+  const visible = payload.visible !== false;
+  if (!tempPath) throw new Error("payload_json.temp_storage_path required");
+
+  const temp = await downloadStorageObject(tempPath);
+  const mimeType = String(payload.mime_type || temp.mimeType || "");
+  if (mimeType && !/^image\/(jpeg|jpg|png|webp|gif)$/i.test(mimeType)) {
+    throw new Error(`Type fichier photo refuse: ${mimeType}`);
+  }
+
+  const beforeEntries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+  const local = await writeTempUploadFile(temp.buffer, filename);
+  try {
+    const uploadResult = await uploadHektorPhotoWithPlaywright(job, dossier, payload, local.filePath, beforeEntries.length);
+    const entries = uploadResult.entries.length ? uploadResult.entries : await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+    if (entries.length <= beforeEntries.length) {
+      throw new Error(`Upload photo Hektor non confirme dans la galerie: ${filename}`);
+    }
+    const indexed = await upsertConsolePhotos(dossier, entries);
+    await deleteStorageObject(tempPath);
+    return {
+      uploaded_filename: filename,
+      visibility: visible ? "visible" : "hidden",
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      indexed: indexed.length,
+      before_count: beforeEntries.length,
+      after_count: entries.length,
+      captured: uploadResult.captured,
+    };
+  } finally {
+    try { fs.unlinkSync(local.filePath); } catch (_) {}
+    try { fs.rmdirSync(local.tempDir); } catch (_) {}
+  }
+}
+
 async function handleDeleteDocumentFromHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -3448,6 +3550,8 @@ async function runHandler(job) {
       return handleDeleteDocumentFromHektor(job);
     case "sync_hektor_photos":
       return handleSyncHektorPhotos(job);
+    case "upload_hektor_photo":
+      return handleUploadHektorPhoto(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
     case "create_hektor_mandant_contact":
