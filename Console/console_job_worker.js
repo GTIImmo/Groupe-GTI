@@ -26,6 +26,7 @@ const ACTION_JOB_TYPES = new Set([
   "create_hektor_mandant_contact",
   "update_hektor_mandant_contact",
   "update_hektor_annonce_fields",
+  "create_hektor_mandat_auto_number",
   "create_hektor_draft_annonce",
 ]);
 const DOCUMENT_JOB_TYPES = new Set([
@@ -1923,6 +1924,33 @@ function hektorProspectLinkedInHtml(html, contactId, annonceId) {
   );
 }
 
+function parseHektorLinkedMandantContactIds(html, annonceId) {
+  const text = String(html || "");
+  const annonce = String(annonceId || "").trim();
+  const ids = new Set();
+  const add = (value) => {
+    const id = String(value || "").trim();
+    if (/^\d+$/.test(id)) ids.add(id);
+  };
+  if (annonce) {
+    const escapedAnnonce = annonce.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const directPattern = new RegExp(`(?:changeInfo|changeDate)(\\d+)_${escapedAnnonce}\\b`, "g");
+    let match;
+    while ((match = directPattern.exec(text))) add(match[1]);
+
+    const ungroupPattern = /degroupproprioForAnnonce\(\s*['"](\d+)['"]\s*,\s*['"]?(\d+)/g;
+    while ((match = ungroupPattern.exec(text))) {
+      if (String(match[2]) === annonce) add(match[1]);
+    }
+  }
+
+  const navigatePattern = /navigateToProspect\(\s*['"](\d+)['"]/g;
+  let match;
+  while ((match = navigatePattern.exec(text))) add(match[1]);
+
+  return Array.from(ids);
+}
+
 async function fetchHektorProspectsList(hektorAnnonceId) {
   const id = encodeURIComponent(String(hektorAnnonceId));
   return hektorFetch(`${XMLRPC_URL}?mode=div_display_prospects_liste&id=${id}`);
@@ -2242,6 +2270,213 @@ async function handleLinkHektorMandant(job) {
 function cleanString(value) {
   const text = String(value || "").trim();
   return text || null;
+}
+
+function todayFrenchDate() {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}-${now.getFullYear()}`;
+}
+
+function normalizeFrenchDate(value) {
+  const text = String(value || "").trim();
+  if (!text) return todayFrenchDate();
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+  const fr = text.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+  if (fr) return `${fr[1]}-${fr[2]}-${fr[3]}`;
+  throw new Error("date_debut mandat invalide, format attendu jj-mm-aaaa");
+}
+
+function normalizeMandatContactIds(payload) {
+  const raw = Array.isArray(payload.mandant_contact_ids)
+    ? payload.mandant_contact_ids
+    : Array.isArray(payload.mandantContactIds)
+      ? payload.mandantContactIds
+      : typeof payload.idMandants === "string"
+        ? payload.idMandants.split("|")
+        : [];
+  const ids = [];
+  const seen = new Set();
+  for (const value of raw) {
+    const id = String(value || "").trim();
+    if (/^\d+$/.test(id) && !seen.has(id)) {
+      ids.push(id);
+      seen.add(id);
+    }
+  }
+  return ids;
+}
+
+function normalizeHektorMandatPayload(payload) {
+  const typeMandat = cleanString(payload.type_mandat || payload.typeMandat) || "Mandat de vente";
+  const subTypeMandat = cleanString(payload.sub_type_mandat || payload.subTypeMandat || payload.sub_type) || typeMandat;
+  const durationText = String(payload.duree_mandat || payload.duree || payload.duration || "12").trim();
+  if (!/^\d+$/.test(durationText) || Number(durationText) <= 0 || Number(durationText) > 120) {
+    throw new Error("duree_mandat invalide");
+  }
+  const tacite = payload.tacite_reconduction ?? payload.taciteReconduction ?? payload.tr ?? true;
+  const taciteValue = tacite === true || tacite === "true" || tacite === "1" || tacite === 1 ? "1" : "0";
+  return {
+    typeMandat,
+    subTypeMandat,
+    dateDebut: normalizeFrenchDate(payload.date_debut || payload.dateDebut),
+    duree: durationText,
+    taciteReconduction: taciteValue,
+    mandantContactIds: normalizeMandatContactIds(payload),
+  };
+}
+
+function parseHektorJson(text, step) {
+  try {
+    return JSON.parse(String(text || ""));
+  } catch (error) {
+    throw new Error(`Reponse Hektor JSON invalide ${step}: ${String(text || "").slice(0, 500)}`);
+  }
+}
+
+async function hektorProtexaGetJson(job, step, params) {
+  const url = `${XMLRPC_URL}?${params.toString()}`;
+  const response = await hektorFetch(url, {
+    headers: {
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(params.get("id") || params.get("idann") || "")}`,
+    },
+  });
+  const parsed = parseHektorJson(response.text, step);
+  if (parsed && typeof parsed === "object" && (parsed.error || parsed.errors || parsed.err)) {
+    throw new Error(`Hektor ${step} refuse: ${JSON.stringify(parsed).slice(0, 800)}`);
+  }
+  await logJob(job.id, step, "done", `Etape mandat ${step} OK`, parsed);
+  return parsed;
+}
+
+function mandatIdMandantsValue(ids) {
+  return ids.map((id) => `${id}|`).join("");
+}
+
+async function handleCreateHektorMandatAutoNumber(job) {
+  const payload = safeJsonParse(job.payload_json);
+  let dossier = null;
+  try {
+    dossier = await loadDossier(job);
+  } catch (error) {
+    if (!job.hektor_annonce_id || !(payload.hektor_user_id || payload.hektor_id_user || payload.target_hektor_user_id || payload.hektor_user_email)) throw error;
+    dossier = {
+      app_dossier_id: job.app_dossier_id || payload.app_dossier_id || null,
+      hektor_annonce_id: String(job.hektor_annonce_id),
+      negociateur_email: payload.hektor_user_email || null,
+    };
+  }
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const annonceId = String(dossier.hektor_annonce_id || job.hektor_annonce_id || "").trim();
+  if (!annonceId) throw new Error("hektor_annonce_id requis pour generer un mandat");
+  const mandat = normalizeHektorMandatPayload(payload);
+
+  await logJob(job.id, "hektor_mandat_number", "running", "Preparation generation numero mandat Hektor", {
+    hektor_annonce_id: annonceId,
+    type_mandat: mandat.typeMandat,
+    sub_type_mandat: mandat.subTypeMandat,
+    date_debut: mandat.dateDebut,
+    duree: mandat.duree,
+    mandant_contact_ids_payload: mandat.mandantContactIds,
+  });
+
+  await hektorFetch(`${XMLRPC_URL}?mode=chargeannonce_MandatPrix&id=${encodeURIComponent(annonceId)}&lang=fr`, {
+    headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(annonceId)}` },
+  });
+  await hektorFetch(`${XMLRPC_URL}?mode=protexa-mandat&mandat=0&idann=${encodeURIComponent(annonceId)}`, {
+    headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(annonceId)}` },
+  });
+  await hektorFetch(`${XMLRPC_URL}?mode=protexa-listeTypeMandat`, {
+    method: "POST",
+    body: new URLSearchParams(),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(annonceId)}`,
+    },
+  });
+
+  let mandantIds = mandat.mandantContactIds;
+  const prospects = await fetchHektorProspectsList(annonceId);
+  if (!mandantIds.length) {
+    mandantIds = parseHektorLinkedMandantContactIds(prospects.text, annonceId);
+  }
+  if (!mandantIds.length) {
+    throw new Error("Aucun mandant Hektor rattache a cette annonce: cree ou associe un mandant avant de generer le numero de mandat.");
+  }
+  for (const contactId of mandantIds) {
+    if (!hektorProspectLinkedInHtml(prospects.text, contactId, annonceId)) {
+      throw new Error(`Le contact ${contactId} n'est pas confirme comme mandant de l'annonce ${annonceId}`);
+    }
+  }
+
+  const step1 = await hektorProtexaGetJson(job, "hektor_mandat_step1_number", new URLSearchParams({
+    mode: "protexa-valideStep1",
+    id: annonceId,
+    numMandat: "0",
+  }));
+  const numeroMandat = String(step1 && step1.mandat && step1.mandat.numero ? step1.mandat.numero : "").trim();
+  if (!numeroMandat) {
+    throw new Error(`Numero de mandat non retourne par Hektor: ${JSON.stringify(step1).slice(0, 800)}`);
+  }
+
+  await hektorProtexaGetJson(job, "hektor_mandat_step2_type", new URLSearchParams({
+    mode: "protexa-valideStep2",
+    id: annonceId,
+    numMandat: numeroMandat,
+    typeMandat: mandat.typeMandat,
+    subType: mandat.subTypeMandat,
+  }));
+  await hektorProtexaGetJson(job, "hektor_mandat_step3_dates", new URLSearchParams({
+    mode: "protexa-valideStep3",
+    id: annonceId,
+    numMandat: numeroMandat,
+    date_debut: mandat.dateDebut,
+    duree: mandat.duree,
+    TR: mandat.taciteReconduction,
+  }));
+  await hektorProtexaGetJson(job, "hektor_mandat_step4_mandants", new URLSearchParams({
+    mode: "protexa-valideStep4",
+    id: annonceId,
+    numMandat: numeroMandat,
+    idMandants: mandatIdMandantsValue(mandantIds),
+  }));
+
+  const step5 = await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+    mode: "protexa-valideStep5",
+    id: annonceId,
+    numMandat: numeroMandat,
+  }).toString()}`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(annonceId)}`,
+    },
+  });
+  await logJob(job.id, "hektor_mandat_step5_finish", "done", "Mandat Hektor finalise", {
+    hektor_annonce_id: annonceId,
+    numero_mandat: numeroMandat,
+    response_preview: step5.text.slice(0, 500),
+  });
+
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "create_hektor_mandat_auto_number",
+    priority: 70,
+  });
+
+  return {
+    status: "mandat_created",
+    hektor_annonce_id: annonceId,
+    numero_mandat: numeroMandat,
+    mandat_contact_ids: mandantIds,
+    type_mandat: mandat.typeMandat,
+    sub_type_mandat: mandat.subTypeMandat,
+    date_debut: mandat.dateDebut,
+    duree_mandat: mandat.duree,
+    tacite_reconduction: mandat.taciteReconduction,
+    sync_job: syncJob,
+  };
 }
 
 function replaceParam(values, name, value) {
@@ -2897,6 +3132,8 @@ async function runHandler(job) {
       return handleUpdateHektorMandantContact(job);
     case "update_hektor_annonce_fields":
       return handleUpdateHektorAnnonceFields(job);
+    case "create_hektor_mandat_auto_number":
+      return handleCreateHektorMandatAutoNumber(job);
     case "delete_hektor_annonce":
       return handleDeleteHektorAnnonce(job);
     case "create_hektor_draft_annonce":

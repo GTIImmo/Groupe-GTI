@@ -9415,6 +9415,9 @@ button.metric-card.is-active {
 .hektor-mandant-create-form .hektor-inline-icon {
   background: #0f6874;
 }
+.hektor-mandat-number-form .hektor-inline-icon {
+  background: var(--gti-final-ink);
+}
 .hektor-inline-form-head div {
   display: grid;
   gap: 2px;
@@ -9438,6 +9441,9 @@ button.metric-card.is-active {
 }
 .hektor-mandant-create-form .hektor-inline-grid {
   grid-template-columns: 96px repeat(4, minmax(120px, 1fr));
+}
+.hektor-mandat-number-form .hektor-mandat-number-grid {
+  grid-template-columns: repeat(2, minmax(140px, 1fr)) 150px 100px;
 }
 .hektor-mandant-edit-form {
   margin-top: 14px;
@@ -9537,6 +9543,9 @@ button.metric-card.is-active {
 }
 .hektor-mandant-create-form .hektor-inline-actions button {
   background: #0f6874;
+}
+.hektor-mandat-number-form .hektor-inline-actions button {
+  background: var(--gti-final-magenta);
 }
 .hektor-inline-actions button:disabled {
   cursor: wait;
@@ -10008,6 +10017,133 @@ button.metric-card.is-active {
   font-size: 12px;
   font-weight: 750;
 }
+.hektor-mandat-number-shell {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.hektor-mandat-number-shell.is-compact {
+  gap: 10px;
+}
+.hektor-mandat-number-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 76px;
+  border: 1px solid rgba(197, 0, 95, 0.22);
+  border-radius: 10px;
+  padding: 13px 15px;
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.1), rgba(15, 104, 116, 0.08) 52%, rgba(255, 255, 255, 0) 78%),
+    #ffffff;
+  color: var(--gti-final-ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(34, 35, 35, 0.08);
+}
+.hektor-mandat-number-card:hover {
+  border-color: rgba(197, 0, 95, 0.38);
+  box-shadow: 0 18px 38px rgba(34, 35, 35, 0.11);
+}
+.hektor-mandat-number-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  box-shadow: none;
+}
+.hektor-mandat-number-card.is-done {
+  border-color: rgba(27, 127, 77, 0.26);
+  background:
+    linear-gradient(135deg, rgba(27, 127, 77, 0.08), rgba(15, 104, 116, 0.06)),
+    #ffffff;
+}
+.hektor-mandat-number-card span {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: var(--gti-final-magenta);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1;
+}
+.hektor-mandat-number-card.is-done span {
+  background: #1b7f4d;
+}
+.hektor-mandat-number-card strong,
+.hektor-mandat-number-card small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hektor-mandat-number-card strong {
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+.hektor-mandat-number-card small {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 750;
+}
+.hektor-mandat-renewal {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 34px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--gti-final-ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+.hektor-mandat-contact-picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+.hektor-mandat-contact-picks label {
+  display: grid;
+  grid-template-columns: auto 30px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid rgba(15, 104, 116, 0.16);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.hektor-mandat-contact-picks label > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #0f6874;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 950;
+}
+.hektor-mandat-contact-picks strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gti-final-ink);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .mobile-hektor-field-edit-button {
   width: 100%;
   margin-top: 12px;
@@ -10136,7 +10272,8 @@ button.metric-card.is-active {
   }
   .hektor-inline-grid,
   .hektor-mandant-create-form .hektor-inline-grid,
-  .hektor-mandant-edit-form .hektor-inline-grid {
+  .hektor-mandant-edit-form .hektor-inline-grid,
+  .hektor-mandat-number-form .hektor-mandat-number-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .hektor-inline-grid label.is-small {
@@ -10191,7 +10328,8 @@ button.metric-card.is-active {
   }
   .hektor-inline-grid,
   .hektor-mandant-create-form .hektor-inline-grid,
-  .hektor-mandant-edit-form .hektor-inline-grid {
+  .hektor-mandant-edit-form .hektor-inline-grid,
+  .hektor-mandat-number-form .hektor-mandat-number-grid {
     grid-template-columns: 1fr;
   }
   .hektor-inline-actions {

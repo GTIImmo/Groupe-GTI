@@ -3327,6 +3327,15 @@ export type HektorAnnonceUpdateFields = {
   bedroomCount?: string | number | null
 }
 
+export type HektorMandatAutoNumberInput = {
+  typeMandat?: string | null
+  subTypeMandat?: string | null
+  dateDebut?: string | null
+  dureeMandat?: string | number | null
+  taciteReconduction?: boolean | string | number | null
+  mandantContactIds?: string[]
+}
+
 export async function createUpdateHektorAnnonceFieldsJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
   fields: HektorAnnonceUpdateFields
@@ -3356,6 +3365,33 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
   return data as ConsoleJob
 }
 
+export async function createHektorMandatAutoNumberJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  mandat?: HektorMandatAutoNumberInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const tacite = input.mandat?.taciteReconduction
+  const payload = {
+    type_mandat: input.mandat?.typeMandat?.trim() || 'Mandat de vente',
+    sub_type_mandat: input.mandat?.subTypeMandat?.trim() || input.mandat?.typeMandat?.trim() || 'Mandat de vente',
+    date_debut: input.mandat?.dateDebut?.trim() || null,
+    duree_mandat: input.mandat?.dureeMandat == null ? '12' : String(input.mandat.dureeMandat).trim() || '12',
+    tacite_reconduction: tacite === false || tacite === 'false' || tacite === '0' || tacite === 0 ? '0' : '1',
+    mandant_contact_ids: input.mandat?.mandantContactIds ?? [],
+    hektor_user_email: input.dossier.negociateur_email ?? null,
+  }
+  const { data, error } = await supabase.rpc('app_console_create_mandat_auto_number_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    mandat_payload: payload,
+    job_priority: input.priority ?? 12,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor mandat number job')
+  return data as ConsoleJob
+}
+
 export async function createDeleteHektorAnnonceJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   reason?: string
@@ -3381,6 +3417,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'update_hektor_annonce_fields',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',
+  'create_hektor_mandat_auto_number',
   'link_hektor_mandant',
   'prepare_document_cloud',
   'upload_document_to_hektor',

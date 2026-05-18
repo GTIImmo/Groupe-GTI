@@ -50,6 +50,7 @@ import {
   createHektorMandantContactJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
+  createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createConsoleDocumentSignedUrl,
@@ -441,6 +442,155 @@ function HektorMandantContactEditForm(props: {
           </div>
           <div className="hektor-inline-actions">
             <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer la modification'}</button>
+            {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
+          </div>
+        </form>
+      ) : null}
+    </div>
+  )
+}
+
+function todayInputDate() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
+function inputDateToFrench(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return value
+  return `${match[3]}-${match[2]}-${match[1]}`
+}
+
+function HektorMandatNumberForm(props: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email' | 'numero_mandat'>
+  contacts: DetailContact[]
+  compact?: boolean
+  onJobCreated?: (job: ConsoleJob) => void
+}) {
+  const numericContacts = props.contacts.filter((contact) => contact.sourceId && /^\d+$/.test(contact.sourceId))
+  const [open, setOpen] = useState(false)
+  const [typeMandat, setTypeMandat] = useState('Mandat de vente')
+  const [subTypeMandat, setSubTypeMandat] = useState('Mandat de vente')
+  const [dateDebut, setDateDebut] = useState(todayInputDate())
+  const [dureeMandat, setDureeMandat] = useState('12')
+  const [taciteReconduction, setTaciteReconduction] = useState(true)
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => numericContacts.map((contact) => contact.sourceId as string))
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setOpen(false)
+    setTypeMandat('Mandat de vente')
+    setSubTypeMandat('Mandat de vente')
+    setDateDebut(todayInputDate())
+    setDureeMandat('12')
+    setTaciteReconduction(true)
+    setSelectedIds(numericContacts.map((contact) => contact.sourceId as string))
+    setPending(false)
+    setError(null)
+  }, [props.dossier.app_dossier_id, props.dossier.numero_mandat, props.contacts.map((contact) => contact.sourceId ?? contact.id).join('|')])
+
+  const hasMandat = Boolean(String(props.dossier.numero_mandat ?? '').trim())
+  const canCreate = !hasMandat && props.contacts.length > 0
+
+  const toggleContact = (contactId: string) => {
+    setSelectedIds((current) => current.includes(contactId) ? current.filter((id) => id !== contactId) : [...current, contactId])
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+    if (hasMandat) {
+      setError('Un numero de mandat existe deja sur cette annonce.')
+      return
+    }
+    if (!props.contacts.length) {
+      setError('Ajoute au moins un mandant avant de generer le numero.')
+      return
+    }
+    if (numericContacts.length > 0 && selectedIds.length === 0) {
+      setError('Selectionne au moins un mandant.')
+      return
+    }
+    setPending(true)
+    try {
+      const job = await createHektorMandatAutoNumberJob({
+        dossier: props.dossier,
+        mandat: {
+          typeMandat,
+          subTypeMandat,
+          dateDebut: inputDateToFrench(dateDebut),
+          dureeMandat,
+          taciteReconduction,
+          mandantContactIds: selectedIds,
+        },
+        priority: 12,
+      })
+      props.onJobCreated?.(job)
+      setOpen(false)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Generation du numero de mandat impossible.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className={`hektor-mandat-number-shell ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
+      {!open ? (
+        <button className={`hektor-mandat-number-card ${hasMandat ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
+          <span aria-hidden="true">{hasMandat ? 'N' : '#'}</span>
+          <strong>{hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le N° mandat'}</strong>
+          <small>{hasMandat ? 'Numero deja present dans l app.' : props.contacts.length ? 'Hektor attribue automatiquement le prochain numero.' : 'Ajoute un mandant avant cette etape.'}</small>
+        </button>
+      ) : null}
+      {open ? (
+        <form className={`hektor-inline-form hektor-mandat-number-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
+          <div className="hektor-inline-form-head">
+            <span className="hektor-inline-icon" aria-hidden="true">#</span>
+            <div>
+              <strong>Generer le N° mandat Hektor</strong>
+              <small>Le prochain numero est reserve par Hektor au moment de l envoi.</small>
+            </div>
+          </div>
+          <div className="hektor-inline-grid hektor-mandat-number-grid">
+            <label>
+              <span>Type</span>
+              <input value={typeMandat} onChange={(event) => setTypeMandat(event.target.value)} required />
+            </label>
+            <label>
+              <span>Sous-type</span>
+              <input value={subTypeMandat} onChange={(event) => setSubTypeMandat(event.target.value)} required />
+            </label>
+            <label>
+              <span>Date debut</span>
+              <input value={dateDebut} onChange={(event) => setDateDebut(event.target.value)} type="date" required />
+            </label>
+            <label className="is-small">
+              <span>Duree</span>
+              <input value={dureeMandat} onChange={(event) => setDureeMandat(event.target.value)} inputMode="numeric" required />
+            </label>
+          </div>
+          <label className="hektor-mandat-renewal">
+            <input type="checkbox" checked={taciteReconduction} onChange={(event) => setTaciteReconduction(event.target.checked)} />
+            <span>Tacite reconduction</span>
+          </label>
+          {numericContacts.length > 0 ? (
+            <div className="hektor-mandat-contact-picks">
+              {numericContacts.map((contact) => (
+                <label key={`mandat-number-contact-${contact.sourceId}`}>
+                  <input type="checkbox" checked={selectedIds.includes(contact.sourceId as string)} onChange={() => toggleContact(contact.sourceId as string)} />
+                  <span>{userInitials(contact.name, contact.email)}</span>
+                  <strong>{contact.name || contact.email || contact.sourceId}</strong>
+                </label>
+              ))}
+            </div>
+          ) : <p className="hektor-inline-feedback">Les mandants seront detectes directement dans Hektor.</p>}
+          <div className="hektor-inline-actions">
+            <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Generer dans Hektor'}</button>
+            <button className="button-subtle" type="button" onClick={() => setOpen(false)} disabled={pending}>Annuler</button>
             {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
           </div>
         </form>
@@ -1964,6 +2114,10 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') {
     return `Modification ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
+  if (job.job_type === 'create_hektor_mandat_auto_number') {
+    const numero = typeof result.numero_mandat === 'string' && result.numero_mandat.trim() ? result.numero_mandat.trim() : null
+    return numero ? `Mandat ${numero}` : `Generation mandat ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') {
     const contact = typeof payload.last_name === 'string' && payload.last_name.trim() ? payload.last_name.trim() : null
     return contact ? `Mandant ${contact}` : 'Mandant Hektor'
@@ -1979,6 +2133,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
   if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
+  if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
   return 'Creation en cours'
 }
@@ -1986,6 +2141,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
 function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
+  if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
   if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud') return 'document'
   return 'create'
@@ -2002,6 +2158,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
+  if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Modification puis resynchronisation'
   if (folder) return `${folder} synchronise dans l'app`
@@ -2053,6 +2210,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
   if (progress === 'available') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return 'Annonce disponible'
     if (job.job_type === 'update_hektor_annonce_fields') return 'Modification terminee'
+    if (job.job_type === 'create_hektor_mandat_auto_number') return 'Mandat genere'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
     if (job.job_type === 'update_hektor_mandant_contact') return 'Mandant modifie'
     if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
@@ -2064,6 +2222,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
   if (progress === 'syncing') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
     if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact') return "Mise a jour de l'app"
+    if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
     return "Mise a jour de l'app"
@@ -2076,6 +2235,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
 function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
+  if (job.job_type === 'create_hektor_mandat_auto_number') return 'Hektor a genere le numero de mandat. Mise a jour de l app en cours...'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
   if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
   if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute dans Hektor. Synchronisation app en cours...'
@@ -9227,6 +9387,9 @@ function DossierDetailLayout(props: {
                       {mandatSectionOpen ? 'Masquer' : 'Afficher'}
                     </button>
                   </div>
+                  {mandatSectionOpen ? (
+                    <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} />
+                  ) : null}
                   {mandatSectionOpen ? (props.mandats.length > 0 ? (
                     <div className="detail-entity-list detail-mandat-list">
                       {props.mandats.map((item) => (
@@ -9870,6 +10033,7 @@ function DossierDetailLayout(props: {
                   <strong>Mandants associes</strong>
                 </div>
                 <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
+                <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
                 {props.contacts.length > 0 ? (
                   <div className="detail-edit-mandant-list">
                     {props.contacts.map((contact) => (
@@ -10365,6 +10529,7 @@ function MobileDossierDetail(props: {
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
         <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} />
+        <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
             <strong>{mandat.title}</strong>
