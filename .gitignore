@@ -41,6 +41,7 @@ playwright/.auth/
 
 Console/.env
 Console/storage_state.json
+Console/matterport_storage_state.json
 Console/sessions/
 Console/token_dump.json
 Console/debug_graphql_headers.json

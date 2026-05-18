@@ -1,7 +1,8 @@
 param(
   [switch]$Once,
   [switch]$DisableHektorActions,
-  [ValidateSet("actions", "documents", "admin", "sync_light", "sync_full", "sync", "all")]
+  [switch]$DisableMatterportActions,
+  [ValidateSet("actions", "documents", "admin", "matterport", "sync_light", "sync_full", "sync", "all")]
   [string]$WorkerKind = "actions",
   [switch]$SyncWorker
 )
@@ -17,6 +18,7 @@ if (-not (Test-Path -LiteralPath $logDir)) {
 }
 
 $env:CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS = if ($DisableHektorActions) { "false" } else { "true" }
+$env:CONSOLE_WORKER_ENABLE_MATTERPORT_ACTIONS = if ($DisableMatterportActions) { "false" } else { "true" }
 if ($SyncWorker) {
   $WorkerKind = "sync_light"
 }
@@ -58,9 +60,19 @@ $legacyStorageStatePath = Join-Path $scriptDir "storage_state.json"
 if (-not (Test-Path -LiteralPath $storageStatePath) -and (Test-Path -LiteralPath $legacyStorageStatePath)) {
   Copy-Item -LiteralPath $legacyStorageStatePath -Destination $storageStatePath -Force
 }
-if (-not (Test-Path -LiteralPath $storageStatePath)) {
+if ($WorkerKind -ne "matterport" -and -not (Test-Path -LiteralPath $storageStatePath)) {
   Write-Host "Session Hektor absente, lancement du login Playwright..."
   & $nodeExe playwright_login.js
+}
+
+if ($WorkerKind -eq "matterport") {
+  if (-not $env:MATTERPORT_STORAGE_STATE_PATH) {
+    $env:MATTERPORT_STORAGE_STATE_PATH = Join-Path $scriptDir "matterport_storage_state.json"
+  }
+  if (-not (Test-Path -LiteralPath $env:MATTERPORT_STORAGE_STATE_PATH)) {
+    Write-Host "Session Matterport absente, lancement du login Playwright..."
+    & $nodeExe matterport_playwright_login.js
+  }
 }
 
 $arguments = @("console_job_worker.js")
@@ -68,11 +80,16 @@ if ($Once) {
   $arguments += "--once"
 }
 
-Write-Host "Demarrage worker Console Hektor..."
+Write-Host "Demarrage worker Console..."
 Write-Host "Type worker: $env:CONSOLE_WORKER_KIND"
 Write-Host "Polling: $env:CONSOLE_WORKER_POLL_INTERVAL_MS ms"
-Write-Host "Session Hektor: $env:CONSOLE_STORAGE_STATE_PATH"
+if ($WorkerKind -eq "matterport") {
+  Write-Host "Session Matterport: $env:MATTERPORT_STORAGE_STATE_PATH"
+} else {
+  Write-Host "Session Hektor: $env:CONSOLE_STORAGE_STATE_PATH"
+}
 Write-Host "Actions Hektor: $env:CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS"
+Write-Host "Actions Matterport: $env:CONSOLE_WORKER_ENABLE_MATTERPORT_ACTIONS"
 Write-Host "Archive locale: $env:CONSOLE_LOCAL_ARCHIVE_ROOT"
 $logPath = Join-Path $logDir ("console_worker_{0}_{1}.log" -f $WorkerKind, $PID)
 & $nodeExe $arguments 2>&1 | Tee-Object -FilePath $logPath -Append
