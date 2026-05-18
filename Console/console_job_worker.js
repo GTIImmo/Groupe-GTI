@@ -6,6 +6,7 @@ const { spawn } = require("child_process");
 const { chromium } = require("playwright");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
+require("dotenv").config({ path: path.resolve(__dirname, "..", "matterport", ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", "apps", "hektor-v1", ".env") });
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -14,10 +15,11 @@ const HEKTOR_BASE_URL = process.env.HEKTOR_BASE_URL || "https://groupe-gti-immob
 const ADMIN_URL = `${HEKTOR_BASE_URL.replace(/\/+$/, "")}/admin/`;
 const XMLRPC_URL = `${ADMIN_URL}xmlrpc.php`;
 const RAW_WORKER_KIND = String(process.env.CONSOLE_WORKER_KIND || process.env.CONSOLE_WORKER_MODE || "actions").toLowerCase();
-const WORKER_KINDS = new Set(["actions", "documents", "admin", "sync_light", "sync_full", "sync", "all"]);
+const WORKER_KINDS = new Set(["actions", "documents", "admin", "matterport", "sync_light", "sync_full", "sync", "all"]);
 const WORKER_KIND = WORKER_KINDS.has(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actions";
 const STORAGE_BUCKET = process.env.CONSOLE_STORAGE_BUCKET || "hektor-console-documents";
 const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "sessions", `storage_state_${WORKER_KIND}.json`);
+const MATTERPORT_STORAGE_STATE_PATH = process.env.MATTERPORT_STORAGE_STATE_PATH || path.resolve(__dirname, "matterport_storage_state.json");
 const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\HektorConsoleDocuments";
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
@@ -34,9 +36,16 @@ const DOCUMENT_JOB_TYPES = new Set([
   "prepare_document_cloud",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
+  "sync_hektor_photos",
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
+]);
+const MATTERPORT_JOB_TYPES = new Set([
+  "matterport_online",
+  "matterport_offline",
+  "matterport_archive",
+  "matterport_reactivate",
 ]);
 const SYNC_LIGHT_JOB_TYPES = new Set([
   "refresh_console_data",
@@ -48,6 +57,7 @@ const ALL_JOB_TYPES_BY_KIND = {
   actions: ACTION_JOB_TYPES,
   documents: DOCUMENT_JOB_TYPES,
   admin: ADMIN_JOB_TYPES,
+  matterport: MATTERPORT_JOB_TYPES,
   sync_light: SYNC_LIGHT_JOB_TYPES,
   sync_full: SYNC_FULL_JOB_TYPES,
 };
@@ -56,6 +66,7 @@ const DEFAULT_POLL_INTERVAL_MS = ["sync", "sync_full"].includes(WORKER_KIND) ? 6
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
 const ENABLE_HEKTOR_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS || "").toLowerCase() === "true";
+const ENABLE_MATTERPORT_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_MATTERPORT_ACTIONS || "").toLowerCase() === "true";
 const CREATE_HEKTOR_HTTP_DIRECT = String(process.env.CONSOLE_CREATE_HEKTOR_HTTP_DIRECT || "true").toLowerCase() !== "false";
 const CREATE_HEKTOR_PLAYWRIGHT_FALLBACK = String(process.env.CONSOLE_CREATE_HEKTOR_PLAYWRIGHT_FALLBACK || "true").toLowerCase() !== "false";
 const CLOUD_STATUSES = new Set(["Actif", "Sous offre", "Sous compromis", "Estimation"]);
@@ -104,9 +115,9 @@ function isHektorSessionError(error) {
     || message.includes("Missing HTTP_AUTHORIZATION");
 }
 
-function runNodeScript(scriptPath) {
+function runNodeScript(scriptPath, args = []) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [scriptPath], {
+    const child = spawn(process.execPath, [scriptPath, ...args], {
       cwd: __dirname,
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],
@@ -579,6 +590,77 @@ function extractDocumentEntries(html, source, visibility) {
     seen.add(entry.hektor_document_id);
     return true;
   });
+}
+
+function htmlAttrValue(html, attrName) {
+  const escaped = String(attrName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`\\b${escaped}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i");
+  const match = String(html || "").match(pattern);
+  return match ? decodeHtml(match[2]) : "";
+}
+
+function cleanImageUrl(url) {
+  const resolved = absoluteUrl(url);
+  if (!resolved) return "";
+  try {
+    const parsed = new URL(resolved);
+    parsed.search = "";
+    return parsed.toString();
+  } catch {
+    return resolved.replace(/\?.*$/, "");
+  }
+}
+
+function filenameFromImageUrl(url) {
+  try {
+    return path.basename(new URL(url).pathname);
+  } catch {
+    return "";
+  }
+}
+
+function extractConsolePhotoEntries(html, visible) {
+  const entries = [];
+  const itemPattern = /<li\b[^>]*class=["'][^"']*classementPhoto[^"']*["'][^>]*id=["']item_([^"']+)["'][^>]*>[\s\S]*?(?=<li\b[^>]*class=["'][^"']*(?:classementPhoto|addNewPhoto)|<\/ul>)/gi;
+  let match;
+  while ((match = itemPattern.exec(String(html || "")))) {
+    const hektorPhotoId = String(match[1] || "").trim();
+    const itemHtml = match[0];
+    if (!hektorPhotoId) continue;
+    const imgMatch = itemHtml.match(/<img\b[^>]*class=["'][^"']*galerie[^"']*["'][^>]*>/i)
+      || itemHtml.match(/<img\b[^>]*(?:srcHD|src)=["'][^"']+["'][^>]*>/i);
+    const imgHtml = imgMatch ? imgMatch[0] : "";
+    const previewUrl = cleanImageUrl(htmlAttrValue(imgHtml, "src"));
+    const hdUrl = cleanImageUrl(htmlAttrValue(imgHtml, "srcHD") || htmlAttrValue(imgHtml, "srchd") || previewUrl);
+    if (!previewUrl && !hdUrl) continue;
+    const detailIndexMatch = imgHtml.match(/\bid=["']detailPhoto(\d+)["']/i);
+    const deleteMatch = itemHtml.match(/delete_img\(\s*['"]([^'"]+)['"]\s*,\s*([^,]+)\s*,\s*['"]([^'"]+)['"]/i);
+    const legendMatch = itemHtml.match(new RegExp(`<div[^>]*id=["']div_legende_${hektorPhotoId}["'][^>]*>([\\s\\S]*?)<\\/div>`, "i"));
+    const textareaMatch = itemHtml.match(new RegExp(`<textarea[^>]*id=["']legende_${hektorPhotoId}["'][^>]*>([\\s\\S]*?)<\\/textarea>`, "i"));
+    const legend = stripHtml((legendMatch && legendMatch[1]) || (textareaMatch && textareaMatch[1]) || "");
+    const sortOrder = detailIndexMatch ? Number(detailIndexMatch[1]) + 1 : entries.length + 1;
+    const filename = safeFilename((deleteMatch && deleteMatch[1]) || filenameFromImageUrl(hdUrl || previewUrl), `${hektorPhotoId}.jpg`);
+    entries.push({
+      hektor_photo_id: hektorPhotoId,
+      filename,
+      url_preview: previewUrl || hdUrl,
+      url_hd: hdUrl || previewUrl,
+      visible: Boolean(visible),
+      legend: legend || null,
+      sort_order: Number.isFinite(sortOrder) ? sortOrder : entries.length + 1,
+      source_json: {
+        delete_filename: deleteMatch ? deleteMatch[1] : null,
+        delete_annonce_id: deleteMatch ? String(deleteMatch[2] || "").trim() : null,
+        delete_photo_id: deleteMatch ? deleteMatch[3] : null,
+        actions: {
+          can_change_visibility: /visibiliteVignette\(/i.test(itemHtml),
+          can_edit_legend: /legendVignette\(/i.test(itemHtml),
+          can_delete: /delete_img\(/i.test(itemHtml),
+        },
+      },
+    });
+  }
+  return entries;
 }
 
 function restHeaders(contentType = "application/json") {
@@ -1564,6 +1646,77 @@ async function fetchConsoleDocumentEntries(hektorAnnonceId) {
   return entries;
 }
 
+async function fetchConsolePhotoEntries(hektorAnnonceId) {
+  const id = encodeURIComponent(String(hektorAnnonceId));
+  const endpoints = [
+    {
+      visible: true,
+      url: `${XMLRPC_URL}?mode=vignettes&id=${id}&sortBy=byOrder`,
+    },
+    {
+      visible: false,
+      url: `${XMLRPC_URL}?mode=vignettes_hidden&id=${id}&sortBy=byOrder`,
+    },
+  ];
+  const entries = [];
+  for (const endpoint of endpoints) {
+    const result = await hektorFetch(endpoint.url);
+    entries.push(...extractConsolePhotoEntries(result.text, endpoint.visible));
+  }
+  const byId = new Map();
+  for (const entry of entries) {
+    byId.set(entry.hektor_photo_id, entry);
+  }
+  return Array.from(byId.values()).sort((left, right) => {
+    if (left.visible !== right.visible) return left.visible ? -1 : 1;
+    return Number(left.sort_order || 9999) - Number(right.sort_order || 9999);
+  });
+}
+
+async function upsertConsolePhotos(dossier, entries) {
+  const now = new Date().toISOString();
+  const rows = entries.map((entry) => ({
+    app_dossier_id: Number(dossier.app_dossier_id),
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    hektor_photo_id: entry.hektor_photo_id,
+    filename: entry.filename || null,
+    url_preview: entry.url_preview || null,
+    url_hd: entry.url_hd || null,
+    visible: Boolean(entry.visible),
+    legend: entry.legend || null,
+    sort_order: entry.sort_order || null,
+    source: "hektor_console",
+    source_json: entry.source_json || {},
+    synced_at: now,
+    updated_at: now,
+  }));
+
+  if (rows.length) {
+    await supabaseRequest("app_console_photo?on_conflict=hektor_annonce_id,hektor_photo_id", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: JSON.stringify(rows),
+    });
+  }
+
+  const keepIds = new Set(rows.map((row) => row.hektor_photo_id));
+  const existing = await supabaseRequest(`app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}&select=id,hektor_photo_id`, {
+    method: "GET",
+  });
+  const obsoleteIds = (Array.isArray(existing) ? existing : [])
+    .filter((row) => row.hektor_photo_id && !keepIds.has(String(row.hektor_photo_id)))
+    .map((row) => row.id)
+    .filter(Boolean);
+  if (obsoleteIds.length) {
+    await supabaseRequest(`app_console_photo?id=in.(${obsoleteIds.map((id) => encodeURIComponent(id)).join(",")})`, {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+  }
+
+  return rows;
+}
+
 function entryPriority(entry) {
   if (entry.visibility === "private") return 3;
   if (entry.visibility === "shared") return 2;
@@ -1777,6 +1930,30 @@ async function handleSyncConsoleDocuments(job) {
     cloud_stored: cloudStored,
     cloud_policy: cloud ? "daily_cloud_scope" : "local_archive_only",
     hektor_annonce_id: String(dossier.hektor_annonce_id),
+  };
+}
+
+async function handleSyncHektorPhotos(job) {
+  const dossier = await loadDossier(job);
+  await logJob(job.id, "hektor_photos", "running", "Lecture photos Console", {
+    hektor_annonce_id: dossier.hektor_annonce_id,
+  });
+  const entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+  const rows = await upsertConsolePhotos(dossier, entries);
+  const visibleCount = rows.filter((row) => row.visible).length;
+  const hiddenCount = rows.length - visibleCount;
+  await logJob(job.id, "hektor_photos", "done", "Photos Console indexees", {
+    hektor_annonce_id: dossier.hektor_annonce_id,
+    total: rows.length,
+    visible: visibleCount,
+    hidden: hiddenCount,
+  });
+  return {
+    status: "photos_synced",
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    total: rows.length,
+    visible: visibleCount,
+    hidden: hiddenCount,
   };
 }
 
@@ -3212,8 +3389,48 @@ async function handleCreateHektorDraftAnnonce(job) {
   };
 }
 
+async function handleMatterportAction(job) {
+  const payload = safeJsonParse(job.payload_json, {});
+  const modelId = String(payload.matterport_model_id || "").trim();
+  if (!/^[A-Za-z0-9_-]+$/.test(modelId)) {
+    throw new Error("ID Matterport invalide ou manquant");
+  }
+  if (!fs.existsSync(MATTERPORT_STORAGE_STATE_PATH)) {
+    throw new Error(`Session Matterport absente: lancer Console/matterport_playwright_login.js avant le worker`);
+  }
+  const commandByJobType = {
+    matterport_online: "online",
+    matterport_offline: "offline",
+    matterport_archive: "archive",
+    matterport_reactivate: "reactivate",
+  };
+  const command = commandByJobType[job.job_type];
+  if (!command) throw new Error(`Action Matterport inconnue: ${job.job_type}`);
+
+  await logJob(job.id, "matterport_console", "running", `Commande Matterport ${command}`, {
+    matterport_model_id: modelId,
+    matterport_name: payload.matterport_name || null,
+  });
+  const scriptPath = path.resolve(__dirname, "matterport_console_actions.js");
+  const result = await runNodeScript(scriptPath, [command, modelId, "--confirm"]);
+  await logJob(job.id, "matterport_console", "done", `Commande Matterport ${command} terminee`, {
+    matterport_model_id: modelId,
+  });
+  return {
+    matterport_model_id: modelId,
+    matterport_action: command,
+    matterport_url: payload.matterport_url || `https://my.matterport.com/show/?m=${modelId}`,
+    stdout: result.stdout.slice(-2000),
+    stderr: result.stderr.slice(-1000),
+  };
+}
+
 async function runHandler(job) {
-  if (!ENABLE_HEKTOR_ACTIONS) {
+  if (MATTERPORT_JOB_TYPES.has(job.job_type)) {
+    if (!ENABLE_MATTERPORT_ACTIONS) {
+      throw new Error("Console worker protected: set CONSOLE_WORKER_ENABLE_MATTERPORT_ACTIONS=true to execute Matterport actions.");
+    }
+  } else if (!ENABLE_HEKTOR_ACTIONS) {
     throw new Error("Console worker protected: set CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS=true to execute Hektor actions.");
   }
   if (!workerCanHandleJob(job.job_type)) {
@@ -3229,6 +3446,8 @@ async function runHandler(job) {
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
       return handleDeleteDocumentFromHektor(job);
+    case "sync_hektor_photos":
+      return handleSyncHektorPhotos(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
     case "create_hektor_mandant_contact":
@@ -3243,6 +3462,11 @@ async function runHandler(job) {
       return handleDeleteHektorAnnonce(job);
     case "create_hektor_draft_annonce":
       return handleCreateHektorDraftAnnonce(job);
+    case "matterport_online":
+    case "matterport_offline":
+    case "matterport_archive":
+    case "matterport_reactivate":
+      return handleMatterportAction(job);
     case "refresh_console_data":
       return handleRefreshConsoleData(job);
     case "archive_cloud_documents":

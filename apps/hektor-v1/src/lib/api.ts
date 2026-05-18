@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -3100,6 +3100,34 @@ export async function loadConsoleDocuments(appDossierId: number): Promise<Consol
   return (data ?? []) as ConsoleDocument[]
 }
 
+export async function loadConsolePhotos(appDossierId: number): Promise<ConsolePhoto[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_console_photo')
+    .select('id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,visible,legend,sort_order,source,source_json,synced_at,created_at,updated_at')
+    .eq('app_dossier_id', appDossierId)
+    .order('visible', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .limit(500)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ConsolePhoto[]
+}
+
+export async function createSyncHektorPhotosJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_console_create_sync_photos_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    job_priority: input.priority ?? 28,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor photos sync job')
+  return data as ConsoleJob
+}
+
 export async function createPrepareConsoleDocumentJob(input: {
   document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
   priority?: number
@@ -3467,6 +3495,29 @@ export async function createDeleteHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
+export type MatterportConsoleAction = 'online' | 'offline' | 'archive' | 'reactivate'
+
+export async function createMatterportActionJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  model: Pick<MatterportModelLink, 'matterport_model_id' | 'matterport_name' | 'matterport_url'>
+  action: MatterportConsoleAction
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const modelId = input.model.matterport_model_id.trim()
+  if (!/^[A-Za-z0-9_-]+$/.test(modelId)) throw new Error('ID Matterport invalide')
+  const { data, error } = await supabase.rpc('app_console_create_matterport_action_job', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    target_matterport_model_id: modelId,
+    matterport_action: input.action,
+    job_priority: input.priority ?? 18,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Matterport action job')
+  return data as ConsoleJob
+}
+
 const hektorActionJobTypes: ConsoleJobType[] = [
   'create_hektor_draft_annonce',
   'delete_hektor_annonce',
@@ -3475,9 +3526,14 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'update_hektor_mandant_contact',
   'create_hektor_mandat_auto_number',
   'link_hektor_mandant',
+  'matterport_online',
+  'matterport_offline',
+  'matterport_archive',
+  'matterport_reactivate',
   'prepare_document_cloud',
   'upload_document_to_hektor',
   'delete_document_from_hektor',
+  'sync_hektor_photos',
 ]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {

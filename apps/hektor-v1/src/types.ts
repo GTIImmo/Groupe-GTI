@@ -432,6 +432,24 @@ export type ConsoleDocument = {
   updated_at: string | null
 }
 
+export type ConsolePhoto = {
+  id: string
+  app_dossier_id: number | null
+  hektor_annonce_id: string
+  hektor_photo_id: string
+  filename: string | null
+  url_preview: string | null
+  url_hd: string | null
+  visible: boolean
+  legend: string | null
+  sort_order: number | null
+  source: string | null
+  source_json: Record<string, unknown> | null
+  synced_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
 export type ConsoleJobStatus = 'pending' | 'running' | 'done' | 'error'
 
 export type ConsoleJobType =
@@ -439,6 +457,7 @@ export type ConsoleJobType =
   | 'prepare_document_cloud'
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
+  | 'sync_hektor_photos'
   | 'link_hektor_mandant'
   | 'create_hektor_mandant_contact'
   | 'update_hektor_mandant_contact'
@@ -446,6 +465,10 @@ export type ConsoleJobType =
   | 'create_hektor_mandat_auto_number'
   | 'delete_hektor_annonce'
   | 'create_hektor_draft_annonce'
+  | 'matterport_online'
+  | 'matterport_offline'
+  | 'matterport_archive'
+  | 'matterport_reactivate'
   | 'refresh_console_data'
   | 'archive_cloud_documents'
 

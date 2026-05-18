@@ -44,21 +44,24 @@ import {
   updateDiffusionRequest,
   verifyPriceDropOnHektor,
   loadConsoleDocuments,
+  loadConsolePhotos,
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
+  createSyncHektorPhotosJob,
   createHektorMandantContactJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
   createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
   createHektorDraftAnnonceJob,
+  createMatterportActionJob,
   createConsoleDocumentSignedUrl,
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -752,6 +755,520 @@ function HektorMandatNumberForm(props: {
     </div>
   )
 }
+
+type MandatDocumentDraft = {
+  numeroMandat: string
+  dateSignature: string
+  typeMandat: string
+  mandantsLibelle: string
+  bienTitre: string
+  bienType: string
+  bienAdresse: string
+  surfaceHabitable: string
+  surfaceTerrain: string
+  nombrePieces: string
+  prixVente: string
+  prixNetVendeur: string
+  honorairesTtc: string
+  honorairesCharge: 'acquereur' | 'mandant' | ''
+  etatOccupation: 'libre' | 'loue' | 'occupe' | ''
+  clauseParticuliere: string
+  executionAnticipee: 'oui' | 'non' | ''
+  inclureCouverture: boolean
+}
+
+function firstNonEmpty(...values: unknown[]) {
+  for (const value of values) {
+    if (value == null) continue
+    const text = typeof value === 'number' ? String(value) : safeText(value)
+    if (text) return text
+  }
+  return ''
+}
+
+function valueFromJsonList(value: string | null | undefined, keys: string[]) {
+  const rows = parseJson<Array<Record<string, unknown>>>(value, [])
+  for (const row of rows) {
+    for (const key of keys) {
+      const text = firstNonEmpty(row[key])
+      if (text) return text
+    }
+  }
+  return ''
+}
+
+function formatDraftDate(value: string) {
+  if (!value) return ''
+  return inputDateToFrench(value).replace(/-/g, '/')
+}
+
+function buildMandatDocumentDraft(
+  dossier: Dossier,
+  detail: DossierDetailPayload,
+  contacts: DetailContact[],
+  address: string,
+): MandatDocumentDraft {
+  const contactLabel = contacts
+    .map((contact) => [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name)
+    .filter(Boolean)
+    .join(' et ')
+  const rawHonoraires = firstNonEmpty(
+    rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES'),
+    rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES_ACQUEREUR'),
+    valueFromJsonList(detail.honoraires_json, ['montant_ttc', 'montant', 'honoraires', 'value']),
+    detail.honoraires_resume,
+    detail.mandat_montant,
+  )
+  return {
+    numeroMandat: firstNonEmpty(dossier.numero_mandat, detail.mandat_numero_source),
+    dateSignature: todayInputDate(),
+    typeMandat: firstNonEmpty(detail.mandat_type, detail.mandat_type_source, 'Mandat de vente'),
+    mandantsLibelle: firstNonEmpty(detail.mandants_texte, detail.proprietaires_resume, contactLabel),
+    bienTitre: firstNonEmpty(dossier.titre_bien, detail.texte_principal_titre),
+    bienType: firstNonEmpty(dossier.type_bien, rawDetailProp(detail, 'bien', 'type')),
+    bienAdresse: firstNonEmpty(address, detail.adresse_privee_listing, detail.adresse_detail),
+    surfaceHabitable: firstNonEmpty(detail.surface_habitable_detail, detail.surface),
+    surfaceTerrain: firstNonEmpty(detail.surface_terrain_detail, rawDetailProp(detail, 'terrain', 'surfterrain')),
+    nombrePieces: firstNonEmpty(detail.nb_pieces),
+    prixVente: firstNonEmpty(detail.prix_publique, dossier.prix),
+    prixNetVendeur: firstNonEmpty(detail.prix_net_vendeur, rawDetailProp(detail, 'mandat_infofi', 'PRIXNETVENDEUR')),
+    honorairesTtc: rawHonoraires,
+    honorairesCharge: rawHonoraires ? 'acquereur' : '',
+    etatOccupation: '',
+    clauseParticuliere: firstNonEmpty(detail.mandat_note),
+    executionAnticipee: '',
+    inclureCouverture: true,
+  }
+}
+
+function buildMandatDocumentPayload(draft: MandatDocumentDraft, dossier: Dossier) {
+  return {
+    mandat: {
+      numero: draft.numeroMandat,
+      type: draft.typeMandat,
+      date_signature: formatDraftDate(draft.dateSignature),
+      duree_mois: 12,
+      periode_ferme_mois: 3,
+      preavis_jours: 15,
+      clause_particuliere: draft.clauseParticuliere,
+    },
+    mandants_libelle: draft.mandantsLibelle,
+    bien: {
+      titre: draft.bienTitre,
+      type: draft.bienType,
+      adresse_complete: draft.bienAdresse,
+      surface_habitable: draft.surfaceHabitable,
+      surface_terrain: draft.surfaceTerrain,
+      nombre_pieces: draft.nombrePieces,
+      prix_vente: draft.prixVente,
+      prix_net_vendeur: draft.prixNetVendeur,
+      etat_occupation: draft.etatOccupation,
+    },
+    honoraires: {
+      montant_ttc: draft.honorairesTtc,
+      charge: draft.honorairesCharge,
+      mode_paiement: 'virement',
+    },
+    agence: {
+      nom: dossier.agence_nom ?? '',
+    },
+    negociateur: {
+      nom_complet: dossier.commercial_nom ?? '',
+    },
+    options: {
+      inclure_couverture: draft.inclureCouverture,
+      execution_anticipee_demandee: draft.executionAnticipee || null,
+      signature_electronique: true,
+    },
+  }
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function textOrPlaceholder(value: unknown, placeholder = 'A completer') {
+  const text = firstNonEmpty(value)
+  return escapeHtml(text || placeholder)
+}
+
+function formatFreeTextHtml(value: string, fallback: string) {
+  const lines = value
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (!lines.length) return `<p>${escapeHtml(fallback)}</p>`
+  return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')
+}
+
+function mandateContactCardsHtml(contacts: DetailContact[], mandantsLibelle: string) {
+  if (contacts.length === 0) {
+    return `<div class="identity-card"><strong>${textOrPlaceholder(mandantsLibelle)}</strong></div>`
+  }
+  return contacts.map((contact, index) => {
+    const name = [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name || `Mandant ${index + 1}`
+    const address = [contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')
+    return `<div class="identity-card">
+      <strong>${escapeHtml(name)}</strong>
+      <span>${escapeHtml(contact.role || 'Mandant')}</span>
+      ${address ? `<p>${escapeHtml(address)}</p>` : ''}
+      ${contact.phone ? `<p>Telephone : ${escapeHtml(contact.phone)}</p>` : ''}
+      ${contact.email ? `<p>Email : ${escapeHtml(contact.email)}</p>` : ''}
+    </div>`
+  }).join('')
+}
+
+function checkedEntity(active: boolean) {
+  return active ? '&#9745;' : '&#9744;'
+}
+
+function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, contacts: DetailContact[]) {
+  const payload = buildMandatDocumentPayload(draft, dossier)
+  const chargeAcquereur = payload.honoraires.charge === 'acquereur'
+  const chargeMandant = payload.honoraires.charge === 'mandant'
+  const executionYes = payload.options.execution_anticipee_demandee === 'oui'
+  const executionNo = payload.options.execution_anticipee_demandee === 'non'
+  const dateSignature = payload.mandat.date_signature || 'A completer'
+  const agencyName = dossier.agence_nom || payload.agence.nom || 'GROUPE GTI'
+  const negotiatorName = dossier.commercial_nom || payload.negociateur.nom_complet || 'A completer'
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Mandat de vente ${draft.numeroMandat || ''}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;background:#eef2f5}
+    .sheet{width:210mm;min-height:297mm;margin:18px auto;padding:13mm 14mm;background:#fff;box-shadow:0 18px 60px rgba(15,23,42,.18);font-size:10.5px;line-height:1.34}
+    .cover{display:flex;min-height:250mm;flex-direction:column;justify-content:space-between}
+    .cover-head,.doc-head{display:grid;grid-template-columns:120px minmax(0,1fr);background:#1f1f23;color:#fff;margin-bottom:18px}
+    .logo{display:flex;align-items:center;justify-content:center;padding:14px;border-right:5px solid #c2185b;font-weight:800;letter-spacing:.08em}
+    .doc-title{padding:15px 18px}
+    .doc-title h1{margin:0;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.02em}
+    .doc-title p{margin:7px 0 0;color:#ddd;font-weight:700;text-transform:uppercase;font-size:9px;letter-spacing:.08em}
+    .cover-title h1{font-size:48px;line-height:.95;margin:36px 0 10px;text-transform:uppercase}
+    .accent{width:86px;height:4px;background:#c2185b;margin:18px 0}
+    .cover-property{border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:18px 0;margin:30px 0}
+    .cover-property span,.eyebrow{display:block;color:#c2185b;font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    .cover-property strong{display:block;margin-top:8px;font-size:18px}
+    .cover-grid,.identity-grid,.facts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .cover-box,.identity-card,.fact{border:1px solid #ddd;padding:10px;background:#fafafa}
+    .identity-grid{margin:8px 0 12px}
+    .identity-card strong,.cover-box strong,.fact strong{display:block;font-size:11.5px;color:#111}
+    .identity-card span,.fact span{display:block;color:#555;font-size:9px;margin-top:3px}
+    .identity-card p,.fact p{margin:5px 0 0}
+    .section-band{display:flex;align-items:center;gap:10px;background:#1f1f23;color:#fff;margin:18px 0 12px;break-after:avoid}
+    .section-band:before{content:"";display:block;width:5px;align-self:stretch;background:#c2185b}
+    .section-band strong{padding:8px 10px 8px 0;text-transform:uppercase;font-size:12.5px;letter-spacing:.04em}
+    h2{break-after:avoid;margin:12px 0 7px;padding:5px 8px;border-left:4px solid #c2185b;background:#f6f6f6;color:#1f1f1f;font-size:10.8px;text-transform:uppercase;letter-spacing:.02em}
+    h3{break-after:avoid;margin:9px 0 5px;color:#222;font-size:11px;text-transform:uppercase}
+    p{margin:0 0 5px;text-align:justify}
+    .box{border:1px solid #ddd;border-left:4px solid #c2185b;padding:10px;margin:0 0 12px;break-inside:avoid}
+    .muted{color:#555}
+    .facts-grid{margin:6px 0 8px}
+    .fact{min-height:45px}
+    .checkbox-line{margin:8px 0;font-weight:700}
+    .checkbox-line span{display:inline-block;margin-left:16px;font-weight:500}
+    ul{margin:4px 0 7px 16px;padding:0}
+    li{margin:0 0 4px;text-align:justify}
+    .signature-block{break-inside:avoid;margin-top:16px;border-top:2px solid #c2185b;padding-top:10px}
+    .signature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:10px}
+    .signature-box{height:112px;border:1px dotted #aaa;padding:9px;position:relative}
+    .signature-box strong{display:block;border-bottom:2px solid #c2185b;padding-bottom:5px;margin-bottom:8px;text-align:center;text-transform:uppercase}
+    .signature-box span{position:absolute;right:9px;bottom:7px;color:#aaa;font-size:8px;text-transform:uppercase}
+    .page-break{break-before:page}
+    @page{size:A4;margin:10mm}
+    @media print{
+      body{background:#fff}
+      .sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+      .cover{min-height:270mm}
+      .page-break{break-before:page}
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    ${draft.inclureCouverture ? `
+    <section class="cover">
+      <div>
+        <div class="cover-head"><div class="logo">GROUPE GTI</div><div class="doc-title"><p>Document contractuel</p></div></div>
+        <div class="cover-title">
+          <h1>Mandat<br />de vente</h1>
+          <div class="accent"></div>
+          <strong>N ${textOrPlaceholder(payload.mandat.numero)}</strong>
+        </div>
+        <div class="cover-property">
+          <span>Bien confie</span>
+          <strong>${textOrPlaceholder(payload.bien.titre)}</strong>
+          <p>${textOrPlaceholder(payload.bien.adresse_complete)}</p>
+        </div>
+        <div class="cover-grid">
+          <div class="cover-box"><span class="eyebrow">Mandant</span><strong>${textOrPlaceholder(payload.mandants_libelle)}</strong></div>
+          <div class="cover-box"><span class="eyebrow">Agence</span><strong>${escapeHtml(agencyName)}</strong><p>Conseiller : ${escapeHtml(negotiatorName)}</p></div>
+        </div>
+      </div>
+      <p class="muted">Mandat simple conclu en dehors des locaux de l'agence - Date : ${escapeHtml(dateSignature)}</p>
+    </section>
+    <div class="page-break"></div>` : ''}
+
+    <section class="doc-head"><div class="logo">GROUPE GTI</div><div class="doc-title"><h1>Mandat de vente</h1><p>Document contractuel de mise en vente</p></div></section>
+    <div class="box"><strong>MANDAT DE VENTE N ${textOrPlaceholder(payload.mandat.numero)}</strong><p class="muted">Mandat simple conclu en dehors des locaux de l'agence</p></div>
+
+    <div class="section-band"><strong>Entre les soussignes</strong></div>
+    <h2>Le mandant</h2>
+    <div class="identity-grid">${mandateContactCardsHtml(contacts, payload.mandants_libelle)}</div>
+    <p>Si le MANDANT est une personne morale, elle est representee par son representant legal ou toute personne dument habilitee a l'effet des presentes.</p>
+    <p>Ci-apres denomme(e.s) invariablement le "MANDANT" ou le "VENDEUR" d'une part,</p>
+    <h2>Le mandataire</h2>
+    <p>${escapeHtml(agencyName)} ${dossier.agence_nom ? '' : ''}, exploitee par la societe GROUPE GTI, SAS au capital de 309968 euros, dont le siege social est situe 22 rue Jean Jaures 42700 Firminy, RCS Saint-Etienne n 502811144, titulaire de la carte professionnelle Transactions sur immeubles et fonds de commerce n CPI 42022019 000 043 878, numero de TVA FR24 502811144, assuree en responsabilite civile professionnelle par ALLIANZ IARD sous le n 60583928, declarant ne pouvoir ni recevoir, ni detenir d'autres fonds, effets ou valeurs que ceux representatifs de sa remuneration.</p>
+    <p>Representee par ${escapeHtml(negotiatorName)}, en sa qualite de negociateur, dument habilite a l'effet des presentes.</p>
+    <p>Ci-apres denomme(e.s) invariablement le "MANDATAIRE" ou "L'AGENCE" d'une part,</p>
+    <p>Le MANDANT et le MANDATAIRE etant individuellement et indifferemment denommes ci-apres une "PARTIE" et ensemble les "PARTIES". Le present contrat sera designe comme le "MANDAT".</p>
+
+    <div class="section-band"><strong>Objet, capacite des parties et bien</strong></div>
+    <h2>Article 1. Objet du mandat</h2>
+    <p>Le MANDANT confie au MANDATAIRE la mission de trouver un acquereur du bien ou droits immobiliers aux conditions du MANDAT.</p>
+    <p>Dans le cadre d'un MANDAT SIMPLE DE VENTE, cette mission est confiee a titre non-exclusif. Le MANDANT conserve le droit de conclure un ou plusieurs autres mandats de vente non-exclusifs avec d'autres intermediaires ou de rechercher par lui-meme un acquereur.</p>
+    <h2>Article 2. Declaration sur les capacites des parties</h2>
+    <p>Le MANDANT ou son representant declare que l'etat civil et les qualites indiquees en tete des presentes sont exacts.</p>
+    <h2>Article 3. Bien ou droits immobiliers objet du mandat</h2>
+    <p>Le MANDAT concerne le bien ou droits immobiliers suivants, ci-apres denommes invariablement le "BIEN".</p>
+    <h2>Article 3.1 Designation du bien</h2>
+    <div class="facts-grid">
+      <div class="fact"><span>Type de bien</span><strong>${textOrPlaceholder(payload.bien.type)}</strong></div>
+      <div class="fact"><span>Surface habitable</span><strong>${textOrPlaceholder(payload.bien.surface_habitable, '-')}</strong></div>
+      <div class="fact"><span>Nombre de pieces</span><strong>${textOrPlaceholder(payload.bien.nombre_pieces, '-')}</strong></div>
+      <div class="fact"><span>Surface terrain</span><strong>${textOrPlaceholder(payload.bien.surface_terrain, '-')}</strong></div>
+    </div>
+    <p><strong>Designation :</strong> ${textOrPlaceholder(payload.bien.titre)}</p>
+    <p><strong>Lot n :</strong> ........................................................................................................</p>
+    <h2>Article 3.2 Situation du bien</h2>
+    <p>${textOrPlaceholder(payload.bien.adresse_complete)}</p>
+    <p>Tel que le bien existe, avec tous droits y attaches, sans aucune exception ni reserve.</p>
+    <h2>Article 3.3 Etat d'occupation du bien</h2>
+    <p>Le MANDANT declare que le BIEN est actuellement ${textOrPlaceholder(payload.bien.etat_occupation, 'libre de toute occupation / loue / occupe par le mandant')}.</p>
+    <p>Dans le cas ou le MANDANT occupe le BIEN, il s'engage a le liberer au plus tard le jour de signature de l'acte authentique de vente.</p>
+    <p>Dans le cas ou le BIEN est vendu loue, le MANDANT s'engage a fournir au MANDATAIRE le bail correspondant.</p>
+    <p>Dans le cas ou le BIEN est actuellement libre de toute occupation, le MANDANT s'engage a ce que le BIEN soit libre de toute occupation ou location le jour de signature de l'acte definitif de vente.</p>
+
+    <div class="section-band"><strong>Prix, remuneration et duree</strong></div>
+    <h2>Article 4. Prix du bien</h2>
+    <p>Le BIEN sera presente a la vente au prix de :</p>
+    <p><strong>Prix du bien :</strong> ${textOrPlaceholder(payload.bien.prix_vente)} euros</p>
+    <p>Le paiement sera effectue le jour de la reiteration authentique de la vente tant a l'aide d'un pret que des fonds propres a l'acquereur. Ce prix a ete fixe librement par le MANDANT apres avoir recu l'avis du MANDATAIRE.</p>
+    <p>Le MANDANT est informe qu'il pourra etre assujetti le cas echeant a l'impot sur les plus-values immobilieres.</p>
+    <h2>Article 5. Remuneration - Honoraires</h2>
+    <p>En cas de realisation de l'operation avec un acheteur presente par le MANDATAIRE ou un mandataire substitue ou dirige vers lui, le mandataire aura droit a ses honoraires d'un montant fixe et forfaitaire de :</p>
+    <p><strong>Montant des honoraires :</strong> ${textOrPlaceholder(payload.honoraires.montant_ttc)} euros TTC</p>
+    <p class="checkbox-line">La totalite des honoraires sera a la charge du : <span>${checkedEntity(chargeMandant)} MANDANT</span><span>${checkedEntity(chargeAcquereur)} ACQUEREUR</span></p>
+    <p>Dans le cas d'honoraires a la charge de l'Acquereur, le montant NET VENDEUR est de ${textOrPlaceholder(payload.bien.prix_net_vendeur)} euros TTC.</p>
+    <p>Ces honoraires seront payes le jour de la signature de l'acte authentique de vente et le taux de TVA applique aux honoraires sera le taux en vigueur a la date de leur exigibilite. En cas d'exercice d'un droit de preemption ou d'une faculte de substitution, son beneficiaire sera subroge dans tous les droits et obligations de l'acquereur.</p>
+    <p>Le paiement des honoraires sera effectue par virement bancaire.</p>
+    <h2>Article 6. Duree du mandat</h2>
+    <p>Le MANDAT est conclu pour une duree de 12 mois a compter de sa signature, dont 3 mois fermes.</p>
+    <p>Le MANDAT prendra fin par arrivee a terme, pour cause de vente, ou par revocation passee la periode irrevocable de 3 mois avec un preavis de 15 jours par lettre recommandee avec accuse de reception conformement aux dispositions applicables.</p>
+
+    <div class="section-band"><strong>Retractation, clause particuliere et debut des obligations</strong></div>
+    <h2>Droit de retractation et execution anticipee</h2>
+    <p>Le MANDANT beneficie d'un droit de retractation. Les contrats conclus hors etablissement ou a distance offrent au MANDANT un delai de retractation de quatorze (14) jours calendaires, sauf exceptions legales applicables. Cette retractation permet au MANDANT de mettre fin immediatement au MANDAT en envoyant une LRAR ou une LRE dans le delai imparti.</p>
+    <p>Le delai commence a courir a partir du jour de la conclusion du contrat. Si ce delai expire un samedi, dimanche ou jour chome, il est proroge jusqu'au premier jour ouvrable suivant.</p>
+    <p>Le MANDANT reconnait avoir recu les informations sur le droit de retractation et ses modalites et les avoir comprises.</p>
+    <p class="checkbox-line">${checkedEntity(executionYes)} Le MANDANT demande expressement au MANDATAIRE de commencer a executer le present MANDAT des sa signature, sans attendre la fin du delai de retractation de quatorze jours.</p>
+    <p class="checkbox-line">${checkedEntity(executionNo)} Le MANDANT indique qu'il ne souhaite pas que le MANDATAIRE commence a executer le present MANDAT des sa signature. L'execution debutera apres la fin du delai de retractation.</p>
+    <p>Par derogation aux dispositions de l'article 2003 du Code civil, le deces du MANDANT n'entrainera pas la resiliation du mandat, lequel se poursuivra avec ses ayants droit.</p>
+    <h2>Article 7. Clause particuliere</h2>
+    <div class="box">${formatFreeTextHtml(payload.mandat.clause_particuliere, 'Aucune clause particuliere renseignee.')}</div>
+
+    <div class="section-band page-break"><strong>Obligations des parties</strong></div>
+    <h2>Article 8. Obligations du mandataire</h2>
+    <p>Le MANDATAIRE recoit mission et pouvoir de notamment :</p>
+    <ul>
+      <li>Demander aupres de toute personne competente les documents administratifs necessaires a l'operation projetee, les frais devant etre acceptes prealablement par ecrit par le MANDANT sauf si le MANDATAIRE prefere en supporter le cout definitif.</li>
+      <li>Installer si bon lui semble un panneau sur le BIEN objet du MANDAT precisant que le bien est "a vendre" des la signature du MANDAT et un panneau "vendu" jusqu'a un delai de trois mois apres la signature de l'acte authentique de vente.</li>
+      <li>Rediger des annonces faisant la promotion du BIEN avec des photographies et/ou videos de qualite et les publier sur tout support approprie dont la vitrine de l'agence, son site internet et ses outils habituels de communication.</li>
+      <li>Faire des visites du BIEN, en vue de sa vente ou de sa promotion, avec ou sans le MANDANT.</li>
+      <li>Negocier le prix du BIEN au mieux des interets du MANDANT.</li>
+      <li>Rendre compte, par tout moyen, de l'execution de ses missions et des avancees du projet immobilier au MANDANT au moins une fois par mois.</li>
+    </ul>
+    <h2>Article 9. Obligations du mandant</h2>
+    <h2>Article 9.1 Conditions generales</h2>
+    <p>Le MANDANT s'engage a :</p>
+    <ul>
+      <li>Fournir au MANDATAIRE tous documents ou informations utiles ou necessaires pour sa mission.</li>
+      <li>Fournir notamment les elements permettant de s'assurer de la capacite juridique a accomplir l'operation projetee, dont le titre de propriete du BIEN et les justificatifs utiles.</li>
+      <li>Laisser le MANDATAIRE visiter et faire visiter le BIEN aux conditions convenues.</li>
+      <li>Tenir ou faire tenir l'immeuble propre et range, autant que possible, afin de permettre des visites dans des conditions favorables.</li>
+      <li>Ne pas modifier le BIEN, ni l'immeuble, ni consentir de suretes qui l'affecteraient pendant la duree du MANDAT sans en informer prealablement le MANDATAIRE.</li>
+      <li>S'assurer de la securite du BIEN pour eviter des accidents au MANDATAIRE et aux candidats acquereurs.</li>
+      <li>Transmettre tous les diagnostics techniques obligatoires et documents en sa possession concernant l'etat du BIEN et sa situation administrative.</li>
+      <li>Informer immediatement le MANDATAIRE de chaque offre d'achat ou promesse d'achat ou de vente recue ou adressee.</li>
+      <li>S'assurer que l'acte de vente rappelle la remuneration due au MANDATAIRE et assurer le reglement des sommes exigibles conformement au MANDAT et a la loi.</li>
+    </ul>
+    <p>Le MANDANT s'interdit de negocier directement ou indirectement la vente du BIEN avec un acquereur que le MANDATAIRE lui aurait presente ou a qui le MANDATAIRE aurait fait visiter le BIEN, pendant la duree du mandat et durant les 12 mois suivant son expiration ou sa revocation.</p>
+    <h2>Article 9.2 Conditions particulieres concernant le type de mandat</h2>
+    <p>Le MANDANT conserve le droit de conclure un ou plusieurs autres mandats de vente non-exclusifs avec d'autres intermediaires ou de rechercher par lui-meme un acquereur.</p>
+    <p>Dans le cas d'une vente sans le concours de l'AGENCE, le MANDANT s'engage a informer le MANDATAIRE immediatement par lettre recommandee avec accuse de reception, en precisant les noms et adresses de l'acquereur, du notaire charge de l'acte authentique, de l'agence eventuellement intervenue, ainsi que le prix de vente final.</p>
+
+    <div class="section-band page-break"><strong>Conditions particulieres et clauses finales</strong></div>
+    <h2>Article 10. Clause penale</h2>
+    <p><strong>EN CAS DE MANQUEMENT A SES ENGAGEMENTS, OU A L'UNE OU L'AUTRE DE SES INTERDICTIONS OU OBLIGATIONS, LE MANDANT S'OBLIGE EXPRESSEMENT ET DE MANIERE IRREVOCABLE A VERSER AU MANDATAIRE UNE INDEMNITE FORFAITAIRE EGALE AU MONTANT TOTAL, TVA INCLUSE, DE LA REMUNERATION PREVUE AUX PRESENTES.</strong></p>
+    <h2>Article 11. Engagement de non-discrimination</h2>
+    <p>Constitue une discrimination toute distinction operee entre les personnes sur un fondement prohibe par la loi. Le MANDATAIRE informe le MANDANT que toute discrimination commise a l'egard d'une personne est punie penalement. En consequence, les parties prennent l'engagement expres de n'opposer a un candidat a l'acquisition des presents biens aucun refus fonde sur un motif discriminatoire.</p>
+    <h2>Article 12. Donnees personnelles</h2>
+    <p>Les informations personnelles collectees par le MANDATAIRE sont necessaires a l'accomplissement de sa mission, a la publicite du bien sur tous supports, a la redaction des documents necessaires et a la lutte contre le blanchiment de capitaux et le financement du terrorisme. Ces informations seront conservees durant l'execution du contrat puis jusqu'a extinction des delais legaux de prescription.</p>
+    <p>Le MANDANT beneficie d'un droit d'acces, de rectification, d'effacement et de limitation du traitement des informations le concernant. Toute reclamation peut etre adressee aupres de la CNIL. Pour exercer un droit ou pour toute question sur le traitement des donnees, une demande peut etre adressee a Groupe G.T.I, 22 Rue Jean Jaures, 42700 Firminy.</p>
+    <h2>Article 13. Election de domicile</h2>
+    <p>Les parties soussignees font election de domicile chacune a leur adresse respective stipulee en tete du present mandat.</p>
+    <h2>Article 14. Loi applicable et tribunal competent</h2>
+    <p>Le present contrat est regi par la loi francaise. Tout contentieux n'ayant pu etre resolu a l'amiable pourra donner lieu a une action en justice devant les juridictions competentes. En cas de differend, si le MANDANT est un consommateur, il pourra saisir le mediateur de la consommation gratuitement en vue du reglement amiable d'un litige. Le mediateur est ANM Conso, 62 rue Tiquetonne, 75002 Paris.</p>
+    <h2>Article 15. Contractualisation electronique</h2>
+    <p>Les PARTIES acceptent de recourir a la signature electronique conforme aux exigences du Reglement eIDAS pour signer le present contrat et tout autre document lie. Elles reconnaissent que l'identification pourra resulter d'un code envoye par SMS et/ou d'un lien envoye par courriel sur les coordonnees renseignees au present contrat.</p>
+    <p>Les PARTIES reconnaissent a la signature electronique une presomption simple de fiabilite et consentent a l'utilisation de la lettre recommandee electronique qualifiee pour toute notification officielle ou correspondance entre les PARTIES.</p>
+
+    <div class="signature-block">
+      <h2>Signatures des parties</h2>
+      <p>Chaque PARTIE reconnait disposer ou avoir acces a un exemplaire du present contrat conformement a l'article 1375 du Code civil.</p>
+      <p><strong>Fait a :</strong> ............................................................ <strong>Le :</strong> ${escapeHtml(dateSignature)}</p>
+      <div class="signature-grid">
+        <div class="signature-box"><strong>Le mandant</strong><p>Mention manuscrite : Bon pour mandat</p><span>signature</span></div>
+        <div class="signature-box"><strong>Le mandataire</strong><p>Cachet et signature de l'agence</p><span>signature</span></div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>`
+}
+
+function MandatDocumentEditor(props: {
+  dossier: Dossier
+  detail: DossierDetailPayload
+  contacts: DetailContact[]
+  address: string
+  compact?: boolean
+}) {
+  const initialDraft = useMemo(
+    () => buildMandatDocumentDraft(props.dossier, props.detail, props.contacts, props.address),
+    [props.dossier.app_dossier_id, props.dossier.numero_mandat, props.dossier.titre_bien, props.dossier.prix, props.detail, props.contacts, props.address],
+  )
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState<MandatDocumentDraft>(initialDraft)
+  const [message, setMessage] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+
+  useEffect(() => {
+    setDraft(initialDraft)
+    setOpen(false)
+    setMessage(null)
+  }, [initialDraft])
+
+  const missingFields = [
+    !draft.numeroMandat ? 'numero mandat' : '',
+    !draft.mandantsLibelle ? 'mandant' : '',
+    !draft.bienAdresse ? 'adresse du bien' : '',
+    !draft.prixVente ? 'prix de vente' : '',
+    !draft.honorairesTtc ? 'honoraires' : '',
+    !draft.honorairesCharge ? 'charge honoraires' : '',
+    !draft.dateSignature ? 'date de signature' : '',
+  ].filter(Boolean)
+  const payload = buildMandatDocumentPayload(draft, props.dossier)
+
+  const updateDraft = <K extends keyof MandatDocumentDraft>(key: K, value: MandatDocumentDraft[K]) => {
+    setDraft((current) => ({ ...current, [key]: value }))
+    setMessage(null)
+  }
+
+  useEffect(() => {
+    if (!open) {
+      setPreviewUrl('')
+      return
+    }
+    const blob = new Blob([mandatPreviewHtml(draft, props.dossier, props.contacts)], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    setPreviewUrl(url)
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [draft, open, props.contacts, props.dossier])
+
+  const copyPayload = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+      setMessage('JSON de rendu copie.')
+    } catch {
+      setMessage('Copie impossible dans ce navigateur.')
+    }
+  }
+
+  return (
+    <div className={`mandat-document-editor ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
+      <div className="mandat-document-editor-head">
+        <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+        <div>
+          <strong>Document mandat depuis annonce</strong>
+          <small>{missingFields.length ? `${missingFields.length} champ${missingFields.length > 1 ? 's' : ''} a completer avant generation` : 'Pret pour une generation de test'}</small>
+        </div>
+        <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((value) => !value)}>
+          {open ? 'Fermer' : 'Editer'}
+        </button>
+      </div>
+      {open ? (
+        <div className="mandat-document-editor-body">
+          <div className="mandat-document-form">
+            <div className="mandat-document-form-grid">
+              <label><span>N mandat</span><input value={draft.numeroMandat} onChange={(event) => updateDraft('numeroMandat', event.target.value)} /></label>
+              <label><span>Date signature</span><input type="date" value={draft.dateSignature} onChange={(event) => updateDraft('dateSignature', event.target.value)} /></label>
+              <label><span>Type mandat</span><input value={draft.typeMandat} onChange={(event) => updateDraft('typeMandat', event.target.value)} /></label>
+              <label><span>Occupation</span><select value={draft.etatOccupation} onChange={(event) => updateDraft('etatOccupation', event.target.value as MandatDocumentDraft['etatOccupation'])}><option value="">A choisir</option><option value="libre">Libre</option><option value="loue">Loue</option><option value="occupe">Occupe par le mandant</option></select></label>
+              <label className="is-wide"><span>Mandants</span><textarea value={draft.mandantsLibelle} onChange={(event) => updateDraft('mandantsLibelle', event.target.value)} rows={2} /></label>
+              <label className="is-wide"><span>Designation du bien</span><input value={draft.bienTitre} onChange={(event) => updateDraft('bienTitre', event.target.value)} /></label>
+              <label><span>Type de bien</span><input value={draft.bienType} onChange={(event) => updateDraft('bienType', event.target.value)} /></label>
+              <label><span>Pieces</span><input value={draft.nombrePieces} onChange={(event) => updateDraft('nombrePieces', event.target.value)} /></label>
+              <label><span>Surface habitable</span><input value={draft.surfaceHabitable} onChange={(event) => updateDraft('surfaceHabitable', event.target.value)} /></label>
+              <label><span>Surface terrain</span><input value={draft.surfaceTerrain} onChange={(event) => updateDraft('surfaceTerrain', event.target.value)} /></label>
+              <label className="is-wide"><span>Adresse complete</span><input value={draft.bienAdresse} onChange={(event) => updateDraft('bienAdresse', event.target.value)} /></label>
+              <label><span>Prix de vente</span><input value={draft.prixVente} onChange={(event) => updateDraft('prixVente', event.target.value)} /></label>
+              <label><span>Net vendeur</span><input value={draft.prixNetVendeur} onChange={(event) => updateDraft('prixNetVendeur', event.target.value)} /></label>
+              <label><span>Honoraires TTC</span><input value={draft.honorairesTtc} onChange={(event) => updateDraft('honorairesTtc', event.target.value)} /></label>
+              <label><span>Charge honoraires</span><select value={draft.honorairesCharge} onChange={(event) => updateDraft('honorairesCharge', event.target.value as MandatDocumentDraft['honorairesCharge'])}><option value="">A choisir</option><option value="acquereur">Acquereur</option><option value="mandant">Mandant</option></select></label>
+              <label className="is-wide"><span>Clause particuliere</span><textarea value={draft.clauseParticuliere} onChange={(event) => updateDraft('clauseParticuliere', event.target.value)} rows={3} /></label>
+            </div>
+            <div className="mandat-document-options">
+              <label><input type="checkbox" checked={draft.inclureCouverture} onChange={(event) => updateDraft('inclureCouverture', event.target.checked)} /><span>Couverture incluse</span></label>
+              <label><span>Execution anticipee</span><select value={draft.executionAnticipee} onChange={(event) => updateDraft('executionAnticipee', event.target.value as MandatDocumentDraft['executionAnticipee'])}><option value="">Non renseigne</option><option value="oui">Demandee</option><option value="non">Refusee</option></select></label>
+            </div>
+            {missingFields.length ? <p className="mandat-document-warning">A completer : {missingFields.join(', ')}.</p> : null}
+            {message ? <p className="mandat-document-message">{message}</p> : null}
+            <div className="mandat-document-actions">
+              <a className={`ghost-button button-primary ${previewUrl ? '' : 'is-disabled'}`} href={previewUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!previewUrl}>
+                <span aria-hidden="true"><DetailIcon type="content" /></span>
+                Apercu imprimable
+              </a>
+              <button className="ghost-button" type="button" onClick={() => void copyPayload()}>
+                Copier JSON
+              </button>
+              <button className="ghost-button" type="button" disabled>
+                Generer PDF
+              </button>
+            </div>
+          </div>
+          <aside className="mandat-document-preview" aria-label="Apercu mandat">
+            <div className="mandat-preview-head">
+              <span>GROUPE GTI</span>
+              <strong>MANDAT DE VENTE</strong>
+              <small>N {draft.numeroMandat || 'a completer'}</small>
+            </div>
+            {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du mandat" /> : null}
+          </aside>
+        </div>
+      ) : null}
+    </div>
+  )
+}
 type UpdateDiffusionRequestAction = {
   requestId: string
   requestType?: BusinessRequestType
@@ -1421,6 +1938,85 @@ function matterportModelLabel(label: string | null | undefined, name: string | n
   const cleanLabel = (label ?? '').trim()
   if (cleanLabel) return cleanLabel
   return single ? 'Visite virtuelle' : (name ?? 'Visite virtuelle')
+}
+
+type MatterportConsoleAction = 'online' | 'offline' | 'archive' | 'reactivate'
+
+function matterportActionLabel(action: MatterportConsoleAction) {
+  if (action === 'online') return 'Mettre en ligne'
+  if (action === 'offline') return 'Hors ligne'
+  if (action === 'archive') return 'Archiver'
+  return 'Reactiver'
+}
+
+function matterportJobActionLabel(jobType: ConsoleJob['job_type']) {
+  if (jobType === 'matterport_online') return 'Mise en ligne Matterport'
+  if (jobType === 'matterport_offline') return 'Passage hors ligne Matterport'
+  if (jobType === 'matterport_archive') return 'Archivage Matterport'
+  if (jobType === 'matterport_reactivate') return 'Reactivation Matterport'
+  return null
+}
+
+function MatterportModelActions(props: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  model: MatterportModelLink
+  onJobCreated?: (job: ConsoleJob) => void
+  compact?: boolean
+}) {
+  const [pendingAction, setPendingAction] = useState<MatterportConsoleAction | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const state = (props.model.state ?? '').trim().toLowerCase()
+  const visibility = (props.model.visibility ?? '').trim().toLowerCase()
+  const isArchived = state === 'inactive' || state === 'archived'
+  const isOnline = visibility === 'unlisted' || visibility === 'public'
+  const canCreateJob = Boolean(props.onJobCreated)
+
+  async function submitMatterportAction(action: MatterportConsoleAction) {
+    setPendingAction(action)
+    setMessage(null)
+    setError(null)
+    try {
+      const job = await createMatterportActionJob({
+        dossier: props.dossier,
+        model: props.model,
+        action,
+      })
+      props.onJobCreated?.(job)
+      setMessage(`${matterportActionLabel(action)} demande`)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Action Matterport impossible')
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const actionButtons: Array<{ action: MatterportConsoleAction; show: boolean; tone?: string; disabled?: boolean; title?: string }> = [
+    { action: 'reactivate', show: isArchived, title: 'Desarchive le modele Matterport. Ensuite, lance Mettre en ligne si besoin.' },
+    { action: 'online', show: !isOnline, disabled: isArchived, title: isArchived ? 'Il faut reactiver le modele avant de le mettre en ligne.' : 'Passe la visite en Non repertorie.' },
+    { action: 'offline', show: isOnline, title: 'Repasse la visite en prive.' },
+    { action: 'archive', show: !isArchived, tone: 'danger', title: 'Archive le modele Matterport.' },
+  ]
+
+  return (
+    <div className={props.compact ? 'matterport-model-actions is-compact' : 'matterport-model-actions'}>
+      {props.model.matterport_url ? <a className="ghost-button matterport-open-link" href={props.model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a> : null}
+      {actionButtons.filter((button) => button.show).map((button) => (
+        <button
+          key={button.action}
+          className={`ghost-button${button.tone === 'danger' ? ' is-danger' : ''}`}
+          type="button"
+          disabled={!canCreateJob || Boolean(pendingAction) || button.disabled}
+          title={!canCreateJob ? 'Console indisponible pour cette session.' : button.title}
+          onClick={() => submitMatterportAction(button.action)}
+        >
+          {pendingAction === button.action ? 'Demande...' : matterportActionLabel(button.action)}
+        </button>
+      ))}
+      {message ? <span className="matterport-action-message">{message}</span> : null}
+      {error ? <span className="matterport-action-error">{error}</span> : null}
+    </div>
+  )
 }
 
 function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diffusable' | 'nb_portails_actifs' | 'has_diffusion_error' | 'statut_annonce' | 'mandat_date_fin'>) {
@@ -2246,6 +2842,12 @@ function consoleJobShortId(job: Pick<ConsoleJob, 'id'>) {
 function hektorActionJobTitle(job: ConsoleJob) {
   const payload = job.payload_json ?? {}
   const result = job.result_json ?? {}
+  const matterportLabel = matterportJobActionLabel(job.job_type)
+  if (matterportLabel) {
+    const modelName = typeof payload.matterport_name === 'string' && payload.matterport_name.trim() ? payload.matterport_name.trim() : null
+    const modelId = typeof payload.matterport_model_id === 'string' && payload.matterport_model_id.trim() ? payload.matterport_model_id.trim() : null
+    return [matterportLabel, modelName ?? modelId].filter(Boolean).join(' - ')
+  }
   const documentName = typeof payload.document_name === 'string' && payload.document_name.trim()
     ? payload.document_name.trim()
     : typeof payload.original_filename === 'string' && payload.original_filename.trim()
@@ -2276,12 +2878,15 @@ function hektorActionJobTitle(job: ConsoleJob) {
     const contact = typeof payload.last_name === 'string' && payload.last_name.trim() ? payload.last_name.trim() : null
     return contact ? `Mandant ${contact}` : 'Mandant Hektor'
   }
+  if (job.job_type === 'sync_hektor_photos') return `Photos ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   const folder = typeof result.folder_number === 'string' ? result.folder_number : null
   const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : null
   return folder ? `Creation ${folder}` : title ? `Creation ${title}` : 'Creation annonce Hektor'
 }
 
 function hektorActionJobLabel(job: ConsoleJob) {
+  const matterportLabel = matterportJobActionLabel(job.job_type)
+  if (matterportLabel) return matterportLabel
   if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
@@ -2289,15 +2894,17 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
+  if (job.job_type === 'sync_hektor_photos') return 'Photos en cours'
   return 'Creation en cours'
 }
 
 function hektorActionJobTone(job: ConsoleJob) {
+  if (job.job_type.startsWith('matterport_')) return job.job_type === 'matterport_archive' ? 'delete' : 'update'
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
-  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud') return 'document'
+  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'sync_hektor_photos') return 'document'
   return 'create'
 }
 
@@ -2308,6 +2915,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   const negotiator = typeof payload.hektor_user_label === 'string' ? payload.hektor_user_label : null
   const folder = typeof result.folder_number === 'string' ? result.folder_number : null
   if (job.status === 'error') return job.error_message || 'Action Hektor en erreur'
+  if (job.job_type.startsWith('matterport_')) return 'Commande envoyee au worker Matterport local'
   if (job.job_type === 'upload_document_to_hektor') return 'Document envoye au PC serveur'
   if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
@@ -2315,6 +2923,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Modification puis resynchronisation'
+  if (job.job_type === 'sync_hektor_photos') return 'Index photos Console'
   if (folder) return `${folder} synchronise dans l'app`
   return [negotiator, agency].filter(Boolean).join(' - ') || `Job ${consoleJobShortId(job)}`
 }
@@ -2370,6 +2979,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
     if (job.job_type === 'prepare_document_cloud') return 'Document pret'
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
+    if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
     return 'Action terminee'
   }
@@ -2379,6 +2989,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
+    if (job.job_type === 'sync_hektor_photos') return 'Synchronisation photos'
     return "Mise a jour de l'app"
   }
   if (progress === 'creating') return job && job.job_type !== 'create_hektor_draft_annonce' ? 'Commande Hektor' : 'Creation Hektor'
@@ -2394,6 +3005,7 @@ function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
   if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute dans Hektor. Synchronisation app en cours...'
   if (job.job_type === 'delete_document_from_hektor') return 'Document supprime dans Hektor. Mise a jour app en cours...'
+  if (job.job_type === 'sync_hektor_photos') return 'Photos Hektor lues. Mise a jour de la galerie app en cours...'
   return 'Commande Hektor terminee. Mise a jour de l app en cours...'
 }
 
@@ -3224,6 +3836,117 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated }: { dos
         ) : null}
       </div>
     </details>
+  )
+}
+
+function ConsolePhotosPanel({
+  dossier,
+  apiImages,
+  compact = false,
+  onOpenImage,
+  onJobCreated,
+}: {
+  dossier: Dossier
+  apiImages: Array<{ url: string; legend: string }>
+  compact?: boolean
+  onOpenImage?: (url: string) => void
+  onJobCreated?: (job: ConsoleJob) => void
+}) {
+  const [photos, setPhotos] = useState<ConsolePhoto[]>([])
+  const [loading, setLoading] = useState(false)
+  const [syncPending, setSyncPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const refreshPhotos = async (silent = false) => {
+    if (!silent) setLoading(true)
+    try {
+      const rows = await loadConsolePhotos(dossier.app_dossier_id)
+      setPhotos(rows)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de chargement des photos Console')
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    setPhotos([])
+    setError(null)
+    void refreshPhotos()
+  }, [dossier.app_dossier_id])
+
+  async function handleSyncPhotos() {
+    setSyncPending(true)
+    setError(null)
+    try {
+      const job = await createSyncHektorPhotosJob({ dossier, priority: 28 })
+      onJobCreated?.(job)
+      window.setTimeout(() => void refreshPhotos(true), 8000)
+      window.setTimeout(() => void refreshPhotos(true), 18000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de lancer la synchro photos Hektor')
+    } finally {
+      setSyncPending(false)
+    }
+  }
+
+  const visiblePhotos = photos.filter((photo) => photo.visible)
+  const hiddenPhotos = photos.filter((photo) => !photo.visible)
+  const sourcePhotos = photos.length ? photos : apiImages.map((image, index) => ({
+    id: `api-photo-${index}-${image.url}`,
+    app_dossier_id: dossier.app_dossier_id,
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    hektor_photo_id: `api-${index}`,
+    filename: null,
+    url_preview: image.url,
+    url_hd: image.url,
+    visible: true,
+    legend: image.legend,
+    sort_order: index + 1,
+    source: 'api_preview',
+    source_json: null,
+    synced_at: null,
+    created_at: null,
+    updated_at: null,
+  } satisfies ConsolePhoto))
+  const galleryPhotos = sourcePhotos.slice(0, compact ? 6 : 12)
+
+  return (
+    <div className={`console-photos-panel ${compact ? 'is-compact' : ''}`}>
+      <div className="console-photos-head">
+        <div>
+          <strong>Photos Hektor</strong>
+          <small>{photos.length ? 'Index Console actif : visibles, masquees et legendes.' : 'Affichage actuel depuis les URLs API. Lance la synchro pour lire aussi la Console.'}</small>
+        </div>
+        <div className="console-photos-actions">
+          {photos.length ? <StatusPill value={`${visiblePhotos.length} visibles`} /> : <StatusPill value={`${apiImages.length} API`} />}
+          {hiddenPhotos.length ? <StatusPill value={`${hiddenPhotos.length} masquees`} /> : null}
+          <button className="ghost-button console-photos-sync" type="button" onClick={() => void handleSyncPhotos()} disabled={syncPending}>
+            <span aria-hidden="true"><DetailIcon type="photo" /></span>
+            {syncPending ? 'Demande...' : photos.length ? 'Resynchroniser' : 'Synchroniser'}
+          </button>
+        </div>
+      </div>
+      {error ? <p className="console-documents-error">{error}</p> : null}
+      {loading ? <p className="empty-state">Chargement des photos Console...</p> : null}
+      {!loading && galleryPhotos.length === 0 ? <p className="empty-state">Aucune photo synchronisee.</p> : null}
+      {galleryPhotos.length > 0 ? (
+        <div className="console-photos-grid">
+          {galleryPhotos.map((photo) => {
+            const url = photo.url_preview || photo.url_hd
+            if (!url) return null
+            return (
+              <button key={photo.id} className={`console-photo-tile ${photo.visible ? 'is-visible' : 'is-hidden'}`} type="button" onClick={() => onOpenImage?.(photo.url_hd || url)}>
+                <img src={url} alt={photo.legend || dossier.titre_bien} />
+                <span className="console-photo-badge">{photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquee'}</span>
+                {photo.legend ? <small>{photo.legend}</small> : null}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -9544,6 +10267,9 @@ function DossierDetailLayout(props: {
                   {mandatSectionOpen ? (
                     <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} />
                   ) : null}
+                  {mandatSectionOpen ? (
+                    <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />
+                  ) : null}
                   {mandatSectionOpen ? (props.mandats.length > 0 ? (
                     <div className="detail-entity-list detail-mandat-list">
                       {props.mandats.map((item) => (
@@ -9752,15 +10478,7 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'content' ? (
               <section className="detail-section detail-photo-section">
                 <div className="section-header"><DetailSectionTitle icon="photo" title="Photos" /><span>{props.images.length} photo{props.images.length > 1 ? 's' : ''}</span></div>
-                {props.images.length > 0 ? (
-                  <div className="detail-media-grid">
-                    {props.images.slice(0, 6).map((item) => (
-                      <button key={`content-photo-${item.url}`} className="detail-media-tile" type="button" onClick={() => props.onOpenImage?.(item.url)}>
-                        <img src={item.url} alt={item.legend || dossier.titre_bien} />
-                      </button>
-                    ))}
-                  </div>
-                ) : <p className="empty-state">Aucune photo synchronisee.</p>}
+                <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} />
               </section>
               ) : null}
 
@@ -9800,13 +10518,9 @@ function DossierDetailLayout(props: {
                                   <span>{model.matterport_name || model.matterport_model_id}</span>
                                 </div>
                                 <div className="matterport-model-actions">
-                                  <a className="ghost-button matterport-open-link" href={model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a>
-                                  <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
-                                    {matterportStateLabel(model.state)}
-                                  </button>
-                                  <button className="ghost-button" type="button" disabled title="Action bloquee cote Matterport tant que l'acces API model.locked n'est pas leve.">
-                                    {matterportVisibilityLabel(model.visibility)}
-                                  </button>
+                                  <StatusPill value={matterportStateLabel(model.state)} />
+                                  <StatusPill value={matterportVisibilityLabel(model.visibility)} />
+                                  <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} />
                                 </div>
                               </div>
                             ))}
@@ -10684,6 +11398,7 @@ function MobileDossierDetail(props: {
         <summary>Mandat et contacts</summary>
         <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} />
         <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
+        <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} compact />
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
             <strong>{mandat.title}</strong>
@@ -10721,15 +11436,7 @@ function MobileDossierDetail(props: {
         <div className="mobile-console-documents">
           <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
         </div>
-        {props.images.length > 0 ? (
-          <div className="mobile-detail-gallery">
-            {props.images.map((image) => (
-              <button key={image.url} type="button" onClick={() => props.onOpenImage?.(image.url)}>
-                <img src={image.url} alt={image.legend || dossier.titre_bien} loading="lazy" />
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <ConsolePhotosPanel dossier={dossier} apiImages={props.images} compact onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} />
         {props.texts.map((text) => (
           <div key={text.id} className="mobile-detail-text">
             <strong>{text.title}</strong>
@@ -10745,8 +11452,8 @@ function MobileDossierDetail(props: {
                 <b>{matterportModelLabel(model.label, model.matterport_name, false)}</b>
                 <small>
                   {matterportStateLabel(model.state)} - {matterportVisibilityLabel(model.visibility)}
-                  {model.matterport_url ? <a href={model.matterport_url} target="_blank" rel="noreferrer">Ouvrir</a> : null}
                 </small>
+                <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} compact />
               </div>
             ))}
           </div>
