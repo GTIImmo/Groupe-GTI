@@ -1494,11 +1494,11 @@ function MandatDocumentEditor(props: {
       <div className="mandat-document-editor-head">
         <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
         <div>
-          <strong>Document mandat depuis annonce</strong>
-          <small>{missingFields.length ? `${missingFields.length} champ${missingFields.length > 1 ? 's' : ''} a completer avant generation` : 'Pret pour une generation de test'}</small>
+          <strong>Mandat de vente</strong>
+          <small>{missingFields.length ? `${missingFields.length} element${missingFields.length > 1 ? 's' : ''} a completer avant signature` : 'Document pret a verifier avant signature'}</small>
         </div>
         <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((value) => !value)}>
-          {open ? 'Fermer la page' : 'Ouvrir la page'}
+          {open ? 'Retour fiche' : 'Preparer le mandat'}
         </button>
       </div>
       {open ? (
