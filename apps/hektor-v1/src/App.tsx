@@ -97,36 +97,196 @@ function numericDraft(value: unknown): string {
   return String(value ?? '').replace(/[^\d,.-]/g, '').trim()
 }
 
+type HektorAdvancedFieldKey =
+  | 'title'
+  | 'description'
+  | 'price'
+  | 'surface'
+  | 'roomCount'
+  | 'bedroomCount'
+  | 'bathroomCount'
+  | 'showerRoomCount'
+  | 'wcCount'
+  | 'kitchen'
+  | 'exposure'
+  | 'view'
+  | 'interiorState'
+  | 'exteriorState'
+  | 'landSurface'
+  | 'gardenSurface'
+  | 'terraceCount'
+  | 'garageCount'
+  | 'parkingInsideCount'
+  | 'parkingOutsideCount'
+  | 'pool'
+  | 'dpeValue'
+  | 'gesValue'
+  | 'constructionYear'
+  | 'diagnosticNote'
+  | 'coproLots'
+  | 'coproCharges'
+  | 'coproQuotePart'
+  | 'coproWorksFund'
+  | 'mandateNumber'
+  | 'mandateType'
+  | 'mandateStartDate'
+  | 'mandateEndDate'
+  | 'netSellerPrice'
+  | 'fees'
+
+type HektorAdvancedField = {
+  key: HektorAdvancedFieldKey
+  label: string
+  placeholder?: string
+  inputMode?: 'decimal' | 'numeric'
+  multiline?: boolean
+}
+
+const hektorAdvancedSections: Array<{ title: string; tone: string; fields: HektorAdvancedField[] }> = [
+  {
+    title: 'Informations principales',
+    tone: 'main',
+    fields: [
+      { key: 'title', label: 'Titre', placeholder: 'Titre visible' },
+      { key: 'price', label: 'Prix public', placeholder: 'Prix', inputMode: 'decimal' },
+      { key: 'surface', label: 'Surface', placeholder: 'm2', inputMode: 'decimal' },
+      { key: 'roomCount', label: 'Pieces', placeholder: 'Pieces', inputMode: 'numeric' },
+      { key: 'bedroomCount', label: 'Chambres', placeholder: 'Chambres', inputMode: 'numeric' },
+      { key: 'description', label: 'Description principale', placeholder: 'Laisser vide pour ne pas changer le texte principal', multiline: true },
+    ],
+  },
+  {
+    title: 'Caracteristiques',
+    tone: 'features',
+    fields: [
+      { key: 'bathroomCount', label: 'SDB', inputMode: 'numeric' },
+      { key: 'showerRoomCount', label: "Salle d'eau", inputMode: 'numeric' },
+      { key: 'wcCount', label: 'WC', inputMode: 'numeric' },
+      { key: 'kitchen', label: 'Cuisine' },
+      { key: 'exposure', label: 'Exposition' },
+      { key: 'view', label: 'Vue' },
+      { key: 'interiorState', label: 'Etat interieur' },
+      { key: 'exteriorState', label: 'Etat exterieur' },
+    ],
+  },
+  {
+    title: 'Exterieurs',
+    tone: 'outside',
+    fields: [
+      { key: 'landSurface', label: 'Terrain', placeholder: 'm2', inputMode: 'decimal' },
+      { key: 'gardenSurface', label: 'Jardin', placeholder: 'm2', inputMode: 'decimal' },
+      { key: 'terraceCount', label: 'Terrasse', inputMode: 'numeric' },
+      { key: 'garageCount', label: 'Garage', inputMode: 'numeric' },
+      { key: 'parkingInsideCount', label: 'Parking int.', inputMode: 'numeric' },
+      { key: 'parkingOutsideCount', label: 'Parking ext.', inputMode: 'numeric' },
+      { key: 'pool', label: 'Piscine', inputMode: 'numeric' },
+    ],
+  },
+  {
+    title: 'Diagnostics',
+    tone: 'diagnostics',
+    fields: [
+      { key: 'dpeValue', label: 'DPE' },
+      { key: 'gesValue', label: 'GES' },
+      { key: 'constructionYear', label: 'Annee construction', inputMode: 'numeric' },
+      { key: 'diagnosticNote', label: 'Diagnostic principal' },
+    ],
+  },
+  {
+    title: 'Copropriete',
+    tone: 'copro',
+    fields: [
+      { key: 'coproLots', label: 'Lots', inputMode: 'numeric' },
+      { key: 'coproCharges', label: 'Charges', inputMode: 'decimal' },
+      { key: 'coproQuotePart', label: 'Quote-part', inputMode: 'decimal' },
+      { key: 'coproWorksFund', label: 'Fonds travaux', inputMode: 'decimal' },
+    ],
+  },
+  {
+    title: 'Mandat',
+    tone: 'mandate',
+    fields: [
+      { key: 'mandateNumber', label: 'N° mandat' },
+      { key: 'mandateType', label: 'Type mandat' },
+      { key: 'mandateStartDate', label: 'Date debut' },
+      { key: 'mandateEndDate', label: 'Date fin' },
+      { key: 'netSellerPrice', label: 'Prix net vendeur', inputMode: 'decimal' },
+      { key: 'fees', label: 'Honoraires', inputMode: 'decimal' },
+    ],
+  },
+]
+
+function rawDetailProp(detail: DossierDetailPayload, group: string, key: string) {
+  const raw = parseJson<Record<string, unknown>>(detail.detail_raw_json, {})
+  const groupValue = raw[group] as { props?: Record<string, { value?: unknown }> } | undefined
+  const value = groupValue?.props?.[key]?.value
+  return value == null ? '' : String(value)
+}
+
+function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_mandat'>, detail: DossierDetailPayload) {
+  return {
+    title: dossier.titre_bien ?? '',
+    description: '',
+    price: numericDraft(dossier.prix),
+    surface: numericDraft(detail.surface_habitable_detail ?? detail.surface),
+    roomCount: numericDraft(detail.nb_pieces),
+    bedroomCount: numericDraft(detail.nb_chambres),
+    bathroomCount: rawDetailProp(detail, 'ag_interieur', 'SDB'),
+    showerRoomCount: rawDetailProp(detail, 'ag_interieur', 'SE'),
+    wcCount: rawDetailProp(detail, 'ag_interieur', 'WC'),
+    kitchen: rawDetailProp(detail, 'ag_interieur', 'CUISINE'),
+    exposure: rawDetailProp(detail, 'ag_interieur', 'EXPOSITION'),
+    view: rawDetailProp(detail, 'ag_interieur', 'vuee'),
+    interiorState: rawDetailProp(detail, 'ag_interieur', 'ETAT_INTERIEUR'),
+    exteriorState: rawDetailProp(detail, 'ag_exterieur', 'ETAT_EXTERIEUR'),
+    landSurface: numericDraft(detail.surface_terrain_detail || rawDetailProp(detail, 'terrain', 'surfterrain')),
+    gardenSurface: rawDetailProp(detail, 'ag_exterieur', 'SURFACE_JARDIN'),
+    terraceCount: rawDetailProp(detail, 'ag_exterieur', 'TERRASSE'),
+    garageCount: rawDetailProp(detail, 'ag_exterieur', 'GARAGE_BOX'),
+    parkingInsideCount: rawDetailProp(detail, 'ag_exterieur', 'NB_PARK_INT'),
+    parkingOutsideCount: rawDetailProp(detail, 'ag_exterieur', 'NB_PARK_EXT'),
+    pool: rawDetailProp(detail, 'ag_exterieur', 'PISCINE'),
+    dpeValue: rawDetailProp(detail, 'diagnostiques', 'DPE'),
+    gesValue: rawDetailProp(detail, 'diagnostiques', 'GES'),
+    constructionYear: rawDetailProp(detail, 'diagnostiques', 'ANNEE_CONSTRUCTION'),
+    diagnosticNote: rawDetailProp(detail, 'diagnostiques', 'diag_risques_nat_tech_date'),
+    coproLots: rawDetailProp(detail, 'copropriete', 'copropriete_nb_lot'),
+    coproCharges: rawDetailProp(detail, 'mandat_infofi', 'CHARGES'),
+    coproQuotePart: rawDetailProp(detail, 'copropriete', 'copropriete_quote_part'),
+    coproWorksFund: rawDetailProp(detail, 'copropriete', 'montant_fonds_travaux'),
+    mandateNumber: dossier.numero_mandat == null ? '' : String(dossier.numero_mandat),
+    mandateType: '',
+    mandateStartDate: '',
+    mandateEndDate: '',
+    netSellerPrice: rawDetailProp(detail, 'mandat_infofi', 'PRIXNETVENDEUR'),
+    fees: '',
+  } satisfies Record<HektorAdvancedFieldKey, string>
+}
+
 function HektorAnnonceUpdateForm(props: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix'>
-  detail: Pick<DossierDetailPayload, 'surface_habitable_detail' | 'surface' | 'nb_pieces' | 'nb_chambres'>
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat'>
+  detail: DossierDetailPayload
   compact?: boolean
   fieldPanel?: boolean
   onCancel?: () => void
   onJobCreated?: (job: ConsoleJob) => void
 }) {
   const { dossier, detail } = props
-  const [title, setTitle] = useState(dossier.titre_bien ?? '')
-  const [description, setDescription] = useState('')
-  const [price, setPrice] = useState(numericDraft(dossier.prix))
-  const [surface, setSurface] = useState(numericDraft(detail.surface_habitable_detail ?? detail.surface))
-  const [roomCount, setRoomCount] = useState(numericDraft(detail.nb_pieces))
-  const [bedroomCount, setBedroomCount] = useState(numericDraft(detail.nb_chambres))
+  const [values, setValues] = useState<Record<HektorAdvancedFieldKey, string>>(() => buildHektorAdvancedDraft(dossier, detail))
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setTitle(dossier.titre_bien ?? '')
-    setDescription('')
-    setPrice(numericDraft(dossier.prix))
-    setSurface(numericDraft(detail.surface_habitable_detail ?? detail.surface))
-    setRoomCount(numericDraft(detail.nb_pieces))
-    setBedroomCount(numericDraft(detail.nb_chambres))
+    setValues(buildHektorAdvancedDraft(dossier, detail))
     setMessage(null)
     setError(null)
     setPending(false)
-  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
+  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_mandat, detail.detail_raw_json, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
+
+  const updateField = (key: HektorAdvancedFieldKey, value: string) => {
+    setValues((current) => ({ ...current, [key]: value }))
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -137,12 +297,7 @@ function HektorAnnonceUpdateForm(props: {
       const job = await createUpdateHektorAnnonceFieldsJob({
         dossier,
         fields: {
-          title,
-          description,
-          price,
-          surface,
-          roomCount,
-          bedroomCount,
+          ...values,
         },
         priority: 14,
       })
@@ -161,36 +316,35 @@ function HektorAnnonceUpdateForm(props: {
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">M</span>
         <div>
-          <strong>Modifier les champs Hektor</strong>
-          <small>Prix, surface, pieces, chambres et texte principal.</small>
+          <strong>Modifier dans Hektor</strong>
+          <small>Champs principaux, caracteristiques, exterieurs, diagnostics, copropriete et mandat.</small>
         </div>
       </div>
-      <div className="hektor-inline-grid">
-        <label>
-          <span>Titre</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Titre visible" />
-        </label>
-        <label>
-          <span>Prix public</span>
-          <input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" placeholder="Prix" />
-        </label>
-        <label>
-          <span>Surface</span>
-          <input value={surface} onChange={(event) => setSurface(event.target.value)} inputMode="decimal" placeholder="m2" />
-        </label>
-        <label>
-          <span>Pieces</span>
-          <input value={roomCount} onChange={(event) => setRoomCount(event.target.value)} inputMode="numeric" placeholder="Pieces" />
-        </label>
-        <label>
-          <span>Chambres</span>
-          <input value={bedroomCount} onChange={(event) => setBedroomCount(event.target.value)} inputMode="numeric" placeholder="Chambres" />
-        </label>
+      <div className="hektor-advanced-sections">
+        {hektorAdvancedSections.map((section) => (
+          <section key={section.title} className={`hektor-advanced-section hektor-advanced-section-${section.tone}`}>
+            <div className="hektor-advanced-section-head">
+              <strong>{section.title}</strong>
+              <span>{section.fields.length}</span>
+            </div>
+            <div className="hektor-advanced-grid">
+              {section.fields.map((field) => (
+                field.multiline ? (
+                  <label key={field.key} className="hektor-inline-textarea hektor-advanced-textarea">
+                    <span>{field.label}</span>
+                    <textarea value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)} placeholder={field.placeholder} />
+                  </label>
+                ) : (
+                  <label key={field.key}>
+                    <span>{field.label}</span>
+                    <input value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)} inputMode={field.inputMode} placeholder={field.placeholder ?? field.label} />
+                  </label>
+                )
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
-      <label className="hektor-inline-textarea">
-        <span>Description principale</span>
-        <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Laisser vide pour ne pas changer le texte principal" />
-      </label>
       <div className="hektor-inline-actions">
         <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer vers Hektor'}</button>
         {props.onCancel ? <button className="button-subtle" type="button" onClick={props.onCancel} disabled={pending}>Fermer</button> : null}

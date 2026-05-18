@@ -2040,9 +2040,30 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     },
   });
   const values = extractHektorFormValues(html.text, groupName);
-  for (const [key, value] of Object.entries(overrides)) {
-    if (value == null) continue;
-    values.set(key, String(value));
+  const applied = [];
+  const skipped = [];
+  for (const [key, rawSpec] of Object.entries(overrides)) {
+    const spec = rawSpec && typeof rawSpec === "object" && Object.prototype.hasOwnProperty.call(rawSpec, "value")
+      ? rawSpec
+      : { value: rawSpec, candidates: [key] };
+    if (spec.value == null) continue;
+    const candidates = Array.isArray(spec.candidates) && spec.candidates.length ? spec.candidates : [key];
+    const targetKey = candidates.find((candidate) => values.has(candidate));
+    if (!targetKey) {
+      skipped.push({ field: key, candidates });
+      continue;
+    }
+    values.set(targetKey, String(spec.value));
+    applied.push({ field: key, target: targetKey });
+  }
+  if (!applied.length) {
+    await logJob(job.id, "hektor_annonce_update", "running", `Aucun champ reconnu dans groupe ${groupName}`, {
+      hektor_annonce_id: String(annonceId),
+      group: groupName,
+      requested_fields: Object.keys(overrides),
+      skipped,
+    });
+    return null;
   }
   values.set("mode", "update_annonce_MEF");
   values.set("idann", String(annonceId));
@@ -2051,7 +2072,9 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
   await logJob(job.id, "hektor_annonce_update", "running", `Sauvegarde groupe ${groupName}`, {
     hektor_annonce_id: String(annonceId),
     group: groupName,
-    fields: Object.keys(overrides),
+    fields: applied.map((item) => item.field),
+    targets: applied,
+    skipped,
   });
 
   const response = await hektorFetch(XMLRPC_URL, {
@@ -2073,7 +2096,9 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
   }
   return {
     group: groupName,
-    fields: Object.keys(overrides),
+    fields: applied.map((item) => item.field),
+    targets: applied,
+    skipped,
     response: parsed || response.text.slice(0, 300),
   };
 }
@@ -2124,8 +2149,46 @@ async function postHektorPrincipalTextUpdate(job, annonceId, fields) {
 function normalizeHektorAnnonceUpdatePayload(payload) {
   const fields = payload && payload.fields_json && typeof payload.fields_json === "object" ? payload.fields_json : payload.fields || payload;
   const clean = {};
-  const textKeys = ["title", "description"];
-  const numberKeys = ["price", "net_seller_price", "surface", "carrez_surface", "room_count", "bedroom_count"];
+  const textKeys = [
+    "title",
+    "description",
+    "kitchen",
+    "exposure",
+    "view",
+    "interior_state",
+    "exterior_state",
+    "dpe_value",
+    "ges_value",
+    "diagnostic_note",
+    "mandate_number",
+    "mandate_type",
+    "mandate_start_date",
+    "mandate_end_date",
+  ];
+  const numberKeys = [
+    "price",
+    "net_seller_price",
+    "surface",
+    "carrez_surface",
+    "room_count",
+    "bedroom_count",
+    "bathroom_count",
+    "shower_room_count",
+    "wc_count",
+    "land_surface",
+    "garden_surface",
+    "terrace_count",
+    "garage_count",
+    "parking_inside_count",
+    "parking_outside_count",
+    "pool",
+    "construction_year",
+    "copro_lots",
+    "copro_charges",
+    "copro_quote_part",
+    "copro_works_fund",
+    "fees",
+  ];
   for (const key of textKeys) {
     if (fields[key] == null) continue;
     const value = String(fields[key]).trim();
@@ -2140,6 +2203,16 @@ function normalizeHektorAnnonceUpdatePayload(payload) {
   return clean;
 }
 
+function fieldSpec(value, candidates) {
+  return { value, candidates };
+}
+
+async function pushHektorGroupUpdate(results, job, annonceId, groupName, readMode, fields) {
+  if (!Object.keys(fields).length) return;
+  const result = await postHektorMefUpdate(job, annonceId, groupName, readMode, fields);
+  if (result) results.push(result);
+}
+
 async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   const cleanFields = normalizeHektorAnnonceUpdatePayload(fields);
   const results = [];
@@ -2151,20 +2224,52 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   if (textResult) results.push(textResult);
 
   const agInterieur = {};
-  if (cleanFields.room_count != null) agInterieur.nbpieces = cleanFields.room_count;
-  if (cleanFields.bedroom_count != null) agInterieur.NB_CHAMBRES = cleanFields.bedroom_count;
-  if (cleanFields.surface != null) agInterieur.surfappart = cleanFields.surface;
-  if (cleanFields.carrez_surface != null) agInterieur.SURF_CARREZ = cleanFields.carrez_surface;
-  if (Object.keys(agInterieur).length) {
-    results.push(await postHektorMefUpdate(job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur));
-  }
+  if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
+  if (cleanFields.bedroom_count != null) agInterieur.bedroom_count = fieldSpec(cleanFields.bedroom_count, ["NB_CHAMBRES"]);
+  if (cleanFields.surface != null) agInterieur.surface = fieldSpec(cleanFields.surface, ["surfappart"]);
+  if (cleanFields.carrez_surface != null) agInterieur.carrez_surface = fieldSpec(cleanFields.carrez_surface, ["SURF_CARREZ"]);
+  if (cleanFields.bathroom_count != null) agInterieur.bathroom_count = fieldSpec(cleanFields.bathroom_count, ["SDB", "NB_SDB", "nb_sdb", "sdb"]);
+  if (cleanFields.shower_room_count != null) agInterieur.shower_room_count = fieldSpec(cleanFields.shower_room_count, ["SE", "SDE", "NB_SE", "NB_SALLE_EAU", "salle_eau"]);
+  if (cleanFields.wc_count != null) agInterieur.wc_count = fieldSpec(cleanFields.wc_count, ["WC", "NB_WC", "wc"]);
+  if (cleanFields.kitchen != null) agInterieur.kitchen = fieldSpec(cleanFields.kitchen, ["CUISINE", "cuisine"]);
+  if (cleanFields.exposure != null) agInterieur.exposure = fieldSpec(cleanFields.exposure, ["EXPOSITION", "exposition"]);
+  if (cleanFields.view != null) agInterieur.view = fieldSpec(cleanFields.view, ["vuee", "VUE", "vue"]);
+  if (cleanFields.interior_state != null) agInterieur.interior_state = fieldSpec(cleanFields.interior_state, ["ETAT_INTERIEUR", "ETATINT", "etat_interieur"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur);
+
+  const agExterieur = {};
+  if (cleanFields.exterior_state != null) agExterieur.exterior_state = fieldSpec(cleanFields.exterior_state, ["ETAT_EXTERIEUR", "ETAT_EXT", "etat_exterieur"]);
+  if (cleanFields.garden_surface != null) agExterieur.garden_surface = fieldSpec(cleanFields.garden_surface, ["SURFACE_JARDIN"]);
+  if (cleanFields.terrace_count != null) agExterieur.terrace_count = fieldSpec(cleanFields.terrace_count, ["TERRASSE"]);
+  if (cleanFields.garage_count != null) agExterieur.garage_count = fieldSpec(cleanFields.garage_count, ["GARAGE_BOX"]);
+  if (cleanFields.parking_inside_count != null) agExterieur.parking_inside_count = fieldSpec(cleanFields.parking_inside_count, ["NB_PARK_INT"]);
+  if (cleanFields.parking_outside_count != null) agExterieur.parking_outside_count = fieldSpec(cleanFields.parking_outside_count, ["NB_PARK_EXT"]);
+  if (cleanFields.pool != null) agExterieur.pool = fieldSpec(cleanFields.pool, ["PISCINE"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "ag_exterieur", "ihmChargeGroupe", agExterieur);
+
+  const terrain = {};
+  if (cleanFields.land_surface != null) terrain.land_surface = fieldSpec(cleanFields.land_surface, ["surfterrain"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "terrain", "ihmChargeGroupe", terrain);
+
+  const diagnostics = {};
+  if (cleanFields.dpe_value != null) diagnostics.dpe_value = fieldSpec(cleanFields.dpe_value, ["DPE", "dpe", "classe_energie"]);
+  if (cleanFields.ges_value != null) diagnostics.ges_value = fieldSpec(cleanFields.ges_value, ["GES", "ges", "classe_ges"]);
+  if (cleanFields.construction_year != null) diagnostics.construction_year = fieldSpec(cleanFields.construction_year, ["ANNEE_CONSTRUCTION", "annee_construction", "construction_year"]);
+  if (cleanFields.diagnostic_note != null) diagnostics.diagnostic_note = fieldSpec(cleanFields.diagnostic_note, ["diag_risques_nat_tech_date", "dpe_date"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "diagnostiques", "ihmChargeGroupe", diagnostics);
+
+  const copropriete = {};
+  if (cleanFields.copro_lots != null) copropriete.copro_lots = fieldSpec(cleanFields.copro_lots, ["copropriete_nb_lot"]);
+  if (cleanFields.copro_quote_part != null) copropriete.copro_quote_part = fieldSpec(cleanFields.copro_quote_part, ["copropriete_quote_part"]);
+  if (cleanFields.copro_works_fund != null) copropriete.copro_works_fund = fieldSpec(cleanFields.copro_works_fund, ["montant_fonds_travaux"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "copropriete", "ihmChargeGroupe", copropriete);
 
   const mandatInfo = {};
-  if (cleanFields.price != null) mandatInfo.prix = cleanFields.price;
-  if (cleanFields.net_seller_price != null) mandatInfo.PRIXNETVENDEUR = cleanFields.net_seller_price;
-  if (Object.keys(mandatInfo).length) {
-    results.push(await postHektorMefUpdate(job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo));
-  }
+  if (cleanFields.price != null) mandatInfo.price = fieldSpec(cleanFields.price, ["prix"]);
+  if (cleanFields.net_seller_price != null) mandatInfo.net_seller_price = fieldSpec(cleanFields.net_seller_price, ["PRIXNETVENDEUR"]);
+  if (cleanFields.copro_charges != null) mandatInfo.copro_charges = fieldSpec(cleanFields.copro_charges, ["CHARGES"]);
+  if (cleanFields.fees != null) mandatInfo.fees = fieldSpec(cleanFields.fees, ["HONORAIRES", "honoraires", "HONORAIRES_ACQUEREUR"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo);
 
   return results;
 }

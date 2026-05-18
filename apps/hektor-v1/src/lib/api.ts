@@ -3325,6 +3325,34 @@ export type HektorAnnonceUpdateFields = {
   carrezSurface?: string | number | null
   roomCount?: string | number | null
   bedroomCount?: string | number | null
+  bathroomCount?: string | number | null
+  showerRoomCount?: string | number | null
+  wcCount?: string | number | null
+  kitchen?: string | null
+  exposure?: string | null
+  view?: string | null
+  interiorState?: string | null
+  exteriorState?: string | null
+  landSurface?: string | number | null
+  gardenSurface?: string | number | null
+  terraceCount?: string | number | null
+  garageCount?: string | number | null
+  parkingInsideCount?: string | number | null
+  parkingOutsideCount?: string | number | null
+  pool?: string | number | null
+  dpeValue?: string | null
+  gesValue?: string | null
+  constructionYear?: string | number | null
+  diagnosticNote?: string | null
+  coproLots?: string | number | null
+  coproCharges?: string | number | null
+  coproQuotePart?: string | number | null
+  coproWorksFund?: string | number | null
+  mandateNumber?: string | null
+  mandateType?: string | null
+  mandateStartDate?: string | null
+  mandateEndDate?: string | null
+  fees?: string | number | null
 }
 
 export type HektorMandatAutoNumberInput = {
@@ -3352,6 +3380,34 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
     carrez_surface: input.fields.carrezSurface == null ? null : String(input.fields.carrezSurface).trim() || null,
     room_count: input.fields.roomCount == null ? null : String(input.fields.roomCount).trim() || null,
     bedroom_count: input.fields.bedroomCount == null ? null : String(input.fields.bedroomCount).trim() || null,
+    bathroom_count: input.fields.bathroomCount == null ? null : String(input.fields.bathroomCount).trim() || null,
+    shower_room_count: input.fields.showerRoomCount == null ? null : String(input.fields.showerRoomCount).trim() || null,
+    wc_count: input.fields.wcCount == null ? null : String(input.fields.wcCount).trim() || null,
+    kitchen: input.fields.kitchen?.trim() || null,
+    exposure: input.fields.exposure?.trim() || null,
+    view: input.fields.view?.trim() || null,
+    interior_state: input.fields.interiorState?.trim() || null,
+    exterior_state: input.fields.exteriorState?.trim() || null,
+    land_surface: input.fields.landSurface == null ? null : String(input.fields.landSurface).trim() || null,
+    garden_surface: input.fields.gardenSurface == null ? null : String(input.fields.gardenSurface).trim() || null,
+    terrace_count: input.fields.terraceCount == null ? null : String(input.fields.terraceCount).trim() || null,
+    garage_count: input.fields.garageCount == null ? null : String(input.fields.garageCount).trim() || null,
+    parking_inside_count: input.fields.parkingInsideCount == null ? null : String(input.fields.parkingInsideCount).trim() || null,
+    parking_outside_count: input.fields.parkingOutsideCount == null ? null : String(input.fields.parkingOutsideCount).trim() || null,
+    pool: input.fields.pool == null ? null : String(input.fields.pool).trim() || null,
+    dpe_value: input.fields.dpeValue?.trim() || null,
+    ges_value: input.fields.gesValue?.trim() || null,
+    construction_year: input.fields.constructionYear == null ? null : String(input.fields.constructionYear).trim() || null,
+    diagnostic_note: input.fields.diagnosticNote?.trim() || null,
+    copro_lots: input.fields.coproLots == null ? null : String(input.fields.coproLots).trim() || null,
+    copro_charges: input.fields.coproCharges == null ? null : String(input.fields.coproCharges).trim() || null,
+    copro_quote_part: input.fields.coproQuotePart == null ? null : String(input.fields.coproQuotePart).trim() || null,
+    copro_works_fund: input.fields.coproWorksFund == null ? null : String(input.fields.coproWorksFund).trim() || null,
+    mandate_number: input.fields.mandateNumber?.trim() || null,
+    mandate_type: input.fields.mandateType?.trim() || null,
+    mandate_start_date: input.fields.mandateStartDate?.trim() || null,
+    mandate_end_date: input.fields.mandateEndDate?.trim() || null,
+    fees: input.fields.fees == null ? null : String(input.fields.fees).trim() || null,
   }
   const updateFields = Object.fromEntries(Object.entries(cleanFields).filter(([, value]) => value !== null))
   if (Object.keys(updateFields).length === 0) throw new Error('Aucune modification a envoyer')

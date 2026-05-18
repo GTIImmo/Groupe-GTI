@@ -9520,6 +9520,91 @@ button.metric-card.is-active {
   border-color: rgba(197, 0, 95, 0.48);
   box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.1);
 }
+.hektor-advanced-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.hektor-advanced-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.06), rgba(15, 104, 116, 0.05) 58%, rgba(255, 255, 255, 0) 80%),
+    rgba(255, 255, 255, 0.9);
+}
+.hektor-advanced-section-main,
+.hektor-advanced-section-mandate {
+  grid-column: 1 / -1;
+}
+.hektor-advanced-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.hektor-advanced-section-head strong {
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  font-weight: 950;
+}
+.hektor-advanced-section-head span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(197, 0, 95, 0.1);
+  color: var(--gti-final-magenta);
+  font-size: 11px;
+  font-weight: 950;
+}
+.hektor-advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 10px;
+}
+.hektor-advanced-section-main .hektor-advanced-grid,
+.hektor-advanced-section-mandate .hektor-advanced-grid {
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+}
+.hektor-advanced-grid label,
+.hektor-advanced-textarea {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.hektor-advanced-textarea {
+  grid-column: 1 / -1;
+}
+.hektor-advanced-grid label span {
+  color: #687070;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hektor-advanced-grid input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(34, 35, 35, 0.16);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  font-weight: 800;
+  outline: none;
+}
+.hektor-advanced-grid input:focus {
+  border-color: rgba(197, 0, 95, 0.48);
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.1);
+}
 .hektor-inline-textarea textarea {
   min-height: 72px;
   resize: vertical;
@@ -10276,6 +10361,12 @@ button.metric-card.is-active {
   .hektor-mandat-number-form .hektor-mandat-number-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .hektor-advanced-sections,
+  .hektor-advanced-section-main .hektor-advanced-grid,
+  .hektor-advanced-section-mandate .hektor-advanced-grid,
+  .hektor-advanced-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .hektor-inline-grid label.is-small {
     grid-column: span 1;
   }
@@ -10330,6 +10421,12 @@ button.metric-card.is-active {
   .hektor-mandant-create-form .hektor-inline-grid,
   .hektor-mandant-edit-form .hektor-inline-grid,
   .hektor-mandat-number-form .hektor-mandat-number-grid {
+    grid-template-columns: 1fr;
+  }
+  .hektor-advanced-sections,
+  .hektor-advanced-section-main .hektor-advanced-grid,
+  .hektor-advanced-section-mandate .hektor-advanced-grid,
+  .hektor-advanced-grid {
     grid-template-columns: 1fr;
   }
   .hektor-inline-actions {
