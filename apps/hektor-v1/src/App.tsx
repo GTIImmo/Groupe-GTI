@@ -1375,9 +1375,16 @@ function splitMandatCoverSection(html: string) {
   }
 }
 
+function normalizeMandatPrintContent(html: string) {
+  return html
+    .replace(/<section data-source="([^"]+)" data-section="([^"]+)">\s*/g, '<div class="mandat-flow-section" data-source="$1" data-section="$2">')
+    .replace(/<\/section>\s*/g, '</div>')
+}
+
 function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contacts: DetailContact[]) {
   const body = renderMandatTemplate(draft, dossier)
   const { cover, content } = splitMandatCoverSection(body)
+  const normalizedContent = normalizeMandatPrintContent(content)
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -1390,40 +1397,40 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
     .mandat-print-root{padding:18px 0}
     section[data-section="couverture"],.mandat-continuous-sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto 18px;background:#fff;box-shadow:0 18px 60px rgba(15,23,42,.18)}
     section[data-section="couverture"]{padding:13mm 14mm;break-after:page;page-break-after:always}
-    .mandat-continuous-sheet{padding:8.5mm 11mm 9mm}
+    .mandat-continuous-sheet{padding:9mm 11mm}
     section[data-section="couverture"]::after,.mandat-continuous-sheet::after{content:"";display:none}
-    .mandat-continuous-sheet section[data-source]{width:auto!important;min-height:0!important;margin:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;break-after:auto!important;page-break-after:auto!important}
-    .mandat-continuous-sheet section[data-source] + section[data-source]{margin-top:3px!important}
-    .mandat-continuous-sheet section[data-source] > div{max-width:none!important;font-size:9.25px!important;line-height:1.18!important}
-    .mandat-continuous-sheet section[data-source] table{page-break-inside:avoid}
-    .mandat-continuous-sheet section[data-source] > div > table:first-child{margin:0 0 6px 0!important}
-    .mandat-continuous-sheet section[data-source]:not(:first-child) > div > table:first-child{margin-top:5px!important}
-    .mandat-continuous-sheet table[style*="background:#1f1f23"]{margin:7px 0 5px 0!important;break-after:avoid;page-break-after:avoid}
+    .mandat-flow-section{display:block;margin:0;padding:0;background:transparent;break-before:auto;break-after:auto;page-break-before:auto;page-break-after:auto}
+    .mandat-flow-section + .mandat-flow-section{margin-top:3px}
+    .mandat-flow-section > div{max-width:none!important;font-size:9.35px!important;line-height:1.2!important}
+    .mandat-flow-section table{page-break-inside:auto;break-inside:auto}
+    .mandat-flow-section tr{break-inside:avoid;page-break-inside:avoid}
+    .mandat-flow-section > div > table:first-child{margin:0 0 6px 0!important}
+    .mandat-flow-section:not(:first-child) > div > table:first-child{margin-top:6px!important}
+    .mandat-continuous-sheet table[style*="background:#1f1f23"]{margin:7px 0 5px 0!important;break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid}
     .mandat-continuous-sheet table[style*="background:#1f1f23"] td{padding-top:4px!important;padding-bottom:4px!important}
     .mandat-continuous-sheet table[style*="background:#1f1f23"] td[style*="font-size:13.45px"]{font-size:10px!important;line-height:1.12!important;padding:4px 7px!important}
     .mandat-continuous-sheet table[style*="background:#1f1f23"] td[style*="width:5px"]{width:4px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="background:#f6f6f6"][style*="border-left:4px solid #c2185b"]{break-after:avoid;page-break-after:avoid;margin:5px 0 3px 0!important;padding:2px 5px!important;font-size:9.1px!important;line-height:1.14!important}
-    .mandat-continuous-sheet section[data-source] div[style*="text-transform:uppercase"][style*="border-top:2px solid #c2185b"]{break-after:avoid;page-break-after:avoid;margin:8px 0 4px 0!important;padding-top:4px!important;font-size:9.8px!important;line-height:1.14!important}
-    .mandat-continuous-sheet section[data-source] div[style*="background:#1f1f23"]{break-after:avoid;page-break-after:avoid}
-    .mandat-continuous-sheet section[data-source] div[style*="border:1px solid #dddddd"][style*="border-left:4px"]{margin:0 0 6px 0!important;padding:6px 8px!important;break-inside:auto!important;page-break-inside:auto!important}
-    .mandat-continuous-sheet section[data-source] div[style*="border:1px solid #eeeeee"]{padding:4px 6px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="line-height:1.45"]{line-height:1.18!important}
-    .mandat-continuous-sheet section[data-source] div[style*="line-height:1.38"]{line-height:1.18!important}
-    .mandat-continuous-sheet section[data-source] div[style*="font-size:12.1px"]{font-size:10px!important;margin-bottom:4px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="font-size:11.55px"]{font-size:9.8px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="text-align:justify"]{margin-bottom:2px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="margin:0 0 4px"]{margin-bottom:2px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="margin:0 0 3px 12px"]{margin-bottom:1px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="margin:12px 0 10px"]{margin:5px 0 4px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="margin:12px 0 7px"]{margin:5px 0 3px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="margin-top:13px"]{margin-top:6px!important;padding-top:6px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="height:58px"]{height:auto!important;min-height:28px!important}
-    .mandat-continuous-sheet section[data-source] div[style*="min-height:58px"]{min-height:28px!important}
-    .mandat-continuous-sheet section[data-source] span[style*="height:13px"]{height:9px!important}
-    .mandat-continuous-sheet section[data-source] span[style*="width:140px"]{width:70px!important}
-    .mandat-continuous-sheet section[data-source] span[style*="width:150px"]{width:84px!important}
-    .mandat-continuous-sheet section[data-source] strong{break-after:avoid;page-break-after:avoid}
-    .mandat-continuous-sheet .mandat-keep-tight{break-inside:avoid;page-break-inside:avoid}
+    .mandat-continuous-sheet div[style*="background:#f6f6f6"][style*="border-left:4px solid #c2185b"]{break-after:avoid;page-break-after:avoid;margin:6px 0 3px 0!important;padding:2px 5px!important;font-size:9.15px!important;line-height:1.15!important}
+    .mandat-continuous-sheet div[style*="text-transform:uppercase"][style*="border-top:2px solid #c2185b"]{break-after:avoid;page-break-after:avoid;margin:9px 0 4px 0!important;padding-top:4px!important;font-size:9.9px!important;line-height:1.15!important}
+    .mandat-continuous-sheet div[style*="background:#1f1f23"]{break-after:avoid;page-break-after:avoid}
+    .mandat-continuous-sheet div[style*="border:1px solid #dddddd"][style*="border-left:4px"]{margin:0 0 6px 0!important;padding:6px 8px!important;break-inside:auto!important;page-break-inside:auto!important}
+    .mandat-continuous-sheet div[style*="border:1px solid #eeeeee"]{padding:4px 6px!important}
+    .mandat-continuous-sheet div[style*="line-height:1.45"]{line-height:1.2!important}
+    .mandat-continuous-sheet div[style*="line-height:1.38"]{line-height:1.2!important}
+    .mandat-continuous-sheet div[style*="font-size:12.1px"]{font-size:10px!important;margin-bottom:4px!important}
+    .mandat-continuous-sheet div[style*="font-size:11.55px"]{font-size:9.9px!important}
+    .mandat-continuous-sheet div[style*="text-align:justify"]{margin-bottom:2px!important}
+    .mandat-continuous-sheet div[style*="margin:0 0 4px"]{margin-bottom:2px!important}
+    .mandat-continuous-sheet div[style*="margin:0 0 3px 12px"]{margin-bottom:1px!important}
+    .mandat-continuous-sheet div[style*="margin:12px 0 10px"]{margin:5px 0 4px!important}
+    .mandat-continuous-sheet div[style*="margin:12px 0 7px"]{margin:5px 0 3px!important}
+    .mandat-continuous-sheet div[style*="margin-top:13px"]{margin-top:6px!important;padding-top:6px!important}
+    .mandat-continuous-sheet div[style*="height:58px"]{height:auto!important;min-height:28px!important}
+    .mandat-continuous-sheet div[style*="min-height:58px"]{min-height:28px!important}
+    .mandat-continuous-sheet span[style*="height:13px"]{height:9px!important}
+    .mandat-continuous-sheet span[style*="width:140px"]{width:70px!important}
+    .mandat-continuous-sheet span[style*="width:150px"]{width:84px!important}
+    .mandat-continuous-sheet strong{break-after:avoid;page-break-after:avoid}
     .mandat-mandants-table{width:100%;border-collapse:collapse!important;margin:0!important;font-size:8.55px!important;line-height:1.14!important;page-break-inside:auto!important}
     .mandat-mandants-table tr{break-inside:avoid;page-break-inside:avoid}
     .mandat-mandants-table td{border-top:1px solid #e4e4e4;padding:3px 4px;vertical-align:top}
@@ -1440,18 +1447,18 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
     .mandat-signature-area span{position:absolute;right:6px;bottom:4px;color:#aaa;font-size:7px;letter-spacing:.05em;text-transform:uppercase}
     .mandat-signature-agency{border-color:#bfc6cb}
     img{max-width:100%}
-    @page{size:A4;margin:0}
+    @page{size:A4;margin:10mm}
     @media print{
       html,body{background:#fff}
       .mandat-print-root{padding:0}
-      section[data-section="couverture"]{width:210mm;min-height:297mm;margin:0;padding:13mm 14mm;box-shadow:none}
-      .mandat-continuous-sheet{width:auto;min-height:auto;margin:0;padding:8mm 10mm;box-shadow:none}
-      .mandat-continuous-sheet section[data-source]{break-after:auto!important;page-break-after:auto!important}
+      section[data-section="couverture"]{width:auto;min-height:277mm;margin:0;padding:0;box-shadow:none}
+      .mandat-continuous-sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+      .mandat-flow-section{break-after:auto!important;page-break-after:auto!important}
     }
   </style>
 </head>
 <body>
-  <main class="mandat-print-root">${cover}<section class="mandat-continuous-sheet">${content}</section></main>
+  <main class="mandat-print-root">${cover}<section class="mandat-continuous-sheet">${normalizedContent}</section></main>
 </body>
 </html>`
 }
