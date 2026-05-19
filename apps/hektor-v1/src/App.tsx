@@ -1279,6 +1279,20 @@ function mandatTemplateLookup(source: unknown, path: string) {
 
 function mandatMandantsHtml(mandants: MandatDocumentMandant[], fallback: string) {
   const rows = mandants.length ? mandants : buildMandatDocumentMandants([], fallback)
+  if (rows.length > 2) {
+    return `<table class="mandat-mandants-table" cellspacing="0">
+      <tbody>${rows.map((mandant, index) => {
+        const name = mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`
+        const contact = [mandant.telephone, mandant.email].filter(Boolean).join(' - ')
+        return `<tr>
+          <td class="mandat-mandants-rank">${index + 1}</td>
+          <td><strong>${escapeHtml(name)}</strong><span>${escapeHtml(mandant.qualite || 'Mandant')}</span></td>
+          <td>${escapeHtml(mandant.adresse || '-')}</td>
+          <td>${escapeHtml(contact || '-')}</td>
+        </tr>`
+      }).join('')}</tbody>
+    </table>`
+  }
   return rows.map((mandant, index) => {
     const name = mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`
     const details = [
@@ -1292,6 +1306,28 @@ function mandatMandantsHtml(mandants: MandatDocumentMandant[], fallback: string)
       ${details.map((detail) => `<div style="color:#444;font-size:9.6px;margin-top:3px;">${escapeHtml(detail)}</div>`).join('')}
     </div>`
   }).join('')
+}
+
+function mandatSignatureBlocksHtml(mandants: MandatDocumentMandant[]) {
+  const rows = mandants.length ? mandants : buildMandatDocumentMandants([], '')
+  const mandantBlocks = rows.map((mandant, index) => {
+    const name = mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`
+    return `<div class="mandat-signature-box">
+      <div class="mandat-signature-title">Mandant ${index + 1}</div>
+      <div class="mandat-signature-name">${escapeHtml(name)}</div>
+      <div class="mandat-signature-note"><strong>Mention manuscrite :</strong> Bon pour mandat</div>
+      <div class="mandat-signature-area"><span>signature</span></div>
+    </div>`
+  }).join('')
+  return `<div class="mandat-signatures-grid">
+    ${mandantBlocks}
+    <div class="mandat-signature-box mandat-signature-agency">
+      <div class="mandat-signature-title">Mandataire</div>
+      <div class="mandat-signature-name">Groupe GTI</div>
+      <div class="mandat-signature-note"><strong>Cachet et signature de l'agence</strong></div>
+      <div class="mandat-signature-area"><span>signature</span></div>
+    </div>
+  </div>`
 }
 
 function renderMandatTemplate(draft: MandatDocumentDraft, dossier: Dossier) {
@@ -1323,11 +1359,25 @@ function renderMandatTemplate(draft: MandatDocumentDraft, dossier: Dossier) {
       /<div style="border:1px dotted #c7c7c7;height:58px;margin:5px 0 8px 0;">CHAMP LIBRE<\/div>/,
       `<div style="border:1px dotted #c7c7c7;min-height:58px;margin:5px 0 8px 0;padding:8px 10px;">${formatFreeTextHtml(draft.clauseParticuliere, 'Aucune clause particuliere renseignee.')}</div>`,
     )
+    .replace(
+      /<table cellspacing="0" style="border-collapse:separate;border-spacing:12px 0;margin-top:7px;width:100%">[\s\S]*?<\/table>/,
+      mandatSignatureBlocksHtml(draft.mandants),
+    )
   return html
+}
+
+function splitMandatCoverSection(html: string) {
+  const coverMatch = html.match(/<section data-section="couverture"[\s\S]*?<\/section>\s*/)
+  if (!coverMatch) return { cover: '', content: html }
+  return {
+    cover: coverMatch[0],
+    content: html.replace(coverMatch[0], ''),
+  }
 }
 
 function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contacts: DetailContact[]) {
   const body = renderMandatTemplate(draft, dossier)
+  const { cover, content } = splitMandatCoverSection(body)
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -1338,22 +1388,70 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
     html{background:#e9eef2}
     body{margin:0;background:#e9eef2;color:#111}
     .mandat-print-root{padding:18px 0}
-    section[data-section],section[data-source]{position:relative;width:210mm;min-height:297mm;margin:0 auto 18px;padding:13mm 14mm;background:#fff;box-shadow:0 18px 60px rgba(15,23,42,.18);break-after:page;page-break-after:always}
-    section[data-section]::after,section[data-source]::after{content:"Page " counter(page);position:absolute;right:14mm;bottom:7mm;color:#777;font:700 8px Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase}
-    section[data-section]{counter-increment:page}
-    section[data-source]{counter-increment:page}
-    section[data-section]:last-of-type,section[data-source]:last-of-type{break-after:auto;page-break-after:auto}
+    section[data-section="couverture"],.mandat-continuous-sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto 18px;background:#fff;box-shadow:0 18px 60px rgba(15,23,42,.18)}
+    section[data-section="couverture"]{padding:13mm 14mm;break-after:page;page-break-after:always}
+    .mandat-continuous-sheet{padding:8.5mm 11mm 9mm}
+    section[data-section="couverture"]::after,.mandat-continuous-sheet::after{content:"";display:none}
+    .mandat-continuous-sheet section[data-source]{width:auto!important;min-height:0!important;margin:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;break-after:auto!important;page-break-after:auto!important}
+    .mandat-continuous-sheet section[data-source] + section[data-source]{margin-top:3px!important}
+    .mandat-continuous-sheet section[data-source] > div{max-width:none!important;font-size:9.25px!important;line-height:1.18!important}
+    .mandat-continuous-sheet section[data-source] table{page-break-inside:avoid}
+    .mandat-continuous-sheet section[data-source] > div > table:first-child{margin:0 0 6px 0!important}
+    .mandat-continuous-sheet section[data-source]:not(:first-child) > div > table:first-child{margin-top:5px!important}
+    .mandat-continuous-sheet table[style*="background:#1f1f23"]{margin:7px 0 5px 0!important;break-after:avoid;page-break-after:avoid}
+    .mandat-continuous-sheet table[style*="background:#1f1f23"] td{padding-top:4px!important;padding-bottom:4px!important}
+    .mandat-continuous-sheet table[style*="background:#1f1f23"] td[style*="font-size:13.45px"]{font-size:10px!important;line-height:1.12!important;padding:4px 7px!important}
+    .mandat-continuous-sheet table[style*="background:#1f1f23"] td[style*="width:5px"]{width:4px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="background:#f6f6f6"][style*="border-left:4px solid #c2185b"]{break-after:avoid;page-break-after:avoid;margin:5px 0 3px 0!important;padding:2px 5px!important;font-size:9.1px!important;line-height:1.14!important}
+    .mandat-continuous-sheet section[data-source] div[style*="text-transform:uppercase"][style*="border-top:2px solid #c2185b"]{break-after:avoid;page-break-after:avoid;margin:8px 0 4px 0!important;padding-top:4px!important;font-size:9.8px!important;line-height:1.14!important}
+    .mandat-continuous-sheet section[data-source] div[style*="background:#1f1f23"]{break-after:avoid;page-break-after:avoid}
+    .mandat-continuous-sheet section[data-source] div[style*="border:1px solid #dddddd"][style*="border-left:4px"]{margin:0 0 6px 0!important;padding:6px 8px!important;break-inside:auto!important;page-break-inside:auto!important}
+    .mandat-continuous-sheet section[data-source] div[style*="border:1px solid #eeeeee"]{padding:4px 6px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="line-height:1.45"]{line-height:1.18!important}
+    .mandat-continuous-sheet section[data-source] div[style*="line-height:1.38"]{line-height:1.18!important}
+    .mandat-continuous-sheet section[data-source] div[style*="font-size:12.1px"]{font-size:10px!important;margin-bottom:4px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="font-size:11.55px"]{font-size:9.8px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="text-align:justify"]{margin-bottom:2px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="margin:0 0 4px"]{margin-bottom:2px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="margin:0 0 3px 12px"]{margin-bottom:1px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="margin:12px 0 10px"]{margin:5px 0 4px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="margin:12px 0 7px"]{margin:5px 0 3px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="margin-top:13px"]{margin-top:6px!important;padding-top:6px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="height:58px"]{height:auto!important;min-height:28px!important}
+    .mandat-continuous-sheet section[data-source] div[style*="min-height:58px"]{min-height:28px!important}
+    .mandat-continuous-sheet section[data-source] span[style*="height:13px"]{height:9px!important}
+    .mandat-continuous-sheet section[data-source] span[style*="width:140px"]{width:70px!important}
+    .mandat-continuous-sheet section[data-source] span[style*="width:150px"]{width:84px!important}
+    .mandat-continuous-sheet section[data-source] strong{break-after:avoid;page-break-after:avoid}
+    .mandat-continuous-sheet .mandat-keep-tight{break-inside:avoid;page-break-inside:avoid}
+    .mandat-mandants-table{width:100%;border-collapse:collapse!important;margin:0!important;font-size:8.55px!important;line-height:1.14!important;page-break-inside:auto!important}
+    .mandat-mandants-table tr{break-inside:avoid;page-break-inside:avoid}
+    .mandat-mandants-table td{border-top:1px solid #e4e4e4;padding:3px 4px;vertical-align:top}
+    .mandat-mandants-table tr:first-child td{border-top:0}
+    .mandat-mandants-table strong,.mandat-mandants-table span{display:block}
+    .mandat-mandants-table span{color:#555;font-size:8px;margin-top:1px}
+    .mandat-mandants-rank{width:16px;color:#c2185b;font-weight:800;text-align:center}
+    .mandat-signatures-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:7px;break-inside:auto;page-break-inside:auto}
+    .mandat-signature-box{border:1px solid #d8d8d8;padding:6px;break-inside:avoid;page-break-inside:avoid}
+    .mandat-signature-title{border-bottom:2px solid #c2185b;font-size:8.7px;font-weight:800;margin-bottom:4px;padding-bottom:3px;text-align:center;text-transform:uppercase}
+    .mandat-signature-name{font-size:8.9px;font-weight:800;margin-bottom:3px;min-height:10px;text-align:center}
+    .mandat-signature-note{color:#555;font-size:8.2px;margin-bottom:4px}
+    .mandat-signature-area{border:1px dotted #bbb;height:54px;position:relative}
+    .mandat-signature-area span{position:absolute;right:6px;bottom:4px;color:#aaa;font-size:7px;letter-spacing:.05em;text-transform:uppercase}
+    .mandat-signature-agency{border-color:#bfc6cb}
     img{max-width:100%}
     @page{size:A4;margin:0}
     @media print{
       html,body{background:#fff}
       .mandat-print-root{padding:0}
-      section[data-section],section[data-source]{width:210mm;min-height:297mm;margin:0;padding:13mm 14mm;box-shadow:none}
+      section[data-section="couverture"]{width:210mm;min-height:297mm;margin:0;padding:13mm 14mm;box-shadow:none}
+      .mandat-continuous-sheet{width:auto;min-height:auto;margin:0;padding:8mm 10mm;box-shadow:none}
+      .mandat-continuous-sheet section[data-source]{break-after:auto!important;page-break-after:auto!important}
     }
   </style>
 </head>
 <body>
-  <main class="mandat-print-root">${body}</main>
+  <main class="mandat-print-root">${cover}<section class="mandat-continuous-sheet">${content}</section></main>
 </body>
 </html>`
 }
