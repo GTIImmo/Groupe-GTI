@@ -5430,6 +5430,10 @@ export default function App() {
     }
     return filters
   }, [filters, screen])
+  const listingStatusOptions = useMemo(
+    () => [activeListingsFilterOption, ...filterCatalog.statuts.filter((value) => value !== 'Estimation')],
+    [filterCatalog.statuts],
+  )
   const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter((job) => isPrimaryHektorActionJob(job) && isConsoleJobActive(job)), [hektorActionJobs])
   const visibleHektorActionPopupJobs = useMemo(() => {
     const dismissed = new Set(dismissedHektorActionJobIds)
@@ -8506,7 +8510,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="filter-grid">
                 <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect
                   label="Diffusable"
@@ -8922,7 +8926,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'sans_erreur', label: 'Non' },
                   ]}
                 />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect label="Priorite" value={filters.priority} onChange={(value) => updateFilter('priority', value)} options={filterCatalog.priorities} />
@@ -8947,7 +8951,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect
@@ -9039,7 +9043,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect
                   label="Etat du mandat"
                   value={filters.mandateState}
@@ -9142,7 +9146,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'sans_erreur', label: 'Non' },
                   ]}
                 />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect
