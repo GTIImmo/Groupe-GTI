@@ -1020,7 +1020,7 @@ export async function loadDossiersPage({
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'planned' = 'planned'
+  const countMode: 'exact' = 'exact'
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
     filters,
@@ -1688,7 +1688,7 @@ export async function loadMandatsPage({
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'planned' = 'planned'
+  const countMode: 'exact' = 'exact'
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
     filters,
