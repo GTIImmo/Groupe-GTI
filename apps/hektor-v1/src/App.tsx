@@ -5929,7 +5929,7 @@ export default function App() {
   }
 
   function openScreen(nextScreen: Screen) {
-    setScreen(nextScreen)
+    setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMobileMenuOpen(false)
     setMandatDrilldownLabel(null)
     setActiveMandatKpiAction(null)
@@ -6006,7 +6006,7 @@ export default function App() {
                                 : action === 'bienici'
                                   ? { eyebrow: '', title: "Diffusées sur Bien'ici" }
                                   : null
-    setScreen(action === 'all_annonces' ? 'annonces' : 'mandats')
+    setScreen('mandats')
     setFiltersOpen(false)
     setPriorityPanelOpen(false)
     setDossierPage(1)
@@ -8659,10 +8659,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
-          <button className={`nav-button ${screen === 'annonces' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('annonces')}>Annonces</button>
-          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Mandats actifs</button>
+          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
-          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Registre</button>
+          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Mandats</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi</button> : null}
         </nav>
         <div className="header-user-stack">
