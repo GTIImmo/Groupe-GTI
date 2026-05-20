@@ -133,7 +133,6 @@ const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 const activeListingStatuses = ['Actif', 'Sous offre', 'Sous compromis']
-const annoncesCurrentView = 'app_annonces_current'
 const dossiersCurrentView = 'app_dossiers_current'
 const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accepted', 'refused']
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
@@ -1022,7 +1021,7 @@ export async function loadDossiersPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   let query = applyDossierFiltersToQuery(
-    applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
+    applyNegotiatorScopeToQuery(supabase.from(dossiersCurrentView).select('*', { count: countMode }), scope),
     filters,
   )
     .order('has_open_blocker', { ascending: false })
@@ -1089,7 +1088,7 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
   }
 
   const { data: dossierData, error: dossierError } = await supabase
-    .from(annoncesCurrentView)
+    .from(dossiersCurrentView)
     .select('*')
     .eq('app_dossier_id', appDossierId)
     .maybeSingle()
@@ -1399,7 +1398,7 @@ export async function loadFilterCatalog(scope?: DataScope | null): Promise<Filte
     while (true) {
       const { data, error } = await applyNegotiatorScopeToQuery(
         supabase
-          .from(annoncesCurrentView)
+          .from(dossiersCurrentView)
           .select('app_dossier_id,commercial_nom,agence_nom,statut_annonce,validation_diffusion_state,portails_resume,diffusable,priority,negociateur_email')
           .order('app_dossier_id', { ascending: true })
           .range(from, from + batchSize - 1),

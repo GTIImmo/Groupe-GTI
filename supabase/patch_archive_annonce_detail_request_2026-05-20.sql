@@ -87,9 +87,18 @@ begin
     if current_app_role = 'commercial' then
         return exists (
             select 1
-            from public.app_annonces_current target
+            from public.app_dossiers_current target
             where (
                     (target_app_dossier_id is not null and target.app_dossier_id = target_app_dossier_id)
+                 or (nullif(target_hektor_annonce_id, '') is not null and target.hektor_annonce_id::text = target_hektor_annonce_id)
+                )
+              and lower(coalesce(target.negociateur_email, '')) = lower(coalesce(current_email, ''))
+        )
+        or exists (
+            select 1
+            from public.app_archive_annonce_index_current target
+            where (
+                    (target_app_dossier_id is not null and target.app_archive_id = target_app_dossier_id)
                  or (nullif(target_hektor_annonce_id, '') is not null and target.hektor_annonce_id::text = target_hektor_annonce_id)
                 )
               and lower(coalesce(target.negociateur_email, '')) = lower(coalesce(current_email, ''))
