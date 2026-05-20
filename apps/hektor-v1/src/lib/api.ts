@@ -1690,7 +1690,7 @@ export async function loadMandatsPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   let query = applyDossierFiltersToQuery(
-    applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
+    applyNegotiatorScopeToQuery(supabase.from(dossiersCurrentView).select('*', { count: countMode }), scope),
     filters,
   )
     .order('has_diffusion_error', { ascending: false })
@@ -1984,7 +1984,7 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
     const { data, error } = await applyDossierFiltersToQuery(
       applyNegotiatorScopeToQuery(
         supabase
-          .from(annoncesCurrentView)
+          .from(dossiersCurrentView)
           .select('app_dossier_id,numero_mandat,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error')
           .order('app_dossier_id', { ascending: true })
           .range(from, from + batchSize - 1),
