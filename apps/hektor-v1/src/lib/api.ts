@@ -941,119 +941,6 @@ function applyNegotiatorScopeToQuery(baseQuery: any, scope?: DataScope | null) {
   return baseQuery.eq('negociateur_email', negotiatorEmail)
 }
 
-type ArchiveAnnonceIndexRow = {
-  hektor_annonce_id: number
-  app_archive_id: number | null
-  numero_dossier: string | null
-  numero_mandat: string | null
-  titre_bien: string | null
-  ville: string | null
-  type_bien: string | null
-  prix: number | null
-  commercial_id: string | null
-  commercial_nom: string | null
-  negociateur_email: string | null
-  agence_nom: string | null
-  statut_annonce: string | null
-  archive: string | null
-  diffusable: string | null
-  mandat_type: string | null
-  mandat_date_debut: string | null
-  mandat_date_fin: string | null
-  mandat_montant: number | null
-  mandants_texte: string | null
-  has_local_detail: boolean | number | string | null
-  local_detail_updated_at: string | null
-}
-
-function archiveIndexRowToDossier(row: ArchiveAnnonceIndexRow): Dossier & { mandants_texte?: string | null } {
-  return {
-    app_dossier_id: Number(row.app_archive_id ?? row.hektor_annonce_id),
-    hektor_annonce_id: Number(row.hektor_annonce_id),
-    photo_url_listing: null,
-    images_preview_json: null,
-    archive: row.archive ?? '1',
-    diffusable: row.diffusable ?? null,
-    nb_portails_actifs: 0,
-    has_diffusion_error: false,
-    portails_resume: null,
-    offre_id: null,
-    offre_state: null,
-    offre_last_proposition_type: null,
-    compromis_id: null,
-    compromis_state: null,
-    vente_id: null,
-    numero_dossier: row.numero_dossier ?? null,
-    numero_mandat: row.numero_mandat ?? null,
-    titre_bien: row.titre_bien ?? '[Sans titre]',
-    ville: row.ville ?? null,
-    type_bien: row.type_bien ?? null,
-    prix: row.prix ?? null,
-    commercial_id: row.commercial_id ?? null,
-    commercial_nom: row.commercial_nom ?? null,
-    negociateur_email: row.negociateur_email ?? null,
-    agence_nom: row.agence_nom ?? null,
-    statut_annonce: row.statut_annonce ?? null,
-    validation_diffusion_state: null,
-    price_change_event_count: 0,
-    price_change_last_source_kind: null,
-    price_change_last_old_value: null,
-    price_change_last_new_value: null,
-    price_change_last_detected_at: null,
-    price_change_last_source_updated_at: null,
-    etat_visibilite: null,
-    alerte_principale: null,
-    priority: 'normal',
-    has_open_blocker: false,
-    commentaire_resume: null,
-    date_relance_prevue: null,
-    dernier_event_type: null,
-    dernier_work_status: null,
-    has_local_detail: row.has_local_detail,
-    local_detail_updated_at: row.local_detail_updated_at ?? null,
-    mandants_texte: row.mandants_texte ?? null,
-  }
-}
-
-function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, scope?: DataScope | null) {
-  let query = applyNegotiatorScopeToQuery(baseQuery, scope)
-  const commercial = normalizeFilterValue(filters.commercial)
-  const agency = normalizeFilterValue(filters.agency)
-  const mandat = filters.mandat
-  const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
-  const mandantName = normalizeSearchTerm(filters.mandantName)
-
-  if (commercial) {
-    if (commercial === withoutCommercialFilterValue) {
-      query = query.or('commercial_nom.is.null,commercial_nom.eq.')
-    } else {
-      query = query.eq('commercial_nom', commercial)
-    }
-  }
-  if (agency) query = query.eq('agence_nom', agency)
-  if (mandat === withMandatFilterValue) query = query.not('numero_mandat', 'is', null).neq('numero_mandat', '')
-  if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
-  if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
-  if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
-
-  const search = normalizeSearchTerm(filters.query)
-  if (search) {
-    const ilike = `%${search}%`
-    query = query.or(
-      [
-        `titre_bien.ilike.${ilike}`,
-        `numero_dossier.ilike.${ilike}`,
-        `numero_mandat.ilike.${ilike}`,
-        `commercial_nom.ilike.${ilike}`,
-        `ville.ilike.${ilike}`,
-        `mandants_texte.ilike.${ilike}`,
-      ].join(','),
-    )
-  }
-
-  return query
-}
-
 function applyWorkItemFiltersToQuery(baseQuery: any, filters: AppFilters) {
   let query = baseQuery
   const commercial = normalizeFilterValue(filters.commercial)
@@ -1130,37 +1017,10 @@ export async function loadDossiersPage({
     return paginate(applyLocalDossierFilters(filterByNegotiatorEmail(mockDossiers, scope), filters), page, pageSize)
   }
 
+  const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
-  if (filters.archive === archivedFilterValue) {
-    const requestScope = normalizeFilterValue(filters.requestScope)
-    const requestType = normalizeFilterValue(filters.requestType)
-    if (requestScope || requestType) {
-      return { rows: [], total: 0, page, pageSize }
-    }
-    const archiveQuery = applyArchiveIndexFiltersToQuery(
-      supabase
-        .from('app_archive_annonce_index_current')
-        .select('hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
-      filters,
-      scope,
-    )
-      .order('date_maj', { ascending: false, nullsFirst: false })
-      .order('hektor_annonce_id', { ascending: false })
-      .range(from, to)
-
-    const { data, error, count } = await archiveQuery
-    if (error || !data) throw new Error(error?.message ?? 'Unable to load archived annonces')
-    return {
-      rows: (data as ArchiveAnnonceIndexRow[]).map(archiveIndexRowToDossier),
-      total: count ?? 0,
-      page,
-      pageSize,
-    }
-  }
-
-  const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
     filters,
