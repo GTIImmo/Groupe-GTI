@@ -5881,6 +5881,7 @@ export default function App() {
         if (value !== 'compromis') next.compromisStatus = allFilterValue
       }
       if (key === 'archive' && value === archivedFilterValue) {
+        next.statut = allFilterValue
         next.validationDiffusion = allFilterValue
         next.diffusable = allFilterValue
         next.passerelle = allFilterValue
