@@ -133,6 +133,7 @@ const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 const activeListingStatuses = ['Actif', 'Sous offre', 'Sous compromis']
+const historicalListingStatuses = ['Vendu', 'Clos']
 const dossiersCurrentView = 'app_dossiers_current'
 const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accepted', 'refused']
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
@@ -940,9 +941,10 @@ function applyNegotiatorScopeToQuery(baseQuery: any, scope?: DataScope | null) {
   return baseQuery.eq('negociateur_email', negotiatorEmail)
 }
 
-type ArchiveAnnonceIndexRow = {
+type LightweightAnnonceIndexRow = {
   hektor_annonce_id: number
   app_archive_id: number | null
+  app_historical_id?: number | null
   numero_dossier: string | null
   numero_mandat: string | null
   titre_bien: string | null
@@ -965,9 +967,9 @@ type ArchiveAnnonceIndexRow = {
   local_detail_updated_at: string | null
 }
 
-function archiveIndexRowToDossier(row: ArchiveAnnonceIndexRow): Dossier & { mandants_texte?: string | null } {
+function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier & { mandants_texte?: string | null } {
   return {
-    app_dossier_id: Number(row.app_archive_id ?? row.hektor_annonce_id),
+    app_dossier_id: Number(row.app_archive_id ?? row.app_historical_id ?? row.hektor_annonce_id),
     hektor_annonce_id: Number(row.hektor_annonce_id),
     photo_url_listing: null,
     images_preview_json: null,
@@ -1053,6 +1055,13 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   return query
 }
 
+function applyHistoricalIndexFiltersToQuery(baseQuery: any, filters: AppFilters, scope?: DataScope | null) {
+  let query = applyArchiveIndexFiltersToQuery(baseQuery, filters, scope)
+  const statut = normalizeFilterValue(filters.statut)
+  if (historicalListingStatuses.includes(statut)) query = query.eq('statut_annonce', statut)
+  return query
+}
+
 function applyWorkItemFiltersToQuery(baseQuery: any, filters: AppFilters) {
   let query = baseQuery
   const commercial = normalizeFilterValue(filters.commercial)
@@ -1132,6 +1141,7 @@ export async function loadDossiersPage({
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
+  const statut = normalizeFilterValue(filters.statut)
   if (filters.archive === archivedFilterValue) {
     const requestScope = normalizeFilterValue(filters.requestScope)
     const requestType = normalizeFilterValue(filters.requestType)
@@ -1152,7 +1162,33 @@ export async function loadDossiersPage({
     const { data, error, count } = await archiveQuery
     if (error || !data) throw new Error(error?.message ?? 'Unable to load archived annonces')
     return {
-      rows: (data as ArchiveAnnonceIndexRow[]).map(archiveIndexRowToDossier),
+      rows: (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+      total: count ?? 0,
+      page,
+      pageSize,
+    }
+  }
+  if (historicalListingStatuses.includes(statut)) {
+    const requestScope = normalizeFilterValue(filters.requestScope)
+    const requestType = normalizeFilterValue(filters.requestType)
+    if (requestScope || requestType) {
+      return { rows: [], total: 0, page, pageSize }
+    }
+    const historicalQuery = applyHistoricalIndexFiltersToQuery(
+      supabase
+        .from('app_historical_annonce_index_current')
+        .select('hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
+      filters,
+      scope,
+    )
+      .order('date_maj', { ascending: false, nullsFirst: false })
+      .order('hektor_annonce_id', { ascending: false })
+      .range(from, to)
+
+    const { data, error, count } = await historicalQuery
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load historical annonces')
+    return {
+      rows: (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
       total: count ?? 0,
       page,
       pageSize,

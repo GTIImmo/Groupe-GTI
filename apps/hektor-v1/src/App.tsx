@@ -100,6 +100,10 @@ const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
 const activeListingsFilterOption = { value: activeListingsFilterValue, label: 'Actif / offre / compromis' }
+const historicalListingStatusOptions = [
+  { value: 'Vendu', label: 'Vendu' },
+  { value: 'Clos', label: 'Clos' },
+]
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 
@@ -1986,6 +1990,16 @@ function defaultFiltersForScreen(screen: Screen): AppFilters {
     }
   }
   return emptyFilters
+}
+
+function mergeFilterOptions(options: Array<string | { value: string; label: string }>) {
+  const seen = new Set<string>()
+  return options.filter((option) => {
+    const value = typeof option === 'string' ? option : option.value
+    if (seen.has(value)) return false
+    seen.add(value)
+    return true
+  })
 }
 
 function metricDrilldownFilters(current: AppFilters, action: HeaderMetricItem['action']): AppFilters {
@@ -5430,6 +5444,10 @@ export default function App() {
     }
     return filters
   }, [filters, screen])
+  const listingStatusOptions = useMemo(
+    () => mergeFilterOptions([activeListingsFilterOption, ...filterCatalog.statuts, ...historicalListingStatusOptions]),
+    [filterCatalog.statuts],
+  )
   const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter((job) => isPrimaryHektorActionJob(job) && isConsoleJobActive(job)), [hektorActionJobs])
   const visibleHektorActionPopupJobs = useMemo(() => {
     const dismissed = new Set(dismissedHektorActionJobIds)
@@ -8506,7 +8524,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="filter-grid">
                 <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect
                   label="Diffusable"
@@ -8922,7 +8940,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'sans_erreur', label: 'Non' },
                   ]}
                 />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect label="Priorite" value={filters.priority} onChange={(value) => updateFilter('priority', value)} options={filterCatalog.priorities} />
@@ -8947,7 +8965,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect
@@ -9039,7 +9057,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect
                   label="Etat du mandat"
                   value={filters.mandateState}
@@ -9142,7 +9160,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'sans_erreur', label: 'Non' },
                   ]}
                 />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect
@@ -9610,6 +9628,7 @@ function StockScreen(props: {
               <tbody>
                 {props.dossiers.map((item) => {
                   const isArchived = item.archive === '1'
+                  const isHistorical = item.statut_annonce === 'Vendu' || item.statut_annonce === 'Clos'
                   const isPreparingArchiveDetail = props.preparingArchiveDetailIds.has(String(item.hektor_annonce_id))
                   const hasLocalArchiveDetail = item.has_local_detail === true || item.has_local_detail === 1 || item.has_local_detail === '1'
                   return (
@@ -9622,7 +9641,7 @@ function StockScreen(props: {
                       <td>{formatPrice(item.prix)}</td>
                       <td><button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); openHektorAnnonce(item.hektor_annonce_id) }}>Ouvrir</button></td>
                       <td>
-                        {isArchived ? (
+                        {isArchived || isHistorical ? (
                           <button
                             className="ghost-button"
                             type="button"
@@ -9631,7 +9650,7 @@ function StockScreen(props: {
                               props.onPrepareArchivedDetail(item)
                             }}
                             disabled={isPreparingArchiveDetail}
-                            title={hasLocalArchiveDetail ? 'Publier temporairement le detail archive depuis le serveur local' : 'Demander le detail archive au serveur local'}
+                            title={hasLocalArchiveDetail ? 'Publier temporairement le detail depuis le serveur local' : 'Demander le detail au serveur local'}
                           >
                             {isPreparingArchiveDetail ? 'En attente' : hasLocalArchiveDetail ? 'Charger detail' : 'Demander detail'}
                           </button>

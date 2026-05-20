@@ -16,14 +16,14 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_payload
+    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_historical_annonce_index, build_payload
 except ModuleNotFoundError:
     import sys
 
     ROOT_DIR = Path(__file__).resolve().parents[2]
     if str(ROOT_DIR) not in sys.path:
         sys.path.insert(0, str(ROOT_DIR))
-    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_payload
+    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_historical_annonce_index, build_payload
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -222,6 +222,30 @@ MANDAT_REGISTER_NULLABLE_KEYS = (
 )
 
 ARCHIVE_INDEX_NULLABLE_KEYS = (
+    "numero_dossier",
+    "numero_mandat",
+    "titre_bien",
+    "ville",
+    "code_postal",
+    "type_bien",
+    "prix",
+    "commercial_id",
+    "commercial_nom",
+    "negociateur_email",
+    "agence_nom",
+    "statut_annonce",
+    "archive",
+    "diffusable",
+    "date_maj",
+    "mandat_type",
+    "mandat_date_debut",
+    "mandat_date_fin",
+    "mandat_montant",
+    "mandants_texte",
+    "local_detail_updated_at",
+)
+
+HISTORICAL_INDEX_NULLABLE_KEYS = (
     "numero_dossier",
     "numero_mandat",
     "titre_bien",
@@ -646,6 +670,45 @@ def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict
     return current_rows
 
 
+def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    current_rows: list[dict[str, object]] = []
+    for row in rows:
+        normalized = normalize_row(row, HISTORICAL_INDEX_NULLABLE_KEYS)
+        hektor_annonce_id = normalized.get("hektor_annonce_id")
+        if hektor_annonce_id is None:
+            continue
+        current_row = {
+            "hektor_annonce_id": int(hektor_annonce_id),
+            "app_historical_id": int(normalized.get("app_historical_id") or hektor_annonce_id),
+            "numero_dossier": normalized.get("numero_dossier"),
+            "numero_mandat": normalized.get("numero_mandat"),
+            "titre_bien": normalized.get("titre_bien") or "[Sans titre]",
+            "ville": normalized.get("ville"),
+            "code_postal": normalized.get("code_postal"),
+            "type_bien": normalized.get("type_bien"),
+            "prix": normalize_numeric(normalized.get("prix")),
+            "commercial_id": normalized.get("commercial_id"),
+            "commercial_nom": normalized.get("commercial_nom"),
+            "negociateur_email": normalized.get("negociateur_email"),
+            "agence_nom": normalized.get("agence_nom"),
+            "statut_annonce": normalized.get("statut_annonce"),
+            "archive": normalized.get("archive") or "0",
+            "diffusable": normalized.get("diffusable"),
+            "date_maj": normalize_timestamp(normalized.get("date_maj")),
+            "mandat_type": normalized.get("mandat_type"),
+            "mandat_date_debut": normalized.get("mandat_date_debut"),
+            "mandat_date_fin": normalized.get("mandat_date_fin"),
+            "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
+            "mandants_texte": normalized.get("mandants_texte"),
+            "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
+            "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
+        }
+        current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
+        current_row["source_hash"] = stable_hash(current_row)
+        current_rows.append(current_row)
+    return current_rows
+
+
 def normalize_broadcast_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     normalized_by_key: dict[tuple[int, str, str], dict[str, object]] = {}
     for row in rows:
@@ -896,7 +959,9 @@ def main() -> None:
     current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
     archive_table_available = client.table_available("app_archive_annonce_index_current")
+    historical_table_available = client.table_available("app_historical_annonce_index_current")
     current_archive_index_rows = build_current_archive_index_rows(build_archive_annonce_index(limit=None)) if archive_table_available else []
+    current_historical_index_rows = build_current_historical_index_rows(build_historical_annonce_index(limit=None)) if historical_table_available else []
 
     dossier_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_dossiers})
     detail_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_details})
@@ -905,6 +970,8 @@ def main() -> None:
     broadcast_candidate_ids = sorted({int(row["app_dossier_id"]) for row in current_broadcasts})
     archive_upsert_ids: list[int] = []
     archive_delete_ids: list[int] = []
+    historical_upsert_ids: list[int] = []
+    historical_delete_ids: list[int] = []
 
     current_filter_catalog: list[dict[str, object]] = []
     filters_should_refresh = (
@@ -929,6 +996,8 @@ def main() -> None:
             "targeted_hektor_annonce_ids": args.hektor_annonce_id,
             "archive_index_enabled": archive_table_available,
             "archive_index_local_count": len(current_archive_index_rows),
+            "historical_index_enabled": historical_table_available,
+            "historical_index_local_count": len(current_historical_index_rows),
         },
     )
 
@@ -980,10 +1049,22 @@ def main() -> None:
                 )
                 if row.get("hektor_annonce_id") is not None
             }
+        remote_historical_hashes: dict[int, str] = {}
+        if historical_table_available:
+            remote_historical_hashes = {
+                int(row["hektor_annonce_id"]): str(row["source_hash"])
+                for row in client.fetch_all_rows(
+                    path="app_historical_annonce_index_current",
+                    select="hektor_annonce_id,source_hash",
+                    order="hektor_annonce_id.asc",
+                )
+                if row.get("hektor_annonce_id") is not None
+            }
 
         local_dossier_hashes = map_hashes(current_dossiers, id_key="app_dossier_id")
         local_detail_hashes = map_hashes(current_details, id_key="app_dossier_id")
         local_archive_hashes = map_hashes(current_archive_index_rows, id_key="hektor_annonce_id")
+        local_historical_hashes = map_hashes(current_historical_index_rows, id_key="hektor_annonce_id")
 
         if args.full_rebuild:
             dossier_upsert_ids = sorted(local_dossier_hashes)
@@ -1025,6 +1106,13 @@ def main() -> None:
                 if remote_archive_hashes.get(hektor_annonce_id) != source_hash
             )
             archive_delete_ids = sorted(set(remote_archive_hashes) - set(local_archive_hashes))
+        if historical_table_available:
+            historical_upsert_ids = sorted(
+                hektor_annonce_id
+                for hektor_annonce_id, source_hash in local_historical_hashes.items()
+                if remote_historical_hashes.get(hektor_annonce_id) != source_hash
+            )
+            historical_delete_ids = sorted(set(remote_historical_hashes) - set(local_historical_hashes))
 
         if stale_ids:
             client.delete_rows_by_ids(path="app_dossier_current", column="app_dossier_id", ids=stale_ids)
@@ -1095,6 +1183,17 @@ def main() -> None:
                     batch_size=args.dossier_batch_size,
                 )
 
+        if historical_table_available:
+            if historical_delete_ids:
+                client.delete_rows_by_ids(path="app_historical_annonce_index_current", column="hektor_annonce_id", ids=historical_delete_ids)
+            if historical_upsert_ids:
+                historical_upsert_set = set(historical_upsert_ids)
+                client.upsert_rows(
+                    path="app_historical_annonce_index_current",
+                    rows=[row for row in current_historical_index_rows if int(row["hektor_annonce_id"]) in historical_upsert_set],
+                    batch_size=args.dossier_batch_size,
+                )
+
         client.update_delta_run(
             delta_run_id,
             {
@@ -1123,6 +1222,10 @@ def main() -> None:
                     "archive_index_local": len(current_archive_index_rows),
                     "archive_index_upserted": len(archive_upsert_ids),
                     "archive_index_deleted": len(archive_delete_ids),
+                    "historical_index_enabled": historical_table_available,
+                    "historical_index_local": len(current_historical_index_rows),
+                    "historical_index_upserted": len(historical_upsert_ids),
+                    "historical_index_deleted": len(historical_delete_ids),
                     "deleted_dossiers": len(stale_ids),
                     "mode": "full_rebuild" if args.full_rebuild else "upgrade",
                     "targeted_push": targeted_push,

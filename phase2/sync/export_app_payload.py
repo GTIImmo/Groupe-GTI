@@ -215,6 +215,44 @@ ORDER BY
     hektor_annonce_id DESC
 """
 
+SQL_HISTORICAL_ANNONCE_INDEX_BASE = """
+SELECT
+    CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
+    CAST(app_dossier_id AS INTEGER) AS app_historical_id,
+    numero_dossier,
+    numero_mandat,
+    titre_bien,
+    ville,
+    code_postal,
+    type_bien,
+    prix,
+    commercial_id,
+    commercial_nom,
+    negociateur_email,
+    agence_nom,
+    statut_annonce,
+    archive,
+    diffusable,
+    date_maj,
+    mandat_type,
+    mandat_date_debut,
+    mandat_date_fin,
+    mandat_montant,
+    CASE
+        WHEN mandants_texte IS NULL THEN NULL
+        WHEN length(mandants_texte) <= 240 THEN mandants_texte
+        ELSE substr(mandants_texte, 1, 240) || '...'
+    END AS mandants_texte,
+    CASE WHEN detail_statut_name IS NOT NULL THEN 1 ELSE 0 END AS has_local_detail,
+    NULL AS local_detail_updated_at
+FROM app_view_generale
+WHERE COALESCE(archive, '0') = '0'
+  AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Vendu', 'Clos')
+ORDER BY
+    COALESCE(date_maj, '') DESC,
+    hektor_annonce_id DESC
+"""
+
 
 DETAIL_PAYLOAD_FIELDS = {
     "code_postal",
@@ -1391,6 +1429,20 @@ def build_archive_annonce_index(
     owns_connection = connection is None
     try:
         return fetch_rows(con, build_limited_sql(SQL_ARCHIVE_ANNONCE_INDEX_BASE, limit))
+    finally:
+        if owns_connection:
+            con.close()
+
+
+def build_historical_annonce_index(
+    *,
+    limit: int | None = None,
+    connection: sqlite3.Connection | None = None,
+) -> list[dict[str, object]]:
+    con = connection or sqlite3.connect(PHASE2_DB)
+    owns_connection = connection is None
+    try:
+        return fetch_rows(con, build_limited_sql(SQL_HISTORICAL_ANNONCE_INDEX_BASE, limit))
     finally:
         if owns_connection:
             con.close()
