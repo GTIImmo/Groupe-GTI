@@ -1815,9 +1815,12 @@ function screenStatusToken(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase()
 }
 
-function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen) {
+function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen, filters: AppFilters) {
   if (screen === 'estimations') {
     return rows.filter((item) => screenStatusToken(item.statut_annonce) === 'estimation')
+  }
+  if ((screen === 'mandats' || screen === 'suivi') && filters.archive === archivedFilterValue) {
+    return rows
   }
   if (screen === 'mandats' || screen === 'suivi') {
     return rows.filter((item) => activeListingStatusTokens.has(screenStatusToken(item.statut_annonce)))
@@ -5655,7 +5658,7 @@ export default function App() {
     mandatsPromise
       .then((nextMandatsPage) => {
         if (cancelled) return
-        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen)
+        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen, dataFilters)
         setMandats(scopedRows)
         setMandatsTotal(nextMandatsPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], scopedRows)))
@@ -7127,7 +7130,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
   const mandatTotalPages = totalPages(mandatsTotal, mandatPageSize)
   const workItemTotalPages = totalPages(workItemsTotal, workItemPageSize)
-  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen), [mandats, screen])
+  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
