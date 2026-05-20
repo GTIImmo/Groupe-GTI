@@ -5842,6 +5842,21 @@ export default function App() {
         if (value !== 'offre_achat') next.offreStatus = allFilterValue
         if (value !== 'compromis') next.compromisStatus = allFilterValue
       }
+      if (key === 'archive' && value === archivedFilterValue) {
+        next.statut = allFilterValue
+        next.validationDiffusion = allFilterValue
+        next.diffusable = allFilterValue
+        next.passerelle = allFilterValue
+        next.erreurDiffusion = allFilterValue
+        next.priority = allFilterValue
+        next.workStatus = allFilterValue
+        next.internalStatus = allFilterValue
+        next.requestType = allFilterValue
+        next.requestScope = allFilterValue
+        next.affaire = allFilterValue
+        next.offreStatus = allFilterValue
+        next.compromisStatus = allFilterValue
+      }
       return next
     })
     setDossierPage(1)
