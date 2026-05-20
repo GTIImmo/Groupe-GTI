@@ -1105,8 +1105,6 @@ def main() -> None:
                     "details_upserted": len(detail_upsert_ids),
                     "work_items_replaced": len(work_replace_ids),
                     "filters_replaced": len(current_filter_catalog),
-                    "archive_index_upserted": len(archive_upsert_ids),
-                    "archive_index_deleted": len(archive_delete_ids),
                     "deleted_dossiers": len(stale_ids),
                 },
             )

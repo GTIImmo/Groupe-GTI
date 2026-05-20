@@ -469,8 +469,12 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
         conn.commit()
         return
 
-    placeholders = ", ".join("?" for _ in active_annonce_ids)
-    params = tuple(sorted(active_annonce_ids))
+    conn.execute("DROP TABLE IF EXISTS temp_active_annonce_scope")
+    conn.execute("CREATE TEMP TABLE temp_active_annonce_scope(hektor_annonce_id TEXT PRIMARY KEY)")
+    conn.executemany(
+        "INSERT OR IGNORE INTO temp_active_annonce_scope(hektor_annonce_id) VALUES (?)",
+        ((value,) for value in sorted(active_annonce_ids)),
+    )
     for table in (
         "hektor_annonce_detail",
         "hektor_annonce",
@@ -481,12 +485,38 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
         "hektor_annonce_broadcast_state",
         "sync_annonce_contact_link",
     ):
-        conn.execute(f"DELETE FROM {table} WHERE hektor_annonce_id NOT IN ({placeholders})", params)
-    conn.execute(f"DELETE FROM hektor_price_change_event WHERE hektor_annonce_id NOT IN ({placeholders})", params)
+        conn.execute(
+            f"""
+            DELETE FROM {table}
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM temp_active_annonce_scope s
+                WHERE s.hektor_annonce_id = CAST({table}.hektor_annonce_id AS TEXT)
+            )
+            """
+        )
     conn.execute(
-        f"DELETE FROM hektor_mandat WHERE hektor_annonce_id IS NOT NULL AND hektor_annonce_id NOT IN ({placeholders})",
-        params,
+        """
+        DELETE FROM hektor_price_change_event
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM temp_active_annonce_scope s
+            WHERE s.hektor_annonce_id = CAST(hektor_price_change_event.hektor_annonce_id AS TEXT)
+        )
+        """
     )
+    conn.execute(
+        """
+        DELETE FROM hektor_mandat
+        WHERE hektor_annonce_id IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1
+              FROM temp_active_annonce_scope s
+              WHERE s.hektor_annonce_id = CAST(hektor_mandat.hektor_annonce_id AS TEXT)
+          )
+        """
+    )
+    conn.execute("DROP TABLE IF EXISTS temp_active_annonce_scope")
     conn.commit()
 
 

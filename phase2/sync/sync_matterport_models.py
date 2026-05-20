@@ -502,6 +502,22 @@ def supabase_request(url: str, key: str, table: str, rows: list[dict[str, Any]],
         raise RuntimeError(f"Supabase upsert failed on {table}: HTTP {error.code}: {body[:800]}") from error
 
 
+def supabase_delete_by_ids(url: str, key: str, table: str, column: str, ids: list[str], chunk_size: int = 200) -> None:
+    for index in range(0, len(ids), chunk_size):
+        batch = ids[index : index + chunk_size]
+        if not batch:
+            continue
+        id_list = ",".join(batch)
+        endpoint = f"{url.rstrip('/')}/rest/v1/{table}?{column}=in.({id_list})"
+        request = urllib.request.Request(endpoint, headers=supabase_headers(key), method="DELETE")
+        try:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+                response.read()
+        except urllib.error.HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Supabase delete failed on {table}: HTTP {error.code}: {body[:800]}") from error
+
+
 def build_supabase_rows(rows: list[dict[str, Any]], groups: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     groups_by_key = {(str(group["hektor_annonce_id"]), str(group["numero_mandat"])): group for group in groups}
     group_rows: list[dict[str, Any]] = []
@@ -569,6 +585,7 @@ def upsert_supabase(rows: list[dict[str, Any]], groups: list[dict[str, Any]], li
     group_rows, model_rows = build_supabase_rows(rows, selected_groups)
     model_rows = [row for row in model_rows if row["group_id"] in selected_group_ids]
     supabase_request(url, key, "app_matterport_group", group_rows, "id")
+    supabase_delete_by_ids(url, key, "app_matterport_group_model", "group_id", sorted(selected_group_ids))
     supabase_request(url, key, "app_matterport_group_model", model_rows, "matterport_model_id")
     return {"groups_upserted": len(group_rows), "models_upserted": len(model_rows)}
 
