@@ -1815,12 +1815,9 @@ function screenStatusToken(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase()
 }
 
-function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen, filters: AppFilters) {
+function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen) {
   if (screen === 'estimations') {
     return rows.filter((item) => screenStatusToken(item.statut_annonce) === 'estimation')
-  }
-  if ((screen === 'mandats' || screen === 'suivi') && filters.archive === archivedFilterValue) {
-    return rows
   }
   if (screen === 'mandats' || screen === 'suivi') {
     return rows.filter((item) => activeListingStatusTokens.has(screenStatusToken(item.statut_annonce)))
@@ -1963,6 +1960,12 @@ function defaultFiltersForScreen(screen: Screen): AppFilters {
     return {
       ...emptyFilters,
       statut: 'Actif',
+    }
+  }
+  if (screen === 'mandats') {
+    return {
+      ...emptyFilters,
+      statut: activeListingsFilterValue,
     }
   }
   if (screen === 'suivi') {
@@ -5394,7 +5397,6 @@ export default function App() {
     return hektorNegotiators.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, hektorNegotiators])
   const dataFilters = useMemo<AppFilters>(() => {
-    if (screen === 'mandats' && filters.statut === allFilterValue && filters.archive !== archivedFilterValue) return { ...filters, statut: activeListingsFilterValue }
     if (screen === 'suivi' && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
     if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
     return filters
@@ -5658,7 +5660,7 @@ export default function App() {
     mandatsPromise
       .then((nextMandatsPage) => {
         if (cancelled) return
-        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen, dataFilters)
+        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen)
         setMandats(scopedRows)
         setMandatsTotal(nextMandatsPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], scopedRows)))
@@ -5846,7 +5848,6 @@ export default function App() {
         if (value !== 'compromis') next.compromisStatus = allFilterValue
       }
       if (key === 'archive' && value === archivedFilterValue) {
-        next.statut = allFilterValue
         next.validationDiffusion = allFilterValue
         next.diffusable = allFilterValue
         next.passerelle = allFilterValue
@@ -7130,7 +7131,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
   const mandatTotalPages = totalPages(mandatsTotal, mandatPageSize)
   const workItemTotalPages = totalPages(workItemsTotal, workItemPageSize)
-  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
+  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen), [mandats, screen])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
