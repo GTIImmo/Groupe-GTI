@@ -66,7 +66,7 @@ Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndro
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
     "--mode", "update",
-    "--resources", "annonces", "contacts", "mandats", "offres", "compromis", "ventes", "broadcasts",
+    "--resources", "negos", "annonces", "contacts", "mandats", "offres", "compromis", "ventes", "broadcasts",
     "--missing-only"
 )
 

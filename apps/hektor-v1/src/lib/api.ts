@@ -1060,12 +1060,9 @@ export async function loadWorkItemsPage({
   const to = from + pageSize - 1
   const countMode: 'planned' = 'planned'
   const query = applyWorkItemFiltersToQuery(
-    applyNegotiatorScopeToQuery(
-      supabase
-        .from('app_work_items_current')
-        .select('app_dossier_id,hektor_annonce_id,archive,numero_dossier,numero_mandat,titre_bien,commercial_nom,type_demande_label,work_status,internal_status,priority,validation_diffusion_state,etat_visibilite,motif_blocage,has_open_blocker,next_action,date_relance_prevue,date_entree_file,date_derniere_action,age_jours', { count: countMode }),
-      scope,
-    ),
+    supabase
+      .from('app_work_items_current')
+      .select('app_dossier_id,hektor_annonce_id,archive,numero_dossier,numero_mandat,titre_bien,commercial_nom,type_demande_label,work_status,internal_status,priority,validation_diffusion_state,etat_visibilite,motif_blocage,has_open_blocker,next_action,date_relance_prevue,date_entree_file,date_derniere_action,age_jours', { count: countMode }),
     filters,
   )
     .order('has_open_blocker', { ascending: false })
@@ -1417,10 +1414,10 @@ export async function loadFilterCatalog(scope?: DataScope | null): Promise<Filte
       const { data, error } = await applyNegotiatorScopeToQuery(
         supabase
           .from('app_work_items_current')
-          .select('app_dossier_id,commercial_nom,agence_nom,validation_diffusion_state,priority,work_status,internal_status,negociateur_email')
+          .select('app_dossier_id,commercial_nom,validation_diffusion_state,priority,work_status,internal_status')
           .order('app_dossier_id', { ascending: true })
           .range(from, from + batchSize - 1),
-        scope,
+        null,
       )
       if (error || !data) throw new Error(error?.message ?? 'Unable to load scoped filter catalog work items')
       workItems.push(...(data as WorkItem[]))
@@ -2953,6 +2950,9 @@ export async function createAppUser(input: {
   displayName: string
   isActive: boolean
 }) {
+  if (input.password.trim().length < 8) {
+    throw new Error('Le mot de passe temporaire doit contenir au moins 8 caracteres')
+  }
   if (canUseBackendApi()) {
     return invokeBackendApi<{ ok: true; userId: string; email: string }>('/admin/users/create', {
       method: 'POST',
@@ -2973,9 +2973,20 @@ export async function createAppUser(input: {
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok || payload?.ok === false) {
-    throw new Error(payload?.error ?? 'Unable to create user')
+    throw new Error(formatCreateUserError(payload?.error ?? 'Unable to create user'))
   }
   return payload as { ok: true; userId: string; email: string }
+}
+
+function formatCreateUserError(message: unknown) {
+  const text = typeof message === 'string' ? message : JSON.stringify(message ?? '')
+  if (text.includes('string_too_short') && text.includes('password')) {
+    return 'Le mot de passe temporaire doit contenir au moins 8 caracteres'
+  }
+  if (text.toLowerCase().includes('password') && text.includes('8')) {
+    return 'Le mot de passe temporaire doit contenir au moins 8 caracteres'
+  }
+  return text || 'Impossible de creer l utilisateur'
 }
 
 export async function loadAppUsers() {

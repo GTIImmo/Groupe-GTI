@@ -9348,7 +9348,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </label>
                   <label className="filter-field">
                     <span>Mot de passe temporaire</span>
-                    <input type="text" value={newUserPassword} onChange={(event) => setNewUserPassword(event.target.value)} required />
+                    <input type="text" value={newUserPassword} onChange={(event) => setNewUserPassword(event.target.value)} minLength={8} required />
                   </label>
                   <label className="filter-field">
                     <span>Role</span>
