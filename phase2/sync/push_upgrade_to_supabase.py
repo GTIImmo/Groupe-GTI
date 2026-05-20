@@ -804,12 +804,23 @@ def main() -> None:
         candidate_ids = sorted(local_ids)
         stale_ids = sorted(remote_ids - local_ids)
 
-    payload = build_payload(limit=None, dossier_ids=candidate_ids, include_filter_catalog=False)
+    should_build_delta_payload = args.full_rebuild or targeted_push or bool(candidate_ids) or bool(stale_ids)
+    payload = (
+        build_payload(limit=None, dossier_ids=candidate_ids, include_filter_catalog=False)
+        if should_build_delta_payload
+        else {"dossiers": [], "dossier_details": [], "work_items": [], "mandat_register_rows": [], "broadcasts": []}
+    )
+    if args.full_rebuild:
+        register_payload = build_payload(limit=None, dossier_ids=None, include_filter_catalog=False)
+    elif targeted_push or candidate_ids:
+        register_payload = payload
+    else:
+        register_payload = {"mandat_register_rows": []}
     current_dossiers = build_current_dossiers(payload["dossiers"])
     source_updated_at_by_id = {int(row["app_dossier_id"]): row.get("source_updated_at") for row in current_dossiers}
     current_details = build_current_details(payload["dossier_details"], source_updated_at_by_id)
     current_work_items = build_current_work_items(payload["work_items"])
-    current_mandat_register_rows = build_current_mandat_register_rows(payload.get("mandat_register_rows", []))
+    current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
 
     dossier_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_dossiers})
@@ -955,15 +966,19 @@ def main() -> None:
             if current_filter_catalog:
                 client.insert_rows(path="app_filter_catalog_current_store", rows=current_filter_catalog, batch_size=args.filter_batch_size)
 
-        if targeted_push:
-            register_replace_ids = sorted({
-                int(row["app_dossier_id"])
-                for row in current_mandat_register_rows
-                if row.get("app_dossier_id") is not None
-            } | set(targeted_dossier_ids))
-            client.delete_rows_by_ids(path="app_mandat_register_current", column="app_dossier_id", ids=register_replace_ids)
-        else:
+        register_replace_annonce_ids = sorted({
+            int(row["hektor_annonce_id"])
+            for row in [*current_dossiers, *current_mandat_register_rows]
+            if row.get("hektor_annonce_id") is not None
+        })
+        register_replace_dossier_ids = sorted(set(stale_ids) | (set(targeted_dossier_ids) if targeted_push else set()))
+        if args.full_rebuild:
             client.delete_all_rows(path="app_mandat_register_current", filter_expr="register_row_id=not.is.null")
+        else:
+            if register_replace_annonce_ids:
+                client.delete_rows_by_ids(path="app_mandat_register_current", column="hektor_annonce_id", ids=register_replace_annonce_ids)
+            if register_replace_dossier_ids:
+                client.delete_rows_by_ids(path="app_mandat_register_current", column="app_dossier_id", ids=register_replace_dossier_ids)
         if current_mandat_register_rows:
             client.insert_rows(
                 path="app_mandat_register_current",
