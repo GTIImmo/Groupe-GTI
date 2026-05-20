@@ -5430,7 +5430,6 @@ export default function App() {
     }
     return filters
   }, [filters, screen])
-  const isArchiveStockView = screen === 'annonces' && dataFilters.archive === archivedFilterValue
   const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter((job) => isPrimaryHektorActionJob(job) && isConsoleJobActive(job)), [hektorActionJobs])
   const visibleHektorActionPopupJobs = useMemo(() => {
     const dismissed = new Set(dismissedHektorActionJobIds)
@@ -5557,10 +5556,6 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
-    if (isArchiveStockView) {
-      setMandatStats({ total: 0, withoutMandat: 0, mandatNonDiffuse: 0, mandatDiffuse: 0, mandatValide: 0, mandatNonValide: 0, offresEnCours: 0, offresRefusees: 0, compromisEnCours: 0, compromisAnnules: 0, affairesEnCours: 0, affairesAnnulees: 0, leboncoin: 0, bienici: 0, withErrors: 0 })
-      return
-    }
     let cancelled = false
     const statsPromise = screen === 'registre'
       ? loadMandatRegisterStats({ ...dataFilters, mandat: withMandatFilterValue }, dataScope)
@@ -5575,14 +5570,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen, isArchiveStockView])
+  }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
-    if (isArchiveStockView) {
-      setSuiviRequestStats({ pendingOrInProgress: 0, refused: 0, accepted: 0, acceptedHistorical: 0 })
-      return
-    }
     let cancelled = false
     loadSuiviRequestStats(dataFilters, dataScope)
       .then((stats) => {
@@ -5594,14 +5585,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen, isArchiveStockView])
+  }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
-    if (isArchiveStockView) {
-      setCommercialRequestStats({ sent: 0, waitingCorrection: 0 })
-      return
-    }
     let cancelled = false
     loadCommercialRequestStats(dataFilters, dataScope)
       .then((stats) => {
@@ -5613,7 +5600,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen, isArchiveStockView])
+  }, [session, dataFilters, dataScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -5695,33 +5682,6 @@ export default function App() {
     let cancelled = false
     setPageLoading(true)
     setMandatLoading(true)
-    if (isArchiveStockView) {
-      setMandats([])
-      setMandatsTotal(0)
-      setWorkItems([])
-      setWorkItemsTotal(0)
-      const dossiersPromise = loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope })
-      dossiersPromise
-        .then((nextDossiersPage) => {
-          if (cancelled) return
-          setDossiers(nextDossiersPage.rows)
-          setDossiersTotal(nextDossiersPage.total)
-          setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, [], [])))
-          setSelectedDossierId((current) => current ?? nextDossiersPage.rows[0]?.app_dossier_id ?? null)
-        })
-        .catch((error) => {
-          if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement archives')
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setPageLoading(false)
-            setMandatLoading(false)
-          }
-        })
-      return () => {
-        cancelled = true
-      }
-    }
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
     const nextMandatPageSize = screen === 'suivi' ? 1000 : mandatPageSize
     const dossiersPromise = loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope })
@@ -5772,7 +5732,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen, dataReloadKey, isArchiveStockView])
+  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen, dataReloadKey])
 
   useEffect(() => {
     if (selectedDossierId == null) return

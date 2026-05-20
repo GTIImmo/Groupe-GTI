@@ -1132,8 +1132,8 @@ export async function loadDossiersPage({
 
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
+  const countMode: 'exact' = 'exact'
   if (filters.archive === archivedFilterValue) {
-    const countMode: 'planned' = 'planned'
     const requestScope = normalizeFilterValue(filters.requestScope)
     const requestType = normalizeFilterValue(filters.requestType)
     if (requestScope || requestType) {
@@ -1160,7 +1160,6 @@ export async function loadDossiersPage({
     }
   }
 
-  const countMode: 'exact' = 'exact'
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
