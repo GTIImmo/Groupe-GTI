@@ -7,6 +7,21 @@ from phase2.pipeline.view_common import (
 )
 
 
+SQL_NORMALIZE_MANDAT_TYPE = """
+CASE
+    WHEN __VALUE__ IS NULL OR TRIM(__VALUE__) = '' THEN NULL
+    WHEN LOWER(TRIM(__VALUE__)) LIKE '%semi-exclusif%' THEN 'ACCORD'
+    WHEN LOWER(TRIM(__VALUE__)) LIKE '%exclusif%' THEN 'EXCLUSIF'
+    WHEN LOWER(TRIM(__VALUE__)) LIKE '%non exclusif%' THEN 'SIMPLE'
+    WHEN LOWER(TRIM(__VALUE__)) LIKE '%mandat de vente%' THEN 'SIMPLE'
+    WHEN LOWER(TRIM(__VALUE__)) = 'simple' THEN 'SIMPLE'
+    WHEN LOWER(TRIM(__VALUE__)) = 'exclusif' THEN 'EXCLUSIF'
+    WHEN LOWER(TRIM(__VALUE__)) = 'accord' THEN 'ACCORD'
+    ELSE TRIM(__VALUE__)
+END
+""".strip()
+
+
 # Cette vue reste volumineuse; elle est sortie de refresh_views.py pour isoler le SQL metier.
 SQL_REFRESH_VUE_GENERALE = """
 DROP TABLE IF EXISTS app_view_generale;
@@ -245,12 +260,15 @@ SELECT
     src.valide,
     COALESCE(m.hektor_mandat_id, src.mandat_id) AS mandat_source_id,
     COALESCE(NULLIF(TRIM(src.no_mandat), ''), m.numero) AS mandat_numero_reference,
-    COALESCE(NULLIF(TRIM(src.mandat_type), ''), m.type) AS mandat_type,
+    COALESCE(
+        __SQL_NORMALIZE_SRC_MANDAT_TYPE__,
+        __SQL_NORMALIZE_M_TYPE__
+    ) AS mandat_type,
     COALESCE(NULLIF(TRIM(src.mandat_date_debut), ''), m.date_debut) AS mandat_date_debut,
     COALESCE(NULLIF(TRIM(src.mandat_date_fin), ''), m.date_fin) AS mandat_date_fin,
     COALESCE(NULLIF(TRIM(src.mandat_date_cloture), ''), m.date_cloture) AS mandat_date_cloture,
     m.numero AS mandat_numero_source,
-    m.type AS mandat_type_source,
+    __SQL_NORMALIZE_M_TYPE__ AS mandat_type_source,
     m.date_enregistrement AS mandat_date_enregistrement,
     m.montant AS mandat_montant,
     COALESCE(NULLIF(TRIM(m.mandants_texte), ''), NULLIF(TRIM(det.proprietaires_resume), '')) AS mandants_texte,
@@ -399,4 +417,6 @@ SQL_REFRESH_VUE_GENERALE = (
     .replace("__SQL_VALIDATION_DIFFUSION_GENERALE__", SQL_VALIDATION_DIFFUSION_GENERALE)
     .replace("__SQL_ETAT_VISIBILITE__", SQL_ETAT_VISIBILITE)
     .replace("__SQL_ALERTE_PRINCIPALE__", SQL_ALERTE_PRINCIPALE)
+    .replace("__SQL_NORMALIZE_SRC_MANDAT_TYPE__", SQL_NORMALIZE_MANDAT_TYPE.replace("__VALUE__", "src.mandat_type"))
+    .replace("__SQL_NORMALIZE_M_TYPE__", SQL_NORMALIZE_MANDAT_TYPE.replace("__VALUE__", "m.type"))
 )

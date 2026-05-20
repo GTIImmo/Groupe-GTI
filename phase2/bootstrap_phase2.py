@@ -53,6 +53,24 @@ def bootstrap_app_dossier(con: sqlite3.Connection) -> None:
     try:
         con.execute(
             """
+            WITH mandat_match AS (
+                SELECT
+                    src.hektor_annonce_id,
+                    m.hektor_mandat_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY src.hektor_annonce_id
+                        ORDER BY
+                            CASE WHEN COALESCE(m.hektor_mandat_id, '') = COALESCE(src.mandat_id, '') THEN 0 ELSE 1 END,
+                            CASE WHEN COALESCE(m.numero, '') = COALESCE(src.no_mandat, '') THEN 0 ELSE 1 END,
+                            COALESCE(m.synced_at, '') DESC,
+                            COALESCE(m.hektor_mandat_id, '') DESC
+                    ) AS rn
+                FROM hektor.case_dossier_source src
+                LEFT JOIN hektor.hektor_mandat m
+                    ON m.hektor_annonce_id = src.hektor_annonce_id
+                WHERE src.annonce_source_status = 'present'
+                  AND src.hektor_annonce_id IS NOT NULL
+            )
             INSERT INTO app_dossier (
                 hektor_annonce_id,
                 hektor_mandat_id,
@@ -63,25 +81,15 @@ def bootstrap_app_dossier(con: sqlite3.Connection) -> None:
             )
             SELECT
                 CAST(src.hektor_annonce_id AS INTEGER),
-                COALESCE(
-                    (
-                        SELECT m.hektor_mandat_id
-                        FROM hektor.hektor_mandat m
-                        WHERE m.hektor_annonce_id = src.hektor_annonce_id
-                          AND (
-                              m.hektor_mandat_id = src.mandat_id
-                              OR COALESCE(m.numero, '') = COALESCE(src.no_mandat, '')
-                          )
-                        ORDER BY CASE WHEN COALESCE(m.numero, '') = COALESCE(src.no_mandat, '') THEN 0 ELSE 1 END
-                        LIMIT 1
-                    ),
-                    src.mandat_id
-                ),
+                COALESCE(mm.hektor_mandat_id, src.mandat_id),
                 src.no_dossier,
                 src.no_mandat,
                 src.hektor_negociateur_id,
                 TRIM(COALESCE(src.negociateur_prenom, '') || ' ' || COALESCE(src.negociateur_nom, ''))
             FROM hektor.case_dossier_source src
+            LEFT JOIN mandat_match mm
+                ON mm.hektor_annonce_id = src.hektor_annonce_id
+               AND mm.rn = 1
             WHERE src.annonce_source_status = 'present'
               AND src.hektor_annonce_id IS NOT NULL
             ON CONFLICT(hektor_annonce_id) DO UPDATE SET

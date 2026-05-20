@@ -20,7 +20,7 @@ const WORKER_KIND = WORKER_KINDS.has(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actio
 const STORAGE_BUCKET = process.env.CONSOLE_STORAGE_BUCKET || "hektor-console-documents";
 const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "sessions", `storage_state_${WORKER_KIND}.json`);
 const MATTERPORT_STORAGE_STATE_PATH = process.env.MATTERPORT_STORAGE_STATE_PATH || path.resolve(__dirname, "matterport_storage_state.json");
-const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\HektorConsoleDocuments";
+const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\Hektor\\HektorConsoleDocuments";
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
 const ACTION_JOB_TYPES = new Set([
@@ -38,6 +38,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "delete_document_from_hektor",
   "sync_hektor_photos",
   "upload_hektor_photo",
+  "prepare_archived_annonce_detail",
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
@@ -71,6 +72,20 @@ const ENABLE_MATTERPORT_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_MATTE
 const CREATE_HEKTOR_HTTP_DIRECT = String(process.env.CONSOLE_CREATE_HEKTOR_HTTP_DIRECT || "true").toLowerCase() !== "false";
 const CREATE_HEKTOR_PLAYWRIGHT_FALLBACK = String(process.env.CONSOLE_CREATE_HEKTOR_PLAYWRIGHT_FALLBACK || "true").toLowerCase() !== "false";
 const CLOUD_STATUSES = new Set(["Actif", "Sous offre", "Sous compromis", "Estimation"]);
+
+function browserLaunchOptions(options = {}) {
+  const executablePath = [
+    process.env.CONSOLE_CHROME_EXE,
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  ].find((candidate) => candidate && fs.existsSync(candidate)) || "";
+  return {
+    ...options,
+    ...(executablePath ? { executablePath } : {}),
+  };
+}
+
 const PROPERTY_LISTING_QUERY = `
 query PropertyListing($filters: AnnonceSearchInput!) {
   listing: properties(filters: $filters) {
@@ -968,7 +983,7 @@ async function switchHektorUserContextWithPlaywright(idUser) {
   let browser = null;
   let confirmed = false;
   try {
-    browser = await chromium.launch({ headless });
+    browser = await chromium.launch(browserLaunchOptions({ headless }));
     const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
     const page = await context.newPage();
     await page.goto(`${ADMIN_URL}?call=authenticate&mode=autologin&idUser=${encodeURIComponent(targetId)}`, {
@@ -1354,7 +1369,7 @@ async function createHektorAnnonceWithPlaywright(job, payload) {
   const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
   let browser = null;
   try {
-    browser = await chromium.launch({ headless });
+    browser = await chromium.launch(browserLaunchOptions({ headless }));
     const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
     const page = await context.newPage();
     const captured = [];
@@ -1605,6 +1620,38 @@ async function handleRefreshConsoleData(job) {
     status: "synced",
     reason: payload.reason || null,
     parent_job_id: payload.parent_job_id || null,
+  };
+}
+
+async function handlePrepareArchivedAnnonceDetail(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for prepare_archived_annonce_detail");
+  await logJob(job.id, "archive_detail_cache", "running", "Preparation du detail archive depuis la base locale", {
+    hektor_annonce_id: hektorAnnonceId,
+    ttl_hours: payload.ttl_hours || 2,
+  });
+  const args = [
+    "Console/prepare_archived_annonce_detail.py",
+    "--hektor-annonce-id",
+    hektorAnnonceId,
+    "--ttl-hours",
+    String(payload.ttl_hours || 2),
+  ];
+  if (job.requested_by) {
+    args.push("--requested-by", String(job.requested_by));
+  }
+  const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
+  const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+  const result = safeJsonParse(lastLine);
+  await logJob(job.id, "archive_detail_cache", "done", "Detail archive disponible temporairement dans Supabase", {
+    hektor_annonce_id: hektorAnnonceId,
+    result,
+  });
+  return {
+    ...result,
+    hektor_annonce_id: hektorAnnonceId,
+    cache_table: "app_archive_annonce_detail_cache",
   };
 }
 
@@ -2046,7 +2093,7 @@ async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, 
   const pageUrl = `${ADMIN_URL}?page=/mes-biens/mon-bien/photos&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`;
   let browser = null;
   try {
-    browser = await chromium.launch({ headless });
+    browser = await chromium.launch(browserLaunchOptions({ headless }));
     const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
     const page = await context.newPage();
     const captured = [];
@@ -3552,6 +3599,8 @@ async function runHandler(job) {
       return handleSyncHektorPhotos(job);
     case "upload_hektor_photo":
       return handleUploadHektorPhoto(job);
+    case "prepare_archived_annonce_detail":
+      return handlePrepareArchivedAnnonceDetail(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
     case "create_hektor_mandant_contact":

@@ -1020,7 +1020,7 @@ export async function loadDossiersPage({
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'exact' = 'exact'
+  const countMode: 'planned' = 'planned'
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
     filters,
@@ -1688,7 +1688,7 @@ export async function loadMandatsPage({
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'exact' = 'exact'
+  const countMode: 'planned' = 'planned'
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(annoncesCurrentView).select('*', { count: countMode }), scope),
     filters,
@@ -3314,6 +3314,32 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+export async function createPrepareArchivedAnnonceDetailJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'prepare_archived_annonce_detail',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        ttl_hours: 2,
+      },
+      priority: input.priority ?? 32,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create archived annonce detail preparation job')
+  return data as ConsoleJob
+}
+
 export async function createLinkHektorMandantJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   contactId: string
@@ -3606,6 +3632,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'delete_document_from_hektor',
   'sync_hektor_photos',
   'upload_hektor_photo',
+  'prepare_archived_annonce_detail',
 ]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {

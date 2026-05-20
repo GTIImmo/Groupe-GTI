@@ -48,6 +48,7 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
+  createPrepareArchivedAnnonceDetailJob,
   createSyncHektorPhotosJob,
   createUploadHektorPhotoJob,
   createHektorMandantContactJob,
@@ -98,6 +99,7 @@ const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
+const activeListingsFilterOption = { value: activeListingsFilterValue, label: 'Actif / offre / compromis' }
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 
@@ -1965,12 +1967,21 @@ function defaultFiltersForScreen(screen: Screen): AppFilters {
   if (screen === 'mandats') {
     return {
       ...emptyFilters,
+      archive: activeArchiveFilterValue,
       statut: activeListingsFilterValue,
     }
   }
   if (screen === 'suivi') {
     return {
       ...emptyFilters,
+      archive: activeArchiveFilterValue,
+      statut: activeListingsFilterValue,
+    }
+  }
+  if (screen === 'annonces') {
+    return {
+      ...emptyFilters,
+      archive: activeArchiveFilterValue,
       statut: activeListingsFilterValue,
     }
   }
@@ -3614,6 +3625,9 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'prepare_document_cloud') {
     return documentName ? `Preparation ${documentName}` : 'Preparation document'
   }
+  if (job.job_type === 'prepare_archived_annonce_detail') {
+    return `Detail archive ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
   if (job.job_type === 'update_hektor_annonce_fields') {
     return `Modification ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
@@ -3639,6 +3653,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
   if (job.job_type === 'upload_hektor_photo') return 'Ajout photo'
   if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
+  if (job.job_type === 'prepare_archived_annonce_detail') return 'Detail archive'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
@@ -3652,7 +3667,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
-  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'sync_hektor_photos') return 'document'
+  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'sync_hektor_photos') return 'document'
   return 'create'
 }
 
@@ -3667,6 +3682,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'upload_document_to_hektor') return 'Document envoye au PC serveur'
   if (job.job_type === 'upload_hektor_photo') return 'Photo envoyee au PC serveur'
   if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
+  if (job.job_type === 'prepare_archived_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
@@ -3728,6 +3744,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
     if (job.job_type === 'upload_hektor_photo') return 'Photo ajoutee'
     if (job.job_type === 'prepare_document_cloud') return 'Document pret'
+    if (job.job_type === 'prepare_archived_annonce_detail') return 'Archive prete'
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
     if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
@@ -3738,7 +3755,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
-    if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
+    if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
     if (job.job_type === 'upload_hektor_photo') return 'Mise a jour galerie'
     if (job.job_type === 'sync_hektor_photos') return 'Synchronisation photos'
     return "Mise a jour de l'app"
@@ -5185,7 +5202,7 @@ function activeFilterEntries(filters: AppFilters) {
     filters.requestScope === 'refused' ? ['Demandes', 'Refusees'] : null,
     filters.requestType === 'demande_diffusion' ? ['Type demande', 'Validation'] : null,
     filters.requestType === 'demande_baisse_prix' ? ['Type demande', 'Baisse de prix'] : null,
-    filters.statut !== allFilterValue ? ['Statut annonce', filters.statut] : null,
+    filters.statut === activeListingsFilterValue ? ['Statut annonce', activeListingsFilterOption.label] : filters.statut !== allFilterValue ? ['Statut annonce', filters.statut] : null,
     filters.validationDiffusion === '__validated__' ? ['Validation', 'Oui'] : null,
     filters.validationDiffusion === '__not_validated__' ? ['Validation', 'Non'] : null,
     filters.validationDiffusion !== allFilterValue && filters.validationDiffusion !== '__validated__' && filters.validationDiffusion !== '__not_validated__' ? ['Validation', filters.validationDiffusion] : null,
@@ -5203,7 +5220,7 @@ function activeFilterEntries(filters: AppFilters) {
 export default function App() {
   const [screen, setScreen] = useState<Screen>('mandats')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
-  const [filters, setFilters] = useState<AppFilters>(emptyFilters)
+  const [filters, setFilters] = useState<AppFilters>(() => defaultFiltersForScreen('mandats'))
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [dossiersTotal, setDossiersTotal] = useState(0)
   const [dossierPage, setDossierPage] = useState(1)
@@ -5397,8 +5414,20 @@ export default function App() {
     return hektorNegotiators.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, hektorNegotiators])
   const dataFilters = useMemo<AppFilters>(() => {
-    if (screen === 'suivi' && filters.statut === allFilterValue) return { ...filters, statut: activeListingsFilterValue }
-    if (screen === 'estimations') return { ...filters, statut: 'Estimation' }
+    if (screen === 'suivi') {
+      return {
+        ...filters,
+        archive: filters.archive === allFilterValue ? activeArchiveFilterValue : filters.archive,
+        statut: filters.statut === allFilterValue ? activeListingsFilterValue : filters.statut,
+      }
+    }
+    if (screen === 'estimations') {
+      return {
+        ...filters,
+        archive: filters.archive === allFilterValue ? activeArchiveFilterValue : filters.archive,
+        statut: 'Estimation',
+      }
+    }
     return filters
   }, [filters, screen])
   const activeHektorActionJobs = useMemo(() => hektorActionJobs.filter((job) => isPrimaryHektorActionJob(job) && isConsoleJobActive(job)), [hektorActionJobs])
@@ -5411,6 +5440,10 @@ export default function App() {
       .slice(0, 8)
   }, [dismissedHektorActionJobIds, hektorActionJobs])
   const activeDeleteAnnonceJobs = useMemo(() => activeHektorActionJobs.filter((job) => job.job_type === 'delete_hektor_annonce'), [activeHektorActionJobs])
+  const preparingArchiveDetailIds = useMemo(() => new Set(activeHektorActionJobs
+    .filter((job) => job.job_type === 'prepare_archived_annonce_detail')
+    .map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? ''))
+    .filter(Boolean)), [activeHektorActionJobs])
   const deletingAppDossierIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => Number(job.app_dossier_id)).filter((value) => Number.isFinite(value))), [activeDeleteAnnonceJobs])
   const deletingHektorAnnonceIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '')).filter(Boolean)), [activeDeleteAnnonceJobs])
   const visibleDossiers = useMemo(() => dossiers.filter((item) => !deletingAppDossierIds.has(item.app_dossier_id) && !deletingHektorAnnonceIds.has(String(item.hektor_annonce_id))), [dossiers, deletingAppDossierIds, deletingHektorAnnonceIds])
@@ -5882,6 +5915,18 @@ export default function App() {
     setDetailOpen(false)
   }
 
+  async function handlePrepareArchivedAnnonceDetail(dossier: Dossier) {
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    try {
+      const job = await createPrepareArchivedAnnonceDetailJob({ dossier, priority: 32 })
+      rememberHektorActionJob(job)
+      setNoticeMessage(`Preparation du detail archive demandee pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le detail archive')
+    }
+  }
+
   function openScreen(nextScreen: Screen) {
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMobileMenuOpen(false)
@@ -5926,7 +5971,7 @@ export default function App() {
       setActiveMandatKpiAction(null)
       setSuiviDrilldownLabel(nextSuiviLabel)
       setSuiviRequestFilter(nextSuiviFilter)
-      setFilters(emptyFilters)
+      setFilters(defaultFiltersForScreen('suivi'))
       return
     }
     const nextFilters = metricDrilldownFilters(filters, action)
@@ -8460,7 +8505,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="filter-grid">
                 <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect
                   label="Diffusable"
@@ -8876,7 +8921,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'sans_erreur', label: 'Non' },
                   ]}
                 />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect label="Priorite" value={filters.priority} onChange={(value) => updateFilter('priority', value)} options={filterCatalog.priorities} />
@@ -8901,7 +8946,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect
@@ -8993,7 +9038,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
                 <FilterSelect
                   label="Etat du mandat"
                   value={filters.mandateState}
@@ -9096,7 +9141,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'sans_erreur', label: 'Non' },
                   ]}
                 />
-                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={filterCatalog.statuts} />
+                <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={[activeListingsFilterOption, ...filterCatalog.statuts]} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
                 <FilterSelect
@@ -9166,7 +9211,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
             }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
-          <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
+          <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
           <MandatsScreen
             mandats={screenMandats}
@@ -9506,6 +9551,8 @@ function StockScreen(props: {
   dossierPage: number
   dossierTotalPages: number
   hektorActionJobs: ConsoleJob[]
+  preparingArchiveDetailIds: Set<string>
+  onPrepareArchivedDetail: (dossier: Dossier) => void
   onPrevDossier: () => void
   onNextDossier: () => void
   onGoToDossierPage: (page: number) => void
@@ -9558,19 +9605,40 @@ function StockScreen(props: {
         <div className="table-wrap">
           {props.dossiers.length > 0 ? (
             <table>
-              <thead><tr><th>Dossier</th><th>Bien</th><th>Commercial</th><th>Statut</th><th>Diffusion</th><th>Prix</th><th>Hektor</th></tr></thead>
+              <thead><tr><th>Dossier</th><th>Bien</th><th>Commercial</th><th>Statut</th><th>Diffusion</th><th>Prix</th><th>Hektor</th><th>Archive</th></tr></thead>
               <tbody>
-                {props.dossiers.map((item) => (
-                  <tr key={item.app_dossier_id} className={item.app_dossier_id === props.selectedDossier?.app_dossier_id ? 'is-selected' : ''} onClick={() => props.onSelectDossier(item.app_dossier_id)} onDoubleClick={props.onOpenDetail}>
-                    <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.numero_mandat ?? '-'}</span></td>
-                    <td><strong>{item.titre_bien}</strong><span>{item.ville ?? '-'}</span></td>
-                    <td>{commercialDisplay(item)}</td>
-                    <td><StatusPill value={item.statut_annonce} /><small>{item.archive === '1' ? 'Archivee' : 'Non archivee'}</small></td>
-                    <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
-                    <td>{formatPrice(item.prix)}</td>
-                    <td><button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); openHektorAnnonce(item.hektor_annonce_id) }}>Ouvrir</button></td>
-                  </tr>
-                ))}
+                {props.dossiers.map((item) => {
+                  const isArchived = item.archive === '1'
+                  const isPreparingArchiveDetail = props.preparingArchiveDetailIds.has(String(item.hektor_annonce_id))
+                  const hasLocalArchiveDetail = item.has_local_detail === true || item.has_local_detail === 1 || item.has_local_detail === '1'
+                  return (
+                    <tr key={item.app_dossier_id} className={item.app_dossier_id === props.selectedDossier?.app_dossier_id ? 'is-selected' : ''} onClick={() => props.onSelectDossier(item.app_dossier_id)} onDoubleClick={props.onOpenDetail}>
+                      <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.numero_mandat ?? '-'}</span></td>
+                      <td><strong>{item.titre_bien}</strong><span>{item.ville ?? '-'}</span></td>
+                      <td>{commercialDisplay(item)}</td>
+                      <td><StatusPill value={item.statut_annonce} /><small>{isArchived ? 'Archivee' : 'Non archivee'}</small></td>
+                      <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
+                      <td>{formatPrice(item.prix)}</td>
+                      <td><button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); openHektorAnnonce(item.hektor_annonce_id) }}>Ouvrir</button></td>
+                      <td>
+                        {isArchived ? (
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              props.onPrepareArchivedDetail(item)
+                            }}
+                            disabled={isPreparingArchiveDetail}
+                            title={hasLocalArchiveDetail ? 'Publier temporairement le detail archive depuis le serveur local' : 'Demander le detail archive au serveur local'}
+                          >
+                            {isPreparingArchiveDetail ? 'En attente' : hasLocalArchiveDetail ? 'Charger detail' : 'Demander detail'}
+                          </button>
+                        ) : <small>-</small>}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           ) : (

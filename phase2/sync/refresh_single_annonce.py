@@ -22,6 +22,7 @@ from hektor_pipeline.common import (  # noqa: E402
     upsert_raw_response,
 )
 from sync_raw import mark_annonce_detail_synced, replace_annonce_contact_links  # noqa: E402
+from phase2.sync.manual_mandat_corrections import inject_manual_mandat_if_missing  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -268,7 +269,7 @@ def update_annonce_from_detail(conn: sqlite3.Connection, annonce_id: str, payloa
 
 
 def upsert_annonce_detail(conn: sqlite3.Connection, annonce_id: str, payload: dict[str, Any]) -> None:
-    data = payload.get("data") or {}
+    data = inject_manual_mandat_if_missing(payload.get("data") or {})
     statut = data.get("statut") if isinstance(data, dict) else {}
     conn.execute(
         """
@@ -384,6 +385,9 @@ def main() -> int:
             "/Api/Annonce/AnnonceById/",
             params={"id": annonce_id, "version": settings.api_version},
         )
+        if isinstance(detail_payload.get("data"), dict):
+            detail_payload = dict(detail_payload)
+            detail_payload["data"] = inject_manual_mandat_if_missing(detail_payload.get("data") or {})
         upsert_raw_response(
             conn,
             run_id=run_id,
@@ -420,6 +424,8 @@ def main() -> int:
         mandat_items = list(iter_mandat_items(mandats_payload))
         if not mandat_items and isinstance(detail_payload.get("data"), dict):
             mandat_items = list(iter_mandat_items({"data": {"mandats": (detail_payload.get("data") or {}).get("mandats")}}))
+            if mandat_items:
+                mandats_payload = {"data": mandat_items}
         replace_mandats_for_annonce(conn, annonce_id, mandat_items)
 
         passerelles_payload = client.get_json(

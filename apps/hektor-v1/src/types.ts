@@ -170,6 +170,8 @@ export type Dossier = {
   date_relance_prevue: string | null
   dernier_event_type: string | null
   dernier_work_status: string | null
+  has_local_detail?: boolean | number | string | null
+  local_detail_updated_at?: string | null
 }
 
 export type DossierDetail = {
@@ -472,6 +474,7 @@ export type ConsoleJobType =
   | 'matterport_reactivate'
   | 'refresh_console_data'
   | 'archive_cloud_documents'
+  | 'prepare_archived_annonce_detail'
 
 export type ConsoleJob = {
   id: string
