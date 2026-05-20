@@ -12,6 +12,9 @@ from phase2.sync.manual_mandat_corrections import get_manual_mandat_correction, 
 
 ANNONCE_ENDPOINTS = (
     "list_annonces_active",
+    "list_annonces_active_update",
+    "list_annonces_archived",
+    "list_annonces_archived_update",
 )
 CONTACT_ENDPOINTS = (
     "list_contacts",

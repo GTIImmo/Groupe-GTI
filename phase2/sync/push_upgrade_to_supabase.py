@@ -16,14 +16,14 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_payload
+    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_payload
 except ModuleNotFoundError:
     import sys
 
     ROOT_DIR = Path(__file__).resolve().parents[2]
     if str(ROOT_DIR) not in sys.path:
         sys.path.insert(0, str(ROOT_DIR))
-    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_payload
+    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_payload
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -221,6 +221,30 @@ MANDAT_REGISTER_NULLABLE_KEYS = (
     "register_detail_payload_json",
 )
 
+ARCHIVE_INDEX_NULLABLE_KEYS = (
+    "numero_dossier",
+    "numero_mandat",
+    "titre_bien",
+    "ville",
+    "code_postal",
+    "type_bien",
+    "prix",
+    "commercial_id",
+    "commercial_nom",
+    "negociateur_email",
+    "agence_nom",
+    "statut_annonce",
+    "archive",
+    "diffusable",
+    "date_maj",
+    "mandat_type",
+    "mandat_date_debut",
+    "mandat_date_fin",
+    "mandat_montant",
+    "mandants_texte",
+    "local_detail_updated_at",
+)
+
 
 class SupabaseRestClient:
     def __init__(self, *, base_url: str, service_role_key: str) -> None:
@@ -378,6 +402,16 @@ class SupabaseRestClient:
         for batch in chunked(ids, chunk_size):
             id_list = ",".join(str(int(value)) for value in batch)
             self._request(method="DELETE", path=f"{path}?{column}=in.({id_list})")
+
+    def table_available(self, path: str) -> bool:
+        try:
+            self._request(method="GET", path=path, query={"select": "*", "limit": "1"})
+            return True
+        except RuntimeError as exc:
+            message = str(exc)
+            if "PGRST205" in message or "Could not find the table" in message or "404" in message:
+                return False
+            raise
 
 
 def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -568,6 +602,45 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "register_avenants_json": normalized.get("register_avenants_json"),
             "register_detail_payload_json": normalized.get("register_detail_payload_json"),
         }
+        current_row["source_hash"] = stable_hash(current_row)
+        current_rows.append(current_row)
+    return current_rows
+
+
+def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    current_rows: list[dict[str, object]] = []
+    for row in rows:
+        normalized = normalize_row(row, ARCHIVE_INDEX_NULLABLE_KEYS)
+        hektor_annonce_id = normalized.get("hektor_annonce_id")
+        if hektor_annonce_id is None:
+            continue
+        current_row = {
+            "hektor_annonce_id": int(hektor_annonce_id),
+            "app_archive_id": int(normalized.get("app_archive_id") or hektor_annonce_id),
+            "numero_dossier": normalized.get("numero_dossier"),
+            "numero_mandat": normalized.get("numero_mandat"),
+            "titre_bien": normalized.get("titre_bien") or "[Sans titre]",
+            "ville": normalized.get("ville"),
+            "code_postal": normalized.get("code_postal"),
+            "type_bien": normalized.get("type_bien"),
+            "prix": normalize_numeric(normalized.get("prix")),
+            "commercial_id": normalized.get("commercial_id"),
+            "commercial_nom": normalized.get("commercial_nom"),
+            "negociateur_email": normalized.get("negociateur_email"),
+            "agence_nom": normalized.get("agence_nom"),
+            "statut_annonce": normalized.get("statut_annonce"),
+            "archive": normalized.get("archive") or "1",
+            "diffusable": normalized.get("diffusable"),
+            "date_maj": normalize_timestamp(normalized.get("date_maj")),
+            "mandat_type": normalized.get("mandat_type"),
+            "mandat_date_debut": normalized.get("mandat_date_debut"),
+            "mandat_date_fin": normalized.get("mandat_date_fin"),
+            "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
+            "mandants_texte": normalized.get("mandants_texte"),
+            "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
+            "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
+        }
+        current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
         current_row["source_hash"] = stable_hash(current_row)
         current_rows.append(current_row)
     return current_rows
@@ -822,12 +895,16 @@ def main() -> None:
     current_work_items = build_current_work_items(payload["work_items"])
     current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
+    archive_table_available = client.table_available("app_archive_annonce_index_current")
+    current_archive_index_rows = build_current_archive_index_rows(build_archive_annonce_index(limit=None)) if archive_table_available else []
 
     dossier_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_dossiers})
     detail_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_details})
     local_work_hashes = grouped_work_hashes(current_work_items)
     work_candidate_ids = sorted({int(row["app_dossier_id"]) for row in current_work_items})
     broadcast_candidate_ids = sorted({int(row["app_dossier_id"]) for row in current_broadcasts})
+    archive_upsert_ids: list[int] = []
+    archive_delete_ids: list[int] = []
 
     current_filter_catalog: list[dict[str, object]] = []
     filters_should_refresh = (
@@ -850,6 +927,8 @@ def main() -> None:
             "targeted_push": targeted_push,
             "targeted_dossier_ids": targeted_dossier_ids,
             "targeted_hektor_annonce_ids": args.hektor_annonce_id,
+            "archive_index_enabled": archive_table_available,
+            "archive_index_local_count": len(current_archive_index_rows),
         },
     )
 
@@ -890,9 +969,21 @@ def main() -> None:
             ids=sorted(set(candidate_ids) | set(stale_ids) | set(broadcast_candidate_ids)),
             order="app_dossier_id.asc",
         )
+        remote_archive_hashes: dict[int, str] = {}
+        if archive_table_available:
+            remote_archive_hashes = {
+                int(row["hektor_annonce_id"]): str(row["source_hash"])
+                for row in client.fetch_all_rows(
+                    path="app_archive_annonce_index_current",
+                    select="hektor_annonce_id,source_hash",
+                    order="hektor_annonce_id.asc",
+                )
+                if row.get("hektor_annonce_id") is not None
+            }
 
         local_dossier_hashes = map_hashes(current_dossiers, id_key="app_dossier_id")
         local_detail_hashes = map_hashes(current_details, id_key="app_dossier_id")
+        local_archive_hashes = map_hashes(current_archive_index_rows, id_key="hektor_annonce_id")
 
         if args.full_rebuild:
             dossier_upsert_ids = sorted(local_dossier_hashes)
@@ -927,6 +1018,13 @@ def main() -> None:
             broadcast_replace_ids = sorted(set(broadcast_candidate_ids) | {key[0] for key in remote_broadcast_keys})
         else:
             broadcast_replace_ids = sorted({key[0] for key in (remote_broadcast_keys ^ local_broadcast_keys)})
+        if archive_table_available:
+            archive_upsert_ids = sorted(
+                hektor_annonce_id
+                for hektor_annonce_id, source_hash in local_archive_hashes.items()
+                if remote_archive_hashes.get(hektor_annonce_id) != source_hash
+            )
+            archive_delete_ids = sorted(set(remote_archive_hashes) - set(local_archive_hashes))
 
         if stale_ids:
             client.delete_rows_by_ids(path="app_dossier_current", column="app_dossier_id", ids=stale_ids)
@@ -986,6 +1084,17 @@ def main() -> None:
                 batch_size=args.work_item_batch_size,
             )
 
+        if archive_table_available:
+            if archive_delete_ids:
+                client.delete_rows_by_ids(path="app_archive_annonce_index_current", column="hektor_annonce_id", ids=archive_delete_ids)
+            if archive_upsert_ids:
+                archive_upsert_set = set(archive_upsert_ids)
+                client.upsert_rows(
+                    path="app_archive_annonce_index_current",
+                    rows=[row for row in current_archive_index_rows if int(row["hektor_annonce_id"]) in archive_upsert_set],
+                    batch_size=args.dossier_batch_size,
+                )
+
         client.update_delta_run(
             delta_run_id,
             {
@@ -996,6 +1105,8 @@ def main() -> None:
                     "details_upserted": len(detail_upsert_ids),
                     "work_items_replaced": len(work_replace_ids),
                     "filters_replaced": len(current_filter_catalog),
+                    "archive_index_upserted": len(archive_upsert_ids),
+                    "archive_index_deleted": len(archive_delete_ids),
                     "deleted_dossiers": len(stale_ids),
                 },
             )
@@ -1010,6 +1121,10 @@ def main() -> None:
                     "work_items_replaced": len(work_replace_ids),
                     "filters_replaced": len(current_filter_catalog),
                     "mandat_register_replaced": len(current_mandat_register_rows),
+                    "archive_index_enabled": archive_table_available,
+                    "archive_index_local": len(current_archive_index_rows),
+                    "archive_index_upserted": len(archive_upsert_ids),
+                    "archive_index_deleted": len(archive_delete_ids),
                     "deleted_dossiers": len(stale_ids),
                     "mode": "full_rebuild" if args.full_rebuild else "upgrade",
                     "targeted_push": targeted_push,

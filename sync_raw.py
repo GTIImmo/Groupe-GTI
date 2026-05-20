@@ -32,6 +32,15 @@ ANNONCE_VARIANTS = (
         "base_endpoint_name": "list_annonces_active",
         "update_endpoint_name": "list_annonces_active_update",
         "object_type": "annonce_active",
+        "sync_details": True,
+    },
+    {
+        "scope": "archived",
+        "archive": 1,
+        "base_endpoint_name": "list_annonces_archived",
+        "update_endpoint_name": "list_annonces_archived_update",
+        "object_type": "annonce_archived",
+        "sync_details": False,
     },
 )
 
@@ -238,7 +247,8 @@ def load_annonce_ids_missing_detail_sync(conn) -> list[str]:
         """
         SELECT hektor_annonce_id
         FROM sync_annonce_state
-        WHERE last_detail_sync_at IS NULL
+        WHERE listing_variant = 'active'
+          AND last_detail_sync_at IS NULL
         ORDER BY hektor_annonce_id
         """
     ).fetchall()
@@ -421,17 +431,10 @@ def delete_raw_object_rows(conn, *, endpoint_names: Iterable[str], object_ids: I
 
 
 def reconcile_active_annonce_scope(conn, active_annonce_ids: set[str]) -> set[str]:
-    rows = conn.execute("SELECT hektor_annonce_id FROM sync_annonce_state").fetchall()
+    rows = conn.execute("SELECT hektor_annonce_id FROM sync_annonce_state WHERE listing_variant = 'active'").fetchall()
     known_ids = {str(row["hektor_annonce_id"]).strip() for row in rows if str(row["hektor_annonce_id"] or "").strip()}
     stale_ids = sorted(known_ids - active_annonce_ids)
     if not stale_ids:
-        delete_rows_by_endpoint(
-            conn,
-            (
-                "list_annonces_archived",
-                "list_annonces_archived_update",
-            ),
-        )
         return set()
 
     delete_rows_by_ids(conn, table="sync_annonce_state", column="hektor_annonce_id", ids=stale_ids)
@@ -440,13 +443,6 @@ def reconcile_active_annonce_scope(conn, active_annonce_ids: set[str]) -> set[st
         conn,
         endpoint_names=("annonce_detail", "mandats_by_annonce"),
         object_ids=stale_ids,
-    )
-    delete_rows_by_endpoint(
-        conn,
-        (
-            "list_annonces_archived",
-            "list_annonces_archived_update",
-        ),
     )
     return set(stale_ids)
 
@@ -1148,8 +1144,9 @@ def main() -> int:
                     use_update_endpoint=False,
                     bootstrap=True,
                 )
-                changed_annonce_ids.update(variant_changed_ids)
-                active_annonce_ids.update(variant_seen_ids)
+                if variant.get("sync_details", True):
+                    changed_annonce_ids.update(variant_changed_ids)
+                    active_annonce_ids.update(variant_seen_ids)
                 prune_raw_listing_pages(conn, endpoint_name=variant["base_endpoint_name"], max_page=last_page)
                 if max_seen_date:
                     set_meta_value(conn, f"annonce_cursor_{variant['scope']}", max_seen_date)
