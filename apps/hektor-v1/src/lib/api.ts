@@ -778,7 +778,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
   const latestByDossierAndType = requestScope || requestType ? buildLatestRequestRowsByDossierAndType(readLocalDiffusionRequests()) : null
 
   return rows.filter((item) => {
-    const text = `${item.titre_bien} ${item.numero_dossier ?? ''} ${item.numero_mandat ?? ''} ${item.commercial_nom ?? ''} ${item.agence_nom ?? ''} ${item.ville ?? ''} ${item.mandants_texte ?? ''}`.toLowerCase()
+    const text = `${item.titre_bien} ${item.numero_dossier ?? ''} ${item.numero_mandat ?? ''} ${item.commercial_nom ?? ''} ${item.agence_nom ?? ''} ${item.ville ?? ''} ${item.code_postal ?? ''} ${item.mandants_texte ?? ''}`.toLowerCase()
     const isArchived = (item.archive ?? '0') === '1'
     const hasMandat = Boolean((item.numero_mandat ?? '').trim())
     const isDiffusable = (item.diffusable ?? '0') === '1'
@@ -931,7 +931,9 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
         `numero_dossier.ilike.${ilike}`,
         `numero_mandat.ilike.${ilike}`,
         `commercial_nom.ilike.${ilike}`,
+        `agence_nom.ilike.${ilike}`,
         `ville.ilike.${ilike}`,
+        `code_postal.ilike.${ilike}`,
         `mandants_texte.ilike.${ilike}`,
       ].join(','),
     )

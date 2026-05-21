@@ -156,6 +156,7 @@ export type Dossier = {
   commercial_nom: string | null
   negociateur_email?: string | null
   agence_nom?: string | null
+  mandants_texte?: string | null
   statut_annonce: string | null
   validation_diffusion_state?: string | null
   price_change_event_count?: number | null
