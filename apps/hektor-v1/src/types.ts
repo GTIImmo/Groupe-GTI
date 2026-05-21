@@ -175,6 +175,8 @@ export type Dossier = {
   dernier_work_status: string | null
   has_local_detail?: boolean | number | string | null
   local_detail_updated_at?: string | null
+  has_detail_cache?: boolean | number | string | null
+  detail_cache_expires_at?: string | null
 }
 
 export type DossierDetail = {
@@ -330,6 +332,8 @@ export type MandatRecord = {
   register_detail_payload_json?: string | null
   has_local_detail?: boolean | number | string | null
   local_detail_updated_at?: string | null
+  has_detail_cache?: boolean | number | string | null
+  detail_cache_expires_at?: string | null
 }
 
 export type MandatBroadcast = {

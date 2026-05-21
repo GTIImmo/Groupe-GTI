@@ -176,6 +176,10 @@ function hasLocalDetailAvailable(item: Pick<Dossier, 'has_local_detail'> | Pick<
   return item?.has_local_detail === true || item?.has_local_detail === 1 || item?.has_local_detail === '1'
 }
 
+function hasDetailCacheAvailable(item: Pick<Dossier, 'has_detail_cache'> | Pick<MandatRecord, 'has_detail_cache'> | null | undefined) {
+  return item?.has_detail_cache === true || item?.has_detail_cache === 1 || item?.has_detail_cache === '1'
+}
+
 function annonceListingLabels(filters: AppFilters) {
   if (filters.archive === archivedFilterValue) {
     return { title: 'Archives', totalNoun: 'annonces archivees' }
@@ -10184,6 +10188,7 @@ function MandatsScreen(props: {
                 const hasSiteGti = isSiteGtiEnabled(item)
                 const project = projectIdentityLines(item)
                 const isLightweight = !isEstimationMode && isLightweightAnnonceRecord(item)
+                const hasExportedDetail = isLightweight && hasDetailCacheAvailable(item)
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
@@ -10223,11 +10228,16 @@ function MandatsScreen(props: {
                           {isEstimationMode ? (
                             <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
                           ) : isLightweight ? (
-                            <button className="lightweight-row-action" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }} title="Ouvrir le detail si disponible, sinon le preparer">
-                              <span className="lightweight-row-action-icon" aria-hidden="true">i</span>
+                            <button
+                              className={`lightweight-row-action ${hasExportedDetail ? 'is-ready' : 'is-import'}`}
+                              type="button"
+                              onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }}
+                              title={hasExportedDetail ? 'Ouvrir la fiche complete' : 'Charger temporairement le detail complet'}
+                            >
+                              <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail ? 'O' : 'D'}</span>
                               <span className="lightweight-row-action-label">
-                                <strong>Fiche</strong>
-                                <small>Ouvrir</small>
+                                <strong>{hasExportedDetail ? 'Ouvrir' : 'Désarchiver'}</strong>
+                                <small>{hasExportedDetail ? 'Fiche prête' : 'Charger détail'}</small>
                               </span>
                             </button>
                           ) : (

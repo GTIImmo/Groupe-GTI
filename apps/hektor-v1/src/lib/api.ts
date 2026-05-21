@@ -983,6 +983,37 @@ type LightweightAnnonceIndexRow = {
   local_detail_updated_at: string | null
 }
 
+type LightweightDetailCacheRow = {
+  hektor_annonce_id: number | string
+  expires_at: string | null
+}
+
+async function attachLightweightDetailCacheState<T extends Dossier>(
+  rows: T[],
+  cacheTable: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache',
+): Promise<T[]> {
+  if (!hasSupabaseEnv || !supabase || rows.length === 0) return rows
+  const ids = Array.from(new Set(rows.map((row) => String(row.hektor_annonce_id)).filter(Boolean)))
+  if (ids.length === 0) return rows
+  const { data, error } = await supabase
+    .from(cacheTable)
+    .select('hektor_annonce_id,expires_at')
+    .in('hektor_annonce_id', ids)
+    .gt('expires_at', new Date().toISOString())
+  if (error) throw new Error(error.message)
+  const cacheByAnnonceId = new Map(
+    ((data ?? []) as LightweightDetailCacheRow[]).map((row) => [String(row.hektor_annonce_id), row.expires_at ?? null]),
+  )
+  return rows.map((row) => {
+    const expiresAt = cacheByAnnonceId.get(String(row.hektor_annonce_id)) ?? null
+    return {
+      ...row,
+      has_detail_cache: Boolean(expiresAt),
+      detail_cache_expires_at: expiresAt,
+    }
+  })
+}
+
 function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier & { mandants_texte?: string | null } {
   return {
     app_dossier_id: Number(row.app_archive_id ?? row.app_historical_id ?? row.hektor_annonce_id),
@@ -1030,6 +1061,8 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
     dernier_work_status: null,
     has_local_detail: row.has_local_detail,
     local_detail_updated_at: row.local_detail_updated_at ?? null,
+    has_detail_cache: false,
+    detail_cache_expires_at: null,
     mandants_texte: row.mandants_texte ?? null,
   }
 }
@@ -1057,6 +1090,8 @@ function dossierToMandatRecord(row: Dossier & { mandants_texte?: string | null }
     refreshed_at: null,
     has_local_detail: row.has_local_detail ?? null,
     local_detail_updated_at: row.local_detail_updated_at ?? null,
+    has_detail_cache: row.has_detail_cache ?? null,
+    detail_cache_expires_at: row.detail_cache_expires_at ?? null,
   }
 }
 
@@ -1233,8 +1268,12 @@ export async function loadDossiersPage({
 
     const { data, error, count } = await archiveQuery
     if (error || !data) throw new Error(error?.message ?? 'Unable to load archived annonces')
+    const rows = await attachLightweightDetailCacheState(
+      (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+      'app_archive_annonce_detail_cache',
+    )
     return {
-      rows: (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+      rows,
       total: count ?? 0,
       page,
       pageSize,
@@ -1260,7 +1299,10 @@ export async function loadDossiersPage({
     const { data, error, count } = await historicalQuery
     if (error || !data) throw new Error(error?.message ?? 'Unable to load historical annonces')
     const historicalResult: PageResult<Dossier> = {
-      rows: (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+      rows: await attachLightweightDetailCacheState(
+        (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+        'app_historical_annonce_detail_cache',
+      ),
       total: count ?? 0,
       page,
       pageSize,
@@ -1282,7 +1324,10 @@ export async function loadDossiersPage({
       return mergeDossierPageResults([
         historicalResult,
         {
-          rows: (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+          rows: await attachLightweightDetailCacheState(
+            (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+            'app_archive_annonce_detail_cache',
+          ),
           total: archiveCount ?? 0,
           page,
           pageSize,
@@ -1338,7 +1383,10 @@ export async function loadDossiersPage({
     const mergedResults: Array<PageResult<Dossier>> = [
       primaryResult,
       {
-        rows: (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+        rows: await attachLightweightDetailCacheState(
+          (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+          'app_archive_annonce_detail_cache',
+        ),
         total: archiveCount ?? 0,
         page,
         pageSize,
@@ -1359,7 +1407,10 @@ export async function loadDossiersPage({
       const { data: historicalData, error: historicalError, count: historicalCount } = await historicalQuery
       if (historicalError || !historicalData) throw new Error(historicalError?.message ?? 'Unable to load historical annonces')
       mergedResults.push({
-        rows: (historicalData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+        rows: await attachLightweightDetailCacheState(
+          (historicalData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+          'app_historical_annonce_detail_cache',
+        ),
         total: historicalCount ?? 0,
         page,
         pageSize,
@@ -1586,6 +1637,8 @@ async function loadLightweightAnnonceDetailCache(
     dernier_work_status: (index.dernier_work_status ?? null) as string | null,
     has_local_detail: true,
     local_detail_updated_at: (payload.prepared_locally_at ?? null) as string | null,
+    has_detail_cache: true,
+    detail_cache_expires_at: data.expires_at ?? null,
     detail_payload_json: JSON.stringify(detail),
   }
   return dossier
