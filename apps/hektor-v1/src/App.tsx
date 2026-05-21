@@ -178,6 +178,14 @@ function isLightweightAnnonceRecord(item: Pick<Dossier, 'archive' | 'statut_anno
   return item.archive === '1' || isHistoricalListingStatus(item.statut_annonce)
 }
 
+function isArchivedAnnonceRecord(item: Pick<Dossier, 'archive'> | Pick<MandatRecord, 'archive'> | null | undefined) {
+  return item?.archive === '1'
+}
+
+function isHistoricalLightweightRecord(item: Pick<Dossier, 'archive' | 'statut_annonce'> | Pick<MandatRecord, 'archive' | 'statut_annonce'> | null | undefined) {
+  return Boolean(item && item.archive !== '1' && isHistoricalListingStatus(item.statut_annonce))
+}
+
 function hasLocalDetailAvailable(item: Pick<Dossier, 'has_local_detail'> | Pick<MandatRecord, 'has_local_detail'> | null | undefined) {
   return item?.has_local_detail === true || item?.has_local_detail === 1 || item?.has_local_detail === '1'
 }
@@ -6234,11 +6242,14 @@ export default function App() {
     setSelectedDossierId(target.app_dossier_id)
     setSelectedMandatId(target.app_dossier_id)
     setErrorMessage(null)
+    if (isArchivedAnnonceRecord(target)) {
+      setLightweightDetailTarget(target)
+      setDetailOpen(false)
+      return
+    }
     setDetailLoading(true)
     try {
-      const detail = target.archive === '1'
-        ? await loadArchivedAnnonceDetailCache(target.hektor_annonce_id)
-        : await loadHistoricalAnnonceDetailCache(target.hektor_annonce_id)
+      const detail = await loadHistoricalAnnonceDetailCache(target.hektor_annonce_id)
       if (detail) {
         setSelectedDossier(detail)
         setSelectedDossierId(detail.app_dossier_id)
@@ -10659,7 +10670,24 @@ function MandatsScreen(props: {
                 const hasSiteGti = isSiteGtiEnabled(item)
                 const project = projectIdentityLines(item)
                 const isLightweight = !isEstimationMode && isLightweightAnnonceRecord(item)
+                const isArchivedLightweight = !isEstimationMode && isArchivedAnnonceRecord(item)
+                const isHistoricalLightweight = !isEstimationMode && isHistoricalLightweightRecord(item)
                 const hasExportedDetail = isLightweight && hasDetailCacheAvailable(item)
+                const rowActionTitle = isArchivedLightweight
+                  ? 'Gerer le detail ou le desarchivage'
+                  : hasExportedDetail
+                    ? 'Ouvrir la fiche complete'
+                    : 'Charger temporairement le detail complet'
+                const rowActionStrong = isArchivedLightweight
+                  ? 'Desarchiver'
+                  : hasExportedDetail
+                    ? 'Ouvrir'
+                    : 'Charger'
+                const rowActionSmall = isArchivedLightweight
+                  ? 'Archive'
+                  : hasExportedDetail
+                    ? 'Fiche prete'
+                    : 'Detail'
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
@@ -10703,12 +10731,12 @@ function MandatsScreen(props: {
                               className={`lightweight-row-action ${hasExportedDetail ? 'is-ready' : 'is-import'}`}
                               type="button"
                               onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }}
-                              title={hasExportedDetail ? 'Ouvrir la fiche complete' : 'Charger temporairement le detail complet'}
+                              title={rowActionTitle}
                             >
-                              <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail ? 'O' : 'D'}</span>
+                              <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail && isHistoricalLightweight ? 'O' : isArchivedLightweight ? 'D' : 'C'}</span>
                               <span className="lightweight-row-action-label">
-                                <strong>{hasExportedDetail ? 'Ouvrir' : 'Desarchiver'}</strong>
-                                <small>{hasExportedDetail ? 'Fiche prete' : 'Charger detail'}</small>
+                                <strong>{rowActionStrong}</strong>
+                                <small>{rowActionSmall}</small>
                               </span>
                             </button>
                           ) : (
@@ -11806,8 +11834,8 @@ function DossierDetailLayout(props: {
   const detailVariant = props.detailVariant ?? 'annonce'
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
-  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
-  const lightweightDetailLabel = dossier.archive === '1' ? 'archivee' : 'vendue ou close'
+  const isLightweightDetail = isArchivedAnnonceRecord(dossier)
+  const lightweightDetailLabel = 'archivee'
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
   const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
   const validationDraft = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
@@ -11990,7 +12018,7 @@ function DossierDetailLayout(props: {
                   <span className="detail-readonly-banner-icon" aria-hidden="true"><DetailIcon type="history" /></span>
                   <div>
                     <strong>Fiche consultee depuis l'index leger</strong>
-                    <p>Cette annonce {lightweightDetailLabel} est consultable avec le detail recupere temporairement. Les ajouts, uploads et modifications sont bloques ici pour eviter une action Hektor incomplete. Pour intervenir dessus, il faudra d'abord desarchiver ou reintegrer le bien.</p>
+                    <p>Cette annonce {lightweightDetailLabel} reste protegee en consultation. Pour reactiver les actions, documents, photos et modifications, il faut d'abord la desarchiver.</p>
                     {props.onRestoreAnnonce ? (
                       <button className="detail-readonly-action" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
                         Demander le desarchivage
@@ -13044,7 +13072,7 @@ function MobileDossierDetail(props: {
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const actionRole = props.actionRole ?? 'nego'
-  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
+  const isLightweightDetail = isArchivedAnnonceRecord(dossier)
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
@@ -13128,7 +13156,7 @@ function MobileDossierDetail(props: {
         {props.onDeleteAnnonce ? <button className="mobile-ghost-button mobile-danger-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>Supprimer</button> : null}
       </section> : (
         <section className="mobile-detail-section">
-          <ReadOnlyDetailNotice label="Cette fiche vient d'un index leger. Elle est consultable, mais les actions sont bloquees jusqu'a desarchivage." />
+          <ReadOnlyDetailNotice label="Cette fiche archivee est consultable. Les actions seront rouvertes apres desarchivage." />
           {props.onRestoreAnnonce ? (
             <button className="mobile-primary-button" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
               Demander le desarchivage
