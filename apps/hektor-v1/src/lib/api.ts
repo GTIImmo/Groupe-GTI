@@ -4138,6 +4138,7 @@ export async function createRestoreHektorAnnonceJob(input: {
 
 export type ArchiveHektorAnnonceMainChoice = 'choiceVendu' | 'choiceAutre'
 export type ArchiveHektorAnnonceSubChoice =
+  | 'agence'
   | 'confrere'
   | 'proprietaire'
   | 'concurence'
@@ -4154,6 +4155,13 @@ export async function createArchiveHektorAnnonceJob(input: {
   otherText?: string
   price?: string
   confrere?: string
+  saleDate?: string
+  salePrice?: string
+  saleNetSeller?: string
+  saleFees?: string
+  saleBuyerName?: string
+  saleNotaryName?: string
+  saleNotes?: string
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -4173,6 +4181,13 @@ export async function createArchiveHektorAnnonceJob(input: {
         archive_other_text: input.otherText?.trim() || null,
         archive_price: input.price?.trim() || null,
         archive_confrere: input.confrere?.trim() || null,
+        sale_date: input.saleDate?.trim() || null,
+        sale_price: input.salePrice?.trim() || null,
+        sale_net_seller: input.saleNetSeller?.trim() || null,
+        sale_fees: input.saleFees?.trim() || null,
+        sale_buyer_name: input.saleBuyerName?.trim() || null,
+        sale_notary_name: input.saleNotaryName?.trim() || null,
+        sale_notes: input.saleNotes?.trim() || null,
       },
       priority: input.priority ?? 8,
       requested_by: userId,
