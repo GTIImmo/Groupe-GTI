@@ -2375,6 +2375,15 @@ body {
   gap: 8px;
   margin-top: 14px;
 }
+.active-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.search-scope-row {
+  margin: 0 0 12px;
+}
 .active-filter-chip {
   border: 1px solid var(--line);
   background: #fff;

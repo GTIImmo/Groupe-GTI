@@ -136,16 +136,35 @@ function usesLightweightAnnonceIndex(filters: AppFilters) {
   return filters.archive === archivedFilterValue || filters.statut === annonceSearchListingsFilterValue || isHistoricalListingStatus(filters.statut)
 }
 
-function applyAnnonceSearchDefaultScope(screen: Screen, filters: AppFilters): AppFilters {
+type AnnonceSearchScope = 'current' | 'extended'
+
+function applyAnnonceSearchDefaultScope(screen: Screen, filters: AppFilters, searchScope: AnnonceSearchScope): AppFilters {
   const isAnnonceListingScreen = screen === 'annonces' || screen === 'mandats'
   const hasSearch = Boolean(filters.query.trim())
-  const hasDefaultListingScope = filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue
-  if (!isAnnonceListingScreen || !hasSearch || !hasDefaultListingScope) return filters
+  if (!isAnnonceListingScreen || !hasSearch || searchScope !== 'extended') return filters
   return {
     ...filters,
     archive: allFilterValue,
     statut: annonceSearchListingsFilterValue,
   }
+}
+
+function annonceSearchScopeText(filters: AppFilters) {
+  if (filters.statut === annonceSearchListingsFilterValue) return 'toutes les annonces hors estimations'
+  if (filters.archive === archivedFilterValue) return 'les archives'
+  if (filters.statut === 'Vendu') return 'les annonces vendues'
+  if (filters.statut === 'Clos') return 'les annonces closes'
+  if (filters.archive === allFilterValue) return 'toutes les annonces hors estimations'
+  if (filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue) return 'les annonces actives / offres / compromis'
+  if (filters.statut && filters.statut !== allFilterValue) return `les annonces ${filters.statut.toLowerCase()}`
+  return 'le perimetre courant'
+}
+
+function annonceSearchExtendLabel(filters: AppFilters) {
+  if (filters.archive === archivedFilterValue) return 'Chercher aussi dans les actives, vendues et closes'
+  if (filters.statut === 'Vendu') return 'Chercher aussi dans les actives, closes et archives'
+  if (filters.statut === 'Clos') return 'Chercher aussi dans les actives, vendues et archives'
+  return 'Etendre aux archives, vendus et clos'
 }
 
 function isLightweightAnnonceRecord(item: Pick<Dossier, 'archive' | 'statut_annonce'> | Pick<MandatRecord, 'archive' | 'statut_annonce'> | null | undefined) {
@@ -5327,6 +5346,7 @@ export default function App() {
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
   const [filters, setFilters] = useState<AppFilters>(() => defaultFiltersForScreen('mandats'))
   const [searchDraft, setSearchDraft] = useState('')
+  const [annonceSearchScope, setAnnonceSearchScope] = useState<AnnonceSearchScope>('current')
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [dossiersTotal, setDossiersTotal] = useState(0)
   const [dossierPage, setDossierPage] = useState(1)
@@ -5547,8 +5567,8 @@ export default function App() {
         statut: 'Estimation',
       }
     }
-    return applyAnnonceSearchDefaultScope(screen, filters)
-  }, [filters, screen])
+    return applyAnnonceSearchDefaultScope(screen, filters, annonceSearchScope)
+  }, [annonceSearchScope, filters, screen])
   const listingStatusOptions = useMemo(
     () => mergeFilterOptions([activeListingsFilterOption, ...filterCatalog.statuts, ...historicalListingStatusOptions]),
     [filterCatalog.statuts],
@@ -6028,6 +6048,7 @@ export default function App() {
 
   function updateFilter<K extends keyof AppFilters>(key: K, value: AppFilters[K]) {
     if (screen === 'mandats') setActiveMandatKpiAction(null)
+    if (key !== 'query') setAnnonceSearchScope('current')
     setFilters((current) => {
       const next = { ...current, [key]: value }
       const lightweightContext = screen === 'mandats' && usesLightweightAnnonceIndex(next)
@@ -6053,6 +6074,7 @@ export default function App() {
   }
 
   function resetFilters() {
+    setAnnonceSearchScope('current')
     setFilters(defaultFiltersForScreen(screen))
     setMandatDrilldownLabel(null)
     setActiveMandatKpiAction(null)
@@ -6138,6 +6160,7 @@ export default function App() {
   }
 
   function openScreen(nextScreen: Screen) {
+    setAnnonceSearchScope('current')
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMobileMenuOpen(false)
     setMandatDrilldownLabel(null)
@@ -7397,6 +7420,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
+  const hasAnnonceSearch = screen === 'mandats' && filters.query.trim().length >= 3
+  const isAlreadyBroadAnnonceSearch = filters.archive === allFilterValue && (filters.statut === allFilterValue || filters.statut === annonceSearchListingsFilterValue)
+  const canExtendAnnonceSearch = hasAnnonceSearch && annonceSearchScope === 'current' && !isAlreadyBroadAnnonceSearch
+  const annonceSearchScopeSummary = hasAnnonceSearch
+    ? `${new Intl.NumberFormat('fr-FR').format(mandatsTotal)} resultat${mandatsTotal > 1 ? 's' : ''} dans ${annonceSearchScopeText(dataFilters)}`
+    : null
   const lightweightAnnonceFiltersActive = screen === 'mandats' && usesLightweightAnnonceIndex(filters)
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
@@ -9487,6 +9516,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             eyebrow={mandatDrilldownLabel?.eyebrow ?? 'Annonces'}
             title={mandatDrilldownLabel?.title ?? currentAnnonceListingLabels.title}
             totalNoun={currentAnnonceListingLabels.totalNoun}
+            searchScopeSummary={annonceSearchScopeSummary}
+            searchScopeExtended={annonceSearchScope === 'extended'}
+            canExtendSearch={canExtendAnnonceSearch}
+            extendSearchLabel={annonceSearchExtendLabel(filters)}
+            onExtendSearch={() => { setAnnonceSearchScope('extended'); setMandatPage(1); setDossierPage(1) }}
+            onResetSearchScope={() => { setAnnonceSearchScope('current'); setMandatPage(1); setDossierPage(1) }}
             mode="active"
           />
         ) : screen === 'estimations' ? (
@@ -10047,6 +10082,12 @@ function MandatsScreen(props: {
   eyebrow?: string
   title?: string
   totalNoun?: string
+  searchScopeSummary?: string | null
+  searchScopeExtended?: boolean
+  canExtendSearch?: boolean
+  extendSearchLabel?: string
+  onExtendSearch?: () => void
+  onResetSearchScope?: () => void
   mode?: 'active' | 'estimation'
 }) {
   const isEstimationMode = props.mode === 'estimation'
@@ -10071,6 +10112,16 @@ function MandatsScreen(props: {
             </label>
           </div>
         </div>
+        {!isEstimationMode && props.searchScopeSummary ? (
+          <div className="active-filters-row search-scope-row">
+            <span className="active-filter-chip">{props.searchScopeExtended ? 'Recherche etendue' : 'Recherche'}: {props.searchScopeSummary}</span>
+            {props.searchScopeExtended ? (
+              <button className="ghost-button" type="button" onClick={props.onResetSearchScope}>Revenir au perimetre courant</button>
+            ) : props.canExtendSearch ? (
+              <button className="ghost-button" type="button" onClick={props.onExtendSearch}>{props.extendSearchLabel ?? 'Etendre la recherche'}</button>
+            ) : null}
+          </div>
+        ) : null}
         <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'listing-table-estimation' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
           <table>
