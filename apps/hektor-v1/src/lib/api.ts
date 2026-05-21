@@ -1074,7 +1074,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
   if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
-  else if (statut && !historicalListingStatuses.includes(statut)) query = query.eq('statut_annonce', statut)
+  else if (statut) query = query.eq('statut_annonce', statut)
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 

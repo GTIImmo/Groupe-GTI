@@ -6010,10 +6010,9 @@ export default function App() {
         if (value !== 'compromis') next.compromisStatus = allFilterValue
       }
       if (key === 'archive' && value === archivedFilterValue) {
-        next.statut = allFilterValue
         clearHeavyListingFilters(next)
       }
-      if (key === 'statut' && isHistoricalListingStatus(value)) {
+      if (key === 'statut' && isHistoricalListingStatus(value) && next.archive !== archivedFilterValue) {
         next.archive = activeArchiveFilterValue
         clearHeavyListingFilters(next)
       }
