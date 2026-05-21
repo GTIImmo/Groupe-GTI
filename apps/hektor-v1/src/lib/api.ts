@@ -1243,6 +1243,8 @@ export async function loadDossiersPage({
     if (requestScope || requestType) {
       return { rows: [], total: 0, page, pageSize }
     }
+    const historicalRangeFrom = filters.archive === allFilterValue ? 0 : from
+    const historicalRangeTo = to
     const historicalQuery = applyHistoricalIndexFiltersToQuery(
       supabase
         .from('app_historical_annonce_index_current')
@@ -1252,13 +1254,43 @@ export async function loadDossiersPage({
     )
       .order('date_maj', { ascending: false, nullsFirst: false })
       .order('hektor_annonce_id', { ascending: false })
-      .range(from, to)
+      .range(historicalRangeFrom, historicalRangeTo)
 
     const { data, error, count } = await historicalQuery
     if (error || !data) throw new Error(error?.message ?? 'Unable to load historical annonces')
-    return {
+    const historicalResult: PageResult<Dossier> = {
       rows: (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
       total: count ?? 0,
+      page,
+      pageSize,
+    }
+    if (filters.archive === allFilterValue) {
+      const archiveQuery = applyArchiveIndexFiltersToQuery(
+        supabase
+          .from('app_archive_annonce_index_current')
+          .select(archiveIndexSelect, { count: countMode }),
+        filters,
+        scope,
+      )
+        .order('date_maj', { ascending: false, nullsFirst: false })
+        .order('hektor_annonce_id', { ascending: false })
+        .range(0, historicalRangeTo)
+
+      const { data: archiveData, error: archiveError, count: archiveCount } = await archiveQuery
+      if (archiveError || !archiveData) throw new Error(archiveError?.message ?? 'Unable to load archived historical annonces')
+      return mergeDossierPageResults([
+        historicalResult,
+        {
+          rows: (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+          total: archiveCount ?? 0,
+          page,
+          pageSize,
+        },
+      ], page, pageSize)
+    }
+    return {
+      rows: historicalResult.rows,
+      total: historicalResult.total,
       page,
       pageSize,
     }
