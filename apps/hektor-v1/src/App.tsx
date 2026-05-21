@@ -7438,7 +7438,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
   const hasAnnonceSearch = screen === 'mandats' && filters.query.trim().length >= 3
-  const isAlreadyBroadAnnonceSearch = filters.archive === allFilterValue && (filters.statut === allFilterValue || filters.statut === annonceSearchListingsFilterValue)
+  const isAlreadyBroadAnnonceSearch = dataFilters.archive === allFilterValue && (dataFilters.statut === allFilterValue || dataFilters.statut === annonceSearchListingsFilterValue)
   const canExtendAnnonceSearch = hasAnnonceSearch && annonceSearchScope === 'current' && !isAlreadyBroadAnnonceSearch
   const annonceSearchScopeSummary = hasAnnonceSearch
     ? `${new Intl.NumberFormat('fr-FR').format(mandatsTotal)} resultat${mandatsTotal > 1 ? 's' : ''} dans ${annonceSearchScopeText(dataFilters)}`
@@ -10141,7 +10141,7 @@ function MandatsScreen(props: {
                 <span aria-hidden="true">↩</span>
                 <span>Revenir au contexte</span>
               </button>
-            ) : props.canExtendSearch ? (
+            ) : props.canExtendSearch || props.onExtendSearch ? (
               <button className="search-scope-action" type="button" onClick={props.onExtendSearch}>
                 <span aria-hidden="true">+</span>
                 <span>{props.extendSearchLabel ?? 'Étendre la recherche'}</span>
