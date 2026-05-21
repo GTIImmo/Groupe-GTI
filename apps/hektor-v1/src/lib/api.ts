@@ -1016,6 +1016,30 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
   }
 }
 
+function dossierToMandatRecord(row: Dossier & { mandants_texte?: string | null }): MandatRecord {
+  return {
+    ...row,
+    archive: row.archive ?? null,
+    diffusable: row.diffusable ?? null,
+    nb_portails_actifs: row.nb_portails_actifs ?? 0,
+    has_diffusion_error: Boolean(row.has_diffusion_error),
+    portails_resume: row.portails_resume ?? null,
+    agence_nom: row.agence_nom ?? null,
+    validation_diffusion_state: row.validation_diffusion_state ?? null,
+    mandat_type: null,
+    mandat_date_debut: null,
+    mandat_date_fin: null,
+    mandat_montant: null,
+    mandants_texte: row.mandants_texte ?? null,
+    priority: row.priority ?? 'normal',
+    offre_id: row.offre_id == null ? null : String(row.offre_id),
+    compromis_id: row.compromis_id == null ? null : String(row.compromis_id),
+    vente_id: row.vente_id == null ? null : String(row.vente_id),
+    source_updated_at: null,
+    refreshed_at: null,
+  }
+}
+
 function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, scope?: DataScope | null) {
   let query = applyNegotiatorScopeToQuery(baseQuery, scope)
   const commercial = normalizeFilterValue(filters.commercial)
@@ -1864,6 +1888,14 @@ export async function loadMandatsPage({
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
+  const statut = normalizeFilterValue(filters.statut)
+  if (filters.archive === archivedFilterValue || historicalListingStatuses.includes(statut)) {
+    const listingPage = await loadDossiersPage({ filters, page, pageSize, scope })
+    return {
+      ...listingPage,
+      rows: listingPage.rows.map(dossierToMandatRecord),
+    }
+  }
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(dossiersCurrentView).select('*', { count: countMode }), scope),
     filters,

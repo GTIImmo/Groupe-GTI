@@ -107,6 +107,42 @@ const historicalListingStatusOptions = [
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 
+function isHistoricalListingStatus(value: unknown) {
+  return value === 'Vendu' || value === 'Clos'
+}
+
+function usesLightweightAnnonceIndex(filters: AppFilters) {
+  return filters.archive === archivedFilterValue || isHistoricalListingStatus(filters.statut)
+}
+
+function annonceListingLabels(filters: AppFilters) {
+  if (filters.archive === archivedFilterValue) {
+    return { title: 'Archives', totalNoun: 'annonces archivees' }
+  }
+  if (filters.statut === 'Vendu') {
+    return { title: 'Annonces vendues', totalNoun: 'annonces vendues' }
+  }
+  if (filters.statut === 'Clos') {
+    return { title: 'Annonces closes', totalNoun: 'annonces closes' }
+  }
+  return { title: 'Annonces actives', totalNoun: 'annonces actives' }
+}
+
+function clearHeavyListingFilters(next: AppFilters) {
+  next.validationDiffusion = allFilterValue
+  next.diffusable = allFilterValue
+  next.passerelle = allFilterValue
+  next.erreurDiffusion = allFilterValue
+  next.priority = allFilterValue
+  next.workStatus = allFilterValue
+  next.internalStatus = allFilterValue
+  next.requestType = allFilterValue
+  next.requestScope = allFilterValue
+  next.affaire = allFilterValue
+  next.offreStatus = allFilterValue
+  next.compromisStatus = allFilterValue
+}
+
 function numericDraft(value: unknown): string {
   return String(value ?? '').replace(/[^\d,.-]/g, '').trim()
 }
@@ -1821,11 +1857,12 @@ function screenStatusToken(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase()
 }
 
-function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen) {
+function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen, filters?: AppFilters) {
   if (screen === 'estimations') {
     return rows.filter((item) => screenStatusToken(item.statut_annonce) === 'estimation')
   }
   if (screen === 'mandats' || screen === 'suivi') {
+    if (filters && usesLightweightAnnonceIndex(filters)) return rows
     return rows.filter((item) => activeListingStatusTokens.has(screenStatusToken(item.statut_annonce)))
   }
   return rows
@@ -5702,16 +5739,21 @@ export default function App() {
     setMandatLoading(true)
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
     const nextMandatPageSize = screen === 'suivi' ? 1000 : mandatPageSize
+    const lightweightAnnonceListing = (screen === 'annonces' || screen === 'mandats') && usesLightweightAnnonceIndex(dataFilters)
     const dossiersPromise = loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope })
-    const mandatsPromise = screen === 'registre'
-      ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
-      : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
-    const workItemsPromise = loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope })
+    const mandatsPromise = screen === 'annonces' && lightweightAnnonceListing
+      ? Promise.resolve({ rows: [] as MandatRecord[], total: 0, page: nextMandatPage, pageSize: nextMandatPageSize })
+      : screen === 'registre'
+        ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+        : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+    const workItemsPromise = lightweightAnnonceListing
+      ? Promise.resolve({ rows: [] as WorkItem[], total: 0, page: workItemPage, pageSize: workItemPageSize })
+      : loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope })
 
     mandatsPromise
       .then((nextMandatsPage) => {
         if (cancelled) return
-        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen)
+        const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen, dataFilters)
         setMandats(scopedRows)
         setMandatsTotal(nextMandatsPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], scopedRows)))
@@ -5731,21 +5773,33 @@ export default function App() {
         if (!cancelled) setMandatLoading(false)
       })
 
-    Promise.all([dossiersPromise, workItemsPromise])
-      .then(([nextDossiersPage, nextWorkItemsPage]) => {
+    dossiersPromise
+      .then((nextDossiersPage) => {
         if (cancelled) return
         setDossiers(nextDossiersPage.rows)
         setDossiersTotal(nextDossiersPage.total)
-        setWorkItems(nextWorkItemsPage.rows)
-        setWorkItemsTotal(nextWorkItemsPage.total)
-        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, nextWorkItemsPage.rows, [])))
-        setSelectedDossierId((current) => current ?? nextDossiersPage.rows[0]?.app_dossier_id ?? null)
+        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, [], [])))
+        setSelectedDossierId((current) => {
+          if (current && nextDossiersPage.rows.some((item) => item.app_dossier_id === current)) return current
+          return nextDossiersPage.rows[0]?.app_dossier_id ?? null
+        })
       })
       .catch((error) => {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement')
       })
       .finally(() => {
         if (!cancelled) setPageLoading(false)
+      })
+
+    workItemsPromise
+      .then((nextWorkItemsPage) => {
+        if (cancelled) return
+        setWorkItems(nextWorkItemsPage.rows)
+        setWorkItemsTotal(nextWorkItemsPage.total)
+        setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], nextWorkItemsPage.rows, [])))
+      })
+      .catch((error) => {
+        if (!cancelled && !lightweightAnnonceListing) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement des demandes')
       })
     return () => {
       cancelled = true
@@ -5900,18 +5954,11 @@ export default function App() {
       }
       if (key === 'archive' && value === archivedFilterValue) {
         next.statut = allFilterValue
-        next.validationDiffusion = allFilterValue
-        next.diffusable = allFilterValue
-        next.passerelle = allFilterValue
-        next.erreurDiffusion = allFilterValue
-        next.priority = allFilterValue
-        next.workStatus = allFilterValue
-        next.internalStatus = allFilterValue
-        next.requestType = allFilterValue
-        next.requestScope = allFilterValue
-        next.affaire = allFilterValue
-        next.offreStatus = allFilterValue
-        next.compromisStatus = allFilterValue
+        clearHeavyListingFilters(next)
+      }
+      if (key === 'statut' && isHistoricalListingStatus(value)) {
+        next.archive = activeArchiveFilterValue
+        clearHeavyListingFilters(next)
       }
       return next
     })
@@ -7195,15 +7242,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
   const mandatTotalPages = totalPages(mandatsTotal, mandatPageSize)
   const workItemTotalPages = totalPages(workItemsTotal, workItemPageSize)
-  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen), [mandats, screen])
+  const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
+  const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
       return { title: 'Annonces', copy: '' }
     }
     if (screen === 'mandats') {
       return {
-        title: mandatDrilldownLabel?.title ?? 'Annonces actives',
+        title: mandatDrilldownLabel?.title ?? currentAnnonceListingLabels.title,
         copy: '',
       }
     }
@@ -7214,7 +7262,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return { title: 'Registre des mandats', copy: '' }
     }
     return { title: 'Suivi des mandats', copy: '' }
-  }, [screen, mandatDrilldownLabel])
+  }, [screen, mandatDrilldownLabel, currentAnnonceListingLabels])
   const dossierCountLabel = activeFilters.length > 0 ? 'Dossiers apres filtres' : 'Tous les dossiers'
   const address = [detail.adresse_privee_listing || detail.adresse_detail, detail.code_postal_public_listing || detail.code_postal_prive_detail || detail.code_postal, detail.ville_publique_listing || detail.ville_privee_detail || selectedDossier?.ville]
     .filter(Boolean)
@@ -8862,7 +8910,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="filters-head">
               <div>
-                <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres annonces actives' : screen === 'estimations' ? 'Filtres estimations' : screen === 'registre' ? 'Filtres registre' : 'Filtres suivi administratif'}</p>
+                <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres annonces' : screen === 'estimations' ? 'Filtres estimations' : screen === 'registre' ? 'Filtres registre' : 'Filtres suivi administratif'}</p>
                 <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Projets, mandats et diffusion' : screen === 'estimations' ? 'Futurs mandats potentiels' : screen === 'registre' ? 'Mandats avec numéro' : 'Demandes et parc mandat'}</strong>
               </div>
               <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
@@ -9259,7 +9307,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             linkedWorkItems={linkedWorkItems}
             detailLoading={detailLoading}
             eyebrow={mandatDrilldownLabel?.eyebrow ?? 'Annonces'}
-            title={mandatDrilldownLabel?.title ?? 'Annonces actives'}
+            title={mandatDrilldownLabel?.title ?? currentAnnonceListingLabels.title}
+            totalNoun={currentAnnonceListingLabels.totalNoun}
             mode="active"
           />
         ) : screen === 'estimations' ? (
@@ -9741,10 +9790,11 @@ function MandatsScreen(props: {
   detailLoading: boolean
   eyebrow?: string
   title?: string
+  totalNoun?: string
   mode?: 'active' | 'estimation'
 }) {
   const isEstimationMode = props.mode === 'estimation'
-  const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${isEstimationMode ? 'estimations' : 'annonces actives'}`
+  const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${props.totalNoun ?? (isEstimationMode ? 'estimations' : 'annonces actives')}`
   return (
     <section className={`panel-grid ${isEstimationMode ? 'panel-grid-estimation' : 'panel-grid-active-listing'}`}>
       <section className={`panel panel-wide ${isEstimationMode ? 'panel-estimation-listing' : 'panel-active-listing'}`}>
