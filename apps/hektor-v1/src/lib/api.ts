@@ -1507,7 +1507,9 @@ function stringifyJsonPayloadFields(source: Record<string, unknown>) {
 
 async function loadLightweightAnnonceDetailCache(
   table: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache',
+  indexTable: 'app_archive_annonce_index_current' | 'app_historical_annonce_index_current',
   payloadIdKey: 'app_archive_id' | 'app_historical_id',
+  indexIdKey: 'app_archive_id' | 'app_historical_id',
   defaultArchive: '0' | '1',
   hektorAnnonceId: number | string,
 ): Promise<DetailedDossier | null> {
@@ -1531,14 +1533,25 @@ async function loadLightweightAnnonceDetailCache(
     ? parseJsonObject(data.detail_payload_json)
     : ((data.detail_payload_json ?? {}) as Record<string, unknown>)
   const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
-  const index = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
+  const payloadIndex = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
+  let currentIndex: Record<string, unknown> = {}
+  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandants_texte,has_local_detail,local_detail_updated_at`
+  const { data: indexData, error: indexError } = await supabase
+    .from(indexTable)
+    .select(indexSelect)
+    .eq('hektor_annonce_id', cleanId)
+    .maybeSingle()
+  if (indexError && indexError.code !== 'PGRST116') throw new Error(indexError.message)
+  if (indexData && typeof indexData === 'object') currentIndex = indexData as Record<string, unknown>
+  const index = { ...payloadIndex, ...currentIndex }
   const detail = stringifyJsonPayloadFields((payload.detail && typeof payload.detail === 'object' ? payload.detail : {}) as Record<string, unknown>)
-  const appDossierId = Number(index.app_dossier_id ?? payload[payloadIdKey] ?? listing.hektor_annonce_id ?? hektorAnnonceId)
+  const appDossierId = Number(index.app_dossier_id ?? index[indexIdKey] ?? payload[payloadIdKey] ?? listing.hektor_annonce_id ?? hektorAnnonceId)
+  const priceValue = index.prix ?? listing.prix
   const dossier: DetailedDossier = {
     app_dossier_id: Number.isFinite(appDossierId) ? appDossierId : Number(hektorAnnonceId),
     hektor_annonce_id: Number(hektorAnnonceId),
-    photo_url_listing: (detail.photo_url_listing ?? listing.photo ?? null) as string | null,
-    images_preview_json: (detail.images_preview_json ?? null) as string | null,
+    photo_url_listing: (detail.photo_url_listing ?? index.photo_url_listing ?? listing.photo ?? null) as string | null,
+    images_preview_json: (detail.images_preview_json ?? index.images_preview_json ?? null) as string | null,
     archive: String(index.archive ?? listing.archive ?? defaultArchive),
     diffusable: index.diffusable == null ? (listing.diffusable == null ? null : String(listing.diffusable)) : String(index.diffusable),
     nb_portails_actifs: Number(index.nb_portails_actifs ?? 0),
@@ -1550,13 +1563,13 @@ async function loadLightweightAnnonceDetailCache(
     compromis_id: (index.compromis_id ?? null) as string | number | null,
     compromis_state: (index.compromis_state ?? null) as string | null,
     vente_id: (index.vente_id ?? null) as string | number | null,
-    numero_dossier: (index.numero_dossier ?? listing.NO_DOSSIER ?? null) as string | null,
-    numero_mandat: (index.numero_mandat ?? listing.NO_MANDAT ?? null) as string | null,
-    titre_bien: String(index.titre_bien ?? listing.titre ?? '[Sans titre]'),
+    numero_dossier: (index.numero_dossier ?? listing.numero_dossier ?? listing.no_dossier ?? listing.NO_DOSSIER ?? null) as string | null,
+    numero_mandat: (index.numero_mandat ?? listing.numero_mandat ?? listing.no_mandat ?? listing.NO_MANDAT ?? null) as string | null,
+    titre_bien: String(index.titre_bien ?? listing.titre_bien ?? listing.titre ?? '[Sans titre]'),
     ville: (index.ville ?? listing.ville ?? null) as string | null,
     code_postal: (index.code_postal ?? listing.code_postal ?? null) as string | null,
     type_bien: index.type_bien == null ? (listing.idtype == null ? null : String(listing.idtype)) : String(index.type_bien),
-    prix: index.prix == null ? null : Number(index.prix),
+    prix: priceValue == null ? null : Number(priceValue),
     commercial_id: index.commercial_id == null ? null : String(index.commercial_id),
     commercial_nom: (index.commercial_nom ?? null) as string | null,
     negociateur_email: (index.negociateur_email ?? null) as string | null,
@@ -1579,11 +1592,11 @@ async function loadLightweightAnnonceDetailCache(
 }
 
 export async function loadArchivedAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
-  return loadLightweightAnnonceDetailCache('app_archive_annonce_detail_cache', 'app_archive_id', '1', hektorAnnonceId)
+  return loadLightweightAnnonceDetailCache('app_archive_annonce_detail_cache', 'app_archive_annonce_index_current', 'app_archive_id', 'app_archive_id', '1', hektorAnnonceId)
 }
 
 export async function loadHistoricalAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
-  return loadLightweightAnnonceDetailCache('app_historical_annonce_detail_cache', 'app_historical_id', '0', hektorAnnonceId)
+  return loadLightweightAnnonceDetailCache('app_historical_annonce_detail_cache', 'app_historical_annonce_index_current', 'app_historical_id', 'app_historical_id', '0', hektorAnnonceId)
 }
 
 export async function loadDossierByHektorAnnonceId(hektorAnnonceId: string | number, scope?: DataScope | null): Promise<Dossier | null> {
