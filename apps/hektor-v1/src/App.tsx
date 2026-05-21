@@ -9853,7 +9853,7 @@ function MandatsScreen(props: {
                         <td className="estimation-progress-cell"><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
                       ) : (
                         <>
-                          <td><StatusPill value={item.statut_annonce} /></td>
+                          <td><StatusPill value={item.statut_annonce ?? 'Non renseigne'} /><small>{item.archive === '1' ? 'Archivee' : 'Active'}</small></td>
                           <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
                           <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
                           <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
