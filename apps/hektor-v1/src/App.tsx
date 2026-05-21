@@ -6029,7 +6029,7 @@ export default function App() {
         clearHeavyListingFilters(next)
       }
       if (key === 'statut' && isHistoricalListingStatus(value) && next.archive !== archivedFilterValue) {
-        next.archive = activeArchiveFilterValue
+        next.archive = allFilterValue
         clearHeavyListingFilters(next)
       }
       return next
