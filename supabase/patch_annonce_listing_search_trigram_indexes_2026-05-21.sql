@@ -1,0 +1,52 @@
+create extension if not exists pg_trgm;
+
+create index if not exists idx_app_dossier_current_search_titre_trgm
+  on public.app_dossier_current using gin (titre_bien gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_dossier_trgm
+  on public.app_dossier_current using gin (numero_dossier gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_mandat_trgm
+  on public.app_dossier_current using gin (numero_mandat gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_commercial_trgm
+  on public.app_dossier_current using gin (commercial_nom gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_agence_trgm
+  on public.app_dossier_current using gin (agence_nom gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_ville_trgm
+  on public.app_dossier_current using gin (ville gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_code_postal_trgm
+  on public.app_dossier_current using gin (code_postal gin_trgm_ops);
+create index if not exists idx_app_dossier_current_search_mandants_trgm
+  on public.app_dossier_current using gin (mandants_texte gin_trgm_ops);
+
+create index if not exists idx_app_archive_annonce_index_search_titre_trgm
+  on public.app_archive_annonce_index_current using gin (titre_bien gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_dossier_trgm
+  on public.app_archive_annonce_index_current using gin (numero_dossier gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_mandat_trgm
+  on public.app_archive_annonce_index_current using gin (numero_mandat gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_commercial_trgm
+  on public.app_archive_annonce_index_current using gin (commercial_nom gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_agence_trgm
+  on public.app_archive_annonce_index_current using gin (agence_nom gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_ville_trgm
+  on public.app_archive_annonce_index_current using gin (ville gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_code_postal_trgm
+  on public.app_archive_annonce_index_current using gin (code_postal gin_trgm_ops);
+create index if not exists idx_app_archive_annonce_index_search_mandants_trgm
+  on public.app_archive_annonce_index_current using gin (mandants_texte gin_trgm_ops);
+
+create index if not exists idx_app_historical_annonce_index_search_titre_trgm
+  on public.app_historical_annonce_index_current using gin (titre_bien gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_dossier_trgm
+  on public.app_historical_annonce_index_current using gin (numero_dossier gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_mandat_trgm
+  on public.app_historical_annonce_index_current using gin (numero_mandat gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_commercial_trgm
+  on public.app_historical_annonce_index_current using gin (commercial_nom gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_agence_trgm
+  on public.app_historical_annonce_index_current using gin (agence_nom gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_ville_trgm
+  on public.app_historical_annonce_index_current using gin (ville gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_code_postal_trgm
+  on public.app_historical_annonce_index_current using gin (code_postal gin_trgm_ops);
+create index if not exists idx_app_historical_annonce_index_search_mandants_trgm
+  on public.app_historical_annonce_index_current using gin (mandants_texte gin_trgm_ops);
