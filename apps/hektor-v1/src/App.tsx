@@ -62,6 +62,8 @@ import {
   createArchiveHektorAnnonceJob,
   type ArchiveHektorAnnonceMainChoice,
   type ArchiveHektorAnnonceSubChoice,
+  createChangeHektorAnnonceStatusJob,
+  type HektorAnnonceStatusTarget,
   createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createMatterportActionJob,
@@ -3680,6 +3682,26 @@ function pageLabel(total: number, pageSize: number, page: number) {
   return `${from}-${to} / ${new Intl.NumberFormat('fr-FR').format(total)}`
 }
 
+const hektorStatusTargetOptions: Array<{ value: HektorAnnonceStatusTarget; label: string; description: string }> = [
+  { value: 'active', label: 'Actif', description: 'Remet la fiche en statut actif.' },
+  { value: 'offer', label: 'Offre', description: 'Enregistre une offre et alimente la transaction.' },
+  { value: 'compromise', label: 'Compromis', description: 'Enregistre un compromis avec les données clés.' },
+  { value: 'sold', label: 'Vendu', description: 'Enregistre la vente dans le suivi transaction.' },
+  { value: 'closed', label: 'Clos', description: 'Clôture le mandat et coupe la diffusion.' },
+]
+
+function hektorStatusTargetLabel(value: HektorAnnonceStatusTarget | string | null | undefined) {
+  return hektorStatusTargetOptions.find((option) => option.value === value)?.label ?? 'Statut'
+}
+
+function statusChangeNeedsTransaction(value: HektorAnnonceStatusTarget) {
+  return value === 'offer' || value === 'compromise' || value === 'sold'
+}
+
+function statusChangeNeedsSalePrice(value: HektorAnnonceStatusTarget) {
+  return value === 'compromise' || value === 'sold'
+}
+
 function openHektorAnnonce(hektorAnnonceId: number | string | null | undefined) {
   const url = buildHektorAnnonceUrl(hektorAnnonceId)
   if (!url) return
@@ -3743,6 +3765,9 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'restore_hektor_annonce') {
     return `Desarchivage ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
+  if (job.job_type === 'change_hektor_annonce_status') {
+    return `Statut ${hektorStatusTargetLabel(String(payload.target_status ?? ''))} ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
   if (job.job_type === 'delete_document_from_hektor') {
     return documentName ? `Suppression ${documentName}` : 'Suppression document'
   }
@@ -3784,6 +3809,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
   if (job.job_type === 'archive_hektor_annonce') return 'Archivage en cours'
   if (job.job_type === 'restore_hektor_annonce') return 'Desarchivage en cours'
+  if (job.job_type === 'change_hektor_annonce_status') return 'Changement statut'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
   if (job.job_type === 'upload_hektor_photo') return 'Ajout photo'
@@ -3801,6 +3827,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type.startsWith('matterport_')) return job.job_type === 'matterport_archive' ? 'delete' : 'update'
   if (job.job_type === 'archive_hektor_annonce') return 'update'
   if (job.job_type === 'restore_hektor_annonce') return 'update'
+  if (job.job_type === 'change_hektor_annonce_status') return 'update'
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
@@ -3825,6 +3852,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
   if (job.job_type === 'archive_hektor_annonce') return 'Archivage Hektor puis resynchronisation'
   if (job.job_type === 'restore_hektor_annonce') return 'Reintegration Hektor puis resynchronisation'
+  if (job.job_type === 'change_hektor_annonce_status') return 'Transaction Hektor puis resynchronisation'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
@@ -3893,11 +3921,12 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
     if (job.job_type === 'archive_hektor_annonce') return 'Annonce archivee'
     if (job.job_type === 'restore_hektor_annonce') return 'Annonce desarchivee'
+    if (job.job_type === 'change_hektor_annonce_status') return 'Statut mis a jour'
     return 'Action terminee'
   }
   if (progress === 'syncing') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
-    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'archive_hektor_annonce' || job.job_type === 'restore_hektor_annonce') return "Mise a jour de l'app"
+    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'archive_hektor_annonce' || job.job_type === 'restore_hektor_annonce' || job.job_type === 'change_hektor_annonce_status') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
@@ -3915,6 +3944,7 @@ function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
   if (job.job_type === 'archive_hektor_annonce') return 'Hektor a archive l annonce. Mise a jour de l app en cours...'
   if (job.job_type === 'restore_hektor_annonce') return 'Hektor a desarchive l annonce. Mise a jour de l app en cours...'
+  if (job.job_type === 'change_hektor_annonce_status') return 'Hektor a accepte le statut. Reprise des informations transaction en cours...'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Hektor a genere le numero de mandat. Mise a jour de l app en cours...'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
   if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
@@ -5472,6 +5502,23 @@ export default function App() {
   const [archivePrice, setArchivePrice] = useState('')
   const [archiveConfrere, setArchiveConfrere] = useState('')
   const [archiveAnnoncePending, setArchiveAnnoncePending] = useState(false)
+  const [statusChangeTarget, setStatusChangeTarget] = useState<Dossier | null>(null)
+  const [statusChangeStatus, setStatusChangeStatus] = useState<HektorAnnonceStatusTarget>('offer')
+  const [statusChangeAmount, setStatusChangeAmount] = useState('')
+  const [statusChangeSalePrice, setStatusChangeSalePrice] = useState('')
+  const [statusChangeDate, setStatusChangeDate] = useState('')
+  const [statusChangeSignatureDate, setStatusChangeSignatureDate] = useState('')
+  const [statusChangeValidityDays, setStatusChangeValidityDays] = useState('10')
+  const [statusChangeRetractionDays, setStatusChangeRetractionDays] = useState('10')
+  const [statusChangeSelectedMandat, setStatusChangeSelectedMandat] = useState('')
+  const [statusChangeBuyerContactId, setStatusChangeBuyerContactId] = useState('')
+  const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
+  const [statusChangeBuyerFees, setStatusChangeBuyerFees] = useState('')
+  const [statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate] = useState('')
+  const [statusChangeNetSellerPrice, setStatusChangeNetSellerPrice] = useState('')
+  const [statusChangeSequestration, setStatusChangeSequestration] = useState('')
+  const [statusChangeCloseReason, setStatusChangeCloseReason] = useState('')
+  const [statusChangePending, setStatusChangePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
@@ -6624,6 +6671,95 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d archivage Hektor')
     } finally {
       setArchiveAnnoncePending(false)
+    }
+  }
+
+  function openStatusChangeModal(dossier: Dossier) {
+    if (!isAdmin) return
+    const current = String(dossier.statut_annonce ?? '').trim().toLowerCase()
+    const nextStatus: HektorAnnonceStatusTarget = current.includes('compromis')
+      ? 'compromise'
+      : current.includes('offre')
+        ? 'offer'
+        : current.includes('vendu')
+          ? 'sold'
+          : current.includes('clos')
+            ? 'closed'
+            : 'offer'
+    const price = dossier.prix == null ? '' : String(dossier.prix)
+    setStatusChangeTarget(dossier)
+    setStatusChangeStatus(nextStatus)
+    setStatusChangeAmount(price)
+    setStatusChangeSalePrice(price)
+    setStatusChangeDate(todayInputDate())
+    setStatusChangeSignatureDate('')
+    setStatusChangeValidityDays('10')
+    setStatusChangeRetractionDays('10')
+    setStatusChangeSelectedMandat('')
+    setStatusChangeBuyerContactId('')
+    setStatusChangeBuyerNotaryId('')
+    setStatusChangeBuyerFees('')
+    setStatusChangeBuyerFeesRate('')
+    setStatusChangeNetSellerPrice('')
+    setStatusChangeSequestration('')
+    setStatusChangeCloseReason('')
+    setNoticeMessage(null)
+    setErrorMessage(null)
+  }
+
+  function closeStatusChangeModal() {
+    if (statusChangePending) return
+    setStatusChangeTarget(null)
+    setStatusChangeCloseReason('')
+  }
+
+  async function handleChangeHektorAnnonceStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!statusChangeTarget) return
+    if (statusChangeNeedsTransaction(statusChangeStatus) && !statusChangeAmount.trim()) {
+      setErrorMessage('Indique le montant de la transaction avant envoi.')
+      return
+    }
+    if (statusChangeNeedsSalePrice(statusChangeStatus) && !statusChangeSalePrice.trim()) {
+      setErrorMessage('Indique le prix de vente avant envoi.')
+      return
+    }
+    if (statusChangeStatus === 'closed' && !statusChangeCloseReason.trim()) {
+      setErrorMessage('Indique le motif de cloture avant envoi.')
+      return
+    }
+    setStatusChangePending(true)
+    setNoticeMessage(null)
+    setErrorMessage(null)
+    try {
+      const job = await createChangeHektorAnnonceStatusJob({
+        dossier: statusChangeTarget,
+        targetStatus: statusChangeStatus,
+        amount: statusChangeAmount,
+        salePrice: statusChangeSalePrice,
+        transactionDate: statusChangeDate,
+        signatureDate: statusChangeSignatureDate,
+        validityDays: statusChangeValidityDays,
+        retractionDays: statusChangeRetractionDays,
+        selectedMandat: statusChangeSelectedMandat,
+        buyerContactId: statusChangeBuyerContactId,
+        buyerNotaryId: statusChangeBuyerNotaryId,
+        buyerFees: statusChangeBuyerFees,
+        buyerFeesRate: statusChangeBuyerFeesRate,
+        netSellerPrice: statusChangeNetSellerPrice,
+        sequestration: statusChangeSequestration,
+        closeReason: statusChangeCloseReason,
+        closeState: 'autre',
+        closePrice: statusChangeSalePrice || statusChangeAmount,
+        priority: 7,
+      })
+      rememberHektorActionJob(job)
+      setStatusChangeTarget(null)
+      setNoticeMessage(`Changement vers ${hektorStatusTargetLabel(statusChangeStatus)} demande pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de changement de statut')
+    } finally {
+      setStatusChangePending(false)
     }
   }
 
@@ -8366,6 +8502,136 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {statusChangeTarget ? (
+          <div className="modal-overlay" onClick={closeStatusChangeModal}>
+            <section className="modal-panel modal-panel-wide status-change-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head status-change-head">
+                <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Pilotage Hektor</p>
+                  <h3>Changer le statut annonce</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Fermer</button>
+              </div>
+              <form className="status-change-form" onSubmit={handleChangeHektorAnnonceStatus}>
+                <section className="status-change-summary">
+                  <div>
+                    <strong>{statusChangeTarget.titre_bien || statusChangeTarget.numero_dossier || `Annonce ${statusChangeTarget.hektor_annonce_id}`}</strong>
+                    <span>{statusChangeTarget.numero_dossier ?? '-'} · mandat {statusChangeTarget.numero_mandat ?? '-'}</span>
+                  </div>
+                  <StatusPill value={statusChangeTarget.statut_annonce} />
+                </section>
+                <div className="status-choice-grid">
+                  {hektorStatusTargetOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`status-choice-card ${statusChangeStatus === option.value ? 'is-selected' : ''}`}
+                      type="button"
+                      onClick={() => setStatusChangeStatus(option.value)}
+                    >
+                      <strong>{option.label}</strong>
+                      <span>{option.description}</span>
+                    </button>
+                  ))}
+                </div>
+                {statusChangeNeedsTransaction(statusChangeStatus) ? (
+                  <>
+                    <section className="status-change-section">
+                      <div>
+                        <p className="eyebrow">Transaction</p>
+                        <strong>{statusChangeStatus === 'offer' ? 'Offre a enregistrer' : statusChangeStatus === 'compromise' ? 'Compromis a enregistrer' : 'Vente a enregistrer'}</strong>
+                      </div>
+                      <div className="status-change-grid">
+                        <label className="filter-field">
+                          <span>{statusChangeStatus === 'offer' ? "Montant de l'offre" : 'Montant / prix public'}</span>
+                          <input value={statusChangeAmount} onChange={(event) => setStatusChangeAmount(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required />
+                        </label>
+                        <label className="filter-field">
+                          <span>Prix de vente</span>
+                          <input value={statusChangeSalePrice} onChange={(event) => setStatusChangeSalePrice(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required={statusChangeNeedsSalePrice(statusChangeStatus)} />
+                        </label>
+                        <label className="filter-field">
+                          <span>Date</span>
+                          <input type="date" value={statusChangeDate} onChange={(event) => setStatusChangeDate(event.target.value)} required />
+                        </label>
+                        {statusChangeStatus === 'offer' ? (
+                          <label className="filter-field">
+                            <span>Validite offre</span>
+                            <input value={statusChangeValidityDays} onChange={(event) => setStatusChangeValidityDays(event.target.value)} inputMode="numeric" placeholder="10" />
+                          </label>
+                        ) : null}
+                        {statusChangeStatus === 'compromise' ? (
+                          <>
+                            <label className="filter-field">
+                              <span>Date acte prevue</span>
+                              <input type="date" value={statusChangeSignatureDate} onChange={(event) => setStatusChangeSignatureDate(event.target.value)} />
+                            </label>
+                            <label className="filter-field">
+                              <span>Retractation</span>
+                              <input value={statusChangeRetractionDays} onChange={(event) => setStatusChangeRetractionDays(event.target.value)} inputMode="numeric" placeholder="10" />
+                            </label>
+                          </>
+                        ) : null}
+                        <label className="filter-field">
+                          <span>Mandat Hektor</span>
+                          <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder="Auto si vide" />
+                        </label>
+                        <label className="filter-field">
+                          <span>Acquereur Hektor</span>
+                          <input value={statusChangeBuyerContactId} onChange={(event) => setStatusChangeBuyerContactId(event.target.value)} placeholder="ID contact si connu" />
+                        </label>
+                        <label className="filter-field">
+                          <span>Notaire acquereur</span>
+                          <input value={statusChangeBuyerNotaryId} onChange={(event) => setStatusChangeBuyerNotaryId(event.target.value)} placeholder="ID notaire si connu" />
+                        </label>
+                        <label className="filter-field">
+                          <span>Honoraires acquereur</span>
+                          <input value={statusChangeBuyerFees} onChange={(event) => setStatusChangeBuyerFees(event.target.value)} inputMode="numeric" placeholder="0" />
+                        </label>
+                        <label className="filter-field">
+                          <span>Taux honoraires</span>
+                          <input value={statusChangeBuyerFeesRate} onChange={(event) => setStatusChangeBuyerFeesRate(event.target.value)} inputMode="decimal" placeholder="0" />
+                        </label>
+                        {statusChangeStatus !== 'offer' ? (
+                          <>
+                            <label className="filter-field">
+                              <span>Prix net vendeur</span>
+                              <input value={statusChangeNetSellerPrice} onChange={(event) => setStatusChangeNetSellerPrice(event.target.value)} inputMode="numeric" placeholder="Auto si vide" />
+                            </label>
+                            <label className="filter-field">
+                              <span>Sequestre</span>
+                              <input value={statusChangeSequestration} onChange={(event) => setStatusChangeSequestration(event.target.value)} inputMode="numeric" placeholder="0" />
+                            </label>
+                          </>
+                        ) : null}
+                      </div>
+                    </section>
+                    <p className="status-change-note">Apres validation Hektor, le worker relance une reprise ciblee pour remplir les blocs transaction de la fiche. Le run quotidien reste la verification de secours.</p>
+                  </>
+                ) : statusChangeStatus === 'closed' ? (
+                  <section className="status-change-section">
+                    <div>
+                      <p className="eyebrow">Cloture mandat</p>
+                      <strong>Motif transmis a Hektor</strong>
+                    </div>
+                    <label className="filter-field">
+                      <span>Motif de cloture</span>
+                      <textarea className="inline-textarea" value={statusChangeCloseReason} onChange={(event) => setStatusChangeCloseReason(event.target.value)} placeholder="Ex : mandat clos a la demande du proprietaire" required />
+                    </label>
+                  </section>
+                ) : (
+                  <p className="status-change-note">Le statut Actif est envoye directement a Hektor puis la fiche est resynchronisee.</p>
+                )}
+                <div className="modal-actions">
+                  <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Annuler</button>
+                  <button className="ghost-button button-primary" type="submit" disabled={statusChangePending}>
+                    {statusChangePending ? 'Envoi...' : `Envoyer vers ${hektorStatusTargetLabel(statusChangeStatus)}`}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
             <section
@@ -9096,6 +9362,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
+                onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
               />
@@ -9867,6 +10134,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
+                onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
               />
@@ -11502,6 +11770,7 @@ function DossierDetailLayout(props: {
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
   onArchiveAnnonce?: (dossier: Dossier) => void
+  onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
@@ -11661,6 +11930,12 @@ function DossierDetailLayout(props: {
                       <button className="detail-archive-annonce-button" type="button" onClick={() => props.onArchiveAnnonce?.(dossier)}>
                         <span aria-hidden="true"><DetailIcon type="history" /></span>
                         <strong>Archiver</strong>
+                      </button>
+                    ) : null}
+                    {props.onChangeAnnonceStatus && !isLightweightDetail ? (
+                      <button className="detail-status-annonce-button" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
+                        <span aria-hidden="true"><DetailIcon type="actions" /></span>
+                        <strong>Statut</strong>
                       </button>
                     ) : null}
                   </div>
@@ -12639,6 +12914,7 @@ function AnnonceScreen(props: {
   onOpenDiffusionModal?: (id: number) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onArchiveAnnonce?: (dossier: Dossier) => void
+  onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   detailLoading: boolean
   onBack: () => void
@@ -12666,6 +12942,7 @@ function DossierDetailScreen(props: {
   requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onArchiveAnnonce?: (dossier: Dossier) => void
+  onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
@@ -12725,6 +13002,7 @@ function MobileDossierDetail(props: {
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
   onArchiveAnnonce?: (dossier: Dossier) => void
+  onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'

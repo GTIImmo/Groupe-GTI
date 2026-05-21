@@ -4184,6 +4184,70 @@ export async function createArchiveHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
+export type HektorAnnonceStatusTarget = 'active' | 'offer' | 'compromise' | 'sold' | 'closed'
+
+export async function createChangeHektorAnnonceStatusJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email'>
+  targetStatus: HektorAnnonceStatusTarget
+  amount?: string
+  salePrice?: string
+  transactionDate?: string
+  signatureDate?: string
+  validityDays?: string
+  retractionDays?: string
+  selectedMandat?: string
+  buyerContactId?: string
+  buyerNotaryId?: string
+  buyerFees?: string
+  buyerFeesRate?: string
+  netSellerPrice?: string
+  sequestration?: string
+  closeReason?: string
+  closeState?: string
+  closePrice?: string
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const payload = {
+    numero_dossier: input.dossier.numero_dossier ?? null,
+    numero_mandat: input.dossier.numero_mandat ?? null,
+    titre_bien: input.dossier.titre_bien ?? null,
+    negociateur_email: input.dossier.negociateur_email ?? null,
+    target_status: input.targetStatus,
+    amount: input.amount?.trim() || null,
+    sale_price: input.salePrice?.trim() || null,
+    transaction_date: input.transactionDate?.trim() || null,
+    signature_date: input.signatureDate?.trim() || null,
+    validity_days: input.validityDays?.trim() || null,
+    retraction_days: input.retractionDays?.trim() || null,
+    selected_mandat: input.selectedMandat?.trim() || null,
+    buyer_contact_id: input.buyerContactId?.trim() || null,
+    buyer_notary_id: input.buyerNotaryId?.trim() || null,
+    buyer_fees: input.buyerFees?.trim() || null,
+    buyer_fees_rate: input.buyerFeesRate?.trim() || null,
+    net_seller_price: input.netSellerPrice?.trim() || null,
+    sequestration: input.sequestration?.trim() || null,
+    close_reason: input.closeReason?.trim() || null,
+    close_state: input.closeState?.trim() || null,
+    close_price: input.closePrice?.trim() || null,
+  }
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'change_hektor_annonce_status',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: payload,
+      priority: input.priority ?? 7,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor status job')
+  return data as ConsoleJob
+}
+
 export type MatterportConsoleAction = 'online' | 'offline' | 'archive' | 'reactivate'
 
 export async function createMatterportActionJob(input: {
@@ -4212,6 +4276,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'delete_hektor_annonce',
   'archive_hektor_annonce',
   'restore_hektor_annonce',
+  'change_hektor_annonce_status',
   'update_hektor_annonce_fields',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',

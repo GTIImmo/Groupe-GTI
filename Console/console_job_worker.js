@@ -45,6 +45,7 @@ const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
   "archive_hektor_annonce",
   "restore_hektor_annonce",
+  "change_hektor_annonce_status",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
   "matterport_online",
@@ -2689,6 +2690,327 @@ async function handleUpdateHektorAnnonceFields(job) {
   };
 }
 
+const HEKTOR_STATUS_CONFIG = {
+  active: { hektorValue: "2", label: "Actif", diffusable: "1" },
+  offer: { hektorValue: "3", label: "Sous offre", transactionMode: "annonce-SuiviVente-offre-createOffre" },
+  compromise: { hektorValue: "4", label: "Sous compromis", transactionMode: "annonce-SuiviVente-compromis-createCompromis" },
+  sold: { hektorValue: "5", label: "Vendu", transactionMode: "annonce-SuiviVente-vente-createVente" },
+  closed: { hektorValue: "6", label: "Mandat clos", diffusable: "0" },
+};
+
+function normalizeHektorStatusTarget(value) {
+  const text = String(value || "").trim().toLowerCase();
+  const aliases = {
+    actif: "active",
+    active: "active",
+    offre: "offer",
+    "sous offre": "offer",
+    offer: "offer",
+    compromis: "compromise",
+    "sous compromis": "compromise",
+    compromise: "compromise",
+    vendu: "sold",
+    sold: "sold",
+    clos: "closed",
+    "mandat clos": "closed",
+    closed: "closed",
+  };
+  const target = aliases[text] || text;
+  if (!HEKTOR_STATUS_CONFIG[target]) throw new Error(`Statut Hektor non supporte: ${value}`);
+  return target;
+}
+
+function normalizeStatusFrenchDate(value, fallback = new Date()) {
+  const raw = String(value || "").trim();
+  if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) return raw;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [year, month, day] = raw.split("-");
+    return `${day}-${month}-${year}`;
+  }
+  const date = fallback instanceof Date && !Number.isNaN(fallback.getTime()) ? fallback : new Date();
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}-${date.getFullYear()}`;
+}
+
+function cleanMoneyValue(value, fallback = "") {
+  const raw = String(value == null ? "" : value).replace(/\s+/g, "").replace(",", ".").trim();
+  return raw || String(fallback || "");
+}
+
+function htmlInputValue(html, key) {
+  const source = String(html || "");
+  const patterns = [
+    new RegExp(`<input\\b[^>]*(?:name|id)=["']${key}["'][^>]*>`, "i"),
+    new RegExp(`<input\\b[^>]*(?:name|id)=["'][^"']*["'][^>]*(?:name|id)=["']${key}["'][^>]*>`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (!match) continue;
+    const value = htmlAttrValue(match[0], "value");
+    if (value != null) return value;
+  }
+  return "";
+}
+
+function appendIfValue(params, key, value) {
+  const clean = String(value == null ? "" : value).trim();
+  if (clean) params.set(key, clean);
+}
+
+async function setHektorAnnonceStatusValue(job, annonceId, config, reason) {
+  await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+    mode: "upval",
+    id: annonceId,
+    champ: "status",
+    val: config.hektorValue,
+  }).toString()}`, {
+    headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}` },
+  });
+  if (config.diffusable != null) {
+    await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+      mode: "upval",
+      id: annonceId,
+      champ: "diffusable",
+      val: config.diffusable,
+    }).toString()}`, {
+      headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}` },
+    });
+  }
+  await logJob(job.id, "hektor_status", "done", `Statut Hektor ${config.label} envoye`, {
+    hektor_annonce_id: annonceId,
+    status_value: config.hektorValue,
+    diffusable: config.diffusable == null ? null : config.diffusable,
+    reason,
+  });
+}
+
+function normalizeStatusTransactionPayload(payload, config, initHtml) {
+  const amount = cleanMoneyValue(payload.amount || payload.montant_offre || payload.montant || payload.price, htmlInputValue(initHtml, "montant_offre") || htmlInputValue(initHtml, "montantOffre"));
+  const salePrice = cleanMoneyValue(payload.sale_price || payload.prix_de_vente || payload.prixDeVente || payload.price, htmlInputValue(initHtml, "offre_prixDeVente") || htmlInputValue(initHtml, "prixDeVente") || amount);
+  const date = normalizeStatusFrenchDate(payload.transaction_date || payload.date || payload.date_offre || payload.date_compromis || payload.date_vente);
+  const validity = String(payload.validity_days || payload.nb_jours_validite || payload.nbJoursValidite || htmlInputValue(initHtml, "availability") || "10").trim();
+  const selectedMandat = String(payload.selected_mandat || payload.selectedMandat || htmlInputValue(initHtml, "selectedMandatId") || "").trim();
+  const mandat = String(payload.mandat || htmlInputValue(initHtml, "id_mandat") || selectedMandat || "").trim();
+  const negotiator = String(payload.instigateur || payload.negociateur_id || htmlInputValue(initHtml, "negociateurSelect") || "").trim();
+  const agency = String(payload.agence_reseau_selected || payload.agenceReseauSelected || "").trim();
+  const buyer = String(payload.acquereur_id || payload.buyer_contact_id || payload.id_acquereur || "").trim();
+  const notary = String(payload.notaire_id || payload.buyer_notary_id || payload.id_notaire || "").trim();
+  const fees = cleanMoneyValue(payload.buyer_fees || payload.montant_honoraire_sortie || payload.montantHonoraireSortie, htmlInputValue(initHtml, "offre_montant_honoraires_0") || "0");
+  const feesRate = cleanMoneyValue(payload.buyer_fees_rate || payload.taux_honoraire_sortie || payload.tauxHonoraireSortie, htmlInputValue(initHtml, "offreHonorairesSortiePercent_1") || "0");
+  if (!amount && (config.hektorValue === "3" || config.hektorValue === "4")) throw new Error("Montant requis pour ce changement de statut");
+  if (!salePrice && (config.hektorValue === "4" || config.hektorValue === "5")) throw new Error("Prix de vente requis pour ce changement de statut");
+  return {
+    amount,
+    salePrice: salePrice || amount,
+    date,
+    validity,
+    selectedMandat,
+    mandat,
+    negotiator,
+    agency,
+    buyer,
+    notary,
+    fees,
+    feesRate,
+    isWritten: payload.is_written === false || payload.isWrite === false || payload.is_written === "0" ? "0" : "1",
+    sequestration: cleanMoneyValue(payload.sequestre || payload.sequestration, htmlInputValue(initHtml, "sequestre") || "0"),
+    netSellerPrice: cleanMoneyValue(payload.net_seller_price || payload.prix_net_vendeur || payload.prixNetVendeur, htmlInputValue(initHtml, "prixNetVendeur") || ""),
+  };
+}
+
+async function submitHektorTransactionStatus(job, annonceId, target, config, payload) {
+  const initBody = new URLSearchParams({
+    mode: config.transactionMode,
+    idAnnonce: annonceId,
+    init: "1",
+  });
+  if (target === "compromise" || target === "sold") initBody.set("initBasket", "true");
+  const init = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: initBody,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      Accept: "application/json, text/javascript, */*; q=0.01",
+    },
+    timeoutMs: 60000,
+  });
+  const initJson = parseHektorJson(init.text, `init ${config.label}`);
+  const initHtml = String(
+    initJson.html ||
+    (initJson.data && (initJson.data.defaultTemplate || initJson.data.html || initJson.data.template)) ||
+    ""
+  );
+  const tx = normalizeStatusTransactionPayload(payload, config, initHtml);
+  const body = new URLSearchParams();
+  body.set("mode", config.transactionMode);
+  body.set("idAnnonce", annonceId);
+  body.append("actionContainer[]", "save");
+  body.append("actionContainer[]", "treat");
+  appendIfValue(body, "mandat", tx.mandat);
+  appendIfValue(body, "selectedMandat", tx.selectedMandat);
+  appendIfValue(body, "instigateur", tx.negotiator);
+  appendIfValue(body, "agenceReseauSelected", tx.agency);
+  appendIfValue(body, "acquereurs[]", tx.buyer);
+  appendIfValue(body, "notairesAcquereur[]", tx.notary);
+  body.set("fromContact", "0");
+
+  if (target === "offer") {
+    body.set("idOffre", "");
+    body.set("montantOffre", tx.amount);
+    body.set("dateOffre", tx.date);
+    body.set("nbJoursValidite", tx.validity);
+    body.set("prixDeVente", tx.salePrice);
+    if (tx.isWritten === "1") body.set("isWrite", "1");
+    body.set("montantHonoraireSortie", tx.fees);
+    body.set("tauxHonoraireSortie", tx.feesRate);
+    body.append("containerModule[]", "infosFinancieres");
+    body.append("containerModule[]", "acquereurNotaireAutresProspects");
+    body.append("containerModule[]", "AnnoncesOffreMandat");
+    body.set("containerName", "PopinOffre");
+  } else if (target === "compromise") {
+    body.set("idCompromis", "");
+    body.set("dateCompromis", tx.date);
+    body.set("dateSignatureActe", normalizeStatusFrenchDate(payload.signature_date || payload.date_signature_acte || payload.dateSignatureActe));
+    body.set("nbJoursRetractation", String(payload.retraction_days || payload.nb_jours_retractation || "10"));
+    body.set("prixPublique", tx.amount || tx.salePrice);
+    body.set("prixDeVente", tx.salePrice);
+    body.set("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
+    body.set("sequestre", tx.sequestration);
+    body.set("montantHonoraireSortie", tx.fees);
+    body.set("tauxHonoraireSortie", tx.feesRate);
+    body.append("containerModule[]", "infosFinancieres");
+    body.append("containerModule[]", "acquereurNotaireAutresProspects");
+    body.append("containerModule[]", "AnnoncesCompromisMandat");
+    body.set("containerName", "PopinCompromis");
+  } else if (target === "sold") {
+    body.set("idVente", "");
+    body.set("dateVente", tx.date);
+    body.set("prixDeVente", tx.salePrice);
+    body.set("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
+    body.set("montantHonoraireSortie", tx.fees);
+    body.set("tauxHonoraireSortie", tx.feesRate);
+    body.append("containerModule[]", "infosFinancieres");
+    body.append("containerModule[]", "acquereurNotaireAutresProspects");
+    body.append("containerModule[]", "AnnoncesVenteMandat");
+    body.set("containerName", "PopinVente");
+  }
+
+  const saved = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      Accept: "application/json, text/javascript, */*; q=0.01",
+    },
+    timeoutMs: 60000,
+  });
+  const savedJson = parseHektorJson(saved.text, `save ${config.label}`);
+  if (savedJson.error && !savedJson.returnValue) {
+    throw new Error(`Hektor refuse ${config.label}: ${stripHtml(savedJson.html || saved.text).slice(0, 600)}`);
+  }
+  await logJob(job.id, "hektor_transaction", "done", `Transaction ${config.label} envoyee`, {
+    hektor_annonce_id: annonceId,
+    target,
+    return_keys: savedJson.returnValue ? Object.keys(savedJson.returnValue) : [],
+  });
+  await setHektorAnnonceStatusValue(job, annonceId, config, `transaction_${target}`);
+  return {
+    init_error: initJson.error === true,
+    transaction_returned: Boolean(savedJson.returnValue),
+    transaction_keys: savedJson.returnValue ? Object.keys(savedJson.returnValue) : [],
+  };
+}
+
+async function submitHektorClosedStatus(job, annonceId, config, payload) {
+  const body = new URLSearchParams({
+    mode: "annonce-SuiviVente-saveMandatClos",
+    idAnnonce: annonceId,
+    state: String(payload.close_state || payload.state || "autre"),
+    reason: String(payload.close_reason || payload.reason || "Cloture demandee depuis l app").trim(),
+    idConfrere: String(payload.confrere_id || payload.idConfrere || "").trim(),
+    prix: cleanMoneyValue(payload.close_price || payload.price || ""),
+  });
+  await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+    },
+    timeoutMs: 60000,
+  });
+  await setHektorAnnonceStatusValue(job, annonceId, config, "closed_form");
+  return { closed_reason: body.get("reason"), closed_state: body.get("state") };
+}
+
+async function handleChangeHektorAnnonceStatus(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const target = normalizeHektorStatusTarget(payload.target_status || payload.status || payload.targetStatus);
+  const config = HEKTOR_STATUS_CONFIG[target];
+  let dossier = null;
+  try {
+    dossier = await loadDossier(job);
+  } catch (error) {
+    if (!job.hektor_annonce_id) throw error;
+    dossier = {
+      app_dossier_id: job.app_dossier_id || payload.app_dossier_id || null,
+      hektor_annonce_id: String(job.hektor_annonce_id),
+      negociateur_email: payload.hektor_user_email || payload.negociateur_email || null,
+    };
+  }
+  const annonceId = String(dossier.hektor_annonce_id || job.hektor_annonce_id || "").trim();
+  if (!annonceId) throw new Error("hektor_annonce_id required");
+
+  await ensureAdminHektorSession(job, "change_status_admin_login");
+  if (config.transactionMode) {
+    await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: false, preferDossierOwner: true, required: true });
+  }
+
+  await logJob(job.id, "hektor_status", "running", `Changement statut Hektor vers ${config.label}`, {
+    hektor_annonce_id: annonceId,
+    target_status: target,
+    app_dossier_id: dossier.app_dossier_id || null,
+  });
+  const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_status_verify_before");
+  const transactionResult = config.transactionMode
+    ? await submitHektorTransactionStatus(job, annonceId, target, config, payload)
+    : target === "closed"
+      ? await submitHektorClosedStatus(job, annonceId, config, payload)
+      : await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
+
+  await sleep(2500);
+  const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_status_verify_after");
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "change_hektor_annonce_status",
+    priority: 72,
+  });
+
+  return {
+    status: "changed",
+    hektor_annonce_id: annonceId,
+    app_dossier_id: dossier.app_dossier_id || null,
+    target_status: target,
+    target_label: config.label,
+    before_property: before && before.property ? {
+      id: before.property.id,
+      folderNumber: before.property.folderNumber || null,
+      status: before.property.status || null,
+      isArchived: before.property.isArchived === true,
+    } : null,
+    after_property: after && after.property ? {
+      id: after.property.id,
+      folderNumber: after.property.folderNumber || null,
+      status: after.property.status || null,
+      isArchived: after.property.isArchived === true,
+    } : null,
+    transaction: transactionResult || null,
+    sync_job: syncJob,
+  };
+}
+
 async function handleLinkHektorMandant(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -3839,6 +4161,8 @@ async function runHandler(job) {
       return handleArchiveHektorAnnonce(job);
     case "restore_hektor_annonce":
       return handleRestoreHektorAnnonce(job);
+    case "change_hektor_annonce_status":
+      return handleChangeHektorAnnonceStatus(job);
     case "create_hektor_draft_annonce":
       return handleCreateHektorDraftAnnonce(job);
     case "matterport_online":

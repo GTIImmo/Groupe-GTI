@@ -478,6 +478,7 @@ export type ConsoleJobType =
   | 'delete_hektor_annonce'
   | 'archive_hektor_annonce'
   | 'restore_hektor_annonce'
+  | 'change_hektor_annonce_status'
   | 'create_hektor_draft_annonce'
   | 'matterport_online'
   | 'matterport_offline'
