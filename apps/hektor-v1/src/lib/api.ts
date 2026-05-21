@@ -133,6 +133,7 @@ const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
+const annonceSearchListingsFilterValue = '__annonce_search_listings__'
 const activeListingStatuses = ['Actif', 'Sous offre', 'Sous compromis']
 const historicalListingStatuses = ['Vendu', 'Clos']
 const dossiersCurrentView = 'app_dossiers_current'
@@ -803,7 +804,12 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
       (!offreStatus || (offreStatus === 'en_cours' ? hasOffreAchatEnCours(item) : hasOffreAchatRefusee(item))) &&
       (!compromisStatus || (compromisStatus === 'en_cours' ? hasCompromisEnCours(item) : hasCompromisAnnule(item))) &&
       (!(requestScope || requestType) || latestRequestRowsMatchScope(Array.from(latestByDossierAndType?.get(item.app_dossier_id)?.values() ?? []), requestScope, requestType)) &&
-      (!statut || (statut === activeListingsFilterValue ? activeListingStatuses.includes(item.statut_annonce ?? '') : (item.statut_annonce ?? '') === statut)) &&
+      (!statut ||
+        (statut === activeListingsFilterValue
+          ? activeListingStatuses.includes(item.statut_annonce ?? '')
+          : statut === annonceSearchListingsFilterValue
+            ? (item.statut_annonce ?? '') !== 'Estimation'
+            : (item.statut_annonce ?? '') === statut)) &&
       (!validationDiffusion ||
         (validationDiffusion === '__validated__'
           ? isValidationApproved(item.validation_diffusion_state)
@@ -897,6 +903,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (compromisStatus === 'en_cours') query = query.or('and(compromis_id.not.is.null,compromis_state.eq.active)')
   if (compromisStatus === 'annule') query = query.or('and(compromis_id.not.is.null,compromis_state.eq.cancelled)')
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
+  else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
   if (validationDiffusion === '__validated__') {
     query = query.or(
@@ -1076,6 +1083,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
   if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
+  else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
@@ -1310,6 +1318,7 @@ export async function loadDossiersPage({
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
   const shouldMergeArchiveIndex = filters.archive === allFilterValue && !requestScope && !requestType
+  const shouldMergeHistoricalIndex = shouldMergeArchiveIndex && statut === annonceSearchListingsFilterValue
   query = query.range(shouldMergeArchiveIndex ? 0 : from, to)
 
   const { data, error, count } = await query
@@ -1335,7 +1344,7 @@ export async function loadDossiersPage({
 
     const { data: archiveData, error: archiveError, count: archiveCount } = await archiveQuery
     if (archiveError || !archiveData) throw new Error(archiveError?.message ?? 'Unable to load archived annonces')
-    return mergeDossierPageResults([
+    const mergedResults: Array<PageResult<Dossier>> = [
       primaryResult,
       {
         rows: (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
@@ -1343,7 +1352,29 @@ export async function loadDossiersPage({
         page,
         pageSize,
       },
-    ], page, pageSize)
+    ]
+    if (shouldMergeHistoricalIndex) {
+      const historicalQuery = applyHistoricalIndexFiltersToQuery(
+        supabase
+          .from('app_historical_annonce_index_current')
+          .select(historicalIndexSelect, { count: countMode }),
+        filters,
+        scope,
+      )
+        .order('date_maj', { ascending: false, nullsFirst: false })
+        .order('hektor_annonce_id', { ascending: false })
+        .range(0, mixedRangeTo)
+
+      const { data: historicalData, error: historicalError, count: historicalCount } = await historicalQuery
+      if (historicalError || !historicalData) throw new Error(historicalError?.message ?? 'Unable to load historical annonces')
+      mergedResults.push({
+        rows: (historicalData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+        total: historicalCount ?? 0,
+        page,
+        pageSize,
+      })
+    }
+    return mergeDossierPageResults(mergedResults, page, pageSize)
   }
   return primaryResult
 }

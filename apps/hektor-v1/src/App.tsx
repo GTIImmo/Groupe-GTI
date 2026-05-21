@@ -102,6 +102,7 @@ const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
+const annonceSearchListingsFilterValue = '__annonce_search_listings__'
 const detailAvailableFilterValue = 'available'
 const detailToLoadFilterValue = 'to_load'
 const activeListingsFilterOption = { value: activeListingsFilterValue, label: 'Actif / offre / compromis' }
@@ -135,6 +136,18 @@ function usesLightweightAnnonceIndex(filters: AppFilters) {
   return filters.archive === archivedFilterValue || isHistoricalListingStatus(filters.statut)
 }
 
+function applyAnnonceSearchDefaultScope(screen: Screen, filters: AppFilters): AppFilters {
+  const isAnnonceListingScreen = screen === 'annonces' || screen === 'mandats'
+  const hasSearch = Boolean(filters.query.trim())
+  const hasDefaultListingScope = filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue
+  if (!isAnnonceListingScreen || !hasSearch || !hasDefaultListingScope) return filters
+  return {
+    ...filters,
+    archive: allFilterValue,
+    statut: annonceSearchListingsFilterValue,
+  }
+}
+
 function isLightweightAnnonceRecord(item: Pick<Dossier, 'archive' | 'statut_annonce'> | Pick<MandatRecord, 'archive' | 'statut_annonce'> | null | undefined) {
   if (!item) return false
   return item.archive === '1' || isHistoricalListingStatus(item.statut_annonce)
@@ -147,6 +160,9 @@ function hasLocalDetailAvailable(item: Pick<Dossier, 'has_local_detail'> | Pick<
 function annonceListingLabels(filters: AppFilters) {
   if (filters.archive === archivedFilterValue) {
     return { title: 'Archives', totalNoun: 'annonces archivees' }
+  }
+  if (filters.statut === annonceSearchListingsFilterValue) {
+    return { title: 'Recherche annonces', totalNoun: 'annonces' }
   }
   if (filters.statut === 'Vendu') {
     return { title: 'Annonces vendues', totalNoun: 'annonces vendues' }
@@ -5518,7 +5534,7 @@ export default function App() {
         statut: 'Estimation',
       }
     }
-    return filters
+    return applyAnnonceSearchDefaultScope(screen, filters)
   }, [filters, screen])
   const listingStatusOptions = useMemo(
     () => mergeFilterOptions([activeListingsFilterOption, ...filterCatalog.statuts, ...historicalListingStatusOptions]),
