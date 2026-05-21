@@ -23,7 +23,7 @@ if ($SyncWorker) {
   $WorkerKind = "sync_light"
 }
 $env:CONSOLE_WORKER_KIND = $WorkerKind
-$env:CONSOLE_WORKER_ID = "$($env:COMPUTERNAME):$($WorkerKind):scheduled"
+$env:CONSOLE_WORKER_ID = "$($env:COMPUTERNAME):$($WorkerKind):scheduled:v2"
 if (-not $env:CONSOLE_WORKER_POLL_INTERVAL_MS) {
   $env:CONSOLE_WORKER_POLL_INTERVAL_MS = if ($WorkerKind -in @("sync", "sync_full")) { "60000" } elseif ($WorkerKind -eq "sync_light") { "10000" } else { "5000" }
 }
@@ -37,7 +37,7 @@ if (-not $env:CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT) {
   $env:CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT = "true"
 }
 if (-not $env:CONSOLE_LOCAL_ARCHIVE_ROOT) {
-  $env:CONSOLE_LOCAL_ARCHIVE_ROOT = "C:\HektorConsoleDocuments"
+  $env:CONSOLE_LOCAL_ARCHIVE_ROOT = "C:\Hektor\HektorConsoleDocuments"
 }
 
 $sessionDir = Join-Path $scriptDir "sessions"
