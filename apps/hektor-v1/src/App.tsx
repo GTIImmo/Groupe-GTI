@@ -5300,6 +5300,10 @@ function totalPages(total: number, pageSize: number) {
   return Math.max(1, Math.ceil(total / pageSize))
 }
 
+function sameSessionIdentity(left: Session | null, right: Session | null) {
+  return (left?.user?.id ?? null) === (right?.user?.id ?? null) && (left?.user?.email ?? null) === (right?.user?.email ?? null)
+}
+
 function activeFilterEntries(filters: AppFilters) {
   return [
     filters.query.trim() ? ['Recherche', filters.query.trim()] : null,
@@ -5376,6 +5380,7 @@ export default function App() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [lightweightDetailTarget, setLightweightDetailTarget] = useState<LightweightDetailTarget | null>(null)
   const [session, setSession] = useState<Session | null>(null)
+  const sessionRef = useRef<Session | null>(null)
   const [bootLoading, setBootLoading] = useState(true)
   const [pageLoading, setPageLoading] = useState(false)
   const [catalogLoading, setCatalogLoading] = useState(false)
@@ -5600,6 +5605,10 @@ export default function App() {
   const visibleDossiers = useMemo(() => dossiers.filter((item) => !deletingAppDossierIds.has(item.app_dossier_id) && !deletingHektorAnnonceIds.has(String(item.hektor_annonce_id))), [dossiers, deletingAppDossierIds, deletingHektorAnnonceIds])
 
   useEffect(() => {
+    sessionRef.current = session
+  }, [session])
+
+  useEffect(() => {
     if (!hasSupabaseEnv) {
       void bootstrapApp()
       return
@@ -5613,7 +5622,11 @@ export default function App() {
     }
 
     void getCurrentSession().then((nextSession) => {
-      setSession(nextSession)
+      const sameIdentity = sameSessionIdentity(sessionRef.current, nextSession)
+      if (!sameIdentity) {
+        sessionRef.current = nextSession
+        setSession(nextSession)
+      }
       if (nextSession) {
         void bootstrapApp()
       } else {
@@ -5626,9 +5639,13 @@ export default function App() {
       if (event === 'PASSWORD_RECOVERY') {
         setRecoveryMode(true)
       }
-      setSession(nextSession)
+      const sameIdentity = sameSessionIdentity(sessionRef.current, nextSession)
+      if (!sameIdentity) {
+        sessionRef.current = nextSession
+        setSession(nextSession)
+      }
       if (nextSession) {
-        void bootstrapApp()
+        if (!sameIdentity) void bootstrapApp()
       } else {
         setBootLoading(false)
       }
