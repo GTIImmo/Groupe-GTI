@@ -10100,8 +10100,12 @@ function MandatsScreen(props: {
                           {isEstimationMode ? (
                             <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
                           ) : isLightweight ? (
-                            <button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }}>
-                              Charger detail
+                            <button className="lightweight-row-action" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }} title="Preparer puis ouvrir le detail complet">
+                              <span className="lightweight-row-action-icon" aria-hidden="true">i</span>
+                              <span className="lightweight-row-action-label">
+                                <strong>Detail</strong>
+                                <small>A charger</small>
+                              </span>
                             </button>
                           ) : (
                             <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
