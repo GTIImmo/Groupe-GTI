@@ -1630,14 +1630,14 @@ async function handlePrepareArchivedAnnonceDetail(job) {
   if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for prepare_archived_annonce_detail");
   await logJob(job.id, "archive_detail_cache", "running", "Preparation du detail archive depuis la base locale", {
     hektor_annonce_id: hektorAnnonceId,
-    ttl_hours: payload.ttl_hours || 2,
+    ttl_hours: payload.ttl_hours || 24,
   });
   const args = [
     "Console/prepare_archived_annonce_detail.py",
     "--hektor-annonce-id",
     hektorAnnonceId,
     "--ttl-hours",
-    String(payload.ttl_hours || 2),
+    String(payload.ttl_hours || 24),
   ];
   if (job.requested_by) {
     args.push("--requested-by", String(job.requested_by));
@@ -1662,14 +1662,14 @@ async function handlePrepareHistoricalAnnonceDetail(job) {
   if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for prepare_historical_annonce_detail");
   await logJob(job.id, "historical_detail_cache", "running", "Preparation du detail Vendu/Clos depuis la base locale", {
     hektor_annonce_id: hektorAnnonceId,
-    ttl_hours: payload.ttl_hours || 2,
+    ttl_hours: payload.ttl_hours || 24,
   });
   const args = [
     "Console/prepare_historical_annonce_detail.py",
     "--hektor-annonce-id",
     hektorAnnonceId,
     "--ttl-hours",
-    String(payload.ttl_hours || 2),
+    String(payload.ttl_hours || 24),
   ];
   if (job.requested_by) {
     args.push("--requested-by", String(job.requested_by));

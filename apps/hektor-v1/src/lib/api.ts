@@ -3755,7 +3755,7 @@ export async function createPrepareArchivedAnnonceDetailJob(input: {
       payload_json: {
         numero_dossier: input.dossier.numero_dossier ?? null,
         titre_bien: input.dossier.titre_bien ?? null,
-        ttl_hours: 2,
+        ttl_hours: 24,
       },
       priority: input.priority ?? 32,
       requested_by: userId,
@@ -3781,7 +3781,7 @@ export async function createPrepareHistoricalAnnonceDetailJob(input: {
       payload_json: {
         numero_dossier: input.dossier.numero_dossier ?? null,
         titre_bien: input.dossier.titre_bien ?? null,
-        ttl_hours: 2,
+        ttl_hours: 24,
       },
       priority: input.priority ?? 32,
       requested_by: userId,
