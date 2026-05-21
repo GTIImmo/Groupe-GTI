@@ -10113,12 +10113,22 @@ function MandatsScreen(props: {
           </div>
         </div>
         {!isEstimationMode && props.searchScopeSummary ? (
-          <div className="active-filters-row search-scope-row">
-            <span className="active-filter-chip">{props.searchScopeExtended ? 'Recherche etendue' : 'Recherche'}: {props.searchScopeSummary}</span>
+          <div className={`search-scope-row ${props.searchScopeExtended ? 'is-extended' : ''}`}>
+            <span className="search-scope-icon" aria-hidden="true" />
+            <div className="search-scope-copy">
+              <span>{props.searchScopeExtended ? 'Recherche étendue' : 'Recherche limitée au contexte'}</span>
+              <strong>{props.searchScopeSummary}</strong>
+            </div>
             {props.searchScopeExtended ? (
-              <button className="ghost-button" type="button" onClick={props.onResetSearchScope}>Revenir au perimetre courant</button>
+              <button className="search-scope-action is-secondary" type="button" onClick={props.onResetSearchScope}>
+                <span aria-hidden="true">↩</span>
+                <span>Revenir au contexte</span>
+              </button>
             ) : props.canExtendSearch ? (
-              <button className="ghost-button" type="button" onClick={props.onExtendSearch}>{props.extendSearchLabel ?? 'Etendre la recherche'}</button>
+              <button className="search-scope-action" type="button" onClick={props.onExtendSearch}>
+                <span aria-hidden="true">+</span>
+                <span>{props.extendSearchLabel ?? 'Étendre la recherche'}</span>
+              </button>
             ) : null}
           </div>
         ) : null}
