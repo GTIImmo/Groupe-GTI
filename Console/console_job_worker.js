@@ -43,6 +43,7 @@ const DOCUMENT_JOB_TYPES = new Set([
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
+  "restore_hektor_annonce",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
   "matterport_online",
@@ -3435,6 +3436,62 @@ async function handleDeleteHektorAnnonce(job) {
   return result;
 }
 
+async function handleRestoreHektorAnnonce(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  const appDossierId = job.app_dossier_id == null ? payload.app_dossier_id : job.app_dossier_id;
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required");
+
+  await ensureAdminHektorSession(job, "restore_annonce_admin_login");
+  await logJob(job.id, "hektor_annonce_restore", "running", "Verification annonce avant desarchivage", {
+    hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+  });
+  const before = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_restore_verify_before");
+
+  const restoreUrl = `${XMLRPC_URL}?mode=upval&id=${encodeURIComponent(hektorAnnonceId)}&champ=archive&val=0`;
+  await hektorFetch(restoreUrl, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
+    },
+  });
+  await sleep(2500);
+
+  const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_restore_verify_after");
+  if (after && after.archived === true) {
+    throw new Error(`Desarchivage Hektor non confirme pour annonce ${hektorAnnonceId}`);
+  }
+
+  await logJob(job.id, "hektor_annonce_restore", "done", "Desarchivage Hektor envoye", {
+    hektor_annonce_id: hektorAnnonceId,
+    before_archived: before ? before.archived : null,
+    after_archived: after ? after.archived : null,
+  });
+
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, hektorAnnonceId, {
+    reason: "restore_hektor_annonce",
+    priority: 78,
+  });
+
+  return {
+    hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+    before_property: before && before.property ? {
+      id: before.property.id,
+      folderNumber: before.property.folderNumber || null,
+      status: before.property.status || null,
+      isArchived: before.property.isArchived === true,
+    } : null,
+    after_property: after && after.property ? {
+      id: after.property.id,
+      folderNumber: after.property.folderNumber || null,
+      status: after.property.status || null,
+      isArchived: after.property.isArchived === true,
+    } : null,
+    sync_job: syncJob,
+  };
+}
+
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const startedAtMs = Date.now();
@@ -3648,6 +3705,8 @@ async function runHandler(job) {
       return handleCreateHektorMandatAutoNumber(job);
     case "delete_hektor_annonce":
       return handleDeleteHektorAnnonce(job);
+    case "restore_hektor_annonce":
+      return handleRestoreHektorAnnonce(job);
     case "create_hektor_draft_annonce":
       return handleCreateHektorDraftAnnonce(job);
     case "matterport_online":

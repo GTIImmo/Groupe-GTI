@@ -59,6 +59,7 @@ import {
   createUpdateHektorAnnonceFieldsJob,
   createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
+  createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createMatterportActionJob,
   createConsoleDocumentSignedUrl,
@@ -3733,6 +3734,9 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce') {
     return `Suppression ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
+  if (job.job_type === 'restore_hektor_annonce') {
+    return `Desarchivage ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
   if (job.job_type === 'delete_document_from_hektor') {
     return documentName ? `Suppression ${documentName}` : 'Suppression document'
   }
@@ -3772,6 +3776,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   const matterportLabel = matterportJobActionLabel(job.job_type)
   if (matterportLabel) return matterportLabel
   if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
+  if (job.job_type === 'restore_hektor_annonce') return 'Desarchivage en cours'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
   if (job.job_type === 'upload_hektor_photo') return 'Ajout photo'
@@ -3787,6 +3792,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
 
 function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type.startsWith('matterport_')) return job.job_type === 'matterport_archive' ? 'delete' : 'update'
+  if (job.job_type === 'restore_hektor_annonce') return 'update'
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
@@ -3809,6 +3815,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'prepare_archived_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'prepare_historical_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
+  if (job.job_type === 'restore_hektor_annonce') return 'Reintegration Hektor puis resynchronisation'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
@@ -3875,11 +3882,12 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
     if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
+    if (job.job_type === 'restore_hektor_annonce') return 'Annonce desarchivee'
     return 'Action terminee'
   }
   if (progress === 'syncing') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
-    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact') return "Mise a jour de l'app"
+    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'restore_hektor_annonce') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
@@ -3895,6 +3903,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
 function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
+  if (job.job_type === 'restore_hektor_annonce') return 'Hektor a desarchive l annonce. Mise a jour de l app en cours...'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Hektor a genere le numero de mandat. Mise a jour de l app en cours...'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
   if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
@@ -6133,6 +6142,18 @@ export default function App() {
       setNoticeMessage(`Preparation du detail Vendu/Clos demandee pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le detail Vendu/Clos')
+    }
+  }
+
+  async function handleRestoreHektorAnnonce(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    try {
+      const job = await createRestoreHektorAnnonceJob({ dossier, priority: 8 })
+      rememberHektorActionJob(job)
+      setNoticeMessage(`Desarchivage demande pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le desarchivage')
     }
   }
 
@@ -8919,6 +8940,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
+                onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
               />
             </section>
@@ -9522,7 +9544,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -9688,6 +9710,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
+                onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
               />
             </section>
@@ -10236,8 +10259,8 @@ function MandatsScreen(props: {
                             >
                               <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail ? 'O' : 'D'}</span>
                               <span className="lightweight-row-action-label">
-                                <strong>{hasExportedDetail ? 'Ouvrir' : 'Désarchiver'}</strong>
-                                <small>{hasExportedDetail ? 'Fiche prête' : 'Charger détail'}</small>
+                                <strong>{hasExportedDetail ? 'Ouvrir' : 'Desarchiver'}</strong>
+                                <small>{hasExportedDetail ? 'Fiche prete' : 'Charger detail'}</small>
                               </span>
                             </button>
                           ) : (
@@ -11269,6 +11292,15 @@ function SuiviMandatsScreenV2(props: {
     </section>
   )
 }
+function ReadOnlyDetailNotice({ label }: { label: string }) {
+  return (
+    <div className="readonly-detail-notice">
+      <span aria-hidden="true"><DetailIcon type="history" /></span>
+      <p>{label} Desarchivez ou reintegrez le bien avant toute modification.</p>
+    </div>
+  )
+}
+
 function DossierDetailLayout(props: {
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
@@ -11312,6 +11344,7 @@ function DossierDetailLayout(props: {
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
+  onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
@@ -11323,6 +11356,8 @@ function DossierDetailLayout(props: {
   const detailVariant = props.detailVariant ?? 'annonce'
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
+  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
+  const lightweightDetailLabel = dossier.archive === '1' ? 'archivee' : 'vendue ou close'
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
   const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
   const validationDraft = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
@@ -11458,7 +11493,7 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     ) : null}
-                    {props.onDeleteAnnonce ? (
+                    {props.onDeleteAnnonce && !isLightweightDetail ? (
                       <button className="detail-delete-annonce-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>
                         <span aria-hidden="true"><DetailIcon type="alert" /></span>
                         <strong>Supprimer</strong>
@@ -11487,6 +11522,21 @@ function DossierDetailLayout(props: {
                   </div>
                 </div>
               </section>
+
+              {isLightweightDetail ? (
+                <section className="detail-readonly-banner">
+                  <span className="detail-readonly-banner-icon" aria-hidden="true"><DetailIcon type="history" /></span>
+                  <div>
+                    <strong>Fiche consultee depuis l'index leger</strong>
+                    <p>Cette annonce {lightweightDetailLabel} est consultable avec le detail recupere temporairement. Les ajouts, uploads et modifications sont bloques ici pour eviter une action Hektor incomplete. Pour intervenir dessus, il faudra d'abord desarchiver ou reintegrer le bien.</p>
+                    {props.onRestoreAnnonce ? (
+                      <button className="detail-readonly-action" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
+                        Demander le desarchivage
+                      </button>
+                    ) : null}
+                  </div>
+                </section>
+              ) : null}
 
               <nav className="detail-tabbar" aria-label="Navigation detail annonce">
                 {detailTabs.map((tab) => (
@@ -11567,10 +11617,10 @@ function DossierDetailLayout(props: {
                     </button>
                   </div>
                   {mandatSectionOpen ? (
-                    <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} />
+                    isLightweightDetail ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." /> : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} />
                   ) : null}
                   {mandatSectionOpen ? (
-                    <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />
+                    isLightweightDetail ? null : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />
                   ) : null}
                   {mandatSectionOpen ? (props.mandats.length > 0 ? (
                     <div className="detail-entity-list detail-mandat-list">
@@ -11601,7 +11651,7 @@ function DossierDetailLayout(props: {
                   ) : <p className="empty-state">Aucune information mandat riche.</p>) : null}
                 </article>
                 ) : null}
-                {activeDetailTab === 'mandate' && showMandatePilot && props.allowMarkValidation ? (
+                {activeDetailTab === 'mandate' && showMandatePilot && props.allowMarkValidation && !isLightweightDetail ? (
                 <article className="detail-subsection detail-admin-inline-pilot">
                   <DetailAdminPilotPanel
                     allowValidation={props.allowMarkValidation}
@@ -11637,10 +11687,10 @@ function DossierDetailLayout(props: {
                   <div className="section-header section-header-collapsible">
                     <DetailSectionTitle icon="contact" title="Mandants / proprietaires" />
                     <div className="section-header-actions">
-                      <button className="hektor-context-action-button hektor-context-action-button-contact" type="button" onClick={() => setHektorEditModalOpen(true)}>
+                      {!isLightweightDetail ? <button className="hektor-context-action-button hektor-context-action-button-contact" type="button" onClick={() => setHektorEditModalOpen(true)}>
                         <span aria-hidden="true"><DetailIcon type="contact" /></span>
                         <strong>Modifier contacts</strong>
-                      </button>
+                      </button> : null}
                       {secondaryContacts.length > 0 ? (
                         <button className={`mandants-toggle-button ${contactSectionOpen ? 'is-open' : ''}`} type="button" onClick={() => setContactSectionOpen((value) => !value)} aria-expanded={contactSectionOpen}>
                           <span className="mandants-toggle-icon" aria-hidden="true">{contactSectionOpen ? '-' : '+'}</span>
@@ -11659,7 +11709,7 @@ function DossierDetailLayout(props: {
                         <strong>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
                         <small>{props.detail.mandants_texte || primaryContact.name}</small>
                       </div>
-                      <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
+                      {!isLightweightDetail ? <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
                         <div className="detail-contact-head">
                           <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
@@ -11700,7 +11750,7 @@ function DossierDetailLayout(props: {
                             </div>
                           ) : null}
                         </div>
-                        <HektorMandantContactEditForm dossier={dossier} contact={primaryContact} onJobCreated={props.onHektorActionJobCreated} />
+                        {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={primaryContact} onJobCreated={props.onHektorActionJobCreated} /> : null}
                       </article>
                       {contactSectionOpen && secondaryContacts.length > 0 ? (
                         <div className="detail-secondary-contacts">
@@ -11745,7 +11795,7 @@ function DossierDetailLayout(props: {
                                   </div>
                                 ) : null}
                               </div>
-                              <HektorMandantContactEditForm dossier={dossier} contact={contact} onJobCreated={props.onHektorActionJobCreated} />
+                              {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} onJobCreated={props.onHektorActionJobCreated} /> : null}
                             </article>
                           ))}
                         </div>
@@ -11753,7 +11803,7 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : (
                     <div className="detail-entity-list detail-contact-list">
-                      <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} />
+                      {isLightweightDetail ? <ReadOnlyDetailNotice label="Aucun mandant detaille n'est disponible dans cette fiche importee." /> : <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} />}
                     </div>
                   )}
                 </article>
@@ -11769,10 +11819,10 @@ function DossierDetailLayout(props: {
                     <strong>Contenu annonce Hektor</strong>
                     <small>Titre, prix, surface, pieces, chambres et descriptif principal.</small>
                   </div>
-                  <button className="hektor-context-action-button hektor-context-action-button-content" type="button" onClick={() => setHektorEditModalOpen(true)}>
+                  {!isLightweightDetail ? <button className="hektor-context-action-button hektor-context-action-button-content" type="button" onClick={() => setHektorEditModalOpen(true)}>
                     <span aria-hidden="true"><DetailIcon type="content" /></span>
                     <strong>Modifier l'annonce</strong>
-                  </button>
+                  </button> : <small>Lecture seule jusqu'a desarchivage.</small>}
                 </div>
               </section>
               ) : null}
@@ -11780,13 +11830,23 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'content' ? (
               <section className="detail-section detail-photo-section">
                 <div className="section-header"><DetailSectionTitle icon="photo" title="Photos" /><span>{props.images.length} photo{props.images.length > 1 ? 's' : ''}</span></div>
-                <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} />
+                {isLightweightDetail ? (
+                  previewImages.length > 0 ? (
+                    <div className="readonly-photo-grid">
+                      {previewImages.map((image) => (
+                        <button key={image.url} type="button" onClick={() => props.onOpenImage?.(image.url)}>
+                          <img src={image.url} alt={image.legend || dossier.titre_bien} />
+                        </button>
+                      ))}
+                    </div>
+                  ) : <p className="empty-state">Aucune photo synchronisee.</p>
+                ) : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} />}
               </section>
               ) : null}
 
               {activeDetailTab === 'content' ? (
               <section className="detail-section detail-console-documents-section">
-                <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
+                {isLightweightDetail ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre ajoutes ou modifies depuis une fiche d'index leger." /> : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />}
               </section>
               ) : null}
 
@@ -11822,7 +11882,7 @@ function DossierDetailLayout(props: {
                                 <div className="matterport-model-actions">
                                   <StatusPill value={matterportStateLabel(model.state)} />
                                   <StatusPill value={matterportVisibilityLabel(model.visibility)} />
-                                  <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} />
+                                  {!isLightweightDetail ? <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} /> : null}
                                 </div>
                               </div>
                             ))}
@@ -11999,7 +12059,13 @@ function DossierDetailLayout(props: {
 
             <aside className="detail-column-side">
               <section className="detail-section detail-side-quick">
-                <DetailDossierActionPanel
+                {isLightweightDetail ? (
+                  <article className="detail-readonly-side-card">
+                    <span className="detail-readonly-banner-icon" aria-hidden="true"><DetailIcon type="history" /></span>
+                    <strong>Actions bloquees</strong>
+                    <p>Cette fiche est disponible en consultation. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes apres desarchivage.</p>
+                  </article>
+                ) : <DetailDossierActionPanel
                   mandat={dossier}
                   role={actionRole}
                   requests={actionRequests}
@@ -12025,7 +12091,7 @@ function DossierDetailLayout(props: {
                       onOpenHektor={hektorActionItem ? () => hektorActionItem.onClick({ stopPropagation() {} }) : undefined}
                     />
                   ) : undefined}
-                />
+                />}
               </section>
             </aside>
 
@@ -12033,7 +12099,7 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'diffusion' ? (
               <section className="detail-section detail-section-status">
                 <div className="section-header"><DetailSectionTitle icon="diffusion" title="Diffusion" /></div>
-                {props.allowMarkDiffusable && showDiffusionPilot ? (
+                {props.allowMarkDiffusable && showDiffusionPilot && !isLightweightDetail ? (
                   <DetailAdminPilotPanel
                     allowValidation={false}
                     allowDiffusable={props.allowMarkDiffusable}
@@ -12177,7 +12243,7 @@ function DossierDetailLayout(props: {
           </div>
         </div>
       </div>
-      {hektorEditModalOpen ? (
+      {hektorEditModalOpen && !isLightweightDetail ? (
         <div className="modal-overlay detail-edit-popup-overlay" onClick={() => setHektorEditModalOpen(false)}>
           <section className="modal-panel detail-edit-popup" onClick={(event) => event.stopPropagation()}>
             <div className="detail-edit-popup-head">
@@ -12408,6 +12474,7 @@ function AnnonceScreen(props: {
   onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
+  onRestoreAnnonce?: (dossier: Dossier) => void
   detailLoading: boolean
   onBack: () => void
 }) {
@@ -12490,6 +12557,7 @@ function MobileDossierDetail(props: {
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
+  onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
@@ -12507,6 +12575,7 @@ function MobileDossierDetail(props: {
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const actionRole = props.actionRole ?? 'nego'
+  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
@@ -12580,13 +12649,22 @@ function MobileDossierDetail(props: {
         </div>
       </header>
 
-      <section className="mobile-detail-actionbar" aria-label="Actions du dossier">
+      {!isLightweightDetail ? <section className="mobile-detail-actionbar" aria-label="Actions du dossier">
         <button className="mobile-primary-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_diffusion')}>Action métier</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_baisse_prix')}>Baisse prix</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_annulation_mandat')}>Annulation</button>
         {canShowDiffusion ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}>Diffusion</button> : null}
         {props.onDeleteAnnonce ? <button className="mobile-ghost-button mobile-danger-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>Supprimer</button> : null}
-      </section>
+      </section> : (
+        <section className="mobile-detail-section">
+          <ReadOnlyDetailNotice label="Cette fiche vient d'un index leger. Elle est consultable, mais les actions sont bloquees jusqu'a desarchivage." />
+          {props.onRestoreAnnonce ? (
+            <button className="mobile-primary-button" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
+              Demander le desarchivage
+            </button>
+          ) : null}
+        </section>
+      )}
 
       {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
 
@@ -12617,7 +12695,7 @@ function MobileDossierDetail(props: {
         </div>
       </section>
 
-      {canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable ? (
+      {(canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable) && !isLightweightDetail ? (
         <section className="mobile-detail-section mobile-detail-pilot">
           <div className="mobile-detail-section-head">
             <span>Pilotage Hektor</span>
@@ -12698,9 +12776,13 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
-        <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} />
-        <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
-        <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} compact />
+        {isLightweightDetail ? <ReadOnlyDetailNotice label="Mandat et contacts sont consultables, mais les ajouts et modifications sont bloques depuis une fiche d'index leger." /> : (
+          <>
+            <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} />
+            <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
+            <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} compact />
+          </>
+        )}
         {props.mandats.length > 0 ? props.mandats.map((mandat) => (
           <div key={`mobile-mandat-${mandat.id}`} className="mobile-detail-lines">
             <strong>{mandat.title}</strong>
@@ -12717,7 +12799,7 @@ function MobileDossierDetail(props: {
                 {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
                 {[contact.address, contact.postalCode, contact.city].filter(Boolean).length ? <p>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')}</p> : null}
                 {contact.comment ? <p>{contact.comment}</p> : null}
-                <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} />
+                {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} /> : null}
               </div>
             ))}
           </div>
@@ -12726,19 +12808,19 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Contenu de l'annonce</summary>
-        <button className="mobile-hektor-field-edit-button mobile-hektor-content-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
+        {!isLightweightDetail ? <button className="mobile-hektor-field-edit-button mobile-hektor-content-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
           <span aria-hidden="true">M</span>
           Modifier l'annonce
-        </button>
-        {mobileHektorEditOpen ? (
+        </button> : <ReadOnlyDetailNotice label="Le contenu de l'annonce est en lecture seule jusqu'a desarchivage." />}
+        {mobileHektorEditOpen && !isLightweightDetail ? (
           <div className="mobile-detail-embedded">
             <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
           </div>
         ) : null}
-        <div className="mobile-console-documents">
+        {!isLightweightDetail ? <div className="mobile-console-documents">
           <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
-        </div>
-        <ConsolePhotosPanel dossier={dossier} apiImages={props.images} compact onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} />
+        </div> : null}
+        {!isLightweightDetail ? <ConsolePhotosPanel dossier={dossier} apiImages={props.images} compact onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} /> : null}
         {props.texts.map((text) => (
           <div key={text.id} className="mobile-detail-text">
             <strong>{text.title}</strong>
@@ -12755,7 +12837,7 @@ function MobileDossierDetail(props: {
                 <small>
                   {matterportStateLabel(model.state)} - {matterportVisibilityLabel(model.visibility)}
                 </small>
-                <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} compact />
+                {!isLightweightDetail ? <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} compact /> : null}
               </div>
             ))}
           </div>

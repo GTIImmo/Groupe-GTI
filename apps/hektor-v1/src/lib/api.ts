@@ -4110,6 +4110,32 @@ export async function createDeleteHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
+export async function createRestoreHektorAnnonceJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'restore_hektor_annonce',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        target_archive: '0',
+      },
+      priority: input.priority ?? 8,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor restore job')
+  return data as ConsoleJob
+}
+
 export type MatterportConsoleAction = 'online' | 'offline' | 'archive' | 'reactivate'
 
 export async function createMatterportActionJob(input: {
@@ -4136,6 +4162,7 @@ export async function createMatterportActionJob(input: {
 const hektorActionJobTypes: ConsoleJobType[] = [
   'create_hektor_draft_annonce',
   'delete_hektor_annonce',
+  'restore_hektor_annonce',
   'update_hektor_annonce_fields',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',

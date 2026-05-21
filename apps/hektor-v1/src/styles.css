@@ -2939,6 +2939,110 @@ body {
   justify-content: flex-end;
   margin-top: 18px;
 }
+.detail-readonly-banner,
+.detail-readonly-side-card,
+.readonly-detail-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid rgba(133, 77, 14, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fffaf0 0%, #ffffff 76%);
+  color: #4a3320;
+  box-shadow: 0 14px 32px rgba(69, 52, 33, 0.08);
+}
+.detail-readonly-banner {
+  margin: 0 0 18px;
+  padding: 16px 18px;
+}
+.detail-readonly-banner-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #854d0e;
+  color: #fffaf0;
+}
+.detail-readonly-banner-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.detail-readonly-banner strong,
+.detail-readonly-side-card strong {
+  display: block;
+  color: #2f2218;
+  font-size: 15px;
+}
+.detail-readonly-banner p,
+.detail-readonly-side-card p,
+.readonly-detail-notice p {
+  margin: 4px 0 0;
+  color: #6f5741;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.detail-readonly-action {
+  margin-top: 12px;
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid rgba(133, 77, 14, 0.24);
+  border-radius: 12px;
+  background: #854d0e;
+  color: #fffaf0;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(133, 77, 14, 0.16);
+}
+.detail-readonly-action:hover {
+  background: #6f3f09;
+}
+.detail-readonly-side-card {
+  display: grid;
+  justify-items: start;
+  padding: 16px;
+}
+.readonly-detail-notice {
+  padding: 12px 14px;
+  box-shadow: none;
+}
+.readonly-detail-notice > span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: rgba(133, 77, 14, 0.12);
+  color: #854d0e;
+}
+.readonly-detail-notice svg {
+  width: 16px;
+  height: 16px;
+}
+.readonly-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.readonly-photo-grid button {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(15, 76, 92, 0.12);
+  border-radius: 14px;
+  background: #f7fafb;
+  cursor: zoom-in;
+}
+.readonly-photo-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
 @media (max-width: 720px) {
   .lightweight-detail-hero {
     grid-template-columns: 1fr;
