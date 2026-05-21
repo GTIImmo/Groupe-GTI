@@ -6132,9 +6132,28 @@ export default function App() {
     }
   }
 
-  function openLightweightDetailImport(target: LightweightDetailTarget) {
+  async function openLightweightDetailImport(target: LightweightDetailTarget) {
     setSelectedDossierId(target.app_dossier_id)
     setSelectedMandatId(target.app_dossier_id)
+    setErrorMessage(null)
+    setDetailLoading(true)
+    try {
+      const detail = target.archive === '1'
+        ? await loadArchivedAnnonceDetailCache(target.hektor_annonce_id)
+        : await loadHistoricalAnnonceDetailCache(target.hektor_annonce_id)
+      if (detail) {
+        setSelectedDossier(detail)
+        setSelectedDossierId(detail.app_dossier_id)
+        setSelectedMandatId(detail.app_dossier_id)
+        setLightweightDetailTarget(null)
+        setDetailOpen(true)
+        return
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de verifier le detail en cache')
+    } finally {
+      setDetailLoading(false)
+    }
     setLightweightDetailTarget(target)
     setDetailOpen(false)
   }
@@ -6294,12 +6313,8 @@ export default function App() {
   function openDossierDetailPage(appDossierId: number) {
     const quickMandat = mandats.find((item) => item.app_dossier_id === appDossierId)
     const quickBase = dossiers.find((item) => item.app_dossier_id === appDossierId) ?? (quickMandat ? mandateAsDossier(quickMandat) : null)
-    if (isLightweightAnnonceRecord(quickBase)) {
-      setSelectedDossierId(appDossierId)
-      setSelectedMandatId(appDossierId)
-      setLightweightDetailTarget(quickBase)
-      setDetailLoading(false)
-      setDetailOpen(false)
+    if (quickBase && isLightweightAnnonceRecord(quickBase)) {
+      void openLightweightDetailImport(quickBase)
       return
     }
     const currentDetailPayload = selectedDossier?.app_dossier_id === appDossierId ? selectedDossier.detail_payload_json : null
@@ -10208,11 +10223,11 @@ function MandatsScreen(props: {
                           {isEstimationMode ? (
                             <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
                           ) : isLightweight ? (
-                            <button className="lightweight-row-action" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }} title="Preparer puis ouvrir le detail complet">
+                            <button className="lightweight-row-action" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }} title="Ouvrir le detail si disponible, sinon le preparer">
                               <span className="lightweight-row-action-icon" aria-hidden="true">i</span>
                               <span className="lightweight-row-action-label">
-                                <strong>Detail</strong>
-                                <small>A charger</small>
+                                <strong>Fiche</strong>
+                                <small>Ouvrir</small>
                               </span>
                             </button>
                           ) : (
