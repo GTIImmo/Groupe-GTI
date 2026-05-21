@@ -133,7 +133,7 @@ function isHistoricalListingStatus(value: unknown) {
 }
 
 function usesLightweightAnnonceIndex(filters: AppFilters) {
-  return filters.archive === archivedFilterValue || isHistoricalListingStatus(filters.statut)
+  return filters.archive === archivedFilterValue || filters.statut === annonceSearchListingsFilterValue || isHistoricalListingStatus(filters.statut)
 }
 
 function applyAnnonceSearchDefaultScope(screen: Screen, filters: AppFilters): AppFilters {
