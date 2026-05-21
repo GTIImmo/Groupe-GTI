@@ -149,6 +149,7 @@ export type Dossier = {
   titre_bien: string
   ville: string | null
   code_postal?: string | null
+  date_maj?: string | null
   type_bien: string | null
   prix: number | null
   commercial_id: string | null

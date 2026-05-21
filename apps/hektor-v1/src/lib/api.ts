@@ -955,6 +955,7 @@ type LightweightAnnonceIndexRow = {
   titre_bien: string | null
   ville: string | null
   code_postal: string | null
+  date_maj: string | null
   type_bien: string | null
   prix: number | null
   commercial_id: string | null
@@ -995,6 +996,7 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
     titre_bien: row.titre_bien ?? '[Sans titre]',
     ville: row.ville ?? null,
     code_postal: row.code_postal ?? null,
+    date_maj: row.date_maj ?? null,
     type_bien: row.type_bien ?? null,
     prix: row.prix ?? null,
     commercial_id: row.commercial_id ?? null,
@@ -1055,6 +1057,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   const agency = normalizeFilterValue(filters.agency)
   const mandat = filters.mandat
   const detailAvailability = normalizeFilterValue(filters.detailAvailability)
+  const statut = normalizeFilterValue(filters.statut)
   const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
   const mandantName = normalizeSearchTerm(filters.mandantName)
 
@@ -1070,6 +1073,8 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
   if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
   if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
+  if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
+  else if (statut && !historicalListingStatuses.includes(statut)) query = query.eq('statut_annonce', statut)
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
@@ -1098,6 +1103,32 @@ function applyHistoricalIndexFiltersToQuery(baseQuery: any, filters: AppFilters,
   const statut = normalizeFilterValue(filters.statut)
   if (historicalListingStatuses.includes(statut)) query = query.eq('statut_annonce', statut)
   return query
+}
+
+function dossierUpdatedAtValue(item: Dossier) {
+  const raw = (item as Dossier & { source_updated_at?: string | null }).date_maj ?? (item as Dossier & { source_updated_at?: string | null }).source_updated_at ?? item.local_detail_updated_at
+  if (!raw) return 0
+  const parsed = new Date(raw).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function mergeDossierPageResults(results: Array<PageResult<Dossier>>, page: number, pageSize: number): PageResult<Dossier> {
+  const from = (page - 1) * pageSize
+  const to = from + pageSize
+  const rows = results
+    .flatMap((result) => result.rows)
+    .sort((a, b) => {
+      const byDate = dossierUpdatedAtValue(b) - dossierUpdatedAtValue(a)
+      if (byDate !== 0) return byDate
+      return Number(b.hektor_annonce_id ?? 0) - Number(a.hektor_annonce_id ?? 0)
+    })
+    .slice(from, to)
+  return {
+    rows,
+    total: results.reduce((sum, result) => sum + result.total, 0),
+    page,
+    pageSize,
+  }
 }
 
 function applyWorkItemFiltersToQuery(baseQuery: any, filters: AppFilters) {
@@ -1180,16 +1211,18 @@ export async function loadDossiersPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   const statut = normalizeFilterValue(filters.statut)
+  const requestScope = normalizeFilterValue(filters.requestScope)
+  const requestType = normalizeFilterValue(filters.requestType)
+  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at'
+  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at'
   if (filters.archive === archivedFilterValue) {
-    const requestScope = normalizeFilterValue(filters.requestScope)
-    const requestType = normalizeFilterValue(filters.requestType)
     if (requestScope || requestType) {
       return { rows: [], total: 0, page, pageSize }
     }
     const archiveQuery = applyArchiveIndexFiltersToQuery(
       supabase
         .from('app_archive_annonce_index_current')
-        .select('hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
+        .select(archiveIndexSelect, { count: countMode }),
       filters,
       scope,
     )
@@ -1207,15 +1240,13 @@ export async function loadDossiersPage({
     }
   }
   if (historicalListingStatuses.includes(statut)) {
-    const requestScope = normalizeFilterValue(filters.requestScope)
-    const requestType = normalizeFilterValue(filters.requestType)
     if (requestScope || requestType) {
       return { rows: [], total: 0, page, pageSize }
     }
     const historicalQuery = applyHistoricalIndexFiltersToQuery(
       supabase
         .from('app_historical_annonce_index_current')
-        .select('hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
+        .select(historicalIndexSelect, { count: countMode }),
       filters,
       scope,
     )
@@ -1244,16 +1275,43 @@ export async function loadDossiersPage({
   if (requestScopedIds) {
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
-  query = query.range(from, to)
+  const shouldMergeArchiveIndex = filters.archive === allFilterValue && !requestScope && !requestType
+  query = query.range(shouldMergeArchiveIndex ? 0 : from, to)
 
   const { data, error, count } = await query
   if (error || !data) throw new Error(error?.message ?? 'Unable to load dossiers')
-  return {
+  const primaryResult: PageResult<Dossier> = {
     rows: data as Dossier[],
     total: count ?? 0,
     page,
     pageSize,
   }
+  if (shouldMergeArchiveIndex) {
+    const mixedRangeTo = to
+    const archiveQuery = applyArchiveIndexFiltersToQuery(
+      supabase
+        .from('app_archive_annonce_index_current')
+        .select(archiveIndexSelect, { count: countMode }),
+      filters,
+      scope,
+    )
+      .order('date_maj', { ascending: false, nullsFirst: false })
+      .order('hektor_annonce_id', { ascending: false })
+      .range(0, mixedRangeTo)
+
+    const { data: archiveData, error: archiveError, count: archiveCount } = await archiveQuery
+    if (archiveError || !archiveData) throw new Error(archiveError?.message ?? 'Unable to load archived annonces')
+    return mergeDossierPageResults([
+      primaryResult,
+      {
+        rows: (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+        total: archiveCount ?? 0,
+        page,
+        pageSize,
+      },
+    ], page, pageSize)
+  }
+  return primaryResult
 }
 
 export async function loadWorkItemsPage({
@@ -1994,7 +2052,7 @@ export async function loadMandatsPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   const statut = normalizeFilterValue(filters.statut)
-  if (filters.archive === archivedFilterValue || historicalListingStatuses.includes(statut)) {
+  if (filters.archive === archivedFilterValue || filters.archive === allFilterValue || historicalListingStatuses.includes(statut)) {
     const listingPage = await loadDossiersPage({ filters, page, pageSize, scope })
     return {
       ...listingPage,
