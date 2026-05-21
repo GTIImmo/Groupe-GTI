@@ -5326,6 +5326,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('mandats')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
   const [filters, setFilters] = useState<AppFilters>(() => defaultFiltersForScreen('mandats'))
+  const [searchDraft, setSearchDraft] = useState('')
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [dossiersTotal, setDossiersTotal] = useState(0)
   const [dossierPage, setDossierPage] = useState(1)
@@ -5519,6 +5520,18 @@ export default function App() {
   const selectedDraftNegotiator = useMemo(() => {
     return hektorNegotiators.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, hektorNegotiators])
+  useEffect(() => {
+    setSearchDraft(filters.query)
+  }, [filters.query])
+  useEffect(() => {
+    const trimmed = searchDraft.trim()
+    const nextQuery = trimmed.length === 0 ? '' : trimmed.length >= 3 ? searchDraft : ''
+    if (nextQuery === filters.query) return
+    const timeoutId = window.setTimeout(() => {
+      updateFilter('query', nextQuery)
+    }, 400)
+    return () => window.clearTimeout(timeoutId)
+  }, [filters.query, searchDraft])
   const dataFilters = useMemo<AppFilters>(() => {
     if (screen === 'suivi') {
       return {
@@ -8671,8 +8684,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <label className="mobile-search-field">
             <span>Recherche</span>
             <input
-              value={filters.query}
-              onChange={(event) => updateFilter('query', event.target.value)}
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
               placeholder={screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, négociateur...'}
             />
           </label>
@@ -8904,7 +8917,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="hero-top-row">
                 <label className="search-box">
                   <span>Recherche rapide</span>
-                  <input value={filters.query} onChange={(event) => updateFilter('query', event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
+                  <input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <div className="hero-actions">
                   {canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}

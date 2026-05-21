@@ -63,6 +63,10 @@ def stable_hash(payload: object) -> str:
     return hashlib.sha1(encoded.encode("utf-8")).hexdigest()
 
 
+def stable_upload_hash(row: dict[str, object]) -> str:
+    return stable_hash({key: value for key, value in row.items() if key != "search_text"})
+
+
 def normalize_timestamp(value: object) -> str | None:
     text = str(value or "").strip()
     if not text or text.startswith("0000-00-00"):
@@ -86,6 +90,21 @@ def normalize_numeric(value: object) -> object:
     if not text:
         return None
     return value
+
+
+def build_search_text(row: dict[str, object]) -> str | None:
+    parts = [
+        row.get("numero_dossier"),
+        row.get("numero_mandat"),
+        row.get("titre_bien"),
+        row.get("ville"),
+        row.get("code_postal"),
+        row.get("commercial_nom"),
+        row.get("agence_nom"),
+        row.get("mandants_texte"),
+    ]
+    text = " ".join(str(part).strip() for part in parts if str(part or "").strip())
+    return " ".join(text.split()) or None
 
 
 def normalize_row(row: dict[str, object], nullable_keys: tuple[str, ...]) -> dict[str, object]:
@@ -482,6 +501,7 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             "mandat_date_fin": normalized.get("mandat_date_fin"),
             "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
             "mandants_texte": normalized.get("mandants_texte"),
+            "search_text": None,
             "price_change_event_count": int(normalized.get("price_change_event_count") or 0),
             "price_change_last_source_kind": normalized.get("price_change_last_source_kind"),
             "price_change_last_old_value": normalize_numeric(normalized.get("price_change_last_old_value")),
@@ -498,7 +518,8 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             "dernier_work_status": normalized.get("dernier_work_status"),
             "source_updated_at": source_updated_at,
         }
-        current_row["source_hash"] = stable_hash(current_row)
+        current_row["search_text"] = build_search_text(current_row)
+        current_row["source_hash"] = stable_upload_hash(current_row)
         rows_by_id[int(current_row["app_dossier_id"])] = current_row
     return list(rows_by_id.values())
 
@@ -661,11 +682,13 @@ def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict
             "mandat_date_fin": normalized.get("mandat_date_fin"),
             "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
             "mandants_texte": normalized.get("mandants_texte"),
+            "search_text": None,
             "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
             "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
         }
+        current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
-        current_row["source_hash"] = stable_hash(current_row)
+        current_row["source_hash"] = stable_upload_hash(current_row)
         current_rows.append(current_row)
     return current_rows
 
@@ -700,11 +723,13 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
             "mandat_date_fin": normalized.get("mandat_date_fin"),
             "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
             "mandants_texte": normalized.get("mandants_texte"),
+            "search_text": None,
             "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
             "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
         }
+        current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
-        current_row["source_hash"] = stable_hash(current_row)
+        current_row["source_hash"] = stable_upload_hash(current_row)
         current_rows.append(current_row)
     return current_rows
 

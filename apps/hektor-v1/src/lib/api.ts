@@ -516,6 +516,15 @@ function normalizeSearchTerm(value: string) {
   return value.trim().replace(/[%_,()]/g, ' ')
 }
 
+function normalizeListingSearchTerm(value: string) {
+  const search = normalizeSearchTerm(value).replace(/\s+/g, ' ').trim()
+  return search.length >= 3 ? search : ''
+}
+
+function listingSearchColumns(search: string) {
+  return /^\d+$/.test(search) ? ['numero_dossier', 'numero_mandat', 'code_postal', 'search_text'] : ['search_text']
+}
+
 function matchesRequestScope(requestStatus: string | null | undefined, requestScope: string) {
   const status = normalizeBusinessState(requestStatus)
   if (!requestScope) return true
@@ -757,7 +766,7 @@ function buildDiffusionRequestEvent(input: {
 }
 
 function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string | null }>(rows: T[], filters: AppFilters) {
-  const query = filters.query.trim().toLowerCase()
+  const query = normalizeListingSearchTerm(filters.query).toLowerCase()
   const mandatNumber = filters.mandatNumber.trim().toLowerCase()
   const mandantName = filters.mandantName.trim().toLowerCase()
   const commercial = normalizeFilterValue(filters.commercial)
@@ -929,20 +938,11 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
-  const search = normalizeSearchTerm(filters.query)
+  const search = normalizeListingSearchTerm(filters.query)
   if (search) {
     const ilike = `%${search}%`
     query = query.or(
-      [
-        `titre_bien.ilike.${ilike}`,
-        `numero_dossier.ilike.${ilike}`,
-        `numero_mandat.ilike.${ilike}`,
-        `commercial_nom.ilike.${ilike}`,
-        `agence_nom.ilike.${ilike}`,
-        `ville.ilike.${ilike}`,
-        `code_postal.ilike.${ilike}`,
-        `mandants_texte.ilike.${ilike}`,
-      ].join(','),
+      listingSearchColumns(search).map((column) => `${column}.ilike.${ilike}`).join(','),
     )
   }
 
@@ -1088,20 +1088,11 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
-  const search = normalizeSearchTerm(filters.query)
+  const search = normalizeListingSearchTerm(filters.query)
   if (search) {
     const ilike = `%${search}%`
     query = query.or(
-      [
-        `titre_bien.ilike.${ilike}`,
-        `numero_dossier.ilike.${ilike}`,
-        `numero_mandat.ilike.${ilike}`,
-        `commercial_nom.ilike.${ilike}`,
-        `agence_nom.ilike.${ilike}`,
-        `ville.ilike.${ilike}`,
-        `code_postal.ilike.${ilike}`,
-        `mandants_texte.ilike.${ilike}`,
-      ].join(','),
+      listingSearchColumns(search).map((column) => `${column}.ilike.${ilike}`).join(','),
     )
   }
 
