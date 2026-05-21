@@ -3842,6 +3842,7 @@ function hektorCreatedAnnonceId(job: ConsoleJob) {
 function hektorActionProgress(job: ConsoleJob, syncJob: ConsoleJob | null, appDossier?: Dossier | null) {
   if (job.status === 'error' || syncJob?.status === 'error') return 'error'
   const syncJobId = hektorJobSyncJobId(job)
+  if (job.job_type === 'create_hektor_draft_annonce' && job.status === 'done' && !appDossier) return 'syncing'
   if (syncJobId && syncJob?.status !== 'done') {
     if (job.status === 'done') return 'syncing'
     if (job.status === 'running') return 'creating'
@@ -3915,19 +3916,21 @@ function HektorActionStatusPopup(props: {
   const mainAnnonceId = mainJob ? hektorCreatedAnnonceId(mainJob) : null
   const mainDossier = mainAnnonceId ? props.linkedDossiers[mainAnnonceId] : null
   const mainProgress = mainJob ? hektorActionProgress(mainJob, mainSyncJob, mainDossier) : 'queued'
+  const isCreateDraftJob = mainJob?.job_type === 'create_hektor_draft_annonce'
   const isAvailable = mainProgress === 'available'
   const isError = mainProgress === 'error'
   const isWaitingForAppSync = Boolean(mainJob && mainProgress === 'syncing' && mainJob.status === 'done')
-  const canShowOpenDelay = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && openButtonReadyJobId !== mainJob.id)
-  const canOpenApp = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && openButtonReadyJobId === mainJob.id)
+  const appOpenReady = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && (!isCreateDraftJob || mainDossier))
+  const canShowOpenDelay = Boolean(appOpenReady && openButtonReadyJobId !== mainJob?.id)
+  const canOpenApp = Boolean(appOpenReady && openButtonReadyJobId === mainJob?.id)
   const canOpenHektor = Boolean(mainJob && mainAnnonceId && mainJob.job_type !== 'delete_hektor_annonce')
 
   useEffect(() => {
     setOpenButtonReadyJobId(null)
-    if (!mainJob || !isAvailable || mainJob.job_type === 'delete_hektor_annonce') return
+    if (!mainJob || !appOpenReady) return
     const timer = window.setTimeout(() => setOpenButtonReadyJobId(mainJob.id), 1200)
     return () => window.clearTimeout(timer)
-  }, [isAvailable, mainJob?.id, mainJob?.job_type])
+  }, [appOpenReady, mainJob?.id])
 
   if (!mainJob) return null
 
@@ -6389,7 +6392,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
     }
     if (!dossier) {
-      setNoticeMessage("L'annonce est creee dans Hektor. Elle n'est pas encore visible dans l'app, la synchronisation continue.")
+      setNoticeMessage("Annonce creee dans Hektor. L'app attend encore la remontee de la fiche complete; le bouton s'activera automatiquement.")
+      setDataReloadKey((value) => value + 1)
       return
     }
     setScreen('annonces')
@@ -9859,24 +9863,17 @@ function LightweightDetailImportModal(props: {
   const jobDone = props.job?.status === 'done'
   const jobError = props.job?.status === 'error'
   const statusText = jobDone
-    ? 'Detail disponible dans le cache temporaire'
+    ? 'Detail pret'
     : jobError
-      ? 'Erreur pendant la preparation'
+      ? 'Erreur de preparation'
       : jobActive
-        ? 'Preparation en cours par le worker'
-        : 'Detail non charge dans le cloud'
-  const detailRows: Array<[string, string]> = [
-    ['Dossier', props.target.numero_dossier ?? '-'],
-    ['Mandat', props.target.numero_mandat ?? '-'],
-    ['Titre', props.target.titre_bien ?? '-'],
-    ['Ville', props.target.ville ?? '-'],
-    ['Prix', formatPrice(props.target.prix)],
-    ['Commercial', commercialDisplay(props.target)],
-    ['Agence', props.target.agence_nom ?? '-'],
-    ['Statut', props.target.statut_annonce ?? '-'],
-    ['Archive', isArchive ? 'Oui' : 'Non'],
-    ['Detail local', hasLocalDetail ? 'Oui' : 'Non'],
-  ]
+        ? 'Preparation en cours'
+        : 'Detail a charger'
+  const contextLabel = isArchive ? 'Archive' : isHistorical ? (props.target.statut_annonce ?? 'Historique') : 'Fiche'
+  const title = props.target.titre_bien?.trim() || '[Sans titre]'
+  const dossierLabel = [props.target.numero_dossier, props.target.numero_mandat ? `Mandat ${props.target.numero_mandat}` : null].filter(Boolean).join(' - ') || `Annonce ${props.target.hektor_annonce_id}`
+  const locationLabel = [props.target.ville, formatPrice(props.target.prix)].filter((value) => value && value !== '-').join(' - ')
+  const ownerLabel = [commercialDisplay(props.target), props.target.agence_nom].filter((value) => value && value !== '-').join(' - ')
 
   return (
     <div className="modal-overlay" onClick={props.onClose}>
@@ -9884,27 +9881,31 @@ function LightweightDetailImportModal(props: {
         <div className="panel-head request-modal-head">
           <div className="request-modal-title">
             <p className="eyebrow">Detail de fiche</p>
-            <h3>Cette fiche n'est pas encore chargee dans le cloud</h3>
+            <h3>Charger la fiche complete</h3>
           </div>
           <button className="ghost-button button-subtle request-modal-close" type="button" onClick={props.onClose}>Fermer</button>
         </div>
-        <p className="request-modal-copy">
-          Le listing affiche les informations legeres. Pour ouvrir la fiche complete, le serveur doit preparer le detail local puis l'envoyer temporairement dans Supabase.
-        </p>
-        <div className="detail-stack lightweight-detail-grid">
-          {detailRows.map(([label, value]) => (
-            <article className="detail-card" key={label}>
-              <span className="detail-label">{label}</span>
-              <strong>{value || '-'}</strong>
-            </article>
-          ))}
+        <div className="lightweight-detail-hero">
+          <div className="lightweight-detail-summary">
+            <span className={`lightweight-detail-badge ${isArchive ? 'is-archive' : 'is-historical'}`}>{contextLabel}</span>
+            <strong className="lightweight-detail-title">{title}</strong>
+            <span>{dossierLabel}</span>
+            {locationLabel ? <span>{locationLabel}</span> : null}
+            {ownerLabel ? <small>{ownerLabel}</small> : null}
+          </div>
+          <div className={`lightweight-detail-state ${jobError ? 'is-error' : jobDone ? 'is-ready' : jobActive ? 'is-active' : ''}`}>
+            <span aria-hidden="true" />
+            <strong>{statusText}</strong>
+            <small>{hasLocalDetail ? 'Serveur local disponible' : 'Detail local non confirme'}</small>
+          </div>
         </div>
-        <div className={`empty-block lightweight-detail-status ${jobError ? 'is-error' : jobDone ? 'is-ready' : ''}`}>
-          <strong>{statusText}</strong>
+        {(jobError || !hasLocalDetail || !canPrepareDetail) ? (
+          <div className={`empty-block lightweight-detail-status ${jobError ? 'is-error' : ''}`}>
           {jobError ? <p>{hektorActionJobDetail(props.job as ConsoleJob) || "Le detail complet n'est pas encore disponible sur le serveur. Lancez la recuperation locale des details ou reessayez apres synchronisation."}</p> : null}
           {!hasLocalDetail ? <p>Le detail local n'est pas marque disponible pour cette fiche.</p> : null}
           {!canPrepareDetail ? <p>Cette ligne n'est pas eligible au chargement de detail leger.</p> : null}
-        </div>
+          </div>
+        ) : null}
         <div className="mandat-document-actions lightweight-detail-actions">
           <button className="ghost-button" type="button" onClick={props.onClose}>Annuler</button>
           {jobDone ? (
