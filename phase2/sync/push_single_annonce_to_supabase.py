@@ -18,11 +18,17 @@ from hektor_pipeline.common import Settings, connect_db, init_db  # noqa: E402
 from phase2.bootstrap_phase2 import ensure_schema  # noqa: E402
 from phase2.pipeline.view_demandes_mandat_diffusion import SQL_REFRESH_DEMANDES_MANDAT_DIFFUSION  # noqa: E402
 from phase2.pipeline.view_generale import SQL_REFRESH_VUE_GENERALE  # noqa: E402
-from phase2.sync.export_app_payload import build_payload  # noqa: E402
+from phase2.sync.export_app_payload import (  # noqa: E402
+    build_archive_annonce_index,
+    build_historical_annonce_index,
+    build_payload,
+)
 from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     SupabaseRestClient,
+    build_current_archive_index_rows,
     build_current_details,
     build_current_dossiers,
+    build_current_historical_index_rows,
     build_current_mandat_register_rows,
     build_current_work_items,
     load_env_file,
@@ -241,6 +247,23 @@ def create_temp_view_table(con: sqlite3.Connection, table_name: str, create_scri
     )
 
 
+def persist_temp_view_table(con: sqlite3.Connection, table_name: str, app_dossier_id: int) -> None:
+    temp_columns = [str(row[1]) for row in con.execute(f"PRAGMA temp.table_info({table_name})").fetchall()]
+    main_columns = [str(row[1]) for row in con.execute(f"PRAGMA main.table_info({table_name})").fetchall()]
+    common_columns = [column for column in main_columns if column in temp_columns]
+    if not common_columns:
+        return
+    quoted_columns = ", ".join(f'"{column}"' for column in common_columns)
+    con.execute(f"DELETE FROM main.{table_name} WHERE app_dossier_id = ?", (app_dossier_id,))
+    con.execute(
+        f"""
+        INSERT INTO main.{table_name} ({quoted_columns})
+        SELECT {quoted_columns}
+        FROM temp.{table_name}
+        """
+    )
+
+
 def delete_target_remote(client: SupabaseRestClient, app_dossier_id: int) -> None:
     for table in (
         "app_dossier_current",
@@ -250,6 +273,40 @@ def delete_target_remote(client: SupabaseRestClient, app_dossier_id: int) -> Non
         "app_mandat_register_current",
     ):
         client.delete_rows_by_ids(path=table, column="app_dossier_id", ids=[app_dossier_id])
+
+
+def reconcile_lightweight_indexes(client: SupabaseRestClient, con: sqlite3.Connection, hektor_annonce_id: str) -> dict[str, int]:
+    archive_table_available = client.table_available("app_archive_annonce_index_current")
+    historical_table_available = client.table_available("app_historical_annonce_index_current")
+    archive_rows = (
+        build_current_archive_index_rows(build_archive_annonce_index(limit=None, connection=con))
+        if archive_table_available
+        else []
+    )
+    historical_rows = (
+        build_current_historical_index_rows(build_historical_annonce_index(limit=None, connection=con))
+        if historical_table_available
+        else []
+    )
+    target_id = int(hektor_annonce_id)
+    archive_rows = [row for row in archive_rows if int(row["hektor_annonce_id"]) == target_id]
+    historical_rows = [row for row in historical_rows if int(row["hektor_annonce_id"]) == target_id]
+
+    if archive_table_available:
+        client.delete_rows_by_ids(path="app_archive_annonce_index_current", column="hektor_annonce_id", ids=[target_id])
+        if archive_rows:
+            client.upsert_rows(path="app_archive_annonce_index_current", rows=archive_rows, batch_size=10)
+    if historical_table_available:
+        client.delete_rows_by_ids(path="app_historical_annonce_index_current", column="hektor_annonce_id", ids=[target_id])
+        if historical_rows:
+            client.upsert_rows(path="app_historical_annonce_index_current", rows=historical_rows, batch_size=10)
+
+    return {
+        "archive_index_deleted": 1 if archive_table_available else 0,
+        "archive_index_upserted": len(archive_rows),
+        "historical_index_deleted": 1 if historical_table_available else 0,
+        "historical_index_upserted": len(historical_rows),
+    }
 
 
 def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossier_id: int) -> dict[str, int]:
@@ -315,6 +372,9 @@ def main() -> int:
             try:
                 create_temp_view_table(con, "app_view_demandes_mandat_diffusion", SQL_REFRESH_DEMANDES_MANDAT_DIFFUSION, app_dossier_id)
                 create_temp_view_table(con, "app_view_generale", SQL_REFRESH_VUE_GENERALE, app_dossier_id)
+                persist_temp_view_table(con, "app_view_demandes_mandat_diffusion", app_dossier_id)
+                persist_temp_view_table(con, "app_view_generale", app_dossier_id)
+                con.commit()
                 payload = build_payload(
                     limit=None,
                     dossier_ids=[app_dossier_id],
@@ -322,6 +382,7 @@ def main() -> int:
                     connection=con,
                 )
                 counts = push_payload(client, payload, app_dossier_id)
+                counts.update(reconcile_lightweight_indexes(client, con, hektor_annonce_id))
             finally:
                 con.execute("DETACH DATABASE hektor")
         finally:

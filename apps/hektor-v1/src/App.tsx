@@ -5669,6 +5669,10 @@ export default function App() {
       .slice(0, 8)
   }, [dismissedHektorActionJobIds, hektorActionJobs])
   const activeDeleteAnnonceJobs = useMemo(() => activeHektorActionJobs.filter((job) => job.job_type === 'delete_hektor_annonce'), [activeHektorActionJobs])
+  const activeAdminAnnonceJobIds = useMemo(() => new Set(activeHektorActionJobs
+    .filter((job) => job.job_type === 'delete_hektor_annonce' || job.job_type === 'archive_hektor_annonce' || job.job_type === 'restore_hektor_annonce' || job.job_type === 'change_hektor_annonce_status')
+    .map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? ''))
+    .filter(Boolean)), [activeHektorActionJobs])
   const preparingArchiveDetailIds = useMemo(() => new Set(activeHektorActionJobs
     .filter((job) => job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail')
     .map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? ''))
@@ -6213,6 +6217,10 @@ export default function App() {
   async function handleRestoreHektorAnnonce(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
     setNoticeMessage(null)
+    if (activeAdminAnnonceJobIds.has(String(dossier.hektor_annonce_id))) {
+      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      return
+    }
     try {
       const job = await createRestoreHektorAnnonceJob({ dossier, priority: 8 })
       rememberHektorActionJob(job)
@@ -6590,6 +6598,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDeleteAnnoncePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
+    if (activeAdminAnnonceJobIds.has(String(deleteAnnonceTarget.hektor_annonce_id))) {
+      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setDeleteAnnoncePending(false)
+      return
+    }
     try {
       const job = await createDeleteHektorAnnonceJob({
         dossier: deleteAnnonceTarget,
@@ -6651,6 +6664,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setArchiveAnnoncePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
+    if (activeAdminAnnonceJobIds.has(String(archiveAnnonceTarget.hektor_annonce_id))) {
+      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setArchiveAnnoncePending(false)
+      return
+    }
     try {
       const job = await createArchiveHektorAnnonceJob({
         dossier: archiveAnnonceTarget,
@@ -6731,6 +6749,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
+    if (activeAdminAnnonceJobIds.has(String(statusChangeTarget.hektor_annonce_id))) {
+      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setStatusChangePending(false)
+      return
+    }
     try {
       const job = await createChangeHektorAnnonceStatusJob({
         dossier: statusChangeTarget,

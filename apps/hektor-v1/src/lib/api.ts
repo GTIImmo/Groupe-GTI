@@ -4110,6 +4110,14 @@ export async function createDeleteHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
+function throwConsoleAdminJobError(error: { message?: string; code?: string; details?: string } | null | undefined, fallback: string): never {
+  const text = `${error?.code ?? ''} ${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase()
+  if (text.includes('app_console_job_active_admin_annonce_idx') || text.includes('duplicate key')) {
+    throw new Error('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+  }
+  throw new Error(error?.message ?? fallback)
+}
+
 export async function createRestoreHektorAnnonceJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   priority?: number
@@ -4132,7 +4140,7 @@ export async function createRestoreHektorAnnonceJob(input: {
     })
     .select('*')
     .single()
-  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor restore job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor restore job')
   return data as ConsoleJob
 }
 
@@ -4180,7 +4188,7 @@ export async function createArchiveHektorAnnonceJob(input: {
     })
     .select('*')
     .single()
-  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor archive job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor archive job')
   return data as ConsoleJob
 }
 
@@ -4244,7 +4252,7 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     })
     .select('*')
     .single()
-  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor status job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor status job')
   return data as ConsoleJob
 }
 
