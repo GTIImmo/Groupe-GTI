@@ -19,6 +19,8 @@ import {
   loadDiffusionTargets,
   previewDefaultDiffusionTargets,
   loadDossierDetail,
+  loadArchivedAnnonceDetailCache,
+  loadHistoricalAnnonceDetailCache,
   loadDossierByHektorAnnonceId,
   loadDossiersPage,
   loadFilterCatalog,
@@ -49,6 +51,7 @@ import {
   createUploadDocumentToHektorJob,
   createDeleteDocumentFromHektorJob,
   createPrepareArchivedAnnonceDetailJob,
+  createPrepareHistoricalAnnonceDetailJob,
   createSyncHektorPhotosJob,
   createUploadHektorPhotoJob,
   createHektorMandantContactJob,
@@ -99,13 +102,30 @@ const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
 const activeListingsFilterValue = '__active_listings__'
+const detailAvailableFilterValue = 'available'
+const detailToLoadFilterValue = 'to_load'
 const activeListingsFilterOption = { value: activeListingsFilterValue, label: 'Actif / offre / compromis' }
 const historicalListingStatusOptions = [
   { value: 'Vendu', label: 'Vendu' },
   { value: 'Clos', label: 'Clos' },
 ]
+const heavyListingFilterKeys = new Set<keyof AppFilters>([
+  'validationDiffusion',
+  'diffusable',
+  'passerelle',
+  'erreurDiffusion',
+  'priority',
+  'workStatus',
+  'internalStatus',
+  'requestType',
+  'requestScope',
+  'affaire',
+  'offreStatus',
+  'compromisStatus',
+])
 type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
+type LightweightDetailTarget = Dossier | MandatRecord
 
 function isHistoricalListingStatus(value: unknown) {
   return value === 'Vendu' || value === 'Clos'
@@ -113,6 +133,15 @@ function isHistoricalListingStatus(value: unknown) {
 
 function usesLightweightAnnonceIndex(filters: AppFilters) {
   return filters.archive === archivedFilterValue || isHistoricalListingStatus(filters.statut)
+}
+
+function isLightweightAnnonceRecord(item: Pick<Dossier, 'archive' | 'statut_annonce'> | Pick<MandatRecord, 'archive' | 'statut_annonce'> | null | undefined) {
+  if (!item) return false
+  return item.archive === '1' || isHistoricalListingStatus(item.statut_annonce)
+}
+
+function hasLocalDetailAvailable(item: Pick<Dossier, 'has_local_detail'> | Pick<MandatRecord, 'has_local_detail'> | null | undefined) {
+  return item?.has_local_detail === true || item?.has_local_detail === 1 || item?.has_local_detail === '1'
 }
 
 function annonceListingLabels(filters: AppFilters) {
@@ -1982,6 +2011,7 @@ const emptyFilters: AppFilters = {
   commercial: allFilterValue,
   agency: allFilterValue,
   archive: allFilterValue,
+  detailAvailability: allFilterValue,
   mandat: allFilterValue,
   affaire: allFilterValue,
   offreStatus: allFilterValue,
@@ -3679,6 +3709,9 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'prepare_archived_annonce_detail') {
     return `Detail archive ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
+  if (job.job_type === 'prepare_historical_annonce_detail') {
+    return `Detail Vendu/Clos ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
   if (job.job_type === 'update_hektor_annonce_fields') {
     return `Modification ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
@@ -3705,6 +3738,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'upload_hektor_photo') return 'Ajout photo'
   if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
   if (job.job_type === 'prepare_archived_annonce_detail') return 'Detail archive'
+  if (job.job_type === 'prepare_historical_annonce_detail') return 'Detail Vendu/Clos'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification en cours'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
@@ -3718,7 +3752,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
-  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'sync_hektor_photos') return 'document'
+  if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'sync_hektor_photos') return 'document'
   return 'create'
 }
 
@@ -3734,6 +3768,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'upload_hektor_photo') return 'Photo envoyee au PC serveur'
   if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
   if (job.job_type === 'prepare_archived_annonce_detail') return 'Preparation locale demandee'
+  if (job.job_type === 'prepare_historical_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
@@ -3796,6 +3831,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'upload_hektor_photo') return 'Photo ajoutee'
     if (job.job_type === 'prepare_document_cloud') return 'Document pret'
     if (job.job_type === 'prepare_archived_annonce_detail') return 'Archive prete'
+    if (job.job_type === 'prepare_historical_annonce_detail') return 'Fiche prete'
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
     if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
@@ -3806,7 +3842,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
-    if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
+    if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
     if (job.job_type === 'upload_hektor_photo') return 'Mise a jour galerie'
     if (job.job_type === 'sync_hektor_photos') return 'Synchronisation photos'
     return "Mise a jour de l'app"
@@ -5239,6 +5275,8 @@ function activeFilterEntries(filters: AppFilters) {
     filters.agency !== allFilterValue ? ['Agence', filters.agency] : null,
     filters.archive === activeArchiveFilterValue ? ['Archive', 'Actives'] : null,
     filters.archive === archivedFilterValue ? ['Archive', 'Archivees'] : null,
+    filters.detailAvailability === detailAvailableFilterValue ? ['Detail', 'Disponible localement'] : null,
+    filters.detailAvailability === detailToLoadFilterValue ? ['Detail', 'A charger'] : null,
     filters.mandat === withMandatFilterValue ? ['Mandat', 'Avec mandat'] : null,
     filters.mandat === withoutMandatFilterValue ? ['Mandat', 'Sans mandat'] : null,
     filters.affaire === 'offre_achat' ? ['Transactions', "Offre d'achat"] : null,
@@ -5299,6 +5337,7 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [lightweightDetailTarget, setLightweightDetailTarget] = useState<LightweightDetailTarget | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [bootLoading, setBootLoading] = useState(true)
   const [pageLoading, setPageLoading] = useState(false)
@@ -5496,9 +5535,17 @@ export default function App() {
   }, [dismissedHektorActionJobIds, hektorActionJobs])
   const activeDeleteAnnonceJobs = useMemo(() => activeHektorActionJobs.filter((job) => job.job_type === 'delete_hektor_annonce'), [activeHektorActionJobs])
   const preparingArchiveDetailIds = useMemo(() => new Set(activeHektorActionJobs
-    .filter((job) => job.job_type === 'prepare_archived_annonce_detail')
+    .filter((job) => job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail')
     .map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? ''))
     .filter(Boolean)), [activeHektorActionJobs])
+  const lightweightDetailJob = useMemo(() => {
+    if (!lightweightDetailTarget) return null
+    const targetId = String(lightweightDetailTarget.hektor_annonce_id)
+    return hektorActionJobs.find((job) =>
+      (job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail') &&
+      String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '') === targetId,
+    ) ?? null
+  }, [hektorActionJobs, lightweightDetailTarget])
   const deletingAppDossierIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => Number(job.app_dossier_id)).filter((value) => Number.isFinite(value))), [activeDeleteAnnonceJobs])
   const deletingHektorAnnonceIds = useMemo(() => new Set(activeDeleteAnnonceJobs.map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '')).filter(Boolean)), [activeDeleteAnnonceJobs])
   const visibleDossiers = useMemo(() => dossiers.filter((item) => !deletingAppDossierIds.has(item.app_dossier_id) && !deletingHektorAnnonceIds.has(String(item.hektor_annonce_id))), [dossiers, deletingAppDossierIds, deletingHektorAnnonceIds])
@@ -5819,6 +5866,12 @@ export default function App() {
 
   useEffect(() => {
     if (selectedDossierId == null || (hasSupabaseEnv && !session)) return
+    const quickMandat = mandats.find((item) => item.app_dossier_id === selectedDossierId)
+    const quickBase = dossiers.find((item) => item.app_dossier_id === selectedDossierId) ?? quickMandat ?? null
+    if (isLightweightAnnonceRecord(quickBase)) {
+      setDetailLoading(false)
+      return
+    }
     let cancelled = false
     setDetailLoading(true)
     loadDossierDetail(selectedDossierId)
@@ -5834,7 +5887,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDossierId, session, dataReloadKey])
+  }, [selectedDossierId, session, dataReloadKey, dossiers, mandats])
 
   useEffect(() => {
     if (deepLinkHandled || bootLoading || (hasSupabaseEnv && !session)) return
@@ -5948,6 +6001,10 @@ export default function App() {
     if (screen === 'mandats') setActiveMandatKpiAction(null)
     setFilters((current) => {
       const next = { ...current, [key]: value }
+      const lightweightContext = screen === 'mandats' && usesLightweightAnnonceIndex(next)
+      if (lightweightContext && heavyListingFilterKeys.has(key)) {
+        next[key] = allFilterValue as AppFilters[K]
+      }
       if (key === 'affaire') {
         if (value !== 'offre_achat') next.offreStatus = allFilterValue
         if (value !== 'compromis') next.compromisStatus = allFilterValue
@@ -5981,7 +6038,7 @@ export default function App() {
     setDetailOpen(false)
   }
 
-  async function handlePrepareArchivedAnnonceDetail(dossier: Dossier) {
+  async function handlePrepareArchivedAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
     setNoticeMessage(null)
     try {
@@ -5990,6 +6047,65 @@ export default function App() {
       setNoticeMessage(`Preparation du detail archive demandee pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le detail archive')
+    }
+  }
+
+  async function handlePrepareHistoricalAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    try {
+      const job = await createPrepareHistoricalAnnonceDetailJob({ dossier, priority: 32 })
+      rememberHektorActionJob(job)
+      setNoticeMessage(`Preparation du detail Vendu/Clos demandee pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le detail Vendu/Clos')
+    }
+  }
+
+  function openLightweightDetailImport(target: LightweightDetailTarget) {
+    setSelectedDossierId(target.app_dossier_id)
+    setSelectedMandatId(target.app_dossier_id)
+    setLightweightDetailTarget(target)
+    setDetailOpen(false)
+  }
+
+  function closeLightweightDetailImport() {
+    setLightweightDetailTarget(null)
+  }
+
+  async function confirmLightweightDetailImport() {
+    if (!lightweightDetailTarget) return
+    if (lightweightDetailTarget.archive === '1') {
+      await handlePrepareArchivedAnnonceDetail(lightweightDetailTarget)
+      return
+    }
+    if (isHistoricalListingStatus(lightweightDetailTarget.statut_annonce)) {
+      await handlePrepareHistoricalAnnonceDetail(lightweightDetailTarget)
+      return
+    }
+    setErrorMessage("Cette ligne n'est pas eligible au chargement de detail leger.")
+  }
+
+  async function openCachedLightweightDetail() {
+    if (!lightweightDetailTarget) return
+    setDetailLoading(true)
+    setErrorMessage(null)
+    try {
+      const detail = lightweightDetailTarget.archive === '1'
+        ? await loadArchivedAnnonceDetailCache(lightweightDetailTarget.hektor_annonce_id)
+        : await loadHistoricalAnnonceDetailCache(lightweightDetailTarget.hektor_annonce_id)
+      if (!detail) {
+        setErrorMessage("Le detail complet n'est pas encore disponible sur le serveur. Lancez la recuperation locale des details ou reessayez apres synchronisation.")
+        return
+      }
+      setSelectedDossier(detail)
+      setSelectedDossierId(detail.app_dossier_id)
+      setDetailOpen(true)
+      setLightweightDetailTarget(null)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger le detail')
+    } finally {
+      setDetailLoading(false)
     }
   }
 
@@ -6107,6 +6223,14 @@ export default function App() {
   function openDossierDetailPage(appDossierId: number) {
     const quickMandat = mandats.find((item) => item.app_dossier_id === appDossierId)
     const quickBase = dossiers.find((item) => item.app_dossier_id === appDossierId) ?? (quickMandat ? mandateAsDossier(quickMandat) : null)
+    if (isLightweightAnnonceRecord(quickBase)) {
+      setSelectedDossierId(appDossierId)
+      setSelectedMandatId(appDossierId)
+      setLightweightDetailTarget(quickBase)
+      setDetailLoading(false)
+      setDetailOpen(false)
+      return
+    }
     const currentDetailPayload = selectedDossier?.app_dossier_id === appDossierId ? selectedDossier.detail_payload_json : null
     setSelectedDossier(quickBase ? { ...quickBase, detail_payload_json: currentDetailPayload } : null)
     setDetailLoading(true)
@@ -7245,6 +7369,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
+  const lightweightAnnonceFiltersActive = screen === 'mandats' && usesLightweightAnnonceIndex(filters)
   const screenHeader = useMemo(() => {
     if (screen === 'annonces') {
       return { title: 'Annonces', copy: '' }
@@ -7779,6 +7904,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
             </section>
           </div>
+        ) : null}
+        {lightweightDetailTarget ? (
+          <LightweightDetailImportModal
+            target={lightweightDetailTarget}
+            job={lightweightDetailJob}
+            onClose={closeLightweightDetailImport}
+            onConfirm={() => void confirmLightweightDetailImport()}
+            onOpenReady={() => void openCachedLightweightDetail()}
+          />
         ) : null}
         {draftAnnonceModalOpen ? (
           <div className="modal-overlay" onClick={closeDraftAnnonceModal}>
@@ -9084,6 +9218,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: archivedFilterValue, label: 'Archives' },
                   ]}
                 />
+                <FilterSelect
+                  label="Detail"
+                  value={filters.detailAvailability}
+                  onChange={(value) => updateFilter('detailAvailability', value)}
+                  options={[
+                    { value: detailAvailableFilterValue, label: 'Disponible localement' },
+                    { value: detailToLoadFilterValue, label: 'A charger' },
+                  ]}
+                />
+                {lightweightAnnonceFiltersActive ? (
+                  <div className="empty-block filter-context-note">
+                    <strong>Index leger actif</strong>
+                    <p>Les filtres diffusion, demandes, offres et compromis sont neutralises pour eviter un resultat vide incomprehensible.</p>
+                  </div>
+                ) : null}
               </>
             ) : screen === 'registre' ? (
               <>
@@ -9297,6 +9446,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenRequestModal={openRequestModal}
             onOpenDiffusionModal={openDiffusionModal}
             onOpenDetailPage={openDossierDetailPage}
+            onOpenLightweightDetail={openLightweightDetailImport}
             requestPending={requestPending}
             onSelectMandat={setSelectedMandatId}
             loading={mandatLoading}
@@ -9329,6 +9479,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenRequestModal={openRequestModal}
             onOpenDiffusionModal={openDiffusionModal}
             onOpenDetailPage={openDossierDetailPage}
+            onOpenLightweightDetail={openLightweightDetailImport}
             requestPending={requestPending}
             onSelectMandat={setSelectedMandatId}
             loading={mandatLoading}
@@ -9613,6 +9764,82 @@ function DashboardScreen({
   )
 }
 
+function LightweightDetailImportModal(props: {
+  target: LightweightDetailTarget
+  job: ConsoleJob | null
+  onClose: () => void
+  onConfirm: () => void
+  onOpenReady: () => void
+}) {
+  const isArchive = props.target.archive === '1'
+  const isHistorical = !isArchive && isHistoricalListingStatus(props.target.statut_annonce)
+  const canPrepareDetail = isArchive || isHistorical
+  const hasLocalDetail = hasLocalDetailAvailable(props.target)
+  const jobActive = props.job ? isConsoleJobActive(props.job) : false
+  const jobDone = props.job?.status === 'done'
+  const jobError = props.job?.status === 'error'
+  const statusText = jobDone
+    ? 'Detail disponible dans le cache temporaire'
+    : jobError
+      ? 'Erreur pendant la preparation'
+      : jobActive
+        ? 'Preparation en cours par le worker'
+        : 'Detail non charge dans le cloud'
+  const detailRows: Array<[string, string]> = [
+    ['Dossier', props.target.numero_dossier ?? '-'],
+    ['Mandat', props.target.numero_mandat ?? '-'],
+    ['Titre', props.target.titre_bien ?? '-'],
+    ['Ville', props.target.ville ?? '-'],
+    ['Prix', formatPrice(props.target.prix)],
+    ['Commercial', commercialDisplay(props.target)],
+    ['Agence', props.target.agence_nom ?? '-'],
+    ['Statut', props.target.statut_annonce ?? '-'],
+    ['Archive', isArchive ? 'Oui' : 'Non'],
+    ['Detail local', hasLocalDetail ? 'Oui' : 'Non'],
+  ]
+
+  return (
+    <div className="modal-overlay" onClick={props.onClose}>
+      <section className="modal-panel request-modal-panel lightweight-detail-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="panel-head request-modal-head">
+          <div className="request-modal-title">
+            <p className="eyebrow">Detail de fiche</p>
+            <h3>Cette fiche n'est pas encore chargee dans le cloud</h3>
+          </div>
+          <button className="ghost-button button-subtle request-modal-close" type="button" onClick={props.onClose}>Fermer</button>
+        </div>
+        <p className="request-modal-copy">
+          Le listing affiche les informations legeres. Pour ouvrir la fiche complete, le serveur doit preparer le detail local puis l'envoyer temporairement dans Supabase.
+        </p>
+        <div className="detail-stack lightweight-detail-grid">
+          {detailRows.map(([label, value]) => (
+            <article className="detail-card" key={label}>
+              <span className="detail-label">{label}</span>
+              <strong>{value || '-'}</strong>
+            </article>
+          ))}
+        </div>
+        <div className={`empty-block lightweight-detail-status ${jobError ? 'is-error' : jobDone ? 'is-ready' : ''}`}>
+          <strong>{statusText}</strong>
+          {jobError ? <p>{hektorActionJobDetail(props.job as ConsoleJob) || "Le detail complet n'est pas encore disponible sur le serveur. Lancez la recuperation locale des details ou reessayez apres synchronisation."}</p> : null}
+          {!hasLocalDetail ? <p>Le detail local n'est pas marque disponible pour cette fiche.</p> : null}
+          {!canPrepareDetail ? <p>Cette ligne n'est pas eligible au chargement de detail leger.</p> : null}
+        </div>
+        <div className="mandat-document-actions lightweight-detail-actions">
+          <button className="ghost-button" type="button" onClick={props.onClose}>Annuler</button>
+          {jobDone ? (
+            <button className="ghost-button button-primary" type="button" onClick={props.onOpenReady}>Ouvrir la fiche complete</button>
+          ) : (
+            <button className="ghost-button button-primary" type="button" onClick={props.onConfirm} disabled={jobActive || !canPrepareDetail}>
+              {jobActive ? 'Demande envoyee' : 'Telecharger le detail de la fiche'}
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function StockScreen(props: {
   dossiers: Dossier[]
   dossiersTotal: number
@@ -9781,6 +10008,7 @@ function MandatsScreen(props: {
   onOpenDetailPage: (id: number) => void
   requestPending: boolean
   onSelectMandat: (id: number) => void
+  onOpenLightweightDetail: (item: MandatRecord) => void
   loading: boolean
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
@@ -9833,13 +10061,21 @@ function MandatsScreen(props: {
                 const hasBienici = hasPortalEnabled(item, ['bienici'])
                 const hasSiteGti = isSiteGtiEnabled(item)
                 const project = projectIdentityLines(item)
+                const isLightweight = !isEstimationMode && isLightweightAnnonceRecord(item)
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
                       className={`${isSelected ? 'is-selected' : ''} ${props.loading ? 'is-refreshing-row' : ''}`.trim()}
                       onClick={() => {
                         props.onSelectMandat(item.app_dossier_id)
-                        props.onOpenDetailPage(item.app_dossier_id)
+                        if (isLightweight) props.onOpenLightweightDetail(item)
+                        else props.onOpenDetailPage(item.app_dossier_id)
+                      }}
+                      onDoubleClick={(event) => {
+                        event.preventDefault()
+                        props.onSelectMandat(item.app_dossier_id)
+                        if (isLightweight) props.onOpenLightweightDetail(item)
+                        else props.onOpenDetailPage(item.app_dossier_id)
                       }}
                     >
                       {isEstimationMode ? (
@@ -9865,7 +10101,12 @@ function MandatsScreen(props: {
                           {isEstimationMode ? (
                             <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
                           ) : (
-                            <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
+                            <>
+                              <button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); isLightweight ? props.onOpenLightweightDetail(item) : props.onOpenDetailPage(item.app_dossier_id) }}>
+                                {isLightweight ? 'Charger detail' : 'Voir fiche'}
+                              </button>
+                              {!isLightweight ? <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} /> : null}
+                            </>
                           )}
                         </div>
                       </td>

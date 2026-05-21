@@ -39,6 +39,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "sync_hektor_photos",
   "upload_hektor_photo",
   "prepare_archived_annonce_detail",
+  "prepare_historical_annonce_detail",
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
@@ -1652,6 +1653,38 @@ async function handlePrepareArchivedAnnonceDetail(job) {
     ...result,
     hektor_annonce_id: hektorAnnonceId,
     cache_table: "app_archive_annonce_detail_cache",
+  };
+}
+
+async function handlePrepareHistoricalAnnonceDetail(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for prepare_historical_annonce_detail");
+  await logJob(job.id, "historical_detail_cache", "running", "Preparation du detail Vendu/Clos depuis la base locale", {
+    hektor_annonce_id: hektorAnnonceId,
+    ttl_hours: payload.ttl_hours || 2,
+  });
+  const args = [
+    "Console/prepare_historical_annonce_detail.py",
+    "--hektor-annonce-id",
+    hektorAnnonceId,
+    "--ttl-hours",
+    String(payload.ttl_hours || 2),
+  ];
+  if (job.requested_by) {
+    args.push("--requested-by", String(job.requested_by));
+  }
+  const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
+  const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+  const result = safeJsonParse(lastLine);
+  await logJob(job.id, "historical_detail_cache", "done", "Detail Vendu/Clos disponible temporairement dans Supabase", {
+    hektor_annonce_id: hektorAnnonceId,
+    result,
+  });
+  return {
+    ...result,
+    hektor_annonce_id: hektorAnnonceId,
+    cache_table: "app_historical_annonce_detail_cache",
   };
 }
 
@@ -3601,6 +3634,8 @@ async function runHandler(job) {
       return handleUploadHektorPhoto(job);
     case "prepare_archived_annonce_detail":
       return handlePrepareArchivedAnnonceDetail(job);
+    case "prepare_historical_annonce_detail":
+      return handlePrepareHistoricalAnnonceDetail(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
     case "create_hektor_mandant_contact":

@@ -2719,6 +2719,42 @@ body {
   border-radius: 18px;
   background: #fffdf8;
 }
+.filter-context-note {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+}
+.filter-context-note p {
+  margin: 4px 0 0;
+}
+.lightweight-detail-modal {
+  max-width: 760px;
+}
+.lightweight-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.lightweight-detail-status {
+  margin-top: 8px;
+}
+.lightweight-detail-status.is-ready {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(240, 253, 244, 0.9);
+}
+.lightweight-detail-status.is-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(254, 242, 242, 0.9);
+}
+.lightweight-detail-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+@media (max-width: 720px) {
+  .lightweight-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { text-align: left; padding: 14px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }

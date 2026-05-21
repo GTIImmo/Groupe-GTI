@@ -148,6 +148,7 @@ export type Dossier = {
   numero_mandat: string | null
   titre_bien: string
   ville: string | null
+  code_postal?: string | null
   type_bien: string | null
   prix: number | null
   commercial_id: string | null
@@ -325,6 +326,8 @@ export type MandatRecord = {
   register_history_json?: string | null
   register_avenants_json?: string | null
   register_detail_payload_json?: string | null
+  has_local_detail?: boolean | number | string | null
+  local_detail_updated_at?: string | null
 }
 
 export type MandatBroadcast = {
@@ -475,6 +478,7 @@ export type ConsoleJobType =
   | 'refresh_console_data'
   | 'archive_cloud_documents'
   | 'prepare_archived_annonce_detail'
+  | 'prepare_historical_annonce_detail'
 
 export type ConsoleJob = {
   id: string

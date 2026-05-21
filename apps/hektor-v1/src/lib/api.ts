@@ -24,6 +24,7 @@ export type AppFilters = {
   commercial: string
   agency: string
   archive: string
+  detailAvailability: string
   mandat: string
   affaire: string
   offreStatus: string
@@ -649,6 +650,7 @@ function hasActiveFilters(filters: AppFilters) {
       normalizeFilterValue(filters.commercial) ||
       normalizeFilterValue(filters.agency) ||
       filters.archive !== allFilterValue ||
+      normalizeFilterValue(filters.detailAvailability) ||
       filters.mandat !== allFilterValue ||
       normalizeFilterValue(filters.affaire) ||
       normalizeFilterValue(filters.offreStatus) ||
@@ -760,6 +762,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
   const commercial = normalizeFilterValue(filters.commercial)
   const agency = normalizeFilterValue(filters.agency)
   const archive = filters.archive
+  const detailAvailability = normalizeFilterValue(filters.detailAvailability)
   const mandat = filters.mandat
   const affaire = normalizeFilterValue(filters.affaire)
   const offreStatus = normalizeFilterValue(filters.offreStatus)
@@ -857,6 +860,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   const commercial = normalizeFilterValue(filters.commercial)
   const agency = normalizeFilterValue(filters.agency)
   const archive = filters.archive
+  const detailAvailability = normalizeFilterValue(filters.detailAvailability)
   const mandat = filters.mandat
   const affaire = normalizeFilterValue(filters.affaire)
   const offreStatus = normalizeFilterValue(filters.offreStatus)
@@ -881,6 +885,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (agency) query = query.eq('agence_nom', agency)
   if (archive === activeArchiveFilterValue) query = query.eq('archive', '0')
   if (archive === archivedFilterValue) query = query.eq('archive', '1')
+  if (detailAvailability === 'to_load') query = query.eq('app_dossier_id', -1)
   if (mandat === withMandatFilterValue) query = query.not('numero_mandat', 'is', null).neq('numero_mandat', '')
   if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
   if (affaire === 'offre_achat') query = query.not('offre_id', 'is', null)
@@ -949,6 +954,7 @@ type LightweightAnnonceIndexRow = {
   numero_mandat: string | null
   titre_bien: string | null
   ville: string | null
+  code_postal: string | null
   type_bien: string | null
   prix: number | null
   commercial_id: string | null
@@ -988,6 +994,7 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
     numero_mandat: row.numero_mandat ?? null,
     titre_bien: row.titre_bien ?? '[Sans titre]',
     ville: row.ville ?? null,
+    code_postal: row.code_postal ?? null,
     type_bien: row.type_bien ?? null,
     prix: row.prix ?? null,
     commercial_id: row.commercial_id ?? null,
@@ -1037,6 +1044,8 @@ function dossierToMandatRecord(row: Dossier & { mandants_texte?: string | null }
     vente_id: row.vente_id == null ? null : String(row.vente_id),
     source_updated_at: null,
     refreshed_at: null,
+    has_local_detail: row.has_local_detail ?? null,
+    local_detail_updated_at: row.local_detail_updated_at ?? null,
   }
 }
 
@@ -1045,6 +1054,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   const commercial = normalizeFilterValue(filters.commercial)
   const agency = normalizeFilterValue(filters.agency)
   const mandat = filters.mandat
+  const detailAvailability = normalizeFilterValue(filters.detailAvailability)
   const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
   const mandantName = normalizeSearchTerm(filters.mandantName)
 
@@ -1058,6 +1068,8 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (agency) query = query.eq('agence_nom', agency)
   if (mandat === withMandatFilterValue) query = query.not('numero_mandat', 'is', null).neq('numero_mandat', '')
   if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
+  if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
+  if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
@@ -1070,7 +1082,9 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
         `numero_dossier.ilike.${ilike}`,
         `numero_mandat.ilike.${ilike}`,
         `commercial_nom.ilike.${ilike}`,
+        `agence_nom.ilike.${ilike}`,
         `ville.ilike.${ilike}`,
+        `code_postal.ilike.${ilike}`,
         `mandants_texte.ilike.${ilike}`,
       ].join(','),
     )
@@ -1175,7 +1189,7 @@ export async function loadDossiersPage({
     const archiveQuery = applyArchiveIndexFiltersToQuery(
       supabase
         .from('app_archive_annonce_index_current')
-        .select('hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
+        .select('hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
       filters,
       scope,
     )
@@ -1201,7 +1215,7 @@ export async function loadDossiersPage({
     const historicalQuery = applyHistoricalIndexFiltersToQuery(
       supabase
         .from('app_historical_annonce_index_current')
-        .select('hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
+        .select('hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at', { count: countMode }),
       filters,
       scope,
     )
@@ -1365,6 +1379,97 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
     ...(dossierData as Dossier),
     detail_payload_json: JSON.stringify(detailPayload),
   }
+}
+
+function stringifyJsonPayloadFields(source: Record<string, unknown>) {
+  const result: Record<string, unknown> = { ...source }
+  for (const [key, value] of Object.entries(result)) {
+    if (!key.endsWith('_json')) continue
+    if (value == null || typeof value === 'string') continue
+    result[key] = JSON.stringify(value)
+  }
+  return result
+}
+
+async function loadLightweightAnnonceDetailCache(
+  table: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache',
+  payloadIdKey: 'app_archive_id' | 'app_historical_id',
+  defaultArchive: '0' | '1',
+  hektorAnnonceId: number | string,
+): Promise<DetailedDossier | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const cleanId = String(hektorAnnonceId).trim()
+  if (!cleanId) return null
+
+  const { data, error } = await supabase
+    .from(table)
+    .select('detail_payload_json,expires_at')
+    .eq('hektor_annonce_id', cleanId)
+    .maybeSingle()
+
+  if (error && error.code !== 'PGRST116') throw new Error(error.message)
+  if (!data) return null
+
+  const expiresAt = typeof data.expires_at === 'string' ? new Date(data.expires_at).getTime() : 0
+  if (expiresAt && expiresAt < Date.now()) return null
+
+  const payload = typeof data.detail_payload_json === 'string'
+    ? parseJsonObject(data.detail_payload_json)
+    : ((data.detail_payload_json ?? {}) as Record<string, unknown>)
+  const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
+  const index = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
+  const detail = stringifyJsonPayloadFields((payload.detail && typeof payload.detail === 'object' ? payload.detail : {}) as Record<string, unknown>)
+  const appDossierId = Number(index.app_dossier_id ?? payload[payloadIdKey] ?? listing.hektor_annonce_id ?? hektorAnnonceId)
+  const dossier: DetailedDossier = {
+    app_dossier_id: Number.isFinite(appDossierId) ? appDossierId : Number(hektorAnnonceId),
+    hektor_annonce_id: Number(hektorAnnonceId),
+    photo_url_listing: (detail.photo_url_listing ?? listing.photo ?? null) as string | null,
+    images_preview_json: (detail.images_preview_json ?? null) as string | null,
+    archive: String(index.archive ?? listing.archive ?? defaultArchive),
+    diffusable: index.diffusable == null ? (listing.diffusable == null ? null : String(listing.diffusable)) : String(index.diffusable),
+    nb_portails_actifs: Number(index.nb_portails_actifs ?? 0),
+    has_diffusion_error: Boolean(index.has_diffusion_error ?? false),
+    portails_resume: (index.portails_resume ?? null) as string | null,
+    offre_id: (index.offre_id ?? null) as string | number | null,
+    offre_state: (index.offre_state ?? null) as string | null,
+    offre_last_proposition_type: (index.offre_last_proposition_type ?? null) as string | null,
+    compromis_id: (index.compromis_id ?? null) as string | number | null,
+    compromis_state: (index.compromis_state ?? null) as string | null,
+    vente_id: (index.vente_id ?? null) as string | number | null,
+    numero_dossier: (index.numero_dossier ?? listing.NO_DOSSIER ?? null) as string | null,
+    numero_mandat: (index.numero_mandat ?? listing.NO_MANDAT ?? null) as string | null,
+    titre_bien: String(index.titre_bien ?? listing.titre ?? '[Sans titre]'),
+    ville: (index.ville ?? listing.ville ?? null) as string | null,
+    code_postal: (index.code_postal ?? listing.code_postal ?? null) as string | null,
+    type_bien: index.type_bien == null ? (listing.idtype == null ? null : String(listing.idtype)) : String(index.type_bien),
+    prix: index.prix == null ? null : Number(index.prix),
+    commercial_id: index.commercial_id == null ? null : String(index.commercial_id),
+    commercial_nom: (index.commercial_nom ?? null) as string | null,
+    negociateur_email: (index.negociateur_email ?? null) as string | null,
+    agence_nom: (index.agence_nom ?? null) as string | null,
+    statut_annonce: (index.statut_annonce ?? detail.statut_name ?? null) as string | null,
+    validation_diffusion_state: (index.validation_diffusion_state ?? null) as string | null,
+    etat_visibilite: (index.etat_visibilite ?? null) as string | null,
+    alerte_principale: (index.alerte_principale ?? null) as string | null,
+    priority: (index.priority ?? 'normal') as string | null,
+    has_open_blocker: Boolean(index.has_open_blocker ?? false),
+    commentaire_resume: (index.commentaire_resume ?? null) as string | null,
+    date_relance_prevue: (index.date_relance_prevue ?? null) as string | null,
+    dernier_event_type: (index.dernier_event_type ?? null) as string | null,
+    dernier_work_status: (index.dernier_work_status ?? null) as string | null,
+    has_local_detail: true,
+    local_detail_updated_at: (payload.prepared_locally_at ?? null) as string | null,
+    detail_payload_json: JSON.stringify(detail),
+  }
+  return dossier
+}
+
+export async function loadArchivedAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
+  return loadLightweightAnnonceDetailCache('app_archive_annonce_detail_cache', 'app_archive_id', '1', hektorAnnonceId)
+}
+
+export async function loadHistoricalAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
+  return loadLightweightAnnonceDetailCache('app_historical_annonce_detail_cache', 'app_historical_id', '0', hektorAnnonceId)
 }
 
 export async function loadDossierByHektorAnnonceId(hektorAnnonceId: string | number, scope?: DataScope | null): Promise<Dossier | null> {
@@ -3547,6 +3652,32 @@ export async function createPrepareArchivedAnnonceDetailJob(input: {
   return data as ConsoleJob
 }
 
+export async function createPrepareHistoricalAnnonceDetailJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'prepare_historical_annonce_detail',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        ttl_hours: 2,
+      },
+      priority: input.priority ?? 32,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create historical annonce detail preparation job')
+  return data as ConsoleJob
+}
+
 export async function createLinkHektorMandantJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   contactId: string
@@ -3840,6 +3971,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'sync_hektor_photos',
   'upload_hektor_photo',
   'prepare_archived_annonce_detail',
+  'prepare_historical_annonce_detail',
 ]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
