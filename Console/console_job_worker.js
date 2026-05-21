@@ -68,6 +68,8 @@ const ALL_JOB_TYPES_BY_KIND = {
   sync_full: SYNC_FULL_JOB_TYPES,
 };
 const WORKER_ID = process.env.CONSOLE_WORKER_ID || `${os.hostname()}:${WORKER_KIND}:${process.pid}`;
+const WORKER_LOCK_DIR = path.resolve(__dirname, ".locks");
+const WORKER_LOCK_PATH = path.join(WORKER_LOCK_DIR, `console_worker_${WORKER_KIND}.lock`);
 const DEFAULT_POLL_INTERVAL_MS = ["sync", "sync_full"].includes(WORKER_KIND) ? 60000 : WORKER_KIND === "sync_light" ? 10000 : 5000;
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
@@ -2690,6 +2692,76 @@ async function handleUpdateHektorAnnonceFields(job) {
   };
 }
 
+function isProcessAlive(pid) {
+  const numericPid = Number(pid);
+  if (!Number.isFinite(numericPid) || numericPid <= 0) return false;
+  try {
+    process.kill(numericPid, 0);
+    return true;
+  } catch (error) {
+    return error && error.code === "EPERM";
+  }
+}
+
+function acquireWorkerLock() {
+  fs.mkdirSync(WORKER_LOCK_DIR, { recursive: true });
+  try {
+    fs.writeFileSync(WORKER_LOCK_PATH, JSON.stringify({
+      pid: process.pid,
+      worker: WORKER_ID,
+      workerKind: WORKER_KIND,
+      startedAt: new Date().toISOString(),
+    }), { flag: "wx" });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    let existing = null;
+    try {
+      existing = JSON.parse(fs.readFileSync(WORKER_LOCK_PATH, "utf8"));
+    } catch (_) {
+      existing = null;
+    }
+    if (existing && isProcessAlive(existing.pid)) {
+      console.log(JSON.stringify({
+        worker: WORKER_ID,
+        step: "worker_lock",
+        status: "skip",
+        message: `Worker ${WORKER_KIND} deja actif`,
+        activeWorker: existing.worker || null,
+        activePid: existing.pid || null,
+      }));
+      process.exit(0);
+    }
+    fs.rmSync(WORKER_LOCK_PATH, { force: true });
+    fs.writeFileSync(WORKER_LOCK_PATH, JSON.stringify({
+      pid: process.pid,
+      worker: WORKER_ID,
+      workerKind: WORKER_KIND,
+      startedAt: new Date().toISOString(),
+      replacedStaleLock: existing,
+    }), { flag: "wx" });
+  }
+
+  const release = () => {
+    try {
+      const current = JSON.parse(fs.readFileSync(WORKER_LOCK_PATH, "utf8"));
+      if (Number(current.pid) === process.pid) {
+        fs.rmSync(WORKER_LOCK_PATH, { force: true });
+      }
+    } catch (_) {
+      // Best effort cleanup only.
+    }
+  };
+  process.once("exit", release);
+  process.once("SIGINT", () => {
+    release();
+    process.exit(130);
+  });
+  process.once("SIGTERM", () => {
+    release();
+    process.exit(143);
+  });
+}
+
 const HEKTOR_STATUS_CONFIG = {
   active: { hektorValue: "2", label: "Actif", diffusable: "1" },
   offer: { hektorValue: "3", label: "Sous offre", transactionMode: "annonce-SuiviVente-offre-createOffre" },
@@ -4231,6 +4303,7 @@ async function processOnce() {
 async function main() {
   requireEnv("SUPABASE_URL", SUPABASE_URL);
   requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY);
+  acquireWorkerLock();
 
   const once = process.argv.includes("--once");
   console.log(JSON.stringify({

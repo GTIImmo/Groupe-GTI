@@ -13100,6 +13100,8 @@ function MobileDossierDetail(props: {
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_baisse_prix')}>Baisse prix</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_annulation_mandat')}>Annulation</button>
         {canShowDiffusion ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}>Diffusion</button> : null}
+        {props.onChangeAnnonceStatus ? <button className="mobile-ghost-button" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button> : null}
+        {props.onArchiveAnnonce && dossier.archive !== '1' ? <button className="mobile-ghost-button" type="button" onClick={() => props.onArchiveAnnonce?.(dossier)}>Archiver</button> : null}
         {props.onDeleteAnnonce ? <button className="mobile-ghost-button mobile-danger-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>Supprimer</button> : null}
       </section> : (
         <section className="mobile-detail-section">
