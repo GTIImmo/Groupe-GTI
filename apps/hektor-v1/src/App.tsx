@@ -5471,13 +5471,6 @@ export default function App() {
   const [archiveOtherText, setArchiveOtherText] = useState('')
   const [archivePrice, setArchivePrice] = useState('')
   const [archiveConfrere, setArchiveConfrere] = useState('')
-  const [archiveSaleDate, setArchiveSaleDate] = useState('')
-  const [archiveSalePrice, setArchiveSalePrice] = useState('')
-  const [archiveSaleNetSeller, setArchiveSaleNetSeller] = useState('')
-  const [archiveSaleFees, setArchiveSaleFees] = useState('')
-  const [archiveSaleBuyerName, setArchiveSaleBuyerName] = useState('')
-  const [archiveSaleNotaryName, setArchiveSaleNotaryName] = useState('')
-  const [archiveSaleNotes, setArchiveSaleNotes] = useState('')
   const [archiveAnnoncePending, setArchiveAnnoncePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [userToolOpen, setUserToolOpen] = useState(false)
@@ -6584,13 +6577,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setArchiveOtherText('')
     setArchivePrice('')
     setArchiveConfrere('')
-    setArchiveSaleDate('')
-    setArchiveSalePrice('')
-    setArchiveSaleNetSeller('')
-    setArchiveSaleFees('')
-    setArchiveSaleBuyerName('')
-    setArchiveSaleNotaryName('')
-    setArchiveSaleNotes('')
     setNoticeMessage(null)
     setErrorMessage(null)
   }
@@ -6601,13 +6587,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setArchiveOtherText('')
     setArchivePrice('')
     setArchiveConfrere('')
-    setArchiveSaleDate('')
-    setArchiveSalePrice('')
-    setArchiveSaleNetSeller('')
-    setArchiveSaleFees('')
-    setArchiveSaleBuyerName('')
-    setArchiveSaleNotaryName('')
-    setArchiveSaleNotes('')
   }
 
   function updateArchiveMainChoice(value: ArchiveHektorAnnonceMainChoice) {
@@ -6633,13 +6612,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         otherText: archiveOtherText,
         price: archivePrice,
         confrere: archiveConfrere,
-        saleDate: archiveSaleDate,
-        salePrice: archiveSalePrice,
-        saleNetSeller: archiveSaleNetSeller,
-        saleFees: archiveSaleFees,
-        saleBuyerName: archiveSaleBuyerName,
-        saleNotaryName: archiveSaleNotaryName,
-        saleNotes: archiveSaleNotes,
         priority: 8,
       })
       rememberHektorActionJob(job)
@@ -6647,13 +6619,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setArchiveOtherText('')
       setArchivePrice('')
       setArchiveConfrere('')
-      setArchiveSaleDate('')
-      setArchiveSalePrice('')
-      setArchiveSaleNetSeller('')
-      setArchiveSaleFees('')
-      setArchiveSaleBuyerName('')
-      setArchiveSaleNotaryName('')
-      setArchiveSaleNotes('')
       setNoticeMessage(`Archivage demande pour ${archiveAnnonceTarget.numero_dossier ?? archiveAnnonceTarget.hektor_annonce_id}.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d archivage Hektor')
@@ -8365,42 +8330,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <input value={archiveConfrere} onChange={(event) => setArchiveConfrere(event.target.value)} placeholder="Nom agence/confrere" />
                       </label>
                     </div>
-                    {archiveSubChoice === 'agence' ? (
-                      <section className="archive-sale-followup">
-                        <strong>Informations vente agence</strong>
-                        <span>Ces champs preparent les questions de la popin vente Hektor. L'archivage est envoye maintenant, la validation vente complete reste a confirmer lorsque la route Hektor finale sera capturee.</span>
-                        <div className="archive-annonce-grid">
-                          <label className="filter-field">
-                            <span>Date de vente</span>
-                            <input value={archiveSaleDate} onChange={(event) => setArchiveSaleDate(event.target.value)} type="date" />
-                          </label>
-                          <label className="filter-field">
-                            <span>Prix de vente</span>
-                            <input value={archiveSalePrice} onChange={(event) => setArchiveSalePrice(event.target.value)} inputMode="numeric" placeholder="Prix acte" />
-                          </label>
-                          <label className="filter-field">
-                            <span>Net vendeur</span>
-                            <input value={archiveSaleNetSeller} onChange={(event) => setArchiveSaleNetSeller(event.target.value)} inputMode="numeric" placeholder="Net vendeur" />
-                          </label>
-                          <label className="filter-field">
-                            <span>Honoraires</span>
-                            <input value={archiveSaleFees} onChange={(event) => setArchiveSaleFees(event.target.value)} inputMode="numeric" placeholder="Honoraires" />
-                          </label>
-                          <label className="filter-field">
-                            <span>Acquereur</span>
-                            <input value={archiveSaleBuyerName} onChange={(event) => setArchiveSaleBuyerName(event.target.value)} placeholder="Nom acquereur" />
-                          </label>
-                          <label className="filter-field">
-                            <span>Notaire</span>
-                            <input value={archiveSaleNotaryName} onChange={(event) => setArchiveSaleNotaryName(event.target.value)} placeholder="Nom notaire" />
-                          </label>
-                        </div>
-                        <label className="filter-field">
-                          <span>Notes vente</span>
-                          <textarea className="inline-textarea" value={archiveSaleNotes} onChange={(event) => setArchiveSaleNotes(event.target.value)} placeholder="Informations utiles pour completer la vente Hektor" />
-                        </label>
-                      </section>
-                    ) : null}
                   </>
                 ) : (
                   <>

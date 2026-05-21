@@ -3519,13 +3519,6 @@ function normalizeArchiveReasonPayload(payload) {
     confrere: String(payload.archive_confrere || payload.confrere || "").trim(),
     otherText,
     confrereId: String(payload.archive_confrere_id || payload.id_confrere || "").trim(),
-    saleDate: String(payload.sale_date || "").trim(),
-    salePrice: String(payload.sale_price || "").trim(),
-    saleNetSeller: String(payload.sale_net_seller || "").trim(),
-    saleFees: String(payload.sale_fees || "").trim(),
-    buyerName: String(payload.sale_buyer_name || "").trim(),
-    notaryName: String(payload.sale_notary_name || "").trim(),
-    saleNotes: String(payload.sale_notes || "").trim(),
   };
 }
 
@@ -3598,7 +3591,6 @@ async function handleArchiveHektorAnnonce(job) {
     after_archived: after ? after.archived : null,
     main_choice: reason.mainChoice,
     sub_choice: reason.subChoice,
-    sale_followup_required: reason.mainChoice === "choiceVendu" && reason.subChoice === "agence",
   });
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, hektorAnnonceId, {
@@ -3614,16 +3606,6 @@ async function handleArchiveHektorAnnonce(job) {
       sub_choice: reason.subChoice,
       other_text: reason.otherText || null,
     },
-    sale_followup: reason.mainChoice === "choiceVendu" && reason.subChoice === "agence" ? {
-      required: true,
-      date: reason.saleDate || null,
-      price: reason.salePrice || null,
-      net_seller: reason.saleNetSeller || null,
-      fees: reason.saleFees || null,
-      buyer_name: reason.buyerName || null,
-      notary_name: reason.notaryName || null,
-      notes: reason.saleNotes || null,
-    } : null,
     before_property: before && before.property ? {
       id: before.property.id,
       folderNumber: before.property.folderNumber || null,
