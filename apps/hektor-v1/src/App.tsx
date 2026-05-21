@@ -59,6 +59,9 @@ import {
   createUpdateHektorAnnonceFieldsJob,
   createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
+  createArchiveHektorAnnonceJob,
+  type ArchiveHektorAnnonceMainChoice,
+  type ArchiveHektorAnnonceSubChoice,
   createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createMatterportActionJob,
@@ -3734,6 +3737,9 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce') {
     return `Suppression ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
+  if (job.job_type === 'archive_hektor_annonce') {
+    return `Archivage ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
+  }
   if (job.job_type === 'restore_hektor_annonce') {
     return `Desarchivage ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
@@ -3776,6 +3782,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   const matterportLabel = matterportJobActionLabel(job.job_type)
   if (matterportLabel) return matterportLabel
   if (job.job_type === 'delete_hektor_annonce') return 'Suppression en cours'
+  if (job.job_type === 'archive_hektor_annonce') return 'Archivage en cours'
   if (job.job_type === 'restore_hektor_annonce') return 'Desarchivage en cours'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
@@ -3792,6 +3799,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
 
 function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type.startsWith('matterport_')) return job.job_type === 'matterport_archive' ? 'delete' : 'update'
+  if (job.job_type === 'archive_hektor_annonce') return 'update'
   if (job.job_type === 'restore_hektor_annonce') return 'update'
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
@@ -3815,6 +3823,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'prepare_archived_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'prepare_historical_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
+  if (job.job_type === 'archive_hektor_annonce') return 'Archivage Hektor puis resynchronisation'
   if (job.job_type === 'restore_hektor_annonce') return 'Reintegration Hektor puis resynchronisation'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
@@ -3882,12 +3891,13 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
     if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
+    if (job.job_type === 'archive_hektor_annonce') return 'Annonce archivee'
     if (job.job_type === 'restore_hektor_annonce') return 'Annonce desarchivee'
     return 'Action terminee'
   }
   if (progress === 'syncing') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
-    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'restore_hektor_annonce') return "Mise a jour de l'app"
+    if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'archive_hektor_annonce' || job.job_type === 'restore_hektor_annonce') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
@@ -3903,6 +3913,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
 function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
+  if (job.job_type === 'archive_hektor_annonce') return 'Hektor a archive l annonce. Mise a jour de l app en cours...'
   if (job.job_type === 'restore_hektor_annonce') return 'Hektor a desarchive l annonce. Mise a jour de l app en cours...'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Hektor a genere le numero de mandat. Mise a jour de l app en cours...'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
@@ -5454,6 +5465,13 @@ export default function App() {
   const [deleteAnnonceReason, setDeleteAnnonceReason] = useState('')
   const [deleteAnnonceConfirmText, setDeleteAnnonceConfirmText] = useState('')
   const [deleteAnnoncePending, setDeleteAnnoncePending] = useState(false)
+  const [archiveAnnonceTarget, setArchiveAnnonceTarget] = useState<Dossier | null>(null)
+  const [archiveMainChoice, setArchiveMainChoice] = useState<ArchiveHektorAnnonceMainChoice>('choiceAutre')
+  const [archiveSubChoice, setArchiveSubChoice] = useState<ArchiveHektorAnnonceSubChoice>('non_renouvele')
+  const [archiveOtherText, setArchiveOtherText] = useState('')
+  const [archivePrice, setArchivePrice] = useState('')
+  const [archiveConfrere, setArchiveConfrere] = useState('')
+  const [archiveAnnoncePending, setArchiveAnnoncePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
@@ -6548,6 +6566,64 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de suppression Hektor')
     } finally {
       setDeleteAnnoncePending(false)
+    }
+  }
+
+  function openArchiveAnnonceModal(dossier: Dossier) {
+    if (!isAdmin) return
+    setArchiveAnnonceTarget(dossier)
+    setArchiveMainChoice('choiceAutre')
+    setArchiveSubChoice('non_renouvele')
+    setArchiveOtherText('')
+    setArchivePrice('')
+    setArchiveConfrere('')
+    setNoticeMessage(null)
+    setErrorMessage(null)
+  }
+
+  function closeArchiveAnnonceModal() {
+    if (archiveAnnoncePending) return
+    setArchiveAnnonceTarget(null)
+    setArchiveOtherText('')
+    setArchivePrice('')
+    setArchiveConfrere('')
+  }
+
+  function updateArchiveMainChoice(value: ArchiveHektorAnnonceMainChoice) {
+    setArchiveMainChoice(value)
+    setArchiveSubChoice(value === 'choiceVendu' ? 'confrere' : 'non_renouvele')
+  }
+
+  async function handleArchiveHektorAnnonce(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!archiveAnnonceTarget) return
+    if (archiveMainChoice === 'choiceAutre' && archiveSubChoice === 'autre' && !archiveOtherText.trim()) {
+      setErrorMessage('Indique le motif autre avant archivage.')
+      return
+    }
+    setArchiveAnnoncePending(true)
+    setNoticeMessage(null)
+    setErrorMessage(null)
+    try {
+      const job = await createArchiveHektorAnnonceJob({
+        dossier: archiveAnnonceTarget,
+        mainChoice: archiveMainChoice,
+        subChoice: archiveSubChoice,
+        otherText: archiveOtherText,
+        price: archivePrice,
+        confrere: archiveConfrere,
+        priority: 8,
+      })
+      rememberHektorActionJob(job)
+      setArchiveAnnonceTarget(null)
+      setArchiveOtherText('')
+      setArchivePrice('')
+      setArchiveConfrere('')
+      setNoticeMessage(`Archivage demande pour ${archiveAnnonceTarget.numero_dossier ?? archiveAnnonceTarget.hektor_annonce_id}.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d archivage Hektor')
+    } finally {
+      setArchiveAnnoncePending(false)
     }
   }
 
@@ -8211,6 +8287,82 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {archiveAnnonceTarget ? (
+          <div className="modal-overlay" onClick={closeArchiveAnnonceModal}>
+            <section className="modal-panel archive-annonce-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head delete-annonce-head">
+                <span className="modal-hero-icon modal-hero-icon-archive" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Administration Hektor</p>
+                  <h3>Archiver l'annonce</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={closeArchiveAnnonceModal} disabled={archiveAnnoncePending}>Fermer</button>
+              </div>
+              <form className="delete-annonce-form" onSubmit={handleArchiveHektorAnnonce}>
+                <section className="delete-annonce-warning archive-annonce-warning">
+                  <strong>{archiveAnnonceTarget.titre_bien || archiveAnnonceTarget.numero_dossier || `Annonce ${archiveAnnonceTarget.hektor_annonce_id}`}</strong>
+                  <span>Cette action utilise le compte administrateur Hektor, archive le bien, coupe la diffusion, puis lance la resynchronisation de l'app.</span>
+                </section>
+                <label className="filter-field">
+                  <span>Motif principal Hektor</span>
+                  <select value={archiveMainChoice} onChange={(event) => updateArchiveMainChoice(event.target.value as ArchiveHektorAnnonceMainChoice)}>
+                    <option value="choiceAutre">Autre motif</option>
+                    <option value="choiceVendu">Vendu hors agence</option>
+                  </select>
+                </label>
+                {archiveMainChoice === 'choiceVendu' ? (
+                  <div className="archive-annonce-grid">
+                    <label className="filter-field">
+                      <span>Cause</span>
+                      <select value={archiveSubChoice} onChange={(event) => setArchiveSubChoice(event.target.value as ArchiveHektorAnnonceSubChoice)}>
+                        <option value="confrere">Vendu par un confrere</option>
+                        <option value="proprietaire">Vendu par le proprietaire</option>
+                      </select>
+                    </label>
+                    <label className="filter-field">
+                      <span>Prix si connu</span>
+                      <input value={archivePrice} onChange={(event) => setArchivePrice(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" />
+                    </label>
+                    <label className="filter-field">
+                      <span>Confrere si connu</span>
+                      <input value={archiveConfrere} onChange={(event) => setArchiveConfrere(event.target.value)} placeholder="Nom agence/confrere" />
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <label className="filter-field">
+                      <span>Cause</span>
+                      <select value={archiveSubChoice} onChange={(event) => setArchiveSubChoice(event.target.value as ArchiveHektorAnnonceSubChoice)}>
+                        <option value="concurence">Parti a la concurrence</option>
+                        <option value="vendre_seule">Le proprietaire vend seul</option>
+                        <option value="annuler_vente">Vente annulee</option>
+                        <option value="non_renouvele">Mandat non renouvele</option>
+                        <option value="mandat_non_obtenu">Mandat non obtenu</option>
+                        <option value="autre">Autre</option>
+                      </select>
+                    </label>
+                    {archiveSubChoice === 'autre' ? (
+                      <label className="filter-field">
+                        <span>Precision obligatoire</span>
+                        <textarea className="inline-textarea" value={archiveOtherText} onChange={(event) => setArchiveOtherText(event.target.value)} placeholder="Motif transmis a Hektor" />
+                      </label>
+                    ) : null}
+                  </>
+                )}
+                <div className="modal-actions">
+                  <button className="ghost-button button-subtle" type="button" onClick={closeArchiveAnnonceModal} disabled={archiveAnnoncePending}>Annuler</button>
+                  <button
+                    className="ghost-button button-primary"
+                    type="submit"
+                    disabled={archiveAnnoncePending || (archiveMainChoice === 'choiceAutre' && archiveSubChoice === 'autre' && !archiveOtherText.trim())}
+                  >
+                    {archiveAnnoncePending ? 'Envoi...' : 'Archiver dans Hektor'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
             <section
@@ -8940,6 +9092,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
+                onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
               />
@@ -9544,7 +9697,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -9710,6 +9863,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
                 onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
+                onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
               />
@@ -11344,6 +11498,7 @@ function DossierDetailLayout(props: {
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
+  onArchiveAnnonce?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
@@ -11497,6 +11652,12 @@ function DossierDetailLayout(props: {
                       <button className="detail-delete-annonce-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>
                         <span aria-hidden="true"><DetailIcon type="alert" /></span>
                         <strong>Supprimer</strong>
+                      </button>
+                    ) : null}
+                    {props.onArchiveAnnonce && !isLightweightDetail && dossier.archive !== '1' ? (
+                      <button className="detail-archive-annonce-button" type="button" onClick={() => props.onArchiveAnnonce?.(dossier)}>
+                        <span aria-hidden="true"><DetailIcon type="history" /></span>
+                        <strong>Archiver</strong>
                       </button>
                     ) : null}
                   </div>
@@ -12474,6 +12635,7 @@ function AnnonceScreen(props: {
   onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
+  onArchiveAnnonce?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   detailLoading: boolean
   onBack: () => void
@@ -12500,6 +12662,8 @@ function DossierDetailScreen(props: {
   requestHistoryCancellation: Array<{ id: string | number; requestId: string; title: string; status: string; date: string | null | undefined; body: string; cycleTone?: number }>
   requestMessagesCancellation: Array<{ id: string; requestId: string; author: string; date: string; message: string; cycleTone?: number }>
   onHektorActionJobCreated?: (job: ConsoleJob) => void
+  onArchiveAnnonce?: (dossier: Dossier) => void
+  onRestoreAnnonce?: (dossier: Dossier) => void
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
   onBack: () => void
@@ -12557,6 +12721,7 @@ function MobileDossierDetail(props: {
   pendingPortalKeys?: string[]
   onOpenImage?: (url: string) => void
   onDeleteAnnonce?: (dossier: Dossier) => void
+  onArchiveAnnonce?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   detailVariant?: 'annonce' | 'mandat' | 'suivi'

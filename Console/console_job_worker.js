@@ -43,6 +43,7 @@ const DOCUMENT_JOB_TYPES = new Set([
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
+  "archive_hektor_annonce",
   "restore_hektor_annonce",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
@@ -3492,6 +3493,135 @@ async function handleRestoreHektorAnnonce(job) {
   };
 }
 
+const ARCHIVE_MAIN_CHOICES = new Set(["choiceVendu", "choiceAutre"]);
+const ARCHIVE_SUB_CHOICES = {
+  choiceVendu: new Set(["confrere", "proprietaire"]),
+  choiceAutre: new Set(["concurence", "vendre_seule", "annuler_vente", "non_renouvele", "mandat_non_obtenu", "autre"]),
+};
+
+function normalizeArchiveReasonPayload(payload) {
+  const mainChoice = String(payload.archive_main_choice || payload.main_choice || "").trim();
+  const subChoice = String(payload.archive_sub_choice || payload.sub_choice || "").trim();
+  if (!ARCHIVE_MAIN_CHOICES.has(mainChoice)) {
+    throw new Error("Motif principal d archivage invalide");
+  }
+  if (!ARCHIVE_SUB_CHOICES[mainChoice] || !ARCHIVE_SUB_CHOICES[mainChoice].has(subChoice)) {
+    throw new Error("Motif secondaire d archivage invalide");
+  }
+  const otherText = String(payload.archive_other_text || payload.autre || "").trim();
+  if (mainChoice === "choiceAutre" && subChoice === "autre" && !otherText) {
+    throw new Error("Le motif autre est obligatoire pour archiver");
+  }
+  return {
+    mainChoice,
+    subChoice,
+    price: String(payload.archive_price || payload.prix || "").trim(),
+    confrere: String(payload.archive_confrere || payload.confrere || "").trim(),
+    otherText,
+    confrereId: String(payload.archive_confrere_id || payload.id_confrere || "").trim(),
+  };
+}
+
+async function handleArchiveHektorAnnonce(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  const appDossierId = job.app_dossier_id == null ? payload.app_dossier_id : job.app_dossier_id;
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required");
+  const reason = normalizeArchiveReasonPayload(payload);
+
+  await ensureAdminHektorSession(job, "archive_annonce_admin_login");
+  await logJob(job.id, "hektor_annonce_archive", "running", "Verification annonce avant archivage", {
+    hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+    main_choice: reason.mainChoice,
+    sub_choice: reason.subChoice,
+  });
+  const before = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_archive_verify_before");
+
+  const archiveUrl = `${XMLRPC_URL}?${new URLSearchParams({
+    mode: "upval",
+    id: hektorAnnonceId,
+    champ: "archive",
+    val: "1",
+  })}`;
+  await hektorFetch(archiveUrl, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
+    },
+  });
+
+  const archiveReasonParams = new URLSearchParams();
+  archiveReasonParams.set("mode", "popins-StatutBien-statutBienDispatcher");
+  archiveReasonParams.set("context", "validerArchivage");
+  archiveReasonParams.set("idAnnonce", hektorAnnonceId);
+  archiveReasonParams.set("params[id_annonce]", hektorAnnonceId);
+  archiveReasonParams.set("params[prix]", reason.price);
+  archiveReasonParams.set("params[confrere]", reason.confrere);
+  archiveReasonParams.set("params[etat]", reason.mainChoice);
+  archiveReasonParams.set("params[raison]", reason.subChoice);
+  archiveReasonParams.set("params[autre]", reason.otherText);
+  archiveReasonParams.set("params[id_confrere]", reason.confrereId);
+  await hektorFetch(`${XMLRPC_URL}?${archiveReasonParams.toString()}`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
+    },
+  });
+
+  const diffusableUrl = `${XMLRPC_URL}?${new URLSearchParams({
+    mode: "upval",
+    id: hektorAnnonceId,
+    champ: "diffusable",
+    val: "0",
+  })}`;
+  await hektorFetch(diffusableUrl, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
+    },
+  });
+  await sleep(2500);
+
+  const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_archive_verify_after");
+  if (after && after.archived === false) {
+    throw new Error(`Archivage Hektor non confirme pour annonce ${hektorAnnonceId}`);
+  }
+
+  await logJob(job.id, "hektor_annonce_archive", "done", "Archivage Hektor envoye", {
+    hektor_annonce_id: hektorAnnonceId,
+    before_archived: before ? before.archived : null,
+    after_archived: after ? after.archived : null,
+    main_choice: reason.mainChoice,
+    sub_choice: reason.subChoice,
+  });
+
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, hektorAnnonceId, {
+    reason: "archive_hektor_annonce",
+    priority: 78,
+  });
+
+  return {
+    hektor_annonce_id: hektorAnnonceId,
+    app_dossier_id: appDossierId || null,
+    archive_reason: {
+      main_choice: reason.mainChoice,
+      sub_choice: reason.subChoice,
+      other_text: reason.otherText || null,
+    },
+    before_property: before && before.property ? {
+      id: before.property.id,
+      folderNumber: before.property.folderNumber || null,
+      status: before.property.status || null,
+      isArchived: before.property.isArchived === true,
+    } : null,
+    after_property: after && after.property ? {
+      id: after.property.id,
+      folderNumber: after.property.folderNumber || null,
+      status: after.property.status || null,
+      isArchived: after.property.isArchived === true,
+    } : null,
+    sync_job: syncJob,
+  };
+}
+
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const startedAtMs = Date.now();
@@ -3705,6 +3835,8 @@ async function runHandler(job) {
       return handleCreateHektorMandatAutoNumber(job);
     case "delete_hektor_annonce":
       return handleDeleteHektorAnnonce(job);
+    case "archive_hektor_annonce":
+      return handleArchiveHektorAnnonce(job);
     case "restore_hektor_annonce":
       return handleRestoreHektorAnnonce(job);
     case "create_hektor_draft_annonce":

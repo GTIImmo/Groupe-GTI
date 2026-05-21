@@ -476,6 +476,7 @@ export type ConsoleJobType =
   | 'update_hektor_annonce_fields'
   | 'create_hektor_mandat_auto_number'
   | 'delete_hektor_annonce'
+  | 'archive_hektor_annonce'
   | 'restore_hektor_annonce'
   | 'create_hektor_draft_annonce'
   | 'matterport_online'
