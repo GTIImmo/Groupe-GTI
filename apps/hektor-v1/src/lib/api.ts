@@ -423,6 +423,45 @@ function normalizeMatterportGroups(rows: MatterportGroupRow[] | null | undefined
     .sort((a, b) => String(a.numero_mandat ?? '').localeCompare(String(b.numero_mandat ?? ''), 'fr'))
 }
 
+async function loadMatterportGroupsForAnnonce(hektorAnnonceId: number | string | null | undefined) {
+  if (!hasSupabaseEnv || !supabase || hektorAnnonceId == null) return []
+  try {
+    const { data, error } = await supabase
+      .from('app_matterport_group')
+      .select(`
+        id,
+        hektor_annonce_id,
+        numero_mandat,
+        group_label,
+        group_state,
+        group_visibility,
+        match_status,
+        is_validated,
+        synced_at,
+        app_matterport_group_model (
+          id,
+          matterport_model_id,
+          matterport_url,
+          matterport_name,
+          matterport_internal_id,
+          label,
+          display_order,
+          is_primary,
+          state,
+          visibility,
+          created_at_matterport,
+          modified_at_matterport
+        )
+      `)
+      .eq('hektor_annonce_id', hektorAnnonceId)
+      .order('numero_mandat', { ascending: true })
+    if (error) return []
+    return normalizeMatterportGroups(data as MatterportGroupRow[])
+  } catch {
+    return []
+  }
+}
+
 function normalizeHektorApplyMessage(message: string | undefined) {
   return (message ?? '').replace(/Â/g, ' ').replace(/\s+/g, ' ').trim()
 }
@@ -1485,43 +1524,7 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
 
   const detailPayload = parseJsonObject((detailData as DossierDetail | null)?.detail_payload_json ?? null)
 
-  try {
-    const { data: matterportData, error: matterportError } = await supabase
-      .from('app_matterport_group')
-      .select(`
-        id,
-        hektor_annonce_id,
-        numero_mandat,
-        group_label,
-        group_state,
-        group_visibility,
-        match_status,
-        is_validated,
-        synced_at,
-        app_matterport_group_model (
-          id,
-          matterport_model_id,
-          matterport_url,
-          matterport_name,
-          matterport_internal_id,
-          label,
-          display_order,
-          is_primary,
-          state,
-          visibility,
-          created_at_matterport,
-          modified_at_matterport
-        )
-      `)
-      .eq('hektor_annonce_id', dossierData.hektor_annonce_id)
-      .order('numero_mandat', { ascending: true })
-
-    if (!matterportError) {
-      detailPayload.matterport_groups_json = JSON.stringify(normalizeMatterportGroups(matterportData as MatterportGroupRow[]))
-    }
-  } catch {
-    // La table Matterport peut ne pas encore etre appliquee en production.
-  }
+  detailPayload.matterport_groups_json = JSON.stringify(await loadMatterportGroupsForAnnonce(dossierData.hektor_annonce_id))
 
   if (canUseBackendApi()) {
     try {
@@ -1629,6 +1632,7 @@ async function loadLightweightAnnonceDetailCache(
   const firstText = textBlocks.find((item: Record<string, unknown>) => item && (item.html || item.text))
   if (!detail.texte_principal_titre && firstText?.titre) detail.texte_principal_titre = firstText.titre
   if (!detail.texte_principal_html && firstText) detail.texte_principal_html = firstText.html ?? firstText.text
+  detail.matterport_groups_json = JSON.stringify(await loadMatterportGroupsForAnnonce(hektorAnnonceId))
   const appDossierId = Number(index.app_dossier_id ?? index[indexIdKey] ?? payload[payloadIdKey] ?? listing.hektor_annonce_id ?? hektorAnnonceId)
   const priceValue = index.prix ?? listing.prix
   const dossier: DetailedDossier = {

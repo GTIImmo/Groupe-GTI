@@ -43,6 +43,36 @@ def row_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return {key: row[key] for key in row.keys()}
 
 
+def fetch_matterport_groups(annonce_id: str) -> list[dict[str, Any]]:
+    supabase_url = (os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL") or "").rstrip("/")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+    if not supabase_url or not service_key:
+        return []
+    response = requests.get(
+        f"{supabase_url}/rest/v1/app_matterport_group",
+        headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+        params={
+            "select": "*,app_matterport_group_model(*)",
+            "hektor_annonce_id": f"eq.{annonce_id}",
+            "order": "numero_mandat.asc",
+        },
+        timeout=20,
+    )
+    if response.status_code >= 400:
+        return []
+    groups = response.json() or []
+    for group in groups:
+        models = group.pop("app_matterport_group_model", None) or []
+        group["models"] = sorted(
+            models,
+            key=lambda item: (
+                item.get("display_order") if item.get("display_order") is not None else 999,
+                str(item.get("matterport_name") or ""),
+            ),
+        )
+    return groups
+
+
 def nested_value(source: dict[str, Any], *path: str) -> Any:
     value: Any = source
     for key in path:
@@ -199,6 +229,11 @@ def main() -> None:
     finally:
         conn.close()
 
+    payload["detail"]["matterport_groups_json"] = json.dumps(
+        fetch_matterport_groups(annonce_id),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
     payload_text = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     prepared_at = datetime.now(timezone.utc)
     row = {
