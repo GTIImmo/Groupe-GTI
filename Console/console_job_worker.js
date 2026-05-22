@@ -75,6 +75,8 @@ const WORKER_LOCK_PATH = path.join(WORKER_LOCK_DIR, `console_worker_${WORKER_KIN
 const DEFAULT_POLL_INTERVAL_MS = ["sync", "sync_full"].includes(WORKER_KIND) ? 60000 : WORKER_KIND === "sync_light" ? 10000 : 5000;
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
+const NODE_SCRIPT_TIMEOUT_MS = Number(process.env.CONSOLE_NODE_SCRIPT_TIMEOUT_MS || 3 * 60 * 1000);
+const JOB_TIMEOUT_MS = Number(process.env.CONSOLE_JOB_TIMEOUT_MS || 10 * 60 * 1000);
 const ENABLE_HEKTOR_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS || "").toLowerCase() === "true";
 const ENABLE_MATTERPORT_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_MATTERPORT_ACTIONS || "").toLowerCase() === "true";
 const CREATE_HEKTOR_HTTP_DIRECT = String(process.env.CONSOLE_CREATE_HEKTOR_HTTP_DIRECT || "true").toLowerCase() !== "false";
@@ -139,20 +141,39 @@ function isHektorSessionError(error) {
     || message.includes("Missing HTTP_AUTHORIZATION");
 }
 
-function runNodeScript(scriptPath, args = []) {
+function runNodeScript(scriptPath, args = [], options = {}) {
   return new Promise((resolve, reject) => {
+    let settled = false;
     const child = spawn(process.execPath, [scriptPath, ...args], {
       cwd: __dirname,
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });
+    const timeoutMs = Number(options.timeoutMs || 0);
+    const timeout = timeoutMs > 0 ? setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (!child.killed) child.kill("SIGKILL");
+      }, 5000).unref();
+      reject(new Error(`Script ${path.basename(scriptPath)} timeout apres ${timeoutMs}ms`));
+    }, timeoutMs) : null;
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      reject(error);
+    });
     child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
       if (code === 0) {
         resolve({ stdout, stderr });
         return;
@@ -212,12 +233,25 @@ function runProjectPythonScript(args, options = {}) {
   });
 }
 
+function withTimeout(promise, timeoutMs, label) {
+  if (!timeoutMs || timeoutMs <= 0) return promise;
+  let timeout = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(`${label} timeout apres ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
 async function refreshHektorSession(reason = "scheduled") {
   if (hektorLoginPromise) return hektorLoginPromise;
   const loginScript = path.resolve(__dirname, "playwright_login.js");
   hektorLoginPromise = (async () => {
     console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", reason }));
-    await runNodeScript(loginScript);
+    await runNodeScript(loginScript, [], { timeoutMs: NODE_SCRIPT_TIMEOUT_MS });
     lastHektorLoginAt = Date.now();
     console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", status: "done", reason }));
   })();
@@ -1090,23 +1124,34 @@ async function switchHektorUserContextWithPlaywright(idUser) {
 }
 
 async function hektorHtmlRequestWithJar(jar, url) {
-  const response = await fetch(url, {
-    redirect: "manual",
-    headers: {
-      Cookie: cookieHeaderFromJar(jar),
-      Referer: ADMIN_URL,
-      "User-Agent": "Mozilla/5.0 ConsoleWorker/1.0",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
-  });
-  absorbSetCookieHeaders(jar, response.headers);
-  const text = await response.text();
-  if (response.status >= 500) throw new Error(`Hektor ${response.status} on context switch`);
-  return {
-    status: response.status,
-    location: response.headers.get("location"),
-    text,
-  };
+  const timeoutMs = 45000;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      redirect: "manual",
+      signal: controller.signal,
+      headers: {
+        Cookie: cookieHeaderFromJar(jar),
+        Referer: ADMIN_URL,
+        "User-Agent": "Mozilla/5.0 ConsoleWorker/1.0",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    absorbSetCookieHeaders(jar, response.headers);
+    const text = await response.text();
+    if (response.status >= 500) throw new Error(`Hektor ${response.status} on context switch`);
+    return {
+      status: response.status,
+      location: response.headers.get("location"),
+      text,
+    };
+  } catch (error) {
+    if (error && error.name === "AbortError") throw new Error(`Hektor context switch timeout ${timeoutMs}ms on ${url}`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function switchHektorUserContext(idUser) {
@@ -4380,7 +4425,7 @@ async function handleMatterportAction(job) {
     matterport_name: payload.matterport_name || null,
   });
   const scriptPath = path.resolve(__dirname, "matterport_console_actions.js");
-  const result = await runNodeScript(scriptPath, [command, modelId, "--confirm"]);
+  const result = await runNodeScript(scriptPath, [command, modelId, "--confirm"], { timeoutMs: NODE_SCRIPT_TIMEOUT_MS });
   await logJob(job.id, "matterport_console", "done", `Commande Matterport ${command} terminee`, {
     matterport_model_id: modelId,
   });
@@ -4495,7 +4540,7 @@ async function processOnce() {
   });
 
   try {
-    const result = await runHandlerWithSessionRetry(job);
+    const result = await withTimeout(runHandlerWithSessionRetry(job), JOB_TIMEOUT_MS, `Job ${job.job_type}`);
     await logJob(job.id, "finish", "done", "Job completed", result || {});
     await finishJob(job.id, "done", result || {}, null);
   } catch (error) {
