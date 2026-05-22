@@ -36,6 +36,7 @@ import {
   loadMandatStats,
   loadCommercialRequestStats,
   loadSuiviRequestStats,
+  loadHektorAgencyOptions,
   loadHektorNegotiatorOptions,
   loadUserNegotiatorContext,
   loadUserProfile,
@@ -73,7 +74,7 @@ import {
   loadConsoleJobsByIds,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -5588,7 +5589,9 @@ export default function App() {
   const [statusChangeCloseReason, setStatusChangeCloseReason] = useState('')
   const [statusChangePending, setStatusChangePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
+  const [hektorAgencies, setHektorAgencies] = useState<HektorAgencyOption[]>([])
   const [negotiatorAssignTarget, setNegotiatorAssignTarget] = useState<HektorNegotiatorRequiredDossier | null>(null)
+  const [negotiatorAssignAgencyValue, setNegotiatorAssignAgencyValue] = useState('')
   const [negotiatorAssignValue, setNegotiatorAssignValue] = useState('')
   const [negotiatorAssignPending, setNegotiatorAssignPending] = useState(false)
   const [userToolOpen, setUserToolOpen] = useState(false)
@@ -5697,6 +5700,13 @@ export default function App() {
   const selectedDraftNegotiator = useMemo(() => {
     return hektorNegotiators.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, hektorNegotiators])
+  const negotiatorAssignAgency = useMemo(() => {
+    return hektorAgencies.find((item) => item.idAgence === negotiatorAssignAgencyValue) ?? null
+  }, [hektorAgencies, negotiatorAssignAgencyValue])
+  const negotiatorAssignOptions = useMemo(() => {
+    if (!negotiatorAssignAgencyValue) return []
+    return hektorNegotiators.filter((item) => item.hektorAgenceId === negotiatorAssignAgencyValue)
+  }, [hektorNegotiators, negotiatorAssignAgencyValue])
   useEffect(() => {
     setSearchDraft(filters.query)
   }, [filters.query])
@@ -5854,12 +5864,18 @@ export default function App() {
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
-    loadHektorNegotiatorOptions(dataScope)
-      .then((rows) => {
-        if (!cancelled) setHektorNegotiators(rows)
+    Promise.all([loadHektorNegotiatorOptions(dataScope), loadHektorAgencyOptions()])
+      .then(([negotiators, agencies]) => {
+        if (!cancelled) {
+          setHektorNegotiators(negotiators)
+          setHektorAgencies(agencies)
+        }
       })
       .catch(() => {
-        if (!cancelled) setHektorNegotiators([])
+        if (!cancelled) {
+          setHektorNegotiators([])
+          setHektorAgencies([])
+        }
       })
     return () => {
       cancelled = true
@@ -5877,6 +5893,13 @@ export default function App() {
       setDraftAnnonceNegotiatorId('')
     }
   }, [draftAnnonceModalOpen, draftAnnonceNegotiatorId, draftNegotiatorOptions, hektorNegotiators, profile?.role, sessionEmail])
+
+  useEffect(() => {
+    if (!negotiatorAssignTarget || !negotiatorAssignValue) return
+    if (!negotiatorAssignOptions.some((item) => item.hektorNegociateurId === negotiatorAssignValue)) {
+      setNegotiatorAssignValue('')
+    }
+  }, [negotiatorAssignOptions, negotiatorAssignTarget, negotiatorAssignValue])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -6810,7 +6833,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage("Cette action nécessite un négociateur Hektor sur l'annonce. Demande à un administrateur de l'affecter.")
       return
     }
+    const dossierAgency = (dossier.agence_nom ?? '').trim().toLowerCase()
+    const currentAgency = hektorAgencies.find((agency) => dossierAgency && agency.label.trim().toLowerCase() === dossierAgency)
+      ?? hektorAgencies.find((agency) => dossierAgency && agency.label.trim().toLowerCase().includes(dossierAgency))
+      ?? null
     setNegotiatorAssignTarget(dossier)
+    setNegotiatorAssignAgencyValue(currentAgency?.idAgence ?? '')
     setNegotiatorAssignValue('')
     setNoticeMessage(null)
     setErrorMessage(null)
@@ -6819,13 +6847,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   function closeMissingNegotiatorModal() {
     if (negotiatorAssignPending) return
     setNegotiatorAssignTarget(null)
+    setNegotiatorAssignAgencyValue('')
     setNegotiatorAssignValue('')
   }
 
   async function handleAssignHektorNegotiator(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!negotiatorAssignTarget) return
-    const negotiator = hektorNegotiators.find((item) => item.idUser === negotiatorAssignValue)
+    const agency = negotiatorAssignAgency
+    if (!agency) {
+      setErrorMessage('Choisis une agence Hektor avant de lancer l affectation.')
+      return
+    }
+    const negotiator = negotiatorAssignOptions.find((item) => item.hektorNegociateurId === negotiatorAssignValue)
     if (!negotiator) {
       setErrorMessage('Choisis un négociateur Hektor avant de lancer l’affectation.')
       return
@@ -6840,12 +6874,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     try {
       const job = await createAssignHektorAnnonceNegotiatorJob({
         dossier: negotiatorAssignTarget,
+        agency,
         negotiator,
         priority: 9,
       })
       rememberHektorActionJob(job)
-      setNoticeMessage(`Affectation demandée à ${negotiator.label}. Relance l’action après la synchronisation de la fiche.`)
+      setNoticeMessage(`Affectation demandee a ${negotiator.label} sur ${agency.label}. Relance l action apres la synchronisation de la fiche.`)
       setNegotiatorAssignTarget(null)
+      setNegotiatorAssignAgencyValue('')
       setNegotiatorAssignValue('')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de créer la demande d’affectation négociateur.')
@@ -8678,16 +8714,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     : "Cette annonce n'a pas de negociateur Hektor. Les actions comme photo, document, mandat, modification ou changement de statut doivent etre executees dans le contexte d'un negociateur."}
                 </p>
                 <label className="filter-field">
+                  <span>Agence Hektor</span>
+                  <select
+                    value={negotiatorAssignAgencyValue}
+                    onChange={(event) => {
+                      setNegotiatorAssignAgencyValue(event.target.value)
+                      setNegotiatorAssignValue('')
+                    }}
+                    required
+                  >
+                    <option value="">Choisir une agence</option>
+                    {hektorAgencies.map((agency) => (
+                      <option key={agency.idAgence} value={agency.idAgence}>
+                        {agency.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="filter-field">
                   <span>Negociateur Hektor</span>
                   <select value={negotiatorAssignValue} onChange={(event) => setNegotiatorAssignValue(event.target.value)} required>
-                    <option value="">Choisir un negociateur</option>
-                    {hektorNegotiators.map((negotiator) => (
-                      <option key={negotiator.idUser} value={negotiator.idUser}>
+                    <option value="">{negotiatorAssignAgencyValue ? 'Choisir un negociateur' : 'Choisis d abord une agence'}</option>
+                    {negotiatorAssignOptions.map((negotiator) => (
+                      <option key={negotiator.hektorNegociateurId ?? `${negotiator.idUser}-${negotiator.hektorAgenceId}`} value={negotiator.hektorNegociateurId ?? ''}>
                         {negotiator.label}{negotiator.email ? ` - ${negotiator.email}` : ''}
                       </option>
                     ))}
                   </select>
                 </label>
+                {negotiatorAssignAgencyValue && negotiatorAssignOptions.length === 0 ? (
+                  <p className="status-change-note">Aucun negociateur n'est rattache a cette agence dans l'annuaire Hektor synchronise.</p>
+                ) : null}
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeMissingNegotiatorModal} disabled={negotiatorAssignPending}>Annuler</button>
                   <button className="ghost-button button-primary" type="submit" disabled={negotiatorAssignPending || !negotiatorAssignValue}>
@@ -13916,3 +13973,4 @@ function MetricCard({
 function InfoCard({ label, value }: { label: string; value: string | number | null | undefined }) {
   return <article className="info-card"><span>{label}</span><strong>{value == null || value === '' ? '-' : value}</strong></article>
 }
+

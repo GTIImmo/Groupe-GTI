@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -2097,9 +2097,9 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
 
   const [directoryResult, dossierResult] = await Promise.all([
     supabase
-      .from('app_user_directory')
-      .select('id_user,display_name,email,user_type')
-      .eq('user_type', 'NEGO')
+      .from('app_hektor_negotiator_agency_directory')
+      .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email')
+      .order('agence_nom', { ascending: true })
       .order('display_name', { ascending: true })
       .limit(500),
     supabase
@@ -2119,23 +2119,48 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
   }
 
   const wantedEmail = normalizeEmail(scope?.negotiatorEmail)
-  return ((directoryResult.data ?? []) as Array<{ id_user?: string | number | null; display_name?: string | null; email?: string | null }>)
-    .map((row) => {
-      const idUser = row.id_user == null ? '' : String(row.id_user).trim()
+  return ((directoryResult.data ?? []) as Array<{ hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null }>)
+    .map<HektorNegotiatorOption | null>((row) => {
+      const idUser = row.hektor_user_id == null ? '' : String(row.hektor_user_id).trim()
       if (!idUser) return null
       const email = normalizeEmail(row.email)
       if (wantedEmail && email !== wantedEmail) return null
       const dossier = email ? dossierByEmail.get(email) : undefined
-      const label = (dossier?.commercial_nom ?? row.display_name ?? row.email ?? idUser).trim()
+      const label = (row.display_name ?? dossier?.commercial_nom ?? row.email ?? idUser).trim()
       return {
         idUser,
         label: label || idUser,
         email: row.email ?? dossier?.negociateur_email ?? null,
-        agenceNom: dossier?.agence_nom ?? null,
+        agenceNom: row.agence_nom ?? dossier?.agence_nom ?? null,
         commercialId: dossier?.commercial_id == null ? null : String(dossier.commercial_id),
+        hektorNegociateurId: row.hektor_negociateur_id == null ? null : String(row.hektor_negociateur_id),
+        hektorAgenceId: row.hektor_agence_id == null ? null : String(row.hektor_agence_id),
+        agenceIdUser: row.agence_id_user == null ? null : String(row.agence_id_user),
       }
     })
     .filter((item): item is HektorNegotiatorOption => Boolean(item))
+}
+
+export async function loadHektorAgencyOptions(): Promise<HektorAgencyOption[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_agence_directory')
+    .select('id_agence,id_user,nom,mail')
+    .order('nom', { ascending: true })
+    .limit(200)
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as Array<{ id_agence?: string | number | null; id_user?: string | number | null; nom?: string | null; mail?: string | null }>)
+    .map((row) => {
+      const idAgence = row.id_agence == null ? '' : String(row.id_agence).trim()
+      if (!idAgence) return null
+      return {
+        idAgence,
+        idUser: row.id_user == null ? null : String(row.id_user),
+        label: row.nom ?? idAgence,
+        email: row.mail ?? null,
+      }
+    })
+    .filter((item): item is HektorAgencyOption => Boolean(item))
 }
 
 export async function loadMandatsPage({
@@ -4258,7 +4283,8 @@ export async function createChangeHektorAnnonceStatusJob(input: {
 
 export async function createAssignHektorAnnonceNegotiatorJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'> & Partial<Pick<Dossier, 'numero_dossier' | 'titre_bien'>>
-  negotiator: Pick<HektorNegotiatorOption, 'idUser' | 'label' | 'email'>
+  agency?: Pick<HektorAgencyOption, 'idAgence' | 'idUser' | 'label'> | null
+  negotiator: Pick<HektorNegotiatorOption, 'idUser' | 'label' | 'email' | 'agenceNom' | 'hektorNegociateurId' | 'hektorAgenceId' | 'agenceIdUser'>
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -4277,6 +4303,10 @@ export async function createAssignHektorAnnonceNegotiatorJob(input: {
         target_hektor_user_id: targetId,
         target_hektor_user_label: input.negotiator.label ?? null,
         target_hektor_user_email: input.negotiator.email ?? null,
+        target_hektor_negociateur_id: input.negotiator.hektorNegociateurId ?? null,
+        target_hektor_agence_id: input.negotiator.hektorAgenceId ?? input.agency?.idAgence ?? null,
+        target_agency_id_user: input.agency?.idUser ?? input.negotiator.agenceIdUser ?? null,
+        target_agency_label: input.agency?.label ?? input.negotiator.agenceNom ?? null,
       },
       priority: input.priority ?? 9,
       requested_by: userId,

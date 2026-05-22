@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import sqlite3
 import sys
 import urllib.parse
 import urllib.request
@@ -16,6 +17,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from hektor_pipeline.common import HektorClient, Settings
+
+
+HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 
 
 def load_env_file(path: Path) -> None:
@@ -188,6 +192,60 @@ def build_agency_rows(rows: list[dict[str, Any]]) -> list[dict[str, object]]:
     return output
 
 
+def build_negotiator_agency_rows() -> list[dict[str, object]]:
+    if not HEKTOR_DB.exists():
+        return []
+    con = sqlite3.connect(HEKTOR_DB)
+    con.row_factory = sqlite3.Row
+    try:
+        rows = con.execute(
+            """
+            SELECT
+                n.hektor_negociateur_id,
+                n.hektor_user_id,
+                n.hektor_agence_id,
+                ag.nom AS agence_nom,
+                json_extract(ag.raw_json, '$.idUser') AS agence_id_user,
+                n.nom,
+                n.prenom,
+                n.email,
+                n.telephone,
+                n.portable
+            FROM hektor_negociateur n
+            LEFT JOIN hektor_agence ag ON ag.hektor_agence_id = n.hektor_agence_id
+            WHERE NULLIF(TRIM(n.hektor_negociateur_id), '') IS NOT NULL
+            ORDER BY
+                COALESCE(ag.nom, ''),
+                COALESCE(n.prenom, ''),
+                COALESCE(n.nom, '')
+            """
+        ).fetchall()
+    finally:
+        con.close()
+
+    output: list[dict[str, object]] = []
+    for row in rows:
+        display_name = " ".join(
+            part for part in [str(row["prenom"] or "").strip(), str(row["nom"] or "").strip()] if part
+        ) or None
+        payload = {
+            "hektor_negociateur_id": str(row["hektor_negociateur_id"] or "").strip(),
+            "hektor_user_id": str(row["hektor_user_id"] or "").strip() or None,
+            "hektor_agence_id": str(row["hektor_agence_id"] or "").strip() or None,
+            "agence_id_user": str(row["agence_id_user"] or "").strip() or None,
+            "agence_nom": str(row["agence_nom"] or "").strip() or None,
+            "nom": str(row["nom"] or "").strip() or None,
+            "prenom": str(row["prenom"] or "").strip() or None,
+            "display_name": display_name,
+            "email": str(row["email"] or "").strip() or None,
+            "telephone": str(row["telephone"] or "").strip() or None,
+            "portable": str(row["portable"] or "").strip() or None,
+        }
+        payload["source_hash"] = stable_hash(payload)
+        output.append(payload)
+    return output
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Synchronise users et agences Hektor vers Supabase.")
     parser.add_argument("--skip-purge", action="store_true", help="N'efface pas les ids absents du listing source.")
@@ -213,6 +271,7 @@ def main() -> None:
     raw_agencies = fetch_all_agencies(hektor, settings.api_version)
     user_rows = dedupe_rows(build_user_rows(raw_users), "id_user")
     agency_rows = dedupe_rows(build_agency_rows(raw_agencies), "id_agence")
+    negotiator_agency_rows = dedupe_rows(build_negotiator_agency_rows(), "hektor_negociateur_id")
 
     if args.dump_dir:
         dump_dir = Path(args.dump_dir)
@@ -222,11 +281,14 @@ def main() -> None:
         write_json(dump_dir / "hektor_users_directory.json", user_rows)
         write_json(dump_dir / "hektor_agences_raw.json", raw_agencies)
         write_json(dump_dir / "hektor_agences_directory.json", agency_rows)
+        write_json(dump_dir / "hektor_negotiator_agency_directory.json", negotiator_agency_rows)
         write_json(dump_dir / "hektor_users_duplicate_ids.json", duplicate_user_ids)
         write_json(dump_dir / "hektor_users_duplicates.json", duplicate_user_rows)
 
     client.upsert_rows(path="app_user_directory", rows=user_rows)
     client.upsert_rows(path="app_agence_directory", rows=agency_rows)
+    if negotiator_agency_rows:
+        client.upsert_rows(path="app_hektor_negotiator_agency_directory", rows=negotiator_agency_rows)
 
     deleted_users = 0
     deleted_agencies = 0
@@ -241,12 +303,19 @@ def main() -> None:
             column="id_agence",
             keep_ids=[str(row["id_agence"]) for row in agency_rows],
         )
+        if negotiator_agency_rows:
+            client.delete_missing(
+                path="app_hektor_negotiator_agency_directory",
+                column="hektor_negociateur_id",
+                keep_ids=[str(row["hektor_negociateur_id"]) for row in negotiator_agency_rows],
+            )
 
     print(
         json.dumps(
             {
                 "users_upserted": len(user_rows),
                 "agencies_upserted": len(agency_rows),
+                "negotiator_agencies_upserted": len(negotiator_agency_rows),
                 "users_deleted": deleted_users,
                 "agencies_deleted": deleted_agencies,
                 "dump_dir": args.dump_dir or None,

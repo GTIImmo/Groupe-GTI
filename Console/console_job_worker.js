@@ -980,6 +980,7 @@ async function resolveHektorAnnonceAgencyContext(annonceId, target = {}) {
   ];
   if (target.idUser) args.push("--target-user-id", String(target.idUser));
   if (target.email) args.push("--target-email", String(target.email));
+  if (target.agencyId) args.push("--agency-id", String(target.agencyId));
   const result = await runProjectPythonScript(args, { timeoutMs: 30000, previewSize: 4000 });
   const text = String(result.stdout || "").trim();
   if (!text) return null;
@@ -3189,14 +3190,19 @@ async function handleAssignHektorAnnonceNegotiator(job) {
   if (!annonceId) throw new Error("hektor_annonce_id required");
   if (!/^\d+$/.test(targetId)) throw new Error("target_hektor_user_id numerique requis");
 
-  const directoryUser = await loadHektorDirectoryUserById(targetId);
-  if (!directoryUser || String(directoryUser.user_type || "").toUpperCase() !== "NEGO") {
+  const directoryUser = await loadHektorDirectoryUserById(targetId).catch(() => null) || {
+    user_type: "NEGO",
+    display_name: payload.target_hektor_user_label || payload.hektor_user_label || null,
+    email: payload.target_hektor_user_email || payload.hektor_user_email || null,
+  };
+  if (String(directoryUser.user_type || "").toUpperCase() !== "NEGO") {
     throw new Error(`Négociateur Hektor introuvable pour idUser ${targetId}`);
   }
 
   const agencyContext = await resolveHektorAnnonceAgencyContext(annonceId, {
     idUser: targetId,
     email: directoryUser.email || payload.target_hektor_user_email || payload.hektor_user_email || null,
+    agencyId: payload.target_hektor_agence_id || payload.hektor_agence_id || null,
   });
   if (!agencyContext || !agencyContext.agency_id_user) {
     throw new Error(`Contexte agence Hektor introuvable pour l'annonce ${annonceId}`);
@@ -3207,6 +3213,25 @@ async function handleAssignHektorAnnonceNegotiator(job) {
   const targetNegotiatorId = String(agencyContext.target_hektor_negociateur_id);
 
   await ensureAdminHektorSession(job, "assign_negotiator_admin_login");
+  if (agencyContext.agency_changed) {
+    await logJob(job.id, "hektor_assign_agency", "running", "Changement de l'agence Hektor", {
+      hektor_annonce_id: annonceId,
+      current_hektor_agence_id: agencyContext.current_hektor_agence_id || null,
+      target_hektor_agence_id: agencyContext.hektor_agence_id || null,
+      target_agency_label: agencyContext.agency_label || null,
+    });
+    await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+      mode: "upval",
+      id: annonceId,
+      champ: "agence",
+      val: String(agencyContext.hektor_agence_id),
+    })}`, {
+      headers: {
+        Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      },
+    });
+    await sleep(1500);
+  }
   await switchHektorUserContext(agencyContext.agency_id_user);
   await logJob(job.id, "hektor_assign_negotiator", "running", "Affectation du negociateur Hektor", {
     hektor_annonce_id: annonceId,

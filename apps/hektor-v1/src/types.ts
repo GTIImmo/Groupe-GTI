@@ -267,6 +267,16 @@ export type HektorNegotiatorOption = {
   email: string | null
   agenceNom: string | null
   commercialId: string | null
+  hektorNegociateurId?: string | null
+  hektorAgenceId?: string | null
+  agenceIdUser?: string | null
+}
+
+export type HektorAgencyOption = {
+  idAgence: string
+  idUser: string | null
+  label: string
+  email: string | null
 }
 
 export type MandatRecord = {

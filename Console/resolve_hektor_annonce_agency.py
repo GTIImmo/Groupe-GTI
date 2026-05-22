@@ -13,6 +13,7 @@ DB_PATH = ROOT / "data" / "hektor.sqlite"
 def main() -> int:
     parser = argparse.ArgumentParser(description="Resolve the agency user context required for a Hektor annonce.")
     parser.add_argument("--annonce-id", required=True)
+    parser.add_argument("--agency-id")
     parser.add_argument("--target-user-id")
     parser.add_argument("--target-email")
     args = parser.parse_args()
@@ -50,13 +51,32 @@ def main() -> int:
             raw = {}
 
         id_user = str(raw.get("idUser") or "").strip()
+        selected_agency_id = str(args.agency_id or "").strip() or str(row["hektor_agence_id"] or "").strip()
+        agency_row = con.execute(
+            """
+            SELECT hektor_agence_id, nom, mail, raw_json
+            FROM hektor_agence
+            WHERE hektor_agence_id = ?
+            LIMIT 1
+            """,
+            (selected_agency_id,),
+        ).fetchone()
+        agency_raw = {}
+        try:
+            agency_raw = json.loads((agency_row["raw_json"] if agency_row else row["raw_json"]) or "{}")
+        except Exception:
+            agency_raw = raw
+        agency_id_user = str(agency_raw.get("idUser") or "").strip()
+
         payload = {
             "found": True,
             "hektor_annonce_id": str(row["hektor_annonce_id"] or ""),
-            "hektor_agence_id": str(row["hektor_agence_id"] or ""),
-            "agency_id_user": id_user or None,
-            "agency_label": row["nom"],
-            "agency_email": row["mail"],
+            "current_hektor_agence_id": str(row["hektor_agence_id"] or ""),
+            "hektor_agence_id": selected_agency_id,
+            "agency_changed": selected_agency_id != str(row["hektor_agence_id"] or "").strip(),
+            "agency_id_user": agency_id_user or id_user or None,
+            "agency_label": (agency_row["nom"] if agency_row else row["nom"]),
+            "agency_email": (agency_row["mail"] if agency_row else row["mail"]),
         }
 
         target_email = str(args.target_email or "").strip().lower()
