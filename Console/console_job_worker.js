@@ -69,7 +69,8 @@ const ALL_JOB_TYPES_BY_KIND = {
 };
 const WORKER_ID = process.env.CONSOLE_WORKER_ID || `${os.hostname()}:${WORKER_KIND}:${process.pid}`;
 const WORKER_LOCK_DIR = path.resolve(__dirname, ".locks");
-const WORKER_LOCK_PATH = path.join(WORKER_LOCK_DIR, `console_worker_${WORKER_KIND}.lock`);
+const WORKER_GENERATION = String(process.env.CONSOLE_WORKER_GENERATION || "manual").replace(/[^A-Za-z0-9_-]/g, "_");
+const WORKER_LOCK_PATH = path.join(WORKER_LOCK_DIR, `console_worker_${WORKER_KIND}_${WORKER_GENERATION}.lock`);
 const DEFAULT_POLL_INTERVAL_MS = ["sync", "sync_full"].includes(WORKER_KIND) ? 60000 : WORKER_KIND === "sync_light" ? 10000 : 5000;
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
@@ -958,6 +959,22 @@ async function loadHektorDirectoryUserByEmail(email) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function loadAnyHektorDirectoryUserByEmail(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  const params = new URLSearchParams({
+    select: "id_user,display_name,email,user_type",
+    email: `ilike.${normalized}`,
+    limit: "5",
+  });
+  const rows = await supabaseRequest(`app_user_directory?${params.toString()}`, { method: "GET" });
+  if (!Array.isArray(rows) || !rows.length) return null;
+  return rows.find((row) => row.user_type === "NEGO")
+    || rows.find((row) => row.user_type === "ADMIN")
+    || rows.find((row) => row.user_type === "AGENCE")
+    || rows[0];
+}
+
 async function loadHektorDirectoryUserById(idUser) {
   if (idUser == null || String(idUser).trim() === "") return null;
   const params = new URLSearchParams({
@@ -995,7 +1012,10 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
     const normalized = normalizeEmail(email);
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
-    const directoryUser = await loadHektorDirectoryUserByEmail(normalized).catch(() => null);
+    let directoryUser = await loadHektorDirectoryUserByEmail(normalized).catch(() => null);
+    if (!directoryUser && profile && normalizeEmail(profile.email) === normalized && (profile.role === "admin" || profile.role === "manager")) {
+      directoryUser = await loadAnyHektorDirectoryUserByEmail(normalized).catch(() => null);
+    }
     if (directoryUser && directoryUser.id_user) {
       return {
         idUser: String(directoryUser.id_user),

@@ -23,7 +23,8 @@ if ($SyncWorker) {
   $WorkerKind = "sync_light"
 }
 $env:CONSOLE_WORKER_KIND = $WorkerKind
-$env:CONSOLE_WORKER_ID = "$($env:COMPUTERNAME):$($WorkerKind):scheduled:v2"
+$env:CONSOLE_WORKER_GENERATION = "v3"
+$env:CONSOLE_WORKER_ID = "$($env:COMPUTERNAME):$($WorkerKind):scheduled:$($env:CONSOLE_WORKER_GENERATION)"
 if (-not $env:CONSOLE_WORKER_POLL_INTERVAL_MS) {
   $env:CONSOLE_WORKER_POLL_INTERVAL_MS = if ($WorkerKind -in @("sync", "sync_full")) { "60000" } elseif ($WorkerKind -eq "sync_light") { "10000" } else { "5000" }
 }
