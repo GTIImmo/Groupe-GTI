@@ -505,6 +505,10 @@ function isValidationApproved(value: string | null | undefined) {
   return normalized === '1' || normalized === 'true' || normalized === 'oui' || normalized === 'valide' || normalized === 'validee' || normalized === 'validation ok' || normalized === 'validation_ok' || normalized === 'ok'
 }
 
+function hasMandatNumber(value: string | null | undefined) {
+  return Boolean((value ?? '').trim())
+}
+
 function normalizeOfferPropositionType(value: string | null | undefined) {
   const state = normalizeBusinessState(value)
   if (state === 'accepted') return 'accepte'
@@ -956,15 +960,18 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (validationDiffusion === '__validated__') {
     query = query.or(
       [
+        'validation_diffusion_state.eq.1',
+        'validation_diffusion_state.eq.true',
         'validation_diffusion_state.eq.oui',
         'validation_diffusion_state.eq.valide',
         'validation_diffusion_state.eq.validee',
+        'validation_diffusion_state.eq.validation ok',
         'validation_diffusion_state.eq.validation_ok',
         'validation_diffusion_state.eq.ok',
       ].join(','),
     )
   } else if (validationDiffusion === '__not_validated__') {
-    query = query.not('validation_diffusion_state', 'in', '("oui","valide","validee","validation_ok","ok")')
+    query = query.or('validation_diffusion_state.is.null,validation_diffusion_state.eq.,validation_diffusion_state.not.in.("1","true","oui","valide","validee","validation ok","validation_ok","ok")')
   } else if (validationDiffusion) {
     query = query.eq('validation_diffusion_state', validationDiffusion)
   }
@@ -2422,8 +2429,8 @@ export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataS
       withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
       mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
       mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
-      mandatValide: rows.filter((item) => isValidationApproved(item.validation_diffusion_state)).length,
-      mandatNonValide: rows.filter((item) => !isValidationApproved(item.validation_diffusion_state)).length,
+      mandatValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && isValidationApproved(item.validation_diffusion_state)).length,
+      mandatNonValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && !isValidationApproved(item.validation_diffusion_state)).length,
       offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
       offresRefusees: rows.filter((item) => hasOffreAchatRefusee(item)).length,
       compromisEnCours: rows.filter((item) => hasCompromisEnCours(item)).length,
@@ -2470,8 +2477,8 @@ export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataS
     withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
     mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
     mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
-    mandatValide: rows.filter((item) => isValidationApproved(item.validation_diffusion_state)).length,
-    mandatNonValide: rows.filter((item) => !isValidationApproved(item.validation_diffusion_state)).length,
+    mandatValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && isValidationApproved(item.validation_diffusion_state)).length,
+    mandatNonValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && !isValidationApproved(item.validation_diffusion_state)).length,
     offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
     offresRefusees: rows.filter((item) => hasOffreAchatRefusee(item)).length,
     compromisEnCours: rows.filter((item) => hasCompromisEnCours(item)).length,
@@ -2510,8 +2517,8 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
       withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
       mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
       mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
-      mandatValide: rows.filter((item) => isValidationApproved(item.validation_diffusion_state)).length,
-      mandatNonValide: rows.filter((item) => !isValidationApproved(item.validation_diffusion_state)).length,
+      mandatValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && isValidationApproved(item.validation_diffusion_state)).length,
+      mandatNonValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && !isValidationApproved(item.validation_diffusion_state)).length,
       offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
       offresRefusees: rows.filter((item) => hasOffreAchatRefusee(item)).length,
       compromisEnCours: rows.filter((item) => hasCompromisEnCours(item)).length,
@@ -2558,8 +2565,8 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
     withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
     mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
     mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
-    mandatValide: rows.filter((item) => isValidationApproved(item.validation_diffusion_state)).length,
-    mandatNonValide: rows.filter((item) => !isValidationApproved(item.validation_diffusion_state)).length,
+    mandatValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && isValidationApproved(item.validation_diffusion_state)).length,
+    mandatNonValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && !isValidationApproved(item.validation_diffusion_state)).length,
     offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
     offresRefusees: rows.filter((item) => hasOffreAchatRefusee(item)).length,
     compromisEnCours: rows.filter((item) => hasCompromisEnCours(item)).length,
