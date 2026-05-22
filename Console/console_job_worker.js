@@ -1006,6 +1006,73 @@ async function loadHektorDirectoryUserById(idUser) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function loadHektorNegotiatorAgencyRows(filters = {}) {
+  const params = new URLSearchParams({
+    select: "hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email",
+    limit: String(filters.limit || 10),
+  });
+  if (filters.negotiatorId) params.set("hektor_negociateur_id", `eq.${String(filters.negotiatorId).trim()}`);
+  if (filters.userId) params.set("hektor_user_id", `eq.${String(filters.userId).trim()}`);
+  if (filters.email) params.set("email", `ilike.${normalizeEmail(filters.email)}`);
+  const rows = await supabaseRequest(`app_hektor_negotiator_agency_directory?${params.toString()}`, { method: "GET" });
+  return Array.isArray(rows) ? rows : [];
+}
+
+function agencyNameMatches(left, right) {
+  const normalize = (value) => String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const a = normalize(left);
+  const b = normalize(right);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+}
+
+function agencyDirectoryRowToExecutionUser(row, source, fallback = {}) {
+  if (!row || !row.hektor_user_id) return null;
+  return {
+    idUser: String(row.hektor_user_id),
+    label: row.display_name || fallback.label || null,
+    email: row.email || fallback.email || null,
+    source,
+    agencyId: row.hektor_agence_id || row.agence_id_user || null,
+    negotiatorId: row.hektor_negociateur_id || null,
+  };
+}
+
+async function resolveHektorNegotiatorFromAgencyDirectory(dossier, email = null) {
+  const commercialId = dossier && dossier.commercial_id ? String(dossier.commercial_id).trim() : "";
+  const agenceNom = dossier && dossier.agence_nom ? String(dossier.agence_nom).trim() : "";
+
+  if (commercialId) {
+    const rows = await loadHektorNegotiatorAgencyRows({ negotiatorId: commercialId, limit: 10 }).catch(() => []);
+    const exactAgency = rows.find((row) => agencyNameMatches(row.agence_nom, agenceNom));
+    const row = exactAgency || rows[0];
+    const user = agencyDirectoryRowToExecutionUser(row, exactAgency ? "dossier_commercial_id_agency" : "dossier_commercial_id", {
+      label: dossier.commercial_nom,
+      email: dossier.negociateur_email,
+    });
+    if (user) return user;
+  }
+
+  const normalizedEmail = normalizeEmail(email || (dossier && dossier.negociateur_email));
+  if (normalizedEmail) {
+    const rows = await loadHektorNegotiatorAgencyRows({ email: normalizedEmail, limit: 25 }).catch(() => []);
+    const exactCommercial = commercialId ? rows.find((row) => String(row.hektor_negociateur_id || "").trim() === commercialId) : null;
+    const exactAgency = rows.find((row) => agencyNameMatches(row.agence_nom, agenceNom));
+    const row = exactCommercial || exactAgency || (rows.length === 1 ? rows[0] : null);
+    const user = agencyDirectoryRowToExecutionUser(row, exactCommercial ? "email_commercial_id" : exactAgency ? "email_agency" : "email_unique", {
+      label: dossier && dossier.commercial_nom,
+      email: normalizedEmail,
+    });
+    if (user) return user;
+  }
+
+  return null;
+}
+
 async function resolveHektorAnnonceAgencyContext(annonceId, target = {}) {
   const args = [
     "Console/resolve_hektor_annonce_agency.py",
@@ -1039,13 +1106,16 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
   }
 
   if (options.preferDossierOwner && dossier && dossier.commercial_id) {
+    const agencyDirectoryUser = await resolveHektorNegotiatorFromAgencyDirectory(dossier).catch(() => null);
+    if (agencyDirectoryUser && agencyDirectoryUser.idUser) return agencyDirectoryUser;
+
     const directoryUser = await loadHektorDirectoryUserById(dossier.commercial_id).catch(() => null);
     if (directoryUser && directoryUser.id_user) {
       return {
         idUser: String(directoryUser.id_user),
         label: directoryUser.display_name || dossier.commercial_nom || null,
         email: directoryUser.email || dossier.negociateur_email || null,
-        source: "dossier_commercial_id",
+        source: "dossier_commercial_id_legacy",
       };
     }
   }
@@ -1063,6 +1133,9 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
     const normalized = normalizeEmail(email);
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
+    const agencyDirectoryUser = await resolveHektorNegotiatorFromAgencyDirectory(dossier, normalized).catch(() => null);
+    if (agencyDirectoryUser && agencyDirectoryUser.idUser) return agencyDirectoryUser;
+
     let directoryUser = await loadHektorDirectoryUserByEmail(normalized).catch(() => null);
     if (directoryUser && directoryUser.id_user) {
       return {
