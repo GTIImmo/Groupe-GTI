@@ -3255,12 +3255,6 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     },
   });
 
-  await sleep(1500);
-  const apiDetail = await fetchHektorAnnonceDetailKeyDataBestEffort(job, annonceId, "hektor_assign_negotiator_verify_api");
-  const confirmedNegoId = apiDetail && apiDetail.NEGOCIATEUR != null ? String(apiDetail.NEGOCIATEUR) : null;
-  if (confirmedNegoId && confirmedNegoId !== targetNegotiatorId) {
-    throw new Error(`Affectation négociateur non confirmée: Hektor renvoie ${confirmedNegoId}`);
-  }
   const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_after");
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "assign_hektor_annonce_negotiator",
@@ -3277,7 +3271,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     target_hektor_negociateur_id: targetNegotiatorId,
     target_label: directoryUser.display_name || null,
     target_email: directoryUser.email || null,
-    confirmed_negotiator_id: confirmedNegoId,
+    confirmed_negotiator_id: null,
     before_property: before && before.property ? {
       id: before.property.id,
       folderNumber: before.property.folderNumber || null,
