@@ -403,6 +403,13 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
   } satisfies Record<HektorAdvancedFieldKey, string>
 }
 
+const hektorFinancialFieldKeys = new Set<HektorAdvancedFieldKey>([
+  'price',
+  'netSellerPrice',
+  'coproCharges',
+  'fees',
+])
+
 function HektorAnnonceUpdateForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email'>
   detail: DossierDetailPayload
@@ -437,13 +444,24 @@ function HektorAnnonceUpdateForm(props: {
       props.onMissingNegotiator?.(dossier)
       return
     }
+    const baseline = buildHektorAdvancedDraft(dossier, detail)
+    const changedValues = Object.fromEntries(
+      Object.entries(values).filter(([key, value]) => String(value ?? '').trim() !== String(baseline[key as HektorAdvancedFieldKey] ?? '').trim()),
+    ) as Partial<Record<HektorAdvancedFieldKey, string>>
+    if (Object.keys(changedValues).length === 0) {
+      setError('Aucune modification a envoyer.')
+      return
+    }
+    const blockedFinancialFields = Object.keys(changedValues).filter((key) => hektorFinancialFieldKeys.has(key as HektorAdvancedFieldKey))
+    if (blockedFinancialFields.length > 0) {
+      setError("Hektor refuse la modification directe du prix et des champs financiers depuis cette fiche. Utilise le workflow mandat/statut adapte ou modifie ces champs directement dans Hektor.")
+      return
+    }
     setPending(true)
     try {
       const job = await createUpdateHektorAnnonceFieldsJob({
         dossier,
-        fields: {
-          ...values,
-        },
+        fields: changedValues,
         priority: 14,
       })
       props.onJobCreated?.(job)
@@ -8641,8 +8659,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Action Hektor bloquee</p>
-                  <h3>Affecter un negociateur</h3>
+                  <p className="eyebrow">{hasHektorNegotiator(negotiatorAssignTarget) ? 'Administration Hektor' : 'Action Hektor bloquee'}</p>
+                  <h3>{hasHektorNegotiator(negotiatorAssignTarget) ? 'Reaffecter le negociateur' : 'Affecter un negociateur'}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeMissingNegotiatorModal} disabled={negotiatorAssignPending}>Fermer</button>
               </div>
@@ -8652,10 +8670,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <strong>{negotiatorAssignTarget.titre_bien || negotiatorAssignTarget.numero_dossier || `Annonce ${negotiatorAssignTarget.hektor_annonce_id}`}</strong>
                     <span>{negotiatorAssignTarget.numero_dossier ?? '-'} · mandat {negotiatorAssignTarget.numero_mandat ?? '-'}</span>
                   </div>
-                  <StatusPill value="Nego requis" />
+                  <StatusPill value={hasHektorNegotiator(negotiatorAssignTarget) ? 'Reaffectation' : 'Nego requis'} />
                 </section>
                 <p className="status-change-note">
-                  Cette annonce n'a pas de negociateur Hektor. Les actions comme photo, document, mandat, modification ou changement de statut doivent etre executees dans le contexte d'un negociateur.
+                  {hasHektorNegotiator(negotiatorAssignTarget)
+                    ? "Choisis le compte negociateur qui doit reprendre cette annonce. Le worker admin mettra Hektor a jour puis relancera la synchronisation de la fiche."
+                    : "Cette annonce n'a pas de negociateur Hektor. Les actions comme photo, document, mandat, modification ou changement de statut doivent etre executees dans le contexte d'un negociateur."}
                 </p>
                 <label className="filter-field">
                   <span>Negociateur Hektor</span>
@@ -12113,6 +12133,11 @@ function DossierDetailLayout(props: {
                           <span>Responsable</span>
                           <strong>{dossier.commercial_nom ?? '-'}</strong>
                           {dossier.agence_nom ? <small>{dossier.agence_nom}</small> : null}
+                          {props.onMissingNegotiator ? (
+                            <button className="detail-owner-reassign" type="button" onClick={() => props.onMissingNegotiator?.(dossier)}>
+                              Reaffecter
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     ) : null}
@@ -13319,6 +13344,11 @@ function MobileDossierDetail(props: {
         <div className="mobile-detail-section-head">
           <span>Synthèse</span>
           <strong>{dossier.commercial_nom ?? '-'}</strong>
+          {props.onMissingNegotiator ? (
+            <button className="mobile-reassign-button" type="button" onClick={() => props.onMissingNegotiator?.(dossier)}>
+              Reaffecter
+            </button>
+          ) : null}
         </div>
         <div className="mobile-detail-facts">
           {detailFacts.map(([label, value]) => (

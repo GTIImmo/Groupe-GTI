@@ -2522,6 +2522,9 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     parsed = null;
   }
   if (parsed && String(parsed.result) !== "1") {
+    if (groupName === "mandat_infofi" && /Credential Error/i.test(response.text)) {
+      throw new Error("Hektor refuse la modification directe du prix ou des champs financiers sur cette fiche. Utilise le workflow mandat/statut adapte ou modifie ces champs directement dans Hektor.");
+    }
     throw new Error(`Hektor update_annonce_MEF ${groupName} refuse: ${response.text.slice(0, 500)}`);
   }
   return {

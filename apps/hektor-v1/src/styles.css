@@ -4113,6 +4113,24 @@ tbody tr.is-refreshing-row td {
   color: #6a7780;
   font-size: 11px;
 }
+.detail-owner-reassign {
+  justify-self: start;
+  width: max-content;
+  margin-top: 3px;
+  border: 1px solid rgba(15, 111, 123, 0.22);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f6f7b;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.detail-owner-reassign:hover {
+  border-color: rgba(15, 111, 123, 0.42);
+  background: rgba(15, 111, 123, 0.08);
+}
 .detail-keyfacts {
   grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
   border-radius: 12px;
