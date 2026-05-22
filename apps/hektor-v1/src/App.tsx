@@ -102,11 +102,11 @@ type DetailContact = {
   negotiatorId?: string
 }
 
-type HektorNegotiatorRequiredDossier = Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'> & Partial<Pick<Dossier, 'numero_dossier' | 'numero_mandat' | 'titre_bien' | 'ville' | 'commercial_nom' | 'agence_nom' | 'negociateur_email'>>
+type HektorNegotiatorRequiredDossier = Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'> & Partial<Pick<Dossier, 'numero_dossier' | 'numero_mandat' | 'titre_bien' | 'ville' | 'commercial_id' | 'commercial_nom' | 'agence_nom' | 'negociateur_email'>>
 type MissingNegotiatorHandler = (dossier: HektorNegotiatorRequiredDossier) => void
 
 function hasHektorNegotiator(dossier: HektorNegotiatorRequiredDossier) {
-  return Boolean(String(dossier.negociateur_email ?? '').trim())
+  return Boolean(String(dossier.commercial_id ?? '').trim() || String(dossier.negociateur_email ?? '').trim())
 }
 
 const allFilterValue = '__all__'

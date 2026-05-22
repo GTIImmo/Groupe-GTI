@@ -984,6 +984,18 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
     };
   }
 
+  if (options.preferDossierOwner && dossier && dossier.commercial_id) {
+    const directoryUser = await loadHektorDirectoryUserById(dossier.commercial_id).catch(() => null);
+    if (directoryUser && directoryUser.id_user) {
+      return {
+        idUser: String(directoryUser.id_user),
+        label: directoryUser.display_name || dossier.commercial_nom || null,
+        email: directoryUser.email || dossier.negociateur_email || null,
+        source: "dossier_commercial_id",
+      };
+    }
+  }
+
   const emails = [];
   const profile = job.requested_by ? await loadAppUserProfile(job.requested_by).catch(() => null) : null;
   if (options.preferRequester && profile && profile.role === "commercial" && profile.email) emails.push(profile.email);
