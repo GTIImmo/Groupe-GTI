@@ -6138,6 +6138,10 @@ export default function App() {
     if (selectedDossierId == null || (hasSupabaseEnv && !session)) return
     const quickMandat = mandats.find((item) => item.app_dossier_id === selectedDossierId)
     const quickBase = dossiers.find((item) => item.app_dossier_id === selectedDossierId) ?? quickMandat ?? null
+    if (!quickBase && selectedDossier?.app_dossier_id === selectedDossierId && isLightweightAnnonceRecord(selectedDossier)) {
+      setDetailLoading(false)
+      return
+    }
     if (isLightweightAnnonceRecord(quickBase)) {
       setDetailLoading(false)
       return
@@ -6157,7 +6161,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDossierId, session, dataReloadKey, dossiers, mandats])
+  }, [selectedDossierId, session, dataReloadKey, dossiers, mandats, selectedDossier])
 
   useEffect(() => {
     if (deepLinkHandled || bootLoading || (hasSupabaseEnv && !session)) return
@@ -6631,9 +6635,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setDataReloadKey((value) => value + 1)
       return
     }
-    setScreen('annonces')
+    setScreen('mandats')
     if ('detail_payload_json' in dossier) setSelectedDossier(dossier as DetailedDossier)
     setSelectedDossierId(dossier.app_dossier_id)
+    setSelectedMandatId(dossier.app_dossier_id)
     setDataReloadKey((value) => value + 1)
     setDetailOpen(true)
     dismissHektorActionPopup(job.id)
@@ -12090,8 +12095,8 @@ function DossierDetailLayout(props: {
   const detailVariant = props.detailVariant ?? 'annonce'
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
-  const isLightweightDetail = isArchivedAnnonceRecord(dossier)
-  const lightweightDetailLabel = 'archivee'
+  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
+  const lightweightDetailLabel = dossier.archive === '1' ? 'archivee' : 'historique'
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
   const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
   const validationDraft = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
@@ -13336,7 +13341,7 @@ function MobileDossierDetail(props: {
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const actionRole = props.actionRole ?? 'nego'
-  const isLightweightDetail = isArchivedAnnonceRecord(dossier)
+  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
