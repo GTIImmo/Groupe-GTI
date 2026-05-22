@@ -972,12 +972,15 @@ async function loadHektorDirectoryUserById(idUser) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
-async function resolveHektorAnnonceAgencyContext(annonceId) {
-  const result = await runProjectPythonScript([
+async function resolveHektorAnnonceAgencyContext(annonceId, target = {}) {
+  const args = [
     "Console/resolve_hektor_annonce_agency.py",
     "--annonce-id",
     String(annonceId),
-  ], { timeoutMs: 30000, previewSize: 4000 });
+  ];
+  if (target.idUser) args.push("--target-user-id", String(target.idUser));
+  if (target.email) args.push("--target-email", String(target.email));
+  const result = await runProjectPythonScript(args, { timeoutMs: 30000, previewSize: 4000 });
   const text = String(result.stdout || "").trim();
   if (!text) return null;
   try {
@@ -3191,10 +3194,17 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     throw new Error(`Négociateur Hektor introuvable pour idUser ${targetId}`);
   }
 
-  const agencyContext = await resolveHektorAnnonceAgencyContext(annonceId);
+  const agencyContext = await resolveHektorAnnonceAgencyContext(annonceId, {
+    idUser: targetId,
+    email: directoryUser.email || payload.target_hektor_user_email || payload.hektor_user_email || null,
+  });
   if (!agencyContext || !agencyContext.agency_id_user) {
     throw new Error(`Contexte agence Hektor introuvable pour l'annonce ${annonceId}`);
   }
+  if (!agencyContext.target_found || !agencyContext.target_hektor_negociateur_id) {
+    throw new Error(`Ce negociateur n'est pas rattache a l'agence Hektor ${agencyContext.agency_label || agencyContext.hektor_agence_id || ""}. Choisis un negociateur de cette agence ou change d'abord l'agence dans Hektor.`);
+  }
+  const targetNegotiatorId = String(agencyContext.target_hektor_negociateur_id);
 
   await ensureAdminHektorSession(job, "assign_negotiator_admin_login");
   await switchHektorUserContext(agencyContext.agency_id_user);
@@ -3203,6 +3213,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     agency_id_user: agencyContext.agency_id_user,
     agency_label: agencyContext.agency_label || null,
     target_hektor_user_id: targetId,
+    target_hektor_negociateur_id: targetNegotiatorId,
     target_label: directoryUser.display_name || null,
     target_email: directoryUser.email || null,
   });
@@ -3212,7 +3223,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     mode: "upval",
     id: annonceId,
     champ: "NEGOCIATEUR",
-    val: targetId,
+    val: targetNegotiatorId,
   })}`, {
     headers: {
       Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
@@ -3222,7 +3233,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
   await sleep(1500);
   const apiDetail = await fetchHektorAnnonceDetailKeyDataBestEffort(job, annonceId, "hektor_assign_negotiator_verify_api");
   const confirmedNegoId = apiDetail && apiDetail.NEGOCIATEUR != null ? String(apiDetail.NEGOCIATEUR) : null;
-  if (confirmedNegoId && confirmedNegoId !== targetId) {
+  if (confirmedNegoId && confirmedNegoId !== targetNegotiatorId) {
     throw new Error(`Affectation négociateur non confirmée: Hektor renvoie ${confirmedNegoId}`);
   }
   const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_after");
@@ -3238,6 +3249,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     agency_id_user: agencyContext.agency_id_user,
     agency_label: agencyContext.agency_label || null,
     target_hektor_user_id: targetId,
+    target_hektor_negociateur_id: targetNegotiatorId,
     target_label: directoryUser.display_name || null,
     target_email: directoryUser.email || null,
     confirmed_negotiator_id: confirmedNegoId,

@@ -13,6 +13,8 @@ DB_PATH = ROOT / "data" / "hektor.sqlite"
 def main() -> int:
     parser = argparse.ArgumentParser(description="Resolve the agency user context required for a Hektor annonce.")
     parser.add_argument("--annonce-id", required=True)
+    parser.add_argument("--target-user-id")
+    parser.add_argument("--target-email")
     args = parser.parse_args()
 
     annonce_id = str(args.annonce_id).strip()
@@ -48,19 +50,58 @@ def main() -> int:
             raw = {}
 
         id_user = str(raw.get("idUser") or "").strip()
-        print(
-            json.dumps(
+        payload = {
+            "found": True,
+            "hektor_annonce_id": str(row["hektor_annonce_id"] or ""),
+            "hektor_agence_id": str(row["hektor_agence_id"] or ""),
+            "agency_id_user": id_user or None,
+            "agency_label": row["nom"],
+            "agency_email": row["mail"],
+        }
+
+        target_email = str(args.target_email or "").strip().lower()
+        target_user_id = str(args.target_user_id or "").strip()
+        target = None
+        if target_email:
+            target = con.execute(
+                """
+                SELECT hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email
+                FROM hektor_negociateur
+                WHERE lower(COALESCE(email, '')) = ?
+                  AND COALESCE(hektor_agence_id, '') = ?
+                ORDER BY CAST(COALESCE(hektor_negociateur_id, '0') AS INTEGER)
+                LIMIT 1
+                """,
+                (target_email, payload["hektor_agence_id"]),
+            ).fetchone()
+        if target is None and target_user_id:
+            target = con.execute(
+                """
+                SELECT hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email
+                FROM hektor_negociateur
+                WHERE COALESCE(hektor_user_id, '') = ?
+                  AND COALESCE(hektor_agence_id, '') = ?
+                ORDER BY CAST(COALESCE(hektor_negociateur_id, '0') AS INTEGER)
+                LIMIT 1
+                """,
+                (target_user_id, payload["hektor_agence_id"]),
+            ).fetchone()
+        if target is not None:
+            label = " ".join(part for part in [target["prenom"], target["nom"]] if part).strip()
+            payload.update(
                 {
-                    "found": True,
-                    "hektor_annonce_id": str(row["hektor_annonce_id"] or ""),
-                    "hektor_agence_id": str(row["hektor_agence_id"] or ""),
-                    "agency_id_user": id_user or None,
-                    "agency_label": row["nom"],
-                    "agency_email": row["mail"],
-                },
-                ensure_ascii=True,
+                    "target_found": True,
+                    "target_hektor_negociateur_id": str(target["hektor_negociateur_id"] or ""),
+                    "target_hektor_user_id": str(target["hektor_user_id"] or ""),
+                    "target_hektor_agence_id": str(target["hektor_agence_id"] or ""),
+                    "target_label": label or None,
+                    "target_email": target["email"],
+                }
             )
-        )
+        elif target_email or target_user_id:
+            payload["target_found"] = False
+
+        print(json.dumps(payload, ensure_ascii=True))
         return 0
     finally:
         con.close()
