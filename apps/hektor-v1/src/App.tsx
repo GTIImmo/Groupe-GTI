@@ -3962,16 +3962,15 @@ function hektorActionCanFinishWithoutAppDossier(job: ConsoleJob) {
 function hektorActionProgress(job: ConsoleJob, syncJob: ConsoleJob | null, appDossier?: Dossier | null) {
   if (job.status === 'error' || syncJob?.status === 'error') return 'error'
   const syncJobId = hektorJobSyncJobId(job)
-  const needsAppDossier = job.job_type !== 'delete_hektor_annonce' && !hektorActionCanFinishWithoutAppDossier(job)
   if (job.job_type === 'create_hektor_draft_annonce' && job.status === 'done' && !appDossier) return 'syncing'
   if (syncJobId && syncJob?.status !== 'done') {
     if (job.status === 'done') return 'syncing'
     if (job.status === 'running') return 'creating'
     return 'queued'
   }
-  if (syncJobId && syncJob?.status === 'done') return !needsAppDossier || appDossier ? 'available' : 'syncing'
+  if (syncJobId && syncJob?.status === 'done') return 'available'
   if (appDossier) return 'available'
-  if (job.job_type !== 'create_hektor_draft_annonce' && job.status === 'done') return needsAppDossier ? 'syncing' : 'available'
+  if (job.job_type !== 'create_hektor_draft_annonce' && job.status === 'done') return hektorActionCanFinishWithoutAppDossier(job) ? 'available' : 'syncing'
   if (job.status === 'done') return 'syncing'
   if (job.status === 'running') return 'creating'
   return 'queued'
