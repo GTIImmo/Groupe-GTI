@@ -972,6 +972,22 @@ async function loadHektorDirectoryUserById(idUser) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function resolveHektorAnnonceAgencyContext(annonceId) {
+  const result = await runProjectPythonScript([
+    "Console/resolve_hektor_annonce_agency.py",
+    "--annonce-id",
+    String(annonceId),
+  ], { timeoutMs: 30000, previewSize: 4000 });
+  const text = String(result.stdout || "").trim();
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && parsed.found ? parsed : null;
+  } catch (error) {
+    throw new Error(`Resolution agence Hektor illisible: ${text.slice(0, 500)}`);
+  }
+}
+
 async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
   const directId = payload.hektor_user_id || payload.hektor_id_user || payload.target_hektor_user_id;
   if (directId) {
@@ -3175,9 +3191,17 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     throw new Error(`Négociateur Hektor introuvable pour idUser ${targetId}`);
   }
 
+  const agencyContext = await resolveHektorAnnonceAgencyContext(annonceId);
+  if (!agencyContext || !agencyContext.agency_id_user) {
+    throw new Error(`Contexte agence Hektor introuvable pour l'annonce ${annonceId}`);
+  }
+
   await ensureAdminHektorSession(job, "assign_negotiator_admin_login");
+  await switchHektorUserContext(agencyContext.agency_id_user);
   await logJob(job.id, "hektor_assign_negotiator", "running", "Affectation du negociateur Hektor", {
     hektor_annonce_id: annonceId,
+    agency_id_user: agencyContext.agency_id_user,
+    agency_label: agencyContext.agency_label || null,
     target_hektor_user_id: targetId,
     target_label: directoryUser.display_name || null,
     target_email: directoryUser.email || null,
@@ -3211,6 +3235,8 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     status: "assigned",
     hektor_annonce_id: annonceId,
     app_dossier_id: dossier.app_dossier_id || null,
+    agency_id_user: agencyContext.agency_id_user,
+    agency_label: agencyContext.agency_label || null,
     target_hektor_user_id: targetId,
     target_label: directoryUser.display_name || null,
     target_email: directoryUser.email || null,
