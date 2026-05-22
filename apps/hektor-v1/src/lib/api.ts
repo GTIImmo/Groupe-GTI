@@ -4256,6 +4256,37 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   return data as ConsoleJob
 }
 
+export async function createAssignHektorAnnonceNegotiatorJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'> & Partial<Pick<Dossier, 'numero_dossier' | 'titre_bien'>>
+  negotiator: Pick<HektorNegotiatorOption, 'idUser' | 'label' | 'email'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const targetId = String(input.negotiator.idUser ?? '').trim()
+  if (!/^\d+$/.test(targetId)) throw new Error('Choisis un negociateur Hektor valide.')
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'assign_hektor_annonce_negotiator',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        target_hektor_user_id: targetId,
+        target_hektor_user_label: input.negotiator.label ?? null,
+        target_hektor_user_email: input.negotiator.email ?? null,
+      },
+      priority: input.priority ?? 9,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor negotiator assignment job')
+  return data as ConsoleJob
+}
+
 export type MatterportConsoleAction = 'online' | 'offline' | 'archive' | 'reactivate'
 
 export async function createMatterportActionJob(input: {
@@ -4285,6 +4316,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'archive_hektor_annonce',
   'restore_hektor_annonce',
   'change_hektor_annonce_status',
+  'assign_hektor_annonce_negotiator',
   'update_hektor_annonce_fields',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',

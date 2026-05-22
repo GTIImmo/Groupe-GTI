@@ -46,6 +46,7 @@ const ADMIN_JOB_TYPES = new Set([
   "archive_hektor_annonce",
   "restore_hektor_annonce",
   "change_hektor_annonce_status",
+  "assign_hektor_annonce_negotiator",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
   "matterport_online",
@@ -959,22 +960,6 @@ async function loadHektorDirectoryUserByEmail(email) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
-async function loadAnyHektorDirectoryUserByEmail(email) {
-  const normalized = normalizeEmail(email);
-  if (!normalized) return null;
-  const params = new URLSearchParams({
-    select: "id_user,display_name,email,user_type",
-    email: `ilike.${normalized}`,
-    limit: "5",
-  });
-  const rows = await supabaseRequest(`app_user_directory?${params.toString()}`, { method: "GET" });
-  if (!Array.isArray(rows) || !rows.length) return null;
-  return rows.find((row) => row.user_type === "NEGO")
-    || rows.find((row) => row.user_type === "ADMIN")
-    || rows.find((row) => row.user_type === "AGENCE")
-    || rows[0];
-}
-
 async function loadHektorDirectoryUserById(idUser) {
   if (idUser == null || String(idUser).trim() === "") return null;
   const params = new URLSearchParams({
@@ -1013,15 +998,6 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     let directoryUser = await loadHektorDirectoryUserByEmail(normalized).catch(() => null);
-    if (
-      !directoryUser
-      && options.allowAdminContextFallback
-      && profile
-      && normalizeEmail(profile.email) === normalized
-      && (profile.role === "admin" || profile.role === "manager")
-    ) {
-      directoryUser = await loadAnyHektorDirectoryUserByEmail(normalized).catch(() => null);
-    }
     if (directoryUser && directoryUser.id_user) {
       return {
         idUser: String(directoryUser.id_user),
@@ -1397,6 +1373,30 @@ async function fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, step) {
   } catch (error) {
     await logJob(job.id, step, "error", "Verification GraphQL Hektor ignoree apres erreur", {
       hektor_annonce_id: String(hektorAnnonceId),
+      error: error && error.message ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+async function fetchHektorAnnonceDetailKeyDataBestEffort(job, hektorAnnonceId, step) {
+  const id = String(hektorAnnonceId || "").trim();
+  if (!id) return null;
+  try {
+    const result = await hektorFetch(`${HEKTOR_BASE_URL.replace(/\/+$/, "")}/Api/Annonce/AnnonceById/?${new URLSearchParams({
+      id,
+      version: process.env.HEKTOR_VERSION || process.env.VERSION || "v2",
+    }).toString()}`, {
+      headers: {
+        Accept: "application/json",
+        ...(process.env.HEKTOR_JWT ? { jwt: process.env.HEKTOR_JWT } : {}),
+      },
+    });
+    const payload = JSON.parse(result.text);
+    return payload && payload.data && payload.data.keyData ? payload.data.keyData : null;
+  } catch (error) {
+    await logJob(job.id, step, "error", "Verification API Hektor ignoree apres erreur", {
+      hektor_annonce_id: id,
       error: error && error.message ? error.message : String(error),
     });
     return null;
@@ -2129,12 +2129,7 @@ async function handlePrepareDocumentCloud(job) {
 async function handleUploadDocumentToHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, {
-    preferRequester: true,
-    preferDossierOwner: true,
-    required: true,
-    allowAdminContextFallback: true,
-  });
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "document.pdf");
   const visibility = payload.visibility === "shared" ? "shared" : "private";
@@ -2239,12 +2234,7 @@ async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, 
 async function handleUploadHektorPhoto(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, {
-    preferRequester: true,
-    preferDossierOwner: true,
-    required: true,
-    allowAdminContextFallback: true,
-  });
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "photo.jpg");
   const visible = payload.visible !== false;
@@ -2284,12 +2274,7 @@ async function handleUploadHektorPhoto(job) {
 async function handleDeleteDocumentFromHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, {
-    preferRequester: true,
-    preferDossierOwner: true,
-    required: true,
-    allowAdminContextFallback: true,
-  });
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const documentId = payload.document_id;
   if (!documentId) throw new Error("payload_json.document_id required");
   const document = await loadConsoleDocumentById(documentId);
@@ -3148,6 +3133,85 @@ async function handleChangeHektorAnnonceStatus(job) {
       isArchived: after.property.isArchived === true,
     } : null,
     transaction: transactionResult || null,
+    sync_job: syncJob,
+  };
+}
+
+async function handleAssignHektorAnnonceNegotiator(job) {
+  const payload = safeJsonParse(job.payload_json);
+  let dossier = null;
+  try {
+    dossier = await loadDossier(job);
+  } catch (error) {
+    if (!job.hektor_annonce_id) throw error;
+    dossier = {
+      app_dossier_id: job.app_dossier_id || payload.app_dossier_id || null,
+      hektor_annonce_id: String(job.hektor_annonce_id),
+      negociateur_email: null,
+    };
+  }
+  const annonceId = String(dossier.hektor_annonce_id || job.hektor_annonce_id || "").trim();
+  const targetId = String(payload.target_hektor_user_id || payload.hektor_user_id || "").trim();
+  if (!annonceId) throw new Error("hektor_annonce_id required");
+  if (!/^\d+$/.test(targetId)) throw new Error("target_hektor_user_id numerique requis");
+
+  const directoryUser = await loadHektorDirectoryUserById(targetId);
+  if (!directoryUser || String(directoryUser.user_type || "").toUpperCase() !== "NEGO") {
+    throw new Error(`Négociateur Hektor introuvable pour idUser ${targetId}`);
+  }
+
+  await ensureAdminHektorSession(job, "assign_negotiator_admin_login");
+  await logJob(job.id, "hektor_assign_negotiator", "running", "Affectation du negociateur Hektor", {
+    hektor_annonce_id: annonceId,
+    target_hektor_user_id: targetId,
+    target_label: directoryUser.display_name || null,
+    target_email: directoryUser.email || null,
+  });
+
+  const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_before");
+  await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+    mode: "upval",
+    id: annonceId,
+    champ: "NEGOCIATEUR",
+    val: targetId,
+  })}`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+    },
+  });
+
+  await sleep(1500);
+  const apiDetail = await fetchHektorAnnonceDetailKeyDataBestEffort(job, annonceId, "hektor_assign_negotiator_verify_api");
+  const confirmedNegoId = apiDetail && apiDetail.NEGOCIATEUR != null ? String(apiDetail.NEGOCIATEUR) : null;
+  if (confirmedNegoId && confirmedNegoId !== targetId) {
+    throw new Error(`Affectation négociateur non confirmée: Hektor renvoie ${confirmedNegoId}`);
+  }
+  const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_after");
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "assign_hektor_annonce_negotiator",
+    priority: 82,
+  });
+
+  return {
+    status: "assigned",
+    hektor_annonce_id: annonceId,
+    app_dossier_id: dossier.app_dossier_id || null,
+    target_hektor_user_id: targetId,
+    target_label: directoryUser.display_name || null,
+    target_email: directoryUser.email || null,
+    confirmed_negotiator_id: confirmedNegoId,
+    before_property: before && before.property ? {
+      id: before.property.id,
+      folderNumber: before.property.folderNumber || null,
+      status: before.property.status || null,
+      isArchived: before.property.isArchived === true,
+    } : null,
+    after_property: after && after.property ? {
+      id: after.property.id,
+      folderNumber: after.property.folderNumber || null,
+      status: after.property.status || null,
+      isArchived: after.property.isArchived === true,
+    } : null,
     sync_job: syncJob,
   };
 }
@@ -4304,6 +4368,8 @@ async function runHandler(job) {
       return handleRestoreHektorAnnonce(job);
     case "change_hektor_annonce_status":
       return handleChangeHektorAnnonceStatus(job);
+    case "assign_hektor_annonce_negotiator":
+      return handleAssignHektorAnnonceNegotiator(job);
     case "create_hektor_draft_annonce":
       return handleCreateHektorDraftAnnonce(job);
     case "matterport_online":

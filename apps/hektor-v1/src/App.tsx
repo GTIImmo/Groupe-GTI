@@ -63,6 +63,7 @@ import {
   type ArchiveHektorAnnonceMainChoice,
   type ArchiveHektorAnnonceSubChoice,
   createChangeHektorAnnonceStatusJob,
+  createAssignHektorAnnonceNegotiatorJob,
   type HektorAnnonceStatusTarget,
   createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
@@ -99,6 +100,13 @@ type DetailContact = {
   dateCreated?: string
   dateUpdated?: string
   negotiatorId?: string
+}
+
+type HektorNegotiatorRequiredDossier = Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'> & Partial<Pick<Dossier, 'numero_dossier' | 'numero_mandat' | 'titre_bien' | 'ville' | 'commercial_nom' | 'agence_nom' | 'negociateur_email'>>
+type MissingNegotiatorHandler = (dossier: HektorNegotiatorRequiredDossier) => void
+
+function hasHektorNegotiator(dossier: HektorNegotiatorRequiredDossier) {
+  return Boolean(String(dossier.negociateur_email ?? '').trim())
 }
 
 const allFilterValue = '__all__'
@@ -396,12 +404,13 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
 }
 
 function HektorAnnonceUpdateForm(props: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat'>
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email'>
   detail: DossierDetailPayload
   compact?: boolean
   fieldPanel?: boolean
   onCancel?: () => void
   onJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   const { dossier, detail } = props
   const [values, setValues] = useState<Record<HektorAdvancedFieldKey, string>>(() => buildHektorAdvancedDraft(dossier, detail))
@@ -424,6 +433,10 @@ function HektorAnnonceUpdateForm(props: {
     event.preventDefault()
     setMessage(null)
     setError(null)
+    if (!hasHektorNegotiator(dossier)) {
+      props.onMissingNegotiator?.(dossier)
+      return
+    }
     setPending(true)
     try {
       const job = await createUpdateHektorAnnonceFieldsJob({
@@ -492,6 +505,7 @@ function HektorMandantContactForm(props: {
   compact?: boolean
   initialOpen?: boolean
   onJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   const [open, setOpen] = useState(Boolean(props.initialOpen))
   const [civility, setCivility] = useState('')
@@ -521,6 +535,10 @@ function HektorMandantContactForm(props: {
     setError(null)
     if (!lastName.trim() || !email.trim()) {
       setError('Nom et email sont obligatoires pour créer le contact Hektor.')
+      return
+    }
+    if (!hasHektorNegotiator(props.dossier)) {
+      props.onMissingNegotiator?.(props.dossier)
       return
     }
     setPending(true)
@@ -613,6 +631,7 @@ function HektorMandantContactEditForm(props: {
   contact: DetailContact
   compact?: boolean
   onJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   const [open, setOpen] = useState(false)
   const [civility, setCivility] = useState(props.contact.civility ?? '')
@@ -651,6 +670,10 @@ function HektorMandantContactEditForm(props: {
     }
     if (!lastName.trim() || !email.trim()) {
       setError('Nom et email sont obligatoires pour modifier le contact Hektor.')
+      return
+    }
+    if (!hasHektorNegotiator(props.dossier)) {
+      props.onMissingNegotiator?.(props.dossier)
       return
     }
     setPending(true)
@@ -754,6 +777,7 @@ function HektorMandatNumberForm(props: {
   contacts: DetailContact[]
   compact?: boolean
   onJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   const numericContacts = props.contacts.filter((contact) => contact.sourceId && /^\d+$/.test(contact.sourceId))
   const [open, setOpen] = useState(false)
@@ -798,6 +822,10 @@ function HektorMandatNumberForm(props: {
     }
     if (numericContacts.length > 0 && selectedIds.length === 0) {
       setError('Selectionne au moins un mandant.')
+      return
+    }
+    if (!hasHektorNegotiator(props.dossier)) {
+      props.onMissingNegotiator?.(props.dossier)
       return
     }
     setPending(true)
@@ -4504,7 +4532,7 @@ function consoleDocumentIconType(document: Pick<ConsoleDocument, 'mime_type' | '
   return 'content'
 }
 
-function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void }) {
+function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -4613,6 +4641,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated }: { dos
       setError('Choisis un fichier avant de lancer l upload.')
       return
     }
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
+      return
+    }
     setUploadPending(true)
     setMessage(null)
     setError(null)
@@ -4642,6 +4674,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated }: { dos
   async function handleDeleteDocument(document: ConsoleDocument) {
     const confirmed = window.confirm(`Supprimer ce document dans Hektor ?\n\n${document.document_name}`)
     if (!confirmed) return
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
+      return
+    }
     setBusyDocumentId(document.id)
     setMessage(null)
     setError(null)
@@ -4801,12 +4837,14 @@ function ConsolePhotosPanel({
   compact = false,
   onOpenImage,
   onJobCreated,
+  onMissingNegotiator,
 }: {
   dossier: Dossier
   apiImages: Array<{ url: string; legend: string }>
   compact?: boolean
   onOpenImage?: (url: string) => void
   onJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   const [photos, setPhotos] = useState<ConsolePhoto[]>([])
   const [loading, setLoading] = useState(false)
@@ -4855,6 +4893,10 @@ function ConsolePhotosPanel({
     event.preventDefault()
     if (!photoFile) {
       setError('Choisis une photo a ajouter dans Hektor')
+      return
+    }
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
       return
     }
     setUploadPending(true)
@@ -5528,6 +5570,9 @@ export default function App() {
   const [statusChangeCloseReason, setStatusChangeCloseReason] = useState('')
   const [statusChangePending, setStatusChangePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
+  const [negotiatorAssignTarget, setNegotiatorAssignTarget] = useState<HektorNegotiatorRequiredDossier | null>(null)
+  const [negotiatorAssignValue, setNegotiatorAssignValue] = useState('')
+  const [negotiatorAssignPending, setNegotiatorAssignPending] = useState(false)
   const [userToolOpen, setUserToolOpen] = useState(false)
   const [userToolLoading, setUserToolLoading] = useState(false)
   const [appUsers, setAppUsers] = useState<UserProfile[]>([])
@@ -6742,6 +6787,55 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeCloseReason('')
   }
 
+  function openMissingNegotiatorModal(dossier: HektorNegotiatorRequiredDossier) {
+    if (!isAdmin) {
+      setErrorMessage("Cette action nécessite un négociateur Hektor sur l'annonce. Demande à un administrateur de l'affecter.")
+      return
+    }
+    setNegotiatorAssignTarget(dossier)
+    setNegotiatorAssignValue('')
+    setNoticeMessage(null)
+    setErrorMessage(null)
+  }
+
+  function closeMissingNegotiatorModal() {
+    if (negotiatorAssignPending) return
+    setNegotiatorAssignTarget(null)
+    setNegotiatorAssignValue('')
+  }
+
+  async function handleAssignHektorNegotiator(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!negotiatorAssignTarget) return
+    const negotiator = hektorNegotiators.find((item) => item.idUser === negotiatorAssignValue)
+    if (!negotiator) {
+      setErrorMessage('Choisis un négociateur Hektor avant de lancer l’affectation.')
+      return
+    }
+    if (activeAdminAnnonceJobIds.has(String(negotiatorAssignTarget.hektor_annonce_id))) {
+      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      return
+    }
+    setNegotiatorAssignPending(true)
+    setNoticeMessage(null)
+    setErrorMessage(null)
+    try {
+      const job = await createAssignHektorAnnonceNegotiatorJob({
+        dossier: negotiatorAssignTarget,
+        negotiator,
+        priority: 9,
+      })
+      rememberHektorActionJob(job)
+      setNoticeMessage(`Affectation demandée à ${negotiator.label}. Relance l’action après la synchronisation de la fiche.`)
+      setNegotiatorAssignTarget(null)
+      setNegotiatorAssignValue('')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de créer la demande d’affectation négociateur.')
+    } finally {
+      setNegotiatorAssignPending(false)
+    }
+  }
+
   async function handleChangeHektorAnnonceStatus(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!statusChangeTarget) return
@@ -6760,6 +6854,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
+    if (!hasHektorNegotiator(statusChangeTarget)) {
+      openMissingNegotiatorModal(statusChangeTarget)
+      setStatusChangePending(false)
+      return
+    }
     if (activeAdminAnnonceJobIds.has(String(statusChangeTarget.hektor_annonce_id))) {
       setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
       setStatusChangePending(false)
@@ -8536,6 +8635,49 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {negotiatorAssignTarget ? (
+          <div className="modal-overlay" onClick={closeMissingNegotiatorModal}>
+            <section className="modal-panel negotiator-assign-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head status-change-head">
+                <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Action Hektor bloquee</p>
+                  <h3>Affecter un negociateur</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={closeMissingNegotiatorModal} disabled={negotiatorAssignPending}>Fermer</button>
+              </div>
+              <form className="delete-annonce-form" onSubmit={handleAssignHektorNegotiator}>
+                <section className="status-change-summary">
+                  <div>
+                    <strong>{negotiatorAssignTarget.titre_bien || negotiatorAssignTarget.numero_dossier || `Annonce ${negotiatorAssignTarget.hektor_annonce_id}`}</strong>
+                    <span>{negotiatorAssignTarget.numero_dossier ?? '-'} · mandat {negotiatorAssignTarget.numero_mandat ?? '-'}</span>
+                  </div>
+                  <StatusPill value="Nego requis" />
+                </section>
+                <p className="status-change-note">
+                  Cette annonce n'a pas de negociateur Hektor. Les actions comme photo, document, mandat, modification ou changement de statut doivent etre executees dans le contexte d'un negociateur.
+                </p>
+                <label className="filter-field">
+                  <span>Negociateur Hektor</span>
+                  <select value={negotiatorAssignValue} onChange={(event) => setNegotiatorAssignValue(event.target.value)} required>
+                    <option value="">Choisir un negociateur</option>
+                    {hektorNegotiators.map((negotiator) => (
+                      <option key={negotiator.idUser} value={negotiator.idUser}>
+                        {negotiator.label}{negotiator.email ? ` - ${negotiator.email}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="modal-actions">
+                  <button className="ghost-button button-subtle" type="button" onClick={closeMissingNegotiatorModal} disabled={negotiatorAssignPending}>Annuler</button>
+                  <button className="ghost-button button-primary" type="submit" disabled={negotiatorAssignPending || !negotiatorAssignValue}>
+                    {negotiatorAssignPending ? 'Affectation...' : 'Affecter dans Hektor'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
         {statusChangeTarget ? (
           <div className="modal-overlay" onClick={closeStatusChangeModal}>
             <section className="modal-panel modal-panel-wide status-change-modal" onClick={(event) => event.stopPropagation()}>
@@ -9399,6 +9541,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
+                onMissingNegotiator={openMissingNegotiatorModal}
               />
             </section>
           </div>
@@ -10001,7 +10144,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -10171,6 +10314,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onHektorActionJobCreated={rememberHektorActionJob}
+                onMissingNegotiator={openMissingNegotiatorModal}
               />
             </section>
           </div>
@@ -11824,6 +11968,7 @@ function DossierDetailLayout(props: {
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   if (!props.selectedDossier) {
@@ -12107,7 +12252,7 @@ function DossierDetailLayout(props: {
                     </button>
                   </div>
                   {mandatSectionOpen ? (
-                    isLightweightDetail ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." /> : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} />
+                    isLightweightDetail ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." /> : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
                   ) : null}
                   {mandatSectionOpen ? (
                     isLightweightDetail ? null : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />
@@ -12199,7 +12344,7 @@ function DossierDetailLayout(props: {
                         <strong>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
                         <small>{props.detail.mandants_texte || primaryContact.name}</small>
                       </div>
-                      {!isLightweightDetail ? <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
+                      {!isLightweightDetail ? <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
                         <div className="detail-contact-head">
                           <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
@@ -12240,7 +12385,7 @@ function DossierDetailLayout(props: {
                             </div>
                           ) : null}
                         </div>
-                        {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={primaryContact} onJobCreated={props.onHektorActionJobCreated} /> : null}
+                        {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={primaryContact} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
                       </article>
                       {contactSectionOpen && secondaryContacts.length > 0 ? (
                         <div className="detail-secondary-contacts">
@@ -12285,7 +12430,7 @@ function DossierDetailLayout(props: {
                                   </div>
                                 ) : null}
                               </div>
-                              {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} onJobCreated={props.onHektorActionJobCreated} /> : null}
+                              {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
                             </article>
                           ))}
                         </div>
@@ -12293,7 +12438,7 @@ function DossierDetailLayout(props: {
                     </div>
                   ) : (
                     <div className="detail-entity-list detail-contact-list">
-                      {isLightweightDetail ? <ReadOnlyDetailNotice label="Aucun mandant detaille n'est disponible dans cette fiche importee." /> : <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} />}
+                      {isLightweightDetail ? <ReadOnlyDetailNotice label="Aucun mandant detaille n'est disponible dans cette fiche importee." /> : <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
                     </div>
                   )}
                 </article>
@@ -12330,13 +12475,13 @@ function DossierDetailLayout(props: {
                       ))}
                     </div>
                   ) : <p className="empty-state">Aucune photo synchronisee.</p>
-                ) : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} />}
+                ) : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               </section>
               ) : null}
 
               {activeDetailTab === 'content' ? (
               <section className="detail-section detail-console-documents-section">
-                {isLightweightDetail ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre ajoutes ou modifies depuis une fiche d'index leger." /> : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />}
+                {isLightweightDetail ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre ajoutes ou modifies depuis une fiche d'index leger." /> : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               </section>
               ) : null}
 
@@ -12751,15 +12896,15 @@ function DossierDetailLayout(props: {
                   <span>Annonce</span>
                   <strong>Informations du bien</strong>
                 </div>
-                <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorEditModalOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+                <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorEditModalOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
               </section>
               <section className="detail-edit-popup-section detail-edit-popup-mandants">
                 <div className="detail-edit-popup-section-head">
                   <span>Vendeurs</span>
                   <strong>Mandants associes</strong>
                 </div>
-                <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
-                <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
+                <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
+                <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
                 {props.contacts.length > 0 ? (
                   <div className="detail-edit-mandant-list">
                     {props.contacts.map((contact) => (
@@ -12771,7 +12916,7 @@ function DossierDetailLayout(props: {
                             <span>{contact.email || contact.phone || contact.role || '-'}</span>
                           </div>
                         </div>
-                        <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} />
+                        <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
                       </article>
                     ))}
                   </div>
@@ -12969,6 +13114,7 @@ function AnnonceScreen(props: {
   onRestoreAnnonce?: (dossier: Dossier) => void
   detailLoading: boolean
   onBack: () => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   return <DossierDetailLayout {...props} eyebrow="Annonce complete" backLabel="Retour stock" detailVariant="annonce" />
 }
@@ -12998,6 +13144,7 @@ function DossierDetailScreen(props: {
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
   onBack: () => void
+  onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   return (
     <DossierDetailLayout
@@ -13056,6 +13203,7 @@ function MobileDossierDetail(props: {
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
+  onMissingNegotiator?: MissingNegotiatorHandler
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   const dossier = props.selectedDossier
@@ -13277,8 +13425,8 @@ function MobileDossierDetail(props: {
         <summary>Mandat et contacts</summary>
         {isLightweightDetail ? <ReadOnlyDetailNotice label="Mandat et contacts sont consultables, mais les ajouts et modifications sont bloques depuis une fiche d'index leger." /> : (
           <>
-            <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} />
-            <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} />
+            <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
+            <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
             <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} compact />
           </>
         )}
@@ -13298,7 +13446,7 @@ function MobileDossierDetail(props: {
                 {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
                 {[contact.address, contact.postalCode, contact.city].filter(Boolean).length ? <p>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')}</p> : null}
                 {contact.comment ? <p>{contact.comment}</p> : null}
-                {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} /> : null}
+                {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
               </div>
             ))}
           </div>
@@ -13313,13 +13461,13 @@ function MobileDossierDetail(props: {
         </button> : <ReadOnlyDetailNotice label="Le contenu de l'annonce est en lecture seule jusqu'a desarchivage." />}
         {mobileHektorEditOpen && !isLightweightDetail ? (
           <div className="mobile-detail-embedded">
-            <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} />
+            <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
           </div>
         ) : null}
         {!isLightweightDetail ? <div className="mobile-console-documents">
-          <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} />
+          <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
         </div> : null}
-        {!isLightweightDetail ? <ConsolePhotosPanel dossier={dossier} apiImages={props.images} compact onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} /> : null}
+        {!isLightweightDetail ? <ConsolePhotosPanel dossier={dossier} apiImages={props.images} compact onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
         {props.texts.map((text) => (
           <div key={text.id} className="mobile-detail-text">
             <strong>{text.title}</strong>
