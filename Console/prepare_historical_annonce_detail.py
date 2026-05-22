@@ -43,6 +43,59 @@ def row_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return {key: row[key] for key in row.keys()}
 
 
+def nested_value(source: dict[str, Any], *path: str) -> Any:
+    value: Any = source
+    for key in path:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def first_text_block(textes: Any) -> dict[str, Any]:
+    if not isinstance(textes, list):
+        return {}
+    for item in textes:
+        if isinstance(item, dict) and (item.get("text") or item.get("html")):
+            return item
+    return {}
+
+
+def build_enriched_detail(detail: dict[str, Any], index_row: dict[str, Any], annonce: dict[str, Any]) -> dict[str, Any]:
+    raw_detail = parse_json(detail.get("raw_json"), {})
+    textes = parse_json(detail.get("textes_json"), [])
+    text_block = first_text_block(textes)
+    enriched = {
+        **index_row,
+        **detail,
+        "detail_raw_json": detail.get("raw_json"),
+        "localite_json": parse_json(detail.get("localite_json"), None),
+        "mandats_json": parse_json(detail.get("mandats_json"), []),
+        "proprietaires_json": parse_json(detail.get("proprietaires_json"), []),
+        "honoraires_json": parse_json(detail.get("honoraires_json"), []),
+        "notes_json": parse_json(detail.get("notes_json"), []),
+        "zones_json": parse_json(detail.get("zones_json"), []),
+        "particularites_json": parse_json(detail.get("particularites_json"), []),
+        "pieces_json": parse_json(detail.get("pieces_json"), []),
+        "images_json": parse_json(detail.get("images_json"), []),
+        "textes_json": textes,
+        "terrain_json": parse_json(detail.get("terrain_json"), None),
+        "copropriete_json": parse_json(detail.get("copropriete_json"), None),
+    }
+    enriched["surface"] = enriched.get("surface") or annonce.get("surface")
+    enriched["surface_habitable_detail"] = (
+        enriched.get("surface_habitable_detail")
+        or nested_value(raw_detail, "ag_interieur", "props", "surfappart", "value")
+        or enriched.get("surface")
+    )
+    enriched["nb_pieces"] = enriched.get("nb_pieces") or nested_value(raw_detail, "ag_interieur", "props", "nbpieces", "value")
+    enriched["nb_chambres"] = enriched.get("nb_chambres") or nested_value(raw_detail, "ag_interieur", "props", "NB_CHAMBRES", "value")
+    enriched["surface_terrain_detail"] = enriched.get("surface_terrain_detail") or nested_value(raw_detail, "terrain", "props", "surfterrain", "value")
+    enriched["texte_principal_titre"] = enriched.get("texte_principal_titre") or text_block.get("titre")
+    enriched["texte_principal_html"] = enriched.get("texte_principal_html") or text_block.get("html") or text_block.get("text")
+    return enriched
+
+
 def build_detail_payload(
     conn: sqlite3.Connection,
     annonce_id: str,
@@ -94,21 +147,7 @@ def build_detail_payload(
             "app_historical_id": app_historical_id,
             "listing": annonce,
             "index": index_row,
-            "detail": {
-                **detail,
-                "localite_json": parse_json(detail.get("localite_json"), None),
-                "mandats_json": parse_json(detail.get("mandats_json"), []),
-                "proprietaires_json": parse_json(detail.get("proprietaires_json"), []),
-                "honoraires_json": parse_json(detail.get("honoraires_json"), []),
-                "notes_json": parse_json(detail.get("notes_json"), []),
-                "zones_json": parse_json(detail.get("zones_json"), []),
-                "particularites_json": parse_json(detail.get("particularites_json"), []),
-                "pieces_json": parse_json(detail.get("pieces_json"), []),
-                "images_json": parse_json(detail.get("images_json"), []),
-                "textes_json": parse_json(detail.get("textes_json"), []),
-                "terrain_json": parse_json(detail.get("terrain_json"), None),
-                "copropriete_json": parse_json(detail.get("copropriete_json"), None),
-            },
+            "detail": build_enriched_detail(detail, index_row, annonce),
             "prepared_locally_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
         return app_historical_id, payload

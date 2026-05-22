@@ -1817,15 +1817,21 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
 
 async function loadExistingDetailCacheState(hektorAnnonceId) {
   const id = encodeURIComponent(String(hektorAnnonceId || "").trim());
-  if (!id) return { archive: null, historical: null };
+  if (!id) return { archive: null, historical: null, archiveIndex: null, historicalIndex: null, current: null };
   const select = "select=hektor_annonce_id,requested_by,expires_at&limit=1";
-  const [archiveRows, historicalRows] = await Promise.all([
+  const [archiveRows, historicalRows, archiveIndexRows, historicalIndexRows, currentRows] = await Promise.all([
     supabaseRequest(`app_archive_annonce_detail_cache?${select}&hektor_annonce_id=eq.${id}`, { method: "GET" }),
     supabaseRequest(`app_historical_annonce_detail_cache?${select}&hektor_annonce_id=eq.${id}`, { method: "GET" }),
+    supabaseRequest(`app_archive_annonce_index_current?select=hektor_annonce_id&hektor_annonce_id=eq.${id}&limit=1`, { method: "GET" }),
+    supabaseRequest(`app_historical_annonce_index_current?select=hektor_annonce_id&hektor_annonce_id=eq.${id}&limit=1`, { method: "GET" }),
+    supabaseRequest(`app_dossier_current?select=hektor_annonce_id&hektor_annonce_id=eq.${id}&limit=1`, { method: "GET" }),
   ]);
   return {
     archive: Array.isArray(archiveRows) && archiveRows.length ? archiveRows[0] : null,
     historical: Array.isArray(historicalRows) && historicalRows.length ? historicalRows[0] : null,
+    archiveIndex: Array.isArray(archiveIndexRows) && archiveIndexRows.length ? archiveIndexRows[0] : null,
+    historicalIndex: Array.isArray(historicalIndexRows) && historicalIndexRows.length ? historicalIndexRows[0] : null,
+    current: Array.isArray(currentRows) && currentRows.length ? currentRows[0] : null,
   };
 }
 
@@ -1864,14 +1870,51 @@ async function rebuildDetailCacheFromLocal(job, hektorAnnonceId, cacheKind, cach
   };
 }
 
+async function deleteDetailCache(job, hektorAnnonceId, cacheKind, reason) {
+  const table = cacheKind === "archive" ? "app_archive_annonce_detail_cache" : "app_historical_annonce_detail_cache";
+  await supabaseRequest(`${table}?hektor_annonce_id=eq.${encodeURIComponent(String(hektorAnnonceId))}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+  await logJob(job.id, "detail_cache_refresh", "done", "Cache detail cloud obsolete supprime", {
+    hektor_annonce_id: String(hektorAnnonceId),
+    cache_kind: cacheKind,
+    reason,
+  });
+  return { cache_kind: cacheKind, cache_table: table, status: "deleted", reason };
+}
+
 async function rebuildRequestedDetailCaches(job, hektorAnnonceId, payload = {}) {
   const cacheState = await loadExistingDetailCacheState(hektorAnnonceId);
   const rebuilt = [];
-  if (cacheState.archive) {
-    rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "archive", cacheState.archive, payload));
-  }
-  if (cacheState.historical) {
-    rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "historical", cacheState.historical, payload));
+  if (cacheState.historicalIndex) {
+    if (cacheState.historical) {
+      rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "historical", cacheState.historical, payload));
+    }
+    if (cacheState.archive) {
+      rebuilt.push(await deleteDetailCache(job, hektorAnnonceId, "archive", "annonce_now_historical"));
+    }
+  } else if (cacheState.archiveIndex) {
+    if (cacheState.archive) {
+      rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "archive", cacheState.archive, payload));
+    }
+    if (cacheState.historical) {
+      rebuilt.push(await deleteDetailCache(job, hektorAnnonceId, "historical", "annonce_now_archived"));
+    }
+  } else if (cacheState.current) {
+    if (cacheState.archive) {
+      rebuilt.push(await deleteDetailCache(job, hektorAnnonceId, "archive", "annonce_now_current"));
+    }
+    if (cacheState.historical) {
+      rebuilt.push(await deleteDetailCache(job, hektorAnnonceId, "historical", "annonce_now_current"));
+    }
+  } else {
+    if (cacheState.historical) {
+      rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "historical", cacheState.historical, payload));
+    }
+    if (cacheState.archive) {
+      rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "archive", cacheState.archive, payload));
+    }
   }
   if (!rebuilt.length) {
     await logJob(job.id, "detail_cache_refresh", "done", "Aucun detail cloud deja demande a reconstruire", {

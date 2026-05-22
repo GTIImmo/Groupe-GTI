@@ -1595,7 +1595,40 @@ async function loadLightweightAnnonceDetailCache(
   if (indexError && indexError.code !== 'PGRST116') throw new Error(indexError.message)
   if (indexData && typeof indexData === 'object') currentIndex = indexData as Record<string, unknown>
   const index = { ...payloadIndex, ...currentIndex }
-  const detail = stringifyJsonPayloadFields((payload.detail && typeof payload.detail === 'object' ? payload.detail : {}) as Record<string, unknown>)
+  const rawDetail = (payload.detail && typeof payload.detail === 'object' ? payload.detail : {}) as Record<string, unknown>
+  const detail = stringifyJsonPayloadFields({ ...index, ...listing, ...rawDetail })
+  const detailRaw = parseJsonObject((detail.detail_raw_json ?? detail.raw_json ?? null) as string | null)
+  if (!detail.detail_raw_json && detail.raw_json) detail.detail_raw_json = detail.raw_json
+  if (!detail.surface && (index.surface || listing.surface)) detail.surface = index.surface ?? listing.surface
+  if (!detail.surface_habitable_detail) {
+    detail.surface_habitable_detail = index.surface_habitable_detail
+      ?? (((detailRaw.ag_interieur as Record<string, unknown> | undefined)?.props as Record<string, { value?: unknown }> | undefined)?.surfappart?.value)
+      ?? detail.surface
+  }
+  if (!detail.surface_terrain_detail) {
+    detail.surface_terrain_detail = index.surface_terrain_detail
+      ?? (((detailRaw.terrain as Record<string, unknown> | undefined)?.props as Record<string, { value?: unknown }> | undefined)?.surfterrain?.value)
+  }
+  if (!detail.nb_pieces) {
+    detail.nb_pieces = index.nb_pieces
+      ?? (((detailRaw.ag_interieur as Record<string, unknown> | undefined)?.props as Record<string, { value?: unknown }> | undefined)?.nbpieces?.value)
+  }
+  if (!detail.nb_chambres) {
+    detail.nb_chambres = index.nb_chambres
+      ?? (((detailRaw.ag_interieur as Record<string, unknown> | undefined)?.props as Record<string, { value?: unknown }> | undefined)?.NB_CHAMBRES?.value)
+  }
+  let textBlocks: Array<Record<string, unknown>> = []
+  if (typeof detail.textes_json === 'string') {
+    try {
+      const parsed = JSON.parse(detail.textes_json)
+      if (Array.isArray(parsed)) textBlocks = parsed as Array<Record<string, unknown>>
+    } catch {
+      textBlocks = []
+    }
+  }
+  const firstText = textBlocks.find((item: Record<string, unknown>) => item && (item.html || item.text))
+  if (!detail.texte_principal_titre && firstText?.titre) detail.texte_principal_titre = firstText.titre
+  if (!detail.texte_principal_html && firstText) detail.texte_principal_html = firstText.html ?? firstText.text
   const appDossierId = Number(index.app_dossier_id ?? index[indexIdKey] ?? payload[payloadIdKey] ?? listing.hektor_annonce_id ?? hektorAnnonceId)
   const priceValue = index.prix ?? listing.prix
   const dossier: DetailedDossier = {
