@@ -1586,7 +1586,7 @@ async function loadLightweightAnnonceDetailCache(
   const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
   const payloadIndex = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
   let currentIndex: Record<string, unknown> = {}
-  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandants_texte,has_local_detail,local_detail_updated_at`
+  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at`
   const { data: indexData, error: indexError } = await supabase
     .from(indexTable)
     .select(indexSelect)
