@@ -148,7 +148,7 @@ function isHistoricalListingStatus(value: unknown) {
 }
 
 function usesLightweightAnnonceIndex(filters: AppFilters) {
-  return filters.archive === archivedFilterValue || filters.statut === annonceSearchListingsFilterValue || isHistoricalListingStatus(filters.statut)
+  return filters.archive === allFilterValue || filters.archive === archivedFilterValue || filters.statut === annonceSearchListingsFilterValue || isHistoricalListingStatus(filters.statut)
 }
 
 type AnnonceSearchScope = 'current' | 'extended'
@@ -6470,7 +6470,7 @@ export default function App() {
       setFilters(defaultFiltersForScreen('suivi'))
       return
     }
-    const nextFilters = metricDrilldownFilters(filters, action)
+    const nextFilters = metricDrilldownFilters(dataFilters, action)
     const nextLabel =
       action === 'all_annonces'
         ? null
@@ -6518,7 +6518,7 @@ export default function App() {
 
   function openRegisterDrilldown(action: HeaderMetricItem['action']) {
     if (!action) return
-    const nextFilters = metricDrilldownFilters(filters, action)
+    const nextFilters = metricDrilldownFilters(dataFilters, action)
     setScreen('registre')
     setFiltersOpen(false)
     setPriorityPanelOpen(false)

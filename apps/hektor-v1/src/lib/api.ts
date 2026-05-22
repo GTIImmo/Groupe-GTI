@@ -1148,6 +1148,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   const mandat = filters.mandat
   const detailAvailability = normalizeFilterValue(filters.detailAvailability)
   const statut = normalizeFilterValue(filters.statut)
+  const diffusable = normalizeFilterValue(filters.diffusable)
   const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
   const mandantName = normalizeSearchTerm(filters.mandantName)
 
@@ -1163,6 +1164,8 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
   if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
   if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
+  if (diffusable === 'diffusable') query = query.eq('diffusable', '1')
+  if (diffusable === 'non_diffusable') query = query.or('diffusable.is.null,diffusable.eq.0')
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
@@ -1178,6 +1181,23 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   }
 
   return query
+}
+
+function canUseLightweightAnnonceIndexesForFilters(filters: AppFilters) {
+  const affaire = normalizeFilterValue(filters.affaire)
+  const offreStatus = normalizeFilterValue(filters.offreStatus)
+  const compromisStatus = normalizeFilterValue(filters.compromisStatus)
+  const validationDiffusion = normalizeFilterValue(filters.validationDiffusion)
+  const passerelle = normalizeFilterValue(filters.passerelle)
+  const erreurDiffusion = normalizeFilterValue(filters.erreurDiffusion)
+  return (
+    !affaire &&
+    !offreStatus &&
+    !compromisStatus &&
+    !passerelle &&
+    !erreurDiffusion &&
+    (!validationDiffusion || validationDiffusion === '__not_validated__')
+  )
 }
 
 function applyHistoricalIndexFiltersToQuery(baseQuery: any, filters: AppFilters, scope?: DataScope | null) {
@@ -1295,10 +1315,11 @@ export async function loadDossiersPage({
   const statut = normalizeFilterValue(filters.statut)
   const requestScope = normalizeFilterValue(filters.requestScope)
   const requestType = normalizeFilterValue(filters.requestType)
+  const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
   const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at'
   const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at'
   if (filters.archive === archivedFilterValue) {
-    if (requestScope || requestType) {
+    if (!canUseLightweightIndexes) {
       return { rows: [], total: 0, page, pageSize }
     }
     const archiveQuery = applyArchiveIndexFiltersToQuery(
@@ -1326,7 +1347,7 @@ export async function loadDossiersPage({
     }
   }
   if (historicalListingStatuses.includes(statut)) {
-    if (requestScope || requestType) {
+    if (!canUseLightweightIndexes) {
       return { rows: [], total: 0, page, pageSize }
     }
     const historicalRangeFrom = filters.archive === allFilterValue ? 0 : from
@@ -1399,7 +1420,7 @@ export async function loadDossiersPage({
   if (requestScopedIds) {
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
-  const shouldMergeArchiveIndex = filters.archive === allFilterValue && !requestScope && !requestType
+  const shouldMergeArchiveIndex = filters.archive === allFilterValue && canUseLightweightIndexes
   const shouldMergeHistoricalIndex = shouldMergeArchiveIndex && (!statut || statut === annonceSearchListingsFilterValue)
   query = query.range(shouldMergeArchiveIndex ? 0 : from, to)
 
@@ -2566,7 +2587,7 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
   const statut = normalizeFilterValue(filters.statut)
   const requestScope = normalizeFilterValue(filters.requestScope)
   const requestType = normalizeFilterValue(filters.requestType)
-  const canUseLightweightIndexes = !requestScope && !requestType
+  const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
   const includePrimary = filters.archive !== archivedFilterValue && !historicalListingStatuses.includes(statut)
   const includeArchiveIndex = canUseLightweightIndexes && (filters.archive === archivedFilterValue || filters.archive === allFilterValue)
   const includeHistoricalIndex =
