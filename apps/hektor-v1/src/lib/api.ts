@@ -1400,7 +1400,7 @@ export async function loadDossiersPage({
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
   const shouldMergeArchiveIndex = filters.archive === allFilterValue && !requestScope && !requestType
-  const shouldMergeHistoricalIndex = shouldMergeArchiveIndex && statut === annonceSearchListingsFilterValue
+  const shouldMergeHistoricalIndex = shouldMergeArchiveIndex && (!statut || statut === annonceSearchListingsFilterValue)
   query = query.range(shouldMergeArchiveIndex ? 0 : from, to)
 
   const { data, error, count } = await query
@@ -2537,34 +2537,11 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
     }
   }
 
-  const batchSize = 1000
-  let from = 0
-  const rows: MandatRecord[] = []
-
-  while (true) {
-    const { data, error } = await applyDossierFiltersToQuery(
-      applyNegotiatorScopeToQuery(
-        supabase
-          .from(dossiersCurrentView)
-          .select('app_dossier_id,numero_mandat,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error')
-          .order('app_dossier_id', { ascending: true })
-          .range(from, from + batchSize - 1),
-        scope,
-      ),
-      filters,
-    )
-
-    if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat stats')
-    rows.push(...(data as MandatRecord[]))
-    if (data.length < batchSize) break
-    from += batchSize
-  }
-
-  return {
+  const buildStats = (rows: MandatRecord[]): MandatStats => ({
     total: rows.length,
     withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
-    mandatNonDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') !== '1').length,
-    mandatDiffuse: rows.filter((item) => Boolean((item.numero_mandat ?? '').trim()) && (item.diffusable ?? '0') === '1').length,
+    mandatNonDiffuse: rows.filter((item) => hasMandatNumber(item.numero_mandat) && (item.diffusable ?? '0') !== '1').length,
+    mandatDiffuse: rows.filter((item) => hasMandatNumber(item.numero_mandat) && (item.diffusable ?? '0') === '1').length,
     mandatValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && isValidationApproved(item.validation_diffusion_state)).length,
     mandatNonValide: rows.filter((item) => hasMandatNumber(item.numero_mandat) && !isValidationApproved(item.validation_diffusion_state)).length,
     offresEnCours: rows.filter((item) => hasOffreAchatEnCours(item)).length,
@@ -2582,7 +2559,88 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
       return normalized.includes('bienici')
     }).length,
     withErrors: rows.filter((item) => Boolean(item.has_diffusion_error)).length,
+  })
+
+  const batchSize = 1000
+  const rows: MandatRecord[] = []
+  const statut = normalizeFilterValue(filters.statut)
+  const requestScope = normalizeFilterValue(filters.requestScope)
+  const requestType = normalizeFilterValue(filters.requestType)
+  const canUseLightweightIndexes = !requestScope && !requestType
+  const includePrimary = filters.archive !== archivedFilterValue && !historicalListingStatuses.includes(statut)
+  const includeArchiveIndex = canUseLightweightIndexes && (filters.archive === archivedFilterValue || filters.archive === allFilterValue)
+  const includeHistoricalIndex =
+    canUseLightweightIndexes &&
+    (historicalListingStatuses.includes(statut) || (filters.archive === allFilterValue && (!statut || statut === annonceSearchListingsFilterValue)))
+  const primaryStatsSelect = 'app_dossier_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error,mandants_texte'
+  const archiveStatsSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte'
+  const historicalStatsSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte'
+
+  if (includePrimary) {
+    let from = 0
+    while (true) {
+      const { data, error } = await applyDossierFiltersToQuery(
+        applyNegotiatorScopeToQuery(
+          supabase
+            .from(dossiersCurrentView)
+            .select(primaryStatsSelect)
+            .order('app_dossier_id', { ascending: true })
+            .range(from, from + batchSize - 1),
+          scope,
+        ),
+        filters,
+      )
+
+      if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat stats')
+      rows.push(...(data as MandatRecord[]))
+      if (data.length < batchSize) break
+      from += batchSize
+    }
   }
+
+  if (includeArchiveIndex) {
+    let from = 0
+    while (true) {
+      const { data, error } = await applyArchiveIndexFiltersToQuery(
+        supabase
+          .from('app_archive_annonce_index_current')
+          .select(archiveStatsSelect)
+          .order('hektor_annonce_id', { ascending: true })
+          .range(from, from + batchSize - 1),
+        filters,
+        scope,
+      )
+
+      if (error || !data) throw new Error(error?.message ?? 'Unable to load archived mandat stats')
+      const mapped = (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier) as unknown as MandatRecord[]
+      rows.push(...mapped)
+      if (data.length < batchSize) break
+      from += batchSize
+    }
+  }
+
+  if (includeHistoricalIndex) {
+    let from = 0
+    while (true) {
+      const { data, error } = await applyHistoricalIndexFiltersToQuery(
+        supabase
+          .from('app_historical_annonce_index_current')
+          .select(historicalStatsSelect)
+          .order('hektor_annonce_id', { ascending: true })
+          .range(from, from + batchSize - 1),
+        filters,
+        scope,
+      )
+
+      if (error || !data) throw new Error(error?.message ?? 'Unable to load historical mandat stats')
+      const mapped = (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier) as unknown as MandatRecord[]
+      rows.push(...mapped)
+      if (data.length < batchSize) break
+      from += batchSize
+    }
+  }
+
+  return buildStats(rows)
 }
 
 export async function loadSuiviRequestStats(filters: AppFilters, scope?: DataScope | null): Promise<SuiviRequestStats> {
