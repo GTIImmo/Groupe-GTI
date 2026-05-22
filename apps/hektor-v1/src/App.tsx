@@ -3942,18 +3942,27 @@ function hektorCreatedAnnonceId(job: ConsoleJob) {
   return value || null
 }
 
+async function loadHektorActionAppDossier(job: ConsoleJob, scope?: DataScope | null): Promise<Dossier | null> {
+  const hektorAnnonceId = hektorCreatedAnnonceId(job)
+  if (!hektorAnnonceId) return null
+  if (job.job_type === 'prepare_archived_annonce_detail') return loadArchivedAnnonceDetailCache(hektorAnnonceId)
+  if (job.job_type === 'prepare_historical_annonce_detail') return loadHistoricalAnnonceDetailCache(hektorAnnonceId)
+  return loadDossierByHektorAnnonceId(hektorAnnonceId, scope)
+}
+
 function hektorActionProgress(job: ConsoleJob, syncJob: ConsoleJob | null, appDossier?: Dossier | null) {
   if (job.status === 'error' || syncJob?.status === 'error') return 'error'
   const syncJobId = hektorJobSyncJobId(job)
+  const canOpenInApp = job.job_type !== 'delete_hektor_annonce'
   if (job.job_type === 'create_hektor_draft_annonce' && job.status === 'done' && !appDossier) return 'syncing'
   if (syncJobId && syncJob?.status !== 'done') {
     if (job.status === 'done') return 'syncing'
     if (job.status === 'running') return 'creating'
     return 'queued'
   }
-  if (syncJobId && syncJob?.status === 'done') return 'available'
+  if (syncJobId && syncJob?.status === 'done') return !canOpenInApp || appDossier ? 'available' : 'syncing'
   if (appDossier) return 'available'
-  if (job.job_type !== 'create_hektor_draft_annonce' && job.status === 'done') return 'available'
+  if (job.job_type !== 'create_hektor_draft_annonce' && job.status === 'done') return canOpenInApp ? 'syncing' : 'available'
   if (job.status === 'done') return 'syncing'
   if (job.status === 'running') return 'creating'
   return 'queued'
@@ -4025,11 +4034,10 @@ function HektorActionStatusPopup(props: {
   const mainAnnonceId = mainJob ? hektorCreatedAnnonceId(mainJob) : null
   const mainDossier = mainAnnonceId ? props.linkedDossiers[mainAnnonceId] : null
   const mainProgress = mainJob ? hektorActionProgress(mainJob, mainSyncJob, mainDossier) : 'queued'
-  const isCreateDraftJob = mainJob?.job_type === 'create_hektor_draft_annonce'
   const isAvailable = mainProgress === 'available'
   const isError = mainProgress === 'error'
   const isWaitingForAppSync = Boolean(mainJob && mainProgress === 'syncing' && mainJob.status === 'done')
-  const appOpenReady = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && (!isCreateDraftJob || mainDossier))
+  const appOpenReady = Boolean(mainJob && isAvailable && mainJob.job_type !== 'delete_hektor_annonce' && mainDossier)
   const canShowOpenDelay = Boolean(appOpenReady && openButtonReadyJobId !== mainJob?.id)
   const canOpenApp = Boolean(appOpenReady && openButtonReadyJobId === mainJob?.id)
   const canOpenHektor = Boolean(mainJob && mainAnnonceId && mainJob.job_type !== 'delete_hektor_annonce')
@@ -4070,7 +4078,7 @@ function HektorActionStatusPopup(props: {
 
       <div className="hektor-action-popup-actions">
         {canOpenApp ? (
-          <button className="ghost-button button-primary" type="button" onClick={() => props.onOpenAppDossier(mainJob)}>Ouvrir l'annonce</button>
+          <button className="ghost-button button-primary" type="button" onClick={() => props.onOpenAppDossier(mainJob)}>Ouvrir le detail</button>
         ) : null}
         {isWaitingForAppSync ? (
           <button className="ghost-button button-primary is-waiting" type="button" disabled>Actualisation app...</button>
@@ -5997,18 +6005,20 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
-    const idsToResolve = visibleHektorActionPopupJobs
+    const jobsToResolve = visibleHektorActionPopupJobs
       .filter((job) => job.status === 'done')
-      .map(hektorCreatedAnnonceId)
-      .filter((id): id is string => Boolean(id))
-      .filter((id) => !hektorActionLinkedDossiers[id])
-    if (idsToResolve.length === 0) return
+      .map((job) => ({ job, id: hektorCreatedAnnonceId(job) }))
+      .filter((entry): entry is { job: ConsoleJob; id: string } => Boolean(entry.id))
+      .filter(({ id }) => !hektorActionLinkedDossiers[id])
+    if (jobsToResolve.length === 0) return
     let cancelled = false
     async function resolveCreatedDossiers() {
       const resolvedEntries: Array<[string, Dossier]> = []
-      for (const id of Array.from(new Set(idsToResolve))) {
+      const uniqueEntries = new Map<string, { job: ConsoleJob; id: string }>()
+      for (const entry of jobsToResolve) uniqueEntries.set(`${entry.job.job_type}:${entry.id}`, entry)
+      for (const { job, id } of uniqueEntries.values()) {
         try {
-          const dossier = await loadDossierByHektorAnnonceId(id, dataScope)
+          const dossier = await loadHektorActionAppDossier(job, dataScope)
           if (dossier) resolvedEntries.push([id, dossier])
         } catch (error) {
           console.warn('Hektor created dossier lookup failed', error)
@@ -6599,7 +6609,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (!hektorAnnonceId) return
     let dossier: Dossier | null = hektorActionLinkedDossiers[hektorAnnonceId] ?? null
     if (!dossier) {
-      dossier = await loadDossierByHektorAnnonceId(hektorAnnonceId, dataScope)
+      dossier = await loadHektorActionAppDossier(job, dataScope)
       if (dossier) {
         setHektorActionLinkedDossiers((current) => ({ ...current, [hektorAnnonceId]: dossier as Dossier }))
       }
@@ -6610,6 +6620,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
     setScreen('annonces')
+    if ('detail_payload_json' in dossier) setSelectedDossier(dossier as DetailedDossier)
     setSelectedDossierId(dossier.app_dossier_id)
     setDataReloadKey((value) => value + 1)
     setDetailOpen(true)
