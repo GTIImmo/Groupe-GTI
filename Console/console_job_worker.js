@@ -1013,7 +1013,13 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     let directoryUser = await loadHektorDirectoryUserByEmail(normalized).catch(() => null);
-    if (!directoryUser && profile && normalizeEmail(profile.email) === normalized && (profile.role === "admin" || profile.role === "manager")) {
+    if (
+      !directoryUser
+      && options.allowAdminContextFallback
+      && profile
+      && normalizeEmail(profile.email) === normalized
+      && (profile.role === "admin" || profile.role === "manager")
+    ) {
       directoryUser = await loadAnyHektorDirectoryUserByEmail(normalized).catch(() => null);
     }
     if (directoryUser && directoryUser.id_user) {
@@ -2123,7 +2129,12 @@ async function handlePrepareDocumentCloud(job) {
 async function handleUploadDocumentToHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+  await ensureHektorExecutionContext(job, dossier, payload, {
+    preferRequester: true,
+    preferDossierOwner: true,
+    required: true,
+    allowAdminContextFallback: true,
+  });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "document.pdf");
   const visibility = payload.visibility === "shared" ? "shared" : "private";
@@ -2228,7 +2239,12 @@ async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, 
 async function handleUploadHektorPhoto(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+  await ensureHektorExecutionContext(job, dossier, payload, {
+    preferRequester: true,
+    preferDossierOwner: true,
+    required: true,
+    allowAdminContextFallback: true,
+  });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "photo.jpg");
   const visible = payload.visible !== false;
@@ -2268,7 +2284,12 @@ async function handleUploadHektorPhoto(job) {
 async function handleDeleteDocumentFromHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+  await ensureHektorExecutionContext(job, dossier, payload, {
+    preferRequester: true,
+    preferDossierOwner: true,
+    required: true,
+    allowAdminContextFallback: true,
+  });
   const documentId = payload.document_id;
   if (!documentId) throw new Error("payload_json.document_id required");
   const document = await loadConsoleDocumentById(documentId);
