@@ -3947,7 +3947,11 @@ async function loadHektorActionAppDossier(job: ConsoleJob, scope?: DataScope | n
   if (!hektorAnnonceId) return null
   if (job.job_type === 'prepare_archived_annonce_detail') return loadArchivedAnnonceDetailCache(hektorAnnonceId)
   if (job.job_type === 'prepare_historical_annonce_detail') return loadHistoricalAnnonceDetailCache(hektorAnnonceId)
-  return loadDossierByHektorAnnonceId(hektorAnnonceId, scope)
+  const currentDossier = await loadDossierByHektorAnnonceId(hektorAnnonceId, scope)
+  if (currentDossier) return currentDossier
+  const historicalDossier = await loadHistoricalAnnonceDetailCache(hektorAnnonceId)
+  if (historicalDossier) return historicalDossier
+  return loadArchivedAnnonceDetailCache(hektorAnnonceId)
 }
 
 function hektorActionCanFinishWithoutAppDossier(job: ConsoleJob) {

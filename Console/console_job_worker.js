@@ -1815,6 +1815,75 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
   };
 }
 
+async function loadExistingDetailCacheState(hektorAnnonceId) {
+  const id = encodeURIComponent(String(hektorAnnonceId || "").trim());
+  if (!id) return { archive: null, historical: null };
+  const select = "select=hektor_annonce_id,requested_by,expires_at&limit=1";
+  const [archiveRows, historicalRows] = await Promise.all([
+    supabaseRequest(`app_archive_annonce_detail_cache?${select}&hektor_annonce_id=eq.${id}`, { method: "GET" }),
+    supabaseRequest(`app_historical_annonce_detail_cache?${select}&hektor_annonce_id=eq.${id}`, { method: "GET" }),
+  ]);
+  return {
+    archive: Array.isArray(archiveRows) && archiveRows.length ? archiveRows[0] : null,
+    historical: Array.isArray(historicalRows) && historicalRows.length ? historicalRows[0] : null,
+  };
+}
+
+async function rebuildDetailCacheFromLocal(job, hektorAnnonceId, cacheKind, cacheRow, payload) {
+  const ttlHours = Number(payload.cache_ttl_hours || payload.ttl_hours || 24);
+  const requestedBy = cacheRow && cacheRow.requested_by ? cacheRow.requested_by : job.requested_by;
+  const script = cacheKind === "archive"
+    ? "Console/prepare_archived_annonce_detail.py"
+    : "Console/prepare_historical_annonce_detail.py";
+  const label = cacheKind === "archive" ? "archive_detail_cache_refresh" : "historical_detail_cache_refresh";
+  const args = [
+    script,
+    "--hektor-annonce-id",
+    String(hektorAnnonceId),
+    "--ttl-hours",
+    String(Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : 24),
+  ];
+  if (requestedBy) args.push("--requested-by", String(requestedBy));
+
+  await logJob(job.id, label, "running", "Reconstruction du detail cloud deja demande", {
+    hektor_annonce_id: String(hektorAnnonceId),
+    cache_kind: cacheKind,
+  });
+  const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
+  const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+  const result = safeJsonParse(lastLine);
+  await logJob(job.id, label, "done", "Detail cloud reconstruit depuis la base locale", {
+    hektor_annonce_id: String(hektorAnnonceId),
+    cache_kind: cacheKind,
+    result,
+  });
+  return {
+    cache_kind: cacheKind,
+    cache_table: cacheKind === "archive" ? "app_archive_annonce_detail_cache" : "app_historical_annonce_detail_cache",
+    ...result,
+  };
+}
+
+async function rebuildRequestedDetailCaches(job, hektorAnnonceId, payload = {}) {
+  const cacheState = await loadExistingDetailCacheState(hektorAnnonceId);
+  const rebuilt = [];
+  if (cacheState.archive) {
+    rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "archive", cacheState.archive, payload));
+  }
+  if (cacheState.historical) {
+    rebuilt.push(await rebuildDetailCacheFromLocal(job, hektorAnnonceId, "historical", cacheState.historical, payload));
+  }
+  if (!rebuilt.length) {
+    await logJob(job.id, "detail_cache_refresh", "done", "Aucun detail cloud deja demande a reconstruire", {
+      hektor_annonce_id: String(hektorAnnonceId),
+    });
+  }
+  return {
+    status: rebuilt.length ? "rebuilt" : "skipped",
+    rebuilt,
+  };
+}
+
 async function handleRefreshConsoleData(job) {
   const payload = safeJsonParse(job.payload_json);
   const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
@@ -1825,11 +1894,13 @@ async function handleRefreshConsoleData(job) {
     parent_job_id: payload.parent_job_id || null,
   });
   const result = await runCreatedAnnonceImmediateSync(job, hektorAnnonceId);
+  const cacheRefresh = await rebuildRequestedDetailCaches(job, hektorAnnonceId, payload);
   return {
     ...result,
     status: "synced",
     reason: payload.reason || null,
     parent_job_id: payload.parent_job_id || null,
+    cache_refresh: cacheRefresh,
   };
 }
 
@@ -2308,6 +2379,10 @@ async function handleUploadDocumentToHektor(job) {
   if (!found) throw new Error(`Upload Hektor non confirme dans la liste documents: ${filename}`);
   const storedRow = indexed.find((row) => row.hektor_document_id === found.hektor_document_id);
   const stored = storedRow ? await persistProvidedDocumentFile(storedRow, temp.buffer, temp.mimeType, { cloud: shouldKeepCloud(dossier) }) : null;
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id, {
+    reason: "upload_document_to_hektor",
+    priority: 82,
+  });
 
   return {
     uploaded_filename: filename,
@@ -2317,6 +2392,7 @@ async function handleUploadDocumentToHektor(job) {
     hektor_document_id: found.hektor_document_id,
     local_path: stored ? stored.local_path : null,
     storage_path: stored ? stored.storage_path : null,
+    sync_job: syncJob,
   };
 }
 
@@ -2406,6 +2482,10 @@ async function handleUploadHektorPhoto(job) {
     }
     const indexed = await upsertConsolePhotos(dossier, entries);
     await deleteStorageObject(tempPath);
+    const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id, {
+      reason: "upload_hektor_photo",
+      priority: 82,
+    });
     return {
       uploaded_filename: filename,
       visibility: visible ? "visible" : "hidden",
@@ -2414,6 +2494,7 @@ async function handleUploadHektorPhoto(job) {
       before_count: beforeEntries.length,
       after_count: entries.length,
       captured: uploadResult.captured,
+      sync_job: syncJob,
     };
   } finally {
     try { fs.unlinkSync(local.filePath); } catch (_) {}
@@ -2467,6 +2548,10 @@ async function handleDeleteDocumentFromHektor(job) {
     prefer: "return=minimal",
   });
   await upsertConsoleDocuments(dossier, entries);
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id, {
+    reason: "delete_document_from_hektor",
+    priority: 82,
+  });
 
   return {
     deleted_document_id: document.id,
@@ -2474,6 +2559,7 @@ async function handleDeleteDocumentFromHektor(job) {
     hektor_uploaded_document_id: String(hektorUploadedDocumentId),
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     indexed: entries.length,
+    sync_job: syncJob,
   };
 }
 
