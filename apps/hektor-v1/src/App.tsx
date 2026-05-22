@@ -5705,7 +5705,10 @@ export default function App() {
   }, [hektorAgencies, negotiatorAssignAgencyValue])
   const negotiatorAssignOptions = useMemo(() => {
     if (!negotiatorAssignAgencyValue) return []
-    return hektorNegotiators.filter((item) => item.hektorAgenceId === negotiatorAssignAgencyValue)
+    return hektorNegotiators
+      .filter((item) => item.hektorAgenceId === negotiatorAssignAgencyValue)
+      .slice()
+      .sort((left, right) => left.label.localeCompare(right.label, 'fr'))
   }, [hektorNegotiators, negotiatorAssignAgencyValue])
   useEffect(() => {
     setSearchDraft(filters.query)
@@ -6848,6 +6851,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (negotiatorAssignPending) return
     setNegotiatorAssignTarget(null)
     setNegotiatorAssignAgencyValue('')
+    setNegotiatorAssignValue('')
+  }
+
+  function handleNegotiatorAssignAgencyChange(value: string) {
+    setNegotiatorAssignAgencyValue(value)
     setNegotiatorAssignValue('')
   }
 
@@ -8717,10 +8725,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <span>Agence Hektor</span>
                   <select
                     value={negotiatorAssignAgencyValue}
-                    onChange={(event) => {
-                      setNegotiatorAssignAgencyValue(event.target.value)
-                      setNegotiatorAssignValue('')
-                    }}
+                    onChange={(event) => handleNegotiatorAssignAgencyChange(event.target.value)}
                     required
                   >
                     <option value="">Choisir une agence</option>
@@ -8733,7 +8738,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <label className="filter-field">
                   <span>Negociateur Hektor</span>
-                  <select value={negotiatorAssignValue} onChange={(event) => setNegotiatorAssignValue(event.target.value)} required>
+                  <select
+                    key={negotiatorAssignAgencyValue || 'no-agency'}
+                    value={negotiatorAssignValue}
+                    onChange={(event) => setNegotiatorAssignValue(event.target.value)}
+                    disabled={!negotiatorAssignAgencyValue || negotiatorAssignOptions.length === 0}
+                    required
+                  >
                     <option value="">{negotiatorAssignAgencyValue ? 'Choisir un negociateur' : 'Choisis d abord une agence'}</option>
                     {negotiatorAssignOptions.map((negotiator) => (
                       <option key={negotiator.hektorNegociateurId ?? `${negotiator.idUser}-${negotiator.hektorAgenceId}`} value={negotiator.hektorNegociateurId ?? ''}>
