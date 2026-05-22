@@ -902,8 +902,36 @@ async function loadDossier(job) {
   if (job.app_dossier_id != null) params.set("app_dossier_id", `eq.${job.app_dossier_id}`);
   else params.set("hektor_annonce_id", `eq.${job.hektor_annonce_id}`);
   const rows = await supabaseRequest(`app_dossier_current?${params.toString()}`, { method: "GET" });
-  if (!Array.isArray(rows) || !rows.length) throw new Error(`Dossier introuvable: ${job.app_dossier_id || job.hektor_annonce_id}`);
-  return rows[0];
+  if (Array.isArray(rows) && rows.length) return rows[0];
+
+  const historicalParams = new URLSearchParams({
+    select: "app_historical_id,hektor_annonce_id,archive,statut_annonce,agence_nom,commercial_id,commercial_nom,negociateur_email",
+    limit: "1",
+  });
+  if (job.app_dossier_id != null) historicalParams.set("app_historical_id", `eq.${job.app_dossier_id}`);
+  else historicalParams.set("hektor_annonce_id", `eq.${job.hektor_annonce_id}`);
+  const historicalRows = await supabaseRequest(`app_historical_annonce_index_current?${historicalParams.toString()}`, { method: "GET" });
+  if (Array.isArray(historicalRows) && historicalRows.length) {
+    const row = historicalRows[0];
+    return {
+      ...row,
+      app_dossier_id: Number(row.app_historical_id),
+      archive: row.archive || "0",
+    };
+  }
+
+  const archiveParams = new URLSearchParams({
+    select: "app_archive_id,hektor_annonce_id,numero_dossier,statut_annonce,archive",
+    limit: "1",
+  });
+  if (job.app_dossier_id != null) archiveParams.set("app_archive_id", `eq.${job.app_dossier_id}`);
+  else archiveParams.set("hektor_annonce_id", `eq.${job.hektor_annonce_id}`);
+  const archiveRows = await supabaseRequest(`app_archive_annonce_index_current?${archiveParams.toString()}`, { method: "GET" });
+  if (Array.isArray(archiveRows) && archiveRows.length) {
+    throw new Error(`Annonce archivee: ${job.app_dossier_id || job.hektor_annonce_id}. Desarchivez avant d'executer cette action Hektor.`);
+  }
+
+  throw new Error(`Dossier introuvable: ${job.app_dossier_id || job.hektor_annonce_id}`);
 }
 
 async function loadAppUserProfile(userId) {
