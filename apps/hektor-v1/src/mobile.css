@@ -369,6 +369,47 @@
   line-height: 1;
 }
 
+.mobile-search-scope {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid rgba(34, 35, 35, 0.08);
+  border-radius: 14px;
+  background: #f7f8f8;
+}
+
+.mobile-search-scope span {
+  color: #747a7a;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mobile-search-scope strong {
+  color: var(--mobile-ink);
+  font-size: 14px;
+  line-height: 1.28;
+}
+
+.mobile-search-scope button {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mobile-magenta);
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.mobile-search-scope.is-extended {
+  border-color: rgba(197, 0, 95, 0.22);
+  background: rgba(197, 0, 95, 0.07);
+}
+
 .mobile-list-head {
   display: flex;
   align-items: flex-end;
@@ -403,6 +444,20 @@
     linear-gradient(135deg, rgba(197, 0, 95, 0.055) 0%, rgba(255,255,255,0) 48%),
     #ffffff;
   box-shadow: 0 10px 26px rgba(34, 35, 35, 0.07);
+}
+
+.mobile-list-card.is-lightweight-listing {
+  border-color: rgba(14, 118, 128, 0.18);
+  background:
+    linear-gradient(135deg, rgba(14, 118, 128, 0.08) 0%, rgba(255,255,255,0) 52%),
+    #ffffff;
+}
+
+.mobile-list-card.is-lightweight-listing.has-detail-cache {
+  border-color: rgba(39, 136, 92, 0.2);
+  background:
+    linear-gradient(135deg, rgba(39, 136, 92, 0.08) 0%, rgba(255,255,255,0) 52%),
+    #ffffff;
 }
 
 .mobile-card-top {
@@ -540,6 +595,29 @@
   color: #4f5656;
   font-size: 11px;
   font-weight: 850;
+}
+
+.mobile-detail-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid rgba(14, 118, 128, 0.18);
+  border-radius: 999px;
+  background: rgba(14, 118, 128, 0.08);
+  color: #0f6f7b;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.mobile-detail-chip.is-ready {
+  border-color: rgba(39, 136, 92, 0.22);
+  background: rgba(39, 136, 92, 0.1);
+  color: #237247;
+}
+
+.mobile-lightweight-button {
+  box-shadow: 0 12px 24px rgba(14, 118, 128, 0.18);
 }
 
 .mobile-portal-chip .portal-mark {
@@ -1031,6 +1109,25 @@
   .modal-overlay {
     z-index: 180;
     padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-filter-overlay {
+    z-index: 170;
+    align-items: end;
+    padding: 0;
+  }
+
+  .mobile-filter-overlay .filters-drawer {
+    width: 100%;
+    max-height: min(82dvh, 720px);
+    padding: 14px;
+    border-radius: 22px 22px 0 0;
+    overflow-y: auto;
+  }
+
+  .mobile-filter-overlay .filter-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .modal-panel,

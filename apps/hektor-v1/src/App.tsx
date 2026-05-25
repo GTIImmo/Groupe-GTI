@@ -9544,6 +9544,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               ))}
             </div>
           ) : null}
+          {screen === 'mandats' && annonceSearchScopeSummary ? (
+            <div className={`mobile-search-scope ${annonceSearchScope === 'extended' ? 'is-extended' : ''}`}>
+              <span>{annonceSearchScope === 'extended' ? 'Recherche étendue' : canExtendAnnonceSearch ? 'Recherche limitée' : 'Recherche filtrée'}</span>
+              <strong>{annonceSearchScopeSummary}</strong>
+              {annonceSearchScope === 'extended' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnnonceSearchScope('current')
+                    setFilters((current) => resetAnnonceSearchScopeFilters(current))
+                    setMandatPage(1)
+                    setDossierPage(1)
+                  }}
+                >
+                  Revenir
+                </button>
+              ) : canExtendAnnonceSearch ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnnonceSearchScope('extended')
+                    setFilters((current) => extendAnnonceSearchFilters(current))
+                    setMandatPage(1)
+                    setDossierPage(1)
+                  }}
+                >
+                  Étendre
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         {filtersOpen ? (
@@ -9559,7 +9590,49 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="filter-grid">
                 <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                <FilterSelect label="Statut" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
+                {screen !== 'estimations' ? (
+                  <FilterSelect
+                    label="Archive"
+                    value={filters.archive}
+                    onChange={(value) => updateFilter('archive', value)}
+                    options={[
+                      { value: activeArchiveFilterValue, label: 'Actives' },
+                      { value: archivedFilterValue, label: 'Archivées' },
+                    ]}
+                  />
+                ) : null}
+                <FilterSelect label={screen === 'mandats' ? 'Statut phase 1' : 'Statut'} value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
+                {screen === 'mandats' ? (
+                  <>
+                    <FilterSelect
+                      label="Détail"
+                      value={filters.detailAvailability}
+                      onChange={(value) => updateFilter('detailAvailability', value)}
+                      options={[
+                        { value: 'available', label: 'Disponible' },
+                        { value: 'to_load', label: 'À charger' },
+                      ]}
+                    />
+                    <FilterSelect
+                      label="Mandat"
+                      value={filters.mandat}
+                      onChange={(value) => updateFilter('mandat', value)}
+                      options={[
+                        { value: withMandatFilterValue, label: 'Avec mandat' },
+                        { value: withoutMandatFilterValue, label: 'Sans mandat' },
+                      ]}
+                    />
+                    <FilterSelect
+                      label="Affaire"
+                      value={filters.affaire}
+                      onChange={(value) => updateFilter('affaire', value)}
+                      options={[
+                        { value: 'offre_achat', label: 'Offre' },
+                        { value: 'compromis', label: 'Compromis' },
+                      ]}
+                    />
+                  </>
+                ) : null}
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect
                   label="Diffusable"
@@ -9596,6 +9669,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             loading={mandatLoading}
             mode="active"
             onOpenDetailPage={openDossierDetailPage}
+            onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={openRequestModal}
           />
         ) : screen === 'estimations' ? (
@@ -9605,6 +9679,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             loading={mandatLoading}
             mode="estimation"
             onOpenDetailPage={openDossierDetailPage}
+            onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={openRequestModal}
           />
         ) : screen === 'registre' ? (
@@ -9625,6 +9700,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             loading={requestLoading || mandatLoading}
             mode="active"
             onOpenDetailPage={openDossierDetailPage}
+            onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={(id) => openRequestModal(id, 'pauline')}
           />
         )}
@@ -13374,6 +13450,10 @@ function MobileDossierDetail(props: {
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const actionRole = props.actionRole ?? 'nego'
   const isLightweightDetail = isLightweightAnnonceRecord(dossier)
+  const isArchivedLightweightDetail = isArchivedAnnonceRecord(dossier)
+  const lightweightReadOnlyLabel = isArchivedLightweightDetail
+    ? 'Cette fiche archivée est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes après désarchivage.'
+    : 'Cette fiche vendue ou close est consultable depuis un index léger. Les modifications restent bloquées tant que la fiche n’est pas revenue dans le périmètre principal.'
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
@@ -13457,10 +13537,15 @@ function MobileDossierDetail(props: {
         {props.onDeleteAnnonce ? <button className="mobile-ghost-button mobile-danger-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>Supprimer</button> : null}
       </section> : (
         <section className="mobile-detail-section">
-          <ReadOnlyDetailNotice label="Cette fiche archivee est consultable. Les actions seront rouvertes apres desarchivage." />
-          {props.onRestoreAnnonce ? (
+          <ReadOnlyDetailNotice label={lightweightReadOnlyLabel} />
+          {isArchivedLightweightDetail && props.onRestoreAnnonce ? (
             <button className="mobile-primary-button" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
-              Demander le desarchivage
+              Demander le désarchivage
+            </button>
+          ) : null}
+          {!isArchivedLightweightDetail && props.onChangeAnnonceStatus ? (
+            <button className="mobile-primary-button" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
+              Changer le statut
             </button>
           ) : null}
         </section>
@@ -13581,7 +13666,7 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
-        {isLightweightDetail ? <ReadOnlyDetailNotice label="Mandat et contacts sont consultables, mais les ajouts et modifications sont bloques depuis une fiche d'index leger." /> : (
+        {isLightweightDetail ? <ReadOnlyDetailNotice label="Mandat et contacts sont consultables, mais les ajouts et modifications sont bloqués depuis une fiche d'index léger." /> : (
           <>
             <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
             <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
@@ -13616,7 +13701,7 @@ function MobileDossierDetail(props: {
         {!isLightweightDetail ? <button className="mobile-hektor-field-edit-button mobile-hektor-content-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
           <span aria-hidden="true">M</span>
           Modifier l'annonce
-        </button> : <ReadOnlyDetailNotice label="Le contenu de l'annonce est en lecture seule jusqu'a desarchivage." />}
+        </button> : <ReadOnlyDetailNotice label="Le contenu de l'annonce est en lecture seule depuis cette fiche d'index léger." />}
         {mobileHektorEditOpen && !isLightweightDetail ? (
           <div className="mobile-detail-embedded">
             <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
@@ -13722,10 +13807,10 @@ function MobileMandatCards(props: {
   loading: boolean
   mode: 'active' | 'estimation'
   onOpenDetailPage: (id: number) => void
+  onOpenLightweightDetail: (item: MandatRecord) => void
   onOpenRequestModal: (id: number, role?: 'nego' | 'pauline') => void
 }) {
   const title = props.mode === 'estimation' ? 'Estimations' : 'Annonces actives'
-  const primaryLabel = props.mode === 'estimation' ? 'Voir estimation' : 'Voir le détail'
   if (props.mandats.length === 0) {
     return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucune ligne disponible.'}</section>
   }
@@ -13739,9 +13824,21 @@ function MobileMandatCards(props: {
         <span>{props.mandats.length} / {props.total}</span>
       </div>
       {props.mandats.map((item, index) => {
+        const isLightweight = props.mode === 'active' && isLightweightAnnonceRecord(item)
+        const isArchive = props.mode === 'active' && isArchivedAnnonceRecord(item)
+        const hasExportedDetail = isLightweight && hasDetailCacheAvailable(item)
         const hasLeboncoin = hasPortalEnabled(item, ['leboncoin', 'le bon coin', 'lbc'])
         const hasBienici = hasPortalEnabled(item, ['bienici'])
         const hasSiteGti = isSiteGtiEnabled(item)
+        const primaryLabel = props.mode === 'estimation'
+          ? 'Voir estimation'
+          : isArchive
+            ? 'Désarchiver'
+            : hasExportedDetail
+              ? 'Ouvrir'
+              : isLightweight
+                ? 'Charger détail'
+                : 'Voir le détail'
         const cardKey = [
           props.mode,
           item.app_dossier_id,
@@ -13751,7 +13848,7 @@ function MobileMandatCards(props: {
           index,
         ].join('-')
         return (
-          <article key={cardKey} className="mobile-list-card">
+          <article key={cardKey} className={`mobile-list-card ${isLightweight ? 'is-lightweight-listing' : ''} ${hasExportedDetail ? 'has-detail-cache' : ''}`}>
             <div className="mobile-card-top">
               <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
               <div className="mobile-list-card-main">
@@ -13766,13 +13863,15 @@ function MobileMandatCards(props: {
             </div>
             <div className="mobile-status-row">
               <StatusPill value={props.mode === 'estimation' ? listingProgressLabel(item) : item.statut_annonce} />
+              {props.mode === 'active' ? <StatusPill value={item.archive === '1' ? 'Archivé' : 'Actif'} /> : null}
+              {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'Détail prêt' : 'Détail à charger'}</span> : null}
               <span className="mobile-portal-chip">LBC <PortalStatusMark enabled={hasLeboncoin} /></span>
               <span className="mobile-portal-chip">BI <PortalStatusMark enabled={hasBienici} /></span>
               <span className="mobile-portal-chip">GTI <PortalStatusMark enabled={hasSiteGti} /></span>
             </div>
             <div className="mobile-card-actions">
-              {props.mode === 'active' ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal(item.app_dossier_id, 'nego')}>Action métier</button> : null}
-              <button className="mobile-primary-button" type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>{primaryLabel}</button>
+              {props.mode === 'active' && !isLightweight ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal(item.app_dossier_id, 'nego')}>Action métier</button> : null}
+              <button className={isLightweight ? 'mobile-primary-button mobile-lightweight-button' : 'mobile-primary-button'} type="button" onClick={() => isLightweight ? props.onOpenLightweightDetail(item) : props.onOpenDetailPage(item.app_dossier_id)}>{primaryLabel}</button>
             </div>
           </article>
         )
