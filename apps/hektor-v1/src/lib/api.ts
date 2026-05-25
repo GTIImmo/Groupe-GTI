@@ -957,6 +957,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
+  else if (archive === allFilterValue) query = query.neq('statut_annonce', 'Estimation')
   if (validationDiffusion === '__validated__') {
     query = query.or(
       [
@@ -1169,6 +1170,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
+  else if (filters.archive === allFilterValue) query = query.neq('statut_annonce', 'Estimation')
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
