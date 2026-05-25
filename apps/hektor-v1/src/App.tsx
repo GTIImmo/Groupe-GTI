@@ -148,7 +148,13 @@ function isHistoricalListingStatus(value: unknown) {
 }
 
 function usesLightweightAnnonceIndex(filters: AppFilters) {
-  return filters.archive === allFilterValue || filters.archive === archivedFilterValue || filters.statut === annonceSearchListingsFilterValue || isHistoricalListingStatus(filters.statut)
+  return (
+    filters.archive === allFilterValue ||
+    filters.archive === archivedFilterValue ||
+    filters.statut === annonceSearchListingsFilterValue ||
+    isHistoricalListingStatus(filters.statut) ||
+    (filters.archive === activeArchiveFilterValue && filters.statut === allFilterValue)
+  )
 }
 
 type AnnonceSearchScope = 'current' | 'extended'
