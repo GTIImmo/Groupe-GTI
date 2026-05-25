@@ -172,8 +172,9 @@ function annonceSearchScopeText(filters: AppFilters) {
   if (filters.statut === 'Clos') return 'les annonces closes'
   if (filters.archive === allFilterValue) return 'toutes les annonces hors estimations'
   if (filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue) return 'les annonces actives / offres / compromis'
+  if (filters.archive === activeArchiveFilterValue && filters.statut === allFilterValue) return 'les annonces actives, vendues et closes'
   if (filters.statut && filters.statut !== allFilterValue) return `les annonces ${filters.statut.toLowerCase()}`
-  return 'le perimetre courant'
+  return 'les annonces correspondant aux filtres'
 }
 
 function annonceSearchExtendLabel(filters: AppFilters) {
@@ -10926,7 +10927,7 @@ function MandatsScreen(props: {
           <div className={`search-scope-row ${props.searchScopeExtended ? 'is-extended' : ''}`}>
             <span className="search-scope-icon" aria-hidden="true" />
             <div className="search-scope-copy">
-              <span>{props.searchScopeExtended ? 'Recherche étendue' : 'Recherche limitée au contexte'}</span>
+              <span>{props.searchScopeExtended ? 'Recherche étendue' : props.canExtendSearch ? 'Recherche limitée au contexte' : 'Recherche selon les filtres'}</span>
               <strong>{props.searchScopeSummary}</strong>
             </div>
             {props.searchScopeExtended ? (
