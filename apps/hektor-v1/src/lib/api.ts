@@ -1438,24 +1438,24 @@ export async function loadDossiersPage({
     page,
     pageSize,
   }
-  if (shouldMergeArchiveIndex) {
+  if (shouldMergeLightweightIndexes) {
     const mixedRangeTo = to
-    const archiveQuery = applyArchiveIndexFiltersToQuery(
-      supabase
-        .from('app_archive_annonce_index_current')
-        .select(archiveIndexSelect, { count: countMode }),
-      filters,
-      scope,
-    )
-      .order('date_maj', { ascending: false, nullsFirst: false })
-      .order('hektor_annonce_id', { ascending: false })
-      .range(0, mixedRangeTo)
+    const mergedResults: Array<PageResult<Dossier>> = [primaryResult]
+    if (shouldMergeArchiveIndex) {
+      const archiveQuery = applyArchiveIndexFiltersToQuery(
+        supabase
+          .from('app_archive_annonce_index_current')
+          .select(archiveIndexSelect, { count: countMode }),
+        filters,
+        scope,
+      )
+        .order('date_maj', { ascending: false, nullsFirst: false })
+        .order('hektor_annonce_id', { ascending: false })
+        .range(0, mixedRangeTo)
 
-    const { data: archiveData, error: archiveError, count: archiveCount } = await archiveQuery
-    if (archiveError || !archiveData) throw new Error(archiveError?.message ?? 'Unable to load archived annonces')
-    const mergedResults: Array<PageResult<Dossier>> = [
-      primaryResult,
-      {
+      const { data: archiveData, error: archiveError, count: archiveCount } = await archiveQuery
+      if (archiveError || !archiveData) throw new Error(archiveError?.message ?? 'Unable to load archived annonces')
+      mergedResults.push({
         rows: await attachLightweightDetailCacheState(
           (archiveData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
           'app_archive_annonce_detail_cache',
@@ -1463,8 +1463,8 @@ export async function loadDossiersPage({
         total: archiveCount ?? 0,
         page,
         pageSize,
-      },
-    ]
+      })
+    }
     if (shouldMergeHistoricalIndex) {
       const historicalQuery = applyHistoricalIndexFiltersToQuery(
         supabase
