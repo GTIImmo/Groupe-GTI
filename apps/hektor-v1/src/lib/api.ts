@@ -2270,7 +2270,12 @@ export async function loadMandatsPage({
   const to = from + pageSize - 1
   const countMode: 'exact' = 'exact'
   const statut = normalizeFilterValue(filters.statut)
-  if (filters.archive === archivedFilterValue || filters.archive === allFilterValue || historicalListingStatuses.includes(statut)) {
+  const shouldUseMergedAnnonceListing =
+    filters.archive === archivedFilterValue ||
+    filters.archive === allFilterValue ||
+    historicalListingStatuses.includes(statut) ||
+    (filters.archive === activeArchiveFilterValue && (!statut || statut === annonceSearchListingsFilterValue))
+  if (shouldUseMergedAnnonceListing) {
     const listingPage = await loadDossiersPage({ filters, page, pageSize, scope })
     return {
       ...listingPage,
