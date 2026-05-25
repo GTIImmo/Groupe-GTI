@@ -957,7 +957,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
-  else if (archive === allFilterValue) query = query.neq('statut_annonce', 'Estimation')
+  else query = query.neq('statut_annonce', 'Estimation')
   if (validationDiffusion === '__validated__') {
     query = query.or(
       [
@@ -1170,7 +1170,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
-  else if (filters.archive === allFilterValue) query = query.neq('statut_annonce', 'Estimation')
+  else query = query.neq('statut_annonce', 'Estimation')
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
@@ -1423,8 +1423,12 @@ export async function loadDossiersPage({
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
   const shouldMergeArchiveIndex = filters.archive === allFilterValue && canUseLightweightIndexes
-  const shouldMergeHistoricalIndex = shouldMergeArchiveIndex && (!statut || statut === annonceSearchListingsFilterValue)
-  query = query.range(shouldMergeArchiveIndex ? 0 : from, to)
+  const shouldMergeHistoricalIndex =
+    canUseLightweightIndexes &&
+    (filters.archive === allFilterValue || filters.archive === activeArchiveFilterValue) &&
+    (!statut || statut === annonceSearchListingsFilterValue)
+  const shouldMergeLightweightIndexes = shouldMergeArchiveIndex || shouldMergeHistoricalIndex
+  query = query.range(shouldMergeLightweightIndexes ? 0 : from, to)
 
   const { data, error, count } = await query
   if (error || !data) throw new Error(error?.message ?? 'Unable to load dossiers')
@@ -2594,7 +2598,8 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
   const includeArchiveIndex = canUseLightweightIndexes && (filters.archive === archivedFilterValue || filters.archive === allFilterValue)
   const includeHistoricalIndex =
     canUseLightweightIndexes &&
-    (historicalListingStatuses.includes(statut) || (filters.archive === allFilterValue && (!statut || statut === annonceSearchListingsFilterValue)))
+    (historicalListingStatuses.includes(statut) ||
+      ((filters.archive === allFilterValue || filters.archive === activeArchiveFilterValue) && (!statut || statut === annonceSearchListingsFilterValue)))
   const primaryStatsSelect = 'app_dossier_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error,mandants_texte'
   const archiveStatsSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte'
   const historicalStatsSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte'

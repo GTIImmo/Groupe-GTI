@@ -7932,8 +7932,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
   const hasAnnonceSearch = screen === 'mandats' && filters.query.trim().length >= 3
-  const isAlreadyBroadAnnonceSearch = filters.archive === allFilterValue && (filters.statut === allFilterValue || filters.statut === annonceSearchListingsFilterValue)
-  const canExtendAnnonceSearch = hasAnnonceSearch && annonceSearchScope === 'current' && !isAlreadyBroadAnnonceSearch
+  const isDefaultAnnonceSearchScope = filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue
+  const canExtendAnnonceSearch = hasAnnonceSearch && annonceSearchScope === 'current' && isDefaultAnnonceSearchScope
   const annonceSearchScopeSummary = hasAnnonceSearch
     ? `${new Intl.NumberFormat('fr-FR').format(mandatsTotal)} resultat${mandatsTotal > 1 ? 's' : ''} dans ${annonceSearchScopeText(dataFilters)}`
     : null
