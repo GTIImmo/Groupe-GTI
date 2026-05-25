@@ -136,6 +136,8 @@ const activeListingsFilterValue = '__active_listings__'
 const annonceSearchListingsFilterValue = '__annonce_search_listings__'
 const activeListingStatuses = ['Actif', 'Sous offre', 'Sous compromis']
 const historicalListingStatuses = ['Vendu', 'Clos']
+const compromisCancelledQuery = 'compromis_state.in.("cancelled","annule","annulé","annuled")'
+const noCancelledCompromisQuery = 'compromis_id.is.null,compromis_state.is.null,compromis_state.not.in.("cancelled","annule","annulé","annuled")'
 const dossiersCurrentView = 'app_dossiers_current'
 const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accepted', 'refused']
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
@@ -518,7 +520,8 @@ function normalizeOfferPropositionType(value: string | null | undefined) {
 }
 
 function isCompromisCancelledState(value: string | null | undefined) {
-  return normalizeBusinessState(value) === 'cancelled'
+  const state = normalizeBusinessState(value)
+  return state === 'cancelled' || state === 'annule' || state === 'annulé' || state === 'annuled'
 }
 
 function getOfferLastPropositionType(item: { offre_last_proposition_type?: string | null; offre_state?: string | null }) {
@@ -527,12 +530,26 @@ function getOfferLastPropositionType(item: { offre_last_proposition_type?: strin
   return normalizeOfferPropositionType(item.offre_state)
 }
 
-function hasOffreAchatEnCours(item: { offre_id?: string | number | null; offre_last_proposition_type?: string | null; offre_state?: string | null }) {
+function hasOffreAchatEnCours(item: {
+  offre_id?: string | number | null
+  offre_last_proposition_type?: string | null
+  offre_state?: string | null
+  compromis_id?: string | number | null
+  compromis_state?: string | null
+}) {
+  if (hasCompromisAnnule(item)) return false
   const lastType = getOfferLastPropositionType(item)
   return item.offre_id != null && (lastType === 'proposition' || lastType === 'accepte')
 }
 
-function hasOffreAchatRefusee(item: { offre_id?: string | number | null; offre_last_proposition_type?: string | null; offre_state?: string | null }) {
+function hasOffreAchatRefusee(item: {
+  offre_id?: string | number | null
+  offre_last_proposition_type?: string | null
+  offre_state?: string | null
+  compromis_id?: string | number | null
+  compromis_state?: string | null
+}) {
+  if (hasCompromisAnnule(item)) return false
   return item.offre_id != null && getOfferLastPropositionType(item) === 'refus'
 }
 
@@ -950,10 +967,14 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (affaire === 'compromis') query = query.not('compromis_id', 'is', null)
   if (offreStatus === 'en_cours') {
     query = query.or(['and(offre_id.not.is.null,offre_last_proposition_type.eq.proposition)', 'and(offre_id.not.is.null,offre_last_proposition_type.eq.accepte)'].join(','))
+    query = query.or(noCancelledCompromisQuery)
   }
-  if (offreStatus === 'refusee') query = query.or('and(offre_id.not.is.null,offre_last_proposition_type.eq.refus)')
+  if (offreStatus === 'refusee') {
+    query = query.or('and(offre_id.not.is.null,offre_last_proposition_type.eq.refus)')
+    query = query.or(noCancelledCompromisQuery)
+  }
   if (compromisStatus === 'en_cours') query = query.or('and(compromis_id.not.is.null,compromis_state.eq.active)')
-  if (compromisStatus === 'annule') query = query.or('and(compromis_id.not.is.null,compromis_state.eq.cancelled)')
+  if (compromisStatus === 'annule') query = query.not('compromis_id', 'is', null).or(compromisCancelledQuery)
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
