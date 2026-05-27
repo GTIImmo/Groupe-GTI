@@ -281,6 +281,17 @@ def mark_annonce_detail_synced(conn, annonce_id: str) -> None:
     )
 
 
+def mark_contact_detail_synced(conn, contact_id: str) -> None:
+    conn.execute(
+        """
+        UPDATE sync_contact_state
+        SET last_detail_sync_at = ?
+        WHERE hektor_contact_id = ?
+        """,
+        (now_utc_iso(), contact_id),
+    )
+
+
 def upsert_contact_state(
     conn,
     *,

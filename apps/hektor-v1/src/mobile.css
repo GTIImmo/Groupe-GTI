@@ -205,6 +205,26 @@
   border-radius: 50%;
 }
 
+.mobile-nav-icon-contact::before {
+  left: 3px;
+  bottom: 2px;
+  width: 12px;
+  height: 8px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.mobile-nav-icon-contact::after {
+  top: 2px;
+  left: 6px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow: 7px 5px 0 -3px currentColor;
+}
+
 .mobile-bottom-nav-item strong {
   max-width: 100%;
   overflow: hidden;

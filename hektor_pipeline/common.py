@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import time
 from contextlib import suppress
@@ -16,6 +17,7 @@ from requests import Response
 
 DEFAULT_DB_PATH = Path("data") / "hektor.sqlite"
 RUN_STALE_AFTER_MINUTES = 30
+SENSITIVE_QUERY_RE = re.compile(r"((?:client_secret|token)=)[^&\s]+", re.IGNORECASE)
 
 
 def load_env(env_path: str | Path = ".env") -> None:
@@ -29,6 +31,14 @@ def load_env(env_path: str | Path = ".env") -> None:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip())
+
+
+def sanitize_error_text(value: object) -> str:
+    return SENSITIVE_QUERY_RE.sub(r"\1***", str(value or ""))
+
+
+class HektorNonRetryableError(RuntimeError):
+    """Permanent Hektor API error that should not be retried immediately."""
 
 
 @dataclass
@@ -74,30 +84,47 @@ class HektorClient:
         self.max_retries = 4
 
     def authenticate(self) -> str:
-        auth_resp = self.session.post(
-            f"{self.settings.base_url}/Api/OAuth/Authenticate/",
-            params={
-                "client_id": self.settings.client_id,
-                "client_secret": self.settings.client_secret,
-                "grant_type": "client_credentials",
-            },
-            timeout=self.settings.timeout,
-        )
-        auth_resp.raise_for_status()
-        access_token = auth_resp.json()["access_token"]
+        last_error: Optional[Exception] = None
+        last_stage = "authenticate"
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                last_stage = "authenticate"
+                auth_resp = self.session.post(
+                    f"{self.settings.base_url}/Api/OAuth/Authenticate/",
+                    params={
+                        "client_id": self.settings.client_id,
+                        "client_secret": self.settings.client_secret,
+                        "grant_type": "client_credentials",
+                    },
+                    timeout=self.settings.timeout,
+                )
+                auth_resp.raise_for_status()
+                access_token = auth_resp.json()["access_token"]
 
-        sso_resp = self.session.post(
-            f"{self.settings.base_url}/Api/OAuth/Sso/",
-            params={
-                "token": access_token,
-                "scope": "sso",
-                "client_id": self.settings.client_id,
-            },
-            timeout=self.settings.timeout,
-        )
-        sso_resp.raise_for_status()
-        self.jwt = sso_resp.json()["jwt"]
-        return self.jwt
+                last_stage = "sso"
+                sso_resp = self.session.post(
+                    f"{self.settings.base_url}/Api/OAuth/Sso/",
+                    params={
+                        "token": access_token,
+                        "scope": "sso",
+                        "client_id": self.settings.client_id,
+                    },
+                    timeout=self.settings.timeout,
+                )
+                sso_resp.raise_for_status()
+                self.jwt = sso_resp.json()["jwt"]
+                return self.jwt
+            except (KeyError, ValueError, requests.RequestException) as exc:
+                last_error = exc
+                if attempt >= self.max_retries:
+                    break
+                time.sleep(1.5 * attempt)
+
+        safe_error = sanitize_error_text(last_error)
+        raise RuntimeError(
+            f"Hektor OAuth {last_stage} failed after {self.max_retries} attempts: "
+            f"{type(last_error).__name__ if last_error else 'unknown'}: {safe_error}"
+        ) from last_error
 
     def request(self, method: str, path: str, *, params: Optional[Dict[str, Any]] = None) -> Response:
         if not self.jwt:
@@ -122,6 +149,12 @@ class HektorClient:
                     self.authenticate()
                     continue
 
+                if 400 <= response.status_code < 500:
+                    try:
+                        response.raise_for_status()
+                    except requests.HTTPError as exc:
+                        raise HektorNonRetryableError(sanitize_error_text(exc)) from exc
+
                 response.raise_for_status()
                 return response
             except requests.RequestException as exc:
@@ -141,6 +174,8 @@ class HektorClient:
                 if isinstance(payload, dict) and payload.get("refresh"):
                     self.jwt = str(payload["refresh"]).strip()
                 return payload
+            except HektorNonRetryableError:
+                raise
             except (ValueError, RuntimeError) as exc:
                 last_error = exc
                 if attempt >= self.max_retries:
@@ -252,7 +287,8 @@ def init_db(conn: sqlite3.Connection) -> None:
             listing_variant TEXT NOT NULL,
             date_last_traitement TEXT,
             date_maj TEXT,
-            last_seen_at TEXT NOT NULL
+            last_seen_at TEXT NOT NULL,
+            last_detail_sync_at TEXT
         );
 
         CREATE TABLE IF NOT EXISTS sync_annonce_contact_link (
@@ -565,6 +601,9 @@ def init_db(conn: sqlite3.Connection) -> None:
     existing_annonce_columns = {row["name"] for row in conn.execute("PRAGMA table_info(hektor_annonce)")}
     if "date_maj" not in existing_annonce_columns:
         conn.execute("ALTER TABLE hektor_annonce ADD COLUMN date_maj TEXT")
+    existing_contact_state_columns = {row["name"] for row in conn.execute("PRAGMA table_info(sync_contact_state)")}
+    if "last_detail_sync_at" not in existing_contact_state_columns:
+        conn.execute("ALTER TABLE sync_contact_state ADD COLUMN last_detail_sync_at TEXT")
     existing_offre_columns = {row["name"] for row in conn.execute("PRAGMA table_info(hektor_offre)")}
     for column_name, ddl in (
         ("offre_state", "ALTER TABLE hektor_offre ADD COLUMN offre_state TEXT"),

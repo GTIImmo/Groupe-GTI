@@ -1,6 +1,16 @@
 param(
     [switch]$PushAndroidFront,
     [switch]$SkipAndroid,
+    [switch]$SkipContactDetails,
+    [int]$ContactDetailLimit = 1000,
+    [int]$ContactDetailBatchSize = 100,
+    [int]$ContactDetailMaxAttempts = 2,
+    [int]$ContactDetailRetryDelaySeconds = 120,
+    [switch]$FailOnContactDetailsError,
+    [switch]$PushContactsToSupabase,
+    [switch]$ContactsEligibleOnly,
+    [switch]$IncludeArchivedContactRelations,
+    [switch]$IncludeArchivedContactSearches,
     [switch]$FullRebuildSupabase,
     [switch]$EnqueueConsoleDocuments,
     [switch]$EnqueueAllConsoleDocumentsLocal,
@@ -57,11 +67,54 @@ function Invoke-Step {
     Write-RunLog "DONE  $Label"
 }
 
+function Invoke-OptionalStepWithRetry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+        [int]$MaxAttempts = 1,
+        [int]$RetryDelaySeconds = 120,
+        [switch]$FailOnError,
+        [ref]$Succeeded
+    )
+
+    if ($Succeeded) {
+        $Succeeded.Value = $false
+    }
+    $attempts = [Math]::Max(1, $MaxAttempts)
+    for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+        Write-RunLog "START $Label attempt $attempt/$attempts"
+        & $pythonExe @Arguments
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -eq 0) {
+            Write-RunLog "DONE  $Label attempt $attempt/$attempts"
+            if ($Succeeded) {
+                $Succeeded.Value = $true
+            }
+            return
+        }
+
+        Write-RunLog "WARN  $Label failed attempt $attempt/$attempts (exit code $exitCode)"
+        if ($attempt -lt $attempts) {
+            Write-RunLog "WAIT  $Label retry in $RetryDelaySeconds seconds"
+            Start-Sleep -Seconds ([Math]::Max(1, $RetryDelaySeconds))
+        }
+    }
+
+    if ($FailOnError) {
+        throw "Step failed: $Label after $attempts attempt(s)"
+    }
+
+    Write-RunLog "SKIP  $Label after $attempts failed attempt(s); pipeline continues with existing local contact details"
+    return
+}
+
 Set-Location $projectRoot
 
 Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"
-Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase"
+Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SkipContactDetails=$SkipContactDetails ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds FailOnContactDetailsError=$FailOnContactDetailsError PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly"
 
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
@@ -73,6 +126,30 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
 Invoke-Step -Label "normalize_source" -Arguments @(
     "normalize_source.py"
 )
+
+if (-not $SkipContactDetails) {
+    $contactDetailsOk = $false
+    Invoke-OptionalStepWithRetry -Label "contact details delta" -Arguments @(
+        "phase2\sync\sync_contact_details.py",
+        "--limit", [string]$ContactDetailLimit,
+        "--batch-size", [string]$ContactDetailBatchSize,
+        "--skip-listing-refresh",
+        "--use-last-seen-as-changed",
+        "--no-normalize"
+    ) -MaxAttempts $ContactDetailMaxAttempts -RetryDelaySeconds $ContactDetailRetryDelaySeconds -FailOnError:$FailOnContactDetailsError -Succeeded ([ref]$contactDetailsOk)
+
+    if ($contactDetailsOk) {
+        Invoke-Step -Label "normalize_source after contact details" -Arguments @(
+            "normalize_source.py"
+        )
+    }
+    else {
+        Write-RunLog "SKIP normalize_source after contact details because contact detail delta did not complete"
+    }
+}
+else {
+    Write-RunLog "SKIP contact details delta"
+}
 
 Invoke-Step -Label "build_case_index" -Arguments @(
     "build_case_index.py"
@@ -86,8 +163,17 @@ Invoke-Step -Label "phase2 refresh views" -Arguments @(
     "phase2\refresh_views.py"
 )
 
+Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
+    "phase2\contacts\build_contacts_layer.py",
+    "--no-reports"
+)
+
 Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
+)
+
+Invoke-Step -Label "phase2 contact sync status" -Arguments @(
+    "phase2\checks\contact_sync_status.py"
 )
 
 $supabaseArgs = @(
@@ -105,6 +191,25 @@ Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
 )
+
+if ($PushContactsToSupabase) {
+    $contactsScope = if ($ContactsEligibleOnly) { "eligible" } else { "active_or_eligible" }
+    $contactsPushArgs = @(
+        "phase2\sync\push_contacts_to_supabase.py",
+        "--push-mode", "update",
+        "--contacts-scope", $contactsScope
+    )
+    if ($IncludeArchivedContactRelations) {
+        $contactsPushArgs += "--include-archived-relations"
+    }
+    if ($IncludeArchivedContactSearches) {
+        $contactsPushArgs += "--include-archived-searches"
+    }
+    Invoke-Step -Label "phase2 push contacts to supabase" -Arguments $contactsPushArgs
+}
+else {
+    Write-RunLog "SKIP phase2 push contacts to supabase"
+}
 
 if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
     $nodeCandidates = @(

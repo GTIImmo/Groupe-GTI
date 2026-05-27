@@ -72,9 +72,13 @@ import {
   createConsoleDocumentSignedUrl,
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
+  loadContactRelations,
+  loadContactSearches,
+  loadContactsPage,
+  loadContactStats,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -120,6 +124,9 @@ const activeListingsFilterValue = '__active_listings__'
 const annonceSearchListingsFilterValue = '__annonce_search_listings__'
 const detailAvailableFilterValue = 'available'
 const detailToLoadFilterValue = 'to_load'
+const activeContactSearchFilterValue = '__active_search__'
+const withContactSearchFilterValue = '__with_search__'
+const withoutContactSearchFilterValue = '__without_search__'
 const activeListingsFilterOption = { value: activeListingsFilterValue, label: 'Actif / offre / compromis' }
 const historicalListingStatusOptions = [
   { value: 'Vendu', label: 'Vendu' },
@@ -139,7 +146,7 @@ const heavyListingFilterKeys = new Set<keyof AppFilters>([
   'offreStatus',
   'compromisStatus',
 ])
-type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'suivi'
+type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type LightweightDetailTarget = Dossier | MandatRecord
 
@@ -1995,6 +2002,7 @@ function detailEyebrowForScreen(screen: Screen) {
   if (screen === 'registre') return 'Detail mandat'
   if (screen === 'suivi') return 'Detail suivi'
   if (screen === 'estimations') return 'Detail estimation'
+  if (screen === 'contacts') return 'Fiche contact'
   return 'Detail annonce'
 }
 
@@ -2018,6 +2026,7 @@ function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen, filters
 const dossierPageSize = 50
 const mandatPageSize = 50
 const workItemPageSize = 25
+const contactPageSize = 50
 const requestStatusOptions = [
   { value: 'pending', label: 'Nouvelle demande' },
   { value: 'in_progress', label: 'En cours de traitement' },
@@ -2144,6 +2153,8 @@ const emptyFilters: AppFilters = {
   priority: allFilterValue,
   workStatus: allFilterValue,
   internalStatus: allFilterValue,
+  contactRole: allFilterValue,
+  contactSearchScope: allFilterValue,
 }
 
 function defaultFiltersForScreen(screen: Screen): AppFilters {
@@ -2172,6 +2183,12 @@ function defaultFiltersForScreen(screen: Screen): AppFilters {
       ...emptyFilters,
       archive: activeArchiveFilterValue,
       statut: activeListingsFilterValue,
+    }
+  }
+  if (screen === 'contacts') {
+    return {
+      ...emptyFilters,
+      archive: activeArchiveFilterValue,
     }
   }
   return emptyFilters
@@ -4159,6 +4176,7 @@ function screenContextLabel(screen: Screen) {
   if (screen === 'mandats') return 'Vue mandat'
   if (screen === 'estimations') return 'Estimations'
   if (screen === 'registre') return 'Registre'
+  if (screen === 'contacts') return 'Contacts'
   return 'Vue Pauline'
 }
 
@@ -5506,6 +5524,10 @@ function activeFilterEntries(filters: AppFilters) {
     filters.priority !== allFilterValue ? ['Priorite', filters.priority] : null,
     filters.workStatus !== allFilterValue ? ['Work status', filters.workStatus] : null,
     filters.internalStatus !== allFilterValue ? ['Interne', filters.internalStatus] : null,
+    filters.contactRole !== allFilterValue ? ['Role contact', filters.contactRole] : null,
+    filters.contactSearchScope === activeContactSearchFilterValue ? ['Recherche contact', 'Active'] : null,
+    filters.contactSearchScope === withContactSearchFilterValue ? ['Recherche contact', 'Avec recherche'] : null,
+    filters.contactSearchScope === withoutContactSearchFilterValue ? ['Recherche contact', 'Sans recherche'] : null,
   ].filter(Boolean) as Array<[string, string]>
 }
 
@@ -5537,6 +5559,14 @@ export default function App() {
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
   const [workItemsTotal, setWorkItemsTotal] = useState(0)
   const [workItemPage, setWorkItemPage] = useState(1)
+  const [contactsDirectory, setContactsDirectory] = useState<AppContact[]>([])
+  const [contactsTotal, setContactsTotal] = useState(0)
+  const [contactPage, setContactPage] = useState(1)
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
+  const [selectedContactRelations, setSelectedContactRelations] = useState<AppContactRelation[]>([])
+  const [selectedContactSearches, setSelectedContactSearches] = useState<AppContactSearch[]>([])
+  const [contactStats, setContactStats] = useState<ContactStats>({ total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 })
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -5948,6 +5978,7 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
+    if (screen === 'contacts') return
     let cancelled = false
     const statsPromise = screen === 'registre'
       ? loadMandatRegisterStats({ ...dataFilters, mandat: withMandatFilterValue }, dataScope)
@@ -5966,6 +5997,7 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
+    if (screen === 'contacts') return
     let cancelled = false
     loadSuiviRequestStats(dataFilters, dataScope)
       .then((stats) => {
@@ -5981,6 +6013,7 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
+    if (screen === 'contacts') return
     let cancelled = false
     loadCommercialRequestStats(dataFilters, dataScope)
       .then((stats) => {
@@ -6073,6 +6106,72 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
+    if (screen !== 'contacts') return
+    let cancelled = false
+    setContactsLoading(true)
+    loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: dataScope })
+      .then((contactsPage) => {
+        if (cancelled) return
+        setContactsDirectory(contactsPage.rows)
+        setContactsTotal(contactsPage.total)
+        setSelectedContactId((current) => {
+          if (current && contactsPage.rows.some((item) => item.hektor_contact_id === current)) return current
+          return contactsPage.rows[0]?.hektor_contact_id ?? null
+        })
+      })
+      .catch((error) => {
+        if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement des contacts')
+      })
+      .finally(() => {
+        if (!cancelled) setContactsLoading(false)
+      })
+    loadContactStats(dataFilters)
+      .then((stats) => {
+        if (!cancelled) setContactStats(stats)
+      })
+      .catch((error) => {
+        console.warn('Contact stats unavailable', error)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session, dataFilters, dataScope, screen, contactPage, dataReloadKey])
+
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    if (screen !== 'contacts' || !selectedContactId) {
+      setSelectedContactRelations([])
+      setSelectedContactSearches([])
+      return
+    }
+    let cancelled = false
+    Promise.all([
+      loadContactRelations(selectedContactId),
+      loadContactSearches(selectedContactId),
+    ])
+      .then(([relations, searches]) => {
+        if (cancelled) return
+        setSelectedContactRelations(relations)
+        setSelectedContactSearches(searches)
+      })
+      .catch((error) => {
+        if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement de la fiche contact')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session, screen, selectedContactId, dataReloadKey])
+
+  useEffect(() => {
+    if (screen !== 'contacts') return
+    setDossierPage(1)
+    setMandatPage(1)
+    setWorkItemPage(1)
+  }, [screen])
+
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    if (screen === 'contacts') return
     let cancelled = false
     setPageLoading(true)
     setMandatLoading(true)
@@ -6318,6 +6417,7 @@ export default function App() {
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
+    setContactPage(1)
   }
 
   function resetFilters() {
@@ -6332,6 +6432,7 @@ export default function App() {
     setDossierPage(1)
     setMandatPage(1)
     setWorkItemPage(1)
+    setContactPage(1)
     setDetailOpen(false)
   }
 
@@ -7935,6 +8036,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
   const mandatTotalPages = totalPages(mandatsTotal, mandatPageSize)
   const workItemTotalPages = totalPages(workItemsTotal, workItemPageSize)
+  const contactTotalPages = totalPages(contactsTotal, contactPageSize)
   const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
   const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
@@ -7960,6 +8062,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     if (screen === 'registre') {
       return { title: 'Registre des mandats', copy: '' }
+    }
+    if (screen === 'contacts') {
+      return { title: 'Contacts Hektor', copy: '' }
     }
     return { title: 'Suivi des mandats', copy: '' }
   }, [screen, mandatDrilldownLabel, currentAnnonceListingLabels])
@@ -7998,6 +8103,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const selectedRegisterMandat = useMemo(
     () => screenMandats.find((item) => (item.register_row_id ?? null) === selectedRegisterRowId) ?? null,
     [screenMandats, selectedRegisterRowId],
+  )
+  const selectedContact = useMemo(
+    () => contactsDirectory.find((item) => item.hektor_contact_id === selectedContactId) ?? contactsDirectory[0] ?? null,
+    [contactsDirectory, selectedContactId],
   )
   const requestModalMandat = useMemo(
     () =>
@@ -8193,13 +8302,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'warning', action: null },
       ]
     }
+    if (screen === 'contacts') {
+      return [
+        { label: 'Contacts', value: new Intl.NumberFormat('fr-FR').format(contactStats.total), tone: 'volume', action: null },
+        { label: 'Actifs', value: new Intl.NumberFormat('fr-FR').format(contactStats.active), tone: 'diffusion', action: null },
+        { label: 'Recherches actives', value: new Intl.NumberFormat('fr-FR').format(contactStats.activeSearchContacts), tone: 'demandes', action: null },
+        { label: 'Archivés', value: new Intl.NumberFormat('fr-FR').format(contactStats.archived), tone: 'neutral', action: null },
+        { label: 'Doublons', value: new Intl.NumberFormat('fr-FR').format(contactStats.duplicates), tone: 'warning', action: null },
+        { label: 'Risque fort', value: new Intl.NumberFormat('fr-FR').format(contactStats.highRiskDuplicates), tone: 'warning', action: null },
+        { label: 'Liés annonces', value: new Intl.NumberFormat('fr-FR').format(contactStats.linked), tone: 'demandes', action: null },
+      ]
+    }
     return [
       { label: 'Demandes à traiter', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.pendingOrInProgress), tone: 'demandes', action: 'suivi_a_traiter' },
       { label: 'Demandes acceptées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.acceptedHistorical), tone: 'demandes', action: 'suivi_acceptees' },
       { label: 'Demandes rejetées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.refused), tone: 'demandes', action: 'suivi_rejetees' },
       { label: 'Affaires en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.affairesEnCours), tone: 'affaires', action: null },
     ]
-  }, [screen, visibleDossiersCount, workItemsTotal, workItems.length, mandatStats, commercialRequestStats, suiviRequestStats])
+  }, [screen, visibleDossiersCount, workItemsTotal, workItems.length, mandatStats, commercialRequestStats, suiviRequestStats, contactStats])
   const statsMetrics = headerMetrics
   const viewPriorities = useMemo<Array<{
     label: string
@@ -8230,12 +8350,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         { label: 'Portefeuille', value: format(mandatStats.total), detail: 'Estimations visibles avec les filtres courants', tone: 'volume', action: null },
       ]
     }
+    if (screen === 'contacts') {
+      return [
+        { label: 'Risque fort', value: format(contactStats.highRiskDuplicates), detail: 'Groupes doublons classes high ou critical', tone: 'warning', action: null },
+        { label: 'Recherches actives', value: format(contactStats.activeSearchContacts), detail: 'Contacts avec criteres acquereurs exploitables', tone: 'demandes', action: null },
+        { label: 'Doublons', value: format(contactStats.duplicates), detail: 'Contacts presents dans au moins un groupe suspect', tone: 'warning', action: null },
+        { label: 'Contacts lies', value: format(contactStats.linked), detail: 'Contacts rattaches a une annonce ou un mandat', tone: 'demandes', action: null },
+      ]
+    }
     return [
       { label: 'À traiter', value: format(workItemsTotal || workItems.length), detail: 'Demandes à revoir dans les dossiers visibles', tone: 'demandes', action: 'correction_attente' },
       { label: 'Visibles', value: format(visibleDossiersCount), detail: 'Dossiers correspondant aux filtres actuels', tone: 'volume', action: 'all_annonces' },
       { label: 'Filtres actifs', value: format(activeFilters.length), detail: 'Critères qui réduisent le listing', tone: 'neutral', action: null },
     ]
-  }, [activeFilters.length, mandatStats, screen, visibleDossiersCount, workItems.length, workItemsTotal])
+  }, [activeFilters.length, contactStats, mandatStats, screen, visibleDossiersCount, workItems.length, workItemsTotal])
   const isAdmin = profile?.role === 'admin'
   const inferredUserNegotiatorContext = useMemo(() => {
     if (!sessionEmail) return null
@@ -8391,6 +8519,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       openMandatDrilldown(action)
     }
     setPriorityPanelOpen(false)
+    setContactPage(1)
   }
 
   const priorityPanel = priorityPanelOpen ? (
@@ -9511,7 +9640,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <input
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder={screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, négociateur...'}
+              placeholder={screen === 'contacts' ? 'Nom, email, ville, ID...' : screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, négociateur...'}
             />
           </label>
           <div className="mobile-command-actions">
@@ -9590,60 +9719,98 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="filter-grid">
                 <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
-                {screen !== 'estimations' ? (
-                  <FilterSelect
-                    label="Archive"
-                    value={filters.archive}
-                    onChange={(value) => updateFilter('archive', value)}
-                    options={[
-                      { value: activeArchiveFilterValue, label: 'Actives' },
-                      { value: archivedFilterValue, label: 'Archivées' },
-                    ]}
-                  />
-                ) : null}
-                <FilterSelect label={screen === 'mandats' ? 'Statut phase 1' : 'Statut'} value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
-                {screen === 'mandats' ? (
+                {screen === 'contacts' ? (
                   <>
                     <FilterSelect
-                      label="Détail"
-                      value={filters.detailAvailability}
-                      onChange={(value) => updateFilter('detailAvailability', value)}
+                      label="Archive"
+                      value={filters.archive}
+                      onChange={(value) => updateFilter('archive', value)}
                       options={[
-                        { value: 'available', label: 'Disponible' },
-                        { value: 'to_load', label: 'À charger' },
+                        { value: activeArchiveFilterValue, label: 'Actifs' },
+                        { value: archivedFilterValue, label: 'Archives' },
                       ]}
                     />
                     <FilterSelect
-                      label="Mandat"
-                      value={filters.mandat}
-                      onChange={(value) => updateFilter('mandat', value)}
+                      label="Role contact"
+                      value={filters.contactRole}
+                      onChange={(value) => updateFilter('contactRole', value)}
                       options={[
-                        { value: withMandatFilterValue, label: 'Avec mandat' },
-                        { value: withoutMandatFilterValue, label: 'Sans mandat' },
+                        { value: 'mandant', label: 'Mandant' },
+                        { value: 'proprietaire', label: 'Proprietaire' },
+                        { value: 'acquereur', label: 'Acquereur' },
+                        { value: 'notaire_entree', label: 'Notaire entree' },
+                        { value: 'notaire_sortie', label: 'Notaire sortie' },
                       ]}
                     />
                     <FilterSelect
-                      label="Affaire"
-                      value={filters.affaire}
-                      onChange={(value) => updateFilter('affaire', value)}
+                      label="Recherche"
+                      value={filters.contactSearchScope}
+                      onChange={(value) => updateFilter('contactSearchScope', value)}
                       options={[
-                        { value: 'offre_achat', label: 'Offre' },
-                        { value: 'compromis', label: 'Compromis' },
+                        { value: activeContactSearchFilterValue, label: 'Active' },
+                        { value: withContactSearchFilterValue, label: 'Avec recherche' },
+                        { value: withoutContactSearchFilterValue, label: 'Sans recherche' },
                       ]}
                     />
                   </>
-                ) : null}
-                <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
-                <FilterSelect
-                  label="Diffusable"
-                  value={filters.diffusable}
-                  onChange={(value) => updateFilter('diffusable', value)}
-                  options={[
-                    { value: 'diffusable', label: 'Oui' },
-                    { value: 'non_diffusable', label: 'Non' },
-                  ]}
-                />
-                <FilterSelect label="Passerelle" value={filters.passerelle} onChange={(value) => updateFilter('passerelle', value)} options={filterCatalog.passerelles} />
+                ) : (
+                  <>
+                    {screen !== 'estimations' ? (
+                      <FilterSelect
+                        label="Archive"
+                        value={filters.archive}
+                        onChange={(value) => updateFilter('archive', value)}
+                        options={[
+                          { value: activeArchiveFilterValue, label: 'Actives' },
+                          { value: archivedFilterValue, label: 'Archivées' },
+                        ]}
+                      />
+                    ) : null}
+                    <FilterSelect label={screen === 'mandats' ? 'Statut phase 1' : 'Statut'} value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
+                    {screen === 'mandats' ? (
+                      <>
+                        <FilterSelect
+                          label="Détail"
+                          value={filters.detailAvailability}
+                          onChange={(value) => updateFilter('detailAvailability', value)}
+                          options={[
+                            { value: 'available', label: 'Disponible' },
+                            { value: 'to_load', label: 'À charger' },
+                          ]}
+                        />
+                        <FilterSelect
+                          label="Mandat"
+                          value={filters.mandat}
+                          onChange={(value) => updateFilter('mandat', value)}
+                          options={[
+                            { value: withMandatFilterValue, label: 'Avec mandat' },
+                            { value: withoutMandatFilterValue, label: 'Sans mandat' },
+                          ]}
+                        />
+                        <FilterSelect
+                          label="Affaire"
+                          value={filters.affaire}
+                          onChange={(value) => updateFilter('affaire', value)}
+                          options={[
+                            { value: 'offre_achat', label: 'Offre' },
+                            { value: 'compromis', label: 'Compromis' },
+                          ]}
+                        />
+                      </>
+                    ) : null}
+                    <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
+                    <FilterSelect
+                      label="Diffusable"
+                      value={filters.diffusable}
+                      onChange={(value) => updateFilter('diffusable', value)}
+                      options={[
+                        { value: 'diffusable', label: 'Oui' },
+                        { value: 'non_diffusable', label: 'Non' },
+                      ]}
+                    />
+                    <FilterSelect label="Passerelle" value={filters.passerelle} onChange={(value) => updateFilter('passerelle', value)} options={filterCatalog.passerelles} />
+                  </>
+                )}
               </div>
             </section>
           </div>
@@ -9681,6 +9848,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenDetailPage={openDossierDetailPage}
             onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={openRequestModal}
+          />
+        ) : screen === 'contacts' ? (
+          <MobileContactCards
+            contacts={contactsDirectory}
+            total={contactsTotal}
+            loading={contactsLoading}
+            onSelectContact={setSelectedContactId}
           />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
@@ -9795,6 +9969,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Mandats</button>
+          <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('contacts')}>Contacts</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi</button> : null}
         </nav>
         <div className="header-user-stack">
@@ -9822,7 +9997,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="hero-top-row">
                 <label className="search-box">
                   <span>Recherche rapide</span>
-                  <input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
+                  <input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'contacts' ? 'Nom, email, telephone, ville, ID contact...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <div className="hero-actions">
                   {canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
@@ -10073,6 +10248,42 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   options={[
                     { value: activeArchiveFilterValue, label: 'Actives' },
                     { value: archivedFilterValue, label: 'Archives' },
+                  ]}
+                />
+              </>
+            ) : screen === 'contacts' ? (
+              <>
+                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                <FilterSelect
+                  label="Archive"
+                  value={filters.archive}
+                  onChange={(value) => updateFilter('archive', value)}
+                  options={[
+                    { value: activeArchiveFilterValue, label: 'Actifs' },
+                    { value: archivedFilterValue, label: 'Archives' },
+                  ]}
+                />
+                <FilterSelect
+                  label="Role contact"
+                  value={filters.contactRole}
+                  onChange={(value) => updateFilter('contactRole', value)}
+                  options={[
+                    { value: 'mandant', label: 'Mandant' },
+                    { value: 'proprietaire', label: 'Proprietaire' },
+                    { value: 'acquereur', label: 'Acquereur' },
+                    { value: 'notaire_entree', label: 'Notaire entree' },
+                    { value: 'notaire_sortie', label: 'Notaire sortie' },
+                  ]}
+                />
+                <FilterSelect
+                  label="Recherche"
+                  value={filters.contactSearchScope}
+                  onChange={(value) => updateFilter('contactSearchScope', value)}
+                  options={[
+                    { value: activeContactSearchFilterValue, label: 'Active' },
+                    { value: withContactSearchFilterValue, label: 'Avec recherche' },
+                    { value: withoutContactSearchFilterValue, label: 'Sans recherche' },
                   ]}
                 />
               </>
@@ -10441,6 +10652,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             eyebrow="Estimations"
             title="Futurs mandats potentiels"
             mode="estimation"
+          />
+        ) : screen === 'contacts' ? (
+          <ContactsScreen
+            contacts={contactsDirectory}
+            contactsTotal={contactsTotal}
+            contactPage={contactPage}
+            contactTotalPages={contactTotalPages}
+            selectedContact={selectedContact}
+            selectedRelations={selectedContactRelations}
+            selectedSearches={selectedContactSearches}
+            loading={contactsLoading}
+            hasActiveFilters={activeFilters.length > 0}
+            onPrevContact={() => setContactPage((page) => Math.max(1, page - 1))}
+            onNextContact={() => setContactPage((page) => Math.min(contactTotalPages, page + 1))}
+            onGoToContactPage={(page) => setContactPage(Math.min(contactTotalPages, Math.max(1, page)))}
+            onSelectContact={setSelectedContactId}
+            onOpenDossier={(id) => {
+              setScreen('mandats')
+              setSelectedMandatId(id)
+              setSelectedDossierId(id)
+              setDetailOpen(true)
+            }}
+            onResetFilters={resetFilters}
           />
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
@@ -13982,6 +14216,299 @@ function MobileDossierCards(props: {
             >
               Voir le détail
             </button>
+          </div>
+        </article>
+      ))}
+    </section>
+  )
+}
+
+function contactJsonList(value: unknown) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean)
+  return parseJson<string[]>(typeof value === 'string' ? value : null, []).map((item) => String(item).trim()).filter(Boolean)
+}
+
+function contactArchiveLabel(contact: Pick<AppContact, 'archive'>) {
+  return contact.archive === true || contact.archive === 1 || contact.archive === '1' ? 'Archive' : 'Actif'
+}
+
+function contactSeverityLabel(value: AppContact['duplicate_max_severity']) {
+  if (value === 'critical') return 'Critique'
+  if (value === 'high') return 'Fort'
+  if (value === 'medium') return 'Moyen'
+  if (value === 'low') return 'Faible'
+  return 'Aucun'
+}
+
+function contactDuplicateTone(value: AppContact['duplicate_max_severity']) {
+  return value ? `is-${value}` : 'is-none'
+}
+
+function contactDirectoryRoleLabel(value: string) {
+  if (value === 'proprietaire') return 'Proprietaire'
+  if (value === 'mandant') return 'Mandant'
+  if (value === 'acquereur') return 'Acquereur'
+  if (value === 'notaire_entree') return 'Notaire entree'
+  if (value === 'notaire_sortie') return 'Notaire sortie'
+  return value || 'Contact'
+}
+
+function contactBool(value: unknown) {
+  return value === true || value === 1 || value === '1'
+}
+
+function contactSearchTypes(value: AppContactSearch['types_json']) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return Object.entries(value)
+      .filter(([, optionValue]) => {
+        const text = String(optionValue ?? '').trim().toLowerCase()
+        return optionValue === true || optionValue === 1 || text === '1' || Boolean(text && text !== '0' && text !== 'false')
+      })
+      .map(([key, optionValue]) => {
+        if (typeof optionValue === 'string' && optionValue.trim() && optionValue !== '1') return optionValue.trim()
+        return key
+      })
+      .filter(Boolean)
+  }
+  const parsed = parseJson<Record<string, unknown>>(typeof value === 'string' ? value : null, {})
+  return contactSearchTypes(parsed)
+}
+
+function contactRangeLabel(label: string, min?: string | null, max?: string | null, suffix = '') {
+  const left = safeText(min)
+  const right = safeText(max)
+  if (!left && !right) return null
+  const value = left && right ? `${left} - ${right}${suffix}` : left ? `min ${left}${suffix}` : `max ${right}${suffix}`
+  return `${label}: ${value}`
+}
+
+function contactSearchCriteriaLabels(search: AppContactSearch) {
+  return [
+    contactRangeLabel('Budget', search.prix_min, search.prix_max, ' EUR'),
+    contactRangeLabel('Surface', search.surface_min, search.surface_max, ' m2'),
+    contactRangeLabel('Pieces', search.pieces_min, search.pieces_max),
+    contactRangeLabel('Chambres', search.chambre_min, search.chambre_max),
+    contactRangeLabel('Terrain', search.surface_terrain_min, search.surface_terrain_max, ' m2'),
+  ].filter(Boolean) as string[]
+}
+
+function contactTransactionLabel(relation: AppContactRelation) {
+  const type = safeText(relation.transaction_type)
+  const id = safeText(relation.transaction_id)
+  if (!type && !id) return null
+  return [type || 'transaction', id ? `#${id}` : null, safeText(relation.transaction_state) || null].filter(Boolean).join(' ')
+}
+
+function ContactsScreen(props: {
+  contacts: AppContact[]
+  contactsTotal: number
+  contactPage: number
+  contactTotalPages: number
+  selectedContact: AppContact | null
+  selectedRelations: AppContactRelation[]
+  selectedSearches: AppContactSearch[]
+  loading: boolean
+  hasActiveFilters: boolean
+  onPrevContact: () => void
+  onNextContact: () => void
+  onGoToContactPage: (page: number) => void
+  onSelectContact: (id: string) => void
+  onOpenDossier: (id: number) => void
+  onResetFilters: () => void
+}) {
+  const selectedRoles = props.selectedContact ? contactJsonList(props.selectedContact.relation_roles_json) : []
+  const selectedActiveSearches = props.selectedSearches.filter((search) => contactBool(search.is_active))
+  return (
+    <section className="contacts-workspace">
+      <section className="panel panel-wide contacts-list-panel">
+        <div className="panel-head">
+          <div className="listing-title-stack">
+            <h3>Annuaire Hektor</h3>
+            <span className="listing-total-label">{new Intl.NumberFormat('fr-FR').format(props.contactsTotal)} contacts</span>
+          </div>
+          <div className="page-controls">
+            {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
+            <span>{pageLabel(props.contactsTotal, contactPageSize, props.contactPage)}</span>
+            <span>Page {props.contactPage} / {props.contactTotalPages}</span>
+            <button className="ghost-button" type="button" onClick={props.onPrevContact} disabled={props.contactPage === 1}>Prec</button>
+            <button className="ghost-button" type="button" onClick={props.onNextContact} disabled={props.contactPage * contactPageSize >= props.contactsTotal}>Suiv</button>
+            <label className="page-jump">
+              <span>Aller</span>
+              <input type="number" min={1} max={props.contactTotalPages} value={props.contactPage} onChange={(event) => props.onGoToContactPage(Number(event.target.value || 1))} />
+            </label>
+          </div>
+        </div>
+        <div className={`table-wrap contacts-table-wrap ${props.loading ? 'is-refreshing' : ''}`}>
+          {props.loading ? <div className="listing-loading-banner">Chargement des contacts...</div> : null}
+          {props.contacts.length > 0 ? (
+            <table>
+              <thead>
+                <tr><th>Contact</th><th>Coordonnees</th><th>Negociateur</th><th>Liens / recherches</th><th>Doublons</th><th>Maj</th></tr>
+              </thead>
+              <tbody>
+                {props.contacts.map((contact) => {
+                  const roles = contactJsonList(contact.relation_roles_json)
+                  const isSelected = contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
+                  return (
+                    <tr key={contact.hektor_contact_id} className={isSelected ? 'is-selected' : ''} onClick={() => props.onSelectContact(contact.hektor_contact_id)}>
+                      <td className="contact-identity-cell">
+                        <span className="detail-contact-avatar">{userInitials(contact.display_name, contact.email)}</span>
+                        <div>
+                          <strong>{contact.display_name}</strong>
+                          <span>ID {contact.hektor_contact_id} · {contactArchiveLabel(contact)}</span>
+                        </div>
+                      </td>
+                      <td><strong>{contact.phone_primary || '-'}</strong><span>{contact.email || '-'}</span><span>{[contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span></td>
+                      <td><strong>{contact.commercial_nom || '-'}</strong><span>{contact.agence_nom || '-'}</span></td>
+                      <td>
+                        <strong>{contact.linked_annonce_count ?? 0} annonce(s)</strong>
+                        <span>{contact.active_search_count ? `${contact.active_search_count} recherche(s) active(s)` : `${contact.total_search_count ?? 0} recherche(s)`}</span>
+                        <small>{contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</small>
+                        <small>{roles.map(contactDirectoryRoleLabel).join(', ') || '-'}</small>
+                      </td>
+                      <td><span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span><small>{contact.duplicate_group_count ? `${contact.duplicate_group_count} groupe(s)` : 'Aucun groupe'}</small></td>
+                      <td><strong>{formatDate(contact.date_maj)}</strong><span>{formatDate(contact.refreshed_at)}</span></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="empty-block">
+              <strong>Aucun contact pour cette combinaison de filtres.</strong>
+              {props.hasActiveFilters ? <button className="ghost-button" type="button" onClick={props.onResetFilters}>Reinitialiser les filtres</button> : null}
+            </div>
+          )}
+        </div>
+      </section>
+      <section className="panel contacts-detail-panel">
+        <div className="panel-head">
+          <div><p className="eyebrow">Fiche contact</p><h3>{props.selectedContact?.display_name ?? 'Aucun contact'}</h3></div>
+        </div>
+        {props.selectedContact ? (
+          <div className="contacts-detail-stack">
+            <article className="detail-card contact-profile-card">
+              <div className="contact-profile-head">
+                <span className="detail-contact-avatar">{userInitials(props.selectedContact.display_name, props.selectedContact.email)}</span>
+                <div>
+                  <strong>{props.selectedContact.display_name}</strong>
+                  <span>{props.selectedContact.email || props.selectedContact.phone_primary || `ID ${props.selectedContact.hektor_contact_id}`}</span>
+                </div>
+              </div>
+              <div className="contact-action-row">
+                {props.selectedContact.phone_primary ? <a className="ghost-button" href={`tel:${props.selectedContact.phone_primary}`}>Appeler</a> : null}
+                {props.selectedContact.email ? <a className="ghost-button" href={`mailto:${props.selectedContact.email}`}>Email</a> : null}
+              </div>
+            </article>
+            <article className="detail-card">
+              <span className="detail-label">Controle donnees</span>
+              <div className="tag-row">
+                <StatusPill value={contactArchiveLabel(props.selectedContact)} />
+                <span className={`contact-duplicate-pill ${contactDuplicateTone(props.selectedContact.duplicate_max_severity)}`}>{contactSeverityLabel(props.selectedContact.duplicate_max_severity)}</span>
+                {props.selectedContact.active_search_count ? <StatusPill value="Recherche active" /> : null}
+                <StatusPill value={contactBool(props.selectedContact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
+                {contactBool(props.selectedContact.supabase_sync_eligible) ? <StatusPill value="Eligible app" /> : null}
+                {selectedRoles.map((role) => <StatusPill key={role} value={contactDirectoryRoleLabel(role)} />)}
+              </div>
+              <span>{props.selectedContact.duplicate_group_count ? `${props.selectedContact.duplicate_group_count} groupe(s) doublon detecte(s)` : 'Pas de doublon classe'}</span>
+              {contactBool(props.selectedContact.has_contact_detail) ? (
+                <span>{props.selectedContact.total_search_count ?? 0} recherche(s) connue(s), dont {props.selectedContact.active_search_count ?? 0} active(s)</span>
+              ) : (
+                <span>Fiche detail non encore chargee: recherches inconnues dans Supabase.</span>
+              )}
+              {contactBool(props.selectedContact.has_contact_detail) && props.selectedContact.contact_detail_synced_at ? <span>Detail lu le {formatDate(props.selectedContact.contact_detail_synced_at)}</span> : null}
+              {props.selectedContact.duplicate_primary_candidate_id ? <span>Candidat principal: {props.selectedContact.duplicate_primary_candidate_id}</span> : null}
+            </article>
+            <article className="detail-card">
+              <span className="detail-label">Portefeuille</span>
+              <strong>{props.selectedContact.commercial_nom || '-'}</strong>
+              <span>{props.selectedContact.agence_nom || '-'}</span>
+              <span>{[props.selectedContact.code_postal, props.selectedContact.ville].filter(Boolean).join(' ') || '-'}</span>
+            </article>
+            <article className="detail-card contact-search-detail">
+              <span className="detail-label">Recherches acquereurs</span>
+              <div className="contact-search-summary">
+                <strong>{selectedActiveSearches.length} active(s)</strong>
+                <span>{contactBool(props.selectedContact.has_contact_detail) ? `${props.selectedContact.total_search_count ?? props.selectedSearches.length} recherche(s) connue(s) dans la fiche detail Hektor.` : 'Fiche detail non encore chargee pour ce contact.'}</span>
+              </div>
+              {props.selectedSearches.length > 0 ? (
+                <div className="contact-search-list">
+                  {props.selectedSearches.map((search) => {
+                    const cities = contactJsonList(search.villes_json)
+                    const types = contactSearchTypes(search.types_json)
+                    const criteria = contactSearchCriteriaLabels(search)
+                    return (
+                      <div key={search.contact_search_key} className={`contact-search-item ${contactBool(search.is_active) ? 'is-active' : 'is-archived'}`}>
+                        <div className="contact-search-item-head">
+                          <strong>{cities.join(', ') || 'Secteur non renseigne'}</strong>
+                          <StatusPill value={contactBool(search.is_active) ? 'Active' : 'Archive'} />
+                        </div>
+                        <span>{types.join(', ') || search.offre || 'Type non renseigne'}</span>
+                        {criteria.length > 0 ? (
+                          <div className="contact-search-criteria">
+                            {criteria.map((item) => <small key={`${search.contact_search_key}-${item}`}>{item}</small>)}
+                          </div>
+                        ) : <small>Aucun critere chiffre exploitable.</small>}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : <p>{contactBool(props.selectedContact.has_contact_detail) ? 'Aucune recherche active poussee sur Supabase pour ce contact.' : 'Les recherches seront visibles apres chargement de la fiche detail Hektor.'}</p>}
+            </article>
+            <article className="detail-card">
+              <span className="detail-label">Annonces liees</span>
+              {props.selectedRelations.length > 0 ? (
+                <div className="contact-relation-list">
+                  {props.selectedRelations.map((relation) => (
+                    <button key={`${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => relation.app_dossier_id ? props.onOpenDossier(relation.app_dossier_id) : undefined} disabled={!relation.app_dossier_id}>
+                      <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
+                      <span>{relation.titre_bien || contactDirectoryRoleLabel(relation.role_contact)}</span>
+                      <small>{[contactDirectoryRoleLabel(relation.role_contact), contactTransactionLabel(relation)].filter(Boolean).join(' - ')}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : <p>Aucune annonce liee dans l'index courant.</p>}
+            </article>
+          </div>
+        ) : <p className="hero-copy">Aucun contact selectionne.</p>}
+      </section>
+    </section>
+  )
+}
+
+function MobileContactCards(props: {
+  contacts: AppContact[]
+  total: number
+  loading: boolean
+  onSelectContact: (id: string) => void
+}) {
+  if (props.contacts.length === 0) {
+    return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucun contact disponible.'}</section>
+  }
+  return (
+    <section className="mobile-card-list" aria-label="Contacts">
+      <div className="mobile-list-head">
+        <div>
+          <span className="mobile-section-kicker">Annuaire</span>
+          <h2>Contacts</h2>
+        </div>
+        <span>{props.contacts.length} / {props.total}</span>
+      </div>
+      {props.contacts.map((contact) => (
+        <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className="mobile-list-card" onClick={() => props.onSelectContact(contact.hektor_contact_id)}>
+          <div className="mobile-card-top">
+            <div className="detail-contact-avatar">{userInitials(contact.display_name, contact.email)}</div>
+            <div className="mobile-list-card-main">
+              <span className="mobile-card-meta">ID {contact.hektor_contact_id}</span>
+              <strong>{contact.display_name}</strong>
+              <span className="mobile-card-subline">{contact.email || contact.phone_primary || [contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span>
+            </div>
+          </div>
+          <div className="mobile-status-row">
+            <StatusPill value={contactArchiveLabel(contact)} />
+            {contact.active_search_count ? <StatusPill value={`${contact.active_search_count} recherche(s)`} /> : null}
+            <StatusPill value={contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
+            <span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span>
           </div>
         </article>
       ))}

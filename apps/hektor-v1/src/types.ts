@@ -346,6 +346,101 @@ export type MandatRecord = {
   detail_cache_expires_at?: string | null
 }
 
+export type ContactDuplicateSeverity = 'low' | 'medium' | 'high' | 'critical'
+
+export type AppContact = {
+  hektor_contact_id: string
+  hektor_agence_id?: string | null
+  hektor_negociateur_id?: string | null
+  negociateur_email?: string | null
+  commercial_nom?: string | null
+  agence_nom?: string | null
+  civilite?: string | null
+  nom?: string | null
+  prenom?: string | null
+  display_name: string
+  archive: boolean | number | string | null
+  date_enregistrement?: string | null
+  date_maj?: string | null
+  email?: string | null
+  phone_primary?: string | null
+  phone_secondary?: string | null
+  ville?: string | null
+  code_postal?: string | null
+  typologies_json?: string[] | string | null
+  relation_roles_json?: string[] | string | null
+  linked_annonce_count: number | null
+  active_search_count: number | null
+  total_search_count: number | null
+  has_contact_detail?: boolean | number | string | null
+  contact_detail_synced_at?: string | null
+  supabase_sync_eligible?: boolean | number | string | null
+  eligibility_reasons_json?: string[] | string | null
+  duplicate_group_count: number | null
+  duplicate_max_severity?: ContactDuplicateSeverity | null
+  duplicate_primary_candidate_id?: string | null
+  completeness_score?: number | null
+  search_text?: string | null
+  source_hash?: string | null
+  refreshed_at?: string | null
+}
+
+export type AppContactRelation = {
+  hektor_contact_id: string
+  hektor_annonce_id: string
+  app_dossier_id?: number | null
+  numero_dossier?: string | null
+  numero_mandat?: string | null
+  titre_bien?: string | null
+  role_contact: string
+  contact_date_maj?: string | null
+  relation_source?: string | null
+  transaction_type?: string | null
+  transaction_id?: string | null
+  transaction_state?: string | null
+  transaction_date?: string | null
+  transaction_amount?: string | null
+  is_active_annonce?: boolean | number | string | null
+  last_seen_at?: string | null
+  refreshed_at?: string | null
+}
+
+export type AppContactSearch = {
+  contact_search_key: string
+  hektor_contact_id: string
+  search_index: number
+  archive: boolean | number | string | null
+  is_active: boolean | number | string | null
+  offre?: string | null
+  villes_json?: string[] | string | null
+  types_json?: Record<string, unknown> | string | null
+  criteres_json?: Array<Record<string, unknown>> | string | null
+  prix_min?: string | null
+  prix_max?: string | null
+  surface_min?: string | null
+  surface_max?: string | null
+  pieces_min?: string | null
+  pieces_max?: string | null
+  chambre_min?: string | null
+  chambre_max?: string | null
+  surface_terrain_min?: string | null
+  surface_terrain_max?: string | null
+  contact_date_maj?: string | null
+  refreshed_at?: string | null
+}
+
+export type ContactStats = {
+  total: number
+  active: number
+  archived: number
+  duplicates: number
+  highRiskDuplicates: number
+  linked: number
+  searchContacts: number
+  activeSearchContacts: number
+  eligible: number
+}
+
 export type MandatBroadcast = {
   app_dossier_id: number
   hektor_annonce_id: number

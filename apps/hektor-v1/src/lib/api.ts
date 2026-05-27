@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -39,6 +39,8 @@ export type AppFilters = {
   priority: string
   workStatus: string
   internalStatus: string
+  contactRole: string
+  contactSearchScope: string
 }
 
 function normalizeMandateStatusValue(value: string | null | undefined) {
@@ -139,6 +141,46 @@ const historicalListingStatuses = ['Vendu', 'Clos']
 const compromisCancelledQuery = 'compromis_state.in.("cancelled","annule","annulé","annuled")'
 const noCancelledCompromisQuery = 'compromis_id.is.null,compromis_state.is.null,compromis_state.not.in.("cancelled","annule","annulé","annuled")'
 const dossiersCurrentView = 'app_dossiers_current'
+const contactsCurrentView = 'app_contacts_current'
+const contactRelationsCurrentView = 'app_contact_relations_current'
+const contactSearchesCurrentView = 'app_contact_searches_current'
+const contactsListingSelect = [
+  'hektor_contact_id',
+  'hektor_agence_id',
+  'hektor_negociateur_id',
+  'negociateur_email',
+  'commercial_nom',
+  'agence_nom',
+  'civilite',
+  'nom',
+  'prenom',
+  'display_name',
+  'archive',
+  'date_enregistrement',
+  'date_maj',
+  'email',
+  'phone_primary',
+  'phone_secondary',
+  'ville',
+  'code_postal',
+  'typologies_json',
+  'relation_roles_json',
+  'linked_annonce_count',
+  'active_search_count',
+  'total_search_count',
+  'has_contact_detail',
+  'contact_detail_synced_at',
+  'supabase_sync_eligible',
+  'eligibility_reasons_json',
+  'duplicate_group_count',
+  'duplicate_max_severity',
+  'duplicate_primary_candidate_id',
+  'completeness_score',
+  'refreshed_at',
+].join(',')
+const activeContactSearchFilterValue = '__active_search__'
+const withContactSearchFilterValue = '__with_search__'
+const withoutContactSearchFilterValue = '__without_search__'
 const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accepted', 'refused']
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
 const localDiffusionRequestsKey = 'hektor-v1-diffusion-requests'
@@ -1023,6 +1065,57 @@ function applyNegotiatorScopeToQuery(baseQuery: any, scope?: DataScope | null) {
   return baseQuery.eq('negociateur_email', negotiatorEmail)
 }
 
+function applyContactFiltersToQuery(baseQuery: any, filters: AppFilters) {
+  let query = baseQuery
+  const search = normalizeSearchTerm(filters.query).replace(/\s+/g, ' ').trim()
+  const commercial = normalizeFilterValue(filters.commercial)
+  const agency = normalizeFilterValue(filters.agency)
+  const archive = filters.archive
+  const role = normalizeFilterValue(filters.contactRole)
+  const contactSearchScope = normalizeFilterValue(filters.contactSearchScope)
+
+  if (archive === activeArchiveFilterValue) query = query.eq('archive', false)
+  if (archive === archivedFilterValue) query = query.eq('archive', true)
+  if (commercial) {
+    if (commercial === withoutCommercialFilterValue) query = query.or('commercial_nom.is.null,commercial_nom.eq.')
+    else query = query.eq('commercial_nom', commercial)
+  }
+  if (agency) query = query.eq('agence_nom', agency)
+  if (role) query = query.contains('relation_roles_json', [role])
+  if (contactSearchScope === activeContactSearchFilterValue) query = query.gt('active_search_count', 0)
+  if (contactSearchScope === withContactSearchFilterValue) query = query.gt('total_search_count', 0)
+  if (contactSearchScope === withoutContactSearchFilterValue) query = query.eq('total_search_count', 0)
+  if (search.length >= 3) {
+    const ilike = `%${search}%`
+    query = /^\d+$/.test(search)
+      ? query.or(`hektor_contact_id.eq.${search},search_text.ilike.${ilike}`)
+      : query.ilike('search_text', ilike)
+  }
+  return query
+}
+
+function normalizeContactRow(row: AppContact): AppContact {
+  return {
+    ...row,
+    linked_annonce_count: Number(row.linked_annonce_count ?? 0),
+    active_search_count: Number(row.active_search_count ?? 0),
+    total_search_count: Number(row.total_search_count ?? 0),
+    has_contact_detail: row.has_contact_detail === true || row.has_contact_detail === 1 || row.has_contact_detail === '1',
+    supabase_sync_eligible: row.supabase_sync_eligible === true || row.supabase_sync_eligible === 1 || row.supabase_sync_eligible === '1',
+    duplicate_group_count: Number(row.duplicate_group_count ?? 0),
+    completeness_score: Number(row.completeness_score ?? 0),
+  }
+}
+
+function normalizeContactSearchRow(row: AppContactSearch): AppContactSearch {
+  return {
+    ...row,
+    archive: row.archive === true || row.archive === 1 || row.archive === '1',
+    is_active: row.is_active === true || row.is_active === 1 || row.is_active === '1',
+    search_index: Number(row.search_index ?? 0),
+  }
+}
+
 type LightweightAnnonceIndexRow = {
   hektor_annonce_id: number
   app_archive_id: number | null
@@ -1315,6 +1408,95 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
   const { data, error } = await supabase.from('app_dashboard_v1').select('*').single()
   if (error || !data) throw new Error(error?.message ?? 'Unable to load dashboard summary')
   return data as DashboardSummary
+}
+
+export async function loadContactsPage({
+  filters,
+  page,
+  pageSize,
+}: {
+  filters: AppFilters
+  page: number
+  pageSize: number
+  scope?: DataScope | null
+}): Promise<PageResult<AppContact>> {
+  if (!hasSupabaseEnv || !supabase) return { rows: [], total: 0, page, pageSize }
+
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+  const countMode: 'estimated' = 'estimated'
+  const { data, error, count } = await applyContactFiltersToQuery(
+    supabase
+      .from(contactsCurrentView)
+      .select(contactsListingSelect, { count: countMode }),
+    filters,
+  )
+    .order('duplicate_group_count', { ascending: false, nullsFirst: false })
+    .order('date_maj', { ascending: false, nullsFirst: false })
+    .order('display_name', { ascending: true })
+    .range(from, to)
+
+  if (error || !data) throw new Error(error?.message ?? 'Unable to load contacts')
+  const minimumTotal = from + data.length + (data.length === pageSize ? 1 : 0)
+  return {
+    rows: (data as AppContact[]).map(normalizeContactRow),
+    total: Math.max(count ?? 0, minimumTotal),
+    page,
+    pageSize,
+  }
+}
+
+async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
+  if (!hasSupabaseEnv || !supabase) return 0
+  let query = applyContactFiltersToQuery(
+    supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'estimated', head: true }),
+    { ...filters, ...patch },
+  )
+  if (extra) query = extra(query)
+  const { error, count } = await query
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
+export async function loadContactStats(filters: AppFilters): Promise<ContactStats> {
+  if (!hasSupabaseEnv || !supabase) return { total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 }
+  const baseFilters = { ...filters, archive: allFilterValue }
+  const [total, active, archived, duplicates, highRiskDuplicates, linked, searchContacts, activeSearchContacts, eligible] = await Promise.all([
+    countContacts(baseFilters),
+    countContacts(baseFilters, { archive: activeArchiveFilterValue }),
+    countContacts(baseFilters, { archive: archivedFilterValue }),
+    countContacts(baseFilters, {}, (query) => query.gt('duplicate_group_count', 0)),
+    countContacts(baseFilters, {}, (query) => query.in('duplicate_max_severity', ['high', 'critical'])),
+    countContacts(baseFilters, {}, (query) => query.gt('linked_annonce_count', 0)),
+    countContacts(baseFilters, {}, (query) => query.gt('total_search_count', 0)),
+    countContacts(baseFilters, {}, (query) => query.gt('active_search_count', 0)),
+    countContacts(baseFilters, {}, (query) => query.eq('supabase_sync_eligible', true)),
+  ])
+  return { total, active, archived, duplicates, highRiskDuplicates, linked, searchContacts, activeSearchContacts, eligible }
+}
+
+export async function loadContactRelations(contactId: string): Promise<AppContactRelation[]> {
+  if (!hasSupabaseEnv || !supabase || !contactId.trim()) return []
+  const { data, error } = await supabase
+    .from(contactRelationsCurrentView)
+    .select('*')
+    .eq('hektor_contact_id', contactId.trim())
+    .order('last_seen_at', { ascending: false, nullsFirst: false })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to load contact relations')
+  return data as AppContactRelation[]
+}
+
+export async function loadContactSearches(contactId: string): Promise<AppContactSearch[]> {
+  if (!hasSupabaseEnv || !supabase || !contactId.trim()) return []
+  const { data, error } = await supabase
+    .from(contactSearchesCurrentView)
+    .select('*')
+    .eq('hektor_contact_id', contactId.trim())
+    .order('is_active', { ascending: false, nullsFirst: false })
+    .order('contact_date_maj', { ascending: false, nullsFirst: false })
+    .order('search_index', { ascending: true })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to load contact searches')
+  return (data as AppContactSearch[]).map(normalizeContactSearchRow)
 }
 
 export async function loadDossiersPage({

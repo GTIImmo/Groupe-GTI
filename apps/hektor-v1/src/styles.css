@@ -497,6 +497,287 @@ body {
   overflow: auto;
   animation: modal-panel-enter 180ms ease-out both;
 }
+
+:root {
+  --icon-contact: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9.5' cy='7' r='4'/%3E%3Cpath d='M21 20v-1a3.5 3.5 0 0 0-2.7-3.4'/%3E%3Cpath d='M16.5 3.2a3.5 3.5 0 0 1 0 6.7'/%3E%3C/svg%3E");
+}
+
+.screen-nav .nav-button.nav-button-contacts::before {
+  -webkit-mask-image: var(--icon-contact) !important;
+  mask-image: var(--icon-contact) !important;
+}
+
+.contacts-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.38fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.contacts-list-panel,
+.contacts-detail-panel {
+  min-width: 0;
+}
+
+.contacts-table-wrap {
+  min-height: 540px;
+}
+
+.contacts-table-wrap table {
+  table-layout: fixed;
+}
+
+.contacts-table-wrap th:nth-child(1) { width: 24%; }
+.contacts-table-wrap th:nth-child(2) { width: 23%; }
+.contacts-table-wrap th:nth-child(3) { width: 16%; }
+.contacts-table-wrap th:nth-child(4) { width: 15%; }
+.contacts-table-wrap th:nth-child(5) { width: 12%; }
+.contacts-table-wrap th:nth-child(6) { width: 10%; }
+
+.contacts-table-wrap tbody tr {
+  cursor: pointer;
+}
+
+.contacts-table-wrap tbody tr.is-selected {
+  background: rgba(15, 104, 116, 0.08);
+  box-shadow: inset 3px 0 0 rgba(15, 104, 116, 0.75);
+}
+
+.contacts-table-wrap td,
+.contacts-table-wrap th {
+  vertical-align: top;
+}
+
+.contacts-table-wrap td > strong,
+.contacts-table-wrap td > span,
+.contacts-table-wrap td > small,
+.contact-identity-cell strong,
+.contact-identity-cell span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-identity-cell {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.contact-identity-cell > div {
+  min-width: 0;
+}
+
+.contacts-detail-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.contact-profile-card {
+  gap: 12px;
+}
+
+.contact-profile-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.contact-profile-head > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.contact-profile-head strong,
+.contact-profile-head span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contact-duplicate-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(104, 112, 112, 0.18);
+  background: rgba(104, 112, 112, 0.08);
+  color: #4f5757;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.contact-duplicate-pill.is-low {
+  border-color: rgba(15, 104, 116, 0.22);
+  background: rgba(15, 104, 116, 0.08);
+  color: #0f6874;
+}
+
+.contact-duplicate-pill.is-medium {
+  border-color: rgba(185, 130, 20, 0.26);
+  background: rgba(185, 130, 20, 0.11);
+  color: #8c620f;
+}
+
+.contact-duplicate-pill.is-high,
+.contact-duplicate-pill.is-critical {
+  border-color: rgba(184, 32, 64, 0.26);
+  background: rgba(184, 32, 64, 0.1);
+  color: #9d1935;
+}
+
+.contact-relation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.contact-relation-list button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.contact-relation-list button:hover:not(:disabled) {
+  border-color: rgba(15, 104, 116, 0.28);
+  box-shadow: 0 10px 24px rgba(15, 104, 116, 0.09);
+  transform: translateY(-1px);
+}
+
+.contact-relation-list button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.contact-search-detail {
+  gap: 10px;
+}
+
+.contact-search-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.contact-search-summary strong,
+.contact-search-summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contact-search-list {
+  display: grid;
+  gap: 8px;
+}
+
+.contact-search-item {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.contact-search-item.is-active {
+  border-color: rgba(27, 133, 95, 0.24);
+  box-shadow: inset 3px 0 0 rgba(27, 133, 95, 0.62);
+}
+
+.contact-search-item.is-archived {
+  opacity: 0.78;
+}
+
+.contact-search-item-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.contact-search-item strong,
+.contact-search-item span,
+.contact-search-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contact-search-criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.contact-search-criteria small {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #eef5f6;
+  color: #31505c;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.contact-relation-list strong,
+.contact-relation-list span,
+.contact-relation-list small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1240px) {
+  .contacts-workspace {
+    grid-template-columns: 1fr;
+  }
+  .contacts-detail-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .contacts-table-wrap {
+    min-height: 360px;
+  }
+  .contacts-table-wrap table {
+    min-width: 900px;
+  }
+  .contact-action-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
 @keyframes modal-panel-enter {
   from {
     opacity: 0;
@@ -23127,4 +23408,14 @@ body {
   .detail-edit-popup-section .hektor-annonce-update-form .hektor-inline-grid {
     grid-template-columns: 1fr !important;
   }
+}
+
+.screen-nav .nav-button.nav-button-contacts::before {
+  -webkit-mask-image: var(--icon-contact) !important;
+  mask-image: var(--icon-contact) !important;
+}
+
+.screen-nav .nav-button:nth-child(5)::before {
+  -webkit-mask-image: var(--icon-target) !important;
+  mask-image: var(--icon-target) !important;
 }
