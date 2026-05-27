@@ -2435,6 +2435,11 @@ function contactPersonDisplayName(contact: DetailContact) {
   return [contact.civility, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name
 }
 
+function detailContactDirectoryId(contact: DetailContact) {
+  const candidates = [contact.sourceId, ...(contact.sourceIds ?? []), ...(contact.members ?? []).flatMap((member) => [member.sourceId, ...(member.sourceIds ?? [])])]
+  return candidates.map((value) => String(value ?? '').trim()).find((value) => /^\d+$/.test(value)) ?? null
+}
+
 function contactCivilityToken(contact: DetailContact) {
   const normalized = normalizeContactText(contact.civility)
   if (['m', 'mr', 'monsieur'].includes(normalized)) return 'M.'
@@ -6436,6 +6441,21 @@ export default function App() {
     setDetailOpen(false)
   }
 
+  function openContactDirectory(contactId: string | null | undefined) {
+    const normalizedId = String(contactId ?? '').trim()
+    if (!normalizedId) return
+    setScreen('contacts')
+    setDetailOpen(false)
+    setSelectedContactId(normalizedId)
+    setContactPage(1)
+    setSearchDraft(normalizedId)
+    setFilters({
+      ...defaultFiltersForScreen('contacts'),
+      archive: allFilterValue,
+      query: normalizedId,
+    })
+  }
+
   async function handlePrepareArchivedAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
     setNoticeMessage(null)
@@ -9853,8 +9873,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <MobileContactCards
             contacts={contactsDirectory}
             total={contactsTotal}
+            page={contactPage}
+            totalPages={contactTotalPages}
+            selectedContact={selectedContact}
+            selectedRelations={selectedContactRelations}
+            selectedSearches={selectedContactSearches}
             loading={contactsLoading}
             onSelectContact={setSelectedContactId}
+            onPrevContact={() => setContactPage((page) => Math.max(1, page - 1))}
+            onNextContact={() => setContactPage((page) => Math.min(contactTotalPages, page + 1))}
+            onOpenDossier={(id) => {
+              setScreen('mandats')
+              setSelectedMandatId(id)
+              setSelectedDossierId(id)
+              setDetailOpen(true)
+            }}
           />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
@@ -9928,6 +9961,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
+                onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
               />
@@ -10569,7 +10603,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -10657,6 +10691,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <ContactsScreen
             contacts={contactsDirectory}
             contactsTotal={contactsTotal}
+            stats={contactStats}
             contactPage={contactPage}
             contactTotalPages={contactTotalPages}
             selectedContact={selectedContact}
@@ -10771,6 +10806,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
+                onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
               />
@@ -12425,6 +12461,7 @@ function DossierDetailLayout(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
@@ -12809,6 +12846,15 @@ function DossierDetailLayout(props: {
                       </div>
                       {!isLightweightDetail ? <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
+                        {(() => {
+                          const directoryContactId = detailContactDirectoryId(primaryContact)
+                          return directoryContactId && props.onOpenContact ? (
+                            <button className="contact-open-directory-button" type="button" onClick={() => props.onOpenContact?.(directoryContactId)}>
+                              <span aria-hidden="true"><DetailIcon type="contact" /></span>
+                              <strong>Fiche contact</strong>
+                            </button>
+                          ) : null
+                        })()}
                         <div className="detail-contact-head">
                           <div className="detail-contact-avatar">{userInitials(primaryContact.name, primaryContact.email)}</div>
                           <div className="detail-contact-identity">
@@ -12854,6 +12900,15 @@ function DossierDetailLayout(props: {
                         <div className="detail-secondary-contacts">
                           {secondaryContacts.map((contact) => (
                             <article key={contact.id} className="detail-entity-card detail-contact-card">
+                              {(() => {
+                                const directoryContactId = detailContactDirectoryId(contact)
+                                return directoryContactId && props.onOpenContact ? (
+                                  <button className="contact-open-directory-button" type="button" onClick={() => props.onOpenContact?.(directoryContactId)}>
+                                    <span aria-hidden="true"><DetailIcon type="contact" /></span>
+                                    <strong>Fiche contact</strong>
+                                  </button>
+                                ) : null
+                              })()}
                               <div className="detail-contact-head">
                                 <div className="detail-contact-avatar is-secondary">{userInitials(contact.name, contact.email)}</div>
                                 <div className="detail-contact-identity">
@@ -13575,6 +13630,7 @@ function AnnonceScreen(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenContact?: (contactId: string) => void
   detailLoading: boolean
   onBack: () => void
   onMissingNegotiator?: MissingNegotiatorHandler
@@ -13604,6 +13660,7 @@ function DossierDetailScreen(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenContact?: (contactId: string) => void
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
   onBack: () => void
@@ -13665,6 +13722,7 @@ function MobileDossierDetail(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
@@ -13923,6 +13981,11 @@ function MobileDossierDetail(props: {
                 {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
                 {[contact.address, contact.postalCode, contact.city].filter(Boolean).length ? <p>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')}</p> : null}
                 {contact.comment ? <p>{contact.comment}</p> : null}
+                {detailContactDirectoryId(contact) && props.onOpenContact ? (
+                  <button className="mobile-contact-directory-button" type="button" onClick={() => props.onOpenContact?.(detailContactDirectoryId(contact) as string)}>
+                    Fiche contact
+                  </button>
+                ) : null}
                 {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
               </div>
             ))}
@@ -14228,6 +14291,73 @@ function contactJsonList(value: unknown) {
   return parseJson<string[]>(typeof value === 'string' ? value : null, []).map((item) => String(item).trim()).filter(Boolean)
 }
 
+type ContactTone = 'buyer' | 'owner' | 'mandate' | 'notary' | 'mixed' | 'search' | 'default'
+
+function isBuyerRole(value: string) {
+  return value === 'acquereur' || value.startsWith('acquereur_')
+}
+
+function contactToneFromRoles(roles: string[], contact?: Pick<AppContact, 'active_search_count' | 'total_search_count'> | null): ContactTone {
+  const hasBuyer = roles.some(isBuyerRole)
+  const hasOwner = roles.includes('proprietaire')
+  const hasMandate = roles.includes('mandant')
+  const hasNotary = roles.some((role) => role.startsWith('notaire'))
+  const typedCount = [hasBuyer, hasOwner, hasMandate, hasNotary].filter(Boolean).length
+  if (typedCount > 1) return 'mixed'
+  if (hasBuyer) return 'buyer'
+  if (hasOwner) return 'owner'
+  if (hasMandate) return 'mandate'
+  if (hasNotary) return 'notary'
+  if ((contact?.active_search_count ?? 0) > 0 || (contact?.total_search_count ?? 0) > 0) return 'search'
+  return 'default'
+}
+
+function contactToneLabel(tone: ContactTone) {
+  if (tone === 'buyer') return 'Acquereur'
+  if (tone === 'owner') return 'Proprietaire'
+  if (tone === 'mandate') return 'Mandant'
+  if (tone === 'notary') return 'Notaire'
+  if (tone === 'mixed') return 'Multi-role'
+  if (tone === 'search') return 'Recherche'
+  return 'Contact'
+}
+
+function contactToneShort(tone: ContactTone) {
+  if (tone === 'buyer') return 'AQ'
+  if (tone === 'owner') return 'PR'
+  if (tone === 'mandate') return 'MD'
+  if (tone === 'notary') return 'NT'
+  if (tone === 'mixed') return '+'
+  if (tone === 'search') return 'R'
+  return 'C'
+}
+
+function contactRoleBadges(roles: string[]) {
+  const normalized = new Set<string>()
+  roles.forEach((role) => {
+    if (isBuyerRole(role)) normalized.add('acquereur')
+    else normalized.add(role)
+  })
+  return Array.from(normalized)
+}
+
+function contactTypologyBadges(contact: AppContact) {
+  const roles = contactJsonList(contact.relation_roles_json)
+  const typologies = contactJsonList(contact.typologies_json)
+  return Array.from(new Set([...contactRoleBadges(roles), ...typologies])).filter(Boolean)
+}
+
+function ContactTypeMark({ contact, compact = false }: { contact: AppContact; compact?: boolean }) {
+  const roles = contactJsonList(contact.relation_roles_json)
+  const tone = contactToneFromRoles(roles, contact)
+  return (
+    <span className={`contact-type-mark is-${tone} ${compact ? 'is-compact' : ''}`} title={contactToneLabel(tone)} aria-label={contactToneLabel(tone)}>
+      <span aria-hidden="true"><DetailIcon type={tone === 'search' ? 'visibility' : tone === 'notary' ? 'mandate' : 'contact'} /></span>
+      <strong>{contactToneShort(tone)}</strong>
+    </span>
+  )
+}
+
 function contactArchiveLabel(contact: Pick<AppContact, 'archive'>) {
   return contact.archive === true || contact.archive === 1 || contact.archive === '1' ? 'Archive' : 'Actif'
 }
@@ -14248,6 +14378,9 @@ function contactDirectoryRoleLabel(value: string) {
   if (value === 'proprietaire') return 'Proprietaire'
   if (value === 'mandant') return 'Mandant'
   if (value === 'acquereur') return 'Acquereur'
+  if (value === 'acquereur_offre') return 'Acquereur offre'
+  if (value === 'acquereur_compromis') return 'Acquereur compromis'
+  if (value === 'acquereur_vente') return 'Acquereur vente'
   if (value === 'notaire_entree') return 'Notaire entree'
   if (value === 'notaire_sortie') return 'Notaire sortie'
   return value || 'Contact'
@@ -14302,6 +14435,7 @@ function contactTransactionLabel(relation: AppContactRelation) {
 function ContactsScreen(props: {
   contacts: AppContact[]
   contactsTotal: number
+  stats: ContactStats
   contactPage: number
   contactTotalPages: number
   selectedContact: AppContact | null
@@ -14316,15 +14450,34 @@ function ContactsScreen(props: {
   onOpenDossier: (id: number) => void
   onResetFilters: () => void
 }) {
+  const formatNumber = new Intl.NumberFormat('fr-FR')
   const selectedRoles = props.selectedContact ? contactJsonList(props.selectedContact.relation_roles_json) : []
+  const selectedTypologies = props.selectedContact ? contactTypologyBadges(props.selectedContact) : []
   const selectedActiveSearches = props.selectedSearches.filter((search) => contactBool(search.is_active))
+  const selectedArchivedSearches = props.selectedSearches.filter((search) => !contactBool(search.is_active))
   return (
     <section className="contacts-workspace">
       <section className="panel panel-wide contacts-list-panel">
+        <div className="contacts-directory-toolbar">
+          <div className="contacts-directory-title">
+            <span className="contacts-directory-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
+            <div>
+              <p className="eyebrow">Annuaire Hektor</p>
+              <h3>Catalogue contacts</h3>
+              <span>{formatNumber.format(props.contactsTotal)} resultat(s) dans le filtre courant</span>
+            </div>
+          </div>
+          <div className="contacts-directory-metrics" aria-label="Synthese contacts">
+            <span><strong>{formatNumber.format(props.stats.active)}</strong> actifs</span>
+            <span><strong>{formatNumber.format(props.stats.activeSearchContacts)}</strong> recherches actives</span>
+            <span><strong>{formatNumber.format(props.stats.linked)}</strong> lies annonces</span>
+            <span><strong>{formatNumber.format(props.stats.highRiskDuplicates)}</strong> doublons forts</span>
+          </div>
+        </div>
         <div className="panel-head">
           <div className="listing-title-stack">
-            <h3>Annuaire Hektor</h3>
-            <span className="listing-total-label">{new Intl.NumberFormat('fr-FR').format(props.contactsTotal)} contacts</span>
+            <h3>Contacts</h3>
+            <span className="listing-total-label">Vue legere, enrichie par les relations et recherches disponibles</span>
           </div>
           <div className="page-controls">
             {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
@@ -14343,31 +14496,39 @@ function ContactsScreen(props: {
           {props.contacts.length > 0 ? (
             <table>
               <thead>
-                <tr><th>Contact</th><th>Coordonnees</th><th>Negociateur</th><th>Liens / recherches</th><th>Doublons</th><th>Maj</th></tr>
+                <tr><th>Contact</th><th>Typologie</th><th>Coordonnees</th><th>Portefeuille</th><th>Relations</th><th>Qualite</th></tr>
               </thead>
               <tbody>
                 {props.contacts.map((contact) => {
                   const roles = contactJsonList(contact.relation_roles_json)
+                  const typologyBadges = contactTypologyBadges(contact).slice(0, 4)
                   const isSelected = contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
                   return (
                     <tr key={contact.hektor_contact_id} className={isSelected ? 'is-selected' : ''} onClick={() => props.onSelectContact(contact.hektor_contact_id)}>
                       <td className="contact-identity-cell">
-                        <span className="detail-contact-avatar">{userInitials(contact.display_name, contact.email)}</span>
+                        <ContactTypeMark contact={contact} />
                         <div>
                           <strong>{contact.display_name}</strong>
-                          <span>ID {contact.hektor_contact_id} · {contactArchiveLabel(contact)}</span>
+                          <span>ID {contact.hektor_contact_id} - {contactArchiveLabel(contact)}</span>
+                          <small>{contact.civilite ? `${contact.civilite} ` : ''}{[contact.prenom, contact.nom].filter(Boolean).join(' ') || 'Identite Hektor'}</small>
                         </div>
                       </td>
-                      <td><strong>{contact.phone_primary || '-'}</strong><span>{contact.email || '-'}</span><span>{[contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span></td>
-                      <td><strong>{contact.commercial_nom || '-'}</strong><span>{contact.agence_nom || '-'}</span></td>
-                      <td>
-                        <strong>{contact.linked_annonce_count ?? 0} annonce(s)</strong>
-                        <span>{contact.active_search_count ? `${contact.active_search_count} recherche(s) active(s)` : `${contact.total_search_count ?? 0} recherche(s)`}</span>
-                        <small>{contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</small>
-                        <small>{roles.map(contactDirectoryRoleLabel).join(', ') || '-'}</small>
+                      <td className="contact-taxonomy-cell">
+                        <div className="contact-chip-row">
+                          {typologyBadges.length > 0 ? typologyBadges.map((badge) => (
+                            <span key={`${contact.hektor_contact_id}-${badge}`} className="contact-role-chip">{contactDirectoryRoleLabel(badge)}</span>
+                          )) : <span className="contact-role-chip is-muted">Sans relation</span>}
+                        </div>
+                        <small>{roles.length > typologyBadges.length ? `+${roles.length - typologyBadges.length} role(s)` : contactBool(contact.has_contact_detail) ? 'Detail disponible' : 'Listing leger'}</small>
                       </td>
-                      <td><span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span><small>{contact.duplicate_group_count ? `${contact.duplicate_group_count} groupe(s)` : 'Aucun groupe'}</small></td>
-                      <td><strong>{formatDate(contact.date_maj)}</strong><span>{formatDate(contact.refreshed_at)}</span></td>
+                      <td className="contact-coordinate-cell"><strong>{contact.phone_primary || '-'}</strong><span>{contact.email || '-'}</span><span>{[contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span></td>
+                      <td><strong>{contact.commercial_nom || '-'}</strong><span>{contact.agence_nom || '-'}</span><small>{contact.negociateur_email || '-'}</small></td>
+                      <td className="contact-activity-cell">
+                        <strong>{contact.linked_annonce_count ?? 0} annonce(s)</strong>
+                        <span className={contact.active_search_count ? 'is-important' : ''}>{contact.active_search_count ? `${contact.active_search_count} recherche(s) active(s)` : `${contact.total_search_count ?? 0} recherche(s)`}</span>
+                        <small>{contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</small>
+                      </td>
+                      <td className="contact-quality-cell"><span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span><small>{contact.duplicate_group_count ? `${contact.duplicate_group_count} groupe(s)` : 'Aucun groupe'}</small><small>Maj {formatDate(contact.date_maj)}</small></td>
                     </tr>
                   )
                 })}
@@ -14389,19 +14550,25 @@ function ContactsScreen(props: {
           <div className="contacts-detail-stack">
             <article className="detail-card contact-profile-card">
               <div className="contact-profile-head">
-                <span className="detail-contact-avatar">{userInitials(props.selectedContact.display_name, props.selectedContact.email)}</span>
+                <ContactTypeMark contact={props.selectedContact} />
                 <div>
                   <strong>{props.selectedContact.display_name}</strong>
-                  <span>{props.selectedContact.email || props.selectedContact.phone_primary || `ID ${props.selectedContact.hektor_contact_id}`}</span>
+                  <span>ID {props.selectedContact.hektor_contact_id} - {contactArchiveLabel(props.selectedContact)}</span>
                 </div>
               </div>
               <div className="contact-action-row">
                 {props.selectedContact.phone_primary ? <a className="ghost-button" href={`tel:${props.selectedContact.phone_primary}`}>Appeler</a> : null}
                 {props.selectedContact.email ? <a className="ghost-button" href={`mailto:${props.selectedContact.email}`}>Email</a> : null}
               </div>
+              <div className="contact-profile-facts">
+                <div><span>Telephone</span><strong>{props.selectedContact.phone_primary || '-'}</strong></div>
+                <div><span>Email</span><strong>{props.selectedContact.email || '-'}</strong></div>
+                <div><span>Secteur</span><strong>{[props.selectedContact.code_postal, props.selectedContact.ville].filter(Boolean).join(' ') || '-'}</strong></div>
+                <div><span>Negociateur</span><strong>{props.selectedContact.commercial_nom || '-'}</strong></div>
+              </div>
             </article>
             <article className="detail-card">
-              <span className="detail-label">Controle donnees</span>
+              <span className="detail-label">Typologie et controle</span>
               <div className="tag-row">
                 <StatusPill value={contactArchiveLabel(props.selectedContact)} />
                 <span className={`contact-duplicate-pill ${contactDuplicateTone(props.selectedContact.duplicate_max_severity)}`}>{contactSeverityLabel(props.selectedContact.duplicate_max_severity)}</span>
@@ -14410,6 +14577,11 @@ function ContactsScreen(props: {
                 {contactBool(props.selectedContact.supabase_sync_eligible) ? <StatusPill value="Eligible app" /> : null}
                 {selectedRoles.map((role) => <StatusPill key={role} value={contactDirectoryRoleLabel(role)} />)}
               </div>
+              {selectedTypologies.length > 0 ? (
+                <div className="contact-chip-row">
+                  {selectedTypologies.map((badge) => <span key={`selected-${badge}`} className="contact-role-chip">{contactDirectoryRoleLabel(badge)}</span>)}
+                </div>
+              ) : null}
               <span>{props.selectedContact.duplicate_group_count ? `${props.selectedContact.duplicate_group_count} groupe(s) doublon detecte(s)` : 'Pas de doublon classe'}</span>
               {contactBool(props.selectedContact.has_contact_detail) ? (
                 <span>{props.selectedContact.total_search_count ?? 0} recherche(s) connue(s), dont {props.selectedContact.active_search_count ?? 0} active(s)</span>
@@ -14427,9 +14599,13 @@ function ContactsScreen(props: {
             </article>
             <article className="detail-card contact-search-detail">
               <span className="detail-label">Recherches acquereurs</span>
+              <div className="contact-search-overview">
+                <div><strong>{selectedActiveSearches.length}</strong><span>actives</span></div>
+                <div><strong>{selectedArchivedSearches.length}</strong><span>archivees</span></div>
+                <div><strong>{props.selectedContact.total_search_count ?? props.selectedSearches.length}</strong><span>connues</span></div>
+              </div>
               <div className="contact-search-summary">
-                <strong>{selectedActiveSearches.length} active(s)</strong>
-                <span>{contactBool(props.selectedContact.has_contact_detail) ? `${props.selectedContact.total_search_count ?? props.selectedSearches.length} recherche(s) connue(s) dans la fiche detail Hektor.` : 'Fiche detail non encore chargee pour ce contact.'}</span>
+                <span>{contactBool(props.selectedContact.has_contact_detail) ? 'Les recherches proviennent du detail contact Hektor deja charge.' : 'Fiche detail non encore chargee pour ce contact.'}</span>
               </div>
               {props.selectedSearches.length > 0 ? (
                 <div className="contact-search-list">
@@ -14459,13 +14635,19 @@ function ContactsScreen(props: {
               <span className="detail-label">Annonces liees</span>
               {props.selectedRelations.length > 0 ? (
                 <div className="contact-relation-list">
-                  {props.selectedRelations.map((relation) => (
-                    <button key={`${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => relation.app_dossier_id ? props.onOpenDossier(relation.app_dossier_id) : undefined} disabled={!relation.app_dossier_id}>
-                      <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
-                      <span>{relation.titre_bien || contactDirectoryRoleLabel(relation.role_contact)}</span>
-                      <small>{[contactDirectoryRoleLabel(relation.role_contact), contactTransactionLabel(relation)].filter(Boolean).join(' - ')}</small>
-                    </button>
-                  ))}
+                  {props.selectedRelations.map((relation) => {
+                    const relationLabel = contactDirectoryRoleLabel(relation.role_contact)
+                    return (
+                      <button key={`${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => relation.app_dossier_id ? props.onOpenDossier(relation.app_dossier_id) : undefined} disabled={!relation.app_dossier_id}>
+                        <span className="contact-relation-button-head">
+                          <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
+                          <span className="contact-role-chip">{relationLabel}</span>
+                        </span>
+                        <span>{relation.titre_bien || relationLabel}</span>
+                        <small>{[contactTransactionLabel(relation), relation.transaction_date ? formatDate(relation.transaction_date) : null].filter(Boolean).join(' - ') || 'Relation annonce'}</small>
+                      </button>
+                    )
+                  })}
                 </div>
               ) : <p>Aucune annonce liee dans l'index courant.</p>}
             </article>
@@ -14479,9 +14661,18 @@ function ContactsScreen(props: {
 function MobileContactCards(props: {
   contacts: AppContact[]
   total: number
+  page: number
+  totalPages: number
+  selectedContact: AppContact | null
+  selectedRelations: AppContactRelation[]
+  selectedSearches: AppContactSearch[]
   loading: boolean
   onSelectContact: (id: string) => void
+  onPrevContact: () => void
+  onNextContact: () => void
+  onOpenDossier: (id: number) => void
 }) {
+  const selectedActiveSearches = props.selectedSearches.filter((search) => contactBool(search.is_active))
   if (props.contacts.length === 0) {
     return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucun contact disponible.'}</section>
   }
@@ -14494,10 +14685,60 @@ function MobileContactCards(props: {
         </div>
         <span>{props.contacts.length} / {props.total}</span>
       </div>
+      {props.selectedContact ? (
+        <article className="mobile-contact-detail-card">
+          <div className="mobile-contact-detail-head">
+            <ContactTypeMark contact={props.selectedContact} compact />
+            <div>
+              <span className="mobile-section-kicker">Fiche selectionnee</span>
+              <strong>{props.selectedContact.display_name}</strong>
+              <small>ID {props.selectedContact.hektor_contact_id} - {contactArchiveLabel(props.selectedContact)}</small>
+            </div>
+          </div>
+          <div className="mobile-contact-actions">
+            {props.selectedContact.phone_primary ? <a href={`tel:${props.selectedContact.phone_primary}`}>Appeler</a> : null}
+            {props.selectedContact.email ? <a href={`mailto:${props.selectedContact.email}`}>Email</a> : null}
+          </div>
+          <div className="mobile-contact-insights">
+            <div><span>Annonces</span><strong>{props.selectedContact.linked_annonce_count ?? 0}</strong></div>
+            <div><span>Rech. actives</span><strong>{props.selectedContact.active_search_count ?? 0}</strong></div>
+            <div><span>Doublon</span><strong>{contactSeverityLabel(props.selectedContact.duplicate_max_severity)}</strong></div>
+          </div>
+          <div className="mobile-status-row">
+            {contactTypologyBadges(props.selectedContact).slice(0, 5).map((badge) => <span key={`mobile-selected-${badge}`} className="contact-role-chip">{contactDirectoryRoleLabel(badge)}</span>)}
+            <StatusPill value={contactBool(props.selectedContact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
+          </div>
+          {selectedActiveSearches.length > 0 ? (
+            <div className="mobile-contact-searches">
+              {selectedActiveSearches.slice(0, 3).map((search) => (
+                <div key={`mobile-search-${search.contact_search_key}`}>
+                  <strong>{contactJsonList(search.villes_json).join(', ') || 'Secteur non renseigne'}</strong>
+                  <span>{contactSearchTypes(search.types_json).join(', ') || search.offre || 'Recherche acquereur'}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {props.selectedRelations.length > 0 ? (
+            <div className="mobile-contact-relations">
+              {props.selectedRelations.slice(0, 4).map((relation) => (
+                <button key={`mobile-relation-${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => relation.app_dossier_id ? props.onOpenDossier(relation.app_dossier_id) : undefined} disabled={!relation.app_dossier_id}>
+                  <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
+                  <span>{contactDirectoryRoleLabel(relation.role_contact)}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </article>
+      ) : null}
       {props.contacts.map((contact) => (
-        <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className="mobile-list-card" onClick={() => props.onSelectContact(contact.hektor_contact_id)}>
-          <div className="mobile-card-top">
-            <div className="detail-contact-avatar">{userInitials(contact.display_name, contact.email)}</div>
+        <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className={`mobile-list-card ${contact.hektor_contact_id === props.selectedContact?.hektor_contact_id ? 'is-selected' : ''}`} onClick={() => props.onSelectContact(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            props.onSelectContact(contact.hektor_contact_id)
+          }
+        }}>
+          <div className="mobile-card-top mobile-contact-card-top">
+            <ContactTypeMark contact={contact} compact />
             <div className="mobile-list-card-main">
               <span className="mobile-card-meta">ID {contact.hektor_contact_id}</span>
               <strong>{contact.display_name}</strong>
@@ -14512,6 +14753,11 @@ function MobileContactCards(props: {
           </div>
         </article>
       ))}
+      <div className="mobile-contact-pager">
+        <button type="button" onClick={props.onPrevContact} disabled={props.page <= 1}>Prec</button>
+        <span>Page {props.page} / {props.totalPages}</span>
+        <button type="button" onClick={props.onNextContact} disabled={props.page >= props.totalPages}>Suiv</button>
+      </div>
     </section>
   )
 }
