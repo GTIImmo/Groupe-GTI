@@ -908,6 +908,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--work-item-batch-size", type=int, default=DEFAULT_WORK_ITEM_BATCH_SIZE)
     parser.add_argument("--filter-batch-size", type=int, default=DEFAULT_FILTER_BATCH_SIZE)
     parser.add_argument("--full-rebuild", action="store_true")
+    parser.add_argument("--rebuild-register-only", action="store_true", help="Rebuild only app_mandat_register_current from the local complete register payload.")
     parser.add_argument("--dossier-id", action="append", default=[], help="Limit push to one app_dossier_id. Can be repeated.")
     parser.add_argument("--hektor-annonce-id", action="append", default=[], help="Resolve and limit push to one Hektor annonce id. Can be repeated.")
     return parser.parse_args()
@@ -928,6 +929,63 @@ def main() -> None:
 
     client = SupabaseRestClient(base_url=supabase_url, service_role_key=supabase_service_role_key)
     source_watermark = fetch_source_watermark()
+
+    if args.rebuild_register_only:
+        register_payload = build_payload(limit=None, dossier_ids=None, include_filter_catalog=False)
+        current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
+        delta_run_id = client.insert_delta_run(
+            mode="upgrade",
+            notes={
+                "generated_from": "phase2/sync/push_upgrade_to_supabase.py",
+                "register_only": True,
+                "source_watermark": source_watermark,
+                "mandat_register_local_count": len(current_mandat_register_rows),
+            },
+        )
+        try:
+            client.delete_all_rows(path="app_mandat_register_current", filter_expr="register_row_id=not.is.null")
+            if current_mandat_register_rows:
+                client.insert_rows(
+                    path="app_mandat_register_current",
+                    rows=current_mandat_register_rows,
+                    batch_size=args.work_item_batch_size,
+                )
+            client.update_delta_run(
+                delta_run_id,
+                {
+                    "status": "completed",
+                    "finished_at": now_iso(),
+                    "dossiers_detected": 0,
+                    "dossiers_upserted": 0,
+                    "details_upserted": 0,
+                    "work_items_replaced": 0,
+                    "filters_replaced": 0,
+                    "deleted_dossiers": 0,
+                },
+            )
+            print(
+                json.dumps(
+                    {
+                        "delta_run_id": delta_run_id,
+                        "mandat_register_replaced": len(current_mandat_register_rows),
+                        "mode": "register_only",
+                    },
+                    ensure_ascii=True,
+                    indent=2,
+                )
+            )
+        except Exception as exc:
+            client.update_delta_run(
+                delta_run_id,
+                {
+                    "status": "failed",
+                    "finished_at": now_iso(),
+                    "notes": {"error": str(exc), "register_only": True},
+                },
+            )
+            raise
+        return
+
     latest_completed_run = client.fetch_latest_completed_delta_run()
     latest_notes = latest_completed_run.get("notes") if latest_completed_run else None
     latest_source_watermark = None
@@ -966,14 +1024,14 @@ def main() -> None:
         stale_ids = sorted(remote_ids - local_ids)
 
     should_build_delta_payload = args.full_rebuild or targeted_push or bool(candidate_ids) or bool(stale_ids)
+    should_build_global_payload = args.full_rebuild or (not targeted_push and not candidate_ids and bool(stale_ids))
+    payload_dossier_ids = None if should_build_global_payload else candidate_ids
     payload = (
-        build_payload(limit=None, dossier_ids=candidate_ids, include_filter_catalog=False)
+        build_payload(limit=None, dossier_ids=payload_dossier_ids, include_filter_catalog=False)
         if should_build_delta_payload
         else {"dossiers": [], "dossier_details": [], "work_items": [], "mandat_register_rows": [], "broadcasts": []}
     )
-    if args.full_rebuild:
-        register_payload = build_payload(limit=None, dossier_ids=None, include_filter_catalog=False)
-    elif targeted_push or candidate_ids:
+    if should_build_global_payload or targeted_push or candidate_ids:
         register_payload = payload
     else:
         register_payload = {"mandat_register_rows": []}
