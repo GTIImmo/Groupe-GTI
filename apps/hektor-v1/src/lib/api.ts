@@ -1065,6 +1065,17 @@ function applyNegotiatorScopeToQuery(baseQuery: any, scope?: DataScope | null) {
   return baseQuery.eq('negociateur_email', negotiatorEmail)
 }
 
+function contactRoleFilterValues(role: string) {
+  if (role === 'acquereur') return ['acquereur', 'acquereur_offre', 'acquereur_compromis', 'acquereur_vente']
+  return [role]
+}
+
+function applyContactRoleFilter(baseQuery: any, role: string) {
+  const roles = contactRoleFilterValues(role)
+  if (roles.length === 1) return baseQuery.contains('relation_roles_json', JSON.stringify([roles[0]]))
+  return baseQuery.or(roles.map((value) => `relation_roles_json.cs.${JSON.stringify([value])}`).join(','))
+}
+
 function applyContactFiltersToQuery(baseQuery: any, filters: AppFilters) {
   let query = baseQuery
   const search = normalizeSearchTerm(filters.query).replace(/\s+/g, ' ').trim()
@@ -1081,7 +1092,7 @@ function applyContactFiltersToQuery(baseQuery: any, filters: AppFilters) {
     else query = query.eq('commercial_nom', commercial)
   }
   if (agency) query = query.eq('agence_nom', agency)
-  if (role) query = query.contains('relation_roles_json', [role])
+  if (role) query = applyContactRoleFilter(query, role)
   if (contactSearchScope === activeContactSearchFilterValue) query = query.gt('active_search_count', 0)
   if (contactSearchScope === withContactSearchFilterValue) query = query.gt('total_search_count', 0)
   if (contactSearchScope === withoutContactSearchFilterValue) query = query.eq('total_search_count', 0)
