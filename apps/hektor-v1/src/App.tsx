@@ -14323,12 +14323,12 @@ function contactToneLabel(tone: ContactTone) {
 }
 
 function contactToneBadgeLabel(tone: ContactTone) {
-  if (tone === 'buyer') return 'Achat'
+  if (tone === 'buyer') return 'Acquereur'
   if (tone === 'owner') return 'Vendeur'
   if (tone === 'mandate') return 'Mandant'
   if (tone === 'notary') return 'Notaire'
-  if (tone === 'mixed') return 'Multi'
-  if (tone === 'search') return 'Rech.'
+  if (tone === 'mixed') return 'Mixte'
+  if (tone === 'search') return 'Recherche'
   return 'Contact'
 }
 
@@ -14654,7 +14654,7 @@ function ContactsScreen(props: {
                 {props.contacts.map((contact) => {
                   const roles = contactJsonList(contact.relation_roles_json)
                   const typologyBadges = contactTypologyBadges(contact).slice(0, 4)
-                  const isSelected = contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
+                  const isSelected = detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
                   const tone = contactToneFromRoles(roles, contact)
                   return (
                     <tr key={contact.hektor_contact_id} className={`contact-row is-${tone}${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)}>
@@ -14740,7 +14740,7 @@ function MobileContactCards(props: {
         <span>{props.contacts.length} / {props.total}</span>
       </div>
       {props.contacts.map((contact) => (
-        <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className={`mobile-list-card ${contact.hektor_contact_id === props.selectedContact?.hektor_contact_id ? 'is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => {
+        <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className={`mobile-list-card ${detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id ? 'is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             openContactDetail(contact.hektor_contact_id)
