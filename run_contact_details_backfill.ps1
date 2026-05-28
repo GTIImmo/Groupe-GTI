@@ -1,9 +1,10 @@
 param(
-  [int]$Limit = 0,
+  [int]$Limit = 500,
   [int]$BatchSize = 100,
   [switch]$DryRun,
   [switch]$ForceFull,
   [switch]$SkipListingRefresh,
+  [switch]$RefreshListing,
   [switch]$FullListingRefresh,
   [int]$ListingMaxPages = 5,
   [ValidateSet("active", "archived", "both")]
@@ -11,8 +12,17 @@ param(
   [switch]$MissingOnly,
   [switch]$Retry404,
   [switch]$NoNormalize,
-  [int]$MaxAttempts = 6,
-  [int]$RetryDelaySeconds = 120
+  [int]$RequestDelaySeconds = 1,
+  [int]$BatchPauseSeconds = 0,
+  [int]$MaxHardErrors = 1,
+  [int]$MaxConsecutiveHardErrors = 1,
+  [int]$Max404Errors = 0,
+  [int]$MaxConsecutive404Errors = 0,
+  [int]$ClientMaxRetries = 1,
+  [int]$MaxAttempts = 1,
+  [int]$RetryDelaySeconds = 600,
+  [int]$MinRunIntervalMinutes = 60,
+  [switch]$ForceRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,27 +35,80 @@ if (-not (Test-Path -LiteralPath $python)) {
   $python = "python"
 }
 
+if (-not $DryRun -and -not $ForceRun) {
+  if ($Limit -le 0) {
+    throw "Safety stop: Limit=0 is not allowed for contact backfill without -ForceRun."
+  }
+  if ($Limit -gt 500) {
+    throw "Safety stop: Limit above 500 is not allowed for contact backfill without -ForceRun."
+  }
+  if ($ForceFull) {
+    throw "Safety stop: ForceFull is not allowed for contact backfill without -ForceRun."
+  }
+  if ($RefreshListing -or $FullListingRefresh) {
+    throw "Safety stop: listing refresh is not allowed for contact backfill without -ForceRun."
+  }
+}
+
+$stateDir = Join-Path $projectRoot ".tmp"
+$lastRunFile = Join-Path $stateDir "contact_details_backfill_last_run.txt"
+$lastSuccessFile = Join-Path $stateDir "contact_details_backfill_last_success.txt"
+if (-not $DryRun) {
+  New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
+  $lastIntervalFile = if (Test-Path -LiteralPath $lastRunFile) { $lastRunFile } else { $lastSuccessFile }
+  if (-not $ForceRun -and (Test-Path -LiteralPath $lastIntervalFile)) {
+    $lastRunRaw = (Get-Content -LiteralPath $lastIntervalFile -Raw).Trim()
+    if ($lastRunRaw) {
+      try {
+        $lastRun = [DateTimeOffset]::Parse($lastRunRaw)
+        $elapsedMinutes = ([DateTimeOffset]::UtcNow - $lastRun.ToUniversalTime()).TotalMinutes
+        if ($elapsedMinutes -lt $MinRunIntervalMinutes) {
+          $remaining = [Math]::Ceiling($MinRunIntervalMinutes - $elapsedMinutes)
+          Write-Warning ("Safety stop: last contact backfill attempt was {0:N0} minute(s) ago. Wait about {1:N0} minute(s), or use -ForceRun intentionally." -f $elapsedMinutes, $remaining)
+          exit 0
+        }
+      }
+      catch {
+        Write-Warning "Could not parse last contact backfill timestamp; continuing with safety defaults."
+      }
+    }
+  }
+}
+
 $argsList = @(
   "phase2\sync\sync_contact_details.py",
   "--limit", $Limit,
   "--batch-size", $BatchSize,
   "--listing-max-pages", $ListingMaxPages,
-  "--contact-scope", $ContactScope
+  "--contact-scope", $ContactScope,
+  "--request-delay-seconds", $RequestDelaySeconds,
+  "--batch-pause-seconds", $BatchPauseSeconds,
+  "--max-hard-errors", $MaxHardErrors,
+  "--max-consecutive-hard-errors", $MaxConsecutiveHardErrors,
+  "--max-404-errors", $Max404Errors,
+  "--max-consecutive-404-errors", $MaxConsecutive404Errors,
+  "--client-max-retries", $ClientMaxRetries
 )
 
 if ($DryRun) { $argsList += "--dry-run" }
 if ($ForceFull) { $argsList += "--force-full" }
-if ($SkipListingRefresh) { $argsList += "--skip-listing-refresh" }
+if ($SkipListingRefresh -or (-not $RefreshListing -and -not $FullListingRefresh)) { $argsList += "--skip-listing-refresh" }
 if ($FullListingRefresh) { $argsList += "--full-listing-refresh" }
-if ($MissingOnly) { $argsList += "--missing-only" }
+if ($MissingOnly -or -not $ForceFull) { $argsList += "--missing-only" }
 if ($Retry404) { $argsList += "--retry-404" }
 if ($NoNormalize) { $argsList += "--no-normalize" }
 
 for ($attempt = 1; $attempt -le [Math]::Max(1, $MaxAttempts); $attempt++) {
   Write-Host ("Contact detail extraction attempt {0}/{1}" -f $attempt, [Math]::Max(1, $MaxAttempts))
+  if (-not $DryRun) {
+    Set-Content -LiteralPath $lastRunFile -Value ([DateTimeOffset]::UtcNow.ToString("o"))
+  }
   & $python $argsList
   $exitCode = $LASTEXITCODE
   if ($exitCode -eq 0) {
+    if (-not $DryRun) {
+      Set-Content -LiteralPath $lastSuccessFile -Value ([DateTimeOffset]::UtcNow.ToString("o"))
+    }
     exit 0
   }
   if ($attempt -ge [Math]::Max(1, $MaxAttempts)) {

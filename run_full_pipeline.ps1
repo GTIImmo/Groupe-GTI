@@ -2,10 +2,18 @@ param(
     [switch]$PushAndroidFront,
     [switch]$SkipAndroid,
     [switch]$SkipContactDetails,
-    [int]$ContactDetailLimit = 1000,
+    [int]$DailyRawMaxPages = 5,
+    [int]$ContactDetailLimit = 100,
     [int]$ContactDetailBatchSize = 100,
-    [int]$ContactDetailMaxAttempts = 2,
-    [int]$ContactDetailRetryDelaySeconds = 120,
+    [int]$ContactDetailMaxAttempts = 1,
+    [int]$ContactDetailRetryDelaySeconds = 600,
+    [int]$ContactDetailRequestDelaySeconds = 1,
+    [int]$ContactDetailBatchPauseSeconds = 0,
+    [int]$ContactDetailMaxHardErrors = 1,
+    [int]$ContactDetailMaxConsecutiveHardErrors = 1,
+    [int]$ContactDetailMax404Errors = 0,
+    [int]$ContactDetailMaxConsecutive404Errors = 0,
+    [int]$ContactDetailClientMaxRetries = 1,
     [switch]$FailOnContactDetailsError,
     [switch]$PushContactsToSupabase,
     [switch]$ContactsEligibleOnly,
@@ -114,12 +122,13 @@ Set-Location $projectRoot
 
 Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"
-Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SkipContactDetails=$SkipContactDetails ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds FailOnContactDetailsError=$FailOnContactDetailsError PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly"
+Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly"
 
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
     "--mode", "update",
     "--resources", "negos", "annonces", "contacts", "mandats", "offres", "compromis", "ventes", "broadcasts",
+    "--max-pages", [string]$DailyRawMaxPages,
     "--missing-only"
 )
 
@@ -134,7 +143,14 @@ if (-not $SkipContactDetails) {
         "--limit", [string]$ContactDetailLimit,
         "--batch-size", [string]$ContactDetailBatchSize,
         "--skip-listing-refresh",
-        "--use-last-seen-as-changed",
+        "--changed-only",
+        "--request-delay-seconds", [string]$ContactDetailRequestDelaySeconds,
+        "--batch-pause-seconds", [string]$ContactDetailBatchPauseSeconds,
+        "--max-hard-errors", [string]$ContactDetailMaxHardErrors,
+        "--max-consecutive-hard-errors", [string]$ContactDetailMaxConsecutiveHardErrors,
+        "--max-404-errors", [string]$ContactDetailMax404Errors,
+        "--max-consecutive-404-errors", [string]$ContactDetailMaxConsecutive404Errors,
+        "--client-max-retries", [string]$ContactDetailClientMaxRetries,
         "--no-normalize"
     ) -MaxAttempts $ContactDetailMaxAttempts -RetryDelaySeconds $ContactDetailRetryDelaySeconds -FailOnError:$FailOnContactDetailsError -Succeeded ([ref]$contactDetailsOk)
 
