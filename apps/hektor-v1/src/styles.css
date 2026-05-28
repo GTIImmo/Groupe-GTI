@@ -25655,3 +25655,298 @@ body {
 .contacts-table-wrap tbody tr:hover .contact-type-mark {
   box-shadow: 0 10px 22px rgba(34, 35, 35, 0.09) !important;
 }
+
+/* Contacts directory: purposeful palette, not decorative color coding. */
+.contacts-workspace-full,
+.contact-detail-modal,
+.mobile-card-list {
+  --contact-purpose-brand: var(--gti-final-magenta, #c5005f);
+  --contact-purpose-brand-soft: rgba(197, 0, 95, 0.065);
+  --contact-purpose-info: #2f6673;
+  --contact-purpose-info-soft: rgba(47, 102, 115, 0.075);
+  --contact-purpose-warning: #a66a22;
+  --contact-purpose-warning-soft: rgba(166, 106, 34, 0.105);
+  --contact-purpose-ink: var(--gti-final-ink, #222323);
+  --contact-purpose-neutral: #747b7b;
+  --contact-purpose-neutral-soft: rgba(34, 35, 35, 0.045);
+  --contact-purpose-line: rgba(34, 35, 35, 0.12);
+  --contact-buyer: var(--contact-purpose-brand);
+  --contact-buyer-soft: var(--contact-purpose-brand-soft);
+  --contact-owner: var(--contact-purpose-neutral);
+  --contact-owner-soft: var(--contact-purpose-neutral-soft);
+  --contact-mandate: var(--contact-purpose-neutral);
+  --contact-mandate-soft: var(--contact-purpose-neutral-soft);
+  --contact-notary: var(--contact-purpose-neutral);
+  --contact-notary-soft: var(--contact-purpose-neutral-soft);
+  --contact-mixed: var(--contact-purpose-neutral);
+  --contact-mixed-soft: var(--contact-purpose-neutral-soft);
+  --contact-search: var(--contact-purpose-info);
+  --contact-search-soft: var(--contact-purpose-info-soft);
+  --contact-neutral: var(--contact-purpose-neutral);
+  --contact-neutral-soft: var(--contact-purpose-neutral-soft);
+}
+
+.contacts-workspace-full .contacts-list-panel {
+  background:
+    linear-gradient(180deg, rgba(34, 35, 35, 0.022) 0%, rgba(255, 255, 255, 0) 150px),
+    #ffffff !important;
+}
+
+.contacts-workspace-full .contacts-directory-toolbar {
+  background:
+    linear-gradient(100deg, rgba(197, 0, 95, 0.06) 0%, rgba(255, 255, 255, 0) 34%),
+    linear-gradient(180deg, #ffffff 0%, #fafafa 100%) !important;
+}
+
+.contacts-workspace-full .contacts-directory-toolbar::after,
+.contact-detail-modal::before {
+  background: linear-gradient(90deg, var(--contact-purpose-brand) 0%, rgba(34, 35, 35, 0.34) 62%, rgba(161, 164, 164, 0.48) 100%) !important;
+}
+
+.contacts-directory-icon {
+  background: linear-gradient(135deg, var(--contact-purpose-ink) 0%, #343838 100%) !important;
+}
+
+.contacts-directory-metrics span {
+  border-left-color: var(--contact-purpose-neutral) !important;
+  background: #ffffff !important;
+}
+
+.contacts-directory-metrics span:nth-child(1) {
+  border-left-color: var(--contact-purpose-ink) !important;
+  background: linear-gradient(135deg, rgba(34, 35, 35, 0.045), #ffffff 58%) !important;
+}
+
+.contacts-directory-metrics span:nth-child(2) {
+  border-left-color: var(--contact-purpose-info) !important;
+  background: linear-gradient(135deg, var(--contact-purpose-info-soft), #ffffff 58%) !important;
+}
+
+.contacts-directory-metrics span:nth-child(3) {
+  border-left-color: var(--contact-purpose-brand) !important;
+  background: linear-gradient(135deg, var(--contact-purpose-brand-soft), #ffffff 58%) !important;
+}
+
+.contacts-directory-metrics span:nth-child(4) {
+  border-left-color: var(--contact-purpose-warning) !important;
+  background: linear-gradient(135deg, var(--contact-purpose-warning-soft), #ffffff 58%) !important;
+}
+
+.contacts-directory-metrics span::after {
+  background: var(--contact-purpose-line) !important;
+  opacity: 1 !important;
+}
+
+.contacts-table-wrap tbody tr,
+.contacts-table-wrap tbody tr.is-buyer,
+.contacts-table-wrap tbody tr.is-owner,
+.contacts-table-wrap tbody tr.is-mandate,
+.contacts-table-wrap tbody tr.is-notary,
+.contacts-table-wrap tbody tr.is-mixed {
+  --contact-row-accent: #d6dada;
+  --contact-row-soft: rgba(34, 35, 35, 0.035);
+}
+
+.contacts-table-wrap tbody tr.is-search {
+  --contact-row-accent: var(--contact-purpose-info);
+  --contact-row-soft: var(--contact-purpose-info-soft);
+}
+
+.contacts-table-wrap tbody tr:hover td {
+  background: #fafafa !important;
+}
+
+.contacts-table-wrap tbody tr:hover td:first-child,
+.contacts-table-wrap tbody tr.is-selected td:first-child {
+  background:
+    linear-gradient(90deg, var(--contact-row-soft) 0%, rgba(255, 255, 255, 0) 54%),
+    #fafafa !important;
+}
+
+.contact-type-mark {
+  --contact-mark-accent: var(--contact-purpose-neutral);
+  --contact-mark-soft: rgba(34, 35, 35, 0.035);
+  border-color: var(--contact-purpose-line) !important;
+  background:
+    linear-gradient(180deg, var(--contact-mark-soft) 0%, rgba(255, 255, 255, 0) 62%),
+    #ffffff !important;
+  color: var(--contact-mark-accent) !important;
+}
+
+.contact-type-mark.is-buyer {
+  --contact-mark-accent: var(--contact-purpose-brand);
+  --contact-mark-soft: var(--contact-purpose-brand-soft);
+}
+
+.contact-type-mark.is-search {
+  --contact-mark-accent: var(--contact-purpose-info);
+  --contact-mark-soft: var(--contact-purpose-info-soft);
+}
+
+.contact-type-mark.is-owner,
+.contact-type-mark.is-mandate,
+.contact-type-mark.is-notary,
+.contact-type-mark.is-mixed,
+.contact-type-mark.is-default {
+  --contact-mark-accent: var(--contact-purpose-neutral);
+  --contact-mark-soft: rgba(34, 35, 35, 0.035);
+}
+
+.contact-role-chip {
+  border-color: var(--contact-purpose-line) !important;
+  background: #ffffff !important;
+  color: var(--contact-purpose-ink) !important;
+}
+
+.contact-role-chip.is-buyer {
+  border-color: rgba(197, 0, 95, 0.22) !important;
+  background: var(--contact-purpose-brand-soft) !important;
+  color: var(--contact-purpose-brand) !important;
+}
+
+.contact-role-chip.is-search {
+  border-color: rgba(47, 102, 115, 0.22) !important;
+  background: var(--contact-purpose-info-soft) !important;
+  color: var(--contact-purpose-info) !important;
+}
+
+.contact-role-chip.is-owner,
+.contact-role-chip.is-mandate,
+.contact-role-chip.is-notary,
+.contact-role-chip.is-muted {
+  border-color: var(--contact-purpose-line) !important;
+  background: var(--gti-final-grey-soft, #f1f2f2) !important;
+  color: var(--contact-purpose-ink) !important;
+}
+
+.contact-detail-modal-head {
+  background:
+    linear-gradient(100deg, rgba(197, 0, 95, 0.055) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
+
+.contact-detail-modal-grid {
+  background:
+    linear-gradient(180deg, var(--gti-final-grey-soft, #f1f2f2) 0%, #f8f8f8 100%) !important;
+}
+
+.contact-detail-main-card,
+.contact-profile-card {
+  --detail-card-accent: var(--contact-purpose-ink);
+  background: #ffffff !important;
+}
+
+.contact-detail-control-card {
+  --detail-card-accent: var(--contact-purpose-warning);
+  background:
+    linear-gradient(135deg, var(--contact-purpose-warning-soft), rgba(255, 255, 255, 0) 38%),
+    #ffffff !important;
+}
+
+.contact-search-detail {
+  --detail-card-accent: var(--contact-purpose-info);
+  background:
+    linear-gradient(135deg, var(--contact-purpose-info-soft), rgba(255, 255, 255, 0) 38%),
+    #ffffff !important;
+}
+
+.contact-detail-relations-card {
+  --detail-card-accent: var(--contact-purpose-brand);
+  background:
+    linear-gradient(135deg, var(--contact-purpose-brand-soft), rgba(255, 255, 255, 0) 38%),
+    #ffffff !important;
+}
+
+.contact-profile-facts > div,
+.contact-profile-facts > div:nth-child(1),
+.contact-profile-facts > div:nth-child(2),
+.contact-profile-facts > div:nth-child(3),
+.contact-profile-facts > div:nth-child(4),
+.contact-profile-facts > div:nth-child(5),
+.contact-profile-facts > div:nth-child(6) {
+  box-shadow: inset 4px 0 0 rgba(34, 35, 35, 0.12) !important;
+}
+
+.contact-search-overview > div:nth-child(1) {
+  border-color: rgba(47, 102, 115, 0.22) !important;
+  background: var(--contact-purpose-info-soft) !important;
+  box-shadow: inset 4px 0 0 var(--contact-purpose-info) !important;
+}
+
+.contact-search-overview > div:nth-child(2),
+.contact-search-overview > div:nth-child(3) {
+  box-shadow: inset 4px 0 0 rgba(34, 35, 35, 0.16) !important;
+}
+
+.contact-search-overview > div:first-child strong,
+.contact-activity-cell .is-important {
+  color: var(--contact-purpose-info) !important;
+}
+
+.contact-activity-cell .is-important,
+.contact-search-summary,
+.contact-search-item.is-active {
+  border-color: rgba(47, 102, 115, 0.22) !important;
+  background: var(--contact-purpose-info-soft) !important;
+}
+
+.contact-search-item.is-archived {
+  border-color: var(--contact-purpose-line) !important;
+  background: #ffffff !important;
+}
+
+.contact-relation-list button {
+  background:
+    linear-gradient(90deg, var(--contact-purpose-brand-soft) 0%, rgba(255, 255, 255, 0) 36%),
+    #ffffff !important;
+}
+
+.contact-relation-list button:hover:not(:disabled) {
+  border-color: rgba(197, 0, 95, 0.26) !important;
+  background:
+    linear-gradient(90deg, rgba(197, 0, 95, 0.095) 0%, rgba(255, 255, 255, 0) 42%),
+    #ffffff !important;
+}
+
+.contact-duplicate-pill.is-critical,
+.contact-duplicate-pill.is-high {
+  border-color: rgba(166, 106, 34, 0.34) !important;
+  background: var(--contact-purpose-warning-soft) !important;
+  color: var(--contact-purpose-warning) !important;
+}
+
+.contact-detail-modal .tag-row .status-pill,
+.contact-search-item .status-pill,
+.mobile-list-card .status-pill {
+  background: #ffffff !important;
+  color: var(--contact-purpose-ink) !important;
+}
+
+.contact-detail-modal .tag-row .status-pill.status-pill-state-active,
+.mobile-list-card .status-pill.status-pill-state-active {
+  border-color: var(--contact-purpose-line) !important;
+  background: var(--gti-final-grey-soft, #f1f2f2) !important;
+  color: var(--contact-purpose-ink) !important;
+}
+
+.contact-detail-modal .tag-row .status-pill.status-pill-state-offer,
+.mobile-list-card .status-pill.status-pill-state-offer {
+  border-color: rgba(197, 0, 95, 0.22) !important;
+  background: var(--contact-purpose-brand-soft) !important;
+  color: var(--contact-purpose-brand) !important;
+}
+
+.mobile-list-card,
+.mobile-list-card.is-buyer,
+.mobile-list-card.is-owner,
+.mobile-list-card.is-mandate,
+.mobile-list-card.is-notary,
+.mobile-list-card.is-mixed {
+  background: #ffffff !important;
+}
+
+.mobile-list-card.is-search {
+  background:
+    linear-gradient(120deg, var(--contact-purpose-info-soft) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
