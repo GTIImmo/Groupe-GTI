@@ -142,6 +142,7 @@ const compromisCancelledQuery = 'compromis_state.in.("cancelled","annule","annul
 const noCancelledCompromisQuery = 'compromis_id.is.null,compromis_state.is.null,compromis_state.not.in.("cancelled","annule","annulé","annuled")'
 const dossiersCurrentView = 'app_dossiers_current'
 const contactsCurrentView = 'app_contacts_current'
+const contactStatsCurrentTable = 'app_contact_stats_current'
 const contactRelationsCurrentView = 'app_contact_relations_current'
 const contactSearchesCurrentView = 'app_contact_searches_current'
 const contactsListingSelect = [
@@ -1421,6 +1422,70 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
   return data as DashboardSummary
 }
 
+type ContactStatsSnapshotRow = {
+  total?: number | string | null
+  active?: number | string | null
+  archived?: number | string | null
+  duplicates?: number | string | null
+  high_risk_duplicates?: number | string | null
+  linked?: number | string | null
+  search_contacts?: number | string | null
+  active_search_contacts?: number | string | null
+  eligible?: number | string | null
+}
+
+function emptyContactStats(): ContactStats {
+  return { total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 }
+}
+
+function contactStatsNumber(value: number | string | null | undefined) {
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function contactStatsFromSnapshot(row: ContactStatsSnapshotRow): ContactStats {
+  return {
+    total: contactStatsNumber(row.total),
+    active: contactStatsNumber(row.active),
+    archived: contactStatsNumber(row.archived),
+    duplicates: contactStatsNumber(row.duplicates),
+    highRiskDuplicates: contactStatsNumber(row.high_risk_duplicates),
+    linked: contactStatsNumber(row.linked),
+    searchContacts: contactStatsNumber(row.search_contacts),
+    activeSearchContacts: contactStatsNumber(row.active_search_contacts),
+    eligible: contactStatsNumber(row.eligible),
+  }
+}
+
+function canUseContactStatsSnapshot(filters: AppFilters) {
+  return (
+    normalizeSearchTerm(filters.query).replace(/\s+/g, ' ').trim().length === 0 &&
+    !normalizeFilterValue(filters.commercial) &&
+    !normalizeFilterValue(filters.agency) &&
+    !normalizeFilterValue(filters.contactRole) &&
+    !normalizeFilterValue(filters.contactSearchScope)
+  )
+}
+
+async function loadContactStatsSnapshot(): Promise<ContactStats | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const { data, error } = await supabase
+    .from(contactStatsCurrentTable)
+    .select('total,active,archived,duplicates,high_risk_duplicates,linked,search_contacts,active_search_contacts,eligible')
+    .eq('scope', 'active_or_eligible')
+    .maybeSingle()
+  if (error || !data) return null
+  return contactStatsFromSnapshot(data as ContactStatsSnapshotRow)
+}
+
+function contactSummaryTotalForFilters(filters: AppFilters, stats: ContactStats | null) {
+  if (!stats || !canUseContactStatsSnapshot(filters)) return null
+  if (filters.archive === activeArchiveFilterValue) return stats.active
+  if (filters.archive === archivedFilterValue) return stats.archived
+  if (filters.archive === allFilterValue) return stats.total
+  return null
+}
+
 export async function loadContactsPage({
   filters,
   page,
@@ -1437,6 +1502,7 @@ export async function loadContactsPage({
   const to = from + pageSize - 1
   // Contacts is a high-volume listing; exact counts can hit Supabase statement timeout under RLS.
   const countMode: 'planned' = 'planned'
+  const statsSnapshot = canUseContactStatsSnapshot(filters) ? await loadContactStatsSnapshot() : null
   const { data, error, count } = await applyContactFiltersToQuery(
     supabase
       .from(contactsCurrentView)
@@ -1450,9 +1516,10 @@ export async function loadContactsPage({
 
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contacts')
   const minimumTotal = from + data.length + (data.length === pageSize ? 1 : 0)
+  const exactSummaryTotal = contactSummaryTotalForFilters(filters, statsSnapshot)
   return {
     rows: (data as AppContact[]).map(normalizeContactRow),
-    total: Math.max(count ?? 0, minimumTotal),
+    total: Math.max(exactSummaryTotal ?? count ?? 0, minimumTotal),
     page,
     pageSize,
   }
@@ -1471,7 +1538,9 @@ async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {
 }
 
 export async function loadContactStats(filters: AppFilters): Promise<ContactStats> {
-  if (!hasSupabaseEnv || !supabase) return { total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 }
+  if (!hasSupabaseEnv || !supabase) return emptyContactStats()
+  const snapshot = canUseContactStatsSnapshot(filters) ? await loadContactStatsSnapshot() : null
+  if (snapshot) return snapshot
   const baseFilters = { ...filters, archive: allFilterValue }
   const [total, active, archived, duplicates, highRiskDuplicates, linked, searchContacts, activeSearchContacts, eligible] = await Promise.all([
     countContacts(baseFilters),

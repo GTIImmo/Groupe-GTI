@@ -19,6 +19,7 @@ PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 DEFAULT_ENV_FILES = (ROOT / ".env", ROOT / "apps" / "hektor-v1" / ".env")
 PUSH_STATE_TABLE = "app_contact_supabase_push_state"
 VOLATILE_HASH_FIELDS = {"refreshed_at"}
+CONTACT_STATS_TABLE = "app_contact_stats_current"
 
 
 def load_env_file(path: Path) -> None:
@@ -290,6 +291,43 @@ def load_rows(db_path: Path, table: str, normalizer, where: str = "") -> list[di
         conn.close()
 
 
+def scoped_where(base_where: str, extra_condition: str | None = None) -> str:
+    where = base_where.strip()
+    if where.upper().startswith("WHERE "):
+        where = where[6:].strip()
+    if not extra_condition:
+        return f"WHERE ({where})" if where else ""
+    if where:
+        return f"WHERE ({where}) AND ({extra_condition})"
+    return f"WHERE {extra_condition}"
+
+
+def build_contact_stats_row(db_path: Path, scope: str, contact_where: str) -> dict[str, Any]:
+    conn = sqlite3.connect(db_path)
+    try:
+        def count(extra_condition: str | None = None) -> int:
+            where = scoped_where(contact_where, extra_condition)
+            return int(conn.execute(f"SELECT COUNT(*) FROM app_contact_current {where}").fetchone()[0])
+
+        return {
+            "scope": scope,
+            "total": count(),
+            "active": count("archive = 0"),
+            "archived": count("archive = 1"),
+            "duplicates": count("duplicate_group_count > 0"),
+            "high_risk_duplicates": count("duplicate_max_severity IN ('high', 'critical')"),
+            "linked": count("linked_annonce_count > 0"),
+            "search_contacts": count("total_search_count > 0"),
+            "active_search_contacts": count("active_search_count > 0"),
+            "eligible": count("supabase_sync_eligible = 1"),
+            "with_detail": count("has_contact_detail = 1"),
+            "active_or_eligible": count("archive = 0 OR supabase_sync_eligible = 1"),
+            "refreshed_at": now_utc_iso(),
+        }
+    finally:
+        conn.close()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Pousse l'index Contacts limite vers Supabase. Ne lance rien sans appel explicite.")
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
@@ -344,6 +382,7 @@ def main() -> int:
         rows = load_rows(args.phase2_db, table, normalizer, where)
         loaded.append((table, rows))
     loaded_counts = {table: len(rows) for table, rows in loaded}
+    contact_stats = build_contact_stats_row(args.phase2_db, args.contacts_scope, contact_where)
     stale_by_table = find_stale_row_keys(args.phase2_db, loaded)
 
     if args.reset_push_state:
@@ -369,7 +408,7 @@ def main() -> int:
                         "push_mode": args.push_mode,
                     }
                     for table, rows in loaded
-                },
+                } | {CONTACT_STATS_TABLE: {"loaded": 1, "to_upload": 1, "to_delete": 0, "push_mode": "snapshot", "stats": contact_stats}},
                 ensure_ascii=False,
                 indent=2,
             )
@@ -395,6 +434,7 @@ def main() -> int:
         deleted_state[table] = stale_row_keys
     for table, rows in loaded:
         results[table] = client.upsert_rows(table, rows, args.batch_size)
+    results[CONTACT_STATS_TABLE] = client.upsert_rows(CONTACT_STATS_TABLE, [contact_stats], 1)
     if deleted_state:
         mark_deleted_rows(args.phase2_db, deleted_state)
     mark_pushed_rows(args.phase2_db, loaded)
