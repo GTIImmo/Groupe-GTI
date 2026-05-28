@@ -25,6 +25,8 @@ const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
 const ACTION_JOB_TYPES = new Set([
   "link_hektor_mandant",
+  "create_hektor_contact",
+  "update_hektor_contact",
   "create_hektor_mandant_contact",
   "update_hektor_mandant_contact",
   "update_hektor_annonce_fields",
@@ -56,6 +58,7 @@ const MATTERPORT_JOB_TYPES = new Set([
 ]);
 const SYNC_LIGHT_JOB_TYPES = new Set([
   "refresh_console_data",
+  "refresh_console_contact_data",
 ]);
 const SYNC_FULL_JOB_TYPES = new Set([
   "archive_cloud_documents",
@@ -926,6 +929,81 @@ async function enqueueRefreshConsoleDataJobBestEffort(parentJob, hektorAnnonceId
       error: message,
     });
     return { status: "error", error: message, hektor_annonce_id: String(hektorAnnonceId || "") };
+  }
+}
+
+async function enqueueRefreshConsoleContactDataJob(parentJob, hektorContactId, options = {}) {
+  const id = String(hektorContactId || "").trim();
+  if (!id) return { status: "skipped", reason: "missing_hektor_contact_id" };
+
+  const existingParams = new URLSearchParams({
+    select: "id,status,priority,requested_at",
+    job_type: "eq.refresh_console_contact_data",
+    status: "in.(pending,running)",
+    order: "requested_at.desc",
+    limit: "1",
+  });
+  existingParams.append("payload_json->>hektor_contact_id", `eq.${id}`);
+  const existing = await supabaseRequest(`app_console_job?${existingParams.toString()}`, { method: "GET" });
+  if (Array.isArray(existing) && existing.length) {
+    const current = existing[0];
+    await logJob(parentJob.id, "contact_sync_queue", "done", "Sync contact deja en attente", {
+      hektor_contact_id: id,
+      sync_job_id: current.id,
+      sync_status: current.status,
+    });
+    return {
+      status: "already_queued",
+      job_id: current.id,
+      job_status: current.status,
+      hektor_contact_id: id,
+    };
+  }
+
+  const payload = {
+    reason: options.reason || parentJob.job_type,
+    parent_job_id: parentJob.id,
+    parent_job_type: parentJob.job_type,
+    hektor_contact_id: id,
+  };
+  const rows = await supabaseRequest("app_console_job", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_type: "refresh_console_contact_data",
+      app_dossier_id: parentJob.app_dossier_id || null,
+      hektor_annonce_id: parentJob.hektor_annonce_id || null,
+      payload_json: payload,
+      status: "pending",
+      priority: options.priority || 82,
+      requested_by: parentJob.requested_by || null,
+      requested_at: new Date().toISOString(),
+    }]),
+  });
+  const created = Array.isArray(rows) ? rows[0] : null;
+  await logJob(parentJob.id, "contact_sync_queue", "done", "Sync contact differee creee", {
+    hektor_contact_id: id,
+    sync_job_id: created ? created.id : null,
+    priority: options.priority || 82,
+  });
+  return {
+    status: "queued",
+    job_id: created ? created.id : null,
+    hektor_contact_id: id,
+    priority: options.priority || 82,
+  };
+}
+
+async function enqueueRefreshConsoleContactDataJobBestEffort(parentJob, hektorContactId, options = {}) {
+  try {
+    return await enqueueRefreshConsoleContactDataJob(parentJob, hektorContactId, options);
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    await logJob(parentJob.id, "contact_sync_queue", "error", "Creation sync contact differee echouee", {
+      hektor_contact_id: String(hektorContactId || ""),
+      error: message,
+    });
+    return { status: "error", error: message, hektor_contact_id: String(hektorContactId || "") };
   }
 }
 
@@ -1944,6 +2022,70 @@ async function handleRefreshConsoleData(job) {
     reason: payload.reason || null,
     parent_job_id: payload.parent_job_id || null,
     cache_refresh: cacheRefresh,
+  };
+}
+
+async function handleRefreshConsoleContactData(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorContactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(hektorContactId)) throw new Error("hektor_contact_id numerique requis pour refresh_console_contact_data");
+
+  await logJob(job.id, "refresh_console_contact_data", "running", "Synchronisation differee du contact", {
+    hektor_contact_id: hektorContactId,
+    reason: payload.reason || null,
+    parent_job_id: payload.parent_job_id || null,
+  });
+
+  const detailOutput = await runProjectPythonScript([
+    "phase2/sync/sync_contact_details.py",
+    "--skip-listing-refresh",
+    "--contact-id",
+    hektorContactId,
+    "--batch-size",
+    "1",
+    "--limit",
+    "0",
+    "--request-delay-seconds",
+    "0",
+    "--batch-pause-seconds",
+    "0",
+    "--max-hard-errors",
+    "1",
+    "--max-consecutive-hard-errors",
+    "1",
+    "--no-normalize",
+  ], { timeoutMs: 90000, previewSize: 3000 });
+  await logJob(job.id, "refresh_console_contact_data", "running", "Detail contact Hektor relu localement", {
+    hektor_contact_id: hektorContactId,
+    stdout: detailOutput.stdout,
+    stderr: detailOutput.stderr,
+  });
+
+  const normalizeOutput = await runProjectPythonScript(["normalize_source.py"], { timeoutMs: 120000, previewSize: 2000 });
+  const buildOutput = await runProjectPythonScript(["phase2/contacts/build_contacts_layer.py", "--no-reports"], { timeoutMs: 180000, previewSize: 3000 });
+  const pushOutput = await runProjectPythonScript([
+    "phase2/sync/push_contacts_to_supabase.py",
+    "--push-mode",
+    "update",
+    "--contacts-scope",
+    "active_or_eligible",
+  ], { timeoutMs: 180000, previewSize: 3000 });
+
+  await logJob(job.id, "refresh_console_contact_data", "done", "Contact reconstruit et pousse vers Supabase", {
+    hektor_contact_id: hektorContactId,
+    normalize_stdout: normalizeOutput.stdout,
+    build_stdout: buildOutput.stdout,
+    push_stdout: pushOutput.stdout,
+  });
+
+  return {
+    status: "synced",
+    hektor_contact_id: hektorContactId,
+    reason: payload.reason || null,
+    parent_job_id: payload.parent_job_id || null,
+    detail_stdout: detailOutput.stdout,
+    build_stdout: buildOutput.stdout,
+    push_stdout: pushOutput.stdout,
   };
 }
 
@@ -3840,6 +3982,252 @@ async function fetchHektorContactEditForm(contactId) {
   return String(response.text || "");
 }
 
+function normalizeHektorContactPayload(payload, options = {}) {
+  const source = payload || {};
+  const contactId = cleanString(source.hektor_contact_id || source.contact_id || source.id_contact || source.idContact);
+  const lastName = cleanString(source.last_name || source.nom || source.name);
+  const firstName = source.first_name !== undefined || source.prenom !== undefined
+    ? cleanString(source.first_name || source.prenom) || ""
+    : cleanString(source.first_name || source.prenom);
+  const email = source.email !== undefined ? cleanString(source.email) || "" : cleanString(source.email);
+  const phone = source.phone !== undefined || source.telephone !== undefined || source.mobile !== undefined
+    ? cleanString(source.phone || source.telephone || source.mobile) || ""
+    : cleanString(source.phone || source.telephone || source.mobile);
+  const phoneSecondary = source.phone_secondary !== undefined || source.telephone_secondaire !== undefined || source.phoneSecondary !== undefined
+    ? cleanString(source.phone_secondary || source.telephone_secondaire || source.phoneSecondary) || ""
+    : cleanString(source.phone_secondary || source.telephone_secondaire || source.phoneSecondary);
+  const civility = source.civility !== undefined || source.civilite !== undefined
+    ? cleanString(source.civility || source.civilite) || ""
+    : cleanString(source.civility || source.civilite);
+  const address = source.address !== undefined || source.adresse !== undefined
+    ? cleanString(source.address || source.adresse) || ""
+    : cleanString(source.address || source.adresse);
+  const city = source.city !== undefined || source.ville !== undefined
+    ? cleanString(source.city || source.ville) || ""
+    : cleanString(source.city || source.ville);
+  const postalCode = source.postal_code !== undefined || source.code_postal !== undefined || source.code !== undefined
+    ? cleanString(source.postal_code || source.code_postal || source.code) || ""
+    : cleanString(source.postal_code || source.code_postal || source.code);
+  if (options.requireContactId && (!contactId || !/^\d+$/.test(contactId))) {
+    throw new Error("contact_id Hektor numerique requis");
+  }
+  if (options.requireName && !lastName) {
+    throw new Error("Nom contact requis");
+  }
+  if (options.requireReachable && !email && !phone && !phoneSecondary) {
+    throw new Error("Email ou telephone requis pour creer un contact Hektor");
+  }
+  return {
+    contactId,
+    civility,
+    lastName,
+    firstName,
+    email,
+    phone,
+    phoneSecondary,
+    address,
+    postalCode,
+    city,
+    hektorUserEmail: cleanString(source.hektor_user_email || source.negociateur_email || source.target_hektor_user_email),
+    hektorUserId: cleanString(source.hektor_user_id || source.hektor_id_user || source.target_hektor_user_id),
+  };
+}
+
+function replaceContactTelephoneParams(values, primaryPhone, secondaryPhone) {
+  values.delete("label_telephone[]");
+  values.delete("id_telephone[]");
+  values.delete("telephone[]");
+  if (primaryPhone) {
+    values.append("label_telephone[]", "portable");
+    values.append("id_telephone[]", "");
+    values.append("telephone[]", primaryPhone);
+  }
+  if (secondaryPhone) {
+    values.append("label_telephone[]", "fixe");
+    values.append("id_telephone[]", "");
+    values.append("telephone[]", secondaryPhone);
+  }
+  if (!primaryPhone && !secondaryPhone) {
+    values.append("label_telephone[]", "portable");
+    values.append("id_telephone[]", "");
+    values.append("telephone[]", "");
+  }
+}
+
+function applyHektorContactIdentityValues(values, contact) {
+  if (contact.civility !== null && contact.civility !== undefined) values.set("civilite", contact.civility || "");
+  if (contact.lastName) values.set("nom", contact.lastName);
+  if (contact.firstName !== null && contact.firstName !== undefined) values.set("prenom", contact.firstName || "");
+  if (contact.email !== null && contact.email !== undefined) {
+    replaceParam(values, "label_email[]", "email");
+    replaceParam(values, "id_email[]", "");
+    replaceParam(values, "email[]", contact.email || "");
+  }
+  if (contact.phone !== null || contact.phoneSecondary !== null) {
+    replaceContactTelephoneParams(values, contact.phone || "", contact.phoneSecondary || "");
+  }
+  if (contact.address !== null && contact.address !== undefined) values.set("adresse", contact.address || "");
+  if (contact.city !== null && contact.city !== undefined) values.set("ville", contact.city || "");
+  if (contact.postalCode !== null && contact.postalCode !== undefined) values.set("code", contact.postalCode || "");
+}
+
+function parseHektorCreatedContactId(responseText) {
+  const raw = String(responseText || "").trim();
+  let parsed = raw;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_) {
+    parsed = raw;
+  }
+  const candidates = [
+    parsed,
+    parsed && typeof parsed === "object" ? parsed.idContact : null,
+    parsed && typeof parsed === "object" ? parsed.id_contact : null,
+    parsed && typeof parsed === "object" ? parsed.contact_id : null,
+    parsed && typeof parsed === "object" ? parsed.id : null,
+  ];
+  for (const candidate of candidates) {
+    const text = String(candidate == null ? "" : candidate).trim();
+    if (/^\d+$/.test(text)) return text;
+  }
+  return "";
+}
+
+async function createHektorContact(job, payload) {
+  const contact = normalizeHektorContactPayload(payload, { requireName: true, requireReachable: true });
+  const formHtml = await fetchHektorManualMandantForm();
+  const values = extractHektorFormValues(formHtml, null);
+  values.set("mode", "contacts-actions-insertManuelContactFromOtherObject");
+  values.set("statut", cleanString(payload.statut || payload.status) || "contact_seule");
+  values.set("qualification", cleanString(payload.qualification) || "3");
+  values.delete("saveOrUpdate");
+  values.delete("saveOrUpdateValue");
+  applyHektorContactIdentityValues(values, contact);
+
+  await logJob(job.id, "hektor_contact_create", "running", "Creation contact global dans Hektor", {
+    nom: contact.lastName,
+    prenom: contact.firstName,
+    email: contact.email,
+    phone: contact.phone,
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: values,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact`,
+    },
+  });
+  const contactId = parseHektorCreatedContactId(response.text);
+  if (!contactId) {
+    throw new Error(`Creation contact Hektor non confirmee: ${response.text.slice(0, 500)}`);
+  }
+  return {
+    contactId,
+    ...contact,
+  };
+}
+
+async function updateHektorContactIdentity(job, contactId, payload) {
+  const contact = normalizeHektorContactPayload({ ...payload, hektor_contact_id: contactId }, { requireContactId: true, requireName: true });
+  const formHtml = await fetchHektorContactEditForm(contactId);
+  const values = extractHektorFormValues(formHtml, "mefContacts/contacts_full_accueil");
+  if (!values.has("nom")) {
+    throw new Error(`Formulaire edition contact Hektor introuvable pour ${contactId}`);
+  }
+  applyHektorContactIdentityValues(values, contact);
+
+  const body = new URLSearchParams();
+  body.set("mode", "contacts-saveDataEditContact");
+  body.set("group", "mefContacts/contacts_full_accueil");
+  body.set("idContact", String(contactId));
+  for (const [key, value] of values.entries()) body.append(key, value);
+
+  await logJob(job.id, "hektor_contact_update", "running", "Modification contact global dans Hektor", {
+    hektor_contact_id: String(contactId),
+    fields: Object.keys(payload || {}).filter((key) => payload[key] != null),
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+    },
+  });
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = response.text;
+  }
+  const parsedText = typeof parsed === "string" ? parsed : JSON.stringify(parsed);
+  if (/emailErrors|erreur|error/i.test(parsedText) && !/content_mefContacts/i.test(parsedText)) {
+    throw new Error(`Modification contact Hektor refusee: ${parsedText.slice(0, 500)}`);
+  }
+  return {
+    hektor_contact_id: String(contactId),
+    contact: {
+      civilite: contact.civility,
+      nom: contact.lastName,
+      prenom: contact.firstName,
+      email: contact.email,
+      telephone: contact.phone,
+      telephone_secondaire: contact.phoneSecondary,
+      adresse: contact.address,
+      code: contact.postalCode,
+      ville: contact.city,
+    },
+  };
+}
+
+async function handleCreateHektorContact(job) {
+  const payload = safeJsonParse(job.payload_json);
+  await ensureHektorExecutionContext(job, null, payload, { preferRequester: true, preferDossierOwner: false, required: false });
+
+  const created = await createHektorContact(job, payload);
+  await sleep(1200);
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, created.contactId, {
+    reason: "create_hektor_contact",
+    priority: 82,
+  });
+
+  return {
+    status: "created",
+    hektor_contact_id: created.contactId,
+    contact: {
+      nom: created.lastName,
+      prenom: created.firstName,
+      email: created.email,
+      telephone: created.phone,
+    },
+    sync_job: syncJob,
+  };
+}
+
+async function handleUpdateHektorContact(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  await ensureHektorExecutionContext(job, null, payload, { preferRequester: true, preferDossierOwner: false, required: false });
+
+  const updated = await updateHektorContactIdentity(job, contactId, payload);
+  await sleep(1000);
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
+    reason: "update_hektor_contact",
+    priority: 82,
+  });
+
+  return {
+    status: "updated",
+    ...updated,
+    sync_job: syncJob,
+  };
+}
+
 async function createHektorMandantContact(job, annonceId, payload) {
   const lastName = cleanString(payload.last_name || payload.nom || payload.name);
   const firstName = cleanString(payload.first_name || payload.prenom);
@@ -4671,6 +5059,10 @@ async function runHandler(job) {
       return handlePrepareHistoricalAnnonceDetail(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
+    case "create_hektor_contact":
+      return handleCreateHektorContact(job);
+    case "update_hektor_contact":
+      return handleUpdateHektorContact(job);
     case "create_hektor_mandant_contact":
       return handleCreateHektorMandantContact(job);
     case "update_hektor_mandant_contact":
@@ -4698,6 +5090,8 @@ async function runHandler(job) {
       return handleMatterportAction(job);
     case "refresh_console_data":
       return handleRefreshConsoleData(job);
+    case "refresh_console_contact_data":
+      return handleRefreshConsoleContactData(job);
     case "archive_cloud_documents":
       throw new Error("archive_cloud_documents handler will be implemented after first storage sizing validation");
     default:

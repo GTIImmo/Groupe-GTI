@@ -30,6 +30,7 @@ from sync_raw import (  # noqa: E402
     mark_contact_detail_synced,
     set_meta_value,
     sync_contact_listing_variant,
+    upsert_contact_state,
 )
 
 
@@ -62,6 +63,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--full-listing-refresh", action="store_true", help="Relire tout le listing contacts avant les details. Utile pour le run full initial.")
     parser.add_argument("--listing-max-pages", type=int, default=5, help="Pages de listing contacts a rafraichir en mode update. 0 = toutes les pages.")
     parser.add_argument("--contact-scope", choices=["active", "archived", "both"], default="both", help="Scope contacts a traiter.")
+    parser.add_argument(
+        "--contact-id",
+        action="append",
+        default=[],
+        help="ID contact Hektor a rafraichir explicitement. Peut etre repete. Court-circuite la selection globale.",
+    )
     parser.add_argument("--missing-only", action="store_true", help="Compatibilite: comportement par defaut, ne prend que les contacts sans detail local.")
     parser.add_argument("--changed-only", action="store_true", help="Rejouer les details absents ou dont date_maj est plus recente que le dernier detail local.")
     parser.add_argument("--retry-404", action="store_true", help="Retenter les contacts dont ContactById a deja repondu 404. Par defaut ils sont exclus de la reprise.")
@@ -123,6 +130,23 @@ def selected_contact_variants(scope: str) -> list[dict[str, Any]]:
     if scope == "both":
         return list(CONTACT_VARIANTS)
     return [variant for variant in CONTACT_VARIANTS if variant["scope"] == scope]
+
+
+def explicit_contact_ids(values: list[str]) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values:
+        for chunk in str(raw_value or "").replace(";", ",").split(","):
+            contact_id = clean_text(chunk)
+            if not contact_id:
+                continue
+            if not contact_id.isdigit():
+                raise RuntimeError(f"ID contact invalide: {contact_id}")
+            if contact_id in seen:
+                continue
+            seen.add(contact_id)
+            ids.append(contact_id)
+    return ids
 
 
 def iter_batches(values: list[str], batch_size: int) -> Iterable[list[str]]:
@@ -627,15 +651,29 @@ def main() -> int:
         before = count_contact_rows(conn, args.contact_scope)
         missing_only = resolve_missing_only(args)
         selection_mode = selection_mode_label(args, missing_only)
-        detail_ids = load_contact_detail_candidate_ids(
-            conn,
-            scope=args.contact_scope,
-            force_full=args.force_full,
-            missing_only=missing_only,
-            use_last_seen_as_changed=args.use_last_seen_as_changed and not missing_only,
-            retry_404=args.retry_404,
-            limit=args.limit,
-        )
+        target_contact_ids = explicit_contact_ids(args.contact_id)
+        if target_contact_ids:
+            for contact_id in target_contact_ids:
+                upsert_contact_state(
+                    conn,
+                    contact_id=contact_id,
+                    listing_variant="targeted",
+                    date_last_traitement=None,
+                    date_maj=None,
+                )
+            conn.commit()
+            detail_ids = target_contact_ids
+            selection_mode = "explicit_contact_ids"
+        else:
+            detail_ids = load_contact_detail_candidate_ids(
+                conn,
+                scope=args.contact_scope,
+                force_full=args.force_full,
+                missing_only=missing_only,
+                use_last_seen_as_changed=args.use_last_seen_as_changed and not missing_only,
+                retry_404=args.retry_404,
+                limit=args.limit,
+            )
         print(
             "Contact detail candidates: "
             f"{len(detail_ids)} / total={before['contact_total']} "

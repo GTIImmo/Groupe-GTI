@@ -784,56 +784,78 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
 
 def upsert_contacts(conn: sqlite3.Connection) -> None:
     detail_map = latest_detail_map(fetch_latest_raw_payloads(conn, "contact_detail"))
+
+    def upsert_contact_from_sources(item: Dict[str, Any], detail_source: Dict[str, Any] | None = None) -> None:
+        source = detail_source or item
+        if not isinstance(source, dict):
+            return
+        contact_id = str(source.get("id") or item.get("id") or "").strip()
+        if not contact_id:
+            return
+        coords = source.get("coordonnees") or {}
+        localite = source.get("localite") or {}
+        inner = localite.get("localite") if isinstance(localite, dict) else {}
+        conn.execute(
+            """
+            INSERT INTO hektor_contact(
+                hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom, archive, date_enregistrement,
+                date_maj, email, portable, fixe, ville, code_postal, typologie_json, raw_json, synced_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(hektor_contact_id) DO UPDATE SET
+                hektor_agence_id = excluded.hektor_agence_id,
+                hektor_negociateur_id = excluded.hektor_negociateur_id,
+                civilite = excluded.civilite,
+                nom = excluded.nom,
+                prenom = excluded.prenom,
+                archive = excluded.archive,
+                date_enregistrement = excluded.date_enregistrement,
+                date_maj = excluded.date_maj,
+                email = excluded.email,
+                portable = excluded.portable,
+                fixe = excluded.fixe,
+                ville = excluded.ville,
+                code_postal = excluded.code_postal,
+                typologie_json = excluded.typologie_json,
+                raw_json = excluded.raw_json,
+                synced_at = excluded.synced_at
+            """,
+            (
+                contact_id,
+                normalized_id(source.get("agence") or item.get("agence")),
+                normalized_id(source.get("id_negociateur") or item.get("id_negociateur")),
+                source.get("civilite") or item.get("civilite"),
+                source.get("nom") or item.get("nom"),
+                source.get("prenom") or item.get("prenom"),
+                source.get("archive") if source.get("archive") is not None else item.get("archive"),
+                source.get("dateenr") or item.get("dateenr"),
+                source.get("datemaj") or item.get("datemaj"),
+                coords.get("email") if isinstance(coords, dict) else None,
+                coords.get("portable") if isinstance(coords, dict) else None,
+                coords.get("fixe") if isinstance(coords, dict) else None,
+                inner.get("ville") if isinstance(inner, dict) else None,
+                inner.get("code") if isinstance(inner, dict) else None,
+                json_dumps(source.get("typologie")),
+                json_dumps(source),
+                now_utc_iso(),
+            ),
+        )
+
+    seen_contact_ids: set[str] = set()
     for endpoint_name in CONTACT_ENDPOINTS:
         for item in iter_listing_items(fetch_latest_raw_payloads(conn, endpoint_name)):
-            source = get_detail_payload(detail_map.get(str(item.get("id") or "").strip(), item), "contact")
-            coords = source.get("coordonnees") or {}
-            localite = source.get("localite") or {}
-            inner = localite.get("localite") if isinstance(localite, dict) else {}
-            conn.execute(
-                """
-                INSERT INTO hektor_contact(
-                    hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom, archive, date_enregistrement,
-                    date_maj, email, portable, fixe, ville, code_postal, typologie_json, raw_json, synced_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(hektor_contact_id) DO UPDATE SET
-                    hektor_agence_id = excluded.hektor_agence_id,
-                    hektor_negociateur_id = excluded.hektor_negociateur_id,
-                    civilite = excluded.civilite,
-                    nom = excluded.nom,
-                    prenom = excluded.prenom,
-                    archive = excluded.archive,
-                    date_enregistrement = excluded.date_enregistrement,
-                    date_maj = excluded.date_maj,
-                    email = excluded.email,
-                    portable = excluded.portable,
-                    fixe = excluded.fixe,
-                    ville = excluded.ville,
-                    code_postal = excluded.code_postal,
-                    typologie_json = excluded.typologie_json,
-                    raw_json = excluded.raw_json,
-                    synced_at = excluded.synced_at
-                """,
-                (
-                    str(source.get("id") or item.get("id") or ""),
-                    normalized_id(source.get("agence") or item.get("agence")),
-                    normalized_id(source.get("id_negociateur") or item.get("id_negociateur")),
-                    source.get("civilite") or item.get("civilite"),
-                    source.get("nom") or item.get("nom"),
-                    source.get("prenom") or item.get("prenom"),
-                    source.get("archive") or item.get("archive"),
-                    source.get("dateenr") or item.get("dateenr"),
-                    source.get("datemaj") or item.get("datemaj"),
-                    coords.get("email") if isinstance(coords, dict) else None,
-                    coords.get("portable") if isinstance(coords, dict) else None,
-                    coords.get("fixe") if isinstance(coords, dict) else None,
-                    inner.get("ville") if isinstance(inner, dict) else None,
-                    inner.get("code") if isinstance(inner, dict) else None,
-                    json_dumps(source.get("typologie")),
-                    json_dumps(source),
-                    now_utc_iso(),
-                ),
-            )
+            contact_id = str(item.get("id") or "").strip()
+            if contact_id:
+                seen_contact_ids.add(contact_id)
+            source = get_detail_payload(detail_map.get(contact_id, item), "contact")
+            upsert_contact_from_sources(item, source)
+
+    for contact_id, detail_payload in detail_map.items():
+        if contact_id in seen_contact_ids:
+            continue
+        source = get_detail_payload(detail_payload, "contact")
+        if not isinstance(source, dict) or not source:
+            continue
+        upsert_contact_from_sources({"id": contact_id}, source)
     conn.commit()
 
 

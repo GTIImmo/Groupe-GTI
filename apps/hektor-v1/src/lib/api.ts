@@ -1435,7 +1435,8 @@ export async function loadContactsPage({
 
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'exact' = 'exact'
+  // Contacts is a high-volume listing; exact counts can hit Supabase statement timeout under RLS.
+  const countMode: 'planned' = 'planned'
   const { data, error, count } = await applyContactFiltersToQuery(
     supabase
       .from(contactsCurrentView)
@@ -1460,7 +1461,7 @@ export async function loadContactsPage({
 async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
   if (!hasSupabaseEnv || !supabase) return 0
   let query = applyContactFiltersToQuery(
-    supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'exact', head: true }),
+    supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'planned', head: true }),
     { ...filters, ...patch },
   )
   if (extra) query = extra(query)
@@ -4271,6 +4272,107 @@ export type HektorMandantContactInput = {
   city?: string | null
 }
 
+export type HektorContactIdentityInput = {
+  civility?: string | null
+  lastName: string
+  firstName?: string | null
+  email?: string | null
+  phone?: string | null
+  phoneSecondary?: string | null
+  address?: string | null
+  postalCode?: string | null
+  city?: string | null
+  hektorUserEmail?: string | null
+  hektorUserId?: string | null
+}
+
+function cleanOptionalText(value: string | null | undefined) {
+  const text = value?.trim() ?? ''
+  return text || null
+}
+
+function hContactPayload(contact: HektorContactIdentityInput) {
+  return {
+    civilite: cleanOptionalText(contact.civility),
+    last_name: contact.lastName.trim(),
+    first_name: cleanOptionalText(contact.firstName),
+    email: cleanOptionalText(contact.email),
+    phone: cleanOptionalText(contact.phone),
+    phone_secondary: cleanOptionalText(contact.phoneSecondary),
+    address: cleanOptionalText(contact.address),
+    postal_code: cleanOptionalText(contact.postalCode),
+    city: cleanOptionalText(contact.city),
+    hektor_user_email: cleanOptionalText(contact.hektorUserEmail),
+    hektor_user_id: cleanOptionalText(contact.hektorUserId),
+    target_hektor_user_id: cleanOptionalText(contact.hektorUserId),
+  }
+}
+
+export async function createHektorContactJob(input: {
+  contact: HektorContactIdentityInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const payload = hContactPayload(input.contact)
+  if (!payload.last_name) throw new Error('Nom contact requis')
+  if (!payload.email && !payload.phone && !payload.phone_secondary) throw new Error('Email ou telephone requis')
+  const { data, error } = await supabase.rpc('app_console_create_contact_job', {
+    contact_payload: payload,
+    job_priority: input.priority ?? 18,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact job')
+  return data as ConsoleJob
+}
+
+export async function createUpdateHektorContactJob(input: {
+  contactId: string
+  contact: HektorContactIdentityInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const payload = {
+    ...hContactPayload(input.contact),
+    hektor_contact_id: cleanContactId,
+    contact_id: cleanContactId,
+  }
+  if (!payload.last_name) throw new Error('Nom contact requis')
+  const { data, error } = await supabase.rpc('app_console_create_update_contact_job', {
+    target_contact_id: cleanContactId,
+    contact_payload: payload,
+    job_priority: input.priority ?? 16,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact update job')
+  return data as ConsoleJob
+}
+
+export async function findContactDuplicateCandidates(input: {
+  email?: string | null
+  phone?: string | null
+  lastName?: string | null
+  firstName?: string | null
+}, limit = 6): Promise<AppContact[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const email = cleanOptionalText(input.email)
+  const phone = cleanOptionalText(input.phone)
+  const name = [input.firstName, input.lastName].map((value) => cleanOptionalText(value)).filter(Boolean).join(' ')
+  const queryText = normalizeSearchTerm(email || phone || name).replace(/\s+/g, ' ').trim()
+  if (queryText.length < 3) return []
+  const { data, error } = await supabase
+    .from(contactsCurrentView)
+    .select(contactsListingSelect)
+    .ilike('search_text', `%${queryText}%`)
+    .order('archive', { ascending: true })
+    .order('linked_annonce_count', { ascending: false })
+    .order('date_maj', { ascending: false, nullsFirst: false })
+    .limit(limit)
+  if (error || !data) throw new Error(error?.message ?? 'Unable to search contact duplicates')
+  return ((data ?? []) as unknown as AppContact[]).map(normalizeContactRow)
+}
+
 export async function createHektorMandantContactJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   contact: HektorMandantContactInput
@@ -4697,6 +4799,8 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'change_hektor_annonce_status',
   'assign_hektor_annonce_negotiator',
   'update_hektor_annonce_fields',
+  'create_hektor_contact',
+  'update_hektor_contact',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',
   'create_hektor_mandat_auto_number',
@@ -4712,6 +4816,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'upload_hektor_photo',
   'prepare_archived_annonce_detail',
   'prepare_historical_annonce_detail',
+  'refresh_console_contact_data',
 ]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
