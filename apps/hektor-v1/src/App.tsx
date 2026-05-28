@@ -14459,6 +14459,7 @@ function ContactDetailPopup(props: {
   const selectedTypologies = contactTypologyBadges(props.contact)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
   const selectedArchivedSearches = props.searches.filter((search) => !contactBool(search.is_active))
+  const duplicateCount = props.contact.duplicate_group_count ?? 0
   return (
     <div className="modal-overlay contact-detail-overlay" onClick={props.onClose}>
       <section className="modal-panel contact-detail-modal" onClick={(event) => event.stopPropagation()}>
@@ -14476,23 +14477,55 @@ function ContactDetailPopup(props: {
             {props.contact.phone_primary ? <a className="ghost-button" href={`tel:${props.contact.phone_primary}`}>Appeler</a> : null}
             {props.contact.email ? <a className="ghost-button" href={`mailto:${props.contact.email}`}>Email</a> : null}
           </div>
+          <div className="contact-detail-hero-stats" aria-label="Synthese contact">
+            <span className="is-relations"><strong>{props.relations.length}</strong><small>relation(s) annonce</small></span>
+            <span className={selectedActiveSearches.length > 0 ? 'is-search-active' : ''}><strong>{selectedActiveSearches.length}</strong><small>recherche(s) active(s)</small></span>
+            <span className={duplicateCount > 0 ? 'is-duplicate' : ''}><strong>{duplicateCount}</strong><small>groupe(s) doublon</small></span>
+          </div>
         </div>
 
         <div className="contact-detail-modal-grid">
-          <article className="detail-card contact-profile-card contact-detail-main-card">
-            <span className="detail-label">Identite</span>
-            <div className="contact-profile-facts">
-              <div><span>Telephone</span><strong>{props.contact.phone_primary || '-'}</strong></div>
-              <div><span>Email</span><strong>{props.contact.email || '-'}</strong></div>
-              <div><span>Secteur</span><strong>{[props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'}</strong></div>
-              <div><span>Negociateur</span><strong>{props.contact.commercial_nom || '-'}</strong></div>
-              <div><span>Agence</span><strong>{props.contact.agence_nom || '-'}</strong></div>
-              <div><span>Detail</span><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</strong></div>
-            </div>
-          </article>
+          <div className="contact-detail-profile-column">
+            <article className="detail-card contact-profile-card contact-detail-main-card">
+              <div className="contact-card-heading">
+                <span className="detail-label">Identite</span>
+                <strong>{props.contact.civilite ? `${props.contact.civilite} ` : ''}{[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}</strong>
+              </div>
+              <div className="contact-info-list">
+                <div className="contact-info-item is-phone">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
+                  <div><span>Telephone</span><strong>{props.contact.phone_primary || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-email">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="content" /></span>
+                  <div><span>Email</span><strong>{props.contact.email || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-location">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="location" /></span>
+                  <div><span>Secteur</span><strong>{[props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-owner">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="commercial" /></span>
+                  <div><span>Negociateur</span><strong>{props.contact.commercial_nom || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-agency">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+                  <div><span>Agence</span><strong>{props.contact.agence_nom || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-sync">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="hektor" /></span>
+                  <div><span>Detail</span><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</strong></div>
+                </div>
+              </div>
+            </article>
+          </div>
 
-          <article className="detail-card contact-detail-control-card">
-            <span className="detail-label">Typologie et controle</span>
+          <div className="contact-detail-activity-column">
+            <article className="detail-card contact-detail-control-card">
+            <div className="contact-card-heading">
+              <span className="detail-label">Controle</span>
+              <strong>Statut, qualite et synchronisation</strong>
+            </div>
             <div className="tag-row">
               <StatusPill value={contactArchiveLabel(props.contact)} />
               <span className={`contact-duplicate-pill ${contactDuplicateTone(props.contact.duplicate_max_severity)}`}>{contactSeverityLabel(props.contact.duplicate_max_severity)}</span>
@@ -14507,7 +14540,7 @@ function ContactDetailPopup(props: {
               </div>
             ) : null}
             <div className="contact-detail-notes">
-              <span>{props.contact.duplicate_group_count ? `${props.contact.duplicate_group_count} groupe(s) doublon detecte(s)` : 'Pas de doublon classe'}</span>
+              <span>{duplicateCount ? `${duplicateCount} groupe(s) doublon detecte(s)` : 'Pas de doublon classe'}</span>
               {contactBool(props.contact.has_contact_detail) ? (
                 <span>{props.contact.total_search_count ?? 0} recherche(s) connue(s), dont {props.contact.active_search_count ?? 0} active(s)</span>
               ) : (
@@ -14516,9 +14549,9 @@ function ContactDetailPopup(props: {
               {contactBool(props.contact.has_contact_detail) && props.contact.contact_detail_synced_at ? <span>Detail lu le {formatDate(props.contact.contact_detail_synced_at)}</span> : null}
               {props.contact.duplicate_primary_candidate_id ? <span>Candidat principal: {props.contact.duplicate_primary_candidate_id}</span> : null}
             </div>
-          </article>
+            </article>
 
-          <article className="detail-card contact-search-detail">
+            <article className="detail-card contact-search-detail">
             <span className="detail-label">Recherches acquereurs</span>
             <div className="contact-search-overview">
               <div><strong>{selectedActiveSearches.length}</strong><span>actives</span></div>
@@ -14551,9 +14584,9 @@ function ContactDetailPopup(props: {
                 })}
               </div>
             ) : <p>{contactBool(props.contact.has_contact_detail) ? 'Aucune recherche active poussee sur Supabase pour ce contact.' : 'Les recherches seront visibles apres chargement de la fiche detail Hektor.'}</p>}
-          </article>
+            </article>
 
-          <article className="detail-card contact-detail-relations-card">
+            <article className="detail-card contact-detail-relations-card">
             <span className="detail-label">Annonces liees</span>
             {props.relations.length > 0 ? (
               <div className="contact-relation-list">
@@ -14576,7 +14609,8 @@ function ContactDetailPopup(props: {
                 })}
               </div>
             ) : <p>Aucune annonce liee dans l'index courant.</p>}
-          </article>
+            </article>
+          </div>
         </div>
       </section>
     </div>
