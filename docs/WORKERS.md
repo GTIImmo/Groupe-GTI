@@ -76,12 +76,15 @@ Job types observés :
 
 Flux contacts globaux :
 
-1. L'app cree `create_hektor_contact` ou `update_hektor_contact`.
-2. Le worker `actions` ecrit dans Hektor Console avec le contexte negociateur cible.
-3. Le worker cree un job `refresh_console_contact_data` pour relire seulement le `ContactById` concerne.
-4. Le worker `sync_light` normalise localement, reconstruit la couche contacts, puis pousse la projection legere Supabase.
+1. L'app cree `create_hektor_contact` ou `update_hektor_contact` avec un compte Hektor cible obligatoire.
+2. Supabase controle le droit app (`admin`, `manager`, `commercial`) et refuse un job sans contexte negociateur.
+3. En creation, le formulaire app transmet la typologie Hektor minimale : qualification (`proprietaire`, `acquereur`, `locataire`, `partenaire`), structure (`personne_seule`, `couple`, `personne_morale`), source, categorie, note et option RGPD.
+4. En modification, le formulaire standard Hektor verifie par Playwright expose l'identite, les coordonnees, la source, la categorie et la note, mais pas la qualification/statut ; l'app ne modifie donc pas ces deux champs par ce flux.
+5. Le worker `actions` relit le contexte contact/dossier si besoin, mappe en creation ces valeurs vers les codes Console Hektor (`qualification` 1/2/3/4 et `statut` 1/2/3), puis ecrit dans Hektor avec le contexte negociateur cible.
+6. Le worker cree un job `refresh_console_contact_data` pour relire seulement le `ContactById` concerne.
+7. Le worker `sync_light` normalise localement, reconstruit la couche contacts, puis pousse la projection legere Supabase.
 
-Ce flux ne lance pas le backfill 340k contacts et ne modifie pas les relations mandants affichees dans les annonces.
+Ce flux ne lance pas le backfill 340k contacts et ne modifie pas les relations mandants affichees dans les annonces. Les relations/recherches contact ne sont pas melangees dans la creation d'identite : l'assistant Hektor `ajouter un nouveau contact` possede une etape suivante separee, a traiter par un job dedie apres validation du comportement Console.
 
 Note : `archive_cloud_documents` est référencé mais son handler indique qu'il
 reste à implémenter après validation du dimensionnement stockage.

@@ -26427,11 +26427,69 @@ body {
   margin: 0 0 18px;
 }
 
+.contact-delete-panel {
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid rgba(185, 74, 72, 0.24);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(185, 74, 72, 0.075), rgba(255, 255, 255, 0) 46%),
+    #fff;
+  box-shadow: 0 14px 34px rgba(34, 35, 35, 0.08);
+}
+
+.contact-detail-modal .contact-action-row .button-danger {
+  border-color: rgba(185, 74, 72, 0.28) !important;
+  background: #b94a48 !important;
+  color: #ffffff !important;
+}
+
+.contact-detail-modal .contact-action-row .button-danger:hover {
+  background: #9f3535 !important;
+}
+
 .contact-editor-form {
   border: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
   padding: 0 !important;
+}
+
+.contact-editor-context {
+  display: grid;
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(21, 75, 92, 0.16);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(21, 75, 92, 0.08), rgba(255, 255, 255, 0) 72%), #ffffff;
+}
+
+.contact-editor-context label {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.contact-editor-context span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(34, 35, 35, 0.62);
+  text-transform: uppercase;
+}
+
+.contact-editor-context select,
+.contact-editor-context input {
+  min-height: 40px;
+  border: 1px solid rgba(34, 35, 35, 0.14);
+  border-radius: 9px;
+  padding: 0 11px;
+  background: #ffffff;
+  color: var(--gti-final-ink, #222323);
+}
+
+.contact-editor-context small {
+  color: rgba(34, 35, 35, 0.62);
 }
 
 .contact-editor-grid {
@@ -26440,6 +26498,60 @@ body {
 
 .contact-editor-grid .is-wide {
   grid-column: span 2;
+}
+
+.contact-editor-grid label small {
+  min-height: 14px;
+  color: rgba(34, 35, 35, 0.58);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.contact-editor-grid textarea {
+  width: 100%;
+  min-height: 82px;
+  resize: vertical;
+  border: 1px solid rgba(34, 35, 35, 0.16);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--gti-final-ink, #222323);
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.45;
+  outline: none;
+}
+
+.contact-editor-grid textarea:focus {
+  border-color: rgba(197, 0, 95, 0.48);
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.1);
+}
+
+.contact-editor-grid .contact-editor-toggle {
+  align-self: end;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid rgba(21, 75, 92, 0.14);
+  border-radius: 9px;
+  background: rgba(21, 75, 92, 0.055);
+}
+
+.contact-editor-grid .contact-editor-toggle input {
+  width: 16px;
+  min-height: 16px;
+  accent-color: var(--gti-final-magenta, #c5005f);
+}
+
+.contact-editor-grid .contact-editor-toggle span {
+  color: rgba(34, 35, 35, 0.76);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: none;
 }
 
 .contact-duplicate-warning {

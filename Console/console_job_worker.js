@@ -27,6 +27,7 @@ const ACTION_JOB_TYPES = new Set([
   "link_hektor_mandant",
   "create_hektor_contact",
   "update_hektor_contact",
+  "delete_hektor_contact",
   "create_hektor_mandant_contact",
   "update_hektor_mandant_contact",
   "update_hektor_annonce_fields",
@@ -45,6 +46,7 @@ const DOCUMENT_JOB_TYPES = new Set([
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
+  "delete_hektor_contact",
   "archive_hektor_annonce",
   "restore_hektor_annonce",
   "change_hektor_annonce_status",
@@ -1007,6 +1009,40 @@ async function enqueueRefreshConsoleContactDataJobBestEffort(parentJob, hektorCo
   }
 }
 
+async function cancelPendingContactRefreshJobs(parentJob, hektorContactId) {
+  const id = String(hektorContactId || "").trim();
+  if (!id) return { status: "skipped", reason: "missing_hektor_contact_id" };
+  const params = new URLSearchParams({
+    job_type: "eq.refresh_console_contact_data",
+    status: "eq.pending",
+  });
+  params.append("payload_json->>hektor_contact_id", `eq.${id}`);
+  const rows = await supabaseRequest(`app_console_job?${params.toString()}`, {
+    method: "PATCH",
+    prefer: "return=representation",
+    body: JSON.stringify({
+      status: "done",
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      error_message: null,
+      result_json: {
+        status: "cancelled",
+        reason: "contact_deleted",
+        hektor_contact_id: id,
+        parent_job_id: parentJob.id,
+      },
+    }),
+  });
+  const count = Array.isArray(rows) ? rows.length : 0;
+  if (count) {
+    await logJob(parentJob.id, "contact_sync_queue", "done", "Sync contact obsoletes annulees", {
+      hektor_contact_id: id,
+      cancelled_jobs: count,
+    });
+  }
+  return { status: "done", cancelled_jobs: count, hektor_contact_id: id };
+}
+
 async function loadDossier(job) {
   if (job.app_dossier_id == null && !job.hektor_annonce_id) throw new Error("Job without dossier or annonce id");
   const params = new URLSearchParams({
@@ -1046,6 +1082,57 @@ async function loadDossier(job) {
   }
 
   throw new Error(`Dossier introuvable: ${job.app_dossier_id || job.hektor_annonce_id}`);
+}
+
+async function loadContactExecutionContext(contactId) {
+  const cleanContactId = String(contactId || "").trim();
+  if (!/^\d+$/.test(cleanContactId)) throw new Error("contact_id Hektor numerique requis");
+
+  const params = new URLSearchParams({
+    select: "hektor_contact_id,hektor_agence_id,hektor_negociateur_id,negociateur_email,commercial_nom,agence_nom,display_name,archive",
+    hektor_contact_id: `eq.${cleanContactId}`,
+    limit: "1",
+  });
+  const contacts = await supabaseRequest(`app_contact_current?${params.toString()}`, { method: "GET" });
+  const contact = Array.isArray(contacts) && contacts.length ? contacts[0] : null;
+  if (!contact) throw new Error(`Contact introuvable dans l'index Supabase: ${cleanContactId}`);
+
+  let dossier = null;
+  const relationParams = new URLSearchParams({
+    select: "app_dossier_id,hektor_annonce_id,is_active_annonce,role_contact",
+    hektor_contact_id: `eq.${cleanContactId}`,
+    app_dossier_id: "not.is.null",
+    order: "is_active_annonce.desc,refreshed_at.desc",
+    limit: "5",
+  });
+  const relations = await supabaseRequest(`app_contact_relation_current?${relationParams.toString()}`, { method: "GET" }).catch(() => []);
+  for (const relation of Array.isArray(relations) ? relations : []) {
+    const appDossierId = relation && relation.app_dossier_id != null ? String(relation.app_dossier_id) : "";
+    if (!appDossierId) continue;
+    const dossierParams = new URLSearchParams({
+      select: "app_dossier_id,hektor_annonce_id,archive,statut_annonce,agence_nom,commercial_id,commercial_nom,negociateur_email",
+      app_dossier_id: `eq.${appDossierId}`,
+      limit: "1",
+    });
+    const rows = await supabaseRequest(`app_dossier_current?${dossierParams.toString()}`, { method: "GET" }).catch(() => []);
+    if (Array.isArray(rows) && rows.length) {
+      dossier = rows[0];
+      break;
+    }
+  }
+
+  const contactDossier = dossier || {
+    app_dossier_id: null,
+    hektor_annonce_id: null,
+    archive: Boolean(contact.archive),
+    statut_annonce: null,
+    agence_nom: contact.agence_nom || null,
+    commercial_id: contact.hektor_negociateur_id || null,
+    commercial_nom: contact.commercial_nom || contact.display_name || null,
+    negociateur_email: contact.negociateur_email || null,
+  };
+
+  return { contact, dossier: contactDossier };
 }
 
 async function loadAppUserProfile(userId) {
@@ -3943,14 +4030,16 @@ function replaceFirstArrayParam(values, name, value) {
   values.append(name, value == null ? "" : String(value));
 }
 
-async function fetchHektorManualMandantForm() {
+async function fetchHektorManualMandantForm(options = {}) {
+  const qualification = cleanString(options.qualification) || "3";
+  const statut = cleanString(options.statut) || "contact_seule";
   const body = new URLSearchParams({
     mode: "contacts-actions-addManuelContactFromOtherObject",
     idNego: "",
-    statut: "contact_seule",
+    statut,
     metier: "",
     inputId: "",
-    qualification: "3",
+    qualification,
     ihmCenter: "",
   });
   const response = await hektorFetch(XMLRPC_URL, {
@@ -3980,6 +4069,82 @@ async function fetchHektorContactEditForm(contactId) {
     // The same endpoint can return either raw HTML or a JSON-encoded HTML string.
   }
   return String(response.text || "");
+}
+
+function normalizeHektorContactQualification(value, fallback = "2") {
+  const text = cleanString(value).toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_ -]/g, "")
+    .replace(/\s+/g, "_");
+  const map = {
+    "1": "1",
+    locataire: "1",
+    tenant: "1",
+    "2": "2",
+    acquereur: "2",
+    acheteur: "2",
+    buyer: "2",
+    "3": "3",
+    proprietaire: "3",
+    mandant: "3",
+    vendeur: "3",
+    owner: "3",
+    "4": "4",
+    partenaire: "4",
+    notaire: "4",
+    partner: "4",
+  };
+  return map[text] || map[String(value || "").trim()] || fallback;
+}
+
+function normalizeHektorContactStatus(value, fallback = "1") {
+  const text = cleanString(value).toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_ -]/g, "")
+    .replace(/\s+/g, "_");
+  const map = {
+    "1": "1",
+    personne_seule: "1",
+    contact_seule: "1",
+    seul: "1",
+    single: "1",
+    "2": "2",
+    couple: "2",
+    "3": "3",
+    personne_morale: "3",
+    societe: "3",
+    company: "3",
+  };
+  return map[text] || map[String(value || "").trim()] || fallback;
+}
+
+function hektorContactEditFormExists(html) {
+  const source = String(html || "");
+  if (!source.trim()) return false;
+  const values = extractHektorFormValues(source, "mefContacts/contacts_full_accueil");
+  return values.has("nom") || values.has("prenom") || values.has("email[]") || /idContact/i.test(source);
+}
+
+async function fetchHektorContactBeforeDelete(job, contactId) {
+  try {
+    const html = await fetchHektorContactEditForm(contactId);
+    const values = extractHektorFormValues(html, "mefContacts/contacts_full_accueil");
+    return {
+      exists: hektorContactEditFormExists(html),
+      nom: values.get("nom") || null,
+      prenom: values.get("prenom") || null,
+      email: values.get("email[]") || null,
+      telephone: values.get("telephone[]") || null,
+    };
+  } catch (error) {
+    await logJob(job.id, "hektor_contact_delete_verify", "error", "Verification contact Hektor ignoree avant suppression", {
+      hektor_contact_id: String(contactId),
+      error: error && error.message ? error.message : String(error),
+    });
+    return { exists: null, error: error && error.message ? error.message : String(error) };
+  }
 }
 
 function normalizeHektorContactPayload(payload, options = {}) {
@@ -4028,6 +4193,22 @@ function normalizeHektorContactPayload(payload, options = {}) {
     address,
     postalCode,
     city,
+    qualification: normalizeHektorContactQualification(
+      source.qualification || source.contact_qualification || source.contact_kind || source.kind,
+      "2"
+    ),
+    contactStatus: normalizeHektorContactStatus(
+      source.statut || source.status || source.contact_status || source.person_type || source.personType,
+      "1"
+    ),
+    sourceId: cleanString(source.id_source || source.source_id || source.sourceId),
+    categoryId: cleanString(source.category_id || source.categorie_id || source.categories),
+    comments: source.comments !== undefined || source.commentaires !== undefined
+      ? cleanString(source.comments || source.commentaires) || ""
+      : null,
+    sendRgpdEmail: source.send_rgpd_email === false || source.send_rgpd_email === "false" || source.send_rgpd_email === "0"
+      ? false
+      : true,
     hektorUserEmail: cleanString(source.hektor_user_email || source.negociateur_email || source.target_hektor_user_email),
     hektorUserId: cleanString(source.hektor_user_id || source.hektor_id_user || source.target_hektor_user_id),
   };
@@ -4069,6 +4250,14 @@ function applyHektorContactIdentityValues(values, contact) {
   if (contact.address !== null && contact.address !== undefined) values.set("adresse", contact.address || "");
   if (contact.city !== null && contact.city !== undefined) values.set("ville", contact.city || "");
   if (contact.postalCode !== null && contact.postalCode !== undefined) values.set("code", contact.postalCode || "");
+  if (contact.sourceId !== null && contact.sourceId !== undefined) values.set("id_source", contact.sourceId || "");
+  if (contact.categoryId !== null && contact.categoryId !== undefined) values.set("categories", contact.categoryId || "");
+  if (contact.comments !== null && contact.comments !== undefined) {
+    values.set("commentaires", contact.comments || "");
+    values.set("commentairess", contact.comments || "");
+  }
+  values.delete("_email_rgpd");
+  if (contact.sendRgpdEmail !== false) values.append("_email_rgpd", "1");
 }
 
 function parseHektorCreatedContactId(responseText) {
@@ -4095,11 +4284,11 @@ function parseHektorCreatedContactId(responseText) {
 
 async function createHektorContact(job, payload) {
   const contact = normalizeHektorContactPayload(payload, { requireName: true, requireReachable: true });
-  const formHtml = await fetchHektorManualMandantForm();
+  const formHtml = await fetchHektorManualMandantForm({ qualification: contact.qualification });
   const values = extractHektorFormValues(formHtml, null);
   values.set("mode", "contacts-actions-insertManuelContactFromOtherObject");
-  values.set("statut", cleanString(payload.statut || payload.status) || "contact_seule");
-  values.set("qualification", cleanString(payload.qualification) || "3");
+  values.set("statut", contact.contactStatus);
+  values.set("qualification", contact.qualification);
   values.delete("saveOrUpdate");
   values.delete("saveOrUpdateValue");
   applyHektorContactIdentityValues(values, contact);
@@ -4109,6 +4298,8 @@ async function createHektorContact(job, payload) {
     prenom: contact.firstName,
     email: contact.email,
     phone: contact.phone,
+    qualification: contact.qualification,
+    statut: contact.contactStatus,
   });
 
   const response = await hektorFetch(XMLRPC_URL, {
@@ -4180,13 +4371,15 @@ async function updateHektorContactIdentity(job, contactId, payload) {
       adresse: contact.address,
       code: contact.postalCode,
       ville: contact.city,
+      qualification: contact.qualification,
+      statut: contact.contactStatus,
     },
   };
 }
 
 async function handleCreateHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
-  await ensureHektorExecutionContext(job, null, payload, { preferRequester: true, preferDossierOwner: false, required: false });
+  await ensureHektorExecutionContext(job, null, payload, { preferRequester: true, preferDossierOwner: false, required: true });
 
   const created = await createHektorContact(job, payload);
   await sleep(1200);
@@ -4212,9 +4405,17 @@ async function handleUpdateHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
   const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
   if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
-  await ensureHektorExecutionContext(job, null, payload, { preferRequester: true, preferDossierOwner: false, required: false });
+  const context = await loadContactExecutionContext(contactId);
+  const contextPayload = {
+    ...payload,
+    hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
+    target_hektor_user_email: payload.target_hektor_user_email || payload.hektor_user_email || context.contact.negociateur_email || null,
+    contact_negociateur_email: context.contact.negociateur_email || null,
+    contact_hektor_negociateur_id: context.contact.hektor_negociateur_id || null,
+  };
+  await ensureHektorExecutionContext(job, context.dossier, contextPayload, { preferRequester: true, preferDossierOwner: true, required: true });
 
-  const updated = await updateHektorContactIdentity(job, contactId, payload);
+  const updated = await updateHektorContactIdentity(job, contactId, contextPayload);
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "update_hektor_contact",
@@ -4554,6 +4755,31 @@ async function cleanupSupabaseAnnonceRows(appDossierId, hektorAnnonceId) {
   return results;
 }
 
+async function cleanupSupabaseContactRows(hektorContactId) {
+  const filters = [["hektor_contact_id", hektorContactId]];
+  const tables = [
+    "app_contact_search_current",
+    "app_contact_relation_current",
+    "app_contact_duplicate_member_current",
+    "app_contact_current",
+  ];
+  const results = [];
+  for (const table of tables) {
+    results.push(...await deleteSupabaseRows(table, filters));
+  }
+  return results;
+}
+
+async function loadSupabaseContactRelationsForCleanup(hektorContactId) {
+  const params = new URLSearchParams({
+    select: "hektor_annonce_id,app_dossier_id,role_contact,numero_dossier,numero_mandat",
+    hektor_contact_id: `eq.${String(hektorContactId)}`,
+    order: "last_seen_at.desc",
+  });
+  const rows = await supabaseRequest(`app_contact_relation_current?${params.toString()}`, { method: "GET" });
+  return Array.isArray(rows) ? rows : [];
+}
+
 async function runDeletedAnnonceLocalCleanup(job, hektorAnnonceId, appDossierId) {
   const args = ["phase2/sync/delete_local_annonce.py", "--id-annonce", String(hektorAnnonceId)];
   if (appDossierId != null) args.push("--app-dossier-id", String(appDossierId));
@@ -4565,6 +4791,18 @@ async function runDeletedAnnonceLocalCleanup(job, hektorAnnonceId, appDossierId)
     parsed = { stdout: output.stdout || null, stderr: output.stderr || null };
   }
   await logJob(job.id, "local_cleanup", "done", "Caches locaux nettoyes pour annonce supprimee", parsed);
+  return parsed;
+}
+
+async function runDeletedContactLocalCleanup(job, hektorContactId) {
+  const output = await runProjectPythonScript(["phase2/sync/delete_local_contact.py", "--contact-id", String(hektorContactId)]);
+  let parsed = null;
+  try {
+    parsed = JSON.parse(output.stdout || "{}");
+  } catch (_) {
+    parsed = { stdout: output.stdout || null, stderr: output.stderr || null };
+  }
+  await logJob(job.id, "local_cleanup", "done", "Caches locaux nettoyes pour contact supprime", parsed);
   return parsed;
 }
 
@@ -4587,6 +4825,151 @@ async function insertDeletedAnnonceLog(job, payload) {
       error: error && error.message ? error.message : String(error),
     });
   }
+}
+
+async function insertDeletedContactLog(job, payload) {
+  try {
+    await supabaseRequest("app_console_deleted_contact_log", {
+      method: "POST",
+      body: JSON.stringify([{
+        job_id: job.id,
+        hektor_contact_id: String(payload.hektor_contact_id),
+        requested_by: job.requested_by || null,
+        reason: payload.reason || null,
+        before_json: payload.before_json || null,
+        result_json: payload.result_json || null,
+      }]),
+    });
+  } catch (error) {
+    await logJob(job.id, "delete_contact_audit", "error", "Journal de suppression contact non ecrit", {
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
+
+async function handleDeleteHektorContact(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  const expectedConfirm = `SUPPRIMER CONTACT ${contactId}`;
+  if (payload.confirm_text !== expectedConfirm) {
+    throw new Error(`Confirmation suppression contact invalide pour ${contactId}`);
+  }
+
+  await ensureAdminHektorSession(job, "delete_contact_admin_login");
+  await logJob(job.id, "hektor_contact_delete", "running", "Verification contact avant suppression", {
+    hektor_contact_id: contactId,
+  });
+  const before = await fetchHektorContactBeforeDelete(job, contactId);
+  let relatedAnnonces = [];
+  try {
+    relatedAnnonces = await loadSupabaseContactRelationsForCleanup(contactId);
+  } catch (error) {
+    await logJob(job.id, "contact_relations_snapshot", "error", "Relations annonce non lues avant suppression", {
+      hektor_contact_id: contactId,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+  let hektorDeleteSent = false;
+
+  if (before.exists !== false) {
+    const body = new URLSearchParams({
+      mode: "contacts-contactProfile-deleteContact",
+      id: contactId,
+    });
+    await hektorFetch(XMLRPC_URL, {
+      method: "POST",
+      body,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(contactId)}`,
+      },
+    });
+    hektorDeleteSent = true;
+    await sleep(1800);
+  }
+
+  const after = await fetchHektorContactBeforeDelete(job, contactId);
+  if (hektorDeleteSent && after.exists === true) {
+    throw new Error(`Suppression Hektor non confirmee pour contact ${contactId}`);
+  }
+  await logJob(job.id, "hektor_contact_delete", "done", "Suppression Hektor envoyee", {
+    hektor_contact_id: contactId,
+    before_found: before.exists,
+    after_found: after.exists,
+    hektor_delete_sent: hektorDeleteSent,
+  });
+
+  const cleanup = {
+    pending_contact_sync_jobs: null,
+    related_annonce_sync_jobs: [],
+    supabase_rows: null,
+    local: null,
+    build: null,
+    push: null,
+    errors: [],
+  };
+  try {
+    cleanup.pending_contact_sync_jobs = await cancelPendingContactRefreshJobs(job, contactId);
+  } catch (error) {
+    cleanup.errors.push({ step: "pending_contact_sync_jobs", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    const uniqueAnnonceIds = Array.from(new Set(relatedAnnonces.map((relation) => String(relation.hektor_annonce_id || "").trim()).filter(Boolean)));
+    for (const annonceId of uniqueAnnonceIds) {
+      const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+        reason: "delete_hektor_contact",
+        priority: 82,
+      });
+      cleanup.related_annonce_sync_jobs.push(syncJob);
+    }
+  } catch (error) {
+    cleanup.errors.push({ step: "related_annonce_sync_jobs", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    cleanup.supabase_rows = await cleanupSupabaseContactRows(contactId);
+  } catch (error) {
+    cleanup.errors.push({ step: "supabase_rows", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    cleanup.local = await runDeletedContactLocalCleanup(job, contactId);
+  } catch (error) {
+    cleanup.errors.push({ step: "local", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    const buildOutput = await runProjectPythonScript(["phase2/contacts/build_contacts_layer.py", "--no-reports"], { timeoutMs: 180000, previewSize: 3000 });
+    cleanup.build = { stdout: buildOutput.stdout, stderr: buildOutput.stderr };
+  } catch (error) {
+    cleanup.errors.push({ step: "build_contacts_layer", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    const pushOutput = await runProjectPythonScript([
+      "phase2/sync/push_contacts_to_supabase.py",
+      "--push-mode",
+      "update",
+      "--contacts-scope",
+      "active_or_eligible",
+    ], { timeoutMs: 180000, previewSize: 3000 });
+    cleanup.push = { stdout: pushOutput.stdout, stderr: pushOutput.stderr };
+  } catch (error) {
+    cleanup.errors.push({ step: "push_contacts_to_supabase", error: error && error.message ? error.message : String(error) });
+  }
+
+  const result = {
+    deleted_hektor_contact_id: contactId,
+    before_contact: payload.before_contact || before || null,
+    related_annonce_count: relatedAnnonces.length,
+    after_found: after.exists,
+    hektor_delete_sent: hektorDeleteSent,
+    cleanup,
+  };
+  await insertDeletedContactLog(job, {
+    hektor_contact_id: contactId,
+    reason: payload.reason || null,
+    before_json: payload.before_contact || before || null,
+    result_json: result,
+  });
+  return result;
 }
 
 async function handleDeleteHektorAnnonce(job) {
@@ -5063,6 +5446,8 @@ async function runHandler(job) {
       return handleCreateHektorContact(job);
     case "update_hektor_contact":
       return handleUpdateHektorContact(job);
+    case "delete_hektor_contact":
+      return handleDeleteHektorContact(job);
     case "create_hektor_mandant_contact":
       return handleCreateHektorMandantContact(job);
     case "update_hektor_mandant_contact":

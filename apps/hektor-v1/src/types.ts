@@ -578,6 +578,7 @@ export type ConsoleJobType =
   | 'link_hektor_mandant'
   | 'create_hektor_contact'
   | 'update_hektor_contact'
+  | 'delete_hektor_contact'
   | 'create_hektor_mandant_contact'
   | 'update_hektor_mandant_contact'
   | 'update_hektor_annonce_fields'

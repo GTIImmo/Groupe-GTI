@@ -1,5 +1,5 @@
 param(
-  [int]$Limit = 500,
+  [int]$Limit = 10000,
   [int]$BatchSize = 100,
   [switch]$DryRun,
   [switch]$ForceFull,
@@ -39,8 +39,8 @@ if (-not $DryRun -and -not $ForceRun) {
   if ($Limit -le 0) {
     throw "Safety stop: Limit=0 is not allowed for contact backfill without -ForceRun."
   }
-  if ($Limit -gt 500) {
-    throw "Safety stop: Limit above 500 is not allowed for contact backfill without -ForceRun."
+  if ($Limit -gt 10000) {
+    throw "Safety stop: Limit above 10000 is not allowed for contact backfill without -ForceRun."
   }
   if ($ForceFull) {
     throw "Safety stop: ForceFull is not allowed for contact backfill without -ForceRun."
@@ -100,6 +100,7 @@ if ($NoNormalize) { $argsList += "--no-normalize" }
 
 for ($attempt = 1; $attempt -le [Math]::Max(1, $MaxAttempts); $attempt++) {
   Write-Host ("Contact detail extraction attempt {0}/{1}" -f $attempt, [Math]::Max(1, $MaxAttempts))
+  Write-Host ("Contact detail safety: limit={0} batch_size={1} request_delay_seconds={2} batch_pause_seconds={3} max_hard_errors={4}/{5}" -f $Limit, $BatchSize, $RequestDelaySeconds, $BatchPauseSeconds, $MaxHardErrors, $MaxConsecutiveHardErrors)
   if (-not $DryRun) {
     Set-Content -LiteralPath $lastRunFile -Value ([DateTimeOffset]::UtcNow.ToString("o"))
   }
@@ -107,9 +108,14 @@ for ($attempt = 1; $attempt -le [Math]::Max(1, $MaxAttempts); $attempt++) {
   $exitCode = $LASTEXITCODE
   if ($exitCode -eq 0) {
     if (-not $DryRun) {
-      Set-Content -LiteralPath $lastSuccessFile -Value ([DateTimeOffset]::UtcNow.ToString("o"))
+      $finishedAt = [DateTimeOffset]::UtcNow.ToString("o")
+      Set-Content -LiteralPath $lastRunFile -Value $finishedAt
+      Set-Content -LiteralPath $lastSuccessFile -Value $finishedAt
     }
     exit 0
+  }
+  if (-not $DryRun) {
+    Set-Content -LiteralPath $lastRunFile -Value ([DateTimeOffset]::UtcNow.ToString("o"))
   }
   if ($attempt -ge [Math]::Max(1, $MaxAttempts)) {
     exit $exitCode

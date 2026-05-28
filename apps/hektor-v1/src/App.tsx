@@ -57,6 +57,7 @@ import {
   createUploadHektorPhotoJob,
   createHektorContactJob,
   createUpdateHektorContactJob,
+  createDeleteHektorContactJob,
   createHektorMandantContactJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
@@ -3429,6 +3430,13 @@ function buildHektorMandatPrixUrl(hektorAnnonceId: number | string | null | unde
   return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(id)}`
 }
 
+function buildHektorContactUrl(hektorContactId: number | string | null | undefined) {
+  if (hektorContactId == null || hektorContactId === '') return null
+  const id = String(hektorContactId).trim()
+  if (!id) return null
+  return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-contacts/mon-contact&id=${encodeURIComponent(id)}`
+}
+
 function buildAppointmentAnnonceUrl(
   dossier: Pick<Dossier, 'hektor_annonce_id'> | Pick<MandatRecord, 'hektor_annonce_id'> | null | undefined,
   detail?: DossierDetailPayload | null,
@@ -3813,6 +3821,12 @@ function openHektorMandatPrix(hektorAnnonceId: number | string | null | undefine
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+function openHektorContact(hektorContactId: number | string | null | undefined) {
+  const url = buildHektorContactUrl(hektorContactId)
+  if (!url) return
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 function openHektorAnnonceCompact(hektorAnnonceId: number | string | null | undefined) {
   const url = buildHektorAnnonceUrl(hektorAnnonceId)
   if (!url || typeof window === 'undefined') return
@@ -3892,7 +3906,7 @@ function hektorActionJobTitle(job: ConsoleJob) {
     const numero = typeof result.numero_mandat === 'string' && result.numero_mandat.trim() ? result.numero_mandat.trim() : null
     return numero ? `Mandat ${numero}` : `Generation mandat ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
-  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') {
+  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'delete_hektor_contact' || job.job_type === 'refresh_console_contact_data') {
     const contactName = [payload.first_name, payload.last_name].filter((value) => typeof value === 'string' && value.trim()).join(' ')
     const contactId = String(result.hektor_contact_id ?? payload.hektor_contact_id ?? payload.contact_id ?? '').trim()
     if (contactName.trim()) return `Contact ${contactName.trim()}`
@@ -3925,6 +3939,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
   if (job.job_type === 'create_hektor_contact') return 'Creation contact'
   if (job.job_type === 'update_hektor_contact') return 'Modification contact'
+  if (job.job_type === 'delete_hektor_contact') return 'Suppression contact'
   if (job.job_type === 'refresh_console_contact_data') return 'Sync contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
   if (job.job_type === 'sync_hektor_photos') return 'Photos en cours'
@@ -3936,7 +3951,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'archive_hektor_annonce') return 'update'
   if (job.job_type === 'restore_hektor_annonce') return 'update'
   if (job.job_type === 'change_hektor_annonce_status') return 'update'
-  if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_document_from_hektor') return 'delete'
+  if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_hektor_contact' || job.job_type === 'delete_document_from_hektor') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'contact'
@@ -3966,6 +3981,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_contact') return 'Creation puis resynchronisation ciblee'
   if (job.job_type === 'update_hektor_contact') return 'Modification puis resynchronisation ciblee'
+  if (job.job_type === 'delete_hektor_contact') return 'Suppression Hektor puis nettoyage app'
   if (job.job_type === 'refresh_console_contact_data') return 'Lecture detail contact puis push Supabase'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Modification puis resynchronisation'
@@ -4019,6 +4035,7 @@ function hektorActionCanFinishWithoutAppDossier(job: ConsoleJob) {
     'sync_hektor_photos',
     'create_hektor_contact',
     'update_hektor_contact',
+    'delete_hektor_contact',
     'refresh_console_contact_data',
   ].includes(job.job_type)
 }
@@ -4047,6 +4064,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Mandat genere'
     if (job.job_type === 'create_hektor_contact') return 'Contact cree'
     if (job.job_type === 'update_hektor_contact') return 'Contact modifie'
+    if (job.job_type === 'delete_hektor_contact') return 'Contact supprime'
     if (job.job_type === 'refresh_console_contact_data') return 'Contact synchronise'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
     if (job.job_type === 'update_hektor_mandant_contact') return 'Mandant modifie'
@@ -4065,7 +4083,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
   }
   if (progress === 'syncing') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
-    if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Synchronisation contact'
+    if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'delete_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Synchronisation contact'
     if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'archive_hektor_annonce' || job.job_type === 'restore_hektor_annonce' || job.job_type === 'change_hektor_annonce_status') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
@@ -4080,6 +4098,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
 }
 
 function hektorActionWaitingLabel(job: ConsoleJob) {
+  if (job.job_type === 'delete_hektor_contact') return 'Hektor a supprime le contact. Nettoyage app en cours...'
   if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Hektor a mis a jour le contact. Synchronisation app en cours...'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
@@ -5780,6 +5799,30 @@ export default function App() {
       return [job, ...withoutSame].slice(0, 12)
     })
     setDismissedHektorActionJobIds((current) => current.filter((id) => id !== job.id))
+  }
+
+  function handleOptimisticContactDeleted(contact: AppContact) {
+    const contactId = contact.hektor_contact_id
+    const isArchived = contactBool(contact.archive)
+    const highRisk = contact.duplicate_max_severity === 'high' || contact.duplicate_max_severity === 'critical'
+    setContactsDirectory((current) => current.filter((item) => item.hektor_contact_id !== contactId))
+    setContactsTotal((current) => Math.max(0, current - 1))
+    setContactStats((current) => ({
+      ...current,
+      total: Math.max(0, current.total - 1),
+      active: isArchived ? current.active : Math.max(0, current.active - 1),
+      archived: isArchived ? Math.max(0, current.archived - 1) : current.archived,
+      duplicates: contact.duplicate_group_count ? Math.max(0, current.duplicates - 1) : current.duplicates,
+      highRiskDuplicates: highRisk ? Math.max(0, current.highRiskDuplicates - 1) : current.highRiskDuplicates,
+      linked: (contact.linked_annonce_count ?? 0) > 0 ? Math.max(0, current.linked - 1) : current.linked,
+      searchContacts: (contact.total_search_count ?? 0) > 0 ? Math.max(0, current.searchContacts - 1) : current.searchContacts,
+      activeSearchContacts: (contact.active_search_count ?? 0) > 0 ? Math.max(0, current.activeSearchContacts - 1) : current.activeSearchContacts,
+      eligible: contactBool(contact.supabase_sync_eligible) ? Math.max(0, current.eligible - 1) : current.eligible,
+    }))
+    setSelectedContactId((current) => current === contactId ? null : current)
+    setSelectedContactRelations([])
+    setSelectedContactSearches([])
+    setNoticeMessage(`Suppression demandee pour ${contact.display_name || `contact ${contactId}`}.`)
   }
 
   const sessionEmail = normalizeEmail(session?.user.email ?? profile?.email ?? null)
@@ -9917,9 +9960,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               setDetailOpen(true)
             }}
             canManageContacts={canManageContacts}
+            canDeleteContacts={isAdmin}
             hektorUserEmail={contactHektorUserEmail}
             hektorUserId={contactHektorUserId}
+            hektorNegotiators={hektorNegotiators}
+            profileRole={profile?.role ?? null}
+            sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
+            onContactDeleted={handleOptimisticContactDeleted}
           />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
@@ -10743,9 +10791,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             }}
             onResetFilters={resetFilters}
             canManageContacts={canManageContacts}
+            canDeleteContacts={isAdmin}
             hektorUserEmail={contactHektorUserEmail}
             hektorUserId={contactHektorUserId}
+            hektorNegotiators={hektorNegotiators}
+            profileRole={profile?.role ?? null}
+            sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
+            onContactDeleted={handleOptimisticContactDeleted}
           />
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
@@ -14485,6 +14538,16 @@ function contactTransactionLabel(relation: AppContactRelation) {
 }
 
 function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: string | null, hektorUserId?: string | null): HektorContactIdentityInput {
+  const typologies = contactJsonList(contact.typologies_json).map(normalizeContactText)
+  const roles = contactJsonList(contact.relation_roles_json).map(normalizeContactText)
+  const allTags = [...typologies, ...roles]
+  const inferredKind = allTags.some((value) => value.includes('partenaire') || value.includes('notaire'))
+    ? 'partenaire'
+    : allTags.some((value) => value.includes('locataire'))
+      ? 'locataire'
+      : allTags.some((value) => value.includes('proprietaire') || value.includes('mandant'))
+        ? 'proprietaire'
+        : 'acquereur'
   return {
     civility: contact.civilite ?? '',
     lastName: contact.nom || contact.display_name || '',
@@ -14494,9 +14557,59 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
     phoneSecondary: contact.phone_secondary ?? '',
     postalCode: contact.code_postal ?? '',
     city: contact.ville ?? '',
+    contactKind: inferredKind,
+    personType: 'personne_seule',
+    sendRgpdEmail: true,
     hektorUserEmail: hektorUserEmail ?? contact.negociateur_email ?? null,
     hektorUserId: hektorUserId ?? null,
   }
+}
+
+const hektorContactKindOptions = [
+  { value: 'proprietaire', label: 'Propriétaire', detail: 'Contact vendeur/propriétaire' },
+  { value: 'acquereur', label: 'Acquéreur', detail: 'Contact recherche/acquisition' },
+  { value: 'locataire', label: 'Locataire', detail: 'Contact location' },
+  { value: 'partenaire', label: 'Partenaire', detail: 'Notaire, agent immobilier, autre tiers' },
+]
+
+const hektorPersonTypeOptions = [
+  { value: 'personne_seule', label: 'Personne seule' },
+  { value: 'couple', label: 'Couple' },
+  { value: 'personne_morale', label: 'Personne morale' },
+]
+
+const hektorContactSourceOptions = [
+  { value: '', label: 'Non défini' },
+  { value: '1', label: 'Mon site' },
+  { value: '2', label: 'Portails internet' },
+  { value: '3', label: 'Presse papier' },
+  { value: '4', label: 'Vitrine / Agence / Passage' },
+  { value: '5', label: 'Recommandations / Bouche à oreille' },
+  { value: '6', label: 'Autre' },
+  { value: '7', label: 'Récupération de données' },
+  { value: '15', label: 'Réseaux sociaux' },
+  { value: '16', label: 'Panneaux' },
+]
+
+const hektorContactCategoryOptions = [
+  { value: '', label: 'Non défini' },
+  { value: '2', label: 'Agent immobilier' },
+  { value: '1', label: 'Notaire' },
+  { value: '5', label: 'Autre' },
+]
+
+function findContactHektorOption(
+  options: HektorNegotiatorOption[],
+  params: { idUser?: string | null; email?: string | null },
+) {
+  const idUser = String(params.idUser ?? '').trim()
+  if (idUser) {
+    const byId = options.find((item) => item.idUser === idUser)
+    if (byId) return byId
+  }
+  const email = normalizeEmail(params.email)
+  if (email) return options.find((item) => normalizeEmail(item.email) === email) ?? null
+  return null
 }
 
 function HektorContactIdentityForm(props: {
@@ -14504,13 +14617,35 @@ function HektorContactIdentityForm(props: {
   contact?: AppContact | null
   hektorUserEmail?: string | null
   hektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   compact?: boolean
   onCancel?: () => void
   onJobCreated?: (job: ConsoleJob) => void
 }) {
+  const normalizedSessionEmail = normalizeEmail(props.sessionEmail)
+  const availableHektorNegotiators = useMemo(() => {
+    const options = props.hektorNegotiators ?? []
+    if (props.profileRole === 'commercial') {
+      return options.filter((item) => normalizeEmail(item.email) === normalizedSessionEmail)
+    }
+    return options
+  }, [normalizedSessionEmail, props.hektorNegotiators, props.profileRole])
+  const defaultHektorOption = useMemo(() => {
+    if (props.contact) {
+      return findContactHektorOption(availableHektorNegotiators, { email: props.contact.negociateur_email })
+        ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
+        ?? findContactHektorOption(availableHektorNegotiators, { email: props.profileRole === 'commercial' ? normalizedSessionEmail : null })
+        ?? null
+    }
+    return findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
+      ?? findContactHektorOption(availableHektorNegotiators, { email: props.profileRole === 'commercial' ? normalizedSessionEmail : null })
+      ?? null
+  }, [availableHektorNegotiators, normalizedSessionEmail, props.contact?.negociateur_email, props.hektorUserEmail, props.hektorUserId, props.profileRole])
   const initial = props.contact
     ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-    : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+    : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
   const [civility, setCivility] = useState(initial.civility ?? '')
   const [lastName, setLastName] = useState(initial.lastName ?? '')
   const [firstName, setFirstName] = useState(initial.firstName ?? '')
@@ -14520,15 +14655,29 @@ function HektorContactIdentityForm(props: {
   const [address, setAddress] = useState(initial.address ?? '')
   const [postalCode, setPostalCode] = useState(initial.postalCode ?? '')
   const [city, setCity] = useState(initial.city ?? '')
+  const [contactKind, setContactKind] = useState(initial.contactKind ?? 'acquereur')
+  const [personType, setPersonType] = useState(initial.personType ?? 'personne_seule')
+  const [sourceId, setSourceId] = useState(initial.sourceId ?? '')
+  const [categoryId, setCategoryId] = useState(initial.categoryId ?? '')
+  const [comments, setComments] = useState(initial.comments ?? '')
+  const [sendRgpdEmail, setSendRgpdEmail] = useState(initial.sendRgpdEmail !== false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [duplicateCandidates, setDuplicateCandidates] = useState<AppContact[]>([])
   const [duplicatesAccepted, setDuplicatesAccepted] = useState(false)
+  const [selectedHektorUserId, setSelectedHektorUserId] = useState(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
+  const selectedHektorUser = useMemo(() => {
+    return findContactHektorOption(availableHektorNegotiators, { idUser: selectedHektorUserId })
+      ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
+      ?? null
+  }, [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
+  const selectedHektorEmail = selectedHektorUser?.email ?? props.contact?.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
+  const selectedHektorId = selectedHektorUser?.idUser ?? (selectedHektorUserId.trim() || props.hektorUserId || null)
 
   useEffect(() => {
     const next = props.contact
       ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-      : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+      : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
     setCivility(next.civility ?? '')
     setLastName(next.lastName ?? '')
     setFirstName(next.firstName ?? '')
@@ -14538,10 +14687,17 @@ function HektorContactIdentityForm(props: {
     setAddress(next.address ?? '')
     setPostalCode(next.postalCode ?? '')
     setCity(next.city ?? '')
+    setContactKind(next.contactKind ?? 'acquereur')
+    setPersonType(next.personType ?? 'personne_seule')
+    setSourceId(next.sourceId ?? '')
+    setCategoryId(next.categoryId ?? '')
+    setComments(next.comments ?? '')
+    setSendRgpdEmail(next.sendRgpdEmail !== false)
     setError(null)
     setDuplicateCandidates([])
     setDuplicatesAccepted(false)
-  }, [props.contact?.hektor_contact_id, props.hektorUserEmail, props.hektorUserId, props.mode])
+    setSelectedHektorUserId(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
+  }, [defaultHektorOption?.idUser, props.contact?.hektor_contact_id, props.hektorUserEmail, props.hektorUserId, props.mode])
 
   const buildInput = (): HektorContactIdentityInput => ({
     civility,
@@ -14553,8 +14709,14 @@ function HektorContactIdentityForm(props: {
     address,
     postalCode,
     city,
-    hektorUserEmail: props.hektorUserEmail ?? props.contact?.negociateur_email ?? null,
-    hektorUserId: props.hektorUserId ?? null,
+    contactKind: props.mode === 'create' ? contactKind : undefined,
+    personType: props.mode === 'create' ? personType : undefined,
+    sourceId,
+    categoryId,
+    comments,
+    sendRgpdEmail,
+    hektorUserEmail: selectedHektorEmail,
+    hektorUserId: selectedHektorId,
   })
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -14566,6 +14728,14 @@ function HektorContactIdentityForm(props: {
     }
     if (props.mode === 'create' && !email.trim() && !phone.trim() && !phoneSecondary.trim()) {
       setError('Email ou telephone requis pour creer un contact Hektor.')
+      return
+    }
+    if (availableHektorNegotiators.length > 0 && !selectedHektorUser) {
+      setError('Choisis le negociateur Hektor qui portera cette action contact.')
+      return
+    }
+    if (!selectedHektorId && !selectedHektorEmail) {
+      setError('Choisis le compte Hektor qui portera cette action contact.')
       return
     }
     setPending(true)
@@ -14594,6 +14764,12 @@ function HektorContactIdentityForm(props: {
         setAddress('')
         setPostalCode('')
         setCity('')
+        setContactKind('acquereur')
+        setPersonType('personne_seule')
+        setSourceId('')
+        setCategoryId('')
+        setComments('')
+        setSendRgpdEmail(true)
       }
       props.onCancel?.()
     } catch (submitError) {
@@ -14609,8 +14785,31 @@ function HektorContactIdentityForm(props: {
         <span className="hektor-inline-icon" aria-hidden="true">{props.mode === 'create' ? '+' : 'ID'}</span>
         <div>
           <strong>{props.mode === 'create' ? 'Nouveau contact Hektor' : 'Modifier le contact Hektor'}</strong>
-          <small>{props.mode === 'create' ? 'Creation globale, puis resynchronisation ciblee.' : 'Modification de la fiche Hektor, sans changer les relations annonce.'}</small>
+          <small>{props.mode === 'create' ? 'Creation globale, contexte Hektor controle, puis resynchronisation ciblee.' : 'Modification de la fiche Hektor avec le contexte negociateur cible.'}</small>
         </div>
+      </div>
+      <div className="contact-editor-context">
+        <label>
+          <span>Compte Hektor</span>
+          {availableHektorNegotiators.length > 0 ? (
+            <select
+              value={selectedHektorUserId}
+              onChange={(event) => setSelectedHektorUserId(event.target.value)}
+              disabled={props.profileRole === 'commercial' && availableHektorNegotiators.length <= 1}
+              required
+            >
+              <option value="">{props.profileRole === 'commercial' ? 'Acces personnel' : 'Choisir le negociateur'}</option>
+              {availableHektorNegotiators.map((negotiator) => (
+                <option key={`contact-hektor-user-${negotiator.idUser}`} value={negotiator.idUser}>
+                  {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}{negotiator.email ? ` - ${negotiator.email}` : ''}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input value={selectedHektorEmail || selectedHektorId || 'Contexte Hektor non detecte'} disabled />
+          )}
+          <small>{props.mode === 'create' ? 'Le contact sera cree sous ce compte Hektor.' : 'Ce compte sera utilise pour enregistrer la modification dans Hektor.'}</small>
+        </label>
       </div>
       {duplicateCandidates.length > 0 ? (
         <div className="contact-duplicate-warning">
@@ -14624,6 +14823,27 @@ function HektorContactIdentityForm(props: {
         </div>
       ) : null}
       <div className="hektor-inline-grid contact-editor-grid">
+        {props.mode === 'create' ? (
+          <>
+            <label>
+              <span>Type Hektor</span>
+              <select value={contactKind} onChange={(event) => setContactKind(event.target.value)} required>
+                {hektorContactKindOptions.map((option) => (
+                  <option key={`contact-kind-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <small>{hektorContactKindOptions.find((option) => option.value === contactKind)?.detail}</small>
+            </label>
+            <label>
+              <span>Structure</span>
+              <select value={personType} onChange={(event) => setPersonType(event.target.value)} required>
+                {hektorPersonTypeOptions.map((option) => (
+                  <option key={`person-type-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
         <label className="is-small">
           <span>Civilite</span>
           <select value={civility} onChange={(event) => setCivility(event.target.value)}>
@@ -14665,6 +14885,30 @@ function HektorContactIdentityForm(props: {
           <span>Ville</span>
           <input value={city} onChange={(event) => setCity(event.target.value)} />
         </label>
+        <label>
+          <span>Source</span>
+          <select value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
+            {hektorContactSourceOptions.map((option) => (
+              <option key={`contact-source-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Categorie</span>
+          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+            {hektorContactCategoryOptions.map((option) => (
+              <option key={`contact-category-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="is-wide contact-editor-toggle">
+          <input type="checkbox" checked={sendRgpdEmail} onChange={(event) => setSendRgpdEmail(event.target.checked)} />
+          <span>Envoyer l'email d'activation Espace personnel/RGPD</span>
+        </label>
+        <label className="is-wide">
+          <span>Note Hektor</span>
+          <textarea value={comments} onChange={(event) => setComments(event.target.value)} rows={3} />
+        </label>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
       <div className="hektor-inline-actions">
@@ -14680,18 +14924,65 @@ function ContactDetailPopup(props: {
   relations: AppContactRelation[]
   searches: AppContactSearch[]
   canManageContacts?: boolean
+  canDeleteContacts?: boolean
   hektorUserEmail?: string | null
   hektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
+  onContactDeleted?: (contact: AppContact) => void
   onClose: () => void
   onOpenDossier: (id: number) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletePending, setDeletePending] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
   const selectedArchivedSearches = props.searches.filter((search) => !contactBool(search.is_active))
   const duplicateCount = props.contact.duplicate_group_count ?? 0
+  const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
+
+  useEffect(() => {
+    setEditing(false)
+    setDeleteOpen(false)
+    setDeleteReason('')
+    setDeleteConfirmText('')
+    setDeleteError(null)
+    setDeletePending(false)
+  }, [props.contact.hektor_contact_id])
+
+  const handleDeleteContact = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!props.canDeleteContacts) return
+    if (deleteConfirmText.trim() !== expectedDeleteConfirm) {
+      setDeleteError(`Confirmation incorrecte. Tape exactement : ${expectedDeleteConfirm}`)
+      return
+    }
+    setDeletePending(true)
+    setDeleteError(null)
+    try {
+      const job = await createDeleteHektorContactJob({
+        contactId: props.contact.hektor_contact_id,
+        reason: deleteReason,
+        confirmText: deleteConfirmText,
+        priority: 6,
+      })
+      props.onJobCreated?.(job)
+      props.onContactDeleted?.(props.contact)
+      props.onClose()
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Suppression contact impossible.')
+    } finally {
+      setDeletePending(false)
+    }
+  }
+
   return (
     <div className="modal-overlay contact-detail-overlay" onClick={props.onClose}>
       <section className="modal-panel contact-detail-modal" onClick={(event) => event.stopPropagation()}>
@@ -14708,7 +14999,9 @@ function ContactDetailPopup(props: {
           <div className="contact-action-row">
             {props.contact.phone_primary ? <a className="ghost-button" href={`tel:${props.contact.phone_primary}`}>Appeler</a> : null}
             {props.contact.email ? <a className="ghost-button" href={`mailto:${props.contact.email}`}>Email</a> : null}
+            <button className="ghost-button" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>Hektor</button>
             {props.canManageContacts ? <button className="ghost-button" type="button" onClick={() => setEditing((value) => !value)}>{editing ? 'Fermer edition' : 'Modifier'}</button> : null}
+            {props.canDeleteContacts ? <button className="ghost-button button-danger" type="button" onClick={() => setDeleteOpen((value) => !value)}>{deleteOpen ? 'Annuler suppression' : 'Supprimer'}</button> : null}
           </div>
           <div className="contact-detail-hero-stats" aria-label="Synthese contact">
             <span className="is-relations"><strong>{props.relations.length}</strong><small>relation(s) annonce</small></span>
@@ -14724,10 +15017,43 @@ function ContactDetailPopup(props: {
               contact={props.contact}
               hektorUserEmail={props.hektorUserEmail}
               hektorUserId={props.hektorUserId}
+              hektorNegotiators={props.hektorNegotiators}
+              profileRole={props.profileRole}
+              sessionEmail={props.sessionEmail}
               onCancel={() => setEditing(false)}
               onJobCreated={props.onJobCreated}
             />
           </div>
+        ) : null}
+
+        {deleteOpen && props.canDeleteContacts ? (
+          <form className="contact-delete-panel delete-annonce-form" onSubmit={handleDeleteContact}>
+            <section className="delete-annonce-warning">
+              <strong>{props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`}</strong>
+              <span>Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.</span>
+            </section>
+            <label className="filter-field">
+              <span>Raison interne</span>
+              <textarea className="inline-textarea" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} placeholder="Doublon, test, erreur de creation..." />
+            </label>
+            <label className="filter-field">
+              <span>Confirmation</span>
+              <input
+                value={deleteConfirmText}
+                onChange={(event) => setDeleteConfirmText(event.target.value)}
+                placeholder={`Tape : ${expectedDeleteConfirm}`}
+                autoComplete="off"
+                required
+              />
+            </label>
+            {deleteError ? <p className="form-error">{deleteError}</p> : null}
+            <div className="modal-actions">
+              <button className="ghost-button button-subtle" type="button" onClick={() => setDeleteOpen(false)} disabled={deletePending}>Annuler</button>
+              <button className="ghost-button button-danger" type="submit" disabled={deletePending || deleteConfirmText.trim() !== expectedDeleteConfirm}>
+                {deletePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+              </button>
+            </div>
+          </form>
         ) : null}
 
         <div className="contact-detail-modal-grid">
@@ -14881,9 +15207,14 @@ function ContactsScreen(props: {
   onOpenDossier: (id: number) => void
   onResetFilters: () => void
   canManageContacts?: boolean
+  canDeleteContacts?: boolean
   hektorUserEmail?: string | null
   hektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
+  onContactDeleted?: (contact: AppContact) => void
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const [detailOpen, setDetailOpen] = useState(false)
@@ -14922,6 +15253,9 @@ function ContactsScreen(props: {
               mode="create"
               hektorUserEmail={props.hektorUserEmail}
               hektorUserId={props.hektorUserId}
+              hektorNegotiators={props.hektorNegotiators}
+              profileRole={props.profileRole}
+              sessionEmail={props.sessionEmail}
               onCancel={() => setCreateOpen(false)}
               onJobCreated={props.onJobCreated}
             />
@@ -15002,9 +15336,14 @@ function ContactsScreen(props: {
           relations={props.selectedRelations}
           searches={props.selectedSearches}
           canManageContacts={props.canManageContacts}
+          canDeleteContacts={props.canDeleteContacts}
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
+          hektorNegotiators={props.hektorNegotiators}
+          profileRole={props.profileRole}
+          sessionEmail={props.sessionEmail}
           onJobCreated={props.onJobCreated}
+          onContactDeleted={props.onContactDeleted}
           onClose={() => setDetailOpen(false)}
           onOpenDossier={props.onOpenDossier}
         />
@@ -15027,9 +15366,14 @@ function MobileContactCards(props: {
   onNextContact: () => void
   onOpenDossier: (id: number) => void
   canManageContacts?: boolean
+  canDeleteContacts?: boolean
   hektorUserEmail?: string | null
   hektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
+  onContactDeleted?: (contact: AppContact) => void
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -15052,6 +15396,9 @@ function MobileContactCards(props: {
                 compact
                 hektorUserEmail={props.hektorUserEmail}
                 hektorUserId={props.hektorUserId}
+                hektorNegotiators={props.hektorNegotiators}
+                profileRole={props.profileRole}
+                sessionEmail={props.sessionEmail}
                 onCancel={() => setCreateOpen(false)}
                 onJobCreated={props.onJobCreated}
               />
@@ -15081,6 +15428,9 @@ function MobileContactCards(props: {
           compact
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
+          hektorNegotiators={props.hektorNegotiators}
+          profileRole={props.profileRole}
+          sessionEmail={props.sessionEmail}
           onCancel={() => setCreateOpen(false)}
           onJobCreated={props.onJobCreated}
         />
@@ -15122,9 +15472,14 @@ function MobileContactCards(props: {
           relations={props.selectedRelations}
           searches={props.selectedSearches}
           canManageContacts={props.canManageContacts}
+          canDeleteContacts={props.canDeleteContacts}
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
+          hektorNegotiators={props.hektorNegotiators}
+          profileRole={props.profileRole}
+          sessionEmail={props.sessionEmail}
           onJobCreated={props.onJobCreated}
+          onContactDeleted={props.onContactDeleted}
           onClose={() => setDetailOpen(false)}
           onOpenDossier={props.onOpenDossier}
         />

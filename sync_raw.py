@@ -105,7 +105,7 @@ GENERIC_RESOURCE_CONFIG: Dict[str, Dict[str, Any]] = {
         "path": "/Api/Vente/ListVentes/",
         "object_type": "vente",
         "paged": True,
-        "extra_params": {"dateStart": "2020-01-01", "dateEnd": "2030-12-31"},
+        "extra_params": {"dateStart": "2010-01-01", "dateEnd": "2030-12-31"},
     },
     "broadcasts": {
         "endpoint_name": "list_broadcasts",
@@ -1030,7 +1030,7 @@ def configure_generic_resources(args: argparse.Namespace, bootstrap: bool) -> Di
     configs["compromis"]["extra_params"]["withCompromisStatus"] = bool_string(args.with_compromis_status)
     configs["mandats"]["extra_params"]["beginDate"] = args.mandat_date_start or "2020-01-01"
     configs["mandats"]["extra_params"]["endDate"] = args.mandat_date_end or "2030-12-31"
-    configs["ventes"]["extra_params"]["dateStart"] = args.vente_date_start or "2020-01-01"
+    configs["ventes"]["extra_params"]["dateStart"] = args.vente_date_start or "2010-01-01"
     configs["ventes"]["extra_params"]["dateEnd"] = args.vente_date_end or "2030-12-31"
 
     for resource_name, config in configs.items():

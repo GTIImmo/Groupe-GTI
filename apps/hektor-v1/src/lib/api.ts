@@ -4351,6 +4351,12 @@ export type HektorContactIdentityInput = {
   address?: string | null
   postalCode?: string | null
   city?: string | null
+  contactKind?: string | null
+  personType?: string | null
+  sourceId?: string | null
+  categoryId?: string | null
+  comments?: string | null
+  sendRgpdEmail?: boolean | null
   hektorUserEmail?: string | null
   hektorUserId?: string | null
 }
@@ -4371,6 +4377,12 @@ function hContactPayload(contact: HektorContactIdentityInput) {
     address: cleanOptionalText(contact.address),
     postal_code: cleanOptionalText(contact.postalCode),
     city: cleanOptionalText(contact.city),
+    contact_kind: cleanOptionalText(contact.contactKind) ?? 'acquereur',
+    person_type: cleanOptionalText(contact.personType) ?? 'personne_seule',
+    id_source: cleanOptionalText(contact.sourceId),
+    category_id: cleanOptionalText(contact.categoryId),
+    comments: cleanOptionalText(contact.comments),
+    send_rgpd_email: contact.sendRgpdEmail === false ? false : true,
     hektor_user_email: cleanOptionalText(contact.hektorUserEmail),
     hektor_user_id: cleanOptionalText(contact.hektorUserId),
     target_hektor_user_id: cleanOptionalText(contact.hektorUserId),
@@ -4386,6 +4398,7 @@ export async function createHektorContactJob(input: {
   const payload = hContactPayload(input.contact)
   if (!payload.last_name) throw new Error('Nom contact requis')
   if (!payload.email && !payload.phone && !payload.phone_secondary) throw new Error('Email ou telephone requis')
+  if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error('Compte Hektor requis pour creer le contact')
   const { data, error } = await supabase.rpc('app_console_create_contact_job', {
     contact_payload: payload,
     job_priority: input.priority ?? 18,
@@ -4409,12 +4422,33 @@ export async function createUpdateHektorContactJob(input: {
     contact_id: cleanContactId,
   }
   if (!payload.last_name) throw new Error('Nom contact requis')
+  if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error('Compte Hektor requis pour modifier le contact')
   const { data, error } = await supabase.rpc('app_console_create_update_contact_job', {
     target_contact_id: cleanContactId,
     contact_payload: payload,
     job_priority: input.priority ?? 16,
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact update job')
+  return data as ConsoleJob
+}
+
+export async function createDeleteHektorContactJob(input: {
+  contactId: string
+  reason?: string
+  confirmText: string
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const { data, error } = await supabase.rpc('app_console_create_delete_contact_job', {
+    target_contact_id: cleanContactId,
+    delete_reason: input.reason?.trim() || null,
+    confirm_text: input.confirmText.trim(),
+    job_priority: input.priority ?? 6,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact delete job')
   return data as ConsoleJob
 }
 
@@ -4870,6 +4904,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'update_hektor_annonce_fields',
   'create_hektor_contact',
   'update_hektor_contact',
+  'delete_hektor_contact',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',
   'create_hektor_mandat_auto_number',
