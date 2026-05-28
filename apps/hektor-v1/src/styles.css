@@ -25247,3 +25247,376 @@ body {
     padding: 12px !important;
   }
 }
+
+/* Contacts directory: richer but controlled color system. */
+.contacts-workspace-full,
+.contact-detail-modal,
+.mobile-card-list {
+  --contact-buyer: #c5005f;
+  --contact-buyer-soft: rgba(197, 0, 95, 0.075);
+  --contact-owner: #2f756f;
+  --contact-owner-soft: rgba(47, 117, 111, 0.085);
+  --contact-mandate: #b47a24;
+  --contact-mandate-soft: rgba(180, 122, 36, 0.105);
+  --contact-notary: #7161a8;
+  --contact-notary-soft: rgba(113, 97, 168, 0.09);
+  --contact-search: #276f91;
+  --contact-search-soft: rgba(39, 111, 145, 0.085);
+  --contact-mixed: #8c3b64;
+  --contact-mixed-soft: rgba(140, 59, 100, 0.09);
+  --contact-neutral: #6f7777;
+  --contact-neutral-soft: rgba(111, 119, 119, 0.08);
+}
+
+.contacts-workspace-full .contacts-list-panel {
+  background:
+    linear-gradient(180deg, rgba(197, 0, 95, 0.035) 0%, rgba(255, 255, 255, 0) 150px),
+    #ffffff !important;
+}
+
+.contacts-workspace-full .contacts-directory-toolbar {
+  background:
+    linear-gradient(115deg, rgba(197, 0, 95, 0.09) 0%, rgba(197, 0, 95, 0) 28%),
+    linear-gradient(135deg, rgba(47, 117, 111, 0.075) 38%, rgba(180, 122, 36, 0.08) 100%),
+    linear-gradient(180deg, #ffffff 0%, #fafafa 100%) !important;
+}
+
+.contacts-workspace-full .contacts-directory-toolbar::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 18px !important;
+  right: 18px !important;
+  bottom: 0 !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, var(--contact-buyer), var(--contact-owner), var(--contact-mandate), var(--contact-notary), var(--contact-search)) !important;
+  opacity: 0.72 !important;
+}
+
+.contacts-directory-icon {
+  background:
+    linear-gradient(135deg, var(--gti-final-ink, #222323) 0%, #303737 46%, var(--contact-buyer) 150%) !important;
+}
+
+.contacts-directory-metrics span {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.contacts-directory-metrics span::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: auto 10px 7px 10px !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: currentColor !important;
+  opacity: 0.2 !important;
+}
+
+.contacts-directory-metrics span:nth-child(1) {
+  border-left-color: var(--contact-owner) !important;
+  background: linear-gradient(135deg, var(--contact-owner-soft), #ffffff 54%) !important;
+}
+
+.contacts-directory-metrics span:nth-child(2) {
+  border-left-color: var(--contact-search) !important;
+  background: linear-gradient(135deg, var(--contact-search-soft), #ffffff 54%) !important;
+}
+
+.contacts-directory-metrics span:nth-child(3) {
+  border-left-color: var(--contact-mandate) !important;
+  background: linear-gradient(135deg, var(--contact-mandate-soft), #ffffff 54%) !important;
+}
+
+.contacts-directory-metrics span:nth-child(4) {
+  border-left-color: var(--contact-buyer) !important;
+  background: linear-gradient(135deg, var(--contact-buyer-soft), #ffffff 54%) !important;
+}
+
+.contacts-table-wrap {
+  background:
+    linear-gradient(180deg, rgba(34, 35, 35, 0.035) 0 44px, #ffffff 44px) !important;
+}
+
+.contacts-table-wrap th {
+  background:
+    linear-gradient(180deg, #f8f8f8 0%, #f1f2f2 100%) !important;
+}
+
+.contacts-table-wrap tbody tr {
+  --contact-row-accent: var(--contact-neutral);
+  --contact-row-soft: var(--contact-neutral-soft);
+}
+
+.contacts-table-wrap tbody tr.is-buyer {
+  --contact-row-accent: var(--contact-buyer);
+  --contact-row-soft: var(--contact-buyer-soft);
+}
+
+.contacts-table-wrap tbody tr.is-owner {
+  --contact-row-accent: var(--contact-owner);
+  --contact-row-soft: var(--contact-owner-soft);
+}
+
+.contacts-table-wrap tbody tr.is-mandate {
+  --contact-row-accent: var(--contact-mandate);
+  --contact-row-soft: var(--contact-mandate-soft);
+}
+
+.contacts-table-wrap tbody tr.is-notary {
+  --contact-row-accent: var(--contact-notary);
+  --contact-row-soft: var(--contact-notary-soft);
+}
+
+.contacts-table-wrap tbody tr.is-search {
+  --contact-row-accent: var(--contact-search);
+  --contact-row-soft: var(--contact-search-soft);
+}
+
+.contacts-table-wrap tbody tr.is-mixed {
+  --contact-row-accent: var(--contact-mixed);
+  --contact-row-soft: var(--contact-mixed-soft);
+}
+
+.contacts-table-wrap tbody tr td:first-child,
+.contacts-table-wrap tbody tr.is-buyer td:first-child,
+.contacts-table-wrap tbody tr.is-owner td:first-child,
+.contacts-table-wrap tbody tr.is-mandate td:first-child,
+.contacts-table-wrap tbody tr.is-notary td:first-child,
+.contacts-table-wrap tbody tr.is-search td:first-child,
+.contacts-table-wrap tbody tr.is-mixed td:first-child {
+  box-shadow: inset 5px 0 0 var(--contact-row-accent) !important;
+}
+
+.contacts-table-wrap tbody tr:hover td {
+  background:
+    linear-gradient(90deg, var(--contact-row-soft) 0%, rgba(255, 255, 255, 0) 40%),
+    #ffffff !important;
+}
+
+.contacts-table-wrap tbody tr.is-selected td {
+  background:
+    linear-gradient(90deg, var(--contact-row-soft) 0%, rgba(255, 255, 255, 0) 48%),
+    linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%) !important;
+}
+
+.contact-type-mark {
+  --contact-mark-accent: var(--contact-neutral);
+  --contact-mark-soft: var(--contact-neutral-soft);
+  border-color: rgba(34, 35, 35, 0.12) !important;
+  background:
+    linear-gradient(180deg, var(--contact-mark-soft) 0%, rgba(255, 255, 255, 0) 58%),
+    #ffffff !important;
+  color: var(--contact-mark-accent) !important;
+}
+
+.contact-type-mark::before {
+  background: linear-gradient(90deg, var(--contact-mark-accent), rgba(255, 255, 255, 0.28)) !important;
+}
+
+.contact-type-mark.is-buyer {
+  --contact-mark-accent: var(--contact-buyer);
+  --contact-mark-soft: var(--contact-buyer-soft);
+}
+
+.contact-type-mark.is-owner {
+  --contact-mark-accent: var(--contact-owner);
+  --contact-mark-soft: var(--contact-owner-soft);
+}
+
+.contact-type-mark.is-mandate {
+  --contact-mark-accent: var(--contact-mandate);
+  --contact-mark-soft: var(--contact-mandate-soft);
+}
+
+.contact-type-mark.is-notary {
+  --contact-mark-accent: var(--contact-notary);
+  --contact-mark-soft: var(--contact-notary-soft);
+}
+
+.contact-type-mark.is-search {
+  --contact-mark-accent: var(--contact-search);
+  --contact-mark-soft: var(--contact-search-soft);
+}
+
+.contact-type-mark.is-mixed {
+  --contact-mark-accent: var(--contact-mixed);
+  --contact-mark-soft: var(--contact-mixed-soft);
+}
+
+.contact-role-chip.is-buyer,
+.contact-detail-modal .tag-row .status-pill.status-pill-state-offer,
+.mobile-list-card .status-pill.status-pill-state-offer {
+  border-color: rgba(197, 0, 95, 0.24) !important;
+  background: var(--contact-buyer-soft) !important;
+  color: var(--contact-buyer) !important;
+}
+
+.contact-role-chip.is-owner,
+.contact-detail-modal .tag-row .status-pill.status-pill-state-active,
+.mobile-list-card .status-pill.status-pill-state-active {
+  border-color: rgba(47, 117, 111, 0.25) !important;
+  background: var(--contact-owner-soft) !important;
+  color: var(--contact-owner) !important;
+}
+
+.contact-role-chip.is-mandate {
+  border-color: rgba(180, 122, 36, 0.28) !important;
+  background: var(--contact-mandate-soft) !important;
+  color: #8e5d18 !important;
+}
+
+.contact-role-chip.is-notary {
+  border-color: rgba(113, 97, 168, 0.26) !important;
+  background: var(--contact-notary-soft) !important;
+  color: var(--contact-notary) !important;
+}
+
+.contact-role-chip.is-search {
+  border-color: rgba(39, 111, 145, 0.25) !important;
+  background: var(--contact-search-soft) !important;
+  color: var(--contact-search) !important;
+}
+
+.contact-activity-cell .is-important,
+.contact-search-overview > div:first-child strong {
+  color: var(--contact-search) !important;
+}
+
+.contact-activity-cell .is-important,
+.contact-search-overview > div:first-child,
+.contact-search-summary {
+  border-color: rgba(39, 111, 145, 0.2) !important;
+  background: var(--contact-search-soft) !important;
+}
+
+.contact-detail-modal::before {
+  background: linear-gradient(90deg, var(--contact-buyer), var(--contact-owner), var(--contact-mandate), var(--contact-notary), var(--contact-search)) !important;
+}
+
+.contact-detail-modal-head {
+  background:
+    linear-gradient(120deg, rgba(197, 0, 95, 0.07) 0%, rgba(255, 255, 255, 0) 30%),
+    linear-gradient(135deg, rgba(47, 117, 111, 0.055) 48%, rgba(180, 122, 36, 0.065) 100%),
+    #ffffff !important;
+}
+
+.contact-detail-modal-grid {
+  background:
+    radial-gradient(circle at top left, rgba(197, 0, 95, 0.06), transparent 300px),
+    linear-gradient(145deg, rgba(39, 111, 145, 0.055) 0%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(180deg, var(--gti-final-grey-soft, #f1f2f2) 0%, #f8f8f8 100%) !important;
+}
+
+.contact-detail-modal-grid > .detail-card {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.contact-detail-modal-grid > .detail-card::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 0 auto 0 !important;
+  height: 4px !important;
+  background: var(--detail-card-accent, var(--contact-buyer)) !important;
+}
+
+.contact-detail-main-card {
+  --detail-card-accent: var(--contact-owner);
+  background:
+    linear-gradient(135deg, var(--contact-owner-soft), rgba(255, 255, 255, 0) 42%),
+    #ffffff !important;
+}
+
+.contact-detail-control-card {
+  --detail-card-accent: var(--contact-mandate);
+  background:
+    linear-gradient(135deg, var(--contact-mandate-soft), rgba(255, 255, 255, 0) 42%),
+    #ffffff !important;
+}
+
+.contact-search-detail {
+  --detail-card-accent: var(--contact-search);
+  background:
+    linear-gradient(135deg, var(--contact-search-soft), rgba(255, 255, 255, 0) 42%),
+    #ffffff !important;
+}
+
+.contact-detail-relations-card {
+  --detail-card-accent: var(--contact-buyer);
+  background:
+    linear-gradient(135deg, var(--contact-buyer-soft), rgba(255, 255, 255, 0) 42%),
+    #ffffff !important;
+}
+
+.contact-profile-facts > div:nth-child(1) { box-shadow: inset 4px 0 0 var(--contact-owner) !important; }
+.contact-profile-facts > div:nth-child(2) { box-shadow: inset 4px 0 0 var(--contact-buyer) !important; }
+.contact-profile-facts > div:nth-child(3) { box-shadow: inset 4px 0 0 var(--contact-search) !important; }
+.contact-profile-facts > div:nth-child(4) { box-shadow: inset 4px 0 0 var(--contact-mandate) !important; }
+.contact-profile-facts > div:nth-child(5) { box-shadow: inset 4px 0 0 var(--contact-notary) !important; }
+.contact-profile-facts > div:nth-child(6) { box-shadow: inset 4px 0 0 var(--contact-neutral) !important; }
+
+.contact-search-overview > div:nth-child(1) { box-shadow: inset 4px 0 0 var(--contact-search) !important; }
+.contact-search-overview > div:nth-child(2) { box-shadow: inset 4px 0 0 var(--contact-neutral) !important; }
+.contact-search-overview > div:nth-child(3) { box-shadow: inset 4px 0 0 var(--contact-mandate) !important; }
+
+.contact-search-item.is-active {
+  border-color: rgba(39, 111, 145, 0.24) !important;
+  background:
+    linear-gradient(90deg, var(--contact-search-soft) 0%, #ffffff 45%) !important;
+}
+
+.contact-search-item.is-archived {
+  border-color: rgba(111, 119, 119, 0.16) !important;
+  background:
+    linear-gradient(90deg, var(--contact-neutral-soft) 0%, #ffffff 45%) !important;
+}
+
+.contact-relation-list button {
+  background:
+    linear-gradient(90deg, var(--contact-buyer-soft) 0%, rgba(255, 255, 255, 0) 36%),
+    #ffffff !important;
+}
+
+.contact-relation-list button:hover:not(:disabled) {
+  border-color: rgba(197, 0, 95, 0.28) !important;
+  background:
+    linear-gradient(90deg, rgba(197, 0, 95, 0.105) 0%, rgba(255, 255, 255, 0) 42%),
+    #ffffff !important;
+}
+
+.mobile-list-card {
+  background:
+    linear-gradient(120deg, rgba(197, 0, 95, 0.045) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
+
+.mobile-list-card.is-owner {
+  background:
+    linear-gradient(120deg, var(--contact-owner-soft) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
+
+.mobile-list-card.is-mandate {
+  background:
+    linear-gradient(120deg, var(--contact-mandate-soft) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
+
+.mobile-list-card.is-search {
+  background:
+    linear-gradient(120deg, var(--contact-search-soft) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
+
+.mobile-list-card.is-notary {
+  background:
+    linear-gradient(120deg, var(--contact-notary-soft) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}
+
+.mobile-list-card.is-mixed {
+  background:
+    linear-gradient(120deg, var(--contact-mixed-soft) 0%, rgba(255, 255, 255, 0) 34%),
+    #ffffff !important;
+}

@@ -14739,29 +14739,32 @@ function MobileContactCards(props: {
         </div>
         <span>{props.contacts.length} / {props.total}</span>
       </div>
-      {props.contacts.map((contact) => (
-        <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className={`mobile-list-card ${detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id ? 'is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            openContactDetail(contact.hektor_contact_id)
-          }
-        }}>
-          <div className="mobile-card-top mobile-contact-card-top">
-            <ContactTypeMark contact={contact} compact />
-            <div className="mobile-list-card-main">
-              <span className="mobile-card-meta">ID {contact.hektor_contact_id}</span>
-              <strong>{contact.display_name}</strong>
-              <span className="mobile-card-subline">{contact.email || contact.phone_primary || [contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span>
+      {props.contacts.map((contact) => {
+        const tone = contactToneFromRoles(contactJsonList(contact.relation_roles_json), contact)
+        return (
+          <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className={`mobile-list-card is-${tone} ${detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id ? 'is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              openContactDetail(contact.hektor_contact_id)
+            }
+          }}>
+            <div className="mobile-card-top mobile-contact-card-top">
+              <ContactTypeMark contact={contact} compact />
+              <div className="mobile-list-card-main">
+                <span className="mobile-card-meta">ID {contact.hektor_contact_id}</span>
+                <strong>{contact.display_name}</strong>
+                <span className="mobile-card-subline">{contact.email || contact.phone_primary || [contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span>
+              </div>
             </div>
-          </div>
-          <div className="mobile-status-row">
-            <StatusPill value={contactArchiveLabel(contact)} />
-            {contact.active_search_count ? <StatusPill value={`${contact.active_search_count} recherche(s)`} /> : null}
-            <StatusPill value={contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
-            <span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span>
-          </div>
-        </article>
-      ))}
+            <div className="mobile-status-row">
+              <StatusPill value={contactArchiveLabel(contact)} />
+              {contact.active_search_count ? <StatusPill value={`${contact.active_search_count} recherche(s)`} /> : null}
+              <StatusPill value={contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
+              <span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span>
+            </div>
+          </article>
+        )
+      })}
       <div className="mobile-contact-pager">
         <button type="button" onClick={props.onPrevContact} disabled={props.page <= 1}>Prec</button>
         <span>Page {props.page} / {props.totalPages}</span>
