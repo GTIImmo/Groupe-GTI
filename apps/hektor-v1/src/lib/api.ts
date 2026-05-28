@@ -1435,7 +1435,7 @@ export async function loadContactsPage({
 
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const countMode: 'estimated' = 'estimated'
+  const countMode: 'exact' = 'exact'
   const { data, error, count } = await applyContactFiltersToQuery(
     supabase
       .from(contactsCurrentView)
@@ -1460,7 +1460,7 @@ export async function loadContactsPage({
 async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
   if (!hasSupabaseEnv || !supabase) return 0
   let query = applyContactFiltersToQuery(
-    supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'estimated', head: true }),
+    supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'exact', head: true }),
     { ...filters, ...patch },
   )
   if (extra) query = extra(query)
