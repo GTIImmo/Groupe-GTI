@@ -78,11 +78,13 @@ Flux contacts globaux :
 
 1. L'app cree `create_hektor_contact` ou `update_hektor_contact` avec un compte Hektor cible obligatoire.
 2. Supabase controle le droit app (`admin`, `manager`, `commercial`) et refuse un job sans contexte negociateur.
-3. En creation, le formulaire app transmet la typologie Hektor minimale : qualification (`proprietaire`, `acquereur`, `locataire`, `partenaire`), structure (`personne_seule`, `couple`, `personne_morale`), source, categorie, note et option RGPD.
-4. En modification, le formulaire standard Hektor verifie par Playwright expose l'identite, les coordonnees, la source, la categorie et la note, mais pas la qualification/statut ; l'app ne modifie donc pas ces deux champs par ce flux.
-5. Le worker `actions` relit le contexte contact/dossier si besoin, mappe en creation ces valeurs vers les codes Console Hektor (`qualification` 1/2/3/4 et `statut` 1/2/3), puis ecrit dans Hektor avec le contexte negociateur cible.
-6. Le worker cree un job `refresh_console_contact_data` pour relire seulement le `ContactById` concerne.
-7. Le worker `sync_light` normalise localement, reconstruit la couche contacts, puis pousse la projection legere Supabase.
+3. En creation, le formulaire app transmet la typologie Hektor minimale : qualification (`proprietaire`, `acquereur`, `locataire`, `partenaire`), structure (`personne_seule`, `couple`, `personne_morale`), source, categorie, note, option RGPD, naissance/statut matrimonial si renseignes.
+4. En modification, le formulaire standard Hektor verifie par Playwright expose l'identite, les coordonnees, la source, la categorie, la note, `dateNaissance`, `lieuNaissance` et `marital_status`, mais pas la qualification/statut ; l'app ne modifie donc pas ces deux champs par ce flux.
+5. Les automatismes CRM `Mail nouveau mandat`, `Mail echeance mandat` et `Message anniversaire client` ne sont pas des champs XMLRPC d'identite. Leur endpoint exact est GraphQL `POST /ws/GraphQL_Web` avec les mutations `ToggleMandateSummaryConfiguration`, `ToggleMandateExpirationConfiguration` et `ToggleCrmBirthdayConfiguration`, toutes avec variables `{ prospect: contactId, enabled: boolean }`.
+6. Par defaut l'app laisse ces automatismes en `Reglage Hektor` pour ne pas creer de configuration custom inutile. Si l'utilisateur choisit `Oui` ou `Non`, le worker applique la mutation GraphQL par contact puis relit `CrmContactRelationshipConfigurations`.
+7. Le worker `actions` relit le contexte contact/dossier si besoin, mappe en creation ces valeurs vers les codes Console Hektor (`qualification` 1/2/3/4 et `statut` 1/2/3), puis ecrit dans Hektor avec le contexte negociateur cible.
+8. Le worker cree un job `refresh_console_contact_data` pour relire seulement le `ContactById` concerne.
+9. Le worker `sync_light` normalise localement, reconstruit la couche contacts, puis pousse la projection legere Supabase.
 
 Ce flux ne lance pas le backfill 340k contacts et ne modifie pas les relations mandants affichees dans les annonces. Les relations/recherches contact ne sont pas melangees dans la creation d'identite : l'assistant Hektor `ajouter un nouveau contact` possede une etape suivante separee, a traiter par un job dedie apres validation du comportement Console.
 

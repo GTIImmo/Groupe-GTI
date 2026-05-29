@@ -127,6 +127,28 @@ query PropertyListing($filters: AnnonceSearchInput!) {
   }
 }`;
 
+const CRM_CONTACT_CONFIGURATION_QUERY = `
+query CrmContactRelationshipConfigurations($prospect: Int) {
+  mandateSummaryConfiguration(prospect: $prospect) { enabled }
+  mandateExpirationConfiguration(prospect: $prospect) { enabled }
+  crmBirthdayConfiguration(prospect: $prospect) { enabled }
+}`;
+
+const CRM_TOGGLE_MANDATE_SUMMARY_CONFIGURATION_MUTATION = `
+mutation ToggleMandateSummaryConfiguration($enabled: Boolean!, $prospect: Int) {
+  toggleMandateSummaryConfiguration(enabled: $enabled, prospect: $prospect)
+}`;
+
+const CRM_TOGGLE_MANDATE_EXPIRATION_CONFIGURATION_MUTATION = `
+mutation ToggleMandateExpirationConfiguration($enabled: Boolean!, $prospect: Int) {
+  toggleMandateExpirationConfiguration(enabled: $enabled, prospect: $prospect)
+}`;
+
+const CRM_TOGGLE_BIRTHDAY_CONFIGURATION_MUTATION = `
+mutation ToggleCrmBirthdayConfiguration($enabled: Boolean!, $prospect: Int) {
+  toggleCrmBirthdayConfiguration(enabled: $enabled, prospect: $prospect)
+}`;
+
 let hektorLoginPromise = null;
 let lastHektorLoginAt = fs.existsSync(STORAGE_STATE_PATH) ? fs.statSync(STORAGE_STATE_PATH).mtimeMs : 0;
 
@@ -1629,13 +1651,14 @@ async function hektorFetch(url, options = {}) {
   }
 }
 
-async function hektorGraphQL(variables) {
+async function hektorGraphQLOperation({ operationName, query, variables = {} }) {
+  if (!operationName || !query) throw new Error("Operation GraphQL Hektor incomplete");
   const authorization = hektorGraphQLAuthorizationHeader();
   const result = await hektorFetch(`${HEKTOR_BASE_URL.replace(/\/+$/, "")}/ws/GraphQL_Web`, {
     method: "POST",
     body: JSON.stringify({
-      operationName: "PropertyListing",
-      query: PROPERTY_LISTING_QUERY,
+      operationName,
+      query,
       variables,
     }),
     headers: {
@@ -1648,6 +1671,14 @@ async function hektorGraphQL(variables) {
     throw new Error(`GraphQL Hektor: ${payload.errors.map((item) => item.message || String(item)).join("; ")}`);
   }
   return payload;
+}
+
+async function hektorGraphQL(variables) {
+  return hektorGraphQLOperation({
+    operationName: "PropertyListing",
+    query: PROPERTY_LISTING_QUERY,
+    variables,
+  });
 }
 
 async function fetchLatestHektorProperties(page = 1, archived = false) {
@@ -3813,6 +3844,33 @@ function cleanString(value) {
   return text || null;
 }
 
+function firstDefined(source, keys) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(source || {}, key)) return source[key];
+  }
+  return undefined;
+}
+
+function normalizeOptionalBoolean(value) {
+  if (value === undefined || value === null || value === "") return null;
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
+  const text = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "oui", "on", "enabled", "active"].includes(text)) return true;
+  if (["false", "0", "no", "non", "off", "disabled", "inactive"].includes(text)) return false;
+  return null;
+}
+
+function normalizeOptionalFrenchDate(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "00-00-0000") return text ? "00-00-0000" : "";
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+  const fr = text.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+  if (fr) return `${fr[1]}-${fr[2]}-${fr[3]}`;
+  throw new Error("date_naissance contact invalide, format attendu jj-mm-aaaa");
+}
+
 function todayFrenchDate() {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, "0");
@@ -4173,6 +4231,24 @@ function normalizeHektorContactPayload(payload, options = {}) {
   const postalCode = source.postal_code !== undefined || source.code_postal !== undefined || source.code !== undefined
     ? cleanString(source.postal_code || source.code_postal || source.code) || ""
     : cleanString(source.postal_code || source.code_postal || source.code);
+  const rawBirthDate = firstDefined(source, ["birth_date", "date_naissance", "dateNaissance", "birthDate"]);
+  const rawBirthPlace = firstDefined(source, ["birth_place", "lieu_naissance", "lieuNaissance", "birthPlace"]);
+  const rawMaritalStatus = firstDefined(source, ["marital_status", "statut_matrimonial", "maritalStatus"]);
+  const crmMandateSummaryEnabled = normalizeOptionalBoolean(firstDefined(source, [
+    "crm_mandate_summary_enabled",
+    "crmMandateSummaryEnabled",
+    "mail_nouveau_mandat",
+  ]));
+  const crmMandateExpirationEnabled = normalizeOptionalBoolean(firstDefined(source, [
+    "crm_mandate_expiration_enabled",
+    "crmMandateExpirationEnabled",
+    "mail_echeance_mandat",
+  ]));
+  const crmBirthdayEnabled = normalizeOptionalBoolean(firstDefined(source, [
+    "crm_birthday_enabled",
+    "crmBirthdayEnabled",
+    "message_anniversaire_client",
+  ]));
   if (options.requireContactId && (!contactId || !/^\d+$/.test(contactId))) {
     throw new Error("contact_id Hektor numerique requis");
   }
@@ -4193,6 +4269,9 @@ function normalizeHektorContactPayload(payload, options = {}) {
     address,
     postalCode,
     city,
+    birthDate: rawBirthDate !== undefined ? normalizeOptionalFrenchDate(rawBirthDate) : null,
+    birthPlace: rawBirthPlace !== undefined ? cleanString(rawBirthPlace) || "" : null,
+    maritalStatus: rawMaritalStatus !== undefined ? cleanString(rawMaritalStatus) || "" : null,
     qualification: normalizeHektorContactQualification(
       source.qualification || source.contact_qualification || source.contact_kind || source.kind,
       "2"
@@ -4209,6 +4288,9 @@ function normalizeHektorContactPayload(payload, options = {}) {
     sendRgpdEmail: source.send_rgpd_email === false || source.send_rgpd_email === "false" || source.send_rgpd_email === "0"
       ? false
       : true,
+    crmMandateSummaryEnabled,
+    crmMandateExpirationEnabled,
+    crmBirthdayEnabled,
     hektorUserEmail: cleanString(source.hektor_user_email || source.negociateur_email || source.target_hektor_user_email),
     hektorUserId: cleanString(source.hektor_user_id || source.hektor_id_user || source.target_hektor_user_id),
   };
@@ -4250,6 +4332,9 @@ function applyHektorContactIdentityValues(values, contact) {
   if (contact.address !== null && contact.address !== undefined) values.set("adresse", contact.address || "");
   if (contact.city !== null && contact.city !== undefined) values.set("ville", contact.city || "");
   if (contact.postalCode !== null && contact.postalCode !== undefined) values.set("code", contact.postalCode || "");
+  if (contact.birthDate !== null && contact.birthDate !== undefined) values.set("dateNaissance", contact.birthDate || "00-00-0000");
+  if (contact.birthPlace !== null && contact.birthPlace !== undefined) values.set("lieuNaissance", contact.birthPlace || "");
+  if (contact.maritalStatus !== null && contact.maritalStatus !== undefined) values.set("marital_status", contact.maritalStatus || "");
   if (contact.sourceId !== null && contact.sourceId !== undefined) values.set("id_source", contact.sourceId || "");
   if (contact.categoryId !== null && contact.categoryId !== undefined) values.set("categories", contact.categoryId || "");
   if (contact.comments !== null && contact.comments !== undefined) {
@@ -4258,6 +4343,87 @@ function applyHektorContactIdentityValues(values, contact) {
   }
   values.delete("_email_rgpd");
   if (contact.sendRgpdEmail !== false) values.append("_email_rgpd", "1");
+}
+
+const CRM_CONTACT_TOGGLE_FIELDS = [
+  {
+    key: "crmMandateSummaryEnabled",
+    label: "Mail nouveau mandat",
+    operationName: "ToggleMandateSummaryConfiguration",
+    query: CRM_TOGGLE_MANDATE_SUMMARY_CONFIGURATION_MUTATION,
+  },
+  {
+    key: "crmMandateExpirationEnabled",
+    label: "Mail echeance mandat",
+    operationName: "ToggleMandateExpirationConfiguration",
+    query: CRM_TOGGLE_MANDATE_EXPIRATION_CONFIGURATION_MUTATION,
+  },
+  {
+    key: "crmBirthdayEnabled",
+    label: "Message anniversaire client",
+    operationName: "ToggleCrmBirthdayConfiguration",
+    query: CRM_TOGGLE_BIRTHDAY_CONFIGURATION_MUTATION,
+  },
+];
+
+function mapHektorContactCrmConfigurations(data) {
+  const source = data || {};
+  return {
+    crmMandateSummaryEnabled: source.mandateSummaryConfiguration && typeof source.mandateSummaryConfiguration.enabled === "boolean"
+      ? source.mandateSummaryConfiguration.enabled
+      : null,
+    crmMandateExpirationEnabled: source.mandateExpirationConfiguration && typeof source.mandateExpirationConfiguration.enabled === "boolean"
+      ? source.mandateExpirationConfiguration.enabled
+      : null,
+    crmBirthdayEnabled: source.crmBirthdayConfiguration && typeof source.crmBirthdayConfiguration.enabled === "boolean"
+      ? source.crmBirthdayConfiguration.enabled
+      : null,
+  };
+}
+
+async function fetchHektorContactCrmSettings(contactId) {
+  const prospect = Number(contactId);
+  if (!Number.isSafeInteger(prospect)) throw new Error("contact_id Hektor numerique requis pour CRM");
+  const payload = await hektorGraphQLOperation({
+    operationName: "CrmContactRelationshipConfigurations",
+    query: CRM_CONTACT_CONFIGURATION_QUERY,
+    variables: { prospect },
+  });
+  return mapHektorContactCrmConfigurations(payload.data || {});
+}
+
+async function updateHektorContactCrmSettings(job, contactId, payload) {
+  const contact = normalizeHektorContactPayload({ ...(payload || {}), hektor_contact_id: contactId }, { requireContactId: true });
+  const requested = CRM_CONTACT_TOGGLE_FIELDS
+    .map((field) => ({ ...field, enabled: contact[field.key] }))
+    .filter((field) => typeof field.enabled === "boolean");
+  if (!requested.length) return null;
+
+  const prospect = Number(contactId);
+  if (!Number.isSafeInteger(prospect)) throw new Error("contact_id Hektor numerique requis pour CRM");
+  await logJob(job.id, "hektor_contact_crm", "running", "Mise a jour CRM contact Hektor", {
+    hektor_contact_id: String(contactId),
+    fields: requested.map((field) => ({ label: field.label, enabled: field.enabled })),
+  });
+
+  for (const field of requested) {
+    await hektorGraphQLOperation({
+      operationName: field.operationName,
+      query: field.query,
+      variables: { prospect, enabled: field.enabled },
+    });
+  }
+
+  const verified = await fetchHektorContactCrmSettings(contactId);
+  const mismatches = requested.filter((field) => verified[field.key] !== field.enabled);
+  if (mismatches.length) {
+    throw new Error(`Configuration CRM contact Hektor non confirmee: ${mismatches.map((field) => field.label).join(", ")}`);
+  }
+  await logJob(job.id, "hektor_contact_crm", "done", "CRM contact Hektor confirme", {
+    hektor_contact_id: String(contactId),
+    verified,
+  });
+  return verified;
 }
 
 function parseHektorCreatedContactId(responseText) {
@@ -4371,6 +4537,9 @@ async function updateHektorContactIdentity(job, contactId, payload) {
       adresse: contact.address,
       code: contact.postalCode,
       ville: contact.city,
+      date_naissance: contact.birthDate,
+      lieu_naissance: contact.birthPlace,
+      statut_matrimonial: contact.maritalStatus,
       qualification: contact.qualification,
       statut: contact.contactStatus,
     },
@@ -4382,6 +4551,7 @@ async function handleCreateHektorContact(job) {
   await ensureHektorExecutionContext(job, null, payload, { preferRequester: true, preferDossierOwner: false, required: true });
 
   const created = await createHektorContact(job, payload);
+  const crmSettings = await updateHektorContactCrmSettings(job, created.contactId, payload);
   await sleep(1200);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, created.contactId, {
     reason: "create_hektor_contact",
@@ -4396,7 +4566,11 @@ async function handleCreateHektorContact(job) {
       prenom: created.firstName,
       email: created.email,
       telephone: created.phone,
+      date_naissance: created.birthDate,
+      lieu_naissance: created.birthPlace,
+      statut_matrimonial: created.maritalStatus,
     },
+    crm_settings: crmSettings,
     sync_job: syncJob,
   };
 }
@@ -4416,6 +4590,7 @@ async function handleUpdateHektorContact(job) {
   await ensureHektorExecutionContext(job, context.dossier, contextPayload, { preferRequester: true, preferDossierOwner: true, required: true });
 
   const updated = await updateHektorContactIdentity(job, contactId, contextPayload);
+  const crmSettings = await updateHektorContactCrmSettings(job, contactId, contextPayload);
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "update_hektor_contact",
@@ -4425,6 +4600,7 @@ async function handleUpdateHektorContact(job) {
   return {
     status: "updated",
     ...updated,
+    crm_settings: crmSettings,
     sync_job: syncJob,
   };
 }

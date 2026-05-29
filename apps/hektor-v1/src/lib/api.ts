@@ -4351,12 +4351,18 @@ export type HektorContactIdentityInput = {
   address?: string | null
   postalCode?: string | null
   city?: string | null
+  birthDate?: string | null
+  birthPlace?: string | null
+  maritalStatus?: string | null
   contactKind?: string | null
   personType?: string | null
   sourceId?: string | null
   categoryId?: string | null
   comments?: string | null
   sendRgpdEmail?: boolean | null
+  crmMandateSummaryEnabled?: boolean | null
+  crmMandateExpirationEnabled?: boolean | null
+  crmBirthdayEnabled?: boolean | null
   hektorUserEmail?: string | null
   hektorUserId?: string | null
 }
@@ -4377,12 +4383,18 @@ function hContactPayload(contact: HektorContactIdentityInput) {
     address: cleanOptionalText(contact.address),
     postal_code: cleanOptionalText(contact.postalCode),
     city: cleanOptionalText(contact.city),
+    birth_date: cleanOptionalText(contact.birthDate) ?? undefined,
+    birth_place: cleanOptionalText(contact.birthPlace) ?? undefined,
+    marital_status: cleanOptionalText(contact.maritalStatus) ?? undefined,
     contact_kind: cleanOptionalText(contact.contactKind) ?? 'acquereur',
     person_type: cleanOptionalText(contact.personType) ?? 'personne_seule',
     id_source: cleanOptionalText(contact.sourceId),
     category_id: cleanOptionalText(contact.categoryId),
     comments: cleanOptionalText(contact.comments),
     send_rgpd_email: contact.sendRgpdEmail === false ? false : true,
+    crm_mandate_summary_enabled: typeof contact.crmMandateSummaryEnabled === 'boolean' ? contact.crmMandateSummaryEnabled : null,
+    crm_mandate_expiration_enabled: typeof contact.crmMandateExpirationEnabled === 'boolean' ? contact.crmMandateExpirationEnabled : null,
+    crm_birthday_enabled: typeof contact.crmBirthdayEnabled === 'boolean' ? contact.crmBirthdayEnabled : null,
     hektor_user_email: cleanOptionalText(contact.hektorUserEmail),
     hektor_user_id: cleanOptionalText(contact.hektorUserId),
     target_hektor_user_id: cleanOptionalText(contact.hektorUserId),

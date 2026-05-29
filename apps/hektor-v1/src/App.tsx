@@ -14557,9 +14557,15 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
     phoneSecondary: contact.phone_secondary ?? '',
     postalCode: contact.code_postal ?? '',
     city: contact.ville ?? '',
+    birthDate: '',
+    birthPlace: '',
+    maritalStatus: '',
     contactKind: inferredKind,
     personType: 'personne_seule',
     sendRgpdEmail: true,
+    crmMandateSummaryEnabled: null,
+    crmMandateExpirationEnabled: null,
+    crmBirthdayEnabled: null,
     hektorUserEmail: hektorUserEmail ?? contact.negociateur_email ?? null,
     hektorUserId: hektorUserId ?? null,
   }
@@ -14597,6 +14603,18 @@ const hektorContactCategoryOptions = [
   { value: '1', label: 'Notaire' },
   { value: '5', label: 'Autre' },
 ]
+
+function optionalBooleanSelectValue(value: boolean | null | undefined) {
+  if (value === true) return 'true'
+  if (value === false) return 'false'
+  return ''
+}
+
+function optionalBooleanFromSelect(value: string) {
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return null
+}
 
 function findContactHektorOption(
   options: HektorNegotiatorOption[],
@@ -14645,7 +14663,7 @@ function HektorContactIdentityForm(props: {
   }, [availableHektorNegotiators, normalizedSessionEmail, props.contact?.negociateur_email, props.hektorUserEmail, props.hektorUserId, props.profileRole])
   const initial = props.contact
     ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-    : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+    : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
   const [civility, setCivility] = useState(initial.civility ?? '')
   const [lastName, setLastName] = useState(initial.lastName ?? '')
   const [firstName, setFirstName] = useState(initial.firstName ?? '')
@@ -14655,12 +14673,18 @@ function HektorContactIdentityForm(props: {
   const [address, setAddress] = useState(initial.address ?? '')
   const [postalCode, setPostalCode] = useState(initial.postalCode ?? '')
   const [city, setCity] = useState(initial.city ?? '')
+  const [birthDate, setBirthDate] = useState(initial.birthDate ?? '')
+  const [birthPlace, setBirthPlace] = useState(initial.birthPlace ?? '')
+  const [maritalStatus, setMaritalStatus] = useState(initial.maritalStatus ?? '')
   const [contactKind, setContactKind] = useState(initial.contactKind ?? 'acquereur')
   const [personType, setPersonType] = useState(initial.personType ?? 'personne_seule')
   const [sourceId, setSourceId] = useState(initial.sourceId ?? '')
   const [categoryId, setCategoryId] = useState(initial.categoryId ?? '')
   const [comments, setComments] = useState(initial.comments ?? '')
   const [sendRgpdEmail, setSendRgpdEmail] = useState(initial.sendRgpdEmail !== false)
+  const [crmMandateSummaryEnabled, setCrmMandateSummaryEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateSummaryEnabled))
+  const [crmMandateExpirationEnabled, setCrmMandateExpirationEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateExpirationEnabled))
+  const [crmBirthdayEnabled, setCrmBirthdayEnabled] = useState(optionalBooleanSelectValue(initial.crmBirthdayEnabled))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [duplicateCandidates, setDuplicateCandidates] = useState<AppContact[]>([])
@@ -14677,7 +14701,7 @@ function HektorContactIdentityForm(props: {
   useEffect(() => {
     const next = props.contact
       ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-      : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+      : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
     setCivility(next.civility ?? '')
     setLastName(next.lastName ?? '')
     setFirstName(next.firstName ?? '')
@@ -14687,12 +14711,18 @@ function HektorContactIdentityForm(props: {
     setAddress(next.address ?? '')
     setPostalCode(next.postalCode ?? '')
     setCity(next.city ?? '')
+    setBirthDate(next.birthDate ?? '')
+    setBirthPlace(next.birthPlace ?? '')
+    setMaritalStatus(next.maritalStatus ?? '')
     setContactKind(next.contactKind ?? 'acquereur')
     setPersonType(next.personType ?? 'personne_seule')
     setSourceId(next.sourceId ?? '')
     setCategoryId(next.categoryId ?? '')
     setComments(next.comments ?? '')
     setSendRgpdEmail(next.sendRgpdEmail !== false)
+    setCrmMandateSummaryEnabled(optionalBooleanSelectValue(next.crmMandateSummaryEnabled))
+    setCrmMandateExpirationEnabled(optionalBooleanSelectValue(next.crmMandateExpirationEnabled))
+    setCrmBirthdayEnabled(optionalBooleanSelectValue(next.crmBirthdayEnabled))
     setError(null)
     setDuplicateCandidates([])
     setDuplicatesAccepted(false)
@@ -14709,12 +14739,18 @@ function HektorContactIdentityForm(props: {
     address,
     postalCode,
     city,
+    birthDate,
+    birthPlace,
+    maritalStatus,
     contactKind: props.mode === 'create' ? contactKind : undefined,
     personType: props.mode === 'create' ? personType : undefined,
     sourceId,
     categoryId,
     comments,
     sendRgpdEmail,
+    crmMandateSummaryEnabled: optionalBooleanFromSelect(crmMandateSummaryEnabled),
+    crmMandateExpirationEnabled: optionalBooleanFromSelect(crmMandateExpirationEnabled),
+    crmBirthdayEnabled: optionalBooleanFromSelect(crmBirthdayEnabled),
     hektorUserEmail: selectedHektorEmail,
     hektorUserId: selectedHektorId,
   })
@@ -14764,12 +14800,18 @@ function HektorContactIdentityForm(props: {
         setAddress('')
         setPostalCode('')
         setCity('')
+        setBirthDate('')
+        setBirthPlace('')
+        setMaritalStatus('')
         setContactKind('acquereur')
         setPersonType('personne_seule')
         setSourceId('')
         setCategoryId('')
         setComments('')
         setSendRgpdEmail(true)
+        setCrmMandateSummaryEnabled('')
+        setCrmMandateExpirationEnabled('')
+        setCrmBirthdayEnabled('')
       }
       props.onCancel?.()
     } catch (submitError) {
@@ -14885,6 +14927,26 @@ function HektorContactIdentityForm(props: {
           <span>Ville</span>
           <input value={city} onChange={(event) => setCity(event.target.value)} />
         </label>
+        <label className="is-small">
+          <span>Date naissance</span>
+          <input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" />
+          <small>Utilisee par le message anniversaire Hektor.</small>
+        </label>
+        <label>
+          <span>Lieu naissance</span>
+          <input value={birthPlace} onChange={(event) => setBirthPlace(event.target.value)} />
+        </label>
+        <label>
+          <span>Statut matrimonial</span>
+          <select value={maritalStatus} onChange={(event) => setMaritalStatus(event.target.value)}>
+            <option value="">Non precise</option>
+            <option value="single">Celibataire</option>
+            <option value="married">Marie(e)</option>
+            <option value="civil_union">Pacse(e)</option>
+            <option value="divorced">Divorce(e)</option>
+            <option value="widower">Veuf(ve)</option>
+          </select>
+        </label>
         <label>
           <span>Source</span>
           <select value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
@@ -14900,6 +14962,33 @@ function HektorContactIdentityForm(props: {
               <option key={`contact-category-${option.value || 'none'}`} value={option.value}>{option.label}</option>
             ))}
           </select>
+        </label>
+        <label>
+          <span>Mail nouveau mandat</span>
+          <select value={crmMandateSummaryEnabled} onChange={(event) => setCrmMandateSummaryEnabled(event.target.value)}>
+            <option value="">Reglage Hektor</option>
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select>
+          <small>Automatisme CRM par contact.</small>
+        </label>
+        <label>
+          <span>Mail echeance mandat</span>
+          <select value={crmMandateExpirationEnabled} onChange={(event) => setCrmMandateExpirationEnabled(event.target.value)}>
+            <option value="">Reglage Hektor</option>
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select>
+          <small>Alerte Hektor avant fin de mandat.</small>
+        </label>
+        <label>
+          <span>Message anniversaire</span>
+          <select value={crmBirthdayEnabled} onChange={(event) => setCrmBirthdayEnabled(event.target.value)}>
+            <option value="">Reglage Hektor</option>
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select>
+          <small>Necessite une date de naissance renseignee.</small>
         </label>
         <label className="is-wide contact-editor-toggle">
           <input type="checkbox" checked={sendRgpdEmail} onChange={(event) => setSendRgpdEmail(event.target.checked)} />
