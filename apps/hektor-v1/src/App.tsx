@@ -233,6 +233,12 @@ function hasDetailCacheAvailable(item: Pick<Dossier, 'has_detail_cache'> | Pick<
   return item?.has_detail_cache === true || item?.has_detail_cache === 1 || item?.has_detail_cache === '1'
 }
 
+function isReadOnlyLightweightDetail(item: Pick<Dossier, 'archive' | 'statut_annonce' | 'has_detail_cache'> | Pick<MandatRecord, 'archive' | 'statut_annonce' | 'has_detail_cache'> | null | undefined) {
+  if (!item) return false
+  if (item.archive === '1') return true
+  return isHistoricalListingStatus(item.statut_annonce) && !hasDetailCacheAvailable(item)
+}
+
 function annonceListingLabels(filters: AppFilters) {
   if (filters.archive === archivedFilterValue) {
     return { title: 'Archives', totalNoun: 'annonces archivees' }
@@ -13062,7 +13068,7 @@ function DossierDetailLayout(props: {
   const detailVariant = props.detailVariant ?? 'annonce'
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
-  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
+  const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
   const lightweightDetailLabel = dossier.archive === '1' ? 'archivee' : 'historique'
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
   const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
@@ -14329,7 +14335,7 @@ function MobileDossierDetail(props: {
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const actionRole = props.actionRole ?? 'nego'
-  const isLightweightDetail = isLightweightAnnonceRecord(dossier)
+  const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
   const isArchivedLightweightDetail = isArchivedAnnonceRecord(dossier)
   const lightweightReadOnlyLabel = isArchivedLightweightDetail
     ? 'Cette fiche archivée est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes après désarchivage.'
