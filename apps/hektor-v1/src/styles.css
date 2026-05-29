@@ -27485,15 +27485,20 @@ body {
 }
 
 .contacts-workspace-full .contacts-table-wrap tbody tr:hover td,
-.contacts-workspace-full .contacts-table-wrap tbody tr:hover td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr:hover td:first-child {
+  background: #fbfcfc !important;
+  border-bottom-color: rgba(34, 35, 35, 0.1) !important;
+}
+
 .contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td,
 .contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td:first-child {
-  background: linear-gradient(90deg, var(--contact-row-soft) 0%, rgba(255, 255, 255, 0.86) 54%, #ffffff 100%) !important;
+  background: #fff9fc !important;
+  border-bottom-color: rgba(197, 0, 95, 0.12) !important;
 }
 
 .contacts-workspace-full .contacts-table-wrap tbody tr:hover td:first-child,
 .contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td:first-child {
-  box-shadow: inset 4px 0 0 var(--contact-row-accent) !important;
+  box-shadow: inset 3px 0 0 var(--contact-row-accent) !important;
 }
 
 .contacts-workspace-full .contacts-table-wrap td strong,
@@ -27570,6 +27575,7 @@ body {
 }
 
 .contacts-workspace-full .contact-row:hover .contact-type-mark {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55) !important;
   transform: none !important;
 }
 
