@@ -1627,42 +1627,7 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     return target;
   }
 
-  if (!current) {
-    await logJob(job.id, "hektor_context", "running", "Session Hektor illisible, reconnexion avant contexte negociateur", {
-      target_id_user: target.idUser,
-    });
-    await refreshHektorSession("context_switch_missing_session");
-    current = currentHektorSessionIdentity();
-  }
-
-  if (current && (!current.role || current.role !== "ADMIN")) {
-    await logJob(job.id, "hektor_context", "running", "Retour session admin avant changement de negociateur", {
-      current_user_id: current.userId,
-      current_role: current.role,
-      target_id_user: target.idUser,
-    });
-    try {
-      await returnHektorDefaultContext();
-      current = currentHektorSessionIdentity();
-    } catch (error) {
-      await logJob(job.id, "hektor_context", "running", "Retour admin direct impossible, relance Playwright", {
-        error: error && error.message ? error.message : String(error),
-      });
-    }
-    if (!current || current.role !== "ADMIN") {
-      await refreshHektorSession("context_switch_admin_login");
-    }
-    current = currentHektorSessionIdentity();
-  }
-
-  if (!current || current.role !== "ADMIN") {
-    await logJob(job.id, "hektor_context", "error", "Session admin requise avant changement de negociateur", {
-      target_id_user: target.idUser,
-      visible_user_id: current && current.userId ? current.userId : null,
-      visible_role: current && current.role ? current.role : null,
-    });
-    throw new Error(`Session Hektor admin requise avant bascule negociateur ${target.idUser}`);
-  }
+  current = await ensureAdminHektorWriteSession(job, "context_switch_admin_login");
 
   await logJob(job.id, "hektor_context", "running", "Changement de contexte Hektor negociateur", {
     current_user_id: current && current.userId ? current.userId : null,
@@ -1916,6 +1881,7 @@ async function ensureAdminHektorSession(job, reason, options = {}) {
       try {
         await returnHektorDefaultContext();
       } catch (error) {
+        if (isHektorForbiddenError(error)) throw error;
         await logJob(job.id, "hektor_context", "running", "Retour admin direct impossible, relance Playwright", {
           reason,
           error: error && error.message ? error.message : String(error),
@@ -1939,10 +1905,15 @@ async function ensureAdminHektorSession(job, reason, options = {}) {
   return current;
 }
 
+async function ensureAdminHektorWriteSession(job, reason) {
+  return ensureAdminHektorSession(job, reason, { forceReturn: true });
+}
+
 async function returnAdminHektorSessionBestEffort(job, reason) {
   try {
     await ensureAdminHektorSession(job, reason, { forceReturn: true });
   } catch (error) {
+    if (isHektorForbiddenError(error)) throw error;
     await logJob(job.id, "hektor_context", "error", "Retour administrateur Hektor non confirme apres action", {
       reason,
       error: error && error.message ? error.message : String(error),
@@ -1967,9 +1938,7 @@ async function ensureHektorAgencySession(job, agencyContext, reason) {
     return current;
   }
 
-  if (!current || current.role !== "ADMIN") {
-    current = await ensureAdminHektorSession(job, `${reason}_admin_login`);
-  }
+  current = await ensureAdminHektorWriteSession(job, `${reason}_admin_login`);
 
   await logJob(job.id, "hektor_context", "running", "Changement de contexte Hektor agence", {
     reason,
@@ -4261,7 +4230,7 @@ async function handleChangeHektorAnnonceStatus(job) {
   const annonceId = String(dossier.hektor_annonce_id || job.hektor_annonce_id || "").trim();
   if (!annonceId) throw new Error("hektor_annonce_id required");
 
-  await ensureAdminHektorSession(job, "change_status_admin_login");
+  await ensureAdminHektorWriteSession(job, "change_status_admin_login");
   if (config.transactionMode) {
     await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: false, preferDossierOwner: true, required: true });
   }
@@ -4360,7 +4329,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     throw new Error(`Negociateur Hektor ${targetId} non confirme actif pour l'agence ${agencyContext.agency_label || agencyContext.hektor_agence_id || ""}.`);
   }
 
-  await ensureAdminHektorSession(job, "assign_negotiator_admin_login");
+  await ensureAdminHektorWriteSession(job, "assign_negotiator_admin_login");
   if (agencyContext.agency_changed) {
     await logJob(job.id, "hektor_assign_agency", "running", "Changement de l'agence Hektor", {
       hektor_annonce_id: annonceId,
@@ -5774,7 +5743,7 @@ async function handleDeleteHektorContact(job) {
     throw new Error(`Confirmation suppression contact invalide pour ${contactId}`);
   }
 
-  await ensureAdminHektorSession(job, "delete_contact_admin_login");
+  await ensureAdminHektorWriteSession(job, "delete_contact_admin_login");
   await logJob(job.id, "hektor_contact_delete", "running", "Verification contact avant suppression", {
     hektor_contact_id: contactId,
   });
@@ -5900,7 +5869,7 @@ async function handleDeleteHektorAnnonce(job) {
     throw new Error(`Confirmation suppression invalide pour annonce ${hektorAnnonceId}`);
   }
 
-  await ensureAdminHektorSession(job, "delete_annonce_admin_login");
+  await ensureAdminHektorWriteSession(job, "delete_annonce_admin_login");
   await logJob(job.id, "hektor_annonce_delete", "running", "Verification annonce avant suppression", {
     hektor_annonce_id: hektorAnnonceId,
     app_dossier_id: appDossierId || null,
@@ -5978,7 +5947,7 @@ async function handleRestoreHektorAnnonce(job) {
   const appDossierId = job.app_dossier_id == null ? payload.app_dossier_id : job.app_dossier_id;
   if (!hektorAnnonceId) throw new Error("hektor_annonce_id required");
 
-  await ensureAdminHektorSession(job, "restore_annonce_admin_login");
+  await ensureAdminHektorWriteSession(job, "restore_annonce_admin_login");
   await logJob(job.id, "hektor_annonce_restore", "running", "Verification annonce avant desarchivage", {
     hektor_annonce_id: hektorAnnonceId,
     app_dossier_id: appDossierId || null,
@@ -6064,7 +6033,7 @@ async function handleArchiveHektorAnnonce(job) {
   if (!hektorAnnonceId) throw new Error("hektor_annonce_id required");
   const reason = normalizeArchiveReasonPayload(payload);
 
-  await ensureAdminHektorSession(job, "archive_annonce_admin_login");
+  await ensureAdminHektorWriteSession(job, "archive_annonce_admin_login");
   await logJob(job.id, "hektor_annonce_archive", "running", "Verification annonce avant archivage", {
     hektor_annonce_id: hektorAnnonceId,
     app_dossier_id: appDossierId || null,

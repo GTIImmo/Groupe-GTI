@@ -74,6 +74,28 @@ Job types observés :
 - `refresh_console_contact_data`
 - `archive_cloud_documents`
 
+### Incident 403 Hektor sur commandes admin
+
+Si une commande Hektor renvoie `403`, arreter les tests Hektor et ne pas
+retenter en boucle. Controler d'abord les logs `app_console_job_log` du job :
+
+- le worker doit avoir le kind `admin` pour `delete_hektor_annonce`,
+  `delete_hektor_contact`, `archive_hektor_annonce`,
+  `restore_hektor_annonce`, `change_hektor_annonce_status` et
+  `assign_hektor_annonce_negotiator` ;
+- avant chaque ecriture admin sensible, le log doit montrer
+  `Retour session administrateur Hektor`, puis
+  `Session Hektor administrateur active` avec `user_id=4` et `role=ADMIN` ;
+- si une bascule agence/nego est necessaire, le worker doit d'abord revenir
+  au contexte admin, car seul l'acces admin peut changer d'acces Hektor.
+
+Incident valide le 29/05/2026 : la suppression de l'annonce test `62354`
+echouait en `403` apres une bascule admin -> agence -> admin. La correction
+force le vrai retour admin Hektor avant les commandes admin et avant les
+bascule agence/nego. Retest valide : suppression annonce `62354`, suppression
+contacts `603745` et `603746`, sans `403`, avec nettoyage Hektor, Supabase et
+local confirme.
+
 Flux contacts globaux :
 
 1. L'app cree `create_hektor_contact` ou `update_hektor_contact` avec un compte Hektor cible obligatoire.
