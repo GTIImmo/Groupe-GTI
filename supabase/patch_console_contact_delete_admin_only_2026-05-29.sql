@@ -11,7 +11,8 @@ set search_path to 'public'
 as $function$
 declare
     worker_kind text := lower(coalesce(nullif(p_worker_kind, ''), 'actions'));
-    is_current_worker boolean := coalesce(p_worker_id, '') like '%:scheduled:v9';
+    is_current_worker boolean := coalesce(p_worker_id, '') like '%:scheduled:v9'
+        or coalesce(p_worker_id, '') like '%:service:v9';
 begin
     update public.app_console_job j
     set status = 'error',
