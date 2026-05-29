@@ -27302,3 +27302,238 @@ body {
     grid-template-columns: 36px minmax(0, 1fr) !important;
   }
 }
+
+/* Contacts listing: align visual language with the Annonces listing. */
+.contacts-workspace-full .contacts-list-panel {
+  padding: 18px !important;
+}
+
+.contacts-workspace-full .contacts-list-head {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  margin: 0 0 16px !important;
+  padding: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.contacts-workspace-full .contacts-list-head h3 {
+  margin: 0 !important;
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 20px !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+}
+
+.contacts-workspace-full .contacts-list-head .listing-total-label {
+  display: inline !important;
+  width: auto !important;
+  max-width: none !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #686d6d !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.contacts-workspace-full .contacts-list-head .page-controls {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.contacts-workspace-full .contacts-list-head .ghost-button,
+.contacts-workspace-full .contacts-list-head .page-jump input {
+  min-height: 38px !important;
+  border: 1px solid var(--gti-final-line, rgba(34, 35, 35, 0.12)) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink, #222323) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.contacts-workspace-full .contacts-list-head .page-controls > span,
+.contacts-workspace-full .contacts-list-head .page-jump span {
+  color: #686d6d !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap {
+  min-height: calc(100vh - 286px) !important;
+  border: 1px solid var(--gti-final-line, rgba(34, 35, 35, 0.12)) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap table {
+  width: 100% !important;
+  min-width: 1120px !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap th,
+.contacts-workspace-full .contacts-table-wrap td {
+  height: auto !important;
+  padding: 10px 8px !important;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08) !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap th {
+  height: 42px !important;
+  background: #f1f2f2 !important;
+  color: #4d5656 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap th:nth-child(1),
+.contacts-workspace-full .contacts-table-wrap td:nth-child(1) { width: 24% !important; }
+.contacts-workspace-full .contacts-table-wrap th:nth-child(2),
+.contacts-workspace-full .contacts-table-wrap td:nth-child(2) { width: 18% !important; }
+.contacts-workspace-full .contacts-table-wrap th:nth-child(3),
+.contacts-workspace-full .contacts-table-wrap td:nth-child(3) { width: 19% !important; }
+.contacts-workspace-full .contacts-table-wrap th:nth-child(4),
+.contacts-workspace-full .contacts-table-wrap td:nth-child(4) { width: 16% !important; }
+.contacts-workspace-full .contacts-table-wrap th:nth-child(5),
+.contacts-workspace-full .contacts-table-wrap td:nth-child(5) { width: 14% !important; }
+.contacts-workspace-full .contacts-table-wrap th:nth-child(6),
+.contacts-workspace-full .contacts-table-wrap td:nth-child(6) { width: 9% !important; }
+
+.contacts-workspace-full .contacts-table-wrap th:last-child,
+.contacts-workspace-full .contacts-table-wrap td:last-child {
+  position: static !important;
+  right: auto !important;
+  z-index: auto !important;
+  min-width: 0 !important;
+  background: inherit !important;
+  box-shadow: none !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap thead th:last-child {
+  background: #f1f2f2 !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr td,
+.contacts-workspace-full .contacts-table-wrap tbody tr td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-buyer td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-owner td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-mandate td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-notary td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-search td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-mixed td:first-child {
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr:hover td,
+.contacts-workspace-full .contacts-table-wrap tbody tr:hover td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td:first-child {
+  background: linear-gradient(90deg, rgba(197, 0, 95, 0.08) 0%, rgba(197, 0, 95, 0.03) 48%, #ffffff 100%) !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap td strong,
+.contacts-workspace-full .contacts-table-wrap td span,
+.contacts-workspace-full .contacts-table-wrap td small {
+  letter-spacing: 0 !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap td strong {
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap td span,
+.contacts-workspace-full .contacts-table-wrap td small {
+  color: #666d6d !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.contacts-workspace-full .contact-identity-cell {
+  display: table-cell !important;
+}
+
+.contacts-workspace-full .contact-identity-content {
+  display: grid !important;
+  grid-template-columns: 62px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+.contacts-workspace-full .contact-identity-content > div {
+  min-width: 0 !important;
+}
+
+.contacts-workspace-full .contact-type-mark {
+  width: 58px !important;
+  min-width: 58px !important;
+  height: 48px !important;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #4d5656 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.contacts-workspace-full .contact-type-mark::before {
+  height: 3px !important;
+  background: #d6dada !important;
+}
+
+.contacts-workspace-full .contact-type-mark-icon {
+  color: #4d5656 !important;
+}
+
+.contacts-workspace-full .contact-type-mark-label {
+  color: #4d5656 !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+.contacts-workspace-full .contact-row:hover .contact-type-mark {
+  transform: none !important;
+}
+
+.contacts-workspace-full .contact-role-chip,
+.contacts-workspace-full .contact-duplicate-pill {
+  min-height: 24px !important;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink, #222323) !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.contacts-workspace-full .contact-activity-cell .is-important {
+  color: var(--gti-final-magenta, #c5005f) !important;
+}
+
+@media (max-width: 980px) {
+  .contacts-workspace-full .contacts-list-head {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+}

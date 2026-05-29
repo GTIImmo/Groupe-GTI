@@ -5612,6 +5612,7 @@ export default function App() {
   const [contactsTotal, setContactsTotal] = useState(0)
   const [contactPage, setContactPage] = useState(1)
   const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactCreateOpen, setContactCreateOpen] = useState(false)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   const [selectedContactRelations, setSelectedContactRelations] = useState<AppContactRelation[]>([])
   const [selectedContactSearches, setSelectedContactSearches] = useState<AppContactSearch[]>([])
@@ -6648,6 +6649,7 @@ export default function App() {
     setMandatPage(1)
     setWorkItemPage(1)
     setDetailOpen(false)
+    setContactCreateOpen(false)
     setFilters(defaultFiltersForScreen(nextScreen))
   }
 
@@ -9735,7 +9737,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             />
           </label>
           <div className="mobile-command-actions">
-            {canCreateHektorDraftAnnonce ? <button className="mobile-draft-button" type="button" onClick={openDraftAnnonceModal}>Nouveau</button> : null}
+            {screen === 'contacts'
+              ? canManageContacts ? <button className="mobile-draft-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
+              : canCreateHektorDraftAnnonce ? <button className="mobile-draft-button" type="button" onClick={openDraftAnnonceModal}>Nouveau</button> : null}
             <button type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Fermer filtres' : 'Filtres'}</button>
             <button
               className={`mobile-stats-toggle ${mobileStatsOpen ? 'is-active' : ''}`}
@@ -9950,6 +9954,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedRelations={selectedContactRelations}
             selectedSearches={selectedContactSearches}
             loading={contactsLoading}
+            createOpen={contactCreateOpen}
+            onCloseCreate={() => setContactCreateOpen(false)}
             onSelectContact={setSelectedContactId}
             onPrevContact={() => setContactPage((page) => Math.max(1, page - 1))}
             onNextContact={() => setContactPage((page) => Math.min(contactTotalPages, page + 1))}
@@ -10114,7 +10120,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'contacts' ? 'Nom, email, telephone, ville, ID contact...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <div className="hero-actions">
-                  {canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
+                  {screen === 'contacts'
+                    ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
+                    : canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
                 </div>
@@ -10779,6 +10787,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedSearches={selectedContactSearches}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
+            createOpen={contactCreateOpen}
+            onCloseCreate={() => setContactCreateOpen(false)}
             onPrevContact={() => setContactPage((page) => Math.max(1, page - 1))}
             onNextContact={() => setContactPage((page) => Math.min(contactTotalPages, page + 1))}
             onGoToContactPage={(page) => setContactPage(Math.min(contactTotalPages, Math.max(1, page)))}
@@ -15368,6 +15378,8 @@ function ContactsScreen(props: {
   selectedSearches: AppContactSearch[]
   loading: boolean
   hasActiveFilters: boolean
+  createOpen: boolean
+  onCloseCreate: () => void
   onPrevContact: () => void
   onNextContact: () => void
   onGoToContactPage: (page: number) => void
@@ -15387,7 +15399,6 @@ function ContactsScreen(props: {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
   const [detailOpen, setDetailOpen] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
   const openContactDetail = (contactId: string) => {
     props.onSelectContact(contactId)
     setDetailOpen(true)
@@ -15395,13 +15406,13 @@ function ContactsScreen(props: {
   return (
     <section className="contacts-workspace contacts-workspace-full">
       <section className="panel panel-wide contacts-list-panel">
-        {createOpen && props.canManageContacts ? (
+        {props.createOpen && props.canManageContacts ? (
           <ContactWorkflowModal
             title="Nouveau contact"
             eyebrow="Creation Hektor"
             summary="Identite, typologie et options CRM avant creation dans Hektor puis synchronisation app."
             tone="create"
-            onClose={() => setCreateOpen(false)}
+            onClose={props.onCloseCreate}
           >
             <HektorContactIdentityForm
               mode="create"
@@ -15410,7 +15421,7 @@ function ContactsScreen(props: {
               hektorNegotiators={props.hektorNegotiators}
               profileRole={props.profileRole}
               sessionEmail={props.sessionEmail}
-              onCancel={() => setCreateOpen(false)}
+              onCancel={props.onCloseCreate}
               onJobCreated={props.onJobCreated}
             />
           </ContactWorkflowModal>
@@ -15421,12 +15432,6 @@ function ContactsScreen(props: {
             <span className="listing-total-label">{listingTotalLabel}</span>
           </div>
           <div className="page-controls">
-            {props.canManageContacts ? (
-              <button className="primary-action contact-create-button" type="button" onClick={() => setCreateOpen(true)}>
-                <span className="contact-create-button-mark" aria-hidden="true">+</span>
-                <span><strong>Nouveau contact</strong><small>Hektor</small></span>
-              </button>
-            ) : null}
             {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
             <span>{pageLabel(props.contactsTotal, contactPageSize, props.contactPage)}</span>
             <span>Page {props.contactPage} / {props.contactTotalPages}</span>
@@ -15438,7 +15443,7 @@ function ContactsScreen(props: {
             </label>
           </div>
         </div>
-        <div className={`table-wrap contacts-table-wrap ${props.loading ? 'is-refreshing' : ''}`}>
+        <div className={`table-wrap listing-table-wrap listing-table-active contacts-table-wrap ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">Chargement des contacts...</div> : null}
           {props.contacts.length > 0 ? (
             <table>
@@ -15454,11 +15459,13 @@ function ContactsScreen(props: {
                   return (
                     <tr key={contact.hektor_contact_id} className={`contact-row is-${tone}${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)}>
                       <td className="contact-identity-cell">
-                        <ContactTypeMark contact={contact} />
-                        <div>
-                          <strong>{contact.display_name}</strong>
-                          <span>ID {contact.hektor_contact_id} - {contactArchiveLabel(contact)}</span>
-                          <small>{contact.civilite ? `${contact.civilite} ` : ''}{[contact.prenom, contact.nom].filter(Boolean).join(' ') || 'Identite Hektor'}</small>
+                        <div className="contact-identity-content">
+                          <ContactTypeMark contact={contact} />
+                          <div>
+                            <strong>{contact.display_name}</strong>
+                            <span>ID {contact.hektor_contact_id} - {contactArchiveLabel(contact)}</span>
+                            <small>{contact.civilite ? `${contact.civilite} ` : ''}{[contact.prenom, contact.nom].filter(Boolean).join(' ') || 'Identite Hektor'}</small>
+                          </div>
                         </div>
                       </td>
                       <td className="contact-taxonomy-cell">
@@ -15521,6 +15528,8 @@ function MobileContactCards(props: {
   selectedRelations: AppContactRelation[]
   selectedSearches: AppContactSearch[]
   loading: boolean
+  createOpen: boolean
+  onCloseCreate: () => void
   onSelectContact: (id: string) => void
   onPrevContact: () => void
   onNextContact: () => void
@@ -15536,7 +15545,6 @@ function MobileContactCards(props: {
   onContactDeleted?: (contact: AppContact) => void
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
   const openContactDetail = (contactId: string) => {
     props.onSelectContact(contactId)
     setDetailOpen(true)
@@ -15545,34 +15553,26 @@ function MobileContactCards(props: {
     return (
       <section className="mobile-empty-card">
         <span>{props.loading ? 'Chargement...' : 'Aucun contact disponible.'}</span>
-        {props.canManageContacts ? (
-          <>
-            <button className="mobile-contact-create-button" type="button" onClick={() => setCreateOpen(true)}>
-              <span className="contact-create-button-mark" aria-hidden="true">+</span>
-              <span><strong>Nouveau contact</strong><small>Hektor</small></span>
-            </button>
-            {createOpen ? (
-              <ContactWorkflowModal
-                title="Nouveau contact"
-                eyebrow="Creation Hektor"
-                summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
-                tone="create"
-                onClose={() => setCreateOpen(false)}
-              >
-                <HektorContactIdentityForm
-                  mode="create"
-                  compact
-                  hektorUserEmail={props.hektorUserEmail}
-                  hektorUserId={props.hektorUserId}
-                  hektorNegotiators={props.hektorNegotiators}
-                  profileRole={props.profileRole}
-                  sessionEmail={props.sessionEmail}
-                  onCancel={() => setCreateOpen(false)}
-                  onJobCreated={props.onJobCreated}
-                />
-              </ContactWorkflowModal>
-            ) : null}
-          </>
+        {props.createOpen && props.canManageContacts ? (
+          <ContactWorkflowModal
+            title="Nouveau contact"
+            eyebrow="Creation Hektor"
+            summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
+            tone="create"
+            onClose={props.onCloseCreate}
+          >
+            <HektorContactIdentityForm
+              mode="create"
+              compact
+              hektorUserEmail={props.hektorUserEmail}
+              hektorUserId={props.hektorUserId}
+              hektorNegotiators={props.hektorNegotiators}
+              profileRole={props.profileRole}
+              sessionEmail={props.sessionEmail}
+              onCancel={props.onCloseCreate}
+              onJobCreated={props.onJobCreated}
+            />
+          </ContactWorkflowModal>
         ) : null}
       </section>
     )
@@ -15586,19 +15586,13 @@ function MobileContactCards(props: {
         </div>
         <span>{props.contacts.length} / {props.total}</span>
       </div>
-      {props.canManageContacts ? (
-        <button className="mobile-contact-create-button" type="button" onClick={() => setCreateOpen(true)}>
-          <span className="contact-create-button-mark" aria-hidden="true">+</span>
-          <span><strong>Nouveau contact</strong><small>Hektor</small></span>
-        </button>
-      ) : null}
-      {createOpen && props.canManageContacts ? (
+      {props.createOpen && props.canManageContacts ? (
         <ContactWorkflowModal
           title="Nouveau contact"
           eyebrow="Creation Hektor"
           summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
           tone="create"
-          onClose={() => setCreateOpen(false)}
+          onClose={props.onCloseCreate}
         >
           <HektorContactIdentityForm
             mode="create"
@@ -15608,7 +15602,7 @@ function MobileContactCards(props: {
             hektorNegotiators={props.hektorNegotiators}
             profileRole={props.profileRole}
             sessionEmail={props.sessionEmail}
-            onCancel={() => setCreateOpen(false)}
+            onCancel={props.onCloseCreate}
             onJobCreated={props.onJobCreated}
           />
         </ContactWorkflowModal>
