@@ -730,7 +730,6 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     step: 6,
     title: '6. Mandat / prix',
     fields: [
-      wf('mdn_id', 'ID mandant'),
       wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
       wf('prix', 'Prix public', { inputMode: 'decimal' }),
       wf('_selecterHonoraires2', 'Honoraires acquereur', { options: wizardHonorairesOptions }),

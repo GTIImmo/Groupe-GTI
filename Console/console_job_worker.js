@@ -3153,7 +3153,7 @@ function applyExactHektorWizardFields(body, payload, step) {
   const exact = exactHektorWizardFields(payload);
   if (!Object.keys(exact).length) return [];
   const applied = [];
-  const protectedKeys = new Set(["mode", "step", "idann", "offredem", "programme_neuf", "isInterkabActive", "enabled", "content_pdf"]);
+  const protectedKeys = new Set(["mode", "step", "idann", "offredem", "programme_neuf", "isInterkabActive", "enabled", "content_pdf", "mdn_id"]);
   for (const [rawKey, rawValue] of Object.entries(exact)) {
     const key = String(rawKey || "").trim();
     if (!key || protectedKeys.has(key)) continue;
