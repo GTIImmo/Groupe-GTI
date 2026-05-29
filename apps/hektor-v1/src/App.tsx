@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, FormEvent, Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import {
   type AppFilters,
@@ -15008,6 +15008,43 @@ function HektorContactIdentityForm(props: {
   )
 }
 
+function ContactWorkflowModal(props: {
+  title: string
+  eyebrow: string
+  summary: string
+  tone?: 'create' | 'edit' | 'danger'
+  onClose: () => void
+  children: ReactNode
+}) {
+  const symbol = props.tone === 'danger' ? '!' : props.tone === 'edit' ? 'ID' : '+'
+  return (
+    <div className={`contact-workflow-overlay is-${props.tone ?? 'create'}`} onClick={(event) => {
+      event.stopPropagation()
+      props.onClose()
+    }}>
+      <section className="contact-workflow-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="contact-workflow-head">
+          <div className="contact-workflow-title">
+            <span className="contact-workflow-symbol" aria-hidden="true">{symbol}</span>
+            <div>
+              <p className="eyebrow">{props.eyebrow}</p>
+              <h3>{props.title}</h3>
+              <span>{props.summary}</span>
+            </div>
+          </div>
+          <button className="contact-workflow-close" type="button" onClick={props.onClose}>
+            <span aria-hidden="true">x</span>
+            Fermer
+          </button>
+        </div>
+        <div className="contact-workflow-body">
+          {props.children}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function ContactDetailPopup(props: {
   contact: AppContact
   relations: AppContactRelation[]
@@ -15075,22 +15112,52 @@ function ContactDetailPopup(props: {
   return (
     <div className="modal-overlay contact-detail-overlay" onClick={props.onClose}>
       <section className="modal-panel contact-detail-modal" onClick={(event) => event.stopPropagation()}>
-        <button className="contact-detail-close" type="button" onClick={props.onClose}>Fermer</button>
         <div className="contact-detail-modal-head">
-          <div className="contact-detail-title">
-            <ContactTypeMark contact={props.contact} />
-            <div>
-              <p className="eyebrow">Fiche contact</p>
-              <h3>{props.contact.display_name}</h3>
-              <span>ID {props.contact.hektor_contact_id} - {contactArchiveLabel(props.contact)}</span>
+          <div className="contact-detail-heading-main">
+            <div className="contact-detail-title">
+              <ContactTypeMark contact={props.contact} />
+              <div>
+                <p className="eyebrow">Fiche contact</p>
+                <h3>{props.contact.display_name}</h3>
+                <span>ID {props.contact.hektor_contact_id} - {contactArchiveLabel(props.contact)}</span>
+              </div>
+            </div>
+            <div className="contact-communication-panel" aria-label="Actions de contact direct">
+              {props.contact.phone_primary ? (
+                <a className="contact-quick-action is-phone" href={`tel:${props.contact.phone_primary}`}>
+                  <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
+                  <span><strong>Appeler</strong><small>{props.contact.phone_primary}</small></span>
+                </a>
+              ) : null}
+              {props.contact.email ? (
+                <a className="contact-quick-action is-email" href={`mailto:${props.contact.email}`}>
+                  <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="content" /></span>
+                  <span><strong>Email</strong><small>{props.contact.email}</small></span>
+                </a>
+              ) : null}
             </div>
           </div>
-          <div className="contact-action-row">
-            {props.contact.phone_primary ? <a className="ghost-button" href={`tel:${props.contact.phone_primary}`}>Appeler</a> : null}
-            {props.contact.email ? <a className="ghost-button" href={`mailto:${props.contact.email}`}>Email</a> : null}
-            <button className="ghost-button" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>Hektor</button>
-            {props.canManageContacts ? <button className="ghost-button" type="button" onClick={() => setEditing((value) => !value)}>{editing ? 'Fermer edition' : 'Modifier'}</button> : null}
-            {props.canDeleteContacts ? <button className="ghost-button button-danger" type="button" onClick={() => setDeleteOpen((value) => !value)}>{deleteOpen ? 'Annuler suppression' : 'Supprimer'}</button> : null}
+          <div className="contact-management-actions" aria-label="Gestion du contact">
+            <button className="contact-management-button is-hektor" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>
+              <span aria-hidden="true"><DetailIcon type="hektor" /></span>
+              Hektor
+            </button>
+            {props.canManageContacts ? (
+              <button className="contact-management-button is-edit" type="button" onClick={() => setEditing(true)}>
+                <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+                Modifier
+              </button>
+            ) : null}
+            {props.canDeleteContacts ? (
+              <button className="contact-management-button is-delete" type="button" onClick={() => setDeleteOpen(true)}>
+                <span aria-hidden="true"><DetailIcon type="history" /></span>
+                Supprimer
+              </button>
+            ) : null}
+            <button className="contact-management-button is-close" type="button" onClick={props.onClose}>
+              <span aria-hidden="true">x</span>
+              Fermer
+            </button>
           </div>
           <div className="contact-detail-hero-stats" aria-label="Synthese contact">
             <span className="is-relations"><strong>{props.relations.length}</strong><small>relation(s) annonce</small></span>
@@ -15098,52 +15165,6 @@ function ContactDetailPopup(props: {
             <span className={duplicateCount > 0 ? 'is-duplicate' : ''}><strong>{duplicateCount}</strong><small>groupe(s) doublon</small></span>
           </div>
         </div>
-
-        {editing ? (
-          <div className="contact-detail-editor-shell">
-            <HektorContactIdentityForm
-              mode="update"
-              contact={props.contact}
-              hektorUserEmail={props.hektorUserEmail}
-              hektorUserId={props.hektorUserId}
-              hektorNegotiators={props.hektorNegotiators}
-              profileRole={props.profileRole}
-              sessionEmail={props.sessionEmail}
-              onCancel={() => setEditing(false)}
-              onJobCreated={props.onJobCreated}
-            />
-          </div>
-        ) : null}
-
-        {deleteOpen && props.canDeleteContacts ? (
-          <form className="contact-delete-panel delete-annonce-form" onSubmit={handleDeleteContact}>
-            <section className="delete-annonce-warning">
-              <strong>{props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`}</strong>
-              <span>Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.</span>
-            </section>
-            <label className="filter-field">
-              <span>Raison interne</span>
-              <textarea className="inline-textarea" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} placeholder="Doublon, test, erreur de creation..." />
-            </label>
-            <label className="filter-field">
-              <span>Confirmation</span>
-              <input
-                value={deleteConfirmText}
-                onChange={(event) => setDeleteConfirmText(event.target.value)}
-                placeholder={`Tape : ${expectedDeleteConfirm}`}
-                autoComplete="off"
-                required
-              />
-            </label>
-            {deleteError ? <p className="form-error">{deleteError}</p> : null}
-            <div className="modal-actions">
-              <button className="ghost-button button-subtle" type="button" onClick={() => setDeleteOpen(false)} disabled={deletePending}>Annuler</button>
-              <button className="ghost-button button-danger" type="submit" disabled={deletePending || deleteConfirmText.trim() !== expectedDeleteConfirm}>
-                {deletePending ? 'Envoi...' : 'Supprimer dans Hektor'}
-              </button>
-            </div>
-          </form>
-        ) : null}
 
         <div className="contact-detail-modal-grid">
           <div className="contact-detail-profile-column">
@@ -15274,6 +15295,64 @@ function ContactDetailPopup(props: {
           </div>
         </div>
       </section>
+      {editing && props.canManageContacts ? (
+        <ContactWorkflowModal
+          title="Modifier le contact"
+          eyebrow="Mise a jour Hektor"
+          summary="Les changements sont envoyes au worker Hektor puis resynchronises vers le local et Supabase."
+          tone="edit"
+          onClose={() => setEditing(false)}
+        >
+          <HektorContactIdentityForm
+            mode="update"
+            contact={props.contact}
+            hektorUserEmail={props.hektorUserEmail}
+            hektorUserId={props.hektorUserId}
+            hektorNegotiators={props.hektorNegotiators}
+            profileRole={props.profileRole}
+            sessionEmail={props.sessionEmail}
+            onCancel={() => setEditing(false)}
+            onJobCreated={props.onJobCreated}
+          />
+        </ContactWorkflowModal>
+      ) : null}
+      {deleteOpen && props.canDeleteContacts ? (
+        <ContactWorkflowModal
+          title="Supprimer le contact"
+          eyebrow="Action sensible"
+          summary="La suppression passe par Hektor, puis nettoie la copie locale et le listing Supabase."
+          tone="danger"
+          onClose={() => setDeleteOpen(false)}
+        >
+          <form className="contact-delete-panel contact-delete-panel-modern delete-annonce-form" onSubmit={handleDeleteContact}>
+            <section className="delete-annonce-warning">
+              <strong>{props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`}</strong>
+              <span>Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.</span>
+            </section>
+            <label className="filter-field">
+              <span>Raison interne</span>
+              <textarea className="inline-textarea" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} placeholder="Doublon, test, erreur de creation..." />
+            </label>
+            <label className="filter-field">
+              <span>Confirmation</span>
+              <input
+                value={deleteConfirmText}
+                onChange={(event) => setDeleteConfirmText(event.target.value)}
+                placeholder={`Tape : ${expectedDeleteConfirm}`}
+                autoComplete="off"
+                required
+              />
+            </label>
+            {deleteError ? <p className="form-error">{deleteError}</p> : null}
+            <div className="modal-actions">
+              <button className="ghost-button button-subtle" type="button" onClick={() => setDeleteOpen(false)} disabled={deletePending}>Annuler</button>
+              <button className="ghost-button button-danger" type="submit" disabled={deletePending || deleteConfirmText.trim() !== expectedDeleteConfirm}>
+                {deletePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+              </button>
+            </div>
+          </form>
+        </ContactWorkflowModal>
+      ) : null}
     </div>
   )
 }
@@ -15306,6 +15385,7 @@ function ContactsScreen(props: {
   onContactDeleted?: (contact: AppContact) => void
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
+  const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
   const [detailOpen, setDetailOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const openContactDetail = (contactId: string) => {
@@ -15315,29 +15395,14 @@ function ContactsScreen(props: {
   return (
     <section className="contacts-workspace contacts-workspace-full">
       <section className="panel panel-wide contacts-list-panel">
-        <div className="contacts-directory-toolbar">
-          <div className="contacts-directory-title">
-            <span className="contacts-directory-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
-            <div>
-              <p className="eyebrow">Annuaire Hektor</p>
-              <h3>Catalogue contacts</h3>
-              <span>{formatNumber.format(props.contactsTotal)} resultat(s) dans le filtre courant</span>
-            </div>
-          </div>
-          <div className="contacts-directory-metrics" aria-label="Synthese contacts">
-            <span><strong>{formatNumber.format(props.stats.active)}</strong> actifs</span>
-            <span><strong>{formatNumber.format(props.stats.activeSearchContacts)}</strong> recherches actives</span>
-            <span><strong>{formatNumber.format(props.stats.linked)}</strong> lies annonces</span>
-            <span><strong>{formatNumber.format(props.stats.highRiskDuplicates)}</strong> doublons forts</span>
-          </div>
-          {props.canManageContacts ? (
-            <button className="primary-action contact-create-button" type="button" onClick={() => setCreateOpen((value) => !value)}>
-              {createOpen ? 'Fermer' : 'Nouveau contact'}
-            </button>
-          ) : null}
-        </div>
         {createOpen && props.canManageContacts ? (
-          <div className="contact-create-panel">
+          <ContactWorkflowModal
+            title="Nouveau contact"
+            eyebrow="Creation Hektor"
+            summary="Identite, typologie et options CRM avant creation dans Hektor puis synchronisation app."
+            tone="create"
+            onClose={() => setCreateOpen(false)}
+          >
             <HektorContactIdentityForm
               mode="create"
               hektorUserEmail={props.hektorUserEmail}
@@ -15348,14 +15413,20 @@ function ContactsScreen(props: {
               onCancel={() => setCreateOpen(false)}
               onJobCreated={props.onJobCreated}
             />
-          </div>
+          </ContactWorkflowModal>
         ) : null}
         <div className="panel-head contacts-list-head">
           <div className="listing-title-stack">
-            <h3>Contacts</h3>
-            <span className="listing-total-label">Vue legere, enrichie par les relations et recherches disponibles</span>
+            <h3>Liste des contacts</h3>
+            <span className="listing-total-label">{listingTotalLabel}</span>
           </div>
           <div className="page-controls">
+            {props.canManageContacts ? (
+              <button className="primary-action contact-create-button" type="button" onClick={() => setCreateOpen(true)}>
+                <span className="contact-create-button-mark" aria-hidden="true">+</span>
+                <span><strong>Nouveau contact</strong><small>Hektor</small></span>
+              </button>
+            ) : null}
             {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
             <span>{pageLabel(props.contactsTotal, contactPageSize, props.contactPage)}</span>
             <span>Page {props.contactPage} / {props.contactTotalPages}</span>
@@ -15476,21 +15547,30 @@ function MobileContactCards(props: {
         <span>{props.loading ? 'Chargement...' : 'Aucun contact disponible.'}</span>
         {props.canManageContacts ? (
           <>
-            <button className="mobile-contact-create-button" type="button" onClick={() => setCreateOpen((value) => !value)}>
-              {createOpen ? 'Fermer creation' : 'Nouveau contact'}
+            <button className="mobile-contact-create-button" type="button" onClick={() => setCreateOpen(true)}>
+              <span className="contact-create-button-mark" aria-hidden="true">+</span>
+              <span><strong>Nouveau contact</strong><small>Hektor</small></span>
             </button>
             {createOpen ? (
-              <HektorContactIdentityForm
-                mode="create"
-                compact
-                hektorUserEmail={props.hektorUserEmail}
-                hektorUserId={props.hektorUserId}
-                hektorNegotiators={props.hektorNegotiators}
-                profileRole={props.profileRole}
-                sessionEmail={props.sessionEmail}
-                onCancel={() => setCreateOpen(false)}
-                onJobCreated={props.onJobCreated}
-              />
+              <ContactWorkflowModal
+                title="Nouveau contact"
+                eyebrow="Creation Hektor"
+                summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
+                tone="create"
+                onClose={() => setCreateOpen(false)}
+              >
+                <HektorContactIdentityForm
+                  mode="create"
+                  compact
+                  hektorUserEmail={props.hektorUserEmail}
+                  hektorUserId={props.hektorUserId}
+                  hektorNegotiators={props.hektorNegotiators}
+                  profileRole={props.profileRole}
+                  sessionEmail={props.sessionEmail}
+                  onCancel={() => setCreateOpen(false)}
+                  onJobCreated={props.onJobCreated}
+                />
+              </ContactWorkflowModal>
             ) : null}
           </>
         ) : null}
@@ -15507,22 +15587,31 @@ function MobileContactCards(props: {
         <span>{props.contacts.length} / {props.total}</span>
       </div>
       {props.canManageContacts ? (
-        <button className="mobile-contact-create-button" type="button" onClick={() => setCreateOpen((value) => !value)}>
-          {createOpen ? 'Fermer creation' : 'Nouveau contact'}
+        <button className="mobile-contact-create-button" type="button" onClick={() => setCreateOpen(true)}>
+          <span className="contact-create-button-mark" aria-hidden="true">+</span>
+          <span><strong>Nouveau contact</strong><small>Hektor</small></span>
         </button>
       ) : null}
       {createOpen && props.canManageContacts ? (
-        <HektorContactIdentityForm
-          mode="create"
-          compact
-          hektorUserEmail={props.hektorUserEmail}
-          hektorUserId={props.hektorUserId}
-          hektorNegotiators={props.hektorNegotiators}
-          profileRole={props.profileRole}
-          sessionEmail={props.sessionEmail}
-          onCancel={() => setCreateOpen(false)}
-          onJobCreated={props.onJobCreated}
-        />
+        <ContactWorkflowModal
+          title="Nouveau contact"
+          eyebrow="Creation Hektor"
+          summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
+          tone="create"
+          onClose={() => setCreateOpen(false)}
+        >
+          <HektorContactIdentityForm
+            mode="create"
+            compact
+            hektorUserEmail={props.hektorUserEmail}
+            hektorUserId={props.hektorUserId}
+            hektorNegotiators={props.hektorNegotiators}
+            profileRole={props.profileRole}
+            sessionEmail={props.sessionEmail}
+            onCancel={() => setCreateOpen(false)}
+            onJobCreated={props.onJobCreated}
+          />
+        </ContactWorkflowModal>
       ) : null}
       {props.contacts.map((contact) => {
         const tone = contactToneFromRoles(contactJsonList(contact.relation_roles_json), contact)

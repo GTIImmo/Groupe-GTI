@@ -26612,3 +26612,693 @@ body {
     grid-column: auto;
   }
 }
+
+/* Contacts UX: modalised create/edit/delete flows and cleaner action hierarchy. */
+.contact-create-button,
+.mobile-contact-create-button {
+  display: inline-grid !important;
+  grid-template-columns: 36px minmax(0, auto) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  min-height: 48px !important;
+  border: 1px solid rgba(197, 0, 95, 0.28) !important;
+  border-radius: 8px !important;
+  padding: 6px 16px 6px 8px !important;
+  background:
+    linear-gradient(135deg, #c5005f 0%, #a90052 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(197, 0, 95, 0.2) !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+
+.contacts-directory-toolbar .contact-create-button {
+  justify-self: end !important;
+  width: auto !important;
+  min-width: 210px !important;
+}
+
+@media (min-width: 1181px) {
+  .contacts-directory-toolbar {
+    grid-template-columns: minmax(360px, 1fr) minmax(500px, auto) !important;
+  }
+
+  .contacts-directory-title {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .contacts-directory-metrics {
+    grid-column: 2 !important;
+    grid-row: 1 / span 2 !important;
+  }
+
+  .contacts-directory-toolbar .contact-create-button {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    justify-self: start !important;
+    margin-top: 2px !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .contacts-directory-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .contacts-directory-metrics {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+.contact-create-button:hover,
+.mobile-contact-create-button:hover {
+  transform: translateY(-1px) !important;
+  border-color: rgba(197, 0, 95, 0.42) !important;
+  box-shadow: 0 16px 30px rgba(197, 0, 95, 0.24) !important;
+}
+
+.contact-create-button-mark {
+  display: grid !important;
+  place-items: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.contact-create-button span:last-child,
+.mobile-contact-create-button span:last-child {
+  display: grid !important;
+  gap: 0 !important;
+  min-width: 0 !important;
+}
+
+.contact-create-button strong,
+.mobile-contact-create-button strong {
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  line-height: 1.1 !important;
+}
+
+.contact-create-button small,
+.mobile-contact-create-button small {
+  color: rgba(255, 255, 255, 0.74) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.contacts-list-head .contact-create-button {
+  min-height: 40px !important;
+  min-width: 168px !important;
+  grid-template-columns: 28px minmax(0, auto) !important;
+  gap: 8px !important;
+  padding: 5px 12px 5px 6px !important;
+  box-shadow: 0 8px 18px rgba(197, 0, 95, 0.14) !important;
+}
+
+.contacts-list-head .contact-create-button .contact-create-button-mark {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 19px !important;
+}
+
+.contacts-list-head .contact-create-button strong {
+  font-size: 12px !important;
+}
+
+.contacts-list-head .contact-create-button small {
+  font-size: 9px !important;
+}
+
+@media (max-width: 980px) {
+  .contacts-list-head {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contacts-list-head .page-controls {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+.contact-workflow-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 4200 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 26px !important;
+  background: rgba(18, 20, 24, 0.54) !important;
+  backdrop-filter: blur(5px) !important;
+  overflow: auto !important;
+}
+
+.contact-workflow-modal {
+  width: min(990px, calc(100vw - 34px)) !important;
+  max-height: calc(100vh - 42px) !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  border: 1px solid rgba(255, 255, 255, 0.78) !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 30px 70px rgba(16, 24, 40, 0.3) !important;
+  overflow: hidden !important;
+}
+
+.contact-workflow-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  gap: 18px !important;
+  padding: 22px 24px 18px !important;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08) !important;
+  background:
+    linear-gradient(90deg, rgba(197, 0, 95, 0.08) 0%, rgba(47, 102, 115, 0.055) 54%, rgba(255, 255, 255, 0) 100%),
+    #ffffff !important;
+}
+
+.contact-workflow-overlay.is-edit .contact-workflow-head {
+  background:
+    linear-gradient(90deg, rgba(47, 102, 115, 0.1) 0%, rgba(255, 255, 255, 0) 72%),
+    #ffffff !important;
+}
+
+.contact-workflow-overlay.is-danger .contact-workflow-head {
+  background:
+    linear-gradient(90deg, rgba(185, 74, 72, 0.11) 0%, rgba(255, 255, 255, 0) 72%),
+    #ffffff !important;
+}
+
+.contact-workflow-title {
+  display: grid !important;
+  grid-template-columns: 54px minmax(0, 1fr) !important;
+  gap: 14px !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+.contact-workflow-symbol {
+  display: grid !important;
+  place-items: center !important;
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 10px !important;
+  background: var(--gti-final-magenta, #c5005f) !important;
+  color: #ffffff !important;
+  font-size: 24px !important;
+  font-weight: 950 !important;
+  box-shadow: 0 14px 28px rgba(197, 0, 95, 0.2) !important;
+}
+
+.contact-workflow-overlay.is-edit .contact-workflow-symbol {
+  background: var(--contact-purpose-info, #2f6673) !important;
+  box-shadow: 0 14px 28px rgba(47, 102, 115, 0.18) !important;
+}
+
+.contact-workflow-overlay.is-danger .contact-workflow-symbol {
+  background: #b94a48 !important;
+  box-shadow: 0 14px 28px rgba(185, 74, 72, 0.2) !important;
+}
+
+.contact-workflow-title h3 {
+  margin: 0 !important;
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 26px !important;
+  font-weight: 950 !important;
+  line-height: 1.05 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.contact-workflow-title span:not(.contact-workflow-symbol) {
+  display: block !important;
+  margin-top: 5px !important;
+  color: rgba(34, 35, 35, 0.66) !important;
+  font-size: 13px !important;
+  font-weight: 720 !important;
+  line-height: 1.35 !important;
+}
+
+.contact-workflow-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 38px !important;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  padding: 0 12px !important;
+  background: #ffffff !important;
+  color: rgba(34, 35, 35, 0.78) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+.contact-workflow-close span {
+  display: grid !important;
+  place-items: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 999px !important;
+  background: rgba(34, 35, 35, 0.08) !important;
+  color: rgba(34, 35, 35, 0.78) !important;
+  line-height: 1 !important;
+}
+
+.contact-workflow-close:hover {
+  border-color: rgba(197, 0, 95, 0.22) !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+}
+
+.contact-workflow-body {
+  min-height: 0 !important;
+  padding: 22px 24px 24px !important;
+  background: #f7f8f8 !important;
+  overflow: auto !important;
+}
+
+.contact-workflow-modal .contact-editor-form {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.contact-workflow-modal .hektor-inline-form-head {
+  min-height: 0 !important;
+  padding: 0 0 12px !important;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08) !important;
+  background: transparent !important;
+}
+
+.contact-workflow-modal .hektor-inline-icon {
+  background: rgba(197, 0, 95, 0.1) !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+}
+
+.contact-workflow-overlay.is-edit .hektor-inline-icon {
+  background: rgba(47, 102, 115, 0.1) !important;
+  color: var(--contact-purpose-info, #2f6673) !important;
+}
+
+.contact-workflow-modal .contact-editor-context {
+  margin: 0 !important;
+  border-color: rgba(47, 102, 115, 0.16) !important;
+  background:
+    linear-gradient(135deg, rgba(47, 102, 115, 0.075), rgba(255, 255, 255, 0) 70%),
+    #ffffff !important;
+}
+
+.contact-workflow-modal .contact-editor-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.contact-workflow-modal .contact-editor-grid .is-wide {
+  grid-column: span 2 !important;
+}
+
+.contact-workflow-modal .hektor-inline-actions {
+  position: sticky !important;
+  bottom: -24px !important;
+  margin: 2px -24px -24px !important;
+  padding: 14px 24px !important;
+  border-top: 1px solid rgba(34, 35, 35, 0.08) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+.contact-workflow-modal .hektor-inline-actions .primary-action {
+  min-height: 42px !important;
+  border-radius: 8px !important;
+}
+
+.contact-delete-panel-modern {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.contact-delete-panel-modern .delete-annonce-warning {
+  border-color: rgba(185, 74, 72, 0.22) !important;
+  background: rgba(185, 74, 72, 0.08) !important;
+}
+
+.contact-delete-panel-modern .filter-field {
+  display: grid !important;
+  gap: 8px !important;
+  margin-top: 16px !important;
+}
+
+.contact-delete-panel-modern .filter-field > span {
+  color: rgba(34, 35, 35, 0.58) !important;
+  font-size: 11px !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.contact-delete-panel-modern .inline-textarea,
+.contact-delete-panel-modern .filter-field input {
+  width: 100% !important;
+  border: 1px solid rgba(34, 35, 35, 0.14) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 14px !important;
+  font-weight: 760 !important;
+  line-height: 1.35 !important;
+  outline: none !important;
+}
+
+.contact-delete-panel-modern .inline-textarea {
+  min-height: 92px !important;
+  padding: 13px 14px !important;
+  resize: vertical !important;
+}
+
+.contact-delete-panel-modern .filter-field input {
+  min-height: 44px !important;
+  padding: 0 13px !important;
+}
+
+.contact-delete-panel-modern .inline-textarea:focus,
+.contact-delete-panel-modern .filter-field input:focus {
+  border-color: rgba(185, 74, 72, 0.36) !important;
+  box-shadow: 0 0 0 3px rgba(185, 74, 72, 0.1) !important;
+}
+
+.contact-delete-panel-modern .modal-actions {
+  justify-content: flex-end !important;
+  margin-top: 18px !important;
+}
+
+.contact-delete-panel-modern .modal-actions .ghost-button {
+  min-height: 44px !important;
+  border-radius: 8px !important;
+  padding: 0 16px !important;
+}
+
+.contact-detail-modal .contact-detail-modal-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, auto) !important;
+  gap: 18px 22px !important;
+  align-items: start !important;
+  padding: 26px 30px 20px !important;
+  background:
+    linear-gradient(105deg, rgba(197, 0, 95, 0.065) 0%, rgba(47, 102, 115, 0.05) 44%, rgba(255, 255, 255, 0) 82%),
+    #ffffff !important;
+}
+
+.contact-detail-heading-main {
+  display: grid !important;
+  gap: 16px !important;
+  min-width: 0 !important;
+}
+
+.contact-detail-modal .contact-detail-title {
+  grid-template-columns: 76px minmax(0, 1fr) !important;
+  gap: 16px !important;
+}
+
+.contact-detail-modal .contact-detail-title h3 {
+  max-width: 760px !important;
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: clamp(24px, 2.1vw, 32px) !important;
+  line-height: 1.04 !important;
+}
+
+.contact-communication-panel {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(180px, 260px)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+}
+
+.contact-communication-panel:empty {
+  display: none !important;
+}
+
+.contact-quick-action {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: center !important;
+  min-height: 58px !important;
+  padding: 9px 12px !important;
+  border: 1px solid rgba(47, 102, 115, 0.18) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink, #222323) !important;
+  text-decoration: none !important;
+  box-shadow: 0 10px 24px rgba(34, 35, 35, 0.055) !important;
+}
+
+.contact-quick-action:hover {
+  border-color: rgba(47, 102, 115, 0.32) !important;
+  background: rgba(47, 102, 115, 0.055) !important;
+  transform: translateY(-1px) !important;
+}
+
+.contact-quick-action-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 8px !important;
+  background: rgba(47, 102, 115, 0.09) !important;
+  color: var(--contact-purpose-info, #2f6673) !important;
+}
+
+.contact-quick-action.is-email .contact-quick-action-icon {
+  background: rgba(197, 0, 95, 0.09) !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+}
+
+.contact-quick-action svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.contact-quick-action strong,
+.contact-quick-action small {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-quick-action strong {
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+}
+
+.contact-quick-action small {
+  margin-top: 3px !important;
+  color: rgba(34, 35, 35, 0.58) !important;
+  font-size: 11px !important;
+  font-weight: 760 !important;
+}
+
+.contact-management-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(124px, 1fr)) !important;
+  gap: 9px !important;
+  align-self: start !important;
+}
+
+.contact-management-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-height: 40px !important;
+  min-width: 0 !important;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  padding: 0 12px !important;
+  background: #ffffff !important;
+  color: rgba(34, 35, 35, 0.78) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.contact-management-button span {
+  display: grid !important;
+  place-items: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 auto !important;
+  line-height: 1 !important;
+}
+
+.contact-management-button svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.contact-management-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 10px 20px rgba(34, 35, 35, 0.08) !important;
+}
+
+.contact-management-button.is-hektor {
+  border-color: rgba(34, 35, 35, 0.18) !important;
+  color: var(--gti-final-ink, #222323) !important;
+}
+
+.contact-management-button.is-edit {
+  border-color: rgba(47, 102, 115, 0.22) !important;
+  color: var(--contact-purpose-info, #2f6673) !important;
+}
+
+.contact-management-button.is-delete {
+  border-color: rgba(185, 74, 72, 0.22) !important;
+  color: #b94a48 !important;
+}
+
+.contact-management-button.is-delete:hover {
+  background: rgba(185, 74, 72, 0.075) !important;
+}
+
+.contact-management-button.is-close {
+  background: rgba(34, 35, 35, 0.055) !important;
+}
+
+.contact-detail-modal .contact-detail-hero-stats {
+  grid-column: 1 / -1 !important;
+  margin-top: 0 !important;
+}
+
+.contact-detail-modal .contact-detail-hero-stats > span {
+  box-shadow: 0 8px 18px rgba(34, 35, 35, 0.045) !important;
+}
+
+@media (max-width: 980px) {
+  .contact-detail-modal .contact-detail-modal-head {
+    grid-template-columns: 1fr !important;
+    padding: 22px 18px 16px !important;
+  }
+
+  .contact-management-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .contact-workflow-modal .contact-editor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .contact-workflow-overlay {
+    align-items: stretch !important;
+    padding: 10px !important;
+  }
+
+  .contact-workflow-modal {
+    width: 100% !important;
+    max-height: calc(100vh - 20px) !important;
+  }
+
+  .contact-workflow-head {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 18px 14px 14px !important;
+  }
+
+  .contact-workflow-title {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+  }
+
+  .contact-workflow-symbol {
+    width: 46px !important;
+    height: 46px !important;
+    font-size: 20px !important;
+  }
+
+  .contact-workflow-title h3 {
+    font-size: 22px !important;
+  }
+
+  .contact-workflow-close {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .contact-workflow-body {
+    padding: 14px !important;
+    overflow-x: hidden !important;
+  }
+
+  .contact-workflow-modal .contact-editor-form,
+  .contact-workflow-modal .contact-editor-context,
+  .contact-workflow-modal .contact-editor-grid,
+  .contact-workflow-modal .hektor-inline-form-head,
+  .contact-workflow-modal .hektor-inline-actions {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .contact-workflow-modal input,
+  .contact-workflow-modal select,
+  .contact-workflow-modal textarea {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .contact-workflow-modal .contact-editor-grid,
+  .contact-workflow-modal .contact-editor-grid .is-wide {
+    grid-template-columns: 1fr !important;
+    grid-column: auto !important;
+  }
+
+  .contact-workflow-modal .hektor-inline-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    bottom: -14px !important;
+    margin: 0 -14px -14px !important;
+    padding: 12px 14px !important;
+  }
+
+  .contact-workflow-modal .hektor-inline-actions button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .contact-detail-modal .contact-detail-title {
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+  }
+
+  .contact-communication-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-management-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .contact-management-button {
+    min-height: 42px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+  }
+
+  .mobile-contact-create-button {
+    width: 100% !important;
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+  }
+}
