@@ -1456,8 +1456,10 @@ async function switchHektorUserContextWithPlaywright(idUser) {
         return false;
       }
     }, targetId, { timeout: 12000 }).then(() => true).catch(() => false);
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    lastHektorLoginAt = Date.now();
+    if (confirmed) {
+      await context.storageState({ path: STORAGE_STATE_PATH });
+      lastHektorLoginAt = Date.now();
+    }
     return confirmed;
   } finally {
     if (browser) await browser.close().catch(() => {});
@@ -1483,6 +1485,11 @@ async function hektorHtmlRequestWithJar(jar, url) {
     const text = await response.text();
     if (response.status === 403) throw new Error(`Hektor 403 on context switch ${url}`);
     if (response.status >= 500) throw new Error(`Hektor ${response.status} on context switch`);
+    if (isHektorLoginPage(text)) {
+      const error = new Error(`Session Hektor expiree ou invalide sur ${url}`);
+      error.code = "HEKTOR_SESSION_EXPIRED";
+      throw error;
+    }
     return {
       status: response.status,
       location: response.headers.get("location"),
@@ -1496,10 +1503,11 @@ async function hektorHtmlRequestWithJar(jar, url) {
   }
 }
 
-async function switchHektorUserContext(idUser) {
-  const targetId = String(idUser || "").trim();
-  if (!targetId) throw new Error("idUser Hektor requis pour changer de contexte");
+function isHektorSessionExpiredError(error) {
+  return Boolean(error && (error.code === "HEKTOR_SESSION_EXPIRED" || String(error.message || "").includes("Session Hektor expiree")));
+}
 
+async function switchHektorUserContextOnce(targetId) {
   const state = readHektorStorageState();
   const jar = cookieJarFromStorageState(state);
   const htmlParts = [];
@@ -1539,9 +1547,22 @@ async function switchHektorUserContext(idUser) {
   }
   fs.writeFileSync(STORAGE_STATE_PATH, JSON.stringify(state, null, 2), "utf-8");
   lastHektorLoginAt = Date.now();
+  return true;
 }
 
-async function returnHektorDefaultContext() {
+async function switchHektorUserContext(idUser) {
+  const targetId = String(idUser || "").trim();
+  if (!targetId) throw new Error("idUser Hektor requis pour changer de contexte");
+  try {
+    return await switchHektorUserContextOnce(targetId);
+  } catch (error) {
+    if (!isHektorSessionExpiredError(error)) throw error;
+    await refreshHektorSession(`context_switch_expired_session_${targetId}`);
+    return switchHektorUserContextOnce(targetId);
+  }
+}
+
+async function returnHektorDefaultContextOnce() {
   const state = readHektorStorageState();
   const jar = cookieJarFromStorageState(state);
   const htmlParts = [];
@@ -1572,6 +1593,15 @@ async function returnHektorDefaultContext() {
   }
   fs.writeFileSync(STORAGE_STATE_PATH, JSON.stringify(state, null, 2), "utf-8");
   lastHektorLoginAt = Date.now();
+}
+
+async function returnHektorDefaultContext() {
+  try {
+    return await returnHektorDefaultContextOnce();
+  } catch (error) {
+    if (!isHektorSessionExpiredError(error)) throw error;
+    await refreshHektorSession("return_default_expired_session");
+  }
 }
 
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
@@ -1918,6 +1948,73 @@ async function returnAdminHektorSessionBestEffort(job, reason) {
       error: error && error.message ? error.message : String(error),
     });
   }
+}
+
+async function ensureHektorAgencySession(job, agencyContext, reason) {
+  const targetId = String(agencyContext && agencyContext.agency_id_user ? agencyContext.agency_id_user : "").trim();
+  if (!/^\d+$/.test(targetId)) {
+    throw new Error(`idUser agence Hektor invalide pour ${reason}`);
+  }
+
+  let current = currentHektorSessionIdentity();
+  if (current && current.userId === targetId && current.role === "AGENCE") {
+    await logJob(job.id, "hektor_context", "done", "Contexte Hektor agence deja actif", {
+      id_user: targetId,
+      role: current.role,
+      alias: current.alias || null,
+      reason,
+    });
+    return current;
+  }
+
+  if (!current || current.role !== "ADMIN") {
+    current = await ensureAdminHektorSession(job, `${reason}_admin_login`);
+  }
+
+  await logJob(job.id, "hektor_context", "running", "Changement de contexte Hektor agence", {
+    reason,
+    current_user_id: current && current.userId ? current.userId : null,
+    current_role: current && current.role ? current.role : null,
+    agency_id_user: targetId,
+    agency_label: agencyContext.agency_label || null,
+  });
+
+  let switchConfirmed = await switchHektorUserContext(targetId);
+  let after = currentHektorSessionIdentity();
+  if (!after || after.userId !== targetId || after.role !== "AGENCE") {
+    await logJob(job.id, "hektor_context", "running", "Bascule agence non confirmee, relance session admin avant nouveau changement", {
+      reason,
+      agency_id_user: targetId,
+      agency_label: agencyContext.agency_label || null,
+      switch_confirmed: Boolean(switchConfirmed),
+      visible_user_id: after && after.userId ? after.userId : null,
+      visible_role: after && after.role ? after.role : null,
+    });
+    current = await ensureAdminHektorSession(job, `${reason}_retry_admin_login`, { forceReturn: true });
+    switchConfirmed = await switchHektorUserContext(targetId);
+    after = currentHektorSessionIdentity();
+  }
+
+  if (!after || after.userId !== targetId || after.role !== "AGENCE") {
+    await logJob(job.id, "hektor_context", "error", "Bascule agence non confirmee, commande arretee avant ecriture", {
+      reason,
+      agency_id_user: targetId,
+      agency_label: agencyContext.agency_label || null,
+      switch_confirmed: Boolean(switchConfirmed),
+      visible_user_id: after && after.userId ? after.userId : null,
+      visible_role: after && after.role ? after.role : null,
+    });
+    throw new Error(`Bascule Hektor agence non confirmee pour idUser ${targetId}; commande arretee avant ecriture.`);
+  }
+
+  await logJob(job.id, "hektor_context", "done", "Contexte Hektor agence actif", {
+    id_user: after.userId,
+    role: after.role,
+    alias: after.alias || null,
+    agency_label: agencyContext.agency_label || null,
+    reason,
+  });
+  return after;
 }
 
 async function createHektorAnnonceWithPlaywright(job, payload) {
@@ -4283,10 +4380,10 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     });
     await sleep(1500);
   }
-  let switchedForAssignment = false;
+  let agencySwitchAttempted = false;
   try {
-    await switchHektorUserContext(agencyContext.agency_id_user);
-    switchedForAssignment = true;
+    agencySwitchAttempted = true;
+    await ensureHektorAgencySession(job, agencyContext, "assign_negotiator_agency_switch");
     await logJob(job.id, "hektor_assign_negotiator", "running", "Affectation du negociateur Hektor", {
       hektor_annonce_id: annonceId,
       agency_id_user: agencyContext.agency_id_user,
@@ -4341,7 +4438,7 @@ async function handleAssignHektorAnnonceNegotiator(job) {
       sync_job: syncJob,
     };
   } finally {
-    if (switchedForAssignment) {
+    if (agencySwitchAttempted) {
       await returnAdminHektorSessionBestEffort(job, "assign_negotiator_return_admin");
     }
   }
