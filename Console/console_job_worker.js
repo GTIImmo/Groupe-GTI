@@ -1422,12 +1422,18 @@ async function switchHektorUserContextWithPlaywright(idUser) {
     browser = await chromium.launch(browserLaunchOptions({ headless }));
     const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
     const page = await context.newPage();
-    await page.goto(`${ADMIN_URL}?call=authenticate&mode=autologin&idUser=${encodeURIComponent(targetId)}`, {
+    const loginResponse = await page.goto(`${ADMIN_URL}?call=authenticate&mode=autologin&idUser=${encodeURIComponent(targetId)}`, {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
+    if (loginResponse && loginResponse.status() === 403) {
+      throw new Error(`Hektor 403 on context switch autologin idUser ${targetId}`);
+    }
     await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
-    await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
+    const adminResponse = await page.goto(ADMIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => null);
+    if (adminResponse && adminResponse.status() === 403) {
+      throw new Error(`Hektor 403 after context switch autologin idUser ${targetId}`);
+    }
     confirmed = await page.waitForFunction((expectedId) => {
       const matchesImpersonate = (raw) => {
         const value = String(raw || "").trim();
@@ -1444,7 +1450,8 @@ async function switchHektorUserContextWithPlaywright(idUser) {
         const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
         const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
         const payload = JSON.parse(atob(padded));
-        return String(payload.userId || "") === String(expectedId);
+        const data = payload && payload.data ? payload.data : payload;
+        return String(data.userId || "") === String(expectedId);
       } catch (_) {
         return false;
       }
@@ -1474,6 +1481,7 @@ async function hektorHtmlRequestWithJar(jar, url) {
     });
     absorbSetCookieHeaders(jar, response.headers);
     const text = await response.text();
+    if (response.status === 403) throw new Error(`Hektor 403 on context switch ${url}`);
     if (response.status >= 500) throw new Error(`Hektor ${response.status} on context switch`);
     return {
       status: response.status,
@@ -1597,7 +1605,7 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     current = currentHektorSessionIdentity();
   }
 
-  if (current && current.role && current.role !== "ADMIN") {
+  if (current && (!current.role || current.role !== "ADMIN")) {
     await logJob(job.id, "hektor_context", "running", "Retour session admin avant changement de negociateur", {
       current_user_id: current.userId,
       current_role: current.role,
@@ -1617,6 +1625,15 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     current = currentHektorSessionIdentity();
   }
 
+  if (!current || current.role !== "ADMIN") {
+    await logJob(job.id, "hektor_context", "error", "Session admin requise avant changement de negociateur", {
+      target_id_user: target.idUser,
+      visible_user_id: current && current.userId ? current.userId : null,
+      visible_role: current && current.role ? current.role : null,
+    });
+    throw new Error(`Session Hektor admin requise avant bascule negociateur ${target.idUser}`);
+  }
+
   await logJob(job.id, "hektor_context", "running", "Changement de contexte Hektor negociateur", {
     current_user_id: current && current.userId ? current.userId : null,
     current_role: current && current.role ? current.role : null,
@@ -1624,10 +1641,46 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     target_label: target.label,
     source: target.source,
   });
-  const switchConfirmed = await switchHektorUserContext(target.idUser);
+  let switchConfirmed = await switchHektorUserContext(target.idUser);
 
-  const after = currentHektorSessionIdentity();
+  let after = currentHektorSessionIdentity();
   if (!after || after.userId !== String(target.idUser)) {
+    await logJob(job.id, "hektor_context", "running", "Bascule non confirmee, relance session admin avant nouveau changement", {
+      target_id_user: target.idUser,
+      target_label: target.label,
+      source: target.source,
+      switch_confirmed: Boolean(switchConfirmed),
+      visible_user_id: after && after.userId ? after.userId : null,
+      visible_role: after && after.role ? after.role : null,
+    });
+    await refreshHektorSession("context_switch_retry_unconfirmed");
+    current = currentHektorSessionIdentity();
+    if (!current || current.role !== "ADMIN") {
+      await logJob(job.id, "hektor_context", "error", "Session admin non confirmee apres relance avant changement de negociateur", {
+        target_id_user: target.idUser,
+        visible_user_id: current && current.userId ? current.userId : null,
+        visible_role: current && current.role ? current.role : null,
+      });
+      throw new Error(`Session Hektor admin non confirmee avant deuxieme bascule negociateur ${target.idUser}`);
+    }
+    switchConfirmed = await switchHektorUserContext(target.idUser);
+    after = currentHektorSessionIdentity();
+  }
+
+  if (!after || after.userId !== String(target.idUser)) {
+    const allowUnverified = String(process.env.CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT || "true").toLowerCase() !== "false";
+    const hasConflictingVisibleIdentity = Boolean(after && after.userId && after.userId !== String(target.idUser));
+    if (allowUnverified && !hasConflictingVisibleIdentity) {
+      await logJob(job.id, "hektor_context", "done", "Contexte Hektor envoye mais identite locale non verifiable", {
+        target_id_user: target.idUser,
+        target_label: target.label,
+        source: target.source,
+        switch_confirmed: Boolean(switchConfirmed),
+        visible_user_id: after && after.userId ? after.userId : null,
+        visible_role: after && after.role ? after.role : null,
+      });
+      return target;
+    }
     await logJob(job.id, "hektor_context", "error", "Bascule Hektor non confirmee, commande arretee avant ecriture", {
       target_id_user: target.idUser,
       target_label: target.label,
@@ -1821,15 +1874,15 @@ async function fetchHektorAnnonceDetailKeyDataBestEffort(job, hektorAnnonceId, s
   }
 }
 
-async function ensureAdminHektorSession(job, reason) {
+async function ensureAdminHektorSession(job, reason, options = {}) {
   let current = currentHektorSessionIdentity();
-  if (!current || current.role !== "ADMIN") {
+  if (options.forceReturn || !current || current.role !== "ADMIN") {
     await logJob(job.id, "hektor_context", "running", "Retour session administrateur Hektor", {
       reason,
       current_user_id: current && current.userId ? current.userId : null,
       current_role: current && current.role ? current.role : null,
     });
-    if (current && current.role) {
+    if (options.forceReturn || (current && current.role)) {
       try {
         await returnHektorDefaultContext();
       } catch (error) {
@@ -1854,6 +1907,17 @@ async function ensureAdminHektorSession(job, reason) {
     alias: current.alias || null,
   });
   return current;
+}
+
+async function returnAdminHektorSessionBestEffort(job, reason) {
+  try {
+    await ensureAdminHektorSession(job, reason, { forceReturn: true });
+  } catch (error) {
+    await logJob(job.id, "hektor_context", "error", "Retour administrateur Hektor non confirme apres action", {
+      reason,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
 }
 
 async function createHektorAnnonceWithPlaywright(job, payload) {
@@ -4111,11 +4175,18 @@ async function handleChangeHektorAnnonceStatus(job) {
     app_dossier_id: dossier.app_dossier_id || null,
   });
   const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_status_verify_before");
-  const transactionResult = config.transactionMode
-    ? await submitHektorTransactionStatus(job, annonceId, target, config, payload)
-    : target === "closed"
-      ? await submitHektorClosedStatus(job, annonceId, config, payload)
-      : await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
+  let transactionResult = null;
+  try {
+    transactionResult = config.transactionMode
+      ? await submitHektorTransactionStatus(job, annonceId, target, config, payload)
+      : target === "closed"
+        ? await submitHektorClosedStatus(job, annonceId, config, payload)
+        : await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
+  } finally {
+    if (config.transactionMode) {
+      await returnAdminHektorSessionBestEffort(job, "change_status_return_admin");
+    }
+  }
 
   await sleep(2500);
   const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_status_verify_after");
@@ -4212,60 +4283,68 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     });
     await sleep(1500);
   }
-  await switchHektorUserContext(agencyContext.agency_id_user);
-  await logJob(job.id, "hektor_assign_negotiator", "running", "Affectation du negociateur Hektor", {
-    hektor_annonce_id: annonceId,
-    agency_id_user: agencyContext.agency_id_user,
-    agency_label: agencyContext.agency_label || null,
-    target_hektor_user_id: targetId,
-    target_hektor_negociateur_id: targetNegotiatorId,
-    target_label: directoryUser.display_name || null,
-    target_email: directoryUser.email || null,
-  });
+  let switchedForAssignment = false;
+  try {
+    await switchHektorUserContext(agencyContext.agency_id_user);
+    switchedForAssignment = true;
+    await logJob(job.id, "hektor_assign_negotiator", "running", "Affectation du negociateur Hektor", {
+      hektor_annonce_id: annonceId,
+      agency_id_user: agencyContext.agency_id_user,
+      agency_label: agencyContext.agency_label || null,
+      target_hektor_user_id: targetId,
+      target_hektor_negociateur_id: targetNegotiatorId,
+      target_label: directoryUser.display_name || null,
+      target_email: directoryUser.email || null,
+    });
 
-  const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_before");
-  await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
-    mode: "upval",
-    id: annonceId,
-    champ: "NEGOCIATEUR",
-    val: targetNegotiatorId,
-  })}`, {
-    headers: {
-      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
-    },
-  });
+    const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_before");
+    await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+      mode: "upval",
+      id: annonceId,
+      champ: "NEGOCIATEUR",
+      val: targetNegotiatorId,
+    })}`, {
+      headers: {
+        Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      },
+    });
 
-  const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_after");
-  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
-    reason: "assign_hektor_annonce_negotiator",
-    priority: 82,
-  });
+    const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_after");
+    const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+      reason: "assign_hektor_annonce_negotiator",
+      priority: 82,
+    });
 
-  return {
-    status: "assigned",
-    hektor_annonce_id: annonceId,
-    app_dossier_id: dossier.app_dossier_id || null,
-    agency_id_user: agencyContext.agency_id_user,
-    agency_label: agencyContext.agency_label || null,
-    target_hektor_user_id: targetId,
-    target_hektor_negociateur_id: targetNegotiatorId,
-    target_label: directoryUser.display_name || null,
-    target_email: directoryUser.email || null,
-    confirmed_negotiator_id: null,
-    before_property: before && before.property ? {
-      id: before.property.id,
-      folderNumber: before.property.folderNumber || null,
-      status: before.property.status || null,
-      isArchived: before.property.isArchived === true,
-    } : null,
-    after_property: after && after.property ? {
-      id: after.property.id,
-      folderNumber: after.property.folderNumber || null,
-      status: after.property.status || null,
-      isArchived: after.property.isArchived === true,
-    } : null,
-    sync_job: syncJob,
-  };
+    return {
+      status: "assigned",
+      hektor_annonce_id: annonceId,
+      app_dossier_id: dossier.app_dossier_id || null,
+      agency_id_user: agencyContext.agency_id_user,
+      agency_label: agencyContext.agency_label || null,
+      target_hektor_user_id: targetId,
+      target_hektor_negociateur_id: targetNegotiatorId,
+      target_label: directoryUser.display_name || null,
+      target_email: directoryUser.email || null,
+      confirmed_negotiator_id: null,
+      before_property: before && before.property ? {
+        id: before.property.id,
+        folderNumber: before.property.folderNumber || null,
+        status: before.property.status || null,
+        isArchived: before.property.isArchived === true,
+      } : null,
+      after_property: after && after.property ? {
+        id: after.property.id,
+        folderNumber: after.property.folderNumber || null,
+        status: after.property.status || null,
+        isArchived: after.property.isArchived === true,
+      } : null,
+      sync_job: syncJob,
+    };
+  } finally {
+    if (switchedForAssignment) {
+      await returnAdminHektorSessionBestEffort(job, "assign_negotiator_return_admin");
+    }
+  }
 }
 
 async function handleLinkHektorMandant(job) {
