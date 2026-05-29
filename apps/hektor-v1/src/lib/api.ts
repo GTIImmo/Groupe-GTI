@@ -2406,30 +2406,43 @@ export async function loadUserNegotiatorContext(email: string | null | undefined
       : null
   }
 
-  const { data, error } = await supabase
-    .from(dossiersCurrentView)
-    .select('commercial_id,commercial_nom,negociateur_email,agence_nom')
-    .eq('negociateur_email', normalized)
+  const { data: userData, error: userError } = await supabase
+    .from('app_user_directory')
+    .select('id_user,display_name,email')
+    .eq('user_type', 'NEGO')
+    .ilike('email', normalized)
     .limit(1)
     .maybeSingle()
 
-  if (error) {
-    const message = (error.message ?? '').toLowerCase()
-    if (message.includes('negociateur_email') && (message.includes('does not exist') || message.includes('schema cache'))) {
-      return null
+  if (userError) throw new Error(userError.message)
+
+  const activeUser = userData as { id_user?: string | number | null; display_name?: string | null; email?: string | null } | null
+  if (activeUser?.id_user) {
+    const activeUserId = String(activeUser.id_user)
+    const { data: directoryData, error: directoryError } = await supabase
+      .from('app_hektor_negotiator_agency_directory')
+      .select('hektor_user_id,display_name,email,agence_nom')
+      .eq('hektor_user_id', activeUserId)
+      .limit(1)
+      .maybeSingle()
+
+    if (directoryError) {
+      const message = (directoryError.message ?? '').toLowerCase()
+      if (!(message.includes('app_hektor_negotiator_agency_directory') && (message.includes('does not exist') || message.includes('schema cache')))) {
+        throw new Error(directoryError.message)
+      }
     }
-    throw new Error(error.message)
+
+    const directoryContext = directoryData as { hektor_user_id?: string | number | null; display_name?: string | null; email?: string | null; agence_nom?: string | null } | null
+    return {
+      commercial_nom: directoryContext?.display_name ?? activeUser.display_name ?? null,
+      negociateur_email: directoryContext?.email ?? activeUser.email ?? normalized,
+      agence_nom: directoryContext?.agence_nom ?? null,
+      hektor_user_id: activeUserId,
+    }
   }
 
-  const context = (data as (UserNegotiatorContext & { commercial_id?: string | null }) | null) ?? null
-  return context
-    ? {
-        commercial_nom: context.commercial_nom ?? null,
-        negociateur_email: context.negociateur_email ?? null,
-        agence_nom: context.agence_nom ?? null,
-        hektor_user_id: context.hektor_user_id ?? context.commercial_id ?? null,
-      }
-    : null
+  return null
 }
 
 export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Promise<HektorNegotiatorOption[]> {
@@ -2450,7 +2463,7 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
       .filter((item): item is HektorNegotiatorOption => Boolean(item))
   }
 
-  const [directoryResult, dossierResult] = await Promise.all([
+  const [directoryResult, activeUsersResult, dossierResult] = await Promise.all([
     supabase
       .from('app_hektor_negotiator_agency_directory')
       .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email')
@@ -2458,13 +2471,25 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
       .order('display_name', { ascending: true })
       .limit(500),
     supabase
+      .from('app_user_directory')
+      .select('id_user')
+      .eq('user_type', 'NEGO')
+      .limit(1000),
+    supabase
       .from('app_dossiers_current')
       .select('commercial_id,commercial_nom,negociateur_email,agence_nom')
       .limit(4000),
   ])
 
   if (directoryResult.error) throw new Error(directoryResult.error.message)
+  if (activeUsersResult.error) throw new Error(activeUsersResult.error.message)
   if (dossierResult.error) throw new Error(dossierResult.error.message)
+
+  const activeHektorUserIds = new Set(
+    ((activeUsersResult.data ?? []) as Array<{ id_user?: string | number | null }>)
+      .map((row) => (row.id_user == null ? '' : String(row.id_user).trim()))
+      .filter(Boolean),
+  )
 
   const dossierByEmail = new Map<string, { commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>()
   for (const row of (dossierResult.data ?? []) as Array<{ commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>) {
@@ -2478,6 +2503,7 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
     .map<HektorNegotiatorOption | null>((row) => {
       const idUser = row.hektor_user_id == null ? '' : String(row.hektor_user_id).trim()
       if (!idUser) return null
+      if (!activeHektorUserIds.has(idUser)) return null
       const email = normalizeEmail(row.email)
       if (wantedEmail && email !== wantedEmail) return null
       const dossier = email ? dossierByEmail.get(email) : undefined
@@ -4365,6 +4391,11 @@ export type HektorContactIdentityInput = {
   crmBirthdayEnabled?: boolean | null
   hektorUserEmail?: string | null
   hektorUserId?: string | null
+  hektorUserLabel?: string | null
+  hektorNegotiatorId?: string | null
+  hektorAgencyId?: string | null
+  hektorAgencyUserId?: string | null
+  hektorAgencyLabel?: string | null
 }
 
 function cleanOptionalText(value: string | null | undefined) {
@@ -4372,7 +4403,14 @@ function cleanOptionalText(value: string | null | undefined) {
   return text || null
 }
 
+function escapePostgrestFilterValue(value: string) {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
 function hContactPayload(contact: HektorContactIdentityInput) {
+  const hektorUserId = cleanOptionalText(contact.hektorUserId)
+  const agencyUserId = cleanOptionalText(contact.hektorAgencyUserId)
+  const hektorUserEmail = cleanOptionalText(contact.hektorUserEmail)
   return {
     civilite: cleanOptionalText(contact.civility),
     last_name: contact.lastName.trim(),
@@ -4395,9 +4433,15 @@ function hContactPayload(contact: HektorContactIdentityInput) {
     crm_mandate_summary_enabled: typeof contact.crmMandateSummaryEnabled === 'boolean' ? contact.crmMandateSummaryEnabled : null,
     crm_mandate_expiration_enabled: typeof contact.crmMandateExpirationEnabled === 'boolean' ? contact.crmMandateExpirationEnabled : null,
     crm_birthday_enabled: typeof contact.crmBirthdayEnabled === 'boolean' ? contact.crmBirthdayEnabled : null,
-    hektor_user_email: cleanOptionalText(contact.hektorUserEmail),
-    hektor_user_id: cleanOptionalText(contact.hektorUserId),
-    target_hektor_user_id: cleanOptionalText(contact.hektorUserId),
+    hektor_user_email: hektorUserEmail,
+    hektor_user_id: hektorUserId,
+    target_hektor_user_id: hektorUserId,
+    target_hektor_user_label: cleanOptionalText(contact.hektorUserLabel),
+    target_hektor_user_email: hektorUserEmail,
+    target_hektor_negociateur_id: cleanOptionalText(contact.hektorNegotiatorId),
+    target_hektor_agence_id: cleanOptionalText(contact.hektorAgencyId),
+    target_agency_id_user: cleanOptionalText(contact.hektorAgencyUserId),
+    target_agency_label: cleanOptionalText(contact.hektorAgencyLabel),
   }
 }
 
@@ -4473,18 +4517,24 @@ export async function findContactDuplicateCandidates(input: {
   if (!hasSupabaseEnv || !supabase) return []
   const email = cleanOptionalText(input.email)
   const phone = cleanOptionalText(input.phone)
-  const name = [input.firstName, input.lastName].map((value) => cleanOptionalText(value)).filter(Boolean).join(' ')
-  const queryText = normalizeSearchTerm(email || phone || name).replace(/\s+/g, ' ').trim()
-  if (queryText.length < 3) return []
+  const filters = [
+    email ? `email.ilike.${escapePostgrestFilterValue(email)}` : null,
+    phone ? `phone_primary.eq.${escapePostgrestFilterValue(phone)}` : null,
+    phone ? `phone_secondary.eq.${escapePostgrestFilterValue(phone)}` : null,
+  ].filter((value): value is string => Boolean(value))
+  if (filters.length === 0) return []
   const { data, error } = await supabase
     .from(contactsCurrentView)
     .select(contactsListingSelect)
-    .ilike('search_text', `%${queryText}%`)
+    .or(filters.join(','))
     .order('archive', { ascending: true })
     .order('linked_annonce_count', { ascending: false })
     .order('date_maj', { ascending: false, nullsFirst: false })
     .limit(limit)
-  if (error || !data) throw new Error(error?.message ?? 'Unable to search contact duplicates')
+  if (error || !data) {
+    console.warn('Contact duplicate check skipped', error?.message ?? 'Unable to search contact duplicates')
+    return []
+  }
   return ((data ?? []) as unknown as AppContact[]).map(normalizeContactRow)
 }
 
@@ -4962,19 +5012,46 @@ export async function loadConsoleJobsByIds(ids: string[]): Promise<ConsoleJob[]>
 
 export type HektorDraftAnnonceJobInput = {
   title?: string | null
+  description?: string | null
   agenceNom?: string | null
   hektorUserId?: string | null
+  hektorNegociateurId?: string | null
   hektorUserLabel?: string | null
   hektorUserEmail?: string | null
   propertyType?: string | null
+  hektorIdType?: string | number | null
   offerType?: 'sale' | 'rental'
   address?: string | null
   postalCode?: string | null
   city?: string | null
   price?: string | number | null
+  netSellerPrice?: string | number | null
   surface?: string | number | null
+  carrezSurface?: string | number | null
+  livingSurface?: string | number | null
   roomCount?: string | number | null
   bedroomCount?: string | number | null
+  bathroomCount?: string | number | null
+  showerRoomCount?: string | number | null
+  wcCount?: string | number | null
+  kitchen?: string | null
+  exposure?: string | null
+  view?: string | null
+  interiorState?: string | null
+  exteriorState?: string | null
+  landSurface?: string | number | null
+  terraceCount?: string | number | null
+  garageCount?: string | number | null
+  parkingInsideCount?: string | number | null
+  parkingOutsideCount?: string | number | null
+  constructionYear?: string | number | null
+  dpeValue?: string | number | null
+  gesValue?: string | number | null
+  coproLots?: string | number | null
+  coproCharges?: string | number | null
+  coproQuotePart?: string | number | null
+  coproWorksFund?: string | number | null
+  wizardFields?: Record<string, string | number | null | undefined>
   note?: string | null
   initialMandant?: HektorMandantContactInput | null
   priority?: number
@@ -4986,20 +5063,48 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
   const { data, error } = await supabase.rpc('app_console_create_draft_annonce_job', {
     draft_payload: {
       title: input.title?.trim() || null,
+      description: input.description?.trim() || null,
       agence_nom: input.agenceNom?.trim() || null,
       hektor_user_id: input.hektorUserId?.trim() || null,
+      hektor_negociator_form_id: input.hektorNegociateurId?.trim() || null,
       hektor_user_label: input.hektorUserLabel?.trim() || null,
       hektor_user_email: input.hektorUserEmail?.trim() || null,
       property_type: input.propertyType?.trim() || 'Appartement',
-      hektor_id_type: '2',
+      hektor_id_type: input.hektorIdType == null ? '2' : String(input.hektorIdType).trim() || '2',
       offer_type: input.offerType ?? 'sale',
       address: input.address?.trim() || null,
       postal_code: input.postalCode?.trim() || null,
       city: input.city?.trim() || null,
       price: input.price == null ? null : String(input.price).trim() || null,
+      net_seller_price: input.netSellerPrice == null ? null : String(input.netSellerPrice).trim() || null,
       surface: input.surface == null ? null : String(input.surface).trim() || null,
+      carrez_surface: input.carrezSurface == null ? null : String(input.carrezSurface).trim() || null,
+      living_surface: input.livingSurface == null ? null : String(input.livingSurface).trim() || null,
       room_count: input.roomCount == null ? null : String(input.roomCount).trim() || null,
       bedroom_count: input.bedroomCount == null ? null : String(input.bedroomCount).trim() || null,
+      bathroom_count: input.bathroomCount == null ? null : String(input.bathroomCount).trim() || null,
+      shower_room_count: input.showerRoomCount == null ? null : String(input.showerRoomCount).trim() || null,
+      wc_count: input.wcCount == null ? null : String(input.wcCount).trim() || null,
+      kitchen: input.kitchen?.trim() || null,
+      exposure: input.exposure?.trim() || null,
+      view: input.view?.trim() || null,
+      interior_state: input.interiorState?.trim() || null,
+      exterior_state: input.exteriorState?.trim() || null,
+      land_surface: input.landSurface == null ? null : String(input.landSurface).trim() || null,
+      terrace_count: input.terraceCount == null ? null : String(input.terraceCount).trim() || null,
+      garage_count: input.garageCount == null ? null : String(input.garageCount).trim() || null,
+      parking_inside_count: input.parkingInsideCount == null ? null : String(input.parkingInsideCount).trim() || null,
+      parking_outside_count: input.parkingOutsideCount == null ? null : String(input.parkingOutsideCount).trim() || null,
+      construction_year: input.constructionYear == null ? null : String(input.constructionYear).trim() || null,
+      dpe_value: input.dpeValue == null ? null : String(input.dpeValue).trim() || null,
+      ges_value: input.gesValue == null ? null : String(input.gesValue).trim() || null,
+      copro_lots: input.coproLots == null ? null : String(input.coproLots).trim() || null,
+      copro_charges: input.coproCharges == null ? null : String(input.coproCharges).trim() || null,
+      copro_quote_part: input.coproQuotePart == null ? null : String(input.coproQuotePart).trim() || null,
+      copro_works_fund: input.coproWorksFund == null ? null : String(input.coproWorksFund).trim() || null,
+      hektor_wizard_fields: input.wizardFields
+        ? Object.fromEntries(Object.entries(input.wizardFields).map(([key, value]) => [key, value == null ? null : String(value).trim() || null]))
+        : null,
       note: input.note?.trim() || null,
       initial_mandant: input.initialMandant ? {
         civilite: input.initialMandant.civility?.trim() || null,

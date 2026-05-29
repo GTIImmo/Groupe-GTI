@@ -387,11 +387,410 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
   },
 ]
 
+const draftAnnoncePropertyTypes = [
+  { id: '2', label: 'Appartement' },
+  { id: '1', label: 'Maison' },
+  { id: '5', label: 'Terrain' },
+  { id: '7', label: 'Immeuble' },
+  { id: '25', label: 'Villa' },
+  { id: '26', label: 'Studio' },
+  { id: '27', label: 'Duplex' },
+  { id: '3', label: 'Parking / Garage' },
+  { id: '6', label: 'Local' },
+  { id: '4', label: 'Bureau' },
+]
+
+function draftAnnoncePropertyTypeLabel(id: string) {
+  return draftAnnoncePropertyTypes.find((item) => item.id === id)?.label ?? 'Appartement'
+}
+
+type DraftAnnonceAdvancedKey =
+  | 'description'
+  | 'netSellerPrice'
+  | 'carrezSurface'
+  | 'livingSurface'
+  | 'bathroomCount'
+  | 'showerRoomCount'
+  | 'wcCount'
+  | 'kitchen'
+  | 'exposure'
+  | 'view'
+  | 'interiorState'
+  | 'exteriorState'
+  | 'landSurface'
+  | 'terraceCount'
+  | 'garageCount'
+  | 'parkingInsideCount'
+  | 'parkingOutsideCount'
+  | 'constructionYear'
+  | 'dpeValue'
+  | 'gesValue'
+  | 'coproLots'
+  | 'coproCharges'
+  | 'coproQuotePart'
+  | 'coproWorksFund'
+
+type DraftAnnonceAdvancedField = {
+  key: DraftAnnonceAdvancedKey
+  label: string
+  placeholder?: string
+  inputMode?: 'decimal' | 'numeric'
+  multiline?: boolean
+}
+
+const draftAnnonceAdvancedSections: Array<{ title: string; fields: DraftAnnonceAdvancedField[] }> = [
+  {
+    title: 'Texte public',
+    fields: [
+      { key: 'description', label: 'Description', placeholder: 'Texte annonce', multiline: true },
+    ],
+  },
+  {
+    title: 'Interieur',
+    fields: [
+      { key: 'netSellerPrice', label: 'Prix net vendeur', inputMode: 'decimal' },
+      { key: 'carrezSurface', label: 'Surface Carrez', inputMode: 'decimal' },
+      { key: 'livingSurface', label: 'Surface sejour', inputMode: 'decimal' },
+      { key: 'bathroomCount', label: 'SDB', inputMode: 'numeric' },
+      { key: 'showerRoomCount', label: "Salle d'eau", inputMode: 'numeric' },
+      { key: 'wcCount', label: 'WC', inputMode: 'numeric' },
+      { key: 'kitchen', label: 'Cuisine' },
+      { key: 'exposure', label: 'Exposition' },
+      { key: 'view', label: 'Vue' },
+      { key: 'interiorState', label: 'Etat interieur' },
+    ],
+  },
+  {
+    title: 'Exterieur',
+    fields: [
+      { key: 'exteriorState', label: 'Etat exterieur' },
+      { key: 'landSurface', label: 'Terrain', inputMode: 'decimal' },
+      { key: 'terraceCount', label: 'Terrasses', inputMode: 'numeric' },
+      { key: 'garageCount', label: 'Garages', inputMode: 'numeric' },
+      { key: 'parkingInsideCount', label: 'Parking int.', inputMode: 'numeric' },
+      { key: 'parkingOutsideCount', label: 'Parking ext.', inputMode: 'numeric' },
+    ],
+  },
+  {
+    title: 'Diagnostics / copro',
+    fields: [
+      { key: 'constructionYear', label: 'Annee construction', inputMode: 'numeric' },
+      { key: 'dpeValue', label: 'DPE conso', inputMode: 'numeric' },
+      { key: 'gesValue', label: 'GES', inputMode: 'numeric' },
+      { key: 'coproLots', label: 'Lots copro', inputMode: 'numeric' },
+      { key: 'coproCharges', label: 'Charges', inputMode: 'decimal' },
+      { key: 'coproQuotePart', label: 'Quote-part', inputMode: 'decimal' },
+      { key: 'coproWorksFund', label: 'Fonds travaux', inputMode: 'decimal' },
+    ],
+  },
+]
+
+function buildEmptyDraftAnnonceAdvanced(): Record<DraftAnnonceAdvancedKey, string> {
+  return Object.fromEntries(
+    draftAnnonceAdvancedSections.flatMap((section) => section.fields.map((field) => [field.key, ''])),
+  ) as Record<DraftAnnonceAdvancedKey, string>
+}
+
+type DraftAnnonceWizardField = {
+  name: string
+  label: string
+  inputMode?: 'decimal' | 'numeric'
+  multiline?: boolean
+  options?: Array<{ value: string; label: string }>
+}
+
+type DraftAnnonceWizardGroup = {
+  step: number
+  title: string
+  fields: DraftAnnonceWizardField[]
+}
+
+const wizardUnknownOuiNon = [
+  { value: '', label: 'Non precise' },
+  { value: 'OUI', label: 'Oui' },
+  { value: 'NON', label: 'Non' },
+]
+
+const wizardNonOui = [
+  { value: '', label: 'Non' },
+  { value: '1', label: 'Oui' },
+]
+
+const wizardHonorairesOptions = [
+  { value: 'NON', label: 'Non' },
+  { value: 'OUI', label: 'Oui' },
+]
+
+const wizardFloorStateOptions = [
+  { value: '', label: 'Non precise' },
+  { value: 'GROUND_FLOOR', label: 'Rez-de-chaussee' },
+  { value: 'OTHER_FLOOR', label: 'Autre etage' },
+]
+
+const wizardOccupationOptions = [
+  { value: 'N', label: 'Non precise' },
+  { value: 'L', label: 'Libre' },
+  { value: 'S', label: 'Loue' },
+]
+
+const wizardProcedureOptions = [
+  { value: '', label: 'Non precise' },
+  { value: 'ALERTE', label: "Procedure d'alerte" },
+  { value: 'REDRESSEMENT', label: 'Procedure de redressement' },
+  { value: 'PROCEDURE_EN_COURS', label: 'Procedure en cours' },
+  { value: 'PAS_DE_PROCEDURE', label: 'Pas de procedure' },
+]
+
+function wf(name: string, label: string, options?: Partial<DraftAnnonceWizardField>): DraftAnnonceWizardField {
+  return { name, label, ...options }
+}
+
+const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
+  {
+    step: 1,
+    title: '1. Offre',
+    fields: [
+      wf('prix', 'Prix public', { inputMode: 'decimal' }),
+      wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
+      wf('surfappart', 'Surface habitable', { inputMode: 'decimal' }),
+      wf('nbpieces', 'Pieces', { inputMode: 'numeric' }),
+      wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
+      wf('NB_NIVEAUX', 'Niveaux', { inputMode: 'numeric' }),
+      wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
+      wf('EXPOSITION', 'Exposition'),
+      wf('vuee', 'Vue'),
+      wf('NO_DOSSIER', 'Numero dossier'),
+      wf('dateenr', 'Date creation'),
+    ],
+  },
+  {
+    step: 3,
+    title: '3. Secteur',
+    fields: [
+      wf('codepublique', 'Code postal public'),
+      wf('villepublique', 'Ville publique'),
+      wf('ADRESSE_COMPL', 'Adresse / complement'),
+      wf('immeuble', 'Immeuble'),
+      wf('TRANSPORT', 'Transport'),
+      wf('PROXIMITE', 'Proximite'),
+      wf('ENVIRONNEMENT', 'Environnement'),
+      wf('latitude', 'Latitude', { inputMode: 'decimal' }),
+      wf('longitude', 'Longitude', { inputMode: 'decimal' }),
+    ],
+  },
+  {
+    step: 4,
+    title: '4. Composition',
+    fields: [
+      wf('typePiece', 'Type piece'),
+      wf('detailPiece', 'Detail piece'),
+      wf('etagePiece', 'Etage piece'),
+      wf('surfacePiece', 'Surface piece', { inputMode: 'decimal' }),
+      wf('notePublique', 'Note publique piece', { multiline: true }),
+      wf('notePrivee', 'Note privee piece', { multiline: true }),
+      wf('noteInterAgence', 'Note inter-agence piece', { multiline: true }),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Details - interieur',
+    fields: [
+      wf('Particularites', 'Particularites'),
+      wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
+      wf('NB_SDB', 'Salles de bain', { inputMode: 'numeric' }),
+      wf('NB_SE', "Salles d'eau", { inputMode: 'numeric' }),
+      wf('NB_WC', 'WC', { inputMode: 'numeric' }),
+      wf('SURF_CARREZ', 'Surface Carrez', { inputMode: 'decimal' }),
+      wf('SURF_SEJOUR', 'Surface sejour', { inputMode: 'decimal' }),
+      wf('CUISINE', 'Cuisine'),
+      wf('CUISINE_EQUIPEMENT', 'Equipement cuisine'),
+      wf('EXPOSITION', 'Exposition'),
+      wf('vuee', 'Vue'),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Details - exterieur',
+    fields: [
+      wf('MURS_MITOYENS', 'Murs mitoyens'),
+      wf('floorState', 'Indication etage', { options: wizardFloorStateOptions }),
+      wf('ETAGE', 'Etage', { inputMode: 'numeric' }),
+      wf('DERNIER_ETAGE', 'Dernier etage', { options: wizardUnknownOuiNon }),
+      wf('NB_ETAGES', 'Nombre etages', { inputMode: 'numeric' }),
+      wf('CAVE', 'Cave', { options: wizardUnknownOuiNon }),
+      wf('SURFACE_CAVE', 'Surface cave', { inputMode: 'decimal' }),
+      wf('BALCON', 'Balcon', { options: wizardUnknownOuiNon }),
+      wf('NB_BALCON', 'Nombre balcons', { inputMode: 'numeric' }),
+      wf('SURFACE_BALCON', 'Surface balcon', { inputMode: 'decimal' }),
+      wf('TERRASSE', 'Terrasse', { options: wizardUnknownOuiNon }),
+      wf('NB_TERRASSE', 'Nombre terrasses', { inputMode: 'numeric' }),
+      wf('SURFACE_TERRASSE', 'Surface terrasse', { inputMode: 'decimal' }),
+      wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
+      wf('SURFACE_GARAGE', 'Surface garage', { inputMode: 'decimal' }),
+      wf('NB_PARK_INT', 'Parking interieur', { inputMode: 'numeric' }),
+      wf('NB_PARK_EXT', 'Parking exterieur', { inputMode: 'numeric' }),
+      wf('RESIDENCE', 'Residence'),
+      wf('TYPE_RESIDENCE', 'Type residence'),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Details - equipements',
+    fields: [
+      wf('formatChauff', 'Format chauffage'),
+      wf('typeChauff', 'Type chauffage'),
+      wf('energieChauff', 'Energie chauffage'),
+      wf('ASCENSEUR', 'Ascenseur', { options: wizardUnknownOuiNon }),
+      wf('ACCES_HANDI', 'Acces handicape', { options: wizardUnknownOuiNon }),
+      wf('climatisation', 'Climatisation', { options: wizardUnknownOuiNon }),
+      wf('climatisationspec', 'Specification climatisation'),
+      wf('EAU', 'Eau'),
+      wf('ASSAINISSEMENT', 'Assainissement'),
+      wf('DISTRIBUTION_EAU', 'Distribution eau'),
+      wf('ENERGIE_EAU', 'Energie eau'),
+      wf('cheminee', 'Cheminee', { options: wizardUnknownOuiNon }),
+      wf('volets_elctriques', 'Volets electriques', { options: wizardUnknownOuiNon }),
+      wf('gardien', 'Gardien', { options: wizardUnknownOuiNon }),
+      wf('double_vitrage', 'Double vitrage', { options: wizardUnknownOuiNon }),
+      wf('triple_vitrage', 'Triple vitrage', { options: wizardUnknownOuiNon }),
+      wf('cable', 'Cable', { options: wizardUnknownOuiNon }),
+      wf('porte_blindee', 'Porte blindee', { options: wizardUnknownOuiNon }),
+      wf('interphone', 'Interphone', { options: wizardUnknownOuiNon }),
+      wf('visiophone', 'Visiophone', { options: wizardUnknownOuiNon }),
+      wf('alarme', 'Alarme', { options: wizardUnknownOuiNon }),
+      wf('digicode', 'Digicode', { options: wizardUnknownOuiNon }),
+      wf('detecteur_fumee', 'Detecteur fumee', { options: wizardUnknownOuiNon }),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Details - diagnostics',
+    fields: [
+      wf('ANNEE_CONS', 'Annee construction', { inputMode: 'numeric' }),
+      wf('etat_exterieur', 'Etat exterieur'),
+      wf('etat_interieur', 'Etat interieur'),
+      wf('dpe_date', 'Date DPE'),
+      wf('dpe_non_concerne', 'DPE non concerne', { options: wizardNonOui }),
+      wf('dpe_vierge', 'DPE vierge', { options: wizardNonOui }),
+      wf('isDpeAltitude', 'DPE altitude', { options: wizardNonOui }),
+      wf('dpe_cons', 'DPE consommation', { inputMode: 'numeric' }),
+      wf('dpe_ges', 'GES', { inputMode: 'numeric' }),
+      wf('valeurEnergieFinale', 'Energie finale', { inputMode: 'numeric' }),
+      wf('dpe_couts_min', 'Cout energie min', { inputMode: 'decimal' }),
+      wf('dpe_couts_max', 'Cout energie max', { inputMode: 'decimal' }),
+      wf('dpe_annee_reference', 'Annee reference DPE', { inputMode: 'numeric' }),
+      wf('diagnostiqueur', 'Diagnostiqueur'),
+      wf('syndic', 'Syndic'),
+      wf('diag_termites', 'Termites', { options: wizardUnknownOuiNon }),
+      wf('diag_termites_date', 'Date termites'),
+      wf('diag_termites_commentaire', 'Commentaire termites', { multiline: true }),
+      wf('diag_amiante', 'Amiante', { options: wizardUnknownOuiNon }),
+      wf('diag_amiante_date', 'Date amiante'),
+      wf('diag_amiante_commentaire', 'Commentaire amiante', { multiline: true }),
+      wf('diag_electrique', 'Electrique', { options: wizardUnknownOuiNon }),
+      wf('diag_electrique_date', 'Date electrique'),
+      wf('diag_electrique_commentaire', 'Commentaire electrique', { multiline: true }),
+      wf('diag_loi_carrez', 'Loi Carrez', { options: wizardUnknownOuiNon }),
+      wf('diag_loi_carrez_date', 'Date loi Carrez'),
+      wf('diag_loi_carrez_commentaire', 'Commentaire loi Carrez', { multiline: true }),
+      wf('diag_risques_nat_tech', 'Risques naturels', { options: wizardUnknownOuiNon }),
+      wf('diag_risques_nat_tech_date', 'Date risques'),
+      wf('diag_risques_nat_tech_commentaire', 'Commentaire risques', { multiline: true }),
+      wf('diag_plomb', 'Plomb', { options: wizardUnknownOuiNon }),
+      wf('diag_plomb_date', 'Date plomb'),
+      wf('diag_plomb_commentaire', 'Commentaire plomb', { multiline: true }),
+      wf('diag_gaz', 'Gaz', { options: wizardUnknownOuiNon }),
+      wf('diag_gaz_date', 'Date gaz'),
+      wf('diag_gaz_commentaire', 'Commentaire gaz', { multiline: true }),
+      wf('diag_assainissement', 'Assainissement diag.', { options: wizardUnknownOuiNon }),
+      wf('diag_assainissement_date', 'Date assainissement'),
+      wf('diag_assainissement_commentaire', 'Commentaire assainissement', { multiline: true }),
+      wf('clearing', 'Clearing'),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Details - copropriete et visite',
+    fields: [
+      wf('copropriete', 'Copropriete', { options: wizardUnknownOuiNon }),
+      wf('copropriete_lot', 'Lot copropriete'),
+      wf('copropriete_nb_lot', 'Nombre lots', { inputMode: 'numeric' }),
+      wf('copropriete_quote_part', 'Quote-part', { inputMode: 'decimal' }),
+      wf('montant_fonds_travaux', 'Fonds travaux', { inputMode: 'decimal' }),
+      wf('copropriete_plan_sauvegarde', 'Plan sauvegarde', { options: wizardUnknownOuiNon }),
+      wf('copropriete_statut_syndicat', 'Statut syndicat', { options: wizardProcedureOptions }),
+      wf('DISPO', 'Disponible', { options: wizardUnknownOuiNon }),
+      wf('DATE_LIBER', 'Date liberation'),
+      wf('DATE_DISPO', 'Date disponibilite'),
+      wf('CLES', 'Cles'),
+      wf('moyens_visite', 'Moyens visite'),
+    ],
+  },
+  {
+    step: 6,
+    title: '6. Mandat / prix',
+    fields: [
+      wf('mdn_id', 'ID mandant'),
+      wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
+      wf('prix', 'Prix public', { inputMode: 'decimal' }),
+      wf('_selecterHonoraires2', 'Honoraires acquereur', { options: wizardHonorairesOptions }),
+      wf('_tauxHonoraire2', 'Montant honoraires acquereur', { inputMode: 'decimal' }),
+      wf('_pourcentHonoraire2', 'Pourcentage honoraires acquereur', { inputMode: 'decimal' }),
+      wf('_detailHonoraire2', 'Detail honoraires acquereur', { multiline: true }),
+      wf('_selecterHonoraires3', 'Honoraires vendeur', { options: wizardHonorairesOptions }),
+      wf('_tauxHonoraire3', 'Montant honoraires vendeur', { inputMode: 'decimal' }),
+      wf('_pourcentHonoraire3', 'Pourcentage honoraires vendeur', { inputMode: 'decimal' }),
+      wf('_detailHonoraire3', 'Detail honoraires vendeur', { multiline: true }),
+      wf('masque', 'Masquer le prix', { options: wizardNonOui }),
+      wf('ESTIMATION_MONTANT', 'Montant estimation', { inputMode: 'decimal' }),
+      wf('ESTIMATION_DATE', 'Date estimation'),
+      wf('TRAVAUX', 'Travaux', { multiline: true }),
+      wf('DEPOT_GARANTIE', 'Depot garantie', { inputMode: 'decimal' }),
+      wf('TAXE_HABITATION', 'Taxe habitation', { inputMode: 'decimal' }),
+      wf('TAXE_FONCIERE', 'Taxe fonciere', { inputMode: 'decimal' }),
+      wf('CHARGES', 'Charges', { inputMode: 'decimal' }),
+      wf('CHARGES_DETAIL', 'Detail charges', { multiline: true }),
+      wf('Loc_EstimationLoyer', 'Estimation loyer', { inputMode: 'decimal' }),
+      wf('Loc_ChargeLocative', 'Charge locative', { inputMode: 'decimal' }),
+      wf('Loc_RendementBrut', 'Rendement brut', { inputMode: 'decimal' }),
+      wf('Loc_Occupation', 'Occupation locative', { options: wizardOccupationOptions }),
+    ],
+  },
+  {
+    step: 7,
+    title: '7. Diffusion',
+    fields: [
+      wf('diffusable', 'Diffusable', { options: [{ value: '0', label: 'Non' }] }),
+      wf('titre', 'Titre annonce'),
+      wf('corps', 'Texte annonce', { multiline: true }),
+      wf('prix', 'Prix public', { inputMode: 'decimal' }),
+      wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
+      wf('surfappart', 'Surface habitable', { inputMode: 'decimal' }),
+      wf('nbpieces', 'Pieces', { inputMode: 'numeric' }),
+      wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
+      wf('NB_NIVEAUX', 'Niveaux', { inputMode: 'numeric' }),
+      wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
+      wf('EXPOSITION', 'Exposition'),
+      wf('vuee', 'Vue'),
+      wf('NO_DOSSIER', 'Numero dossier'),
+      wf('dateenr', 'Date creation'),
+    ],
+  },
+]
+
 function rawDetailProp(detail: DossierDetailPayload, group: string, key: string) {
   const raw = parseJson<Record<string, unknown>>(detail.detail_raw_json, {})
   const groupValue = raw[group] as { props?: Record<string, { value?: unknown }> } | undefined
   const value = groupValue?.props?.[key]?.value
   return value == null ? '' : String(value)
+}
+
+function rawDetailFirstProp(detail: DossierDetailPayload, group: string, keys: string[]) {
+  for (const key of keys) {
+    const value = rawDetailProp(detail, group, key)
+    if (value) return value
+  }
+  return ''
 }
 
 function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_mandat'>, detail: DossierDetailPayload) {
@@ -402,24 +801,24 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
     surface: numericDraft(detail.surface_habitable_detail ?? detail.surface),
     roomCount: numericDraft(detail.nb_pieces),
     bedroomCount: numericDraft(detail.nb_chambres),
-    bathroomCount: rawDetailProp(detail, 'ag_interieur', 'SDB'),
-    showerRoomCount: rawDetailProp(detail, 'ag_interieur', 'SE'),
-    wcCount: rawDetailProp(detail, 'ag_interieur', 'WC'),
+    bathroomCount: rawDetailFirstProp(detail, 'ag_interieur', ['NB_SDB', 'SDB']),
+    showerRoomCount: rawDetailFirstProp(detail, 'ag_interieur', ['NB_SE', 'SE', 'SDE']),
+    wcCount: rawDetailFirstProp(detail, 'ag_interieur', ['NB_WC', 'WC']),
     kitchen: rawDetailProp(detail, 'ag_interieur', 'CUISINE'),
     exposure: rawDetailProp(detail, 'ag_interieur', 'EXPOSITION'),
     view: rawDetailProp(detail, 'ag_interieur', 'vuee'),
-    interiorState: rawDetailProp(detail, 'ag_interieur', 'ETAT_INTERIEUR'),
-    exteriorState: rawDetailProp(detail, 'ag_exterieur', 'ETAT_EXTERIEUR'),
+    interiorState: rawDetailFirstProp(detail, 'ag_interieur', ['etat_interieur', 'ETAT_INTERIEUR']),
+    exteriorState: rawDetailFirstProp(detail, 'ag_exterieur', ['etat_exterieur', 'ETAT_EXTERIEUR']),
     landSurface: numericDraft(detail.surface_terrain_detail || rawDetailProp(detail, 'terrain', 'surfterrain')),
     gardenSurface: rawDetailProp(detail, 'ag_exterieur', 'SURFACE_JARDIN'),
-    terraceCount: rawDetailProp(detail, 'ag_exterieur', 'TERRASSE'),
+    terraceCount: rawDetailFirstProp(detail, 'ag_exterieur', ['NB_TERRASSE', 'TERRASSE']),
     garageCount: rawDetailProp(detail, 'ag_exterieur', 'GARAGE_BOX'),
     parkingInsideCount: rawDetailProp(detail, 'ag_exterieur', 'NB_PARK_INT'),
     parkingOutsideCount: rawDetailProp(detail, 'ag_exterieur', 'NB_PARK_EXT'),
     pool: rawDetailProp(detail, 'ag_exterieur', 'PISCINE'),
-    dpeValue: rawDetailProp(detail, 'diagnostiques', 'DPE'),
-    gesValue: rawDetailProp(detail, 'diagnostiques', 'GES'),
-    constructionYear: rawDetailProp(detail, 'diagnostiques', 'ANNEE_CONSTRUCTION'),
+    dpeValue: rawDetailFirstProp(detail, 'diagnostiques', ['dpe_cons', 'DPE']),
+    gesValue: rawDetailFirstProp(detail, 'diagnostiques', ['dpe_ges', 'GES']),
+    constructionYear: rawDetailFirstProp(detail, 'diagnostiques', ['ANNEE_CONS', 'ANNEE_CONSTRUCTION']),
     diagnosticNote: rawDetailProp(detail, 'diagnostiques', 'diag_risques_nat_tech_date'),
     coproLots: rawDetailProp(detail, 'copropriete', 'copropriete_nb_lot'),
     coproCharges: rawDetailProp(detail, 'mandat_infofi', 'CHARGES'),
@@ -5664,6 +6063,7 @@ export default function App() {
   const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
   const [draftAnnonceNegotiatorId, setDraftAnnonceNegotiatorId] = useState('')
+  const [draftAnnonceTypeId, setDraftAnnonceTypeId] = useState('2')
   const [draftAnnonceAddress, setDraftAnnonceAddress] = useState('')
   const [draftAnnoncePostalCode, setDraftAnnoncePostalCode] = useState('')
   const [draftAnnonceCity, setDraftAnnonceCity] = useState('')
@@ -5672,6 +6072,8 @@ export default function App() {
   const [draftAnnonceRoomCount, setDraftAnnonceRoomCount] = useState('')
   const [draftAnnonceBedroomCount, setDraftAnnonceBedroomCount] = useState('')
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
+  const [draftAnnonceAdvanced, setDraftAnnonceAdvanced] = useState<Record<DraftAnnonceAdvancedKey, string>>(() => buildEmptyDraftAnnonceAdvanced())
+  const [draftAnnonceWizardFields, setDraftAnnonceWizardFields] = useState<Record<string, string>>({})
   const [draftMandantOpen, setDraftMandantOpen] = useState(false)
   const [draftMandantCivility, setDraftMandantCivility] = useState('')
   const [draftMandantLastName, setDraftMandantLastName] = useState('')
@@ -5834,14 +6236,16 @@ export default function App() {
   const draftNegotiatorOptions = useMemo(() => {
     const selectedAgency = draftAnnonceAgency.trim()
     return hektorNegotiators.filter((item) => {
-      if (profile?.role === 'commercial') return normalizeEmail(item.email) === sessionEmail
+      if (profile?.role === 'commercial') {
+        return normalizeEmail(item.email) === sessionEmail && (!selectedAgency || !item.agenceNom || item.agenceNom === selectedAgency)
+      }
       if (!selectedAgency) return true
       return !item.agenceNom || item.agenceNom === selectedAgency
     })
   }, [draftAnnonceAgency, hektorNegotiators, profile?.role, sessionEmail])
   const selectedDraftNegotiator = useMemo(() => {
-    return hektorNegotiators.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
-  }, [draftAnnonceNegotiatorId, hektorNegotiators])
+    return draftNegotiatorOptions.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
+  }, [draftAnnonceNegotiatorId, draftNegotiatorOptions])
   const negotiatorAssignAgency = useMemo(() => {
     return hektorAgencies.find((item) => item.idAgence === negotiatorAssignAgencyValue) ?? null
   }, [hektorAgencies, negotiatorAssignAgencyValue])
@@ -6034,7 +6438,7 @@ export default function App() {
   useEffect(() => {
     if (!draftAnnonceModalOpen) return
     if (profile?.role === 'commercial') {
-      const ownNegotiator = hektorNegotiators.find((item) => normalizeEmail(item.email) === sessionEmail)
+      const ownNegotiator = draftNegotiatorOptions.find((item) => normalizeEmail(item.email) === sessionEmail)
       setDraftAnnonceNegotiatorId(ownNegotiator?.idUser ?? '')
       return
     }
@@ -6799,9 +7203,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function openDraftAnnonceModal() {
     const agency = userNegotiatorContext?.agence_nom || (filters.agency !== allFilterValue ? filters.agency : '')
-    const ownNegotiator = hektorNegotiators.find((item) => normalizeEmail(item.email) === sessionEmail)
-    setDraftAnnonceAgency(agency === allFilterValue ? '' : agency)
+    const selectedAgency = agency === allFilterValue ? '' : agency
+    const ownNegotiator = hektorNegotiators.find((item) =>
+      normalizeEmail(item.email) === sessionEmail && (!selectedAgency || !item.agenceNom || item.agenceNom === selectedAgency)
+    )
+    setDraftAnnonceAgency(selectedAgency)
     setDraftAnnonceNegotiatorId(profile?.role === 'commercial' ? (ownNegotiator?.idUser ?? '') : '')
+    setDraftAnnonceTypeId('2')
     setDraftAnnonceTitle('')
     setDraftAnnonceAddress('')
     setDraftAnnoncePostalCode('')
@@ -6811,6 +7219,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceRoomCount('')
     setDraftAnnonceBedroomCount('')
     setDraftAnnonceNote('')
+    setDraftAnnonceAdvanced(buildEmptyDraftAnnonceAdvanced())
+    setDraftAnnonceWizardFields({})
     setDraftMandantOpen(false)
     setDraftMandantCivility('')
     setDraftMandantLastName('')
@@ -6820,6 +7230,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setNoticeMessage(null)
     setErrorMessage(null)
     setDraftAnnonceModalOpen(true)
+  }
+
+  function updateDraftAnnonceAdvanced(key: DraftAnnonceAdvancedKey, value: string) {
+    setDraftAnnonceAdvanced((current) => ({ ...current, [key]: value }))
+  }
+
+  function updateDraftAnnonceWizardField(key: string, value: string) {
+    setDraftAnnonceWizardFields((current) => ({ ...current, [key]: value }))
   }
 
   function closeDraftAnnonceModal() {
@@ -6879,19 +7297,46 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     try {
       const job = await createHektorDraftAnnonceJob({
         title: draftAnnonceTitle,
+        description: draftAnnonceAdvanced.description,
         agenceNom: draftAnnonceAgency,
         hektorUserId: selectedDraftNegotiator.idUser,
+        hektorNegociateurId: selectedDraftNegotiator.hektorNegociateurId,
         hektorUserLabel: selectedDraftNegotiator.label,
         hektorUserEmail: selectedDraftNegotiator.email,
-        propertyType: 'Appartement',
+        propertyType: draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
+        hektorIdType: draftAnnonceTypeId,
         offerType: 'sale',
         address: draftAnnonceAddress,
         postalCode: draftAnnoncePostalCode,
         city: draftAnnonceCity,
         price: draftAnnoncePrice,
+        netSellerPrice: draftAnnonceAdvanced.netSellerPrice,
         surface: draftAnnonceSurface,
+        carrezSurface: draftAnnonceAdvanced.carrezSurface,
+        livingSurface: draftAnnonceAdvanced.livingSurface,
         roomCount: draftAnnonceRoomCount,
         bedroomCount: draftAnnonceBedroomCount,
+        bathroomCount: draftAnnonceAdvanced.bathroomCount,
+        showerRoomCount: draftAnnonceAdvanced.showerRoomCount,
+        wcCount: draftAnnonceAdvanced.wcCount,
+        kitchen: draftAnnonceAdvanced.kitchen,
+        exposure: draftAnnonceAdvanced.exposure,
+        view: draftAnnonceAdvanced.view,
+        interiorState: draftAnnonceAdvanced.interiorState,
+        exteriorState: draftAnnonceAdvanced.exteriorState,
+        landSurface: draftAnnonceAdvanced.landSurface,
+        terraceCount: draftAnnonceAdvanced.terraceCount,
+        garageCount: draftAnnonceAdvanced.garageCount,
+        parkingInsideCount: draftAnnonceAdvanced.parkingInsideCount,
+        parkingOutsideCount: draftAnnonceAdvanced.parkingOutsideCount,
+        constructionYear: draftAnnonceAdvanced.constructionYear,
+        dpeValue: draftAnnonceAdvanced.dpeValue,
+        gesValue: draftAnnonceAdvanced.gesValue,
+        coproLots: draftAnnonceAdvanced.coproLots,
+        coproCharges: draftAnnonceAdvanced.coproCharges,
+        coproQuotePart: draftAnnonceAdvanced.coproQuotePart,
+        coproWorksFund: draftAnnonceAdvanced.coproWorksFund,
+        wizardFields: draftAnnonceWizardFields,
         note: draftAnnonceNote,
         initialMandant: hasInitialMandant ? {
           civility: draftMandantCivility,
@@ -8756,8 +9201,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <label className="filter-field">
                   <span>Type Hektor</span>
-                  <select value="Appartement" disabled>
-                    <option value="Appartement">Appartement</option>
+                  <select value={draftAnnonceTypeId} onChange={(event) => setDraftAnnonceTypeId(event.target.value)}>
+                    {draftAnnoncePropertyTypes.map((item) => (
+                      <option key={item.id} value={item.id}>{item.label}</option>
+                    ))}
                   </select>
                 </label>
                 <div className="draft-annonce-section-title">
@@ -8796,6 +9243,49 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <span>Chambres</span>
                   <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
                 </label>
+                {draftAnnonceWizardGroups.map((section) => (
+                  <Fragment key={section.title}>
+                    <div className="draft-annonce-section-title">
+                      <span>Page {section.step}</span>
+                      <strong>{section.title}</strong>
+                    </div>
+                    {section.fields.map((field) => (
+                      field.multiline ? (
+                        <label key={`${section.title}-${field.name}`} className="filter-field draft-annonce-field-wide">
+                          <span>{field.label}</span>
+                          <textarea
+                            className="inline-textarea"
+                            value={draftAnnonceWizardFields[field.name] ?? ''}
+                            onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
+                            placeholder={field.name}
+                          />
+                        </label>
+                      ) : field.options ? (
+                        <label key={`${section.title}-${field.name}`} className="filter-field">
+                          <span>{field.label}</span>
+                          <select
+                            value={draftAnnonceWizardFields[field.name] ?? ''}
+                            onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
+                          >
+                            {field.options.map((option) => (
+                              <option key={`${field.name}-${option.value}`} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <label key={`${section.title}-${field.name}`} className="filter-field">
+                          <span>{field.label}</span>
+                          <input
+                            value={draftAnnonceWizardFields[field.name] ?? ''}
+                            onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
+                            inputMode={field.inputMode}
+                            placeholder={field.name}
+                          />
+                        </label>
+                      )
+                    ))}
+                  </Fragment>
+                ))}
                 <label className="filter-field draft-annonce-field-wide">
                   <span>Note</span>
                   <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
@@ -14580,6 +15070,11 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
     crmBirthdayEnabled: null,
     hektorUserEmail: hektorUserEmail ?? contact.negociateur_email ?? null,
     hektorUserId: hektorUserId ?? null,
+    hektorUserLabel: null,
+    hektorNegotiatorId: null,
+    hektorAgencyId: null,
+    hektorAgencyUserId: null,
+    hektorAgencyLabel: null,
   }
 }
 
@@ -14708,7 +15203,7 @@ function HektorContactIdentityForm(props: {
       ?? null
   }, [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
   const selectedHektorEmail = selectedHektorUser?.email ?? props.contact?.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
-  const selectedHektorId = selectedHektorUser?.idUser ?? (selectedHektorUserId.trim() || props.hektorUserId || null)
+  const selectedHektorId = selectedHektorUser?.idUser ?? (availableHektorNegotiators.length === 0 ? (selectedHektorUserId.trim() || props.hektorUserId || null) : null)
 
   useEffect(() => {
     const next = props.contact
@@ -14765,6 +15260,11 @@ function HektorContactIdentityForm(props: {
     crmBirthdayEnabled: optionalBooleanFromSelect(crmBirthdayEnabled),
     hektorUserEmail: selectedHektorEmail,
     hektorUserId: selectedHektorId,
+    hektorUserLabel: selectedHektorUser?.label ?? null,
+    hektorNegotiatorId: selectedHektorUser?.hektorNegociateurId ?? null,
+    hektorAgencyId: selectedHektorUser?.hektorAgenceId ?? null,
+    hektorAgencyUserId: selectedHektorUser?.agenceIdUser ?? null,
+    hektorAgencyLabel: selectedHektorUser?.agenceNom ?? null,
   })
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -14776,6 +15276,10 @@ function HektorContactIdentityForm(props: {
     }
     if (props.mode === 'create' && !email.trim() && !phone.trim() && !phoneSecondary.trim()) {
       setError('Email ou telephone requis pour creer un contact Hektor.')
+      return
+    }
+    if (props.hektorNegotiators && props.hektorNegotiators.length === 0) {
+      setError('Repertoire negociateurs Hektor indisponible, impossible de garantir le bon acces agence/nego.')
       return
     }
     if (availableHektorNegotiators.length > 0 && !selectedHektorUser) {

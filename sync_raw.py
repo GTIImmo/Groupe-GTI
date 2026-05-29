@@ -115,6 +115,16 @@ GENERIC_RESOURCE_CONFIG: Dict[str, Dict[str, Any]] = {
     },
 }
 
+NEGO_INACTIVE_CONFIG: Dict[str, Any] = {
+    "endpoint_name": "list_negos_inactive",
+    "path": "/Api/Negociateur/listNegos/",
+    "object_type": "negociateur",
+    "paged": True,
+    # Observed on GTI 2026-05-29: actif=0 returns active rows plus inactive rows.
+    # Keeping it separate makes the sync safe if Hektor later returns inactive-only.
+    "extra_params": {"actif": 0},
+}
+
 DETAIL_CONFIG: Dict[str, Dict[str, Any]] = {
     "annonces": {
         "endpoint_name": "annonce_detail",
@@ -480,17 +490,18 @@ def collect_ids_from_rows(rows, object_id_field: str = "id", limit: Optional[int
 
 def extract_missing_nego_ids_from_annonces(conn) -> list[str]:
     known_nego_ids: set[str] = set()
-    for row in fetch_latest_raw_payloads(conn, "list_negos"):
-        payload = json.loads(row["payload_json"])
-        data = payload.get("data") or []
-        if not isinstance(data, list):
-            continue
-        for item in data:
-            if not isinstance(item, dict):
+    for endpoint_name in ("list_negos", "list_negos_inactive"):
+        for row in fetch_latest_raw_payloads(conn, endpoint_name):
+            payload = json.loads(row["payload_json"])
+            data = payload.get("data") or []
+            if not isinstance(data, list):
                 continue
-            nego_id = str(item.get("id") or "").strip()
-            if nego_id:
-                known_nego_ids.add(nego_id)
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                nego_id = str(item.get("id") or "").strip()
+                if nego_id:
+                    known_nego_ids.add(nego_id)
 
     for row in fetch_latest_raw_payloads(conn, "nego_by_id"):
         object_id = str(row["object_id"] or "").strip()
@@ -1205,6 +1216,17 @@ def main() -> int:
                 resolve_generic_max_pages(args, resource_name, bootstrap),
             )
             if resource_name == "negos":
+                inactive_config = copy.deepcopy(NEGO_INACTIVE_CONFIG)
+                inactive_config["resource_name"] = "negos"
+                inactive_config["effective_endpoint_name"] = inactive_config["endpoint_name"]
+                sync_generic_listing(
+                    conn,
+                    run_id,
+                    client,
+                    settings,
+                    inactive_config,
+                    resolve_generic_max_pages(args, resource_name, bootstrap),
+                )
                 sync_missing_negos_by_id(conn, run_id, client, settings)
             if resource_name == "mandats":
                 mandat_detail_sources = [config["effective_endpoint_name"]]

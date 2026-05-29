@@ -3,6 +3,19 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const { chromium } = require("playwright");
 
+function browserLaunchOptions(options = {}) {
+  const executablePath = [
+    process.env.CONSOLE_CHROME_EXE,
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  ].find((candidate) => candidate && fs.existsSync(candidate)) || "";
+  return {
+    ...options,
+    ...(executablePath ? { executablePath } : {}),
+  };
+}
+
 function must(name) {
   const v = process.env[name];
   if (!v) throw new Error(`Missing env var: ${name}`);
@@ -186,7 +199,7 @@ async function gotoWithRetry(page, url, opts = {}) {
   const gqlHeadersOut = path.resolve(BASE_DIR, "debug_graphql_headers.json");
   const tabsDumpPath  = path.resolve(BASE_DIR, "debug_tabs_urls.json");
 
-  const browser = await chromium.launch({ headless: false, slowMo: 40 });
+  const browser = await chromium.launch(browserLaunchOptions({ headless: false, slowMo: 40 }));
   const context = await browser.newContext();
   const page = await context.newPage();
 

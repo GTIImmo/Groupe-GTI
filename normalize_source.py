@@ -27,7 +27,7 @@ MANDAT_ENDPOINTS = ("list_mandats", "list_mandats_update")
 OFFRE_ENDPOINTS = ("list_offres", "list_offres_update")
 COMPROMIS_ENDPOINTS = ("list_compromis", "list_compromis_update")
 VENTE_ENDPOINTS = ("list_ventes", "list_ventes_update")
-NEGO_ENDPOINTS = ("list_negos", "nego_by_id")
+NEGO_LISTING_ENDPOINTS = ("list_negos", "list_negos_inactive")
 
 
 def iter_listing_items(rows: Iterable[sqlite3.Row]) -> Iterable[Dict[str, Any]]:
@@ -294,43 +294,44 @@ def upsert_agences(conn: sqlite3.Connection) -> None:
 
 
 def upsert_negos(conn: sqlite3.Connection) -> None:
-    for row in fetch_latest_raw_payloads(conn, "list_negos"):
-        payload = json.loads(row["payload_json"])
-        data = payload.get("data") or []
-        if not isinstance(data, list):
-            continue
-        for item in data:
-            if not isinstance(item, dict):
+    for endpoint_name in NEGO_LISTING_ENDPOINTS:
+        for row in fetch_latest_raw_payloads(conn, endpoint_name):
+            payload = json.loads(row["payload_json"])
+            data = payload.get("data") or []
+            if not isinstance(data, list):
                 continue
-            conn.execute(
-                """
-                INSERT INTO hektor_negociateur(
-                    hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email, telephone, portable, raw_json, synced_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(hektor_negociateur_id) DO UPDATE SET
-                    hektor_user_id = excluded.hektor_user_id,
-                    hektor_agence_id = excluded.hektor_agence_id,
-                    nom = excluded.nom,
-                    prenom = excluded.prenom,
-                    email = excluded.email,
-                    telephone = excluded.telephone,
-                    portable = excluded.portable,
-                    raw_json = excluded.raw_json,
-                    synced_at = excluded.synced_at
-                """,
-                (
-                    str(item.get("id") or ""),
-                    normalized_id(item.get("idUser")),
-                    normalized_id(item.get("agence")),
-                    item.get("nom"),
-                    item.get("prenom"),
-                    item.get("email"),
-                    item.get("telephone"),
-                    item.get("portable"),
-                    json_dumps(item),
-                    now_utc_iso(),
-                ),
-            )
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                conn.execute(
+                    """
+                    INSERT INTO hektor_negociateur(
+                        hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email, telephone, portable, raw_json, synced_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(hektor_negociateur_id) DO UPDATE SET
+                        hektor_user_id = excluded.hektor_user_id,
+                        hektor_agence_id = excluded.hektor_agence_id,
+                        nom = excluded.nom,
+                        prenom = excluded.prenom,
+                        email = excluded.email,
+                        telephone = excluded.telephone,
+                        portable = excluded.portable,
+                        raw_json = excluded.raw_json,
+                        synced_at = excluded.synced_at
+                    """,
+                    (
+                        str(item.get("id") or ""),
+                        normalized_id(item.get("idUser")),
+                        normalized_id(item.get("agence")),
+                        item.get("nom"),
+                        item.get("prenom"),
+                        item.get("email"),
+                        item.get("telephone"),
+                        item.get("portable"),
+                        json_dumps(item),
+                        now_utc_iso(),
+                    ),
+                )
     for row in fetch_latest_raw_payloads(conn, "nego_by_id"):
         payload = json.loads(row["payload_json"])
         item = payload.get("negociateur")

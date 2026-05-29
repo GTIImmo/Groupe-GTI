@@ -82,19 +82,7 @@ def main() -> int:
         target_email = str(args.target_email or "").strip().lower()
         target_user_id = str(args.target_user_id or "").strip()
         target = None
-        if target_email:
-            target = con.execute(
-                """
-                SELECT hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email
-                FROM hektor_negociateur
-                WHERE lower(COALESCE(email, '')) = ?
-                  AND COALESCE(hektor_agence_id, '') = ?
-                ORDER BY CAST(COALESCE(hektor_negociateur_id, '0') AS INTEGER)
-                LIMIT 1
-                """,
-                (target_email, payload["hektor_agence_id"]),
-            ).fetchone()
-        if target is None and target_user_id:
+        if target_user_id:
             target = con.execute(
                 """
                 SELECT hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email
@@ -105,6 +93,18 @@ def main() -> int:
                 LIMIT 1
                 """,
                 (target_user_id, payload["hektor_agence_id"]),
+            ).fetchone()
+        if target is None and target_email and not target_user_id:
+            target = con.execute(
+                """
+                SELECT hektor_negociateur_id, hektor_user_id, hektor_agence_id, nom, prenom, email
+                FROM hektor_negociateur
+                WHERE lower(COALESCE(email, '')) = ?
+                  AND COALESCE(hektor_agence_id, '') = ?
+                ORDER BY CAST(COALESCE(hektor_negociateur_id, '0') AS INTEGER)
+                LIMIT 1
+                """,
+                (target_email, payload["hektor_agence_id"]),
             ).fetchone()
         if target is not None:
             label = " ".join(part for part in [target["prenom"], target["nom"]] if part).strip()

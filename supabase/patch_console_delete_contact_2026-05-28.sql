@@ -236,7 +236,6 @@ begin
                     'update_hektor_annonce_fields',
                     'create_hektor_contact',
                     'update_hektor_contact',
-                    'delete_hektor_contact',
                     'create_hektor_mandant_contact',
                     'update_hektor_mandant_contact',
                     'create_hektor_mandat_auto_number',

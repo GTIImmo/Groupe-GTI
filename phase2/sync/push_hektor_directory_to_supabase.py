@@ -8,6 +8,7 @@ import sqlite3
 import sys
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
@@ -115,6 +116,20 @@ class SupabaseRestClient:
         ) or []
         return [str(row.get(column) or "").strip() for row in rows if str(row.get(column) or "").strip()]
 
+    def supports_columns(self, *, path: str, columns: list[str]) -> bool:
+        try:
+            self._request(
+                method="GET",
+                path=path,
+                query={"select": ",".join(columns), "limit": "1"},
+            )
+            return True
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            if "pgrst204" in message or "could not find" in message or "schema cache" in message or "does not exist" in message:
+                return False
+            raise
+
     def delete_missing(self, *, path: str, column: str, keep_ids: list[str], chunk_size: int = 200) -> int:
         existing = self.fetch_ids(path=path, column=column)
         stale = [value for value in existing if value not in set(keep_ids)]
@@ -192,7 +207,11 @@ def build_agency_rows(rows: list[dict[str, Any]]) -> list[dict[str, object]]:
     return output
 
 
-def build_negotiator_agency_rows() -> list[dict[str, object]]:
+def build_negotiator_agency_rows(
+    active_hektor_user_ids: set[str] | None = None,
+    *,
+    include_status_columns: bool = False,
+) -> list[dict[str, object]]:
     if not HEKTOR_DB.exists():
         return []
     con = sqlite3.connect(HEKTOR_DB)
@@ -224,13 +243,16 @@ def build_negotiator_agency_rows() -> list[dict[str, object]]:
         con.close()
 
     output: list[dict[str, object]] = []
+    active_refreshed_at = datetime.now(timezone.utc).isoformat()
     for row in rows:
+        hektor_user_id = str(row["hektor_user_id"] or "").strip()
+        is_active = active_hektor_user_ids is not None and hektor_user_id in active_hektor_user_ids
         display_name = " ".join(
             part for part in [str(row["prenom"] or "").strip(), str(row["nom"] or "").strip()] if part
         ) or None
         payload = {
             "hektor_negociateur_id": str(row["hektor_negociateur_id"] or "").strip(),
-            "hektor_user_id": str(row["hektor_user_id"] or "").strip() or None,
+            "hektor_user_id": hektor_user_id or None,
             "hektor_agence_id": str(row["hektor_agence_id"] or "").strip() or None,
             "agence_id_user": str(row["agence_id_user"] or "").strip() or None,
             "agence_nom": str(row["agence_nom"] or "").strip() or None,
@@ -242,6 +264,10 @@ def build_negotiator_agency_rows() -> list[dict[str, object]]:
             "portable": str(row["portable"] or "").strip() or None,
         }
         payload["source_hash"] = stable_hash(payload)
+        if include_status_columns:
+            payload["is_active"] = is_active
+            payload["active_source"] = "users_of_parent_nego" if is_active else "local_hektor_negociateur_inactive"
+            payload["active_refreshed_at"] = active_refreshed_at
         output.append(payload)
     return output
 
@@ -258,7 +284,7 @@ def main() -> None:
     load_env_file(ROOT / ".env")
     load_env_file(ROOT / "apps" / "hektor-v1" / ".env")
 
-    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    supabase_url = (os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or "").strip()
     service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not supabase_url or not service_role_key:
         raise RuntimeError("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY requis")
@@ -271,7 +297,27 @@ def main() -> None:
     raw_agencies = fetch_all_agencies(hektor, settings.api_version)
     user_rows = dedupe_rows(build_user_rows(raw_users), "id_user")
     agency_rows = dedupe_rows(build_agency_rows(raw_agencies), "id_agence")
-    negotiator_agency_rows = dedupe_rows(build_negotiator_agency_rows(), "hektor_negociateur_id")
+    active_nego_user_ids = {
+        str(row["id_user"]).strip()
+        for row in user_rows
+        if str(row.get("user_type") or "").strip().upper() == "NEGO" and str(row.get("id_user") or "").strip()
+    }
+    negotiator_status_columns_supported = client.supports_columns(
+        path="app_hektor_negotiator_agency_directory",
+        columns=["is_active", "active_source", "active_refreshed_at"],
+    )
+    negotiator_agency_rows = dedupe_rows(
+        build_negotiator_agency_rows(
+            active_nego_user_ids,
+            include_status_columns=negotiator_status_columns_supported,
+        ),
+        "hektor_negociateur_id",
+    )
+    active_negotiator_agency_count = sum(
+        1
+        for row in negotiator_agency_rows
+        if str(row.get("hektor_user_id") or "").strip() in active_nego_user_ids
+    )
 
     if args.dump_dir:
         dump_dir = Path(args.dump_dir)
@@ -316,6 +362,9 @@ def main() -> None:
                 "users_upserted": len(user_rows),
                 "agencies_upserted": len(agency_rows),
                 "negotiator_agencies_upserted": len(negotiator_agency_rows),
+                "negotiator_agencies_active": active_negotiator_agency_count,
+                "negotiator_agencies_inactive": len(negotiator_agency_rows) - active_negotiator_agency_count,
+                "negotiator_status_columns_supported": negotiator_status_columns_supported,
                 "users_deleted": deleted_users,
                 "agencies_deleted": deleted_agencies,
                 "dump_dir": args.dump_dir or None,
