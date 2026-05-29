@@ -322,19 +322,17 @@ type HektorAdvancedField = {
 
 const hektorAdvancedSections: Array<{ title: string; tone: string; fields: HektorAdvancedField[] }> = [
   {
-    title: 'Informations principales',
+    title: '1. Offre',
     tone: 'main',
     fields: [
-      { key: 'title', label: 'Titre', placeholder: 'Titre visible' },
       { key: 'price', label: 'Prix public', placeholder: 'Prix', inputMode: 'decimal' },
       { key: 'surface', label: 'Surface', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'roomCount', label: 'Pieces', placeholder: 'Pieces', inputMode: 'numeric' },
       { key: 'bedroomCount', label: 'Chambres', placeholder: 'Chambres', inputMode: 'numeric' },
-      { key: 'description', label: 'Description principale', placeholder: 'Laisser vide pour ne pas changer le texte principal', multiline: true },
     ],
   },
   {
-    title: 'Caracteristiques',
+    title: '5. Details - Interieur',
     tone: 'features',
     fields: [
       { key: 'bathroomCount', label: 'SDB', inputMode: 'numeric' },
@@ -344,13 +342,13 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
       { key: 'exposure', label: 'Exposition' },
       { key: 'view', label: 'Vue' },
       { key: 'interiorState', label: 'Etat interieur' },
-      { key: 'exteriorState', label: 'Etat exterieur' },
     ],
   },
   {
-    title: 'Exterieurs',
+    title: '5. Details - Exterieur',
     tone: 'outside',
     fields: [
+      { key: 'exteriorState', label: 'Etat exterieur' },
       { key: 'landSurface', label: 'Terrain', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'gardenSurface', label: 'Jardin', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'terraceCount', label: 'Terrasse', inputMode: 'numeric' },
@@ -361,7 +359,7 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
     ],
   },
   {
-    title: 'Diagnostics',
+    title: '5. Details - Diagnostics',
     tone: 'diagnostics',
     fields: [
       { key: 'dpeValue', label: 'DPE' },
@@ -371,7 +369,7 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
     ],
   },
   {
-    title: 'Copropriete',
+    title: '5. Details - Copropriete',
     tone: 'copro',
     fields: [
       { key: 'coproLots', label: 'Lots', inputMode: 'numeric' },
@@ -381,7 +379,7 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
     ],
   },
   {
-    title: 'Mandat',
+    title: '6. Mandat / Prix',
     tone: 'mandate',
     fields: [
       { key: 'mandateNumber', label: 'N° mandat' },
@@ -390,6 +388,14 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
       { key: 'mandateEndDate', label: 'Date fin' },
       { key: 'netSellerPrice', label: 'Prix net vendeur', inputMode: 'decimal' },
       { key: 'fees', label: 'Honoraires', inputMode: 'decimal' },
+    ],
+  },
+  {
+    title: '7. Diffusion',
+    tone: 'main',
+    fields: [
+      { key: 'title', label: 'Titre', placeholder: 'Titre visible' },
+      { key: 'description', label: 'Description principale', placeholder: 'Laisser vide pour ne pas changer le texte principal', multiline: true },
     ],
   },
 ]
@@ -410,7 +416,6 @@ const draftAnnoncePropertyTypes = [
 function draftAnnoncePropertyTypeLabel(id: string) {
   return draftAnnoncePropertyTypes.find((item) => item.id === id)?.label ?? 'Appartement'
 }
-
 
 type DraftAnnonceAdvancedKey =
   | 'description'
@@ -601,7 +606,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - interieur',
+    title: '5. Details - Interieur',
     fields: [
       wf('Particularites', 'Particularites'),
       wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
@@ -618,7 +623,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - exterieur',
+    title: '5. Details - Exterieur',
     fields: [
       wf('MURS_MITOYENS', 'Murs mitoyens'),
       wf('floorState', 'Indication etage', { options: wizardFloorStateOptions }),
@@ -643,7 +648,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - equipements',
+    title: '5. Details - Equipements',
     fields: [
       wf('formatChauff', 'Format chauffage'),
       wf('typeChauff', 'Type chauffage'),
@@ -672,7 +677,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - diagnostics',
+    title: '5. Details - Diagnostics',
     fields: [
       wf('ANNEE_CONS', 'Annee construction', { inputMode: 'numeric' }),
       wf('etat_exterieur', 'Etat exterieur'),
@@ -718,7 +723,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - copropriete et visite',
+    title: '5. Details - Copropriete et visite',
     fields: [
       wf('copropriete', 'Copropriete', { options: wizardUnknownOuiNon }),
       wf('copropriete_lot', 'Lot copropriete'),
@@ -736,7 +741,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 6,
-    title: '6. Mandat / prix',
+    title: '6. Mandat / Prix',
     fields: [
       wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
       wf('prix', 'Prix public', { inputMode: 'decimal' }),
@@ -785,45 +790,51 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
 ]
 
-const draftAnnonceStepOrder = ['capture', 'essentiel', 'offre', 'details', 'mandat', 'controle'] as const
+const draftAnnonceStepOrder = ['offre', 'photos', 'secteur', 'composition', 'details', 'mandatPrix', 'diffusion'] as const
 type DraftAnnonceStepKey = typeof draftAnnonceStepOrder[number]
 
 const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: string; subtitle: string; hint: string }> = {
-  capture: {
-    label: 'Depart',
-    title: 'Point de depart',
-    subtitle: 'Repere rapide depuis la fiche papier avant de completer les champs.',
-    hint: 'Titre et repere',
-  },
-  essentiel: {
-    label: 'Essentiel',
-    title: 'Qui, quoi, ou',
-    subtitle: 'Agence, nego, type de bien, adresse, prix et surfaces.',
-    hint: 'Compte et bien',
-  },
   offre: {
-    label: 'Offre',
-    title: 'Pages Hektor principales',
-    subtitle: 'Offre, secteur, composition et informations visibles.',
-    hint: 'Prix et secteur',
+    label: '1. Offre',
+    title: '1. Offre',
+    subtitle: 'Compte, type de bien et champs obligatoires de l offre Hektor.',
+    hint: 'Prix et bien',
+  },
+  photos: {
+    label: '2. Photos',
+    title: '2. Photos',
+    subtitle: 'Etape photos du wizard Hektor.',
+    hint: 'Images',
+  },
+  secteur: {
+    label: '3. Secteur',
+    title: '3. Secteur',
+    subtitle: 'Adresse publique, localisation, transports et environnement.',
+    hint: 'Adresse',
+  },
+  composition: {
+    label: '4. Composition',
+    title: '4. Composition',
+    subtitle: 'Pieces, details de composition et notes de pieces.',
+    hint: 'Pieces',
   },
   details: {
-    label: 'Details',
-    title: 'Detail technique',
-    subtitle: 'Interieur, exterieur, equipements, diagnostics et copropriete.',
-    hint: 'Technique',
+    label: '5. Details',
+    title: '5. Details',
+    subtitle: 'Interieur, exterieur, equipements, diagnostics, copropriete et visites.',
+    hint: 'Details',
   },
-  mandat: {
-    label: 'Mandat',
-    title: 'Mandat et vendeurs',
-    subtitle: 'Honoraires, mandat, notes internes et mandant initial.',
-    hint: 'Vendeur',
+  mandatPrix: {
+    label: '6. Mandat / Prix',
+    title: '6. Mandat / Prix',
+    subtitle: 'Prix net vendeur, honoraires, estimation, charges et mandant initial.',
+    hint: 'Mandat',
   },
-  controle: {
-    label: 'Controle',
-    title: 'Controle avant envoi',
-    subtitle: 'Resume de la demande avant creation du job vers Hektor.',
-    hint: 'Verification',
+  diffusion: {
+    label: '7. Diffusion',
+    title: '7. Diffusion',
+    subtitle: 'Titre, texte, rappel offre et creation du brouillon non diffuse.',
+    hint: 'Diffusion',
   },
 }
 
@@ -959,7 +970,7 @@ function HektorAnnonceUpdateForm(props: {
         <span className="hektor-inline-icon" aria-hidden="true">M</span>
         <div>
           <strong>Modifier dans Hektor</strong>
-          <small>Champs principaux, caracteristiques, exterieurs, diagnostics, copropriete et mandat.</small>
+          <small>Ordre Hektor : Offre, Details, Mandat / Prix, puis Diffusion.</small>
         </div>
       </div>
       <div className="hektor-advanced-sections">
@@ -6109,7 +6120,7 @@ export default function App() {
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
   const [draftAnnonceModalOpen, setDraftAnnonceModalOpen] = useState(false)
   const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
-  const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('capture')
+  const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('offre')
   const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
   const [draftAnnonceNegotiatorId, setDraftAnnonceNegotiatorId] = useState('')
@@ -6313,9 +6324,12 @@ export default function App() {
   ].filter((value) => value.trim()).length
   const draftAnnonceAdvancedFilledCount = Object.values(draftAnnonceAdvanced).filter((value) => value.trim()).length
   const draftAnnonceWizardFilledCount = Object.values(draftAnnonceWizardFields).filter((value) => value.trim()).length
-  const draftAnnonceOfferGroups = draftAnnonceWizardGroups.filter((section) => section.step <= 4)
+  const draftAnnonceOfferGroups = draftAnnonceWizardGroups.filter((section) => section.step === 1)
+  const draftAnnonceSecteurGroups = draftAnnonceWizardGroups.filter((section) => section.step === 3)
+  const draftAnnonceCompositionGroups = draftAnnonceWizardGroups.filter((section) => section.step === 4)
   const draftAnnonceDetailGroups = draftAnnonceWizardGroups.filter((section) => section.step === 5)
-  const draftAnnonceMandatGroups = draftAnnonceWizardGroups.filter((section) => section.step >= 6)
+  const draftAnnonceMandatGroups = draftAnnonceWizardGroups.filter((section) => section.step === 6)
+  const draftAnnonceDiffusionGroups = draftAnnonceWizardGroups.filter((section) => section.step === 7)
   const draftAnnonceHasMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
   const negotiatorAssignAgency = useMemo(() => {
     return hektorAgencies.find((item) => item.idAgence === negotiatorAssignAgencyValue) ?? null
@@ -7292,7 +7306,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceNote('')
     setDraftAnnonceAdvanced(buildEmptyDraftAnnonceAdvanced())
     setDraftAnnonceWizardFields({})
-    setDraftAnnonceStep('capture')
+    setDraftAnnonceStep('offre')
     setDraftMandantOpen(false)
     setDraftMandantCivility('')
     setDraftMandantLastName('')
@@ -7439,24 +7453,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (draftAnnonceStep !== 'controle') {
+    if (draftAnnonceStep !== 'diffusion') {
       moveDraftAnnonceStep(1)
       return
     }
     if (!draftAnnonceAgency.trim()) {
       setErrorMessage('Choisis une agence avant de creer l annonce Hektor.')
-      setDraftAnnonceStep('essentiel')
+      setDraftAnnonceStep('offre')
       return
     }
     if (!selectedDraftNegotiator) {
       setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera l annonce.')
-      setDraftAnnonceStep('essentiel')
+      setDraftAnnonceStep('offre')
       return
     }
     const hasInitialMandant = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
     if (hasInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
       setErrorMessage('Pour ajouter un mandant initial, renseigne au minimum le nom et l email.')
-      setDraftAnnonceStep('mandat')
+      setDraftAnnonceStep('mandatPrix')
       setDraftMandantOpen(true)
       return
     }
@@ -9371,28 +9385,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <span>champs remplis</span>
                   </div>
                 </div>
-                {draftAnnonceStep === 'capture' ? (
+                {draftAnnonceStep === 'offre' ? (
+                  <>
                   <section className="draft-annonce-section draft-annonce-section-identity">
                     <div className="draft-annonce-section-title">
-                      <span>Repere</span>
-                      <strong>Identification rapide</strong>
+                      <span>1. Offre</span>
+                      <strong>Compte et repere</strong>
                     </div>
                     <label className="filter-field draft-annonce-field-wide">
                       <span>Titre / repere interne</span>
                       <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
                     </label>
-                    <div className="draft-annonce-play-card">
-                      <strong>Depart simple</strong>
-                      <span>Commence par un repere, puis avance page par page pour completer tous les champs Hektor sans te perdre.</span>
-                    </div>
                   </section>
-                ) : null}
-                {draftAnnonceStep === 'essentiel' ? (
-                  <>
                     <section className="draft-annonce-section draft-annonce-section-account">
                       <div className="draft-annonce-section-title">
-                        <span>Compte</span>
-                        <strong>Qui porte l annonce</strong>
+                        <span>1. Offre</span>
+                        <strong>Acces Hektor</strong>
                       </div>
                       <label className="filter-field">
                         <span>Agence</span>
@@ -9428,8 +9436,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </section>
                     <section className="draft-annonce-section draft-annonce-type-section">
                       <div className="draft-annonce-section-title">
-                        <span>Type</span>
-                        <strong>Selection rapide du bien</strong>
+                        <span>1. Offre</span>
+                        <strong>Type de bien</strong>
                       </div>
                       <div className="draft-annonce-type-grid" role="group" aria-label="Type de bien">
                         {draftAnnoncePropertyTypes.map((item) => (
@@ -9445,28 +9453,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         ))}
                       </div>
                     </section>
-                    <section className="draft-annonce-section draft-annonce-section-location">
-                      <div className="draft-annonce-section-title">
-                        <span>Localisation</span>
-                        <strong>Adresse privee</strong>
-                      </div>
-                      <label className="filter-field draft-annonce-address-field">
-                        <span>Adresse</span>
-                        <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
-                      </label>
-                      <label className="filter-field">
-                        <span>Code postal</span>
-                        <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
-                      </label>
-                      <label className="filter-field">
-                        <span>Ville</span>
-                        <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
-                      </label>
-                    </section>
                     <section className="draft-annonce-section draft-annonce-section-values">
                       <div className="draft-annonce-section-title">
-                        <span>Valeurs</span>
-                        <strong>Prix et caracteristiques</strong>
+                        <span>1. Offre</span>
+                        <strong>Champs principaux</strong>
                       </div>
                       <label className="filter-field">
                         <span>Prix</span>
@@ -9485,21 +9475,52 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
                       </label>
                     </section>
+                    {draftAnnonceOfferGroups.map(renderDraftAnnonceWizardSection)}
                   </>
                 ) : null}
-                {draftAnnonceStep === 'offre' ? (
+                {draftAnnonceStep === 'photos' ? (
+                  <section className="draft-annonce-section draft-annonce-photos-section">
+                      <div className="draft-annonce-section-title">
+                        <span>2. Photos</span>
+                        <strong>Photos</strong>
+                      </div>
+                    </section>
+                  ) : null}
+                {draftAnnonceStep === 'secteur' ? (
                   <>
-                    {draftAnnonceAdvancedSections.slice(0, 2).map(renderDraftAnnonceAdvancedSection)}
-                    {draftAnnonceOfferGroups.map(renderDraftAnnonceWizardSection)}
+                    <section className="draft-annonce-section draft-annonce-section-location">
+                      <div className="draft-annonce-section-title">
+                        <span>3. Secteur</span>
+                        <strong>Adresse privee</strong>
+                      </div>
+                      <label className="filter-field draft-annonce-address-field">
+                        <span>Adresse</span>
+                        <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Code postal</span>
+                        <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Ville</span>
+                        <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
+                      </label>
+                    </section>
+                    {draftAnnonceSecteurGroups.map(renderDraftAnnonceWizardSection)}
+                  </>
+                ) : null}
+                {draftAnnonceStep === 'composition' ? (
+                  <>
+                    {draftAnnonceCompositionGroups.map(renderDraftAnnonceWizardSection)}
                   </>
                 ) : null}
                 {draftAnnonceStep === 'details' ? (
                   <>
-                    {draftAnnonceAdvancedSections.slice(2).map(renderDraftAnnonceAdvancedSection)}
                     {draftAnnonceDetailGroups.map(renderDraftAnnonceWizardSection)}
+                    {draftAnnonceAdvancedSections.slice(1).map(renderDraftAnnonceAdvancedSection)}
                   </>
                 ) : null}
-                {draftAnnonceStep === 'mandat' ? (
+                {draftAnnonceStep === 'mandatPrix' ? (
                   <>
                     {draftAnnonceMandatGroups.map(renderDraftAnnonceWizardSection)}
                     <section className="draft-annonce-section draft-annonce-section-note">
@@ -9550,30 +9571,34 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </section>
                   </>
                 ) : null}
-                {draftAnnonceStep === 'controle' ? (
-                  <section className="draft-annonce-review-panel">
-                    <div className="draft-annonce-review-lead">
-                      <strong>{draftAnnonceTitle.trim() || 'Nouvelle annonce sans titre'}</strong>
-                      <span>{draftAnnoncePropertyTypeLabel(draftAnnonceTypeId)} - {draftAnnonceAgency.trim() || 'Agence a choisir'}</span>
-                    </div>
-                    <div className="draft-annonce-review-grid">
-                      <article><span>Negociateur</span><strong>{selectedDraftNegotiator?.label || '-'}</strong></article>
-                      <article><span>Adresse</span><strong>{[draftAnnonceAddress, draftAnnoncePostalCode, draftAnnonceCity].filter((value) => value.trim()).join(' ') || '-'}</strong></article>
-                      <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
-                      <article><span>Surface</span><strong>{draftAnnonceSurface.trim() ? `${draftAnnonceSurface} m2` : '-'}</strong></article>
-                      <article><span>Pieces / chambres</span><strong>{[draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ')}</strong></article>
-                      <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
-                      <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>
-                      <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
-                    </div>
-                    <p className="draft-annonce-review-warning">La creation lance un job Hektor. Le worker applique ensuite les champs et l app affiche le resultat apres resynchronisation.</p>
-                  </section>
+                {draftAnnonceStep === 'diffusion' ? (
+                  <>
+                    {draftAnnonceAdvancedSections.slice(0, 1).map(renderDraftAnnonceAdvancedSection)}
+                    {draftAnnonceDiffusionGroups.map(renderDraftAnnonceWizardSection)}
+                    <section className="draft-annonce-review-panel">
+                      <div className="draft-annonce-review-lead">
+                        <strong>{draftAnnonceTitle.trim() || 'Nouvelle annonce sans titre'}</strong>
+                        <span>{draftAnnoncePropertyTypeLabel(draftAnnonceTypeId)} - {draftAnnonceAgency.trim() || 'Agence a choisir'}</span>
+                      </div>
+                      <div className="draft-annonce-review-grid">
+                        <article><span>Negociateur</span><strong>{selectedDraftNegotiator?.label || '-'}</strong></article>
+                        <article><span>Adresse</span><strong>{[draftAnnonceAddress, draftAnnoncePostalCode, draftAnnonceCity].filter((value) => value.trim()).join(' ') || '-'}</strong></article>
+                        <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
+                        <article><span>Surface</span><strong>{draftAnnonceSurface.trim() ? `${draftAnnonceSurface} m2` : '-'}</strong></article>
+                        <article><span>Pieces / chambres</span><strong>{[draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ')}</strong></article>
+                        <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
+                        <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>
+                        <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
+                      </div>
+                      <p className="draft-annonce-review-warning">La creation reste en brouillon non diffuse. La diffusion reste une action separee dans Hektor.</p>
+                    </section>
+                  </>
                 ) : null}
                 <div className="modal-actions draft-annonce-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
                   <div className="draft-annonce-actions-nav">
                     <button className="ghost-button button-subtle" type="button" onClick={() => moveDraftAnnonceStep(-1)} disabled={draftAnnoncePending || draftAnnonceStepIndex === 0}>Retour</button>
-                    {draftAnnonceStep === 'controle' ? (
+                    {draftAnnonceStep === 'diffusion' ? (
                       <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
                         {draftAnnoncePending ? 'Creation...' : 'Creer l annonce'}
                       </button>
