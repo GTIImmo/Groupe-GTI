@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent, Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Session } from '@supabase/supabase-js'
 import {
   type AppFilters,
@@ -409,6 +410,7 @@ const draftAnnoncePropertyTypes = [
 function draftAnnoncePropertyTypeLabel(id: string) {
   return draftAnnoncePropertyTypes.find((item) => item.id === id)?.label ?? 'Appartement'
 }
+
 
 type DraftAnnonceAdvancedKey =
   | 'description'
@@ -9173,83 +9175,113 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Fermer</button>
               </div>
               <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
-                <label className="filter-field draft-annonce-field-wide">
-                  <span>Titre / repere interne</span>
-                  <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
-                </label>
-                <div className="draft-annonce-section-title">
-                  <span>Compte</span>
-                  <strong>Qui porte l annonce</strong>
+                <div className="draft-annonce-guidance" aria-label="Parcours de creation">
+                  <div>
+                    <span>1</span>
+                    <strong>Compte</strong>
+                    <small>Agence et acces nego</small>
+                  </div>
+                  <div>
+                    <span>2</span>
+                    <strong>Bien</strong>
+                    <small>Adresse, prix, surfaces</small>
+                  </div>
+                  <div>
+                    <span>3</span>
+                    <strong>Diffusion</strong>
+                    <small>Pages Hektor et mandant</small>
+                  </div>
                 </div>
-                <label className="filter-field">
-                  <span>Agence</span>
-                  <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)} required>
-                    <option value="">Choisir</option>
-                    {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
-                  </select>
-                </label>
-                <label className="filter-field">
-                  <span>Negociateur Hektor</span>
-                  <select
-                    value={draftAnnonceNegotiatorId}
-                    onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)}
-                    disabled={profile?.role === 'commercial'}
-                    required
-                  >
-                    <option value="">{profile?.role === 'commercial' ? 'Acces personnel' : 'Choisir'}</option>
-                    {draftNegotiatorOptions.map((negotiator) => (
-                      <option key={negotiator.idUser} value={negotiator.idUser}>
-                        {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="filter-field">
-                  <span>Type Hektor</span>
-                  <select value={draftAnnonceTypeId} onChange={(event) => setDraftAnnonceTypeId(event.target.value)}>
-                    {draftAnnoncePropertyTypes.map((item) => (
-                      <option key={item.id} value={item.id}>{item.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="draft-annonce-section-title">
-                  <span>Localisation</span>
-                  <strong>Adresse privee</strong>
-                </div>
-                <label className="filter-field">
-                  <span>Adresse</span>
-                  <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
-                </label>
-                <label className="filter-field">
-                  <span>Code postal</span>
-                  <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
-                </label>
-                <label className="filter-field">
-                  <span>Ville</span>
-                  <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
-                </label>
-                <div className="draft-annonce-section-title">
-                  <span>Valeurs</span>
-                  <strong>Prix et caracteristiques</strong>
-                </div>
-                <label className="filter-field">
-                  <span>Prix</span>
-                  <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
-                </label>
-                <label className="filter-field">
-                  <span>Surface</span>
-                  <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
-                </label>
-                <label className="filter-field">
-                  <span>Pieces</span>
-                  <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
-                </label>
-                <label className="filter-field">
-                  <span>Chambres</span>
-                  <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
-                </label>
+                {errorMessage ? <p className="draft-annonce-inline-error">{errorMessage}</p> : null}
+                <section className="draft-annonce-section draft-annonce-section-identity">
+                  <div className="draft-annonce-section-title">
+                    <span>Repere</span>
+                    <strong>Identification rapide</strong>
+                  </div>
+                  <label className="filter-field draft-annonce-field-wide">
+                    <span>Titre / repere interne</span>
+                    <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
+                  </label>
+                </section>
+                <section className="draft-annonce-section draft-annonce-section-account">
+                  <div className="draft-annonce-section-title">
+                    <span>Compte</span>
+                    <strong>Qui porte l annonce</strong>
+                  </div>
+                  <label className="filter-field">
+                    <span>Agence</span>
+                    <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)} required>
+                      <option value="">Choisir</option>
+                      {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
+                    </select>
+                  </label>
+                  <label className="filter-field">
+                    <span>Negociateur Hektor</span>
+                    <select
+                      value={draftAnnonceNegotiatorId}
+                      onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)}
+                      disabled={profile?.role === 'commercial'}
+                      required
+                    >
+                      <option value="">{profile?.role === 'commercial' ? 'Acces personnel' : 'Choisir'}</option>
+                      {draftNegotiatorOptions.map((negotiator) => (
+                        <option key={negotiator.idUser} value={negotiator.idUser}>
+                          {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="filter-field">
+                    <span>Type Hektor</span>
+                    <select value={draftAnnonceTypeId} onChange={(event) => setDraftAnnonceTypeId(event.target.value)}>
+                      {draftAnnoncePropertyTypes.map((item) => (
+                        <option key={item.id} value={item.id}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </section>
+                <section className="draft-annonce-section draft-annonce-section-location">
+                  <div className="draft-annonce-section-title">
+                    <span>Localisation</span>
+                    <strong>Adresse privee</strong>
+                  </div>
+                  <label className="filter-field draft-annonce-address-field">
+                    <span>Adresse</span>
+                    <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
+                  </label>
+                  <label className="filter-field">
+                    <span>Code postal</span>
+                    <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
+                  </label>
+                  <label className="filter-field">
+                    <span>Ville</span>
+                    <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
+                  </label>
+                </section>
+                <section className="draft-annonce-section draft-annonce-section-values">
+                  <div className="draft-annonce-section-title">
+                    <span>Valeurs</span>
+                    <strong>Prix et caracteristiques</strong>
+                  </div>
+                  <label className="filter-field">
+                    <span>Prix</span>
+                    <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
+                  </label>
+                  <label className="filter-field">
+                    <span>Surface</span>
+                    <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
+                  </label>
+                  <label className="filter-field">
+                    <span>Pieces</span>
+                    <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
+                  </label>
+                  <label className="filter-field">
+                    <span>Chambres</span>
+                    <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
+                  </label>
+                </section>
                 {draftAnnonceWizardGroups.map((section) => (
-                  <Fragment key={section.title}>
+                  <section key={section.title} className="draft-annonce-section draft-annonce-wizard-section">
                     <div className="draft-annonce-section-title">
                       <span>Page {section.step}</span>
                       <strong>{section.title}</strong>
@@ -9289,12 +9321,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </label>
                       )
                     ))}
-                  </Fragment>
+                  </section>
                 ))}
-                <label className="filter-field draft-annonce-field-wide">
-                  <span>Note</span>
-                  <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
-                </label>
+                <section className="draft-annonce-section draft-annonce-section-note">
+                  <div className="draft-annonce-section-title">
+                    <span>Note</span>
+                    <strong>Consignes internes</strong>
+                  </div>
+                  <label className="filter-field draft-annonce-field-wide">
+                    <span>Note</span>
+                    <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
+                  </label>
+                </section>
                 <section className={`draft-mandant-panel ${draftMandantOpen ? 'is-open' : ''}`}>
                   <button className="draft-mandant-toggle" type="button" onClick={() => setDraftMandantOpen((value) => !value)}>
                     <span aria-hidden="true">{draftMandantOpen ? '-' : '+'}</span>
@@ -13990,7 +14028,7 @@ function DossierDetailLayout(props: {
           </div>
         </div>
       </div>
-      {hektorEditModalOpen && !isLightweightDetail ? (
+      {hektorEditModalOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
         <div className="modal-overlay detail-edit-popup-overlay" onClick={() => setHektorEditModalOpen(false)}>
           <section className="modal-panel detail-edit-popup" onClick={(event) => event.stopPropagation()}>
             <div className="detail-edit-popup-head">
@@ -14001,6 +14039,12 @@ function DossierDetailLayout(props: {
                 <p>Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.</p>
               </div>
               <button className="request-modal-close detail-edit-popup-close" type="button" onClick={() => setHektorEditModalOpen(false)}>Fermer</button>
+            </div>
+            <div className="detail-edit-popup-meta" aria-label="Resume de l annonce">
+              <span><strong>ID Hektor</strong>{dossier.hektor_annonce_id || '-'}</span>
+              <span><strong>Mandat</strong>{dossier.numero_mandat || '-'}</span>
+              <span><strong>Prix</strong>{formatPrice(dossier.prix)}</span>
+              <span><strong>Commercial</strong>{dossier.commercial_nom || dossier.negociateur_email || '-'}</span>
             </div>
             <div className="detail-edit-popup-grid">
               <section className="detail-edit-popup-section">
@@ -14036,7 +14080,8 @@ function DossierDetailLayout(props: {
               </section>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </section>
   )
