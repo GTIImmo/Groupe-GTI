@@ -785,6 +785,48 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
 ]
 
+const draftAnnonceStepOrder = ['capture', 'essentiel', 'offre', 'details', 'mandat', 'controle'] as const
+type DraftAnnonceStepKey = typeof draftAnnonceStepOrder[number]
+
+const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: string; subtitle: string; hint: string }> = {
+  capture: {
+    label: 'Depart',
+    title: 'Point de depart',
+    subtitle: 'Repere rapide depuis la fiche papier avant de completer les champs.',
+    hint: 'Titre et repere',
+  },
+  essentiel: {
+    label: 'Essentiel',
+    title: 'Qui, quoi, ou',
+    subtitle: 'Agence, nego, type de bien, adresse, prix et surfaces.',
+    hint: 'Compte et bien',
+  },
+  offre: {
+    label: 'Offre',
+    title: 'Pages Hektor principales',
+    subtitle: 'Offre, secteur, composition et informations visibles.',
+    hint: 'Prix et secteur',
+  },
+  details: {
+    label: 'Details',
+    title: 'Detail technique',
+    subtitle: 'Interieur, exterieur, equipements, diagnostics et copropriete.',
+    hint: 'Technique',
+  },
+  mandat: {
+    label: 'Mandat',
+    title: 'Mandat et vendeurs',
+    subtitle: 'Honoraires, mandat, notes internes et mandant initial.',
+    hint: 'Vendeur',
+  },
+  controle: {
+    label: 'Controle',
+    title: 'Controle avant envoi',
+    subtitle: 'Resume de la demande avant creation du job vers Hektor.',
+    hint: 'Verification',
+  },
+}
+
 function rawDetailProp(detail: DossierDetailPayload, group: string, key: string) {
   const raw = parseJson<Record<string, unknown>>(detail.detail_raw_json, {})
   const groupValue = raw[group] as { props?: Record<string, { value?: unknown }> } | undefined
@@ -6067,6 +6109,7 @@ export default function App() {
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
   const [draftAnnonceModalOpen, setDraftAnnonceModalOpen] = useState(false)
   const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
+  const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('capture')
   const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
   const [draftAnnonceNegotiatorId, setDraftAnnonceNegotiatorId] = useState('')
@@ -6253,6 +6296,27 @@ export default function App() {
   const selectedDraftNegotiator = useMemo(() => {
     return draftNegotiatorOptions.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, draftNegotiatorOptions])
+  const draftAnnonceStepIndex = Math.max(0, draftAnnonceStepOrder.indexOf(draftAnnonceStep))
+  const draftAnnonceStepProgress = ((draftAnnonceStepIndex + 1) / draftAnnonceStepOrder.length) * 100
+  const draftAnnonceCurrentStep = draftAnnonceStepMeta[draftAnnonceStep]
+  const draftAnnonceCoreFilledCount = [
+    draftAnnonceTitle,
+    draftAnnonceAgency,
+    selectedDraftNegotiator?.label ?? '',
+    draftAnnonceAddress,
+    draftAnnoncePostalCode,
+    draftAnnonceCity,
+    draftAnnoncePrice,
+    draftAnnonceSurface,
+    draftAnnonceRoomCount,
+    draftAnnonceBedroomCount,
+  ].filter((value) => value.trim()).length
+  const draftAnnonceAdvancedFilledCount = Object.values(draftAnnonceAdvanced).filter((value) => value.trim()).length
+  const draftAnnonceWizardFilledCount = Object.values(draftAnnonceWizardFields).filter((value) => value.trim()).length
+  const draftAnnonceOfferGroups = draftAnnonceWizardGroups.filter((section) => section.step <= 4)
+  const draftAnnonceDetailGroups = draftAnnonceWizardGroups.filter((section) => section.step === 5)
+  const draftAnnonceMandatGroups = draftAnnonceWizardGroups.filter((section) => section.step >= 6)
+  const draftAnnonceHasMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
   const negotiatorAssignAgency = useMemo(() => {
     return hektorAgencies.find((item) => item.idAgence === negotiatorAssignAgencyValue) ?? null
   }, [hektorAgencies, negotiatorAssignAgencyValue])
@@ -7228,6 +7292,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceNote('')
     setDraftAnnonceAdvanced(buildEmptyDraftAnnonceAdvanced())
     setDraftAnnonceWizardFields({})
+    setDraftAnnonceStep('capture')
     setDraftMandantOpen(false)
     setDraftMandantCivility('')
     setDraftMandantLastName('')
@@ -7245,6 +7310,96 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function updateDraftAnnonceWizardField(key: string, value: string) {
     setDraftAnnonceWizardFields((current) => ({ ...current, [key]: value }))
+  }
+
+  function goToDraftAnnonceStep(step: DraftAnnonceStepKey) {
+    setDraftAnnonceStep(step)
+  }
+
+  function moveDraftAnnonceStep(direction: -1 | 1) {
+    const currentIndex = Math.max(0, draftAnnonceStepOrder.indexOf(draftAnnonceStep))
+    const nextIndex = Math.min(draftAnnonceStepOrder.length - 1, Math.max(0, currentIndex + direction))
+    setDraftAnnonceStep(draftAnnonceStepOrder[nextIndex])
+  }
+
+  function renderDraftAnnonceAdvancedSection(section: (typeof draftAnnonceAdvancedSections)[number]) {
+    return (
+      <section key={section.title} className="draft-annonce-section draft-annonce-advanced-section">
+        <div className="draft-annonce-section-title">
+          <span>Detail app</span>
+          <strong>{section.title}</strong>
+        </div>
+        {section.fields.map((field) => (
+          field.multiline ? (
+            <label key={`${section.title}-${field.key}`} className="filter-field draft-annonce-field-wide">
+              <span>{field.label}</span>
+              <textarea
+                className="inline-textarea"
+                value={draftAnnonceAdvanced[field.key]}
+                onChange={(event) => updateDraftAnnonceAdvanced(field.key, event.target.value)}
+                placeholder={field.placeholder ?? field.key}
+              />
+            </label>
+          ) : (
+            <label key={`${section.title}-${field.key}`} className="filter-field">
+              <span>{field.label}</span>
+              <input
+                value={draftAnnonceAdvanced[field.key]}
+                onChange={(event) => updateDraftAnnonceAdvanced(field.key, event.target.value)}
+                inputMode={field.inputMode}
+                placeholder={field.placeholder ?? field.key}
+              />
+            </label>
+          )
+        ))}
+      </section>
+    )
+  }
+
+  function renderDraftAnnonceWizardSection(section: DraftAnnonceWizardGroup) {
+    return (
+      <section key={section.title} className="draft-annonce-section draft-annonce-wizard-section">
+        <div className="draft-annonce-section-title">
+          <span>Page {section.step}</span>
+          <strong>{section.title}</strong>
+        </div>
+        {section.fields.map((field) => (
+          field.multiline ? (
+            <label key={`${section.title}-${field.name}`} className="filter-field draft-annonce-field-wide">
+              <span>{field.label}</span>
+              <textarea
+                className="inline-textarea"
+                value={draftAnnonceWizardFields[field.name] ?? ''}
+                onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
+                placeholder={field.name}
+              />
+            </label>
+          ) : field.options ? (
+            <label key={`${section.title}-${field.name}`} className="filter-field">
+              <span>{field.label}</span>
+              <select
+                value={draftAnnonceWizardFields[field.name] ?? ''}
+                onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
+              >
+                {field.options.map((option) => (
+                  <option key={`${field.name}-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label key={`${section.title}-${field.name}`} className="filter-field">
+              <span>{field.label}</span>
+              <input
+                value={draftAnnonceWizardFields[field.name] ?? ''}
+                onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
+                inputMode={field.inputMode}
+                placeholder={field.name}
+              />
+            </label>
+          )
+        ))}
+      </section>
+    )
   }
 
   function closeDraftAnnonceModal() {
@@ -7284,17 +7439,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (draftAnnonceStep !== 'controle') {
+      moveDraftAnnonceStep(1)
+      return
+    }
     if (!draftAnnonceAgency.trim()) {
       setErrorMessage('Choisis une agence avant de creer l annonce Hektor.')
+      setDraftAnnonceStep('essentiel')
       return
     }
     if (!selectedDraftNegotiator) {
       setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera l annonce.')
+      setDraftAnnonceStep('essentiel')
       return
     }
     const hasInitialMandant = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
     if (hasInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
       setErrorMessage('Pour ajouter un mandant initial, renseigne au minimum le nom et l email.')
+      setDraftAnnonceStep('mandat')
       setDraftMandantOpen(true)
       return
     }
@@ -9175,205 +9337,250 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Fermer</button>
               </div>
               <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
-                <div className="draft-annonce-guidance" aria-label="Parcours de creation">
+                <div className="draft-annonce-stepper" aria-label="Parcours de creation">
+                  {draftAnnonceStepOrder.map((step, index) => {
+                    const meta = draftAnnonceStepMeta[step]
+                    const stateClass = step === draftAnnonceStep ? 'is-active' : index < draftAnnonceStepIndex ? 'is-done' : ''
+                    return (
+                      <button
+                        key={step}
+                        className={`draft-annonce-step ${stateClass}`}
+                        type="button"
+                        onClick={() => goToDraftAnnonceStep(step)}
+                        disabled={draftAnnoncePending}
+                      >
+                        <span className="draft-annonce-step-number">{index + 1}</span>
+                        <span className="draft-annonce-step-copy">
+                          <strong>{meta.label}</strong>
+                          <small>{meta.hint}</small>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="draft-annonce-progress" aria-hidden="true"><span style={{ width: `${draftAnnonceStepProgress}%` }} /></div>
+                {errorMessage ? <p className="draft-annonce-inline-error">{errorMessage}</p> : null}
+                <div className="draft-annonce-page-head">
                   <div>
-                    <span>1</span>
-                    <strong>Compte</strong>
-                    <small>Agence et acces nego</small>
+                    <span>Etape {draftAnnonceStepIndex + 1} / {draftAnnonceStepOrder.length}</span>
+                    <h4>{draftAnnonceCurrentStep.title}</h4>
+                    <p>{draftAnnonceCurrentStep.subtitle}</p>
                   </div>
-                  <div>
-                    <span>2</span>
-                    <strong>Bien</strong>
-                    <small>Adresse, prix, surfaces</small>
-                  </div>
-                  <div>
-                    <span>3</span>
-                    <strong>Diffusion</strong>
-                    <small>Pages Hektor et mandant</small>
+                  <div className="draft-annonce-page-score">
+                    <strong>{draftAnnonceCoreFilledCount + draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount}</strong>
+                    <span>champs remplis</span>
                   </div>
                 </div>
-                {errorMessage ? <p className="draft-annonce-inline-error">{errorMessage}</p> : null}
-                <section className="draft-annonce-section draft-annonce-section-identity">
-                  <div className="draft-annonce-section-title">
-                    <span>Repere</span>
-                    <strong>Identification rapide</strong>
-                  </div>
-                  <label className="filter-field draft-annonce-field-wide">
-                    <span>Titre / repere interne</span>
-                    <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
-                  </label>
-                </section>
-                <section className="draft-annonce-section draft-annonce-section-account">
-                  <div className="draft-annonce-section-title">
-                    <span>Compte</span>
-                    <strong>Qui porte l annonce</strong>
-                  </div>
-                  <label className="filter-field">
-                    <span>Agence</span>
-                    <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)} required>
-                      <option value="">Choisir</option>
-                      {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
-                    </select>
-                  </label>
-                  <label className="filter-field">
-                    <span>Negociateur Hektor</span>
-                    <select
-                      value={draftAnnonceNegotiatorId}
-                      onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)}
-                      disabled={profile?.role === 'commercial'}
-                      required
-                    >
-                      <option value="">{profile?.role === 'commercial' ? 'Acces personnel' : 'Choisir'}</option>
-                      {draftNegotiatorOptions.map((negotiator) => (
-                        <option key={negotiator.idUser} value={negotiator.idUser}>
-                          {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="filter-field">
-                    <span>Type Hektor</span>
-                    <select value={draftAnnonceTypeId} onChange={(event) => setDraftAnnonceTypeId(event.target.value)}>
-                      {draftAnnoncePropertyTypes.map((item) => (
-                        <option key={item.id} value={item.id}>{item.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                </section>
-                <section className="draft-annonce-section draft-annonce-section-location">
-                  <div className="draft-annonce-section-title">
-                    <span>Localisation</span>
-                    <strong>Adresse privee</strong>
-                  </div>
-                  <label className="filter-field draft-annonce-address-field">
-                    <span>Adresse</span>
-                    <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
-                  </label>
-                  <label className="filter-field">
-                    <span>Code postal</span>
-                    <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
-                  </label>
-                  <label className="filter-field">
-                    <span>Ville</span>
-                    <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
-                  </label>
-                </section>
-                <section className="draft-annonce-section draft-annonce-section-values">
-                  <div className="draft-annonce-section-title">
-                    <span>Valeurs</span>
-                    <strong>Prix et caracteristiques</strong>
-                  </div>
-                  <label className="filter-field">
-                    <span>Prix</span>
-                    <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
-                  </label>
-                  <label className="filter-field">
-                    <span>Surface</span>
-                    <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
-                  </label>
-                  <label className="filter-field">
-                    <span>Pieces</span>
-                    <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
-                  </label>
-                  <label className="filter-field">
-                    <span>Chambres</span>
-                    <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
-                  </label>
-                </section>
-                {draftAnnonceWizardGroups.map((section) => (
-                  <section key={section.title} className="draft-annonce-section draft-annonce-wizard-section">
+                {draftAnnonceStep === 'capture' ? (
+                  <section className="draft-annonce-section draft-annonce-section-identity">
                     <div className="draft-annonce-section-title">
-                      <span>Page {section.step}</span>
-                      <strong>{section.title}</strong>
+                      <span>Repere</span>
+                      <strong>Identification rapide</strong>
                     </div>
-                    {section.fields.map((field) => (
-                      field.multiline ? (
-                        <label key={`${section.title}-${field.name}`} className="filter-field draft-annonce-field-wide">
-                          <span>{field.label}</span>
-                          <textarea
-                            className="inline-textarea"
-                            value={draftAnnonceWizardFields[field.name] ?? ''}
-                            onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
-                            placeholder={field.name}
-                          />
-                        </label>
-                      ) : field.options ? (
-                        <label key={`${section.title}-${field.name}`} className="filter-field">
-                          <span>{field.label}</span>
-                          <select
-                            value={draftAnnonceWizardFields[field.name] ?? ''}
-                            onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
-                          >
-                            {field.options.map((option) => (
-                              <option key={`${field.name}-${option.value}`} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : (
-                        <label key={`${section.title}-${field.name}`} className="filter-field">
-                          <span>{field.label}</span>
-                          <input
-                            value={draftAnnonceWizardFields[field.name] ?? ''}
-                            onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
-                            inputMode={field.inputMode}
-                            placeholder={field.name}
-                          />
-                        </label>
-                      )
-                    ))}
+                    <label className="filter-field draft-annonce-field-wide">
+                      <span>Titre / repere interne</span>
+                      <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
+                    </label>
+                    <div className="draft-annonce-play-card">
+                      <strong>Depart simple</strong>
+                      <span>Commence par un repere, puis avance page par page pour completer tous les champs Hektor sans te perdre.</span>
+                    </div>
                   </section>
-                ))}
-                <section className="draft-annonce-section draft-annonce-section-note">
-                  <div className="draft-annonce-section-title">
-                    <span>Note</span>
-                    <strong>Consignes internes</strong>
-                  </div>
-                  <label className="filter-field draft-annonce-field-wide">
-                    <span>Note</span>
-                    <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
-                  </label>
-                </section>
-                <section className={`draft-mandant-panel ${draftMandantOpen ? 'is-open' : ''}`}>
-                  <button className="draft-mandant-toggle" type="button" onClick={() => setDraftMandantOpen((value) => !value)}>
-                    <span aria-hidden="true">{draftMandantOpen ? '-' : '+'}</span>
-                    <strong>Ajouter un mandant initial</strong>
-                    <small>{draftMandantOpen ? 'Nom et email minimum' : 'Optionnel, ferme par defaut'}</small>
-                  </button>
-                  {draftMandantOpen ? (
-                    <div className="draft-mandant-fields">
-                      <label className="filter-field is-small">
-                        <span>Civilite</span>
-                        <select value={draftMandantCivility} onChange={(event) => setDraftMandantCivility(event.target.value)}>
-                          <option value="">-</option>
-                          <option value="M.">M.</option>
-                          <option value="Mme.">Mme.</option>
-                          <option value="Mlle.">Mlle.</option>
+                ) : null}
+                {draftAnnonceStep === 'essentiel' ? (
+                  <>
+                    <section className="draft-annonce-section draft-annonce-section-account">
+                      <div className="draft-annonce-section-title">
+                        <span>Compte</span>
+                        <strong>Qui porte l annonce</strong>
+                      </div>
+                      <label className="filter-field">
+                        <span>Agence</span>
+                        <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)} required>
+                          <option value="">Choisir</option>
+                          {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
                         </select>
                       </label>
                       <label className="filter-field">
-                        <span>Nom</span>
-                        <input value={draftMandantLastName} onChange={(event) => setDraftMandantLastName(event.target.value)} placeholder="Nom du vendeur" />
+                        <span>Negociateur Hektor</span>
+                        <select
+                          value={draftAnnonceNegotiatorId}
+                          onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)}
+                          disabled={profile?.role === 'commercial'}
+                          required
+                        >
+                          <option value="">{profile?.role === 'commercial' ? 'Acces personnel' : 'Choisir'}</option>
+                          {draftNegotiatorOptions.map((negotiator) => (
+                            <option key={negotiator.idUser} value={negotiator.idUser}>
+                              {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <label className="filter-field">
-                        <span>Prenom</span>
-                        <input value={draftMandantFirstName} onChange={(event) => setDraftMandantFirstName(event.target.value)} placeholder="Prenom" />
+                        <span>Type Hektor</span>
+                        <select value={draftAnnonceTypeId} onChange={(event) => setDraftAnnonceTypeId(event.target.value)}>
+                          {draftAnnoncePropertyTypes.map((item) => (
+                            <option key={item.id} value={item.id}>{item.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </section>
+                    <section className="draft-annonce-section draft-annonce-type-section">
+                      <div className="draft-annonce-section-title">
+                        <span>Type</span>
+                        <strong>Selection rapide du bien</strong>
+                      </div>
+                      <div className="draft-annonce-type-grid" role="group" aria-label="Type de bien">
+                        {draftAnnoncePropertyTypes.map((item) => (
+                          <button
+                            key={item.id}
+                            className={`draft-annonce-type-choice ${draftAnnonceTypeId === item.id ? 'is-selected' : ''}`}
+                            type="button"
+                            onClick={() => setDraftAnnonceTypeId(item.id)}
+                          >
+                            <span aria-hidden="true">{item.label.slice(0, 1)}</span>
+                            <strong>{item.label}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                    <section className="draft-annonce-section draft-annonce-section-location">
+                      <div className="draft-annonce-section-title">
+                        <span>Localisation</span>
+                        <strong>Adresse privee</strong>
+                      </div>
+                      <label className="filter-field draft-annonce-address-field">
+                        <span>Adresse</span>
+                        <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
                       </label>
                       <label className="filter-field">
-                        <span>Email</span>
-                        <input value={draftMandantEmail} onChange={(event) => setDraftMandantEmail(event.target.value)} type="email" placeholder="email@exemple.fr" />
+                        <span>Code postal</span>
+                        <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
                       </label>
                       <label className="filter-field">
-                        <span>Telephone</span>
-                        <input value={draftMandantPhone} onChange={(event) => setDraftMandantPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
+                        <span>Ville</span>
+                        <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
                       </label>
+                    </section>
+                    <section className="draft-annonce-section draft-annonce-section-values">
+                      <div className="draft-annonce-section-title">
+                        <span>Valeurs</span>
+                        <strong>Prix et caracteristiques</strong>
+                      </div>
+                      <label className="filter-field">
+                        <span>Prix</span>
+                        <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Surface</span>
+                        <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Pieces</span>
+                        <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
+                      </label>
+                      <label className="filter-field">
+                        <span>Chambres</span>
+                        <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
+                      </label>
+                    </section>
+                  </>
+                ) : null}
+                {draftAnnonceStep === 'offre' ? (
+                  <>
+                    {draftAnnonceAdvancedSections.slice(0, 2).map(renderDraftAnnonceAdvancedSection)}
+                    {draftAnnonceOfferGroups.map(renderDraftAnnonceWizardSection)}
+                  </>
+                ) : null}
+                {draftAnnonceStep === 'details' ? (
+                  <>
+                    {draftAnnonceAdvancedSections.slice(2).map(renderDraftAnnonceAdvancedSection)}
+                    {draftAnnonceDetailGroups.map(renderDraftAnnonceWizardSection)}
+                  </>
+                ) : null}
+                {draftAnnonceStep === 'mandat' ? (
+                  <>
+                    {draftAnnonceMandatGroups.map(renderDraftAnnonceWizardSection)}
+                    <section className="draft-annonce-section draft-annonce-section-note">
+                      <div className="draft-annonce-section-title">
+                        <span>Note</span>
+                        <strong>Consignes internes</strong>
+                      </div>
+                      <label className="filter-field draft-annonce-field-wide">
+                        <span>Note</span>
+                        <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
+                      </label>
+                    </section>
+                    <section className={`draft-mandant-panel ${draftMandantOpen ? 'is-open' : ''}`}>
+                      <button className="draft-mandant-toggle" type="button" onClick={() => setDraftMandantOpen((value) => !value)}>
+                        <span aria-hidden="true">{draftMandantOpen ? '-' : '+'}</span>
+                        <strong>Ajouter un mandant initial</strong>
+                        <small>{draftMandantOpen ? 'Nom et email minimum' : 'Optionnel, ferme par defaut'}</small>
+                      </button>
+                      {draftMandantOpen ? (
+                        <div className="draft-mandant-fields">
+                          <label className="filter-field is-small">
+                            <span>Civilite</span>
+                            <select value={draftMandantCivility} onChange={(event) => setDraftMandantCivility(event.target.value)}>
+                              <option value="">-</option>
+                              <option value="M.">M.</option>
+                              <option value="Mme.">Mme.</option>
+                              <option value="Mlle.">Mlle.</option>
+                            </select>
+                          </label>
+                          <label className="filter-field">
+                            <span>Nom</span>
+                            <input value={draftMandantLastName} onChange={(event) => setDraftMandantLastName(event.target.value)} placeholder="Nom du vendeur" />
+                          </label>
+                          <label className="filter-field">
+                            <span>Prenom</span>
+                            <input value={draftMandantFirstName} onChange={(event) => setDraftMandantFirstName(event.target.value)} placeholder="Prenom" />
+                          </label>
+                          <label className="filter-field">
+                            <span>Email</span>
+                            <input value={draftMandantEmail} onChange={(event) => setDraftMandantEmail(event.target.value)} type="email" placeholder="email@exemple.fr" />
+                          </label>
+                          <label className="filter-field">
+                            <span>Telephone</span>
+                            <input value={draftMandantPhone} onChange={(event) => setDraftMandantPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
+                          </label>
+                        </div>
+                      ) : null}
+                    </section>
+                  </>
+                ) : null}
+                {draftAnnonceStep === 'controle' ? (
+                  <section className="draft-annonce-review-panel">
+                    <div className="draft-annonce-review-lead">
+                      <strong>{draftAnnonceTitle.trim() || 'Nouvelle annonce sans titre'}</strong>
+                      <span>{draftAnnoncePropertyTypeLabel(draftAnnonceTypeId)} - {draftAnnonceAgency.trim() || 'Agence a choisir'}</span>
                     </div>
-                  ) : null}
-                </section>
-                <div className="modal-actions">
+                    <div className="draft-annonce-review-grid">
+                      <article><span>Negociateur</span><strong>{selectedDraftNegotiator?.label || '-'}</strong></article>
+                      <article><span>Adresse</span><strong>{[draftAnnonceAddress, draftAnnoncePostalCode, draftAnnonceCity].filter((value) => value.trim()).join(' ') || '-'}</strong></article>
+                      <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
+                      <article><span>Surface</span><strong>{draftAnnonceSurface.trim() ? `${draftAnnonceSurface} m2` : '-'}</strong></article>
+                      <article><span>Pieces / chambres</span><strong>{[draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ')}</strong></article>
+                      <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
+                      <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>
+                      <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
+                    </div>
+                    <p className="draft-annonce-review-warning">La creation lance un job Hektor. Le worker applique ensuite les champs et l app affiche le resultat apres resynchronisation.</p>
+                  </section>
+                ) : null}
+                <div className="modal-actions draft-annonce-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
-                  <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
-                    {draftAnnoncePending ? 'Creation...' : 'Creer l annonce'}
-                  </button>
+                  <div className="draft-annonce-actions-nav">
+                    <button className="ghost-button button-subtle" type="button" onClick={() => moveDraftAnnonceStep(-1)} disabled={draftAnnoncePending || draftAnnonceStepIndex === 0}>Retour</button>
+                    {draftAnnonceStep === 'controle' ? (
+                      <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
+                        {draftAnnoncePending ? 'Creation...' : 'Creer l annonce'}
+                      </button>
+                    ) : (
+                      <button className="ghost-button button-primary" type="button" onClick={() => moveDraftAnnonceStep(1)} disabled={draftAnnoncePending}>Suivant</button>
+                    )}
+                  </div>
                 </div>
               </form>
             </section>
@@ -14037,6 +14244,12 @@ function DossierDetailLayout(props: {
                 <span>Modification Hektor</span>
                 <h3>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h3>
                 <p>Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.</p>
+                <div className="detail-edit-popup-flow" aria-label="Circuit de mise a jour">
+                  <span>App</span>
+                  <span>PC serveur</span>
+                  <span>Hektor</span>
+                  <span>Retour app</span>
+                </div>
               </div>
               <button className="request-modal-close detail-edit-popup-close" type="button" onClick={() => setHektorEditModalOpen(false)}>Fermer</button>
             </div>
