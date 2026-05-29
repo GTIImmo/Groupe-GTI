@@ -27306,6 +27306,10 @@ body {
 /* Contacts listing: align visual language with the Annonces listing. */
 .contacts-workspace-full .contacts-list-panel {
   padding: 18px !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 32px rgba(21, 32, 43, 0.05) !important;
 }
 
 .contacts-workspace-full .contacts-list-head {
@@ -27313,30 +27317,31 @@ body {
   justify-content: space-between !important;
   align-items: flex-start !important;
   gap: 12px !important;
-  margin: 0 0 16px !important;
-  padding: 0 !important;
+  margin: 0 0 10px !important;
+  padding: 16px 22px 12px !important;
   border-bottom: 0 !important;
 }
 
 .contacts-workspace-full .contacts-list-head h3 {
   margin: 0 !important;
   color: var(--gti-final-ink, #222323) !important;
-  font-size: 20px !important;
-  font-weight: 950 !important;
-  line-height: 1.15 !important;
+  font-size: 1.17em !important;
+  font-weight: 700 !important;
+  line-height: normal !important;
 }
 
 .contacts-workspace-full .contacts-list-head .listing-total-label {
-  display: inline !important;
-  width: auto !important;
+  display: inline-block !important;
+  width: fit-content !important;
   max-width: none !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  color: #686d6d !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  line-height: 1.35 !important;
+  padding: 5px 9px !important;
+  border: 1px solid rgba(197, 0, 95, 0.18) !important;
+  border-radius: 999px !important;
+  background: rgba(197, 0, 95, 0.075) !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  line-height: normal !important;
 }
 
 .contacts-workspace-full .contacts-list-head .page-controls {
@@ -27368,10 +27373,10 @@ body {
 }
 
 .contacts-workspace-full .contacts-table-wrap {
-  min-height: calc(100vh - 286px) !important;
-  border: 1px solid var(--gti-final-line, rgba(34, 35, 35, 0.12)) !important;
-  border-radius: 8px !important;
-  background: #ffffff !important;
+  min-height: calc(100vh - 318px) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   box-shadow: none !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
@@ -27387,18 +27392,18 @@ body {
 .contacts-workspace-full .contacts-table-wrap th,
 .contacts-workspace-full .contacts-table-wrap td {
   height: auto !important;
-  padding: 10px 8px !important;
+  padding: 10px 7px !important;
   border-bottom: 1px solid rgba(34, 35, 35, 0.08) !important;
   font-size: 13px !important;
   line-height: 1.35 !important;
 }
 
 .contacts-workspace-full .contacts-table-wrap th {
-  height: 42px !important;
+  height: 48px !important;
   background: #f1f2f2 !important;
   color: #4d5656 !important;
   font-size: 12px !important;
-  font-weight: 900 !important;
+  font-weight: 700 !important;
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
 }
@@ -27457,8 +27462,9 @@ body {
 
 .contacts-workspace-full .contacts-table-wrap td strong {
   color: var(--gti-final-ink, #222323) !important;
-  font-size: 13px !important;
-  font-weight: 900 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: normal !important;
 }
 
 .contacts-workspace-full .contacts-table-wrap td span,
@@ -27466,6 +27472,7 @@ body {
   color: #666d6d !important;
   font-size: 12px !important;
   font-weight: 700 !important;
+  line-height: 1.25 !important;
 }
 
 .contacts-workspace-full .contact-identity-cell {
@@ -27517,7 +27524,7 @@ body {
 
 .contacts-workspace-full .contact-role-chip,
 .contacts-workspace-full .contact-duplicate-pill {
-  min-height: 24px !important;
+  min-height: 22px !important;
   border: 1px solid rgba(34, 35, 35, 0.12) !important;
   border-radius: 999px !important;
   background: #ffffff !important;
@@ -27525,6 +27532,16 @@ body {
   box-shadow: none !important;
   font-size: 11px !important;
   font-weight: 800 !important;
+}
+
+.contacts-workspace-full .contact-duplicate-pill {
+  padding: 3px 10px !important;
+}
+
+.contacts-workspace-full .contact-taxonomy-cell small,
+.contacts-workspace-full .contact-activity-cell small,
+.contacts-workspace-full .contact-quality-cell small {
+  margin-top: 2px !important;
 }
 
 .contacts-workspace-full .contact-activity-cell .is-important {
