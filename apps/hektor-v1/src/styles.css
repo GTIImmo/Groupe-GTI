@@ -27435,6 +27435,43 @@ body {
   background: #f1f2f2 !important;
 }
 
+.contacts-workspace-full .contacts-table-wrap tbody tr {
+  --contact-row-accent: #d6dada;
+  --contact-row-soft: rgba(34, 35, 35, 0.035);
+  --contact-row-ink: #4d5656;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-buyer {
+  --contact-row-accent: var(--gti-final-magenta, #c5005f);
+  --contact-row-soft: rgba(197, 0, 95, 0.075);
+  --contact-row-ink: var(--gti-final-magenta, #c5005f);
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-owner,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-mandate {
+  --contact-row-accent: #147e69;
+  --contact-row-soft: rgba(20, 126, 105, 0.085);
+  --contact-row-ink: #147e69;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-notary {
+  --contact-row-accent: #6f4f7d;
+  --contact-row-soft: rgba(111, 79, 125, 0.085);
+  --contact-row-ink: #6f4f7d;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-search {
+  --contact-row-accent: #0f6874;
+  --contact-row-soft: rgba(15, 104, 116, 0.09);
+  --contact-row-ink: #0f6874;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-mixed {
+  --contact-row-accent: #9a5f18;
+  --contact-row-soft: rgba(154, 95, 24, 0.09);
+  --contact-row-ink: #9a5f18;
+}
+
 .contacts-workspace-full .contacts-table-wrap tbody tr td,
 .contacts-workspace-full .contacts-table-wrap tbody tr td:first-child,
 .contacts-workspace-full .contacts-table-wrap tbody tr.is-buyer td:first-child,
@@ -27451,7 +27488,12 @@ body {
 .contacts-workspace-full .contacts-table-wrap tbody tr:hover td:first-child,
 .contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td,
 .contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td:first-child {
-  background: linear-gradient(90deg, rgba(197, 0, 95, 0.08) 0%, rgba(197, 0, 95, 0.03) 48%, #ffffff 100%) !important;
+  background: linear-gradient(90deg, var(--contact-row-soft) 0%, rgba(255, 255, 255, 0.86) 54%, #ffffff 100%) !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap tbody tr:hover td:first-child,
+.contacts-workspace-full .contacts-table-wrap tbody tr.is-selected td:first-child {
+  box-shadow: inset 4px 0 0 var(--contact-row-accent) !important;
 }
 
 .contacts-workspace-full .contacts-table-wrap td strong,
@@ -27481,7 +27523,7 @@ body {
 
 .contacts-workspace-full .contact-identity-content {
   display: grid !important;
-  grid-template-columns: 62px minmax(0, 1fr) !important;
+  grid-template-columns: 72px minmax(0, 1fr) !important;
   gap: 12px !important;
   align-items: center !important;
   min-width: 0 !important;
@@ -27492,30 +27534,39 @@ body {
 }
 
 .contacts-workspace-full .contact-type-mark {
-  width: 58px !important;
-  min-width: 58px !important;
-  height: 48px !important;
-  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  height: 50px !important;
+  border: 1px solid rgba(34, 35, 35, 0.1) !important;
   border-radius: 8px !important;
-  background: #ffffff !important;
-  color: #4d5656 !important;
-  box-shadow: none !important;
+  background: linear-gradient(180deg, var(--contact-row-soft, rgba(34, 35, 35, 0.035)) 0%, #ffffff 76%) !important;
+  color: var(--contact-row-ink, #4d5656) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55) !important;
   transform: none !important;
 }
 
 .contacts-workspace-full .contact-type-mark::before {
   height: 3px !important;
-  background: #d6dada !important;
+  background: var(--contact-row-accent, #d6dada) !important;
 }
 
 .contacts-workspace-full .contact-type-mark-icon {
-  color: #4d5656 !important;
+  color: var(--contact-row-ink, #4d5656) !important;
 }
 
 .contacts-workspace-full .contact-type-mark-label {
-  color: #4d5656 !important;
-  font-size: 10px !important;
+  color: var(--contact-row-ink, #4d5656) !important;
+  font-size: 9px !important;
   font-weight: 850 !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+.contacts-workspace-full .contacts-table-wrap .contact-type-mark,
+.contacts-workspace-full .contacts-table-wrap .contact-type-mark .contact-type-mark-icon,
+.contacts-workspace-full .contacts-table-wrap .contact-type-mark .contact-type-mark-label {
+  color: var(--contact-row-ink, #4d5656) !important;
 }
 
 .contacts-workspace-full .contact-row:hover .contact-type-mark {
@@ -27524,6 +27575,9 @@ body {
 
 .contacts-workspace-full .contact-role-chip,
 .contacts-workspace-full .contact-duplicate-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   min-height: 22px !important;
   border: 1px solid rgba(34, 35, 35, 0.12) !important;
   border-radius: 999px !important;
@@ -27534,8 +27588,63 @@ body {
   font-weight: 800 !important;
 }
 
+.contacts-workspace-full .contact-role-chip.is-buyer {
+  border-color: rgba(197, 0, 95, 0.22) !important;
+  background: rgba(197, 0, 95, 0.075) !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+}
+
+.contacts-workspace-full .contact-role-chip.is-owner,
+.contacts-workspace-full .contact-role-chip.is-mandate {
+  border-color: rgba(20, 126, 105, 0.24) !important;
+  background: rgba(20, 126, 105, 0.085) !important;
+  color: #147e69 !important;
+}
+
+.contacts-workspace-full .contact-role-chip.is-notary {
+  border-color: rgba(111, 79, 125, 0.24) !important;
+  background: rgba(111, 79, 125, 0.085) !important;
+  color: #6f4f7d !important;
+}
+
+.contacts-workspace-full .contact-role-chip.is-search {
+  border-color: rgba(15, 104, 116, 0.24) !important;
+  background: rgba(15, 104, 116, 0.085) !important;
+  color: #0f6874 !important;
+}
+
+.contacts-workspace-full .contact-role-chip.is-muted {
+  border-color: rgba(34, 35, 35, 0.1) !important;
+  background: #f7f9fa !important;
+  color: #7a8282 !important;
+}
+
 .contacts-workspace-full .contact-duplicate-pill {
+  display: inline-flex !important;
+  width: fit-content !important;
+  min-width: 54px !important;
+  max-width: 100% !important;
   padding: 3px 10px !important;
+}
+
+.contacts-workspace-full .contact-duplicate-pill.is-critical,
+.contacts-workspace-full .contact-duplicate-pill.is-high {
+  border-color: rgba(166, 106, 34, 0.34) !important;
+  background: rgba(166, 106, 34, 0.105) !important;
+  color: #9a5f18 !important;
+}
+
+.contacts-workspace-full .contact-duplicate-pill.is-medium {
+  border-color: rgba(15, 104, 116, 0.22) !important;
+  background: rgba(15, 104, 116, 0.075) !important;
+  color: #0f6874 !important;
+}
+
+.contacts-workspace-full .contact-duplicate-pill.is-low,
+.contacts-workspace-full .contact-duplicate-pill.is-none {
+  border-color: rgba(34, 35, 35, 0.1) !important;
+  background: #f8fafb !important;
+  color: #687272 !important;
 }
 
 .contacts-workspace-full .contact-taxonomy-cell small,
@@ -27545,7 +27654,16 @@ body {
 }
 
 .contacts-workspace-full .contact-activity-cell .is-important {
-  color: var(--gti-final-magenta, #c5005f) !important;
+  display: inline-flex !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 3px 9px !important;
+  border: 1px solid rgba(15, 104, 116, 0.24) !important;
+  border-radius: 999px !important;
+  background: rgba(15, 104, 116, 0.085) !important;
+  color: #0f6874 !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
 }
 
 @media (max-width: 980px) {

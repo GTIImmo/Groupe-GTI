@@ -14453,11 +14453,12 @@ function contactTypologyBadges(contact: AppContact) {
 }
 
 function contactRoleChipClass(value: string) {
-  if (isBuyerRole(value)) return 'contact-role-chip is-buyer'
-  if (value === 'proprietaire') return 'contact-role-chip is-owner'
-  if (value === 'mandant') return 'contact-role-chip is-mandate'
-  if (value.startsWith('notaire')) return 'contact-role-chip is-notary'
-  if (value === 'recherche' || value.includes('search')) return 'contact-role-chip is-search'
+  const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (isBuyerRole(normalized) || normalized === 'acquereur') return 'contact-role-chip is-buyer'
+  if (normalized === 'proprietaire') return 'contact-role-chip is-owner'
+  if (normalized === 'mandant') return 'contact-role-chip is-mandate'
+  if (normalized.startsWith('notaire')) return 'contact-role-chip is-notary'
+  if (normalized === 'recherche' || normalized.includes('search')) return 'contact-role-chip is-search'
   return 'contact-role-chip'
 }
 
@@ -14490,14 +14491,15 @@ function contactDuplicateTone(value: AppContact['duplicate_max_severity']) {
 }
 
 function contactDirectoryRoleLabel(value: string) {
-  if (value === 'proprietaire') return 'Proprietaire'
-  if (value === 'mandant') return 'Mandant'
-  if (value === 'acquereur') return 'Acquereur'
-  if (value === 'acquereur_offre') return 'Acquereur offre'
-  if (value === 'acquereur_compromis') return 'Acquereur compromis'
-  if (value === 'acquereur_vente') return 'Acquereur vente'
-  if (value === 'notaire_entree') return 'Notaire entree'
-  if (value === 'notaire_sortie') return 'Notaire sortie'
+  const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (normalized === 'proprietaire') return 'Proprietaire'
+  if (normalized === 'mandant') return 'Mandant'
+  if (normalized === 'acquereur') return 'Acquereur'
+  if (normalized === 'acquereur_offre') return 'Acquereur offre'
+  if (normalized === 'acquereur_compromis') return 'Acquereur compromis'
+  if (normalized === 'acquereur_vente') return 'Acquereur vente'
+  if (normalized === 'notaire_entree') return 'Notaire entree'
+  if (normalized === 'notaire_sortie') return 'Notaire sortie'
   return value || 'Contact'
 }
 
