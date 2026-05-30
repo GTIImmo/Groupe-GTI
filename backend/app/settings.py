@@ -30,6 +30,8 @@ class Settings:
     hektor_client_id: str | None
     hektor_client_secret: str | None
     hektor_api_version: str
+    openai_api_key: str | None
+    openai_vision_model: str
     python_executable: str
     project_root: Path
     hektor_writeback_script: Path
@@ -66,6 +68,8 @@ def get_settings() -> Settings:
         hektor_client_id=os.getenv("HEKTOR_CLIENT_ID", "").strip() or None,
         hektor_client_secret=os.getenv("HEKTOR_CLIENT_SECRET", "").strip() or None,
         hektor_api_version=os.getenv("HEKTOR_API_VERSION", "v2").strip() or "v2",
+        openai_api_key=os.getenv("OPENAI_API_KEY", "").strip() or None,
+        openai_vision_model=os.getenv("OPENAI_VISION_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini",
         python_executable=os.getenv("PYTHON_EXECUTABLE", str(python_default)),
         project_root=ROOT,
         hektor_writeback_script=ROOT / "phase2" / "sync" / "hektor_diffusion_writeback.py",

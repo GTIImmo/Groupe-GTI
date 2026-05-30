@@ -186,7 +186,9 @@ const requestStatuses = ['pending', 'in_progress', 'waiting_commercial', 'accept
 const localDiffusionTargetsKey = 'hektor-v1-diffusion-targets'
 const localDiffusionRequestsKey = 'hektor-v1-diffusion-requests'
 const localDiffusionRequestEventsKey = 'hektor-v1-diffusion-request-events'
-const backendApiBaseUrl = (import.meta.env.VITE_BACKEND_API_URL ?? '').trim().replace(/\/+$/, '')
+const backendApiBaseUrl = (
+  import.meta.env.VITE_BACKEND_API_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8010' : '')
+).trim().replace(/\/+$/, '')
 const defaultDiffusionAgencyTargets = [
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'bienicidirect', hektor_broadcast_id: '2' },
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
@@ -414,6 +416,113 @@ async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST
     throw new Error(message)
   }
   return payload as T
+}
+
+export type DraftAnnonceSheetScanFieldKey =
+  | 'title'
+  | 'propertyType'
+  | 'agency'
+  | 'negotiatorName'
+  | 'address'
+  | 'postalCode'
+  | 'city'
+  | 'price'
+  | 'netSellerPrice'
+  | 'surface'
+  | 'carrezSurface'
+  | 'livingSurface'
+  | 'roomCount'
+  | 'bedroomCount'
+  | 'bathroomCount'
+  | 'showerRoomCount'
+  | 'wcCount'
+  | 'kitchen'
+  | 'exposure'
+  | 'view'
+  | 'interiorState'
+  | 'exteriorState'
+  | 'landSurface'
+  | 'terraceCount'
+  | 'garageCount'
+  | 'parkingInsideCount'
+  | 'parkingOutsideCount'
+  | 'constructionYear'
+  | 'dpeValue'
+  | 'gesValue'
+  | 'coproLots'
+  | 'coproCharges'
+  | 'coproQuotePart'
+  | 'coproWorksFund'
+  | 'description'
+  | 'note'
+  | 'mandantCivility'
+  | 'mandantLastName'
+  | 'mandantFirstName'
+  | 'mandantEmail'
+  | 'mandantPhone'
+
+export type DraftAnnonceSheetScanField = {
+  value: string | null
+  confidence: number | null
+  rawText: string | null
+}
+
+export type DraftAnnonceSheetScanPayload = {
+  model?: string | null
+  summaryConfidence: number | null
+  fields: Record<DraftAnnonceSheetScanFieldKey, DraftAnnonceSheetScanField>
+  warnings: string[]
+  missingFields: string[]
+  rawNotes: string | null
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error ?? new Error('Lecture du fichier impossible'))
+    reader.readAsDataURL(file)
+  })
+}
+
+export async function scanDraftAnnonceSheet(file: File): Promise<DraftAnnonceSheetScanPayload> {
+  if (!backendApiBaseUrl) {
+    throw new Error('Backend Python non configure pour le scan OCR.')
+  }
+  if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type)) {
+    throw new Error('Choisis une photo JPG, PNG ou WebP.')
+  }
+  if (file.size > 12 * 1024 * 1024) {
+    throw new Error('Photo trop lourde pour le scan OCR. Reprends une photo moins lourde.')
+  }
+  const accessToken = hasSupabaseEnv && supabase ? await getFreshSupabaseAccessToken() : null
+  const imageBase64 = await readFileAsDataUrl(file)
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+  const response = await fetch(`${backendApiBaseUrl}/annonces/scan-fiche`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      imageBase64,
+      mimeType: file.type || null,
+      filename: file.name || null,
+      formVersion: 'draft_annonce_v1',
+    }),
+  })
+  const text = await response.text().catch(() => '')
+  const payload = text
+    ? (() => {
+        try {
+          return JSON.parse(text)
+        } catch {
+          return { error: text }
+        }
+      })()
+    : {}
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(extractApiErrorMessage(payload) || 'Scan OCR impossible')
+  }
+  return (payload?.payload ?? payload) as DraftAnnonceSheetScanPayload
 }
 
 function extractApiErrorMessage(payload: unknown) {

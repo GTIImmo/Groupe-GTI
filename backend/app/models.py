@@ -79,6 +79,13 @@ class VerifyPriceDropPayload(BaseModel):
     requestText: str | None = None
 
 
+class ScanAnnonceSheetPayload(BaseModel):
+    imageBase64: str = Field(min_length=80)
+    mimeType: str | None = None
+    filename: str | None = None
+    formVersion: str | None = None
+
+
 class AppointmentRequestCreatePayload(BaseModel):
     clientName: str = Field(min_length=1, max_length=160)
     clientEmail: EmailStr | None = None

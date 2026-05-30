@@ -72,6 +72,7 @@ import {
   type HektorAnnonceStatusTarget,
   createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
+  scanDraftAnnonceSheet,
   createMatterportActionJob,
   createConsoleDocumentSignedUrl,
   loadActiveHektorActionJobs,
@@ -81,6 +82,7 @@ import {
   loadContactsPage,
   loadContactStats,
   findContactDuplicateCandidates,
+  type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
@@ -415,6 +417,44 @@ const draftAnnoncePropertyTypes = [
 
 function draftAnnoncePropertyTypeLabel(id: string) {
   return draftAnnoncePropertyTypes.find((item) => item.id === id)?.label ?? 'Appartement'
+}
+
+function normalizeDraftAnnonceScanText(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function draftAnnoncePropertyTypeIdFromLabel(value: string | null | undefined) {
+  const normalized = normalizeDraftAnnonceScanText(value)
+  if (!normalized) return ''
+  const direct = draftAnnoncePropertyTypes.find((item) => normalizeDraftAnnonceScanText(item.label) === normalized)
+  if (direct) return direct.id
+  return draftAnnoncePropertyTypes.find((item) => normalized.includes(normalizeDraftAnnonceScanText(item.label)) || normalizeDraftAnnonceScanText(item.label).includes(normalized))?.id ?? ''
+}
+
+function draftAnnonceScanValue(scan: DraftAnnonceSheetScanPayload, key: keyof DraftAnnonceSheetScanPayload['fields']) {
+  return scan.fields[key]?.value?.trim() ?? ''
+}
+
+function draftAnnonceScanFilledCount(scan: DraftAnnonceSheetScanPayload) {
+  return Object.values(scan.fields).filter((field) => field.value?.trim()).length
+}
+
+type DraftAnnoncePhotoDraft = {
+  id: string
+  file: File
+  previewUrl: string
+  visible: boolean
+}
+
+type DraftAnnonceQueuedPhoto = {
+  id: string
+  file: File
+  visible: boolean
 }
 
 type DraftAnnonceAdvancedKey =
@@ -803,7 +843,7 @@ const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: 
   photos: {
     label: '2. Photos',
     title: '2. Photos',
-    subtitle: 'Etape photos du wizard Hektor.',
+    subtitle: 'Selection des photos du bien a envoyer apres creation de l annonce.',
     hint: 'Images',
   },
   secteur: {
@@ -6120,6 +6160,14 @@ export default function App() {
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
   const [draftAnnonceModalOpen, setDraftAnnonceModalOpen] = useState(false)
   const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
+  const [draftAnnonceScanPending, setDraftAnnonceScanPending] = useState(false)
+  const [draftAnnonceScanInputVersion, setDraftAnnonceScanInputVersion] = useState(0)
+  const [draftAnnonceScanMessage, setDraftAnnonceScanMessage] = useState<string | null>(null)
+  const [draftAnnonceScanWarnings, setDraftAnnonceScanWarnings] = useState<string[]>([])
+  const [draftAnnoncePhotoDrafts, setDraftAnnoncePhotoDrafts] = useState<DraftAnnoncePhotoDraft[]>([])
+  const [draftAnnoncePhotoInputVersion, setDraftAnnoncePhotoInputVersion] = useState(0)
+  const [draftAnnonceQueuedPhotos, setDraftAnnonceQueuedPhotos] = useState<Record<string, DraftAnnonceQueuedPhoto[]>>({})
+  const draftAnnoncePhotoUploadStartedRef = useRef<Set<string>>(new Set())
   const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('offre')
   const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
@@ -6666,6 +6714,88 @@ export default function App() {
       cancelled = true
     }
   }, [dataScope, hektorActionLinkedDossiers, session, visibleHektorActionPopupJobs])
+
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    const queuedEntries = Object.entries(draftAnnonceQueuedPhotos).filter(([, photos]) => photos.length > 0)
+    if (queuedEntries.length === 0) return
+    let cancelled = false
+
+    async function enqueueDraftAnnoncePhotos() {
+      for (const [createJobId, photos] of queuedEntries) {
+        if (cancelled || draftAnnoncePhotoUploadStartedRef.current.has(createJobId)) continue
+        const createJob = hektorActionJobs.find((job) => job.id === createJobId)
+        if (!createJob) continue
+        if (createJob.status === 'error') {
+          draftAnnoncePhotoUploadStartedRef.current.delete(createJobId)
+          setDraftAnnonceQueuedPhotos((current) => {
+            const next = { ...current }
+            delete next[createJobId]
+            return next
+          })
+          setErrorMessage("Les photos n'ont pas ete envoyees car la creation de l annonce Hektor a echoue.")
+          continue
+        }
+        if (createJob.status !== 'done') continue
+
+        const hektorAnnonceId = hektorCreatedAnnonceId(createJob)
+        if (!hektorAnnonceId) continue
+        draftAnnoncePhotoUploadStartedRef.current.add(createJobId)
+
+        try {
+          let dossier: Dossier | null = hektorActionLinkedDossiers[hektorAnnonceId] ?? null
+          if (!dossier) {
+            dossier = await loadHektorActionAppDossier(createJob, dataScope)
+            if (dossier && !cancelled) {
+              setHektorActionLinkedDossiers((current) => current[hektorAnnonceId] ? current : { ...current, [hektorAnnonceId]: dossier as Dossier })
+            }
+          }
+          if (cancelled) return
+          if (!dossier) {
+            draftAnnoncePhotoUploadStartedRef.current.delete(createJobId)
+            continue
+          }
+
+          let queuedCount = 0
+          let failedCount = 0
+          for (const photo of photos) {
+            try {
+              const photoJob = await createUploadHektorPhotoJob({
+                dossier,
+                file: photo.file,
+                visible: photo.visible,
+                priority: 18,
+              })
+              if (cancelled) return
+              rememberHektorActionJob(photoJob)
+              queuedCount += 1
+            } catch (error) {
+              failedCount += 1
+              console.warn('Draft annonce photo upload job failed', error)
+            }
+          }
+          if (cancelled) return
+          setDraftAnnonceQueuedPhotos((current) => {
+            const next = { ...current }
+            delete next[createJobId]
+            return next
+          })
+          draftAnnoncePhotoUploadStartedRef.current.delete(createJobId)
+          if (queuedCount > 0) setNoticeMessage(`${queuedCount} photo(s) ajoutee(s) a la file du worker photos Hektor.`)
+          if (failedCount > 0) setErrorMessage(`${failedCount} photo(s) n ont pas pu etre preparee(s) pour le worker photos.`)
+        } catch (error) {
+          if (cancelled) return
+          draftAnnoncePhotoUploadStartedRef.current.delete(createJobId)
+          setErrorMessage(error instanceof Error ? error.message : 'Impossible de preparer les photos Hektor')
+        }
+      }
+    }
+
+    void enqueueDraftAnnoncePhotos()
+    return () => {
+      cancelled = true
+    }
+  }, [dataScope, draftAnnonceQueuedPhotos, hektorActionJobs, hektorActionLinkedDossiers, session])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -7287,6 +7417,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function openDraftAnnonceModal() {
+    clearDraftAnnoncePhotoDrafts()
     const agency = userNegotiatorContext?.agence_nom || (filters.agency !== allFilterValue ? filters.agency : '')
     const selectedAgency = agency === allFilterValue ? '' : agency
     const ownNegotiator = hektorNegotiators.find((item) =>
@@ -7307,6 +7438,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceAdvanced(buildEmptyDraftAnnonceAdvanced())
     setDraftAnnonceWizardFields({})
     setDraftAnnonceStep('offre')
+    setDraftAnnonceScanMessage(null)
+    setDraftAnnonceScanWarnings([])
+    setDraftAnnonceScanInputVersion((value) => value + 1)
     setDraftMandantOpen(false)
     setDraftMandantCivility('')
     setDraftMandantLastName('')
@@ -7334,6 +7468,173 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const currentIndex = Math.max(0, draftAnnonceStepOrder.indexOf(draftAnnonceStep))
     const nextIndex = Math.min(draftAnnonceStepOrder.length - 1, Math.max(0, currentIndex + direction))
     setDraftAnnonceStep(draftAnnonceStepOrder[nextIndex])
+  }
+
+  function clearDraftAnnoncePhotoDrafts() {
+    setDraftAnnoncePhotoDrafts((current) => {
+      current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+      return []
+    })
+    setDraftAnnoncePhotoInputVersion((value) => value + 1)
+  }
+
+  function handleDraftAnnoncePhotoFiles(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
+    const acceptedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+    const validFiles = files.filter((file) => acceptedTypes.has(file.type))
+    const rejectedCount = files.length - validFiles.length
+    const remainingSlots = Math.max(0, 20 - draftAnnoncePhotoDrafts.length)
+    const selectedFiles = validFiles.slice(0, remainingSlots)
+
+    if (rejectedCount > 0) {
+      setErrorMessage(`${rejectedCount} fichier(s) ignore(s) : seules les images JPG, PNG ou WebP sont acceptees.`)
+    } else if (validFiles.length > selectedFiles.length) {
+      setErrorMessage('Selection limitee a 20 photos pour cette creation.')
+    } else {
+      setErrorMessage(null)
+    }
+
+    if (!selectedFiles.length) {
+      setDraftAnnoncePhotoInputVersion((value) => value + 1)
+      return
+    }
+
+    const nextPhotos = selectedFiles.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      visible: true,
+    }))
+    setDraftAnnoncePhotoDrafts((current) => [...current, ...nextPhotos])
+    setDraftAnnoncePhotoInputVersion((value) => value + 1)
+  }
+
+  function toggleDraftAnnoncePhotoVisible(photoId: string) {
+    setDraftAnnoncePhotoDrafts((current) => current.map((photo) => (
+      photo.id === photoId ? { ...photo, visible: !photo.visible } : photo
+    )))
+  }
+
+  function removeDraftAnnoncePhotoDraft(photoId: string) {
+    setDraftAnnoncePhotoDrafts((current) => {
+      const photo = current.find((item) => item.id === photoId)
+      if (photo) URL.revokeObjectURL(photo.previewUrl)
+      return current.filter((item) => item.id !== photoId)
+    })
+    setDraftAnnoncePhotoInputVersion((value) => value + 1)
+  }
+
+  function applyDraftAnnonceScan(scan: DraftAnnonceSheetScanPayload) {
+    const value = (key: keyof DraftAnnonceSheetScanPayload['fields']) => draftAnnonceScanValue(scan, key)
+    const setIfPresent = (setter: (next: string) => void, next: string) => {
+      if (next) setter(next)
+    }
+
+    setIfPresent(setDraftAnnonceTitle, value('title'))
+    setIfPresent(setDraftAnnonceAddress, value('address'))
+    setIfPresent(setDraftAnnoncePostalCode, value('postalCode'))
+    setIfPresent(setDraftAnnonceCity, value('city'))
+    setIfPresent(setDraftAnnoncePrice, value('price'))
+    setIfPresent(setDraftAnnonceSurface, value('surface'))
+    setIfPresent(setDraftAnnonceRoomCount, value('roomCount'))
+    setIfPresent(setDraftAnnonceBedroomCount, value('bedroomCount'))
+    setIfPresent(setDraftAnnonceNote, value('note') || scan.rawNotes || '')
+    setIfPresent(setDraftMandantCivility, value('mandantCivility'))
+    setIfPresent(setDraftMandantLastName, value('mandantLastName'))
+    setIfPresent(setDraftMandantFirstName, value('mandantFirstName'))
+    setIfPresent(setDraftMandantEmail, value('mandantEmail'))
+    setIfPresent(setDraftMandantPhone, value('mandantPhone'))
+
+    const propertyTypeId = draftAnnoncePropertyTypeIdFromLabel(value('propertyType'))
+    if (propertyTypeId) setDraftAnnonceTypeId(propertyTypeId)
+
+    const scannedAgency = value('agency')
+    if (scannedAgency) {
+      const agencyMatch = filterCatalog.agencies.find((agency) => normalizeDraftAnnonceScanText(agency) === normalizeDraftAnnonceScanText(scannedAgency))
+      if (agencyMatch) setDraftAnnonceAgency(agencyMatch)
+    }
+
+    const advancedUpdates: Partial<Record<DraftAnnonceAdvancedKey, string>> = {}
+    const setAdvancedIfPresent = (key: DraftAnnonceAdvancedKey, next: string) => {
+      if (next) advancedUpdates[key] = next
+    }
+    setAdvancedIfPresent('description', value('description'))
+    setAdvancedIfPresent('netSellerPrice', value('netSellerPrice'))
+    setAdvancedIfPresent('carrezSurface', value('carrezSurface'))
+    setAdvancedIfPresent('livingSurface', value('livingSurface'))
+    setAdvancedIfPresent('bathroomCount', value('bathroomCount'))
+    setAdvancedIfPresent('showerRoomCount', value('showerRoomCount'))
+    setAdvancedIfPresent('wcCount', value('wcCount'))
+    setAdvancedIfPresent('kitchen', value('kitchen'))
+    setAdvancedIfPresent('exposure', value('exposure'))
+    setAdvancedIfPresent('view', value('view'))
+    setAdvancedIfPresent('interiorState', value('interiorState'))
+    setAdvancedIfPresent('exteriorState', value('exteriorState'))
+    setAdvancedIfPresent('landSurface', value('landSurface'))
+    setAdvancedIfPresent('terraceCount', value('terraceCount'))
+    setAdvancedIfPresent('garageCount', value('garageCount'))
+    setAdvancedIfPresent('parkingInsideCount', value('parkingInsideCount'))
+    setAdvancedIfPresent('parkingOutsideCount', value('parkingOutsideCount'))
+    setAdvancedIfPresent('constructionYear', value('constructionYear'))
+    setAdvancedIfPresent('dpeValue', value('dpeValue'))
+    setAdvancedIfPresent('gesValue', value('gesValue'))
+    setAdvancedIfPresent('coproLots', value('coproLots'))
+    setAdvancedIfPresent('coproCharges', value('coproCharges'))
+    setAdvancedIfPresent('coproQuotePart', value('coproQuotePart'))
+    setAdvancedIfPresent('coproWorksFund', value('coproWorksFund'))
+    if (Object.keys(advancedUpdates).length) {
+      setDraftAnnonceAdvanced((current) => ({ ...current, ...advancedUpdates }))
+    }
+
+    const hasMandant = ['mandantCivility', 'mandantLastName', 'mandantFirstName', 'mandantEmail', 'mandantPhone'].some((key) => value(key as keyof DraftAnnonceSheetScanPayload['fields']))
+    if (hasMandant) setDraftMandantOpen(true)
+
+    const lowConfidence = Object.entries(scan.fields)
+      .filter(([, field]) => field.value?.trim() && typeof field.confidence === 'number' && field.confidence < 0.75)
+      .map(([key]) => key)
+      .slice(0, 8)
+    const warnings = [...scan.warnings]
+    if (lowConfidence.length) warnings.push(`A verifier : ${lowConfidence.join(', ')}`)
+    setDraftAnnonceScanWarnings(warnings)
+    setDraftAnnonceScanMessage(`${draftAnnonceScanFilledCount(scan)} champs recuperes depuis la fiche${scan.summaryConfidence != null ? ` - fiabilite ${(scan.summaryConfidence * 100).toFixed(0)}%` : ''}.`)
+    setDraftAnnonceStep('offre')
+  }
+
+  async function handleDraftAnnonceScanFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+    if (!file) return
+    setDraftAnnonceScanPending(true)
+    setDraftAnnonceScanMessage(null)
+    setDraftAnnonceScanWarnings([])
+    setErrorMessage(null)
+    try {
+      const scan = await scanDraftAnnonceSheet(file)
+      applyDraftAnnonceScan(scan)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de lire la fiche avec OCR')
+    } finally {
+      setDraftAnnonceScanPending(false)
+      setDraftAnnonceScanInputVersion((value) => value + 1)
+    }
+  }
+
+  function renderDraftAnnonceScanButton(description: string) {
+    return (
+      <label className={`draft-annonce-scan-button ${draftAnnonceScanPending ? 'is-loading' : ''}`}>
+        <span aria-hidden="true"><DetailIcon type="photo" /></span>
+        <strong>{draftAnnonceScanPending ? 'Lecture OCR...' : 'Scanner une fiche papier'}</strong>
+        <small>{description}</small>
+        <input
+          key={`draft-scan-${draftAnnonceScanInputVersion}`}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          onChange={(event) => void handleDraftAnnonceScanFile(event)}
+          disabled={draftAnnoncePending || draftAnnonceScanPending}
+        />
+      </label>
+    )
   }
 
   function renderDraftAnnonceAdvancedSection(section: (typeof draftAnnonceAdvancedSections)[number]) {
@@ -7417,7 +7718,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function closeDraftAnnonceModal() {
-    if (draftAnnoncePending) return
+    if (draftAnnoncePending || draftAnnonceScanPending) return
+    clearDraftAnnoncePhotoDrafts()
     setDraftAnnonceModalOpen(false)
   }
 
@@ -7474,6 +7776,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setDraftMandantOpen(true)
       return
     }
+    const queuedPhotos = draftAnnoncePhotoDrafts.map(({ id, file, visible }) => ({ id, file, visible }))
     setDraftAnnoncePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
@@ -7531,8 +7834,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         priority: 10,
       })
       rememberHektorActionJob(job)
+      if (queuedPhotos.length) {
+        setDraftAnnonceQueuedPhotos((current) => ({ ...current, [job.id]: queuedPhotos }))
+        clearDraftAnnoncePhotoDrafts()
+      }
       setDraftAnnonceModalOpen(false)
-      setNoticeMessage(null)
+      setNoticeMessage(queuedPhotos.length
+        ? `${queuedPhotos.length} photo(s) preparee(s). Elles seront envoyees par le worker photos des que l annonce sera synchronisee dans l app.`
+        : null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d annonce Hektor')
     } finally {
@@ -9348,7 +9657,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <p className="eyebrow">Console Hektor</p>
                   <h3>Nouvelle annonce Hektor</h3>
                 </div>
-                <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Fermer</button>
+                <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending || draftAnnonceScanPending}>Fermer</button>
               </div>
               <form className="draft-annonce-form" onSubmit={handleCreateDraftAnnonce}>
                 <div className="draft-annonce-stepper" aria-label="Parcours de creation">
@@ -9361,7 +9670,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         className={`draft-annonce-step ${stateClass}`}
                         type="button"
                         onClick={() => goToDraftAnnonceStep(step)}
-                        disabled={draftAnnoncePending}
+                        disabled={draftAnnoncePending || draftAnnonceScanPending}
                       >
                         <span className="draft-annonce-step-number">{index + 1}</span>
                         <span className="draft-annonce-step-copy">
@@ -9374,6 +9683,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </div>
                 <div className="draft-annonce-progress" aria-hidden="true"><span style={{ width: `${draftAnnonceStepProgress}%` }} /></div>
                 {errorMessage ? <p className="draft-annonce-inline-error">{errorMessage}</p> : null}
+                {draftAnnonceScanMessage ? <p className="draft-annonce-scan-message">{draftAnnonceScanMessage}</p> : null}
+                {draftAnnonceScanWarnings.length ? (
+                  <ul className="draft-annonce-scan-warnings">
+                    {draftAnnonceScanWarnings.slice(0, 4).map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}
+                  </ul>
+                ) : null}
                 <div className="draft-annonce-page-head">
                   <div>
                     <span>Etape {draftAnnonceStepIndex + 1} / {draftAnnonceStepOrder.length}</span>
@@ -9397,6 +9712,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
                     </label>
                   </section>
+                    <section className="draft-annonce-section draft-annonce-scan-section">
+                      <div className="draft-annonce-section-title">
+                        <span>Option</span>
+                        <strong>Fiche papier</strong>
+                      </div>
+                      {renderDraftAnnonceScanButton('Lecture optionnelle pour pre-remplir les champs, separee de la page Photos Hektor.')}
+                    </section>
                     <section className="draft-annonce-section draft-annonce-section-account">
                       <div className="draft-annonce-section-title">
                         <span>1. Offre</span>
@@ -9482,8 +9804,50 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <section className="draft-annonce-section draft-annonce-photos-section">
                       <div className="draft-annonce-section-title">
                         <span>2. Photos</span>
-                        <strong>Photos</strong>
+                        <strong>Photos du bien</strong>
                       </div>
+                      <div className="draft-annonce-photo-upload">
+                        <label className="draft-annonce-photo-picker">
+                          <span aria-hidden="true"><DetailIcon type="photo" /></span>
+                          <strong>Choisir des photos</strong>
+                          <small>JPG, PNG ou WebP. Elles seront envoyees par le worker photos apres creation et synchronisation.</small>
+                          <input
+                            key={`draft-photos-${draftAnnoncePhotoInputVersion}`}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            onChange={handleDraftAnnoncePhotoFiles}
+                            disabled={draftAnnoncePending || draftAnnonceScanPending}
+                          />
+                        </label>
+                        <div className="draft-annonce-photo-summary">
+                          <strong>{draftAnnoncePhotoDrafts.length}</strong>
+                          <span>photo(s) preparee(s)</span>
+                        </div>
+                      </div>
+                      {draftAnnoncePhotoDrafts.length ? (
+                        <div className="draft-annonce-photo-grid">
+                          {draftAnnoncePhotoDrafts.map((photo, index) => (
+                            <article key={photo.id} className={`draft-annonce-photo-card ${photo.visible ? 'is-visible' : 'is-hidden'}`}>
+                              <img src={photo.previewUrl} alt={`Photo ${index + 1}`} />
+                              <div className="draft-annonce-photo-info">
+                                <strong>{photo.file.name}</strong>
+                                <span>{Math.max(1, Math.round(photo.file.size / 1024))} Ko - {photo.visible ? 'Visible' : 'Masquee'}</span>
+                              </div>
+                              <div className="draft-annonce-photo-controls">
+                                <button className="ghost-button button-subtle" type="button" onClick={() => toggleDraftAnnoncePhotoVisible(photo.id)} disabled={draftAnnoncePending}>
+                                  {photo.visible ? 'Masquer' : 'Rendre visible'}
+                                </button>
+                                <button className="ghost-button button-subtle" type="button" onClick={() => removeDraftAnnoncePhotoDraft(photo.id)} disabled={draftAnnoncePending}>
+                                  Retirer
+                                </button>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="draft-annonce-photo-empty">Aucune photo selectionnee. Tu peux creer l annonce sans photo et les ajouter plus tard depuis le detail annonce.</p>
+                      )}
                     </section>
                   ) : null}
                 {draftAnnonceStep === 'secteur' ? (
@@ -9586,6 +9950,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
                         <article><span>Surface</span><strong>{draftAnnonceSurface.trim() ? `${draftAnnonceSurface} m2` : '-'}</strong></article>
                         <article><span>Pieces / chambres</span><strong>{[draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ')}</strong></article>
+                        <article><span>Photos</span><strong>{draftAnnoncePhotoDrafts.length ? `${draftAnnoncePhotoDrafts.length} en attente` : 'Aucune'}</strong></article>
                         <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
                         <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>
                         <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
@@ -9595,15 +9960,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </>
                 ) : null}
                 <div className="modal-actions draft-annonce-actions">
-                  <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending}>Annuler</button>
+                  <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending || draftAnnonceScanPending}>Annuler</button>
                   <div className="draft-annonce-actions-nav">
-                    <button className="ghost-button button-subtle" type="button" onClick={() => moveDraftAnnonceStep(-1)} disabled={draftAnnoncePending || draftAnnonceStepIndex === 0}>Retour</button>
+                    <button className="ghost-button button-subtle" type="button" onClick={() => moveDraftAnnonceStep(-1)} disabled={draftAnnoncePending || draftAnnonceScanPending || draftAnnonceStepIndex === 0}>Retour</button>
                     {draftAnnonceStep === 'diffusion' ? (
-                      <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
+                      <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || draftAnnonceScanPending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
                         {draftAnnoncePending ? 'Creation...' : 'Creer l annonce'}
                       </button>
                     ) : (
-                      <button className="ghost-button button-primary" type="button" onClick={() => moveDraftAnnonceStep(1)} disabled={draftAnnoncePending}>Suivant</button>
+                      <button className="ghost-button button-primary" type="button" onClick={() => moveDraftAnnonceStep(1)} disabled={draftAnnoncePending || draftAnnonceScanPending}>Suivant</button>
                     )}
                   </div>
                 </div>
