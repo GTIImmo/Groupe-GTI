@@ -1845,6 +1845,117 @@ async function fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, step) {
   }
 }
 
+async function rememberCreatedHektorAnnonceId(job, hektorAnnonceId) {
+  const id = String(hektorAnnonceId || "").trim();
+  if (!id) return;
+  try {
+    await supabaseRequest(`app_console_job?id=eq.${encodeURIComponent(job.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        hektor_annonce_id: id,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    await logJob(job.id, "hektor_annonce", "error", "ID annonce creee non rattache au job", {
+      hektor_annonce_id: id,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
+
+function hektorPropertyFromDetailKeyData(hektorAnnonceId, keyData, payload) {
+  if (!keyData || typeof keyData !== "object") return null;
+  if (!Object.keys(keyData).length) return null;
+  const exactFields = exactHektorWizardFields(payload);
+  return {
+    id: String(hektorAnnonceId),
+    folderNumber: cleanString(keyData.NO_DOSSIER || keyData.no_dossier || keyData.folderNumber || exactFields.NO_DOSSIER || payload.NO_DOSSIER || payload.folder_number),
+    createdAt: keyData.createdAt || keyData.date_creation || null,
+    status: keyData.status || keyData.etatAnnonce || null,
+    isArchived: keyData.archive === "1" || keyData.isArchived === true,
+    isDraft: keyData.isDraft === true,
+    isBroadcasted: keyData.diffusable === "1" || keyData.isBroadcasted === true,
+    isValid: keyData.isValid === true,
+    price: keyData.prix || payload.price || null,
+    surface: keyData.surfappart || payload.surface || null,
+    type: { name: payload.property_type || null },
+  };
+}
+
+async function confirmCreatedHektorAnnonce(job, idannWizard, payload, beforeIds, startedAtMs) {
+  const id = String(idannWizard || "").trim();
+  if (!id) return null;
+
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    await sleep(attempt === 1 ? 1800 : 2500);
+    const latest = await fetchLatestHektorProperties(1, false);
+    const candidates = latest
+      .map((property) => ({ property, score: annonceCreationScore(property, beforeIds, startedAtMs) }))
+      .filter((item) => item.score >= 0)
+      .sort((left, right) => right.score - left.score);
+    if (candidates.length) {
+      await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee par liste GraphQL recente", {
+        hektor_annonce_id: String(candidates[0].property.id),
+        attempt,
+      });
+      return candidates[0].property;
+    }
+  }
+
+  try {
+    const direct = await fetchHektorPropertyById(id, { maxPages: 8 });
+    if (direct && direct.property) {
+      await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee par recherche GraphQL directe", {
+        hektor_annonce_id: id,
+        archived: direct.archived,
+        page: direct.page,
+      });
+      return direct.property;
+    }
+  } catch (error) {
+    if (isHektorForbiddenError(error)) throw error;
+    await logJob(job.id, "hektor_annonce_confirm", "error", "Recherche GraphQL directe ignoree apres erreur", {
+      hektor_annonce_id: id,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+
+  const keyData = await fetchHektorAnnonceDetailKeyDataBestEffort(job, id, "hektor_annonce_confirm_api");
+  const keyDataProperty = hektorPropertyFromDetailKeyData(id, keyData, payload);
+  if (keyDataProperty) {
+    await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee par API detail Hektor", {
+      hektor_annonce_id: id,
+      fields: Object.keys(keyData).slice(0, 30),
+    });
+    return keyDataProperty;
+  }
+
+  await ensureAdminHektorWriteSession(job, "create_annonce_confirm_admin_login");
+  const adminDirect = await fetchHektorPropertyById(id, { maxPages: 8 });
+  if (adminDirect && adminDirect.property) {
+    await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee en session admin par ID Hektor", {
+      hektor_annonce_id: id,
+      archived: adminDirect.archived,
+      page: adminDirect.page,
+    });
+    return adminDirect.property;
+  }
+
+  const adminKeyData = await fetchHektorAnnonceDetailKeyDataBestEffort(job, id, "hektor_annonce_confirm_admin_api");
+  const adminKeyDataProperty = hektorPropertyFromDetailKeyData(id, adminKeyData, payload);
+  if (adminKeyDataProperty) {
+    await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee en session admin par API detail Hektor", {
+      hektor_annonce_id: id,
+      fields: Object.keys(adminKeyData).slice(0, 30),
+    });
+    return adminKeyDataProperty;
+  }
+
+  return null;
+}
+
 async function fetchHektorAnnonceDetailKeyDataBestEffort(job, hektorAnnonceId, step) {
   const id = String(hektorAnnonceId || "").trim();
   if (!id) return null;
@@ -6142,6 +6253,7 @@ async function handleCreateHektorDraftAnnonce(job) {
 
   const wizardResult = await createHektorAnnonce(job, payload);
   const idannWizard = wizardResult.idannWizard;
+  await rememberCreatedHektorAnnonceId(job, idannWizard);
   let initialFieldsUpdate = { status: "skipped", reason: "not_started" };
 
   try {
@@ -6158,19 +6270,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     });
   }
 
-  let created = null;
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
-    await sleep(attempt === 1 ? 1800 : 2500);
-    const latest = await fetchLatestHektorProperties(1, false);
-    const candidates = latest
-      .map((property) => ({ property, score: annonceCreationScore(property, beforeIds, startedAtMs) }))
-      .filter((item) => item.score >= 0)
-      .sort((left, right) => right.score - left.score);
-    if (candidates.length) {
-      created = candidates[0].property;
-      break;
-    }
-  }
+  const created = await confirmCreatedHektorAnnonce(job, idannWizard, payload, beforeIds, startedAtMs);
 
   if (!created) {
     throw new Error(`Creation annonce Hektor non confirmee par GraphQL apres enregistrement wizard ${idannWizard}`);
@@ -6180,6 +6280,7 @@ async function handleCreateHektorDraftAnnonce(job) {
   const initialMandantPayload = payload.initial_mandant || payload.initialMandant || null;
   if (initialMandantPayload && (cleanString(initialMandantPayload.last_name || initialMandantPayload.nom || initialMandantPayload.name) || cleanString(initialMandantPayload.email))) {
     try {
+      await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false, required: true });
       const createdContact = await createHektorMandantContact(job, created.id, {
         ...initialMandantPayload,
         hektor_user_email: payload.hektor_user_email || null,
