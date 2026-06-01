@@ -16943,6 +16943,37 @@ const hektorContactCategoryOptions = [
   { value: '5', label: 'Autre' },
 ]
 
+const hektorContactSearchOfferOptionsByKind: Record<string, Array<{ value: string; label: string }>> = {
+  acquereur: [
+    { value: '0', label: 'Ancien' },
+    { value: '10', label: 'Immo. Pro.' },
+  ],
+  locataire: [
+    { value: '2', label: 'Classique' },
+    { value: '8', label: 'Loc. Sais.' },
+    { value: '11', label: 'Immo. Pro.' },
+  ],
+}
+
+const hektorContactSearchTypeOptions = [
+  { value: '1', label: 'Maison' },
+  { value: '25', label: 'Villa' },
+  { value: '39', label: 'Maison de village' },
+  { value: '2', label: 'Appartement' },
+  { value: '4', label: 'Studio' },
+  { value: '18', label: 'Duplex' },
+  { value: '5', label: 'Terrain' },
+  { value: '43', label: 'Terrain a batir' },
+  { value: '21', label: 'Immeuble' },
+  { value: '23', label: 'Commerce' },
+  { value: '15', label: 'Garage' },
+  { value: '16', label: 'Parking' },
+]
+
+function hektorDefaultContactSearchOffer(kind: string) {
+  return hektorContactSearchOfferOptionsByKind[kind]?.[0]?.value ?? '0'
+}
+
 function optionalBooleanSelectValue(value: boolean | null | undefined) {
   if (value === true) return 'true'
   if (value === false) return 'false'
@@ -17036,6 +17067,24 @@ function HektorContactIdentityForm(props: {
   const [crmMandateSummaryEnabled, setCrmMandateSummaryEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateSummaryEnabled))
   const [crmMandateExpirationEnabled, setCrmMandateExpirationEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateExpirationEnabled))
   const [crmBirthdayEnabled, setCrmBirthdayEnabled] = useState(optionalBooleanSelectValue(initial.crmBirthdayEnabled))
+  const [contactStep, setContactStep] = useState<'identity' | 'search' | 'owner'>('identity')
+  const [createSearchCriteria, setCreateSearchCriteria] = useState(true)
+  const [searchOfferCode, setSearchOfferCode] = useState(hektorDefaultContactSearchOffer(initial.contactKind ?? 'acquereur'))
+  const [searchTypeIds, setSearchTypeIds] = useState<string[]>(['2'])
+  const [searchCity, setSearchCity] = useState(initial.city ?? '')
+  const [searchPostalCode, setSearchPostalCode] = useState(initial.postalCode ?? '')
+  const [searchPriceMin, setSearchPriceMin] = useState('')
+  const [searchPriceMax, setSearchPriceMax] = useState('')
+  const [searchSurfaceMin, setSearchSurfaceMin] = useState('')
+  const [searchSurfaceMax, setSearchSurfaceMax] = useState('')
+  const [searchRoomsMin, setSearchRoomsMin] = useState('')
+  const [searchRoomsMax, setSearchRoomsMax] = useState('')
+  const [searchBedroomsMin, setSearchBedroomsMin] = useState('')
+  const [searchBedroomsMax, setSearchBedroomsMax] = useState('')
+  const [searchLandSurfaceMin, setSearchLandSurfaceMin] = useState('')
+  const [searchLandSurfaceMax, setSearchLandSurfaceMax] = useState('')
+  const [ownerNextAction, setOwnerNextAction] = useState<'finish' | 'link_existing' | 'create_property'>('finish')
+  const [ownerAnnonceId, setOwnerAnnonceId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [duplicateCandidates, setDuplicateCandidates] = useState<AppContact[]>([])
@@ -17053,6 +17102,9 @@ function HektorContactIdentityForm(props: {
   const isCompanyPerson = isCreateMode && personType === 'personne_morale'
   const isCouplePerson = isCreateMode && personType === 'couple'
   const personTypeOptions = hektorPersonTypeOptionsForKind(contactKind)
+  const hasSearchStep = isCreateMode && (contactKind === 'acquereur' || contactKind === 'locataire')
+  const hasOwnerStep = isCreateMode && contactKind === 'proprietaire'
+  const searchOfferOptions = hektorContactSearchOfferOptionsByKind[contactKind] ?? hektorContactSearchOfferOptionsByKind.acquereur
 
   useEffect(() => {
     if (!isCreateMode) return
@@ -17063,6 +17115,21 @@ function HektorContactIdentityForm(props: {
       setPersonType('personne_seule')
     }
   }, [contactKind, isCreateMode, personType])
+
+  useEffect(() => {
+    if (!isCreateMode) return
+    setContactStep('identity')
+    setSearchOfferCode(hektorDefaultContactSearchOffer(contactKind))
+    setSearchTypeIds(['2'])
+    setOwnerNextAction('finish')
+    setOwnerAnnonceId('')
+  }, [contactKind, isCreateMode])
+
+  useEffect(() => {
+    if (!isCreateMode || contactStep !== 'identity') return
+    setSearchCity(city)
+    setSearchPostalCode(postalCode)
+  }, [city, contactStep, isCreateMode, postalCode])
 
   useEffect(() => {
     const next = props.contact
@@ -17104,8 +17171,66 @@ function HektorContactIdentityForm(props: {
     setError(null)
     setDuplicateCandidates([])
     setDuplicatesAccepted(false)
+    setContactStep('identity')
+    setCreateSearchCriteria(true)
+    setSearchOfferCode(hektorDefaultContactSearchOffer(next.contactKind ?? 'acquereur'))
+    setSearchTypeIds(['2'])
+    setSearchCity(next.city ?? '')
+    setSearchPostalCode(next.postalCode ?? '')
+    setSearchPriceMin('')
+    setSearchPriceMax('')
+    setSearchSurfaceMin('')
+    setSearchSurfaceMax('')
+    setSearchRoomsMin('')
+    setSearchRoomsMax('')
+    setSearchBedroomsMin('')
+    setSearchBedroomsMax('')
+    setSearchLandSurfaceMin('')
+    setSearchLandSurfaceMax('')
+    setOwnerNextAction('finish')
+    setOwnerAnnonceId('')
     setSelectedHektorUserId(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
   }, [defaultHektorOption?.idUser, props.contact?.hektor_contact_id, props.hektorUserEmail, props.hektorUserId, props.mode])
+
+  const toggleSearchType = (typeId: string) => {
+    setSearchTypeIds((current) => (
+      current.includes(typeId)
+        ? current.filter((value) => value !== typeId)
+        : [...current, typeId]
+    ))
+  }
+
+  const buildContactNextStep = (): HektorContactIdentityInput['contactNextStep'] => {
+    if (!isCreateMode) return null
+    if (hasSearchStep) {
+      return {
+        kind: 'search_criteria',
+        enabled: createSearchCriteria,
+        offerCode: searchOfferCode,
+        propertyTypeIds: searchTypeIds,
+        city: searchCity,
+        postalCode: searchPostalCode,
+        priceMin: searchPriceMin,
+        priceMax: searchPriceMax,
+        surfaceMin: searchSurfaceMin,
+        surfaceMax: searchSurfaceMax,
+        roomsMin: searchRoomsMin,
+        roomsMax: searchRoomsMax,
+        bedroomsMin: searchBedroomsMin,
+        bedroomsMax: searchBedroomsMax,
+        landSurfaceMin: searchLandSurfaceMin,
+        landSurfaceMax: searchLandSurfaceMax,
+      }
+    }
+    if (hasOwnerStep) {
+      return {
+        kind: 'owner_relation',
+        action: ownerNextAction,
+        hektorAnnonceId: ownerAnnonceId,
+      }
+    }
+    return null
+  }
 
   const buildInput = (): HektorContactIdentityInput => ({
     civility,
@@ -17148,6 +17273,7 @@ function HektorContactIdentityForm(props: {
     hektorAgencyId: selectedHektorUser?.hektorAgenceId ?? null,
     hektorAgencyUserId: selectedHektorUser?.agenceIdUser ?? null,
     hektorAgencyLabel: selectedHektorUser?.agenceNom ?? null,
+    contactNextStep: buildContactNextStep(),
   })
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -17182,13 +17308,45 @@ function HektorContactIdentityForm(props: {
       setError('Choisis le compte Hektor qui portera cette action contact.')
       return
     }
+    if (contactStep === 'search' && createSearchCriteria) {
+      if (searchTypeIds.length === 0) {
+        setError('Selectionne au moins un type de bien pour la recherche Hektor.')
+        return
+      }
+      if (!searchCity.trim() && !searchPostalCode.trim()) {
+        setError('Ville ou code postal requis pour la recherche Hektor.')
+        return
+      }
+      if (!searchPriceMax.trim()) {
+        setError('Budget maximum requis pour creer la recherche Hektor.')
+        return
+      }
+    }
+    if (contactStep === 'owner' && ownerNextAction === 'link_existing' && !/^\d+$/.test(ownerAnnonceId.trim())) {
+      setError('ID annonce Hektor numerique requis pour rattacher le proprietaire.')
+      return
+    }
     setPending(true)
     try {
-      if (props.mode === 'create' && !duplicatesAccepted) {
+      if (props.mode === 'create' && contactStep === 'identity' && !duplicatesAccepted) {
         const candidates = await findContactDuplicateCandidates({ email, phone, lastName: mainName, firstName })
         if (candidates.length > 0) {
           setDuplicateCandidates(candidates)
           setDuplicatesAccepted(true)
+          setPending(false)
+          return
+        }
+      }
+      if (props.mode === 'create' && contactStep === 'identity') {
+        if (hasSearchStep) {
+          setSearchCity((current) => current || city)
+          setSearchPostalCode((current) => current || postalCode)
+          setContactStep('search')
+          setPending(false)
+          return
+        }
+        if (hasOwnerStep) {
+          setContactStep('owner')
           setPending(false)
           return
         }
@@ -17232,6 +17390,24 @@ function HektorContactIdentityForm(props: {
         setCrmMandateSummaryEnabled('')
         setCrmMandateExpirationEnabled('')
         setCrmBirthdayEnabled('')
+        setContactStep('identity')
+        setCreateSearchCriteria(true)
+        setSearchOfferCode(hektorDefaultContactSearchOffer('acquereur'))
+        setSearchTypeIds(['2'])
+        setSearchCity('')
+        setSearchPostalCode('')
+        setSearchPriceMin('')
+        setSearchPriceMax('')
+        setSearchSurfaceMin('')
+        setSearchSurfaceMax('')
+        setSearchRoomsMin('')
+        setSearchRoomsMax('')
+        setSearchBedroomsMin('')
+        setSearchBedroomsMax('')
+        setSearchLandSurfaceMin('')
+        setSearchLandSurfaceMax('')
+        setOwnerNextAction('finish')
+        setOwnerAnnonceId('')
       }
       props.onCancel?.()
     } catch (submitError) {
@@ -17284,6 +17460,13 @@ function HektorContactIdentityForm(props: {
           </div>
         </div>
       ) : null}
+      {isCreateMode ? (
+        <div className="contact-create-stepper" aria-label="Parcours de creation contact">
+          <span className={contactStep === 'identity' ? 'is-active' : 'is-done'}><i>1</i>Identite</span>
+          <span className={contactStep !== 'identity' ? 'is-active' : ''}><i>2</i>{hasSearchStep ? 'Recherche' : hasOwnerStep ? 'Bien lie' : 'Fiche'}</span>
+        </div>
+      ) : null}
+      {contactStep === 'identity' || !isCreateMode ? (
       <div className="hektor-inline-grid contact-editor-grid">
         {props.mode === 'create' ? (
           <>
@@ -17497,10 +17680,132 @@ function HektorContactIdentityForm(props: {
           <textarea value={comments} onChange={(event) => setComments(event.target.value)} rows={3} />
         </label>
       </div>
+      ) : null}
+      {contactStep === 'search' ? (
+        <div className="contact-next-step-panel">
+          <div className="contact-next-step-head">
+            <strong>{contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquereur'}</strong>
+            <span>Page 2 Hektor: offre, types de biens, secteur et criteres principaux.</span>
+          </div>
+          <label className="contact-editor-toggle contact-next-toggle">
+            <input type="checkbox" checked={createSearchCriteria} onChange={(event) => setCreateSearchCriteria(event.target.checked)} />
+            <span>Creer la recherche dans Hektor</span>
+          </label>
+          <div className="contact-next-segmented" role="group" aria-label="Type d'offre">
+            {searchOfferOptions.map((option) => (
+              <button
+                key={`search-offer-${option.value}`}
+                type="button"
+                className={searchOfferCode === option.value ? 'is-selected' : ''}
+                onClick={() => setSearchOfferCode(option.value)}
+                disabled={!createSearchCriteria}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="contact-search-type-grid">
+            {hektorContactSearchTypeOptions.map((option) => (
+              <button
+                key={`search-type-${option.value}`}
+                type="button"
+                className={searchTypeIds.includes(option.value) ? 'is-selected' : ''}
+                onClick={() => toggleSearchType(option.value)}
+                disabled={!createSearchCriteria}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="hektor-inline-grid contact-editor-grid contact-next-grid">
+            <label>
+              <span>Ville recherche</span>
+              <input value={searchCity} onChange={(event) => setSearchCity(event.target.value)} disabled={!createSearchCriteria} />
+            </label>
+            <label className="is-small">
+              <span>Code postal</span>
+              <input value={searchPostalCode} onChange={(event) => setSearchPostalCode(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Budget min</span>
+              <input value={searchPriceMin} onChange={(event) => setSearchPriceMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Budget max</span>
+              <input value={searchPriceMax} onChange={(event) => setSearchPriceMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Surface min</span>
+              <input value={searchSurfaceMin} onChange={(event) => setSearchSurfaceMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Surface max</span>
+              <input value={searchSurfaceMax} onChange={(event) => setSearchSurfaceMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Pieces min</span>
+              <input value={searchRoomsMin} onChange={(event) => setSearchRoomsMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Pieces max</span>
+              <input value={searchRoomsMax} onChange={(event) => setSearchRoomsMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Chambres min</span>
+              <input value={searchBedroomsMin} onChange={(event) => setSearchBedroomsMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Chambres max</span>
+              <input value={searchBedroomsMax} onChange={(event) => setSearchBedroomsMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Terrain min</span>
+              <input value={searchLandSurfaceMin} onChange={(event) => setSearchLandSurfaceMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+            <label>
+              <span>Terrain max</span>
+              <input value={searchLandSurfaceMax} onChange={(event) => setSearchLandSurfaceMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
+            </label>
+          </div>
+        </div>
+      ) : null}
+      {contactStep === 'owner' ? (
+        <div className="contact-next-step-panel">
+          <div className="contact-next-step-head">
+            <strong>Nouveau mandant</strong>
+            <span>Page 2 Hektor: Rattacher un bien existant, Creer un bien ou Terminer.</span>
+          </div>
+          <div className="contact-owner-choice-grid">
+            {[
+              { value: 'link_existing', label: 'Rattacher un bien existant' },
+              { value: 'create_property', label: 'Creer un bien' },
+              { value: 'finish', label: 'Terminer' },
+            ].map((option) => (
+              <button
+                key={`owner-next-${option.value}`}
+                type="button"
+                className={ownerNextAction === option.value ? 'is-selected' : ''}
+                onClick={() => setOwnerNextAction(option.value as 'finish' | 'link_existing' | 'create_property')}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {ownerNextAction === 'link_existing' ? (
+            <div className="hektor-inline-grid contact-editor-grid contact-next-grid">
+              <label>
+                <span>ID annonce Hektor</span>
+                <input value={ownerAnnonceId} onChange={(event) => setOwnerAnnonceId(event.target.value)} inputMode="numeric" required />
+              </label>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {error ? <p className="form-error">{error}</p> : null}
       <div className="hektor-inline-actions">
+        {contactStep !== 'identity' ? <button className="ghost-button" type="button" onClick={() => setContactStep('identity')} disabled={pending}>Retour</button> : null}
         {props.onCancel ? <button className="ghost-button" type="button" onClick={props.onCancel} disabled={pending}>Annuler</button> : null}
-        <button className="primary-action" type="submit" disabled={pending}>{pending ? 'Envoi...' : duplicatesAccepted && props.mode === 'create' ? 'Creer malgre le doublon' : props.mode === 'create' ? 'Creer le contact' : 'Enregistrer'}</button>
+        <button className="primary-action" type="submit" disabled={pending}>{pending ? 'Envoi...' : duplicatesAccepted && props.mode === 'create' && contactStep === 'identity' ? 'Continuer malgre doublon' : props.mode === 'create' && contactStep === 'identity' && (hasSearchStep || hasOwnerStep) ? 'Etape suivante' : props.mode === 'create' ? 'Creer le contact' : 'Enregistrer'}</button>
       </div>
     </form>
   )

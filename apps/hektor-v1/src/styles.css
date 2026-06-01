@@ -27353,6 +27353,156 @@ body {
   gap: 3px;
 }
 
+.contact-create-stepper {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.contact-create-stepper span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.76);
+  color: rgba(34, 35, 35, 0.64);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.contact-create-stepper i {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(34, 35, 35, 0.08);
+  color: rgba(34, 35, 35, 0.66);
+  font-style: normal;
+}
+
+.contact-create-stepper .is-active {
+  border-color: rgba(197, 0, 95, 0.32);
+  background: rgba(197, 0, 95, 0.08);
+  color: var(--gti-final-magenta, #c5005f);
+}
+
+.contact-create-stepper .is-active i,
+.contact-create-stepper .is-done i {
+  background: var(--gti-final-magenta, #c5005f);
+  color: #ffffff;
+}
+
+.contact-next-step-panel {
+  display: grid;
+  gap: 14px;
+  margin: 10px 0 4px;
+  padding: 14px;
+  border: 1px solid rgba(21, 75, 92, 0.16);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(21, 75, 92, 0.075), rgba(255, 255, 255, 0) 68%), #ffffff;
+}
+
+.contact-next-step-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--gti-final-ink, #222323);
+}
+
+.contact-next-step-head strong {
+  font-size: 1rem;
+}
+
+.contact-next-step-head span {
+  color: rgba(34, 35, 35, 0.58);
+  font-size: 0.76rem;
+  font-weight: 760;
+  text-align: right;
+}
+
+.contact-next-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid rgba(21, 75, 92, 0.14);
+  border-radius: 9px;
+  background: rgba(21, 75, 92, 0.055);
+  max-width: 360px;
+}
+
+.contact-next-toggle input {
+  width: 16px;
+  min-height: 16px;
+  accent-color: var(--gti-final-magenta, #c5005f);
+}
+
+.contact-next-toggle span {
+  color: rgba(34, 35, 35, 0.76);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.contact-next-segmented,
+.contact-owner-choice-grid,
+.contact-search-type-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.contact-next-segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contact-owner-choice-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contact-search-type-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.contact-next-segmented button,
+.contact-owner-choice-grid button,
+.contact-search-type-grid button {
+  min-height: 40px;
+  border: 1px solid rgba(34, 35, 35, 0.14);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: rgba(34, 35, 35, 0.72);
+  font-weight: 850;
+}
+
+.contact-next-segmented button.is-selected,
+.contact-owner-choice-grid button.is-selected,
+.contact-search-type-grid button.is-selected {
+  border-color: rgba(197, 0, 95, 0.36);
+  background: rgba(197, 0, 95, 0.09);
+  color: var(--gti-final-magenta, #c5005f);
+  box-shadow: inset 0 0 0 1px rgba(197, 0, 95, 0.1);
+}
+
+.contact-next-segmented button:disabled,
+.contact-search-type-grid button:disabled,
+.contact-next-grid input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.contact-next-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .mobile-contact-create-button {
   width: 100%;
   border: 1px solid rgba(197, 0, 95, 0.24);
@@ -27371,6 +27521,11 @@ body {
   .contact-editor-grid .is-wide {
     grid-column: span 2;
   }
+
+  .contact-search-type-grid,
+  .contact-next-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -27384,6 +27539,22 @@ body {
   .contact-editor-grid .is-wide {
     grid-template-columns: 1fr;
     grid-column: auto;
+  }
+
+  .contact-create-stepper,
+  .contact-next-segmented,
+  .contact-owner-choice-grid,
+  .contact-search-type-grid,
+  .contact-next-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-next-step-head {
+    display: grid;
+  }
+
+  .contact-next-step-head span {
+    text-align: left;
   }
 }
 

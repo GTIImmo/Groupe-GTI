@@ -5770,6 +5770,236 @@ async function createHektorContact(job, payload) {
   };
 }
 
+function contactNextStepPayload(payload) {
+  const source = payload || {};
+  const next = source.contact_next_step || source.contactNextStep || source.next_step || null;
+  return next && typeof next === "object" ? next : null;
+}
+
+function stringArray(value) {
+  if (Array.isArray(value)) return value.map((item) => cleanString(item)).filter(Boolean);
+  if (typeof value === "string") return value.split(/[|,;]/).map((item) => cleanString(item)).filter(Boolean);
+  return [];
+}
+
+function firstCleanString(source, keys) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(source || {}, key)) {
+      const value = cleanString(source[key]);
+      if (value) return value;
+    }
+  }
+  return "";
+}
+
+function appendJqueryParam(params, key, value) {
+  if (value === undefined || value === null) return;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        appendJqueryParam(params, `${key}[${index}]`, item);
+      } else {
+        appendJqueryParam(params, `${key}[]`, item);
+      }
+    });
+    return;
+  }
+  if (typeof value === "object") {
+    for (const [childKey, childValue] of Object.entries(value)) {
+      appendJqueryParam(params, `${key}[${childKey}]`, childValue);
+    }
+    return;
+  }
+  params.append(key, String(value));
+}
+
+function appendHektorCriteriaRequest(params, payload) {
+  for (const [key, value] of Object.entries(payload || {})) {
+    appendJqueryParam(params, key, value);
+  }
+  return params;
+}
+
+async function buildHektorContactSearchContainer(contactId, contact, payload) {
+  const next = contactNextStepPayload(payload);
+  if (!next || next.kind !== "search_criteria" || next.enabled === false) {
+    return null;
+  }
+  if (!["1", "2"].includes(contact.qualification)) {
+    return null;
+  }
+
+  const typeIds = stringArray(next.propertyTypeIds || next.property_type_ids || next.typesBiens || next.types_biens)
+    .map((item) => Number(String(item).replace(/[^0-9]/g, "")))
+    .filter((value) => Number.isSafeInteger(value) && value > 0);
+  if (!typeIds.length) throw new Error("Type de bien requis pour creer la recherche contact Hektor");
+
+  const offerCode = firstCleanString(next, ["offerCode", "offer_code", "offreDem", "offre"])
+    || (contact.qualification === "1" ? "2" : "0");
+  const city = firstCleanString(next, ["city", "ville"]) || contact.city || "";
+  const postalCode = firstCleanString(next, ["postalCode", "postal_code", "code_postal", "code"]) || contact.postalCode || "";
+  const cityId = firstCleanString(next, ["hektorCityId", "hektor_city_id", "idVille"]);
+  const postalId = firstCleanString(next, ["hektorPostalCodeId", "hektor_postal_code_id", "idCode"]);
+  let villes = [];
+  if (cityId) villes.push({ id: cityId, type: "0" });
+  if (!cityId && postalId) villes.push({ id: postalId, type: "1" });
+  if (!villes.length) {
+    const locality = await resolveHektorPublicLocality(postalCode, city);
+    if (locality && locality.idVille) {
+      villes.push({ id: locality.idVille, type: "0" });
+    } else if (locality && locality.idCode) {
+      villes.push({ id: locality.idCode, type: "1" });
+    }
+  }
+  if (!villes.length) throw new Error("Ville Hektor non resolue pour creer la recherche contact");
+
+  const criteresDetails = {};
+  const addCriterion = (key, keys) => {
+    const value = firstCleanString(next, keys);
+    if (value) criteresDetails[key] = { value, ponderation: "1" };
+  };
+  addCriterion("ITEM_PRIX_MIN", ["priceMin", "price_min", "prix_min"]);
+  addCriterion("ITEM_PRIX_MAX", ["priceMax", "price_max", "prix_max"]);
+  addCriterion("ITEM_SURFACE_MIN", ["surfaceMin", "surface_min"]);
+  addCriterion("ITEM_SURFACE_MAX", ["surfaceMax", "surface_max"]);
+  addCriterion("ITEM_PIECES_MIN", ["roomsMin", "rooms_min", "pieces_min"]);
+  addCriterion("ITEM_PIECES_MAX", ["roomsMax", "rooms_max", "pieces_max"]);
+  addCriterion("ITEM_CHAMBRE_MIN", ["bedroomsMin", "bedrooms_min", "chambre_min"]);
+  addCriterion("ITEM_CHAMBRE_MAX", ["bedroomsMax", "bedrooms_max", "chambre_max"]);
+  addCriterion("ITEM_SURFACE_TERRAIN_MIN", ["landSurfaceMin", "land_surface_min", "surface_terrain_min"]);
+  addCriterion("ITEM_SURFACE_TERRAIN_MAX", ["landSurfaceMax", "land_surface_max", "surface_terrain_max"]);
+  if (!criteresDetails.ITEM_PRIX_MAX) {
+    throw new Error("Budget maximum requis pour creer la recherche contact Hektor");
+  }
+
+  return {
+    prospectId: Number(contactId),
+    criteresId: 0,
+    offreDem: Number(offerCode),
+    typesBiens: typeIds,
+    typesTransacs: [],
+    criteresDetails,
+    quartiers: [],
+    particularites: [],
+    activites: [],
+    villes,
+    isFirstCallEditSearch: false,
+    quartierOfficiels: [],
+    communes: [],
+  };
+}
+
+async function createHektorContactSearchCriteria(job, contactId, contact, payload) {
+  const container = await buildHektorContactSearchContainer(contactId, contact, payload);
+  if (!container) return { status: "skipped", reason: "not_requested" };
+
+  await logJob(job.id, "hektor_contact_search", "running", "Creation recherche contact Hektor", {
+    hektor_contact_id: String(contactId),
+    offreDem: container.offreDem,
+    typesBiens: container.typesBiens,
+    villes: container.villes,
+    criteres: Object.keys(container.criteresDetails),
+  });
+
+  const checkBody = appendHektorCriteriaRequest(new URLSearchParams(), {
+    mode: "contact-ajoutCritereProspect",
+    state: "checkIfRequiredIsOk",
+    typesBiens: container.typesBiens,
+    container,
+  });
+  const checkResponse = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: checkBody,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+    },
+  });
+  let check = null;
+  try {
+    check = JSON.parse(checkResponse.text);
+  } catch (_) {
+    throw new Error(`Controle recherche contact Hektor illisible: ${checkResponse.text.slice(0, 400)}`);
+  }
+  if (check && String(check.error || "") === "1") {
+    const missing = [check.CRTypeBien ? "type de bien" : null, check.CRPrix ? "prix" : null].filter(Boolean).join(", ");
+    throw new Error(`Recherche contact Hektor incomplete${missing ? `: ${missing}` : ""}`);
+  }
+
+  const createBody = appendHektorCriteriaRequest(new URLSearchParams(), {
+    mode: "contact-ajoutCritereProspect",
+    state: "createCritereCr",
+    container,
+  });
+  const createResponse = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: createBody,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+    },
+  });
+  let created = createResponse.text;
+  try {
+    created = JSON.parse(createResponse.text);
+  } catch (_) {
+    created = createResponse.text;
+  }
+  await logJob(job.id, "hektor_contact_search", "done", "Recherche contact Hektor creee", {
+    hektor_contact_id: String(contactId),
+    result: created,
+  });
+  return {
+    status: "created",
+    hektor_contact_id: String(contactId),
+    result: created,
+  };
+}
+
+async function applyHektorOwnerNextStep(job, contactId, payload) {
+  const next = contactNextStepPayload(payload);
+  if (!next || next.kind !== "owner_relation") return { status: "skipped", reason: "not_requested" };
+  const action = cleanString(next.action) || "finish";
+  if (action === "finish") return { status: "done", action };
+  if (action === "create_property") {
+    return {
+      status: "pending_create_property",
+      action,
+      hektor_contact_id: String(contactId),
+    };
+  }
+  if (action !== "link_existing") return { status: "skipped", reason: `unsupported_action:${action}` };
+
+  const annonceId = cleanString(next.hektorAnnonceId || next.hektor_annonce_id || next.annonce_id);
+  if (!/^\d+$/.test(annonceId || "")) throw new Error("ID annonce Hektor numerique requis pour rattacher le proprietaire");
+
+  const before = await fetchHektorProspectsList(annonceId);
+  if (hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
+    return { status: "already_linked", action, hektor_contact_id: String(contactId), hektor_annonce_id: annonceId };
+  }
+  await logJob(job.id, "hektor_contact_owner_link", "running", "Rattachement proprietaire au bien Hektor", {
+    hektor_contact_id: String(contactId),
+    hektor_annonce_id: annonceId,
+  });
+  await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(contactId)}&idann=${encodeURIComponent(annonceId)}`);
+  await sleep(1800);
+  const after = await fetchHektorProspectsList(annonceId);
+  if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
+    throw new Error(`Rattachement proprietaire non confirme pour contact ${contactId} sur annonce ${annonceId}`);
+  }
+  return { status: "linked", action, hektor_contact_id: String(contactId), hektor_annonce_id: annonceId };
+}
+
+async function applyHektorContactPostCreateStep(job, created, payload) {
+  if (created.qualification === "1" || created.qualification === "2") {
+    return createHektorContactSearchCriteria(job, created.contactId, created, payload);
+  }
+  if (created.qualification === "3") {
+    return applyHektorOwnerNextStep(job, created.contactId, payload);
+  }
+  return { status: "skipped", reason: "no_post_create_step" };
+}
+
 async function updateHektorContactIdentity(job, contactId, payload) {
   const contact = normalizeHektorContactPayload({ ...payload, hektor_contact_id: contactId }, { requireContactId: true, requireName: true });
   const formHtml = await fetchHektorContactEditForm(contactId);
@@ -5846,6 +6076,7 @@ async function handleCreateHektorContact(job) {
 
   const created = await createHektorContact(job, payload);
   const crmSettings = await updateHektorContactCrmSettings(job, created.contactId, payload);
+  const postCreateStep = await applyHektorContactPostCreateStep(job, created, payload);
   await sleep(1200);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, created.contactId, {
     reason: "create_hektor_contact",
@@ -5866,6 +6097,7 @@ async function handleCreateHektorContact(job) {
       statut_matrimonial: created.maritalStatus,
     },
     crm_settings: crmSettings,
+    post_create_step: postCreateStep,
     sync_job: syncJob,
   };
 }

@@ -4517,6 +4517,26 @@ export type HektorContactIdentityInput = {
   hektorAgencyId?: string | null
   hektorAgencyUserId?: string | null
   hektorAgencyLabel?: string | null
+  contactNextStep?: {
+    kind?: string | null
+    enabled?: boolean | null
+    offerCode?: string | null
+    propertyTypeIds?: string[] | null
+    city?: string | null
+    postalCode?: string | null
+    priceMin?: string | null
+    priceMax?: string | null
+    surfaceMin?: string | null
+    surfaceMax?: string | null
+    roomsMin?: string | null
+    roomsMax?: string | null
+    bedroomsMin?: string | null
+    bedroomsMax?: string | null
+    landSurfaceMin?: string | null
+    landSurfaceMax?: string | null
+    action?: string | null
+    hektorAnnonceId?: string | null
+  } | null
 }
 
 function cleanOptionalText(value: string | null | undefined) {
@@ -4579,6 +4599,7 @@ function hContactPayload(contact: HektorContactIdentityInput) {
     target_hektor_agence_id: cleanOptionalText(contact.hektorAgencyId),
     target_agency_id_user: cleanOptionalText(contact.hektorAgencyUserId),
     target_agency_label: cleanOptionalText(contact.hektorAgencyLabel),
+    contact_next_step: contact.contactNextStep ?? null,
   }
 }
 
