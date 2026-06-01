@@ -5304,8 +5304,22 @@ function normalizeHektorContactStatus(value, fallback = "1") {
     personne_morale: "3",
     societe: "3",
     company: "3",
+    "4": "4",
+    personne_physique: "4",
+    partenaire_physique: "4",
+    partner_person: "4",
   };
   return map[text] || map[String(value || "").trim()] || fallback;
+}
+
+function hektorManualContactFormStatus(contactStatus, qualification) {
+  const status = normalizeHektorContactStatus(contactStatus, "1");
+  const qual = normalizeHektorContactQualification(qualification, "2");
+  if (qual === "4" && status === "4") return "partenaire_physique";
+  if (qual === "4" && status === "3") return "partenaire_morale";
+  if (status === "2") return "contact_couple";
+  if (status === "3") return "contact_morale";
+  return "contact_seule";
 }
 
 function hektorContactEditFormExists(html) {
@@ -5338,10 +5352,22 @@ async function fetchHektorContactBeforeDelete(job, contactId) {
 function normalizeHektorContactPayload(payload, options = {}) {
   const source = payload || {};
   const contactId = cleanString(source.hektor_contact_id || source.contact_id || source.id_contact || source.idContact);
-  const lastName = cleanString(source.last_name || source.nom || source.name);
+  const companyName = cleanString(source.company_name || source.companyName || source.sociale || source.raison_sociale);
+  const lastName = cleanString(source.last_name || source.nom || source.name || companyName);
   const firstName = source.first_name !== undefined || source.prenom !== undefined
     ? cleanString(source.first_name || source.prenom) || ""
     : cleanString(source.first_name || source.prenom);
+  const legalForm = cleanString(source.legal_form || source.legalForm || source.juridique || source.forme_juridique);
+  const siret = cleanString(source.siret || source.siren);
+  const partnerJobId = cleanString(source.partner_job_id || source.partnerJobId || source.metier || source.metier_id);
+  const website = cleanString(source.website || source.url || source.site_internet);
+  const spouseLastName = cleanString(source.spouse_last_name || source.spouseLastName || source.nom_m2 || source.conjoint_nom);
+  const spouseFirstName = cleanString(source.spouse_first_name || source.spouseFirstName || source.prenom_m2 || source.conjoint_prenom);
+  const spouseEmail = cleanString(source.spouse_email || source.spouseEmail || source.email_m2);
+  const spousePhone = cleanString(source.spouse_phone || source.spousePhone || source.telephone_m2 || source.conjoint_phone);
+  const spouseAddress = cleanString(source.spouse_address || source.spouseAddress || source.adresse_m2);
+  const spousePostalCode = cleanString(source.spouse_postal_code || source.spousePostalCode || source.codeprivee || source.code_m2);
+  const spouseCity = cleanString(source.spouse_city || source.spouseCity || source.villeprivee || source.ville_m2);
   const email = source.email !== undefined ? cleanString(source.email) || "" : cleanString(source.email);
   const phone = source.phone !== undefined || source.telephone !== undefined || source.mobile !== undefined
     ? cleanString(source.phone || source.telephone || source.mobile) || ""
@@ -5388,11 +5414,31 @@ function normalizeHektorContactPayload(payload, options = {}) {
   if (options.requireReachable && !email && !phone && !phoneSecondary) {
     throw new Error("Email ou telephone requis pour creer un contact Hektor");
   }
+  const qualification = normalizeHektorContactQualification(
+    source.qualification || source.contact_qualification || source.contact_kind || source.kind,
+    "2"
+  );
+  const contactStatus = normalizeHektorContactStatus(
+    source.statut || source.status || source.contact_status || source.person_type || source.personType,
+    qualification === "4" ? "3" : "1"
+  );
   return {
     contactId,
     civility,
     lastName,
     firstName,
+    companyName,
+    legalForm,
+    siret,
+    partnerJobId,
+    website,
+    spouseLastName,
+    spouseFirstName,
+    spouseEmail,
+    spousePhone,
+    spouseAddress,
+    spousePostalCode,
+    spouseCity,
     email,
     phone,
     phoneSecondary,
@@ -5402,14 +5448,8 @@ function normalizeHektorContactPayload(payload, options = {}) {
     birthDate: rawBirthDate !== undefined ? normalizeOptionalFrenchDate(rawBirthDate) : null,
     birthPlace: rawBirthPlace !== undefined ? cleanString(rawBirthPlace) || "" : null,
     maritalStatus: rawMaritalStatus !== undefined ? cleanString(rawMaritalStatus) || "" : null,
-    qualification: normalizeHektorContactQualification(
-      source.qualification || source.contact_qualification || source.contact_kind || source.kind,
-      "2"
-    ),
-    contactStatus: normalizeHektorContactStatus(
-      source.statut || source.status || source.contact_status || source.person_type || source.personType,
-      "1"
-    ),
+    qualification,
+    contactStatus,
     sourceId: cleanString(source.id_source || source.source_id || source.sourceId),
     categoryId: cleanString(source.category_id || source.categorie_id || source.categories),
     comments: source.comments !== undefined || source.commentaires !== undefined
@@ -5453,9 +5493,18 @@ function replaceContactTelephoneParams(values, primaryPhone, secondaryPhone) {
 }
 
 function applyHektorContactIdentityValues(values, contact) {
-  if (contact.civility !== null && contact.civility !== undefined) values.set("civilite", contact.civility || "");
-  if (contact.lastName) values.set("nom", contact.lastName);
-  if (contact.firstName !== null && contact.firstName !== undefined) values.set("prenom", contact.firstName || "");
+  const isCompany = contact.contactStatus === "3";
+  if (isCompany) {
+    values.set("sociale", contact.companyName || contact.lastName || "");
+    if (contact.legalForm !== null && contact.legalForm !== undefined) values.set("juridique", contact.legalForm || "");
+    if (contact.siret !== null && contact.siret !== undefined) values.set("siret", contact.siret || "");
+  } else {
+    if (contact.civility !== null && contact.civility !== undefined) values.set("civilite", contact.civility || "");
+    if (contact.lastName) values.set("nom", contact.lastName);
+    if (contact.firstName !== null && contact.firstName !== undefined) values.set("prenom", contact.firstName || "");
+  }
+  if (contact.partnerJobId !== null && contact.partnerJobId !== undefined) values.set("metier", contact.partnerJobId || "");
+  if (contact.website !== null && contact.website !== undefined) values.set("url", contact.website || "");
   if (contact.email !== null && contact.email !== undefined) {
     replaceParam(values, "label_email[]", "email");
     replaceParam(values, "id_email[]", "");
@@ -5463,6 +5512,23 @@ function applyHektorContactIdentityValues(values, contact) {
   }
   if (contact.phone !== null || contact.phoneSecondary !== null) {
     replaceContactTelephoneParams(values, contact.phone || "", contact.phoneSecondary || "");
+  }
+  if (contact.contactStatus === "2") {
+    if (contact.spouseLastName) values.set("nom_m2", contact.spouseLastName);
+    if (contact.spouseFirstName !== null && contact.spouseFirstName !== undefined) values.set("prenom_m2", contact.spouseFirstName || "");
+    if (contact.spouseEmail !== null && contact.spouseEmail !== undefined) {
+      replaceParam(values, "label_email_m2[]", "email");
+      replaceParam(values, "id_email_m2[]", "");
+      replaceParam(values, "email_m2[]", contact.spouseEmail || "");
+    }
+    if (contact.spousePhone !== null && contact.spousePhone !== undefined) {
+      replaceParam(values, "label_telephone_m2[]", "portable");
+      replaceParam(values, "id_telephone_m2[]", "");
+      replaceParam(values, "telephone_m2[]", contact.spousePhone || "");
+    }
+    if (contact.spouseAddress !== null && contact.spouseAddress !== undefined) values.set("adresse_m2", contact.spouseAddress || "");
+    if (contact.spouseCity !== null && contact.spouseCity !== undefined) values.set("villeprivee", contact.spouseCity || "");
+    if (contact.spousePostalCode !== null && contact.spousePostalCode !== undefined) values.set("codeprivee", contact.spousePostalCode || "");
   }
   if (contact.address !== null && contact.address !== undefined) values.set("adresse", contact.address || "");
   if (contact.city !== null && contact.city !== undefined) values.set("ville", contact.city || "");
@@ -5664,6 +5730,7 @@ async function createHektorContact(job, payload) {
   const contact = normalizeHektorContactPayload(payload, { requireName: true, requireReachable: true });
   const formHtml = await fetchHektorManualMandantForm({
     qualification: contact.qualification,
+    statut: hektorManualContactFormStatus(contact.contactStatus, contact.qualification),
     negotiatorId: contact.targetNegotiatorId,
   });
   const values = extractHektorFormValues(formHtml, null);
@@ -5677,10 +5744,12 @@ async function createHektorContact(job, payload) {
   await logJob(job.id, "hektor_contact_create", "running", "Creation contact global dans Hektor", {
     nom: contact.lastName,
     prenom: contact.firstName,
+    sociale: contact.companyName,
     email: contact.email,
     phone: contact.phone,
     qualification: contact.qualification,
     statut: contact.contactStatus,
+    metier: contact.partnerJobId,
   });
 
   const response = await hektorFetch(XMLRPC_URL, {
@@ -5746,9 +5815,18 @@ async function updateHektorContactIdentity(job, contactId, payload) {
       civilite: contact.civility,
       nom: contact.lastName,
       prenom: contact.firstName,
+      sociale: contact.companyName,
+      juridique: contact.legalForm,
+      siret: contact.siret,
+      metier: contact.partnerJobId,
+      url: contact.website,
       email: contact.email,
       telephone: contact.phone,
       telephone_secondaire: contact.phoneSecondary,
+      conjoint_nom: contact.spouseLastName,
+      conjoint_prenom: contact.spouseFirstName,
+      conjoint_email: contact.spouseEmail,
+      conjoint_telephone: contact.spousePhone,
       adresse: contact.address,
       code: contact.postalCode,
       ville: contact.city,
@@ -5780,6 +5858,7 @@ async function handleCreateHektorContact(job) {
     contact: {
       nom: created.lastName,
       prenom: created.firstName,
+      sociale: created.companyName,
       email: created.email,
       telephone: created.phone,
       date_naissance: created.birthDate,

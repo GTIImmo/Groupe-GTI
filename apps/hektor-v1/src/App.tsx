@@ -16807,6 +16807,18 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
     civility: contact.civilite ?? '',
     lastName: contact.nom || contact.display_name || '',
     firstName: contact.prenom ?? '',
+    companyName: '',
+    legalForm: '',
+    siret: '',
+    partnerJobId: '',
+    website: '',
+    spouseLastName: '',
+    spouseFirstName: '',
+    spouseEmail: '',
+    spousePhone: '',
+    spouseAddress: '',
+    spousePostalCode: '',
+    spouseCity: '',
     email: contact.email ?? '',
     phone: contact.phone_primary ?? '',
     phoneSecondary: contact.phone_secondary ?? '',
@@ -16838,11 +16850,78 @@ const hektorContactKindOptions = [
   { value: 'partenaire', label: 'Partenaire', detail: 'Notaire, agent immobilier, autre tiers' },
 ]
 
-const hektorPersonTypeOptions = [
+const hektorDefaultPersonTypeOptions = [
   { value: 'personne_seule', label: 'Personne seule' },
   { value: 'couple', label: 'Couple' },
   { value: 'personne_morale', label: 'Personne morale' },
 ]
+
+const hektorPartnerPersonTypeOptions = [
+  { value: 'personne_morale', label: 'Personne morale' },
+  { value: 'personne_physique', label: 'Personne physique' },
+]
+
+const hektorLegalFormOptions = [
+  { value: '', label: 'Non defini' },
+  { value: 'ASSOC', label: 'Association' },
+  { value: 'EURL', label: 'EURL' },
+  { value: 'CT', label: 'Collectivite territoriale' },
+  { value: 'EI', label: 'Entreprise individuelle' },
+  { value: 'SARL', label: 'SARL' },
+  { value: 'SA', label: 'SA' },
+  { value: 'SAS', label: 'SAS' },
+  { value: 'SCI', label: 'SCI' },
+  { value: 'SNC', label: 'SNC' },
+  { value: 'EARL', label: 'EARL' },
+  { value: 'EIRL', label: 'EIRL' },
+  { value: 'GAEC', label: 'GAEC' },
+  { value: 'GEIE', label: 'GEIE' },
+  { value: 'GIE', label: 'GIE' },
+  { value: 'SASU', label: 'SASU' },
+  { value: 'SC', label: 'SC' },
+  { value: 'SCA', label: 'SCA' },
+  { value: 'SCIC', label: 'SCIC' },
+  { value: 'SCM', label: 'SCM' },
+  { value: 'SCOP', label: 'SCOP' },
+  { value: 'SCP', label: 'SCP' },
+  { value: 'SCS', label: 'SCS' },
+  { value: 'SEL', label: 'SEL' },
+  { value: 'SELAFA', label: 'SELAFA' },
+  { value: 'SELARL', label: 'SELARL' },
+  { value: 'SELAS', label: 'SELAS' },
+  { value: 'SELCA', label: 'SELCA' },
+  { value: 'SEM', label: 'SEM' },
+  { value: 'SEML', label: 'SEML' },
+  { value: 'SEP', label: 'SEP' },
+  { value: 'SICA', label: 'SICA' },
+  { value: 'SCCV', label: 'SCCV' },
+  { value: 'GFA', label: 'GFA' },
+]
+
+const hektorPartnerJobOptions = [
+  { value: '', label: 'Non defini' },
+  { value: '16', label: 'A supprimer' },
+  { value: '17', label: 'Administration' },
+  { value: '22', label: 'Agent immobilier' },
+  { value: '15', label: 'Apporteur' },
+  { value: '19', label: 'Banque' },
+  { value: '7', label: 'Collaborateur' },
+  { value: '3', label: 'Confrere' },
+  { value: '4', label: 'Diagnostiqueur' },
+  { value: '21', label: 'Lotisseur' },
+  { value: '20', label: 'Mandataire' },
+  { value: '2', label: 'Notaire' },
+  { value: '1', label: 'Promoteur' },
+  { value: '18', label: 'Societe' },
+  { value: '8', label: 'Societe' },
+  { value: '5', label: 'Syndic' },
+  { value: '23', label: 'Technicien' },
+  { value: '6', label: 'Autre' },
+]
+
+function hektorPersonTypeOptionsForKind(kind: string) {
+  return kind === 'partenaire' ? hektorPartnerPersonTypeOptions : hektorDefaultPersonTypeOptions
+}
 
 const hektorContactSourceOptions = [
   { value: '', label: 'Non défini' },
@@ -16923,10 +17002,22 @@ function HektorContactIdentityForm(props: {
   }, [availableHektorNegotiators, normalizedSessionEmail, props.contact?.negociateur_email, props.hektorUserEmail, props.hektorUserId, props.profileRole])
   const initial = props.contact
     ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-    : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+    : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
   const [civility, setCivility] = useState(initial.civility ?? '')
   const [lastName, setLastName] = useState(initial.lastName ?? '')
   const [firstName, setFirstName] = useState(initial.firstName ?? '')
+  const [companyName, setCompanyName] = useState(initial.companyName ?? '')
+  const [legalForm, setLegalForm] = useState(initial.legalForm ?? '')
+  const [siret, setSiret] = useState(initial.siret ?? '')
+  const [partnerJobId, setPartnerJobId] = useState(initial.partnerJobId ?? '')
+  const [website, setWebsite] = useState(initial.website ?? '')
+  const [spouseLastName, setSpouseLastName] = useState(initial.spouseLastName ?? '')
+  const [spouseFirstName, setSpouseFirstName] = useState(initial.spouseFirstName ?? '')
+  const [spouseEmail, setSpouseEmail] = useState(initial.spouseEmail ?? '')
+  const [spousePhone, setSpousePhone] = useState(initial.spousePhone ?? '')
+  const [spouseAddress, setSpouseAddress] = useState(initial.spouseAddress ?? '')
+  const [spousePostalCode, setSpousePostalCode] = useState(initial.spousePostalCode ?? '')
+  const [spouseCity, setSpouseCity] = useState(initial.spouseCity ?? '')
   const [email, setEmail] = useState(initial.email ?? '')
   const [phone, setPhone] = useState(initial.phone ?? '')
   const [phoneSecondary, setPhoneSecondary] = useState(initial.phoneSecondary ?? '')
@@ -16957,14 +17048,41 @@ function HektorContactIdentityForm(props: {
   }, [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
   const selectedHektorEmail = selectedHektorUser?.email ?? props.contact?.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
   const selectedHektorId = selectedHektorUser?.idUser ?? (availableHektorNegotiators.length === 0 ? (selectedHektorUserId.trim() || props.hektorUserId || null) : null)
+  const isCreateMode = props.mode === 'create'
+  const isPartnerKind = isCreateMode && contactKind === 'partenaire'
+  const isCompanyPerson = isCreateMode && personType === 'personne_morale'
+  const isCouplePerson = isCreateMode && personType === 'couple'
+  const personTypeOptions = hektorPersonTypeOptionsForKind(contactKind)
+
+  useEffect(() => {
+    if (!isCreateMode) return
+    if (contactKind === 'partenaire' && !hektorPartnerPersonTypeOptions.some((option) => option.value === personType)) {
+      setPersonType('personne_morale')
+    }
+    if (contactKind !== 'partenaire' && personType === 'personne_physique') {
+      setPersonType('personne_seule')
+    }
+  }, [contactKind, isCreateMode, personType])
 
   useEffect(() => {
     const next = props.contact
       ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-      : { civility: '', lastName: '', firstName: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+      : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
     setCivility(next.civility ?? '')
     setLastName(next.lastName ?? '')
     setFirstName(next.firstName ?? '')
+    setCompanyName(next.companyName ?? '')
+    setLegalForm(next.legalForm ?? '')
+    setSiret(next.siret ?? '')
+    setPartnerJobId(next.partnerJobId ?? '')
+    setWebsite(next.website ?? '')
+    setSpouseLastName(next.spouseLastName ?? '')
+    setSpouseFirstName(next.spouseFirstName ?? '')
+    setSpouseEmail(next.spouseEmail ?? '')
+    setSpousePhone(next.spousePhone ?? '')
+    setSpouseAddress(next.spouseAddress ?? '')
+    setSpousePostalCode(next.spousePostalCode ?? '')
+    setSpouseCity(next.spouseCity ?? '')
     setEmail(next.email ?? '')
     setPhone(next.phone ?? '')
     setPhoneSecondary(next.phoneSecondary ?? '')
@@ -16991,8 +17109,20 @@ function HektorContactIdentityForm(props: {
 
   const buildInput = (): HektorContactIdentityInput => ({
     civility,
-    lastName,
+    lastName: isCompanyPerson ? (companyName || lastName) : lastName,
     firstName,
+    companyName: isCompanyPerson ? (companyName || lastName) : '',
+    legalForm: isCompanyPerson ? legalForm : '',
+    siret: isCompanyPerson ? siret : '',
+    partnerJobId: isPartnerKind ? partnerJobId : '',
+    website: isPartnerKind ? website : '',
+    spouseLastName: isCouplePerson ? spouseLastName : '',
+    spouseFirstName: isCouplePerson ? spouseFirstName : '',
+    spouseEmail: isCouplePerson ? spouseEmail : '',
+    spousePhone: isCouplePerson ? spousePhone : '',
+    spouseAddress: isCouplePerson ? spouseAddress : '',
+    spousePostalCode: isCouplePerson ? spousePostalCode : '',
+    spouseCity: isCouplePerson ? spouseCity : '',
     email,
     phone,
     phoneSecondary,
@@ -17023,8 +17153,17 @@ function HektorContactIdentityForm(props: {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
-    if (!lastName.trim()) {
-      setError('Nom contact requis.')
+    const mainName = isCompanyPerson ? (companyName.trim() || lastName.trim()) : lastName.trim()
+    if (!mainName) {
+      setError(isCompanyPerson ? 'Raison sociale requise.' : 'Nom contact requis.')
+      return
+    }
+    if (isCompanyPerson && !legalForm.trim()) {
+      setError('Forme juridique requise pour une personne morale Hektor.')
+      return
+    }
+    if (isCouplePerson && !spouseLastName.trim()) {
+      setError('Nom du second membre du couple requis.')
       return
     }
     if (props.mode === 'create' && !email.trim() && !phone.trim() && !phoneSecondary.trim()) {
@@ -17046,7 +17185,7 @@ function HektorContactIdentityForm(props: {
     setPending(true)
     try {
       if (props.mode === 'create' && !duplicatesAccepted) {
-        const candidates = await findContactDuplicateCandidates({ email, phone, lastName, firstName })
+        const candidates = await findContactDuplicateCandidates({ email, phone, lastName: mainName, firstName })
         if (candidates.length > 0) {
           setDuplicateCandidates(candidates)
           setDuplicatesAccepted(true)
@@ -17063,6 +17202,18 @@ function HektorContactIdentityForm(props: {
         setCivility('')
         setLastName('')
         setFirstName('')
+        setCompanyName('')
+        setLegalForm('')
+        setSiret('')
+        setPartnerJobId('')
+        setWebsite('')
+        setSpouseLastName('')
+        setSpouseFirstName('')
+        setSpouseEmail('')
+        setSpousePhone('')
+        setSpouseAddress('')
+        setSpousePostalCode('')
+        setSpouseCity('')
         setEmail('')
         setPhone('')
         setPhoneSecondary('')
@@ -17148,30 +17299,66 @@ function HektorContactIdentityForm(props: {
             <label>
               <span>Structure</span>
               <select value={personType} onChange={(event) => setPersonType(event.target.value)} required>
-                {hektorPersonTypeOptions.map((option) => (
+                {personTypeOptions.map((option) => (
                   <option key={`person-type-${option.value}`} value={option.value}>{option.label}</option>
                 ))}
               </select>
+              {isPartnerKind ? <small>Hektor partenaire accepte personne morale ou personne physique.</small> : null}
             </label>
           </>
         ) : null}
-        <label className="is-small">
-          <span>Civilite</span>
-          <select value={civility} onChange={(event) => setCivility(event.target.value)}>
-            <option value="">-</option>
-            <option value="M.">M.</option>
-            <option value="Mme.">Mme.</option>
-            <option value="Mlle.">Mlle.</option>
-          </select>
-        </label>
-        <label>
-          <span>Nom</span>
-          <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
-        </label>
-        <label>
-          <span>Prenom</span>
-          <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-        </label>
+        {isCompanyPerson ? (
+          <>
+            <label>
+              <span>Forme juridique</span>
+              <select value={legalForm} onChange={(event) => setLegalForm(event.target.value)} required>
+                {hektorLegalFormOptions.map((option) => (
+                  <option key={`legal-form-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="is-wide">
+              <span>Raison sociale</span>
+              <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required />
+            </label>
+            <label>
+              <span>SIRET</span>
+              <input value={siret} onChange={(event) => setSiret(event.target.value)} inputMode="numeric" />
+            </label>
+          </>
+        ) : (
+          <>
+            <label className="is-small">
+              <span>Civilite</span>
+              <select value={civility} onChange={(event) => setCivility(event.target.value)}>
+                <option value="">-</option>
+                {isPartnerKind ? <option value="Me.">Me.</option> : null}
+                {isPartnerKind ? <option value="Indivision">Indivision</option> : null}
+                <option value="M.">M.</option>
+                <option value="Mme.">Mme.</option>
+                <option value="Mlle.">Mlle.</option>
+              </select>
+            </label>
+            <label>
+              <span>Nom</span>
+              <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+            </label>
+            <label>
+              <span>Prenom</span>
+              <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+            </label>
+          </>
+        )}
+        {isPartnerKind ? (
+          <label>
+            <span>Metier partenaire</span>
+            <select value={partnerJobId} onChange={(event) => setPartnerJobId(event.target.value)}>
+              {hektorPartnerJobOptions.map((option) => (
+                <option key={`partner-job-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label>
           <span>Email</span>
           <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
@@ -17184,6 +17371,26 @@ function HektorContactIdentityForm(props: {
           <span>Fixe</span>
           <input value={phoneSecondary} onChange={(event) => setPhoneSecondary(event.target.value)} inputMode="tel" />
         </label>
+        {isCouplePerson ? (
+          <>
+            <label>
+              <span>Nom conjoint</span>
+              <input value={spouseLastName} onChange={(event) => setSpouseLastName(event.target.value)} required />
+            </label>
+            <label>
+              <span>Prenom conjoint</span>
+              <input value={spouseFirstName} onChange={(event) => setSpouseFirstName(event.target.value)} />
+            </label>
+            <label>
+              <span>Email conjoint</span>
+              <input value={spouseEmail} onChange={(event) => setSpouseEmail(event.target.value)} type="email" />
+            </label>
+            <label>
+              <span>Telephone conjoint</span>
+              <input value={spousePhone} onChange={(event) => setSpousePhone(event.target.value)} inputMode="tel" />
+            </label>
+          </>
+        ) : null}
         <label className="is-wide">
           <span>Adresse</span>
           <input value={address} onChange={(event) => setAddress(event.target.value)} />
@@ -17196,6 +17403,28 @@ function HektorContactIdentityForm(props: {
           <span>Ville</span>
           <input value={city} onChange={(event) => setCity(event.target.value)} />
         </label>
+        {isCouplePerson ? (
+          <>
+            <label className="is-wide">
+              <span>Adresse conjoint</span>
+              <input value={spouseAddress} onChange={(event) => setSpouseAddress(event.target.value)} />
+            </label>
+            <label className="is-small">
+              <span>CP conjoint</span>
+              <input value={spousePostalCode} onChange={(event) => setSpousePostalCode(event.target.value)} inputMode="numeric" />
+            </label>
+            <label>
+              <span>Ville conjoint</span>
+              <input value={spouseCity} onChange={(event) => setSpouseCity(event.target.value)} />
+            </label>
+          </>
+        ) : null}
+        {isPartnerKind ? (
+          <label className="is-wide">
+            <span>Site internet</span>
+            <input value={website} onChange={(event) => setWebsite(event.target.value)} inputMode="url" />
+          </label>
+        ) : null}
         <label className="is-small">
           <span>Date naissance</span>
           <input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" />

@@ -4480,6 +4480,18 @@ export type HektorContactIdentityInput = {
   civility?: string | null
   lastName: string
   firstName?: string | null
+  companyName?: string | null
+  legalForm?: string | null
+  siret?: string | null
+  partnerJobId?: string | null
+  website?: string | null
+  spouseLastName?: string | null
+  spouseFirstName?: string | null
+  spouseEmail?: string | null
+  spousePhone?: string | null
+  spouseAddress?: string | null
+  spousePostalCode?: string | null
+  spouseCity?: string | null
   email?: string | null
   phone?: string | null
   phoneSecondary?: string | null
@@ -4524,6 +4536,22 @@ function hContactPayload(contact: HektorContactIdentityInput) {
     civilite: cleanOptionalText(contact.civility),
     last_name: contact.lastName.trim(),
     first_name: cleanOptionalText(contact.firstName),
+    company_name: cleanOptionalText(contact.companyName),
+    sociale: cleanOptionalText(contact.companyName),
+    legal_form: cleanOptionalText(contact.legalForm),
+    juridique: cleanOptionalText(contact.legalForm),
+    siret: cleanOptionalText(contact.siret),
+    partner_job_id: cleanOptionalText(contact.partnerJobId),
+    metier: cleanOptionalText(contact.partnerJobId),
+    website: cleanOptionalText(contact.website),
+    url: cleanOptionalText(contact.website),
+    spouse_last_name: cleanOptionalText(contact.spouseLastName),
+    spouse_first_name: cleanOptionalText(contact.spouseFirstName),
+    spouse_email: cleanOptionalText(contact.spouseEmail),
+    spouse_phone: cleanOptionalText(contact.spousePhone),
+    spouse_address: cleanOptionalText(contact.spouseAddress),
+    spouse_postal_code: cleanOptionalText(contact.spousePostalCode),
+    spouse_city: cleanOptionalText(contact.spouseCity),
     email: cleanOptionalText(contact.email),
     phone: cleanOptionalText(contact.phone),
     phone_secondary: cleanOptionalText(contact.phoneSecondary),
