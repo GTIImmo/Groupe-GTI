@@ -56,6 +56,24 @@ GOOGLE_WORKSPACE_SUBJECT_EMAIL=accueil@gti-immobilier.fr
 GOOGLE_WORKSPACE_SCOPES=https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.freebusy,https://www.googleapis.com/auth/calendar.events
 ```
 
+## Etape 3 bis - URL de retour connexion Google
+
+En production Vercel, l'URL publique de l'application est :
+
+```text
+https://groupe-gti.vercel.app
+```
+
+Dans Supabase Dashboard > Authentication > URL Configuration :
+
+- Site URL : `https://groupe-gti.vercel.app`
+- Redirect URLs :
+  - `https://groupe-gti.vercel.app`
+  - `https://groupe-gti.vercel.app/**`
+  - `http://localhost:5173/**` pour les tests locaux
+
+Si Supabase garde `localhost` en Site URL ou si l'URL Vercel n'est pas dans Redirect URLs, Google peut authentifier correctement puis revenir sur localhost au lieu de l'application en ligne.
+
 ## Etape 4 - Controle
 
 Endpoint backend ajoute :

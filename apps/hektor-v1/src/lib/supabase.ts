@@ -9,6 +9,11 @@ export const supabaseAnonKey = anonKey
 
 export const hasSupabaseEnv = Boolean(url && anonKey)
 export const googleWorkspaceDomain = (import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN ?? 'gti-immobilier.fr').trim().toLowerCase()
+const defaultProductionAppUrl = 'https://groupe-gti.vercel.app'
+export const appPublicUrl = (
+  import.meta.env.VITE_APP_PUBLIC_URL
+  ?? (!import.meta.env.DEV ? defaultProductionAppUrl : '')
+).trim().replace(/\/+$/, '')
 
 export const supabase = hasSupabaseEnv
   ? createClient(url, anonKey, {
@@ -39,10 +44,11 @@ export async function signInWithPassword(email: string, password: string): Promi
 
 export async function signInWithGoogleWorkspace(redirectTo?: string): Promise<void> {
   if (!supabase) throw new Error('Supabase is not configured')
+  const cleanRedirectTo = (appPublicUrl || redirectTo || '').trim().replace(/\/+$/, '') || undefined
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo,
+      redirectTo: cleanRedirectTo,
       scopes: 'openid email profile',
       queryParams: {
         hd: googleWorkspaceDomain,
