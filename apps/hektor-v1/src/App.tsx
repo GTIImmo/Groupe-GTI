@@ -8519,6 +8519,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceStep(draftAnnonceStepOrder[nextIndex])
   }
 
+  function selectDraftMandantChoice(choice: DraftMandantChoice) {
+    setDraftMandantChoice(choice)
+    if (choice !== 'existing') {
+      setDraftExistingMandantId('')
+      setDraftExistingMandantSearch('')
+      setDraftExistingMandantOptions([])
+      setDraftExistingMandantError(null)
+    }
+    window.setTimeout(() => {
+      const selector = choice === 'existing' ? '[data-draft-mandant-search]' : choice === 'new' ? '[data-draft-mandant-lastname]' : null
+      if (!selector) return
+      document.querySelector<HTMLInputElement>(selector)?.focus()
+    }, 0)
+  }
+
   function clearDraftAnnoncePhotoDrafts() {
     setDraftAnnoncePhotoDrafts((current) => {
       current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
@@ -11068,31 +11083,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           { value: 'none' as const, title: 'Aucun mandant', text: 'Continuer sans association' },
                           { value: 'existing' as const, title: 'Associer un mandant', text: 'Recherche par nom ou prenom' },
                           { value: 'new' as const, title: 'Ajouter un nouveau mandant', text: 'Creation puis association' },
-                        ].map((choice) => (
-                          <button
-                            key={choice.value}
-                            className={draftMandantChoice === choice.value ? 'is-selected' : ''}
-                            type="button"
-                            onClick={() => {
-                              setDraftMandantChoice(choice.value)
-                              if (choice.value !== 'existing') {
-                                setDraftExistingMandantId('')
-                                setDraftExistingMandantSearch('')
-                                setDraftExistingMandantOptions([])
-                                setDraftExistingMandantError(null)
-                              }
-                            }}
-                          >
-                            <strong>{choice.title}</strong>
-                            <small>{choice.text}</small>
-                          </button>
-                        ))}
+                        ].map((choice) => {
+                          const selected = draftMandantChoice === choice.value
+                          return (
+                            <button
+                              key={choice.value}
+                              className={selected ? 'is-selected' : ''}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => selectDraftMandantChoice(choice.value)}
+                            >
+                              <span className="draft-mandant-choice-check" aria-hidden="true">{selected ? 'OK' : ''}</span>
+                              <span className="draft-mandant-choice-copy">
+                                <strong>{choice.title}</strong>
+                                <small>{choice.text}</small>
+                              </span>
+                              {selected ? <em>Selection active</em> : null}
+                            </button>
+                          )
+                        })}
                       </div>
                       {draftMandantChoice === 'existing' ? (
-                        <div className="draft-mandant-search-panel">
+                        <div className="draft-mandant-search-panel draft-mandant-active-area">
+                          <div className="draft-mandant-active-head">
+                            <strong>Rechercher un contact mandant</strong>
+                            <span>{selectedDraftNegotiator?.label || 'Negociateur a choisir'}</span>
+                            <button type="button" onClick={() => selectDraftMandantChoice('none')}>Fermer</button>
+                          </div>
                           <label className="filter-field draft-annonce-field-wide">
                             <span>Recherche mandant</span>
                             <input
+                              data-draft-mandant-search
                               value={draftExistingMandantSearch}
                               onChange={(event) => {
                                 setDraftExistingMandantSearch(event.target.value)
@@ -11101,7 +11122,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               placeholder="Nom, prenom, email ou telephone"
                             />
                           </label>
-                          <small>{draftExistingMandantLoading ? 'Recherche...' : 'Selectionne le contact a associer comme mandant.'}</small>
+                          <small>{draftExistingMandantLoading ? 'Recherche...' : 'La recherche se lance automatiquement par nom, prenom, email ou telephone.'}</small>
                           {draftExistingMandantError ? <p className="draft-mandant-error">{draftExistingMandantError}</p> : null}
                           <div className="contact-owner-result-list draft-mandant-result-list">
                             {draftExistingMandantOptions.length > 0 ? draftExistingMandantOptions.map((option) => {
@@ -11139,6 +11160,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </div>
                       ) : null}
                       {draftMandantChoice === 'new' ? (
+                        <div className="draft-mandant-active-area">
+                          <div className="draft-mandant-active-head">
+                            <strong>Creer un mandant</strong>
+                            <span>Le contact sera cree puis associe a l'annonce</span>
+                            <button type="button" onClick={() => selectDraftMandantChoice('none')}>Fermer</button>
+                          </div>
                         <div className="draft-mandant-fields">
                           <label className="filter-field is-small">
                             <span>Civilite</span>
@@ -11151,7 +11178,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </label>
                           <label className="filter-field">
                             <span>Nom</span>
-                            <input value={draftMandantLastName} onChange={(event) => setDraftMandantLastName(event.target.value)} placeholder="Nom du vendeur" />
+                            <input data-draft-mandant-lastname value={draftMandantLastName} onChange={(event) => setDraftMandantLastName(event.target.value)} placeholder="Nom du vendeur" />
                           </label>
                           <label className="filter-field">
                             <span>Prenom</span>
@@ -11177,6 +11204,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <span>Ville mandant</span>
                             <input value={draftMandantCity} onChange={(event) => setDraftMandantCity(event.target.value)} />
                           </label>
+                        </div>
                         </div>
                       ) : null}
                     </section>

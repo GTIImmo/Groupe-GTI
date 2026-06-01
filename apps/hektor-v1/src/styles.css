@@ -29001,11 +29001,14 @@ body {
 
 .draft-mandant-panel {
   grid-column: 1 / -1 !important;
+  position: relative !important;
+  z-index: 30 !important;
   display: grid !important;
-  grid-template-rows: auto auto auto !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: auto auto !important;
   align-self: start !important;
   height: auto !important;
-  min-height: 150px !important;
+  min-height: 0 !important;
   overflow: visible !important;
   border: 1px solid #cfe1df !important;
   border-radius: 8px !important;
@@ -29018,21 +29021,26 @@ body {
 }
 
 .draft-mandant-panel .draft-annonce-section-title {
+  grid-column: 1 / -1 !important;
   padding: 14px 14px 0 !important;
 }
 
 .draft-mandant-choice-grid {
   display: grid !important;
+  grid-column: 1 / -1 !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 10px !important;
   padding: 14px !important;
+  align-self: start !important;
 }
 
 .draft-mandant-choice-grid button {
   display: grid !important;
-  gap: 4px !important;
-  min-height: 70px !important;
-  padding: 12px !important;
+  grid-template-columns: 26px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 54px !important;
+  padding: 9px 10px !important;
   border: 1px solid rgba(34, 35, 35, 0.12) !important;
   border-radius: 8px !important;
   background: #ffffff !important;
@@ -29045,6 +29053,34 @@ body {
   border-color: rgba(197, 0, 95, 0.38) !important;
   background: rgba(197, 0, 95, 0.08) !important;
   box-shadow: inset 0 0 0 1px rgba(197, 0, 95, 0.12) !important;
+}
+
+.draft-mandant-choice-grid button em {
+  color: var(--gti-final-magenta, #c5005f) !important;
+  font-size: 0.68rem !important;
+  font-style: normal !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+.draft-mandant-choice-check {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  border: 1px solid rgba(34, 35, 35, 0.16) !important;
+  border-radius: 999px !important;
+  background: #f6fbfa !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+  font-size: 0.75rem !important;
+  font-weight: 950 !important;
+}
+
+.draft-mandant-choice-copy {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 2px !important;
 }
 
 .draft-mandant-choice-grid strong {
@@ -29062,11 +29098,73 @@ body {
 .draft-mandant-search-panel {
   display: grid !important;
   gap: 10px !important;
-  padding: 0 14px 14px !important;
+}
+
+.draft-mandant-active-area {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 18px !important;
+  left: 18px !important;
+  z-index: 80 !important;
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  align-self: stretch !important;
+  align-content: start !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  max-height: min(42vh, 360px) !important;
+  overflow: auto !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 1px solid rgba(15, 104, 116, 0.14) !important;
+  border-radius: 8px !important;
+  background: #f8fcfb !important;
+  box-shadow: 0 18px 44px rgba(7, 22, 34, 0.22) !important;
+}
+
+.draft-mandant-active-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.draft-mandant-active-head strong {
+  min-width: 0 !important;
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 0.86rem !important;
+  font-weight: 950 !important;
+}
+
+.draft-mandant-active-head span {
+  min-width: 0 !important;
+  color: #0f6874 !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+  text-align: right !important;
+}
+
+.draft-mandant-active-head button {
+  min-height: 32px !important;
+  border: 1px solid rgba(34, 35, 35, 0.14) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
 }
 
 .draft-mandant-result-list {
-  max-height: 250px !important;
+  max-height: 150px !important;
+}
+
+.draft-annonce-step-card,
+.draft-annonce-section,
+.draft-annonce-wizard-section {
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 .draft-mandant-selected {
@@ -29098,9 +29196,10 @@ body {
 }
 
 .draft-mandant-fields {
-  grid-template-columns: 110px repeat(4, minmax(0, 1fr)) !important;
-  gap: 12px !important;
-  padding: 0 14px 14px !important;
+  display: grid !important;
+  grid-template-columns: 96px repeat(4, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 0 !important;
 }
 
 .draft-annonce-form .modal-actions {
@@ -29448,12 +29547,27 @@ body {
   }
 
   .draft-mandant-choice-grid {
+    grid-column: 1 / -1 !important;
     grid-template-columns: 1fr !important;
     padding: 12px !important;
   }
 
-  .draft-mandant-search-panel {
-    padding: 0 12px 12px !important;
+  .draft-mandant-panel,
+  .draft-mandant-panel.is-open,
+  .draft-mandant-panel:not(.is-open) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .draft-mandant-panel:not(.is-open) .draft-mandant-choice-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .draft-mandant-active-area {
+    grid-column: 1 / -1 !important;
+    left: 12px !important;
+    right: 12px !important;
+    margin: 0 !important;
+    padding: 10px !important;
   }
 
   .draft-mandant-result-list button {
