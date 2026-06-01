@@ -254,6 +254,21 @@ export type UserProfile = {
   is_active: boolean
 }
 
+export type GoogleWorkspaceIdentity = {
+  id: string
+  app_user_id: string
+  google_email: string
+  workspace_domain: string
+  hektor_user_id?: string | null
+  hektor_negociateur_id?: string | null
+  negociateur_email?: string | null
+  link_status: 'pending' | 'linked' | 'conflict' | 'disabled'
+  is_active: boolean
+  last_login_at?: string | null
+  last_checked_at?: string | null
+  metadata_json?: Record<string, unknown> | null
+}
+
 export type UserNegotiatorContext = {
   commercial_nom: string | null
   negociateur_email: string | null

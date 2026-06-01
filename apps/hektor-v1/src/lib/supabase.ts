@@ -8,15 +8,22 @@ export const supabaseUrl = url
 export const supabaseAnonKey = anonKey
 
 export const hasSupabaseEnv = Boolean(url && anonKey)
+export const googleWorkspaceDomain = (import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN ?? 'gti-immobilier.fr').trim().toLowerCase()
 
 export const supabase = hasSupabaseEnv
   ? createClient(url, anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        detectSessionInUrl: true,
       },
     })
   : null
+
+export function isGoogleWorkspaceEmail(email?: string | null): boolean {
+  const normalized = (email ?? '').trim().toLowerCase()
+  return normalized.endsWith(`@${googleWorkspaceDomain}`)
+}
 
 export async function getCurrentSession(): Promise<Session | null> {
   if (!supabase) return null
@@ -27,6 +34,22 @@ export async function getCurrentSession(): Promise<Session | null> {
 export async function signInWithPassword(email: string, password: string): Promise<void> {
   if (!supabase) throw new Error('Supabase is not configured')
   const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw new Error(error.message)
+}
+
+export async function signInWithGoogleWorkspace(redirectTo?: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      scopes: 'openid email profile',
+      queryParams: {
+        hd: googleWorkspaceDomain,
+        prompt: 'select_account',
+      },
+    },
+  })
   if (error) throw new Error(error.message)
 }
 

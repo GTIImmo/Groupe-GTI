@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+_ENV_FILES_LOADED = False
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,12 @@ class Settings:
     google_client_secret: str | None
     google_refresh_token: str | None
     google_sender_email: str | None
+    google_workspace_domain: str
+    google_workspace_auth_mode: str
+    google_workspace_dwd_client_id: str | None
+    google_workspace_service_account_file: Path | None
+    google_workspace_subject_email: str | None
+    google_workspace_scopes: tuple[str, ...]
     smtp_host: str | None
     smtp_port: int
     smtp_user: str | None
@@ -45,7 +52,59 @@ def _require_env(name: str) -> str:
     return value
 
 
+def _split_csv_env(name: str) -> tuple[str, ...]:
+    value = os.getenv(name, "").strip()
+    if not value:
+        return ()
+    return tuple(item.strip() for item in value.replace("\n", ",").split(",") if item.strip())
+
+
+def _optional_path_env(name: str) -> Path | None:
+    value = os.getenv(name, "").strip()
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else ROOT / path
+
+
+def _load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ[key] = value
+
+
+def _load_env_files() -> None:
+    global _ENV_FILES_LOADED
+    if _ENV_FILES_LOADED:
+        return
+    for path in (
+        ROOT / ".env",
+        ROOT / "apps" / "hektor-v1" / ".env",
+        ROOT / "apps" / "hektor-v1" / ".env.local",
+        ROOT / "backend" / ".env",
+        ROOT / "backend" / ".env.local",
+    ):
+        _load_env_file(path)
+    if not os.getenv("SUPABASE_URL") and os.getenv("VITE_SUPABASE_URL"):
+        os.environ["SUPABASE_URL"] = os.getenv("VITE_SUPABASE_URL", "")
+    if not os.getenv("SUPABASE_ANON_KEY") and os.getenv("VITE_SUPABASE_ANON_KEY"):
+        os.environ["SUPABASE_ANON_KEY"] = os.getenv("VITE_SUPABASE_ANON_KEY", "")
+    _ENV_FILES_LOADED = True
+
+
 def get_settings() -> Settings:
+    _load_env_files()
     python_default = ROOT / ".venv" / "Scripts" / "python.exe"
     return Settings(
         supabase_url=_require_env("SUPABASE_URL"),
@@ -56,6 +115,12 @@ def get_settings() -> Settings:
         google_client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "").strip() or None,
         google_refresh_token=os.getenv("GOOGLE_REFRESH_TOKEN", "").strip() or None,
         google_sender_email=os.getenv("GOOGLE_SENDER_EMAIL", "").strip() or None,
+        google_workspace_domain=os.getenv("GOOGLE_WORKSPACE_DOMAIN", "gti-immobilier.fr").strip().lower() or "gti-immobilier.fr",
+        google_workspace_auth_mode=os.getenv("GOOGLE_WORKSPACE_AUTH_MODE", "domain_wide_delegation").strip().lower() or "domain_wide_delegation",
+        google_workspace_dwd_client_id=os.getenv("GOOGLE_WORKSPACE_DWD_CLIENT_ID", "").strip() or None,
+        google_workspace_service_account_file=_optional_path_env("GOOGLE_WORKSPACE_SERVICE_ACCOUNT_FILE"),
+        google_workspace_subject_email=os.getenv("GOOGLE_WORKSPACE_SUBJECT_EMAIL", "").strip().lower() or None,
+        google_workspace_scopes=_split_csv_env("GOOGLE_WORKSPACE_SCOPES"),
         smtp_host=os.getenv("SMTP_HOST", "").strip() or None,
         smtp_port=int(os.getenv("SMTP_PORT", "587").strip() or "587"),
         smtp_user=os.getenv("SMTP_USER", "").strip() or None,

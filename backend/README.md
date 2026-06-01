@@ -28,8 +28,20 @@ Il ne remplace ni `Phase 1`, ni `Phase 2`, ni Supabase.
 - `POST /admin/users/send-reset`
 - `POST /hektor-diffusion/apply`
 - `POST /hektor-diffusion/accept`
+- `GET /google-workspace/status`
+- `POST /google-workspace/gmail/send-test`
+- `POST /google-workspace/calendar/freebusy-test`
+- `POST /google-workspace/calendar/event-test`
+- `POST /google-workspace/calendar/event-update-test`
+- `POST /google-workspace/calendar/event-delete-test`
 
 ## Variables d'environnement
+
+Le backend lit en priorite le fichier racine existant :
+
+```text
+C:\Hektor\Projet\.env
+```
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
@@ -40,6 +52,24 @@ Il ne remplace ni `Phase 1`, ni `Phase 2`, ni Supabase.
 - `HEKTOR_CLIENT_SECRET`
 - `HEKTOR_API_VERSION`
 - `APPOINTMENT_EMAIL_LOGO_URL` : optionnel, URL de secours du logo si le parametre Supabase `app_setting.appointment_email_logo_url` n'est pas encore present.
+- `GOOGLE_WORKSPACE_DOMAIN` : domaine autorise, par defaut `gti-immobilier.fr`.
+- `GOOGLE_WORKSPACE_AUTH_MODE` : mode cible, par defaut `domain_wide_delegation`.
+- `GOOGLE_WORKSPACE_DWD_CLIENT_ID` : Client ID du compte de service a autoriser dans la console admin Google.
+- `GOOGLE_WORKSPACE_SERVICE_ACCOUNT_FILE` : chemin local du JSON de compte de service, jamais cote front.
+- `GOOGLE_WORKSPACE_SUBJECT_EMAIL` : compte Google sujet pour les premiers tests et les envois techniques, idealement `accueil@gti-immobilier.fr`.
+- `GOOGLE_WORKSPACE_SCOPES` : scopes autorises separes par virgule.
+
+Scopes initiaux conseilles avant les agents IA :
+
+```text
+https://www.googleapis.com/auth/gmail.send,
+https://www.googleapis.com/auth/calendar.freebusy,
+https://www.googleapis.com/auth/calendar.events
+```
+
+Les scopes de lecture Gmail (`gmail.metadata`, `gmail.readonly`) doivent rester une phase ulterieure, apres cadrage RGPD et journalisation.
+
+Important : pour les rendez-vous Agenda, le backend devra deleguer au compte Google du negociateur concerne, pas uniquement au compte `accueil`. Le compte `accueil` sert surtout aux notifications et aux tests techniques.
 
 ## Demarrage local
 

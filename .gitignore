@@ -5,6 +5,7 @@
 
 .venv/
 .tmp/
+secrets/
 __pycache__/
 *.pyc
 *.pyo
