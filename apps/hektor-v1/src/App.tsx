@@ -305,6 +305,7 @@ type HektorAdvancedFieldKey =
   | 'gardenSurface'
   | 'terraceCount'
   | 'garageCount'
+  | 'garageSurface'
   | 'parkingInsideCount'
   | 'parkingOutsideCount'
   | 'pool'
@@ -330,6 +331,8 @@ type HektorAdvancedField = {
   inputMode?: 'decimal' | 'numeric'
   multiline?: boolean
 }
+
+type HektorPropertyProfileKind = 'apartment' | 'house' | 'land' | 'garage' | 'building' | 'other'
 
 const hektorAdvancedSections: Array<{ title: string; tone: string; fields: HektorAdvancedField[] }> = [
   {
@@ -379,6 +382,7 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
       { key: 'gardenSurface', label: 'Jardin', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'terraceCount', label: 'Terrasse', inputMode: 'numeric' },
       { key: 'garageCount', label: 'Garage', inputMode: 'numeric' },
+      { key: 'garageSurface', label: 'Surface garage', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'parkingInsideCount', label: 'Parking int.', inputMode: 'numeric' },
       { key: 'parkingOutsideCount', label: 'Parking ext.', inputMode: 'numeric' },
       { key: 'pool', label: 'Piscine', inputMode: 'numeric' },
@@ -499,6 +503,7 @@ const draftAnnoncePropertyTypes: DraftAnnoncePropertyTypeOption[] = draftAnnonce
 ))
 
 type DraftAnnonceTypeProfile = {
+  kind: HektorPropertyProfileKind
   surfaceMode: 'habitable' | 'terrain' | 'garage' | 'none'
   showRooms: boolean
   showBedrooms: boolean
@@ -520,10 +525,31 @@ function draftAnnonceTypeOptionsForGroup(groupId: DraftAnnoncePropertyGroupId) {
   return draftAnnoncePropertyTypes.filter((item) => item.group === groupId)
 }
 
-function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
+function draftAnnoncePropertyProfileKindForTypeId(id: string): HektorPropertyProfileKind {
   const group = draftAnnoncePropertyGroupForTypeId(id).id
-  if (group === 'terrains') {
+  if (group === 'terrains') return 'land'
+  if (id === '15' || id === '16' || id === '29') return 'garage'
+  if (id === '21') return 'building'
+  if (group === 'maisons' || id === '17') return 'house'
+  if (group === 'autres') return 'other'
+  return 'apartment'
+}
+
+function draftAnnoncePropertyProfileKindFromText(value: string | null | undefined): HektorPropertyProfileKind {
+  const normalized = normalizeDraftAnnonceScanText(value)
+  if (!normalized) return 'apartment'
+  if (normalized.includes('terrain')) return 'land'
+  if (normalized.includes('garage') || normalized.includes('parking') || normalized.includes('cave')) return 'garage'
+  if (normalized.includes('immeuble')) return 'building'
+  if (normalized.includes('maison') || normalized.includes('villa') || normalized.includes('propriete') || normalized.includes('ferme') || normalized.includes('mas') || normalized.includes('chalet')) return 'house'
+  if (normalized.includes('appartement') || normalized.includes('studio') || normalized.includes('duplex') || normalized.includes('loft')) return 'apartment'
+  return 'other'
+}
+
+function draftAnnonceTypeProfileFromKind(kind: HektorPropertyProfileKind): DraftAnnonceTypeProfile {
+  if (kind === 'land') {
     return {
+      kind,
       surfaceMode: 'terrain',
       showRooms: false,
       showBedrooms: false,
@@ -537,8 +563,9 @@ function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
       showCoproDetails: false,
     }
   }
-  if (id === '15' || id === '16' || id === '29') {
+  if (kind === 'garage') {
     return {
+      kind,
       surfaceMode: 'garage',
       showRooms: false,
       showBedrooms: false,
@@ -552,8 +579,9 @@ function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
       showCoproDetails: false,
     }
   }
-  if (id === '21') {
+  if (kind === 'building') {
     return {
+      kind,
       surfaceMode: 'habitable',
       showRooms: false,
       showBedrooms: false,
@@ -567,8 +595,9 @@ function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
       showCoproDetails: false,
     }
   }
-  if (group === 'maisons' || id === '17') {
+  if (kind === 'house') {
     return {
+      kind,
       surfaceMode: 'habitable',
       showRooms: true,
       showBedrooms: true,
@@ -582,8 +611,9 @@ function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
       showCoproDetails: false,
     }
   }
-  if (group === 'autres') {
+  if (kind === 'other') {
     return {
+      kind,
       surfaceMode: 'habitable',
       showRooms: false,
       showBedrooms: false,
@@ -598,6 +628,7 @@ function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
     }
   }
   return {
+    kind,
     surfaceMode: 'habitable',
     showRooms: true,
     showBedrooms: true,
@@ -610,6 +641,10 @@ function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
     showOutdoorDetails: true,
     showCoproDetails: true,
   }
+}
+
+function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
+  return draftAnnonceTypeProfileFromKind(draftAnnoncePropertyProfileKindForTypeId(id))
 }
 
 function draftAnnoncePropertyTypeLabel(id: string) {
@@ -824,9 +859,13 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('prix', 'Prix public', { inputMode: 'decimal' }),
       wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
       wf('surfappart', 'Surface habitable', { inputMode: 'decimal' }),
+      wf('surfterrain', 'Surface terrain', { inputMode: 'decimal' }),
+      wf('SURFACE_GARAGE', 'Surface garage', { inputMode: 'decimal' }),
       wf('nbpieces', 'Pieces', { inputMode: 'numeric' }),
       wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
       wf('NB_NIVEAUX', 'Niveaux', { inputMode: 'numeric' }),
+      wf('JARDIN-', 'Jardin', { options: wizardUnknownOuiNon }),
+      wf('PISCINE-', 'Piscine', { options: wizardUnknownOuiNon }),
       wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
       wf('EXPOSITION', 'Exposition'),
       wf('vuee', 'Vue'),
@@ -1036,9 +1075,13 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('prix', 'Prix public', { inputMode: 'decimal' }),
       wf('PRIXNETVENDEUR', 'Prix net vendeur', { inputMode: 'decimal' }),
       wf('surfappart', 'Surface habitable', { inputMode: 'decimal' }),
+      wf('surfterrain', 'Surface terrain', { inputMode: 'decimal' }),
+      wf('SURFACE_GARAGE', 'Surface garage', { inputMode: 'decimal' }),
       wf('nbpieces', 'Pieces', { inputMode: 'numeric' }),
       wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
       wf('NB_NIVEAUX', 'Niveaux', { inputMode: 'numeric' }),
+      wf('JARDIN-', 'Jardin', { options: wizardUnknownOuiNon }),
+      wf('PISCINE-', 'Piscine', { options: wizardUnknownOuiNon }),
       wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
       wf('EXPOSITION', 'Exposition'),
       wf('vuee', 'Vue'),
@@ -1047,6 +1090,644 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     ],
   },
 ]
+
+const draftAnnonceAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKind, readonly DraftAnnonceAdvancedKey[]> = {
+  apartment: [
+    'description',
+    'netSellerPrice',
+    'carrezSurface',
+    'livingSurface',
+    'bathroomCount',
+    'showerRoomCount',
+    'wcCount',
+    'kitchen',
+    'exposure',
+    'view',
+    'interiorState',
+    'exteriorState',
+    'terraceCount',
+    'garageCount',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'constructionYear',
+    'dpeValue',
+    'gesValue',
+    'coproLots',
+    'coproCharges',
+    'coproQuotePart',
+    'coproWorksFund',
+  ],
+  house: [
+    'description',
+    'netSellerPrice',
+    'carrezSurface',
+    'livingSurface',
+    'bathroomCount',
+    'showerRoomCount',
+    'wcCount',
+    'kitchen',
+    'exposure',
+    'view',
+    'interiorState',
+    'exteriorState',
+    'landSurface',
+    'garden',
+    'terraceCount',
+    'garageCount',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'pool',
+    'constructionYear',
+    'dpeValue',
+    'gesValue',
+  ],
+  land: [
+    'description',
+    'netSellerPrice',
+    'landSurface',
+    'exteriorState',
+  ],
+  garage: [
+    'description',
+    'netSellerPrice',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+  ],
+  building: [
+    'description',
+    'netSellerPrice',
+    'carrezSurface',
+    'livingSurface',
+    'bathroomCount',
+    'showerRoomCount',
+    'wcCount',
+    'exteriorState',
+    'garageCount',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'constructionYear',
+    'dpeValue',
+    'gesValue',
+  ],
+  other: [
+    'description',
+    'netSellerPrice',
+    'exteriorState',
+    'constructionYear',
+    'dpeValue',
+    'gesValue',
+  ],
+}
+
+const draftAnnonceWizardCommonFieldsByStep: Record<number, readonly string[]> = {
+  1: ['prix', 'PRIXNETVENDEUR', 'NO_DOSSIER', 'dateenr'],
+  3: ['codepublique', 'villepublique', 'ADRESSE_COMPL', 'TRANSPORT', 'PROXIMITE', 'ENVIRONNEMENT', 'latitude', 'longitude'],
+  6: [
+    'PRIXNETVENDEUR',
+    'prix',
+    '_selecterHonoraires2',
+    '_tauxHonoraire2',
+    '_pourcentHonoraire2',
+    '_detailHonoraire2',
+    '_selecterHonoraires3',
+    '_tauxHonoraire3',
+    '_pourcentHonoraire3',
+    '_detailHonoraire3',
+    'masque',
+    'ESTIMATION_MONTANT',
+    'ESTIMATION_DATE',
+    'TRAVAUX',
+    'DEPOT_GARANTIE',
+    'TAXE_FONCIERE',
+    'CHARGES',
+    'CHARGES_DETAIL',
+  ],
+  7: ['diffusable', 'titre', 'corps', 'prix', 'PRIXNETVENDEUR', 'NO_DOSSIER', 'dateenr'],
+}
+
+const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Record<number, readonly string[]>> = {
+  apartment: {
+    1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
+    3: ['immeuble'],
+    4: ['typePiece', 'detailPiece', 'etagePiece', 'surfacePiece', 'notePublique', 'notePrivee', 'noteInterAgence'],
+    5: [
+      'Particularites',
+      'NB_CHAMBRES',
+      'NB_SDB',
+      'NB_SE',
+      'NB_WC',
+      'SURF_CARREZ',
+      'SURF_SEJOUR',
+      'CUISINE',
+      'CUISINE_EQUIPEMENT',
+      'EXPOSITION',
+      'vuee',
+      'floorState',
+      'ETAGE',
+      'DERNIER_ETAGE',
+      'NB_ETAGES',
+      'CAVE',
+      'SURFACE_CAVE',
+      'BALCON',
+      'NB_BALCON',
+      'SURFACE_BALCON',
+      'TERRASSE',
+      'NB_TERRASSE',
+      'SURFACE_TERRASSE',
+      'GARAGE_BOX',
+      'SURFACE_GARAGE',
+      'NB_PARK_INT',
+      'NB_PARK_EXT',
+      'RESIDENCE',
+      'TYPE_RESIDENCE',
+      'formatChauff',
+      'typeChauff',
+      'energieChauff',
+      'ASCENSEUR',
+      'ACCES_HANDI',
+      'climatisation',
+      'double_vitrage',
+      'interphone',
+      'visiophone',
+      'alarme',
+      'digicode',
+      'detecteur_fumee',
+      'ANNEE_CONS',
+      'etat_exterieur',
+      'etat_interieur',
+      'dpe_date',
+      'dpe_non_concerne',
+      'dpe_vierge',
+      'isDpeAltitude',
+      'dpe_cons',
+      'dpe_ges',
+      'valeurEnergieFinale',
+      'dpe_couts_min',
+      'dpe_couts_max',
+      'dpe_annee_reference',
+      'diagnostiqueur',
+      'syndic',
+      'diag_termites',
+      'diag_termites_date',
+      'diag_termites_commentaire',
+      'diag_amiante',
+      'diag_amiante_date',
+      'diag_amiante_commentaire',
+      'diag_electrique',
+      'diag_electrique_date',
+      'diag_electrique_commentaire',
+      'diag_loi_carrez',
+      'diag_loi_carrez_date',
+      'diag_loi_carrez_commentaire',
+      'diag_risques_nat_tech',
+      'diag_risques_nat_tech_date',
+      'diag_risques_nat_tech_commentaire',
+      'diag_plomb',
+      'diag_plomb_date',
+      'diag_plomb_commentaire',
+      'diag_gaz',
+      'diag_gaz_date',
+      'diag_gaz_commentaire',
+      'diag_assainissement',
+      'diag_assainissement_date',
+      'diag_assainissement_commentaire',
+      'copropriete',
+      'copropriete_lot',
+      'copropriete_nb_lot',
+      'copropriete_quote_part',
+      'montant_fonds_travaux',
+      'copropriete_plan_sauvegarde',
+      'copropriete_statut_syndicat',
+      'DISPO',
+      'DATE_LIBER',
+      'DATE_DISPO',
+      'CLES',
+      'moyens_visite',
+    ],
+    7: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
+  },
+  house: {
+    1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'surfterrain', 'JARDIN-', 'PISCINE-', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
+    4: ['typePiece', 'detailPiece', 'etagePiece', 'surfacePiece', 'notePublique', 'notePrivee', 'noteInterAgence'],
+    5: [
+      'Particularites',
+      'NB_CHAMBRES',
+      'NB_SDB',
+      'NB_SE',
+      'NB_WC',
+      'SURF_CARREZ',
+      'SURF_SEJOUR',
+      'CUISINE',
+      'CUISINE_EQUIPEMENT',
+      'EXPOSITION',
+      'vuee',
+      'MURS_MITOYENS',
+      'NB_ETAGES',
+      'CAVE',
+      'SURFACE_CAVE',
+      'TERRASSE',
+      'NB_TERRASSE',
+      'SURFACE_TERRASSE',
+      'GARAGE_BOX',
+      'SURFACE_GARAGE',
+      'NB_PARK_INT',
+      'NB_PARK_EXT',
+      'formatChauff',
+      'typeChauff',
+      'energieChauff',
+      'ACCES_HANDI',
+      'climatisation',
+      'climatisationspec',
+      'EAU',
+      'ASSAINISSEMENT',
+      'DISTRIBUTION_EAU',
+      'ENERGIE_EAU',
+      'cheminee',
+      'volets_elctriques',
+      'double_vitrage',
+      'triple_vitrage',
+      'porte_blindee',
+      'interphone',
+      'visiophone',
+      'alarme',
+      'digicode',
+      'detecteur_fumee',
+      'ANNEE_CONS',
+      'etat_exterieur',
+      'etat_interieur',
+      'dpe_date',
+      'dpe_non_concerne',
+      'dpe_vierge',
+      'isDpeAltitude',
+      'dpe_cons',
+      'dpe_ges',
+      'valeurEnergieFinale',
+      'dpe_couts_min',
+      'dpe_couts_max',
+      'dpe_annee_reference',
+      'diagnostiqueur',
+      'diag_termites',
+      'diag_termites_date',
+      'diag_termites_commentaire',
+      'diag_amiante',
+      'diag_amiante_date',
+      'diag_amiante_commentaire',
+      'diag_electrique',
+      'diag_electrique_date',
+      'diag_electrique_commentaire',
+      'diag_risques_nat_tech',
+      'diag_risques_nat_tech_date',
+      'diag_risques_nat_tech_commentaire',
+      'diag_plomb',
+      'diag_plomb_date',
+      'diag_plomb_commentaire',
+      'diag_gaz',
+      'diag_gaz_date',
+      'diag_gaz_commentaire',
+      'diag_assainissement',
+      'diag_assainissement_date',
+      'diag_assainissement_commentaire',
+      'DISPO',
+      'DATE_LIBER',
+      'DATE_DISPO',
+      'CLES',
+      'moyens_visite',
+    ],
+    7: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'surfterrain', 'JARDIN-', 'PISCINE-', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
+  },
+  land: {
+    1: ['surfterrain'],
+    5: [
+      'EAU',
+      'ASSAINISSEMENT',
+      'DISTRIBUTION_EAU',
+      'ENVIRONNEMENT',
+      'diag_termites',
+      'diag_termites_date',
+      'diag_termites_commentaire',
+      'diag_risques_nat_tech',
+      'diag_risques_nat_tech_date',
+      'diag_risques_nat_tech_commentaire',
+      'diag_assainissement',
+      'diag_assainissement_date',
+      'diag_assainissement_commentaire',
+      'CLES',
+      'moyens_visite',
+    ],
+    7: ['surfterrain'],
+  },
+  garage: {
+    1: ['SURFACE_GARAGE'],
+    5: [
+      'SURFACE_GARAGE',
+      'CAVE',
+      'SURFACE_CAVE',
+      'GARAGE_BOX',
+      'NB_PARK_INT',
+      'NB_PARK_EXT',
+      'ACCES_HANDI',
+      'EAU',
+      'CLES',
+      'moyens_visite',
+    ],
+    7: ['SURFACE_GARAGE'],
+  },
+  building: {
+    1: ['surfappart'],
+    3: ['immeuble'],
+    4: ['typePiece', 'detailPiece', 'etagePiece', 'surfacePiece', 'notePublique', 'notePrivee', 'noteInterAgence'],
+    5: [
+      'Particularites',
+      'SURF_CARREZ',
+      'SURF_SEJOUR',
+      'MURS_MITOYENS',
+      'NB_ETAGES',
+      'GARAGE_BOX',
+      'SURFACE_GARAGE',
+      'NB_PARK_INT',
+      'NB_PARK_EXT',
+      'RESIDENCE',
+      'TYPE_RESIDENCE',
+      'formatChauff',
+      'typeChauff',
+      'energieChauff',
+      'ASCENSEUR',
+      'ACCES_HANDI',
+      'EAU',
+      'ASSAINISSEMENT',
+      'DISTRIBUTION_EAU',
+      'ANNEE_CONS',
+      'etat_exterieur',
+      'dpe_date',
+      'dpe_cons',
+      'dpe_ges',
+      'diag_risques_nat_tech',
+      'diag_risques_nat_tech_date',
+      'diag_risques_nat_tech_commentaire',
+      'copropriete',
+      'copropriete_lot',
+      'copropriete_nb_lot',
+      'copropriete_quote_part',
+      'montant_fonds_travaux',
+      'DISPO',
+      'DATE_LIBER',
+      'DATE_DISPO',
+      'CLES',
+      'moyens_visite',
+    ],
+    7: ['surfappart'],
+  },
+  other: {
+    1: ['surfappart'],
+    5: [
+      'SURF_CARREZ',
+      'SURF_SEJOUR',
+      'GARAGE_BOX',
+      'SURFACE_GARAGE',
+      'NB_PARK_INT',
+      'NB_PARK_EXT',
+      'EAU',
+      'ASSAINISSEMENT',
+      'ANNEE_CONS',
+      'etat_exterieur',
+      'dpe_cons',
+      'dpe_ges',
+      'diag_risques_nat_tech',
+      'diag_risques_nat_tech_date',
+      'diag_risques_nat_tech_commentaire',
+      'CLES',
+      'moyens_visite',
+    ],
+    7: ['surfappart'],
+  },
+}
+
+function isDraftAnnonceAdvancedFieldVisibleForProfile(profileKind: HektorPropertyProfileKind, key: DraftAnnonceAdvancedKey) {
+  return draftAnnonceAdvancedVisibleFieldsByProfile[profileKind].includes(key)
+}
+
+function isDraftAnnonceWizardFieldVisibleForProfile(profileKind: HektorPropertyProfileKind, step: number, name: string) {
+  const common = draftAnnonceWizardCommonFieldsByStep[step] ?? []
+  const profile = draftAnnonceWizardFieldsByProfile[profileKind][step] ?? []
+  return common.includes(name) || profile.includes(name)
+}
+
+function filterDraftAnnonceWizardGroupsForProfile(groups: DraftAnnonceWizardGroup[], profileKind: HektorPropertyProfileKind): DraftAnnonceWizardGroup[] {
+  return groups
+    .map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => isDraftAnnonceWizardFieldVisibleForProfile(profileKind, section.step, field.name)),
+    }))
+    .filter((section) => section.fields.length > 0)
+}
+
+function filterDraftAnnonceWizardFieldsForProfile(fields: Record<string, string>, profileKind: HektorPropertyProfileKind) {
+  const visibleNames = new Set(
+    filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, profileKind)
+      .flatMap((section) => section.fields.map((field) => field.name)),
+  )
+  return Object.fromEntries(Object.entries(fields).filter(([key]) => visibleNames.has(key)))
+}
+
+const hektorAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKind, readonly HektorAdvancedFieldKey[]> = {
+  apartment: [
+    'title',
+    'description',
+    'address',
+    'postalCode',
+    'city',
+    'building',
+    'transport',
+    'proximity',
+    'environment',
+    'latitude',
+    'longitude',
+    'price',
+    'surface',
+    'roomCount',
+    'bedroomCount',
+    'bathroomCount',
+    'showerRoomCount',
+    'wcCount',
+    'kitchen',
+    'exposure',
+    'view',
+    'interiorState',
+    'exteriorState',
+    'landSurface',
+    'gardenSurface',
+    'terraceCount',
+    'garageCount',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'pool',
+    'dpeValue',
+    'gesValue',
+    'constructionYear',
+    'diagnosticRiskComment',
+    'coproLots',
+    'coproCharges',
+    'coproQuotePart',
+    'coproWorksFund',
+    'mandateNumber',
+    'mandateType',
+    'mandateStartDate',
+    'mandateEndDate',
+    'netSellerPrice',
+    'fees',
+  ],
+  house: [
+    'title',
+    'description',
+    'address',
+    'postalCode',
+    'city',
+    'transport',
+    'proximity',
+    'environment',
+    'latitude',
+    'longitude',
+    'price',
+    'surface',
+    'roomCount',
+    'bedroomCount',
+    'bathroomCount',
+    'showerRoomCount',
+    'wcCount',
+    'kitchen',
+    'exposure',
+    'view',
+    'interiorState',
+    'exteriorState',
+    'landSurface',
+    'gardenSurface',
+    'terraceCount',
+    'garageCount',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'pool',
+    'dpeValue',
+    'gesValue',
+    'constructionYear',
+    'diagnosticRiskComment',
+    'mandateNumber',
+    'mandateType',
+    'mandateStartDate',
+    'mandateEndDate',
+    'netSellerPrice',
+    'fees',
+  ],
+  land: [
+    'title',
+    'description',
+    'address',
+    'postalCode',
+    'city',
+    'transport',
+    'proximity',
+    'environment',
+    'latitude',
+    'longitude',
+    'price',
+    'landSurface',
+    'diagnosticRiskComment',
+    'mandateNumber',
+    'mandateType',
+    'mandateStartDate',
+    'mandateEndDate',
+    'netSellerPrice',
+    'fees',
+  ],
+  garage: [
+    'title',
+    'description',
+    'address',
+    'postalCode',
+    'city',
+    'transport',
+    'proximity',
+    'environment',
+    'latitude',
+    'longitude',
+    'price',
+    'garageSurface',
+    'garageCount',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'mandateNumber',
+    'mandateType',
+    'mandateStartDate',
+    'mandateEndDate',
+    'netSellerPrice',
+    'fees',
+  ],
+  building: [
+    'title',
+    'description',
+    'address',
+    'postalCode',
+    'city',
+    'building',
+    'transport',
+    'proximity',
+    'environment',
+    'latitude',
+    'longitude',
+    'price',
+    'surface',
+    'exteriorState',
+    'garageCount',
+    'garageSurface',
+    'parkingInsideCount',
+    'parkingOutsideCount',
+    'dpeValue',
+    'gesValue',
+    'constructionYear',
+    'diagnosticRiskComment',
+    'mandateNumber',
+    'mandateType',
+    'mandateStartDate',
+    'mandateEndDate',
+    'netSellerPrice',
+    'fees',
+  ],
+  other: [
+    'title',
+    'description',
+    'address',
+    'postalCode',
+    'city',
+    'transport',
+    'proximity',
+    'environment',
+    'latitude',
+    'longitude',
+    'price',
+    'surface',
+    'exteriorState',
+    'garageSurface',
+    'dpeValue',
+    'gesValue',
+    'constructionYear',
+    'diagnosticRiskComment',
+    'mandateNumber',
+    'mandateType',
+    'mandateStartDate',
+    'mandateEndDate',
+    'netSellerPrice',
+    'fees',
+  ],
+}
+
+function isHektorAdvancedFieldVisibleForProfile(profileKind: HektorPropertyProfileKind, key: HektorAdvancedFieldKey) {
+  return hektorAdvancedVisibleFieldsByProfile[profileKind].includes(key)
+}
 
 const draftAnnonceStepOrder = ['offre', 'photos', 'secteur', 'composition', 'details', 'mandatPrix', 'diffusion'] as const
 type DraftAnnonceStepKey = typeof draftAnnonceStepOrder[number]
@@ -1111,6 +1792,15 @@ function rawDetailFirstProp(detail: DossierDetailPayload, group: string, keys: s
   return ''
 }
 
+function hektorPropertyProfileKindForDetail(
+  dossier: Pick<Dossier, 'type_bien'>,
+  detail: DossierDetailPayload,
+): HektorPropertyProfileKind {
+  const rawTypeId = rawDetailProp(detail, 'offre_type', 'idtype')
+  if (rawTypeId) return draftAnnoncePropertyProfileKindForTypeId(rawTypeId)
+  return draftAnnoncePropertyProfileKindFromText(dossier.type_bien)
+}
+
 function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_mandat'>, detail: DossierDetailPayload) {
   return {
     title: dossier.titre_bien ?? '',
@@ -1140,6 +1830,7 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
     gardenSurface: rawDetailProp(detail, 'ag_exterieur', 'SURFACE_JARDIN'),
     terraceCount: rawDetailFirstProp(detail, 'ag_exterieur', ['NB_TERRASSE', 'TERRASSE']),
     garageCount: rawDetailProp(detail, 'ag_exterieur', 'GARAGE_BOX'),
+    garageSurface: rawDetailProp(detail, 'ag_exterieur', 'SURFACE_GARAGE'),
     parkingInsideCount: rawDetailProp(detail, 'ag_exterieur', 'NB_PARK_INT'),
     parkingOutsideCount: rawDetailProp(detail, 'ag_exterieur', 'NB_PARK_EXT'),
     pool: rawDetailProp(detail, 'ag_exterieur', 'PISCINE'),
@@ -1168,7 +1859,7 @@ const hektorFinancialFieldKeys = new Set<HektorAdvancedFieldKey>([
 ])
 
 function HektorAnnonceUpdateForm(props: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email'>
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email' | 'type_bien'>
   detail: DossierDetailPayload
   compact?: boolean
   fieldPanel?: boolean
@@ -1181,13 +1872,21 @@ function HektorAnnonceUpdateForm(props: {
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const profileKind = hektorPropertyProfileKindForDetail(dossier, detail)
+  const visibleSections = hektorAdvancedSections
+    .map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => isHektorAdvancedFieldVisibleForProfile(profileKind, field.key)),
+    }))
+    .filter((section) => section.fields.length > 0)
+  const visibleFieldKeys = new Set(visibleSections.flatMap((section) => section.fields.map((field) => field.key)))
 
   useEffect(() => {
     setValues(buildHektorAdvancedDraft(dossier, detail))
     setMessage(null)
     setError(null)
     setPending(false)
-  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_mandat, detail.detail_raw_json, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
+  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_mandat, dossier.type_bien, detail.detail_raw_json, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
 
   const updateField = (key: HektorAdvancedFieldKey, value: string) => {
     setValues((current) => ({ ...current, [key]: value }))
@@ -1203,7 +1902,7 @@ function HektorAnnonceUpdateForm(props: {
     }
     const baseline = buildHektorAdvancedDraft(dossier, detail)
     const changedValues = Object.fromEntries(
-      Object.entries(values).filter(([key, value]) => String(value ?? '').trim() !== String(baseline[key as HektorAdvancedFieldKey] ?? '').trim()),
+      Object.entries(values).filter(([key, value]) => visibleFieldKeys.has(key as HektorAdvancedFieldKey) && String(value ?? '').trim() !== String(baseline[key as HektorAdvancedFieldKey] ?? '').trim()),
     ) as Partial<Record<HektorAdvancedFieldKey, string>>
     if (Object.keys(changedValues).length === 0) {
       setError('Aucune modification a envoyer.')
@@ -1218,7 +1917,10 @@ function HektorAnnonceUpdateForm(props: {
     try {
       const job = await createUpdateHektorAnnonceFieldsJob({
         dossier,
-        fields: changedValues,
+        fields: {
+          ...changedValues,
+          propertyProfile: profileKind,
+        },
         priority: 14,
       })
       props.onJobCreated?.(job)
@@ -1241,7 +1943,7 @@ function HektorAnnonceUpdateForm(props: {
         </div>
       </div>
       <div className="hektor-advanced-sections">
-        {hektorAdvancedSections.map((section) => (
+        {visibleSections.map((section) => (
           <section key={section.title} className={`hektor-advanced-section hektor-advanced-section-${section.tone}`}>
             <div className="hektor-advanced-section-head">
               <strong>{section.title}</strong>
@@ -6621,6 +7323,8 @@ export default function App() {
     : draftAnnonceTypeRules.surfaceMode === 'garage'
       ? draftAnnonceAdvanced.garageSurface
       : draftAnnonceSurface
+  const draftAnnonceVisibleWizardGroups = filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, draftAnnonceTypeRules.kind)
+  const draftAnnonceVisibleWizardFieldNames = new Set(draftAnnonceVisibleWizardGroups.flatMap((section) => section.fields.map((field) => field.name)))
   const draftAnnonceCoreFilledCount = [
     draftAnnonceTitle,
     draftAnnonceAgency,
@@ -6634,14 +7338,18 @@ export default function App() {
     draftAnnonceTypeRules.showBedrooms ? draftAnnonceBedroomCount : '',
     draftAnnonceTypeRules.showLevels ? draftAnnonceLevelCount : '',
   ].filter((value) => value.trim()).length
-  const draftAnnonceAdvancedFilledCount = Object.values(draftAnnonceAdvanced).filter((value) => value.trim()).length
-  const draftAnnonceWizardFilledCount = Object.values(draftAnnonceWizardFields).filter((value) => value.trim()).length
-  const draftAnnonceOfferGroups = draftAnnonceWizardGroups.filter((section) => section.step === 1)
-  const draftAnnonceSecteurGroups = draftAnnonceWizardGroups.filter((section) => section.step === 3)
-  const draftAnnonceCompositionGroups = draftAnnonceWizardGroups.filter((section) => section.step === 4)
-  const draftAnnonceDetailGroups = draftAnnonceWizardGroups.filter((section) => section.step === 5)
-  const draftAnnonceMandatGroups = draftAnnonceWizardGroups.filter((section) => section.step === 6)
-  const draftAnnonceDiffusionGroups = draftAnnonceWizardGroups.filter((section) => section.step === 7)
+  const draftAnnonceAdvancedFilledCount = Object.entries(draftAnnonceAdvanced)
+    .filter(([key, value]) => isDraftAnnonceAdvancedFieldVisibleForProfile(draftAnnonceTypeRules.kind, key as DraftAnnonceAdvancedKey) && value.trim())
+    .length
+  const draftAnnonceWizardFilledCount = Object.entries(draftAnnonceWizardFields)
+    .filter(([key, value]) => draftAnnonceVisibleWizardFieldNames.has(key) && value.trim())
+    .length
+  const draftAnnonceOfferGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 1)
+  const draftAnnonceSecteurGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 3)
+  const draftAnnonceCompositionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 4)
+  const draftAnnonceDetailGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 5)
+  const draftAnnonceMandatGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 6)
+  const draftAnnonceDiffusionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 7)
   const draftAnnonceHasMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
   const draftAnnonceCreationStatus = screen === 'estimations' ? 'estimation' : 'active'
   const draftAnnonceCreationStatusLabel = draftAnnonceCreationStatus === 'estimation' ? 'Estimation' : 'Actif'
@@ -7908,13 +8616,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function isDraftAnnonceAdvancedFieldVisible(key: DraftAnnonceAdvancedKey) {
-    if (key === 'landSurface') return draftAnnonceTypeRules.showGardenPool || draftAnnonceTypeRules.surfaceMode === 'terrain'
-    if (key === 'garden' || key === 'pool') return draftAnnonceTypeRules.showGardenPool
-    if (key === 'garageSurface') return draftAnnonceTypeRules.surfaceMode === 'garage'
-    if (['bathroomCount', 'showerRoomCount', 'wcCount', 'kitchen', 'livingSurface', 'carrezSurface'].includes(key)) return draftAnnonceTypeRules.showInteriorDetails
-    if (['terraceCount', 'garageCount', 'parkingInsideCount', 'parkingOutsideCount'].includes(key)) return draftAnnonceTypeRules.showOutdoorDetails
-    if (['coproLots', 'coproCharges', 'coproQuotePart', 'coproWorksFund'].includes(key)) return draftAnnonceTypeRules.showCoproDetails
-    return true
+    return isDraftAnnonceAdvancedFieldVisibleForProfile(draftAnnonceTypeRules.kind, key)
   }
 
   function renderDraftAnnonceAdvancedSection(section: (typeof draftAnnonceAdvancedSections)[number]) {
@@ -8071,11 +8773,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
     const queuedPhotos = draftAnnoncePhotoDrafts.map(({ id, file, visible }) => ({ id, file, visible }))
-    const hektorWizardFields = { ...draftAnnonceWizardFields }
+    const hektorWizardFields = filterDraftAnnonceWizardFieldsForProfile(draftAnnonceWizardFields, draftAnnonceTypeRules.kind)
     const setHektorWizardField = (key: string, value: string) => {
       const clean = value.trim()
       if (clean) hektorWizardFields[key] = clean
     }
+    const draftAdvancedValue = (key: DraftAnnonceAdvancedKey) => (
+      isDraftAnnonceAdvancedFieldVisibleForProfile(draftAnnonceTypeRules.kind, key) ? draftAnnonceAdvanced[key] : null
+    )
     if (draftAnnonceTypeRules.surfaceMode === 'terrain') setHektorWizardField('surfterrain', draftAnnonceAdvanced.landSurface)
     if (draftAnnonceTypeRules.surfaceMode === 'garage') setHektorWizardField('SURFACE_GARAGE', draftAnnonceAdvanced.garageSurface)
     if (draftAnnonceTypeRules.showLevels) setHektorWizardField('NB_NIVEAUX', draftAnnonceLevelCount)
@@ -8101,42 +8806,43 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         hektorUserEmail: selectedDraftNegotiator.email,
         creationStatus: draftAnnonceCreationStatus,
         propertyType: draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
+        propertyProfile: draftAnnonceTypeRules.kind,
         hektorIdType: draftAnnonceTypeId,
         offerType: 'sale',
         address: draftAnnonceAddress,
         postalCode: draftAnnoncePostalCode,
         city: draftAnnonceCity,
         price: draftAnnoncePrice,
-        netSellerPrice: draftAnnonceAdvanced.netSellerPrice,
+        netSellerPrice: draftAdvancedValue('netSellerPrice'),
         surface: draftAnnonceTypeRules.surfaceMode === 'habitable' ? draftAnnonceSurface : null,
-        carrezSurface: draftAnnonceAdvanced.carrezSurface,
-        livingSurface: draftAnnonceAdvanced.livingSurface,
+        carrezSurface: draftAdvancedValue('carrezSurface'),
+        livingSurface: draftAdvancedValue('livingSurface'),
         roomCount: draftAnnonceTypeRules.showRooms ? draftAnnonceRoomCount : null,
         bedroomCount: draftAnnonceTypeRules.showBedrooms ? draftAnnonceBedroomCount : null,
         levelCount: draftAnnonceTypeRules.showLevels ? draftAnnonceLevelCount : null,
-        bathroomCount: draftAnnonceAdvanced.bathroomCount,
-        showerRoomCount: draftAnnonceAdvanced.showerRoomCount,
-        wcCount: draftAnnonceAdvanced.wcCount,
-        kitchen: draftAnnonceAdvanced.kitchen,
-        exposure: draftAnnonceAdvanced.exposure,
-        view: draftAnnonceAdvanced.view,
-        interiorState: draftAnnonceAdvanced.interiorState,
-        exteriorState: draftAnnonceAdvanced.exteriorState,
+        bathroomCount: draftAdvancedValue('bathroomCount'),
+        showerRoomCount: draftAdvancedValue('showerRoomCount'),
+        wcCount: draftAdvancedValue('wcCount'),
+        kitchen: draftAdvancedValue('kitchen'),
+        exposure: draftAdvancedValue('exposure'),
+        view: draftAdvancedValue('view'),
+        interiorState: draftAdvancedValue('interiorState'),
+        exteriorState: draftAdvancedValue('exteriorState'),
         landSurface: draftAnnonceTypeRules.surfaceMode === 'terrain' || draftAnnonceTypeRules.showGardenPool ? draftAnnonceAdvanced.landSurface : null,
-        garden: draftAnnonceTypeRules.showGardenPool ? draftAnnonceAdvanced.garden : null,
-        terraceCount: draftAnnonceAdvanced.terraceCount,
-        garageCount: draftAnnonceTypeRules.showGarageCount ? draftAnnonceAdvanced.garageCount : null,
-        garageSurface: draftAnnonceTypeRules.surfaceMode === 'garage' ? draftAnnonceAdvanced.garageSurface : null,
-        parkingInsideCount: draftAnnonceAdvanced.parkingInsideCount,
-        parkingOutsideCount: draftAnnonceAdvanced.parkingOutsideCount,
-        pool: draftAnnonceTypeRules.showGardenPool ? draftAnnonceAdvanced.pool : null,
-        constructionYear: draftAnnonceAdvanced.constructionYear,
-        dpeValue: draftAnnonceAdvanced.dpeValue,
-        gesValue: draftAnnonceAdvanced.gesValue,
-        coproLots: draftAnnonceAdvanced.coproLots,
-        coproCharges: draftAnnonceAdvanced.coproCharges,
-        coproQuotePart: draftAnnonceAdvanced.coproQuotePart,
-        coproWorksFund: draftAnnonceAdvanced.coproWorksFund,
+        garden: draftAdvancedValue('garden'),
+        terraceCount: draftAdvancedValue('terraceCount'),
+        garageCount: draftAdvancedValue('garageCount'),
+        garageSurface: draftAdvancedValue('garageSurface'),
+        parkingInsideCount: draftAdvancedValue('parkingInsideCount'),
+        parkingOutsideCount: draftAdvancedValue('parkingOutsideCount'),
+        pool: draftAdvancedValue('pool'),
+        constructionYear: draftAdvancedValue('constructionYear'),
+        dpeValue: draftAdvancedValue('dpeValue'),
+        gesValue: draftAdvancedValue('gesValue'),
+        coproLots: draftAdvancedValue('coproLots'),
+        coproCharges: draftAdvancedValue('coproCharges'),
+        coproQuotePart: draftAdvancedValue('coproQuotePart'),
+        coproWorksFund: draftAdvancedValue('coproWorksFund'),
         wizardFields: hektorWizardFields,
         note: draftAnnonceNote,
         initialMandant: hasInitialMandant ? {

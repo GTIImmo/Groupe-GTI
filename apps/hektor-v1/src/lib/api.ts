@@ -4710,6 +4710,7 @@ export async function createUpdateHektorMandantContactJob(input: {
 }
 
 export type HektorAnnonceUpdateFields = {
+  propertyProfile?: string | null
   title?: string | null
   description?: string | null
   address?: string | null
@@ -4740,6 +4741,7 @@ export type HektorAnnonceUpdateFields = {
   gardenSurface?: string | number | null
   terraceCount?: string | number | null
   garageCount?: string | number | null
+  garageSurface?: string | number | null
   parkingInsideCount?: string | number | null
   parkingOutsideCount?: string | number | null
   pool?: string | number | null
@@ -4776,6 +4778,7 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanFields = {
+    property_profile: input.fields.propertyProfile?.trim() || null,
     title: input.fields.title?.trim() || null,
     description: input.fields.description?.trim() || null,
     address: input.fields.address?.trim() || null,
@@ -4805,6 +4808,7 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
     garden_surface: input.fields.gardenSurface == null ? null : String(input.fields.gardenSurface).trim() || null,
     terrace_count: input.fields.terraceCount == null ? null : String(input.fields.terraceCount).trim() || null,
     garage_count: input.fields.garageCount == null ? null : String(input.fields.garageCount).trim() || null,
+    garage_surface: input.fields.garageSurface == null ? null : String(input.fields.garageSurface).trim() || null,
     parking_inside_count: input.fields.parkingInsideCount == null ? null : String(input.fields.parkingInsideCount).trim() || null,
     parking_outside_count: input.fields.parkingOutsideCount == null ? null : String(input.fields.parkingOutsideCount).trim() || null,
     pool: input.fields.pool == null ? null : String(input.fields.pool).trim() || null,
@@ -5149,6 +5153,7 @@ export type HektorDraftAnnonceJobInput = {
   hektorUserEmail?: string | null
   creationStatus?: 'active' | 'estimation'
   propertyType?: string | null
+  propertyProfile?: string | null
   hektorIdType?: string | number | null
   offerType?: 'sale' | 'rental'
   address?: string | null
@@ -5208,6 +5213,7 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       status_label: creationStatus === 'estimation' ? 'Estimation' : 'Actif',
       statut_annonce: creationStatus === 'estimation' ? '1' : '2',
       property_type: input.propertyType?.trim() || 'Appartement',
+      property_profile: input.propertyProfile?.trim() || null,
       hektor_id_type: input.hektorIdType == null ? '2' : String(input.hektorIdType).trim() || '2',
       offer_type: input.offerType ?? 'sale',
       address: input.address?.trim() || null,

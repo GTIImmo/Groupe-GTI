@@ -3417,6 +3417,10 @@ function setWizardDate(values, target, payload, aliases) {
   if (value != null) values.set(target, value);
 }
 
+function setWizardDateIfPresent(values, target, payload, aliases) {
+  if (values.has(target)) setWizardDate(values, target, payload, aliases);
+}
+
 function setWizardDefault(values, target, value) {
   if (!values.has(target)) values.set(target, value);
 }
@@ -3537,6 +3541,196 @@ function exactHektorWizardFields(payload) {
   return source && typeof source === "object" && !Array.isArray(source) ? source : {};
 }
 
+const HEKTOR_PROFILE_ALIASES = new Set(["apartment", "house", "land", "garage", "building", "other"]);
+
+function normalizeProfileText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function hektorPropertyProfileKindFromTypeId(value) {
+  const id = String(value || "").trim();
+  if (["5", "43", "44", "45"].includes(id)) return "land";
+  if (["15", "16", "29"].includes(id)) return "garage";
+  if (id === "21") return "building";
+  if (["1", "10", "11", "17", "22", "25", "27", "28", "30", "39", "49"].includes(id)) return "house";
+  if (["2", "4", "18", "26", "31", "41", "50"].includes(id)) return "apartment";
+  return null;
+}
+
+function hektorPropertyProfileKindFromText(value) {
+  const text = normalizeProfileText(value);
+  if (!text) return null;
+  if (text.includes("terrain")) return "land";
+  if (text.includes("garage") || text.includes("parking") || text.includes("cave")) return "garage";
+  if (text.includes("immeuble")) return "building";
+  if (text.includes("maison") || text.includes("villa") || text.includes("propriete") || text.includes("ferme") || text.includes("mas") || text.includes("chalet")) return "house";
+  if (text.includes("appartement") || text.includes("studio") || text.includes("duplex") || text.includes("loft")) return "apartment";
+  return "other";
+}
+
+function resolveHektorPropertyProfile(payload) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  const direct = normalizeProfileText(source.property_profile || source.propertyProfile || source.type_profile || source.typeProfile || "");
+  if (HEKTOR_PROFILE_ALIASES.has(direct)) return { kind: direct, explicit: true };
+  const typeId = source.hektor_id_type || source.idType || source.id_type || source.idtype || source.idTypeWizard;
+  const fromId = hektorPropertyProfileKindFromTypeId(typeId);
+  if (fromId) return { kind: fromId, explicit: true };
+  const fromText = hektorPropertyProfileKindFromText(source.property_type || source.type_bien || source.typeBien);
+  if (fromText) return { kind: fromText, explicit: true };
+  return { kind: "apartment", explicit: false };
+}
+
+const HEKTOR_WIZARD_COMMON_FIELDS = new Set([
+  "prix", "PRIXNETVENDEUR", "NO_DOSSIER", "dateenr", "idpays", "NEGOCIATEUR", "codepublique", "villepublique",
+  "idCodepublique", "idVillepublique", "idLocalitePrivee", "ADRESSE_COMPL", "adresse", "TRANSPORT",
+  "PROXIMITE", "ENVIRONNEMENT", "latitude", "longitude", "diffusable", "titre", "corps",
+  "_selecterHonoraires2", "_tauxHonoraire2", "_pourcentHonoraire2", "_detailHonoraire2",
+  "_selecterHonoraires3", "_tauxHonoraire3", "_pourcentHonoraire3", "_detailHonoraire3",
+  "masque", "ESTIMATION_MONTANT", "ESTIMATION_DATE", "TRAVAUX", "DEPOT_GARANTIE",
+  "TAXE_FONCIERE", "TAXE_HABITATION", "CHARGES", "CHARGES_DETAIL", "Loc_EstimationLoyer",
+  "Loc_ChargeLocative", "Loc_Occupation",
+]);
+
+const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
+  apartment: new Set([
+    "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "GARAGE_BOX", "EXPOSITION", "vuee",
+    "immeuble", "typePiece", "detailPiece", "etagePiece", "surfacePiece", "notePublique",
+    "notePrivee", "noteInterAgence", "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ",
+    "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "floorState", "ETAGE", "DERNIER_ETAGE",
+    "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON",
+    "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
+    "NB_PARK_EXT", "RESIDENCE", "TYPE_RESIDENCE", "ASCENSEUR", "ACCES_HANDI",
+    "climatisation", "double_vitrage", "interphone", "visiophone", "alarme", "digicode",
+    "detecteur_fumee", "ANNEE_CONS", "etat_exterieur", "etat_interieur", "dpe_date",
+    "dpe_non_concerne", "dpe_vierge", "isDpeAltitude", "dpe_cons", "dpe_ges",
+    "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference",
+    "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante",
+    "diag_amiante_date", "diag_amiante_commentaire", "diag_electrique", "diag_electrique_date",
+    "diag_electrique_commentaire", "diag_loi_carrez", "diag_loi_carrez_date",
+    "diag_loi_carrez_commentaire", "diag_risques_nat_tech", "diag_risques_nat_tech_date",
+    "diag_risques_nat_tech_commentaire", "diag_plomb", "diag_plomb_date",
+    "diag_plomb_commentaire", "diag_gaz", "diag_gaz_date", "diag_gaz_commentaire",
+    "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire",
+    "copropriete", "copropriete_lot", "copropriete_nb_lot", "copropriete_quote_part",
+    "montant_fonds_travaux", "copropriete_plan_sauvegarde", "copropriete_statut_syndicat",
+    "DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite",
+  ]),
+  house: new Set([
+    "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "surfterrain", "JARDIN-",
+    "PISCINE-", "GARAGE_BOX", "EXPOSITION", "vuee", "typePiece", "detailPiece",
+    "etagePiece", "surfacePiece", "notePublique", "notePrivee", "noteInterAgence",
+    "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE",
+    "CUISINE_EQUIPEMENT", "MURS_MITOYENS", "NB_ETAGES", "CAVE", "SURFACE_CAVE",
+    "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
+    "NB_PARK_EXT", "ACCES_HANDI", "climatisation", "EAU", "ASSAINISSEMENT",
+    "DISTRIBUTION_EAU", "ENERGIE_EAU", "cheminee", "volets_elctriques", "double_vitrage",
+    "triple_vitrage", "porte_blindee", "interphone", "visiophone", "alarme", "digicode",
+    "detecteur_fumee", "ANNEE_CONS", "etat_exterieur", "etat_interieur", "dpe_date",
+    "dpe_non_concerne", "dpe_vierge", "isDpeAltitude", "dpe_cons", "dpe_ges",
+    "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference",
+    "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante",
+    "diag_amiante_date", "diag_amiante_commentaire", "diag_electrique", "diag_electrique_date",
+    "diag_electrique_commentaire", "diag_risques_nat_tech", "diag_risques_nat_tech_date",
+    "diag_risques_nat_tech_commentaire", "diag_plomb", "diag_plomb_date",
+    "diag_plomb_commentaire", "diag_gaz", "diag_gaz_date", "diag_gaz_commentaire",
+    "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire",
+    "DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite",
+  ]),
+  land: new Set([
+    "surfterrain", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "diag_termites",
+    "diag_termites_date", "diag_termites_commentaire", "diag_risques_nat_tech",
+    "diag_risques_nat_tech_date", "diag_risques_nat_tech_commentaire", "diag_assainissement",
+    "diag_assainissement_date", "diag_assainissement_commentaire", "CLES", "moyens_visite",
+  ]),
+  garage: new Set([
+    "SURFACE_GARAGE", "CAVE", "SURFACE_CAVE", "GARAGE_BOX", "NB_PARK_INT", "NB_PARK_EXT",
+    "ACCES_HANDI", "EAU", "CLES", "moyens_visite",
+  ]),
+  building: new Set([
+    "surfappart", "immeuble", "typePiece", "detailPiece", "etagePiece", "surfacePiece",
+    "notePublique", "notePrivee", "noteInterAgence", "SURF_CARREZ", "SURF_SEJOUR",
+    "MURS_MITOYENS", "NB_ETAGES", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT",
+    "NB_PARK_EXT", "RESIDENCE", "TYPE_RESIDENCE", "ASCENSEUR", "ACCES_HANDI", "EAU",
+    "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ANNEE_CONS", "etat_exterieur", "dpe_date",
+    "dpe_cons", "dpe_ges", "diag_risques_nat_tech", "diag_risques_nat_tech_date",
+    "diag_risques_nat_tech_commentaire", "copropriete", "copropriete_lot",
+    "copropriete_nb_lot", "copropriete_quote_part", "montant_fonds_travaux", "DISPO",
+    "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite",
+  ]),
+  other: new Set([
+    "surfappart", "SURF_CARREZ", "SURF_SEJOUR", "GARAGE_BOX", "SURFACE_GARAGE",
+    "NB_PARK_INT", "NB_PARK_EXT", "EAU", "ASSAINISSEMENT", "ANNEE_CONS", "etat_exterieur",
+    "dpe_cons", "dpe_ges", "diag_risques_nat_tech", "diag_risques_nat_tech_date",
+    "diag_risques_nat_tech_commentaire", "CLES", "moyens_visite",
+  ]),
+};
+
+function isHektorWizardFieldAllowedForPayload(payload, key) {
+  const profile = resolveHektorPropertyProfile(payload);
+  if (!profile.explicit) return true;
+  if (HEKTOR_WIZARD_COMMON_FIELDS.has(key)) return true;
+  const allowed = HEKTOR_WIZARD_FIELDS_BY_PROFILE[profile.kind] || HEKTOR_WIZARD_FIELDS_BY_PROFILE.apartment;
+  return allowed.has(key);
+}
+
+const HEKTOR_UPDATE_COMMON_FIELDS = new Set([
+  "title", "description", "address", "postal_code", "city", "building", "transport",
+  "proximity", "environment", "latitude", "longitude", "price", "net_seller_price",
+  "fees", "mandate_number", "mandate_type", "mandate_start_date", "mandate_end_date",
+]);
+
+const HEKTOR_UPDATE_FIELDS_BY_PROFILE = {
+  apartment: new Set([
+    "surface", "carrez_surface", "room_count", "bedroom_count", "level_count",
+    "bathroom_count", "shower_room_count", "wc_count", "kitchen", "exposure", "view",
+    "interior_state", "exterior_state", "garden_surface", "terrace_count", "garage_count",
+    "garage_surface", "parking_inside_count", "parking_outside_count", "dpe_value",
+    "ges_value", "construction_year", "diagnostic_risk_comment", "copro_lots",
+    "copro_charges", "copro_quote_part", "copro_works_fund",
+  ]),
+  house: new Set([
+    "surface", "carrez_surface", "room_count", "bedroom_count", "level_count",
+    "bathroom_count", "shower_room_count", "wc_count", "kitchen", "exposure", "view",
+    "interior_state", "exterior_state", "land_surface", "garden_surface", "terrace_count",
+    "garage_count", "garage_surface", "parking_inside_count", "parking_outside_count",
+    "pool", "dpe_value", "ges_value", "construction_year", "diagnostic_risk_comment",
+  ]),
+  land: new Set([
+    "land_surface", "exterior_state", "diagnostic_risk_comment",
+  ]),
+  garage: new Set([
+    "garage_surface", "garage_count", "parking_inside_count", "parking_outside_count",
+    "exterior_state",
+  ]),
+  building: new Set([
+    "surface", "carrez_surface", "garage_count", "garage_surface", "parking_inside_count",
+    "parking_outside_count", "exterior_state", "dpe_value", "ges_value", "construction_year",
+    "diagnostic_risk_comment", "copro_lots", "copro_charges", "copro_quote_part",
+    "copro_works_fund",
+  ]),
+  other: new Set([
+    "surface", "carrez_surface", "garage_count", "garage_surface", "parking_inside_count",
+    "parking_outside_count", "exterior_state", "dpe_value", "ges_value", "construction_year",
+    "diagnostic_risk_comment",
+  ]),
+};
+
+function filterHektorAnnonceUpdateFieldsForProfile(payload, clean) {
+  const profile = resolveHektorPropertyProfile(payload);
+  if (!profile.explicit) return clean;
+  const allowed = HEKTOR_UPDATE_FIELDS_BY_PROFILE[profile.kind] || HEKTOR_UPDATE_FIELDS_BY_PROFILE.apartment;
+  const filtered = {};
+  for (const [key, value] of Object.entries(clean || {})) {
+    if (HEKTOR_UPDATE_COMMON_FIELDS.has(key) || allowed.has(key)) filtered[key] = value;
+  }
+  return filtered;
+}
+
 function applyExactHektorWizardFields(body, payload, step) {
   const exact = exactHektorWizardFields(payload);
   if (!Object.keys(exact).length) return [];
@@ -3546,6 +3740,7 @@ function applyExactHektorWizardFields(body, payload, step) {
     const key = String(rawKey || "").trim();
     if (!key || protectedKeys.has(key)) continue;
     if (!/^[A-Za-z0-9_[\]-]+$/.test(key)) continue;
+    if (!isHektorWizardFieldAllowedForPayload(payload, key)) continue;
     if (key === "diffusable") {
       if (Number(step) === 7) {
         body.set("diffusable", "0");
@@ -3678,53 +3873,53 @@ function buildWizardStep6Body(idannWizard, meta, html, payload) {
     "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference",
     "copropriete_nb_lot", "copropriete_quote_part", "montant_fonds_travaux",
   ];
-  for (const field of zeroDefaults) setWizardDefault(body, field, "0");
+  for (const field of zeroDefaults) setWizardDefaultIfPresent(body, field, "0");
   for (const field of ["dpe_date", "diag_termites_date", "diag_amiante_date", "diag_electrique_date", "diag_loi_carrez_date", "diag_risques_nat_tech_date", "diag_plomb_date", "diag_gaz_date", "diag_assainissement_date"]) {
-    setWizardDefault(body, field, "00-00-0000");
+    setWizardDefaultIfPresent(body, field, "00-00-0000");
   }
-  setWizardNumber(body, "NB_CHAMBRES", payload, ["bedroom_count", "bedroomCount", "NB_CHAMBRES"]);
-  setWizardNumber(body, "NB_SDB", payload, ["bathroom_count", "bathroomCount", "NB_SDB", "sdb"]);
-  setWizardNumber(body, "NB_SE", payload, ["shower_room_count", "showerRoomCount", "NB_SE", "salle_eau"]);
-  setWizardNumber(body, "NB_WC", payload, ["wc_count", "wcCount", "NB_WC", "wc"]);
-  setWizardNumber(body, "SURF_CARREZ", payload, ["carrez_surface", "carrezSurface", "SURF_CARREZ"]);
-  setWizardNumber(body, "SURF_SEJOUR", payload, ["living_surface", "livingSurface", "SURF_SEJOUR"]);
-  setWizardText(body, "CUISINE", payload, ["kitchen", "cuisine", "CUISINE"]);
-  setWizardText(body, "CUISINE_EQUIPEMENT", payload, ["kitchen_equipment", "kitchenEquipment", "CUISINE_EQUIPEMENT"]);
-  setWizardText(body, "EXPOSITION", payload, ["exposure", "exposition", "EXPOSITION"]);
-  setWizardText(body, "vuee", payload, ["view", "vue", "vuee"]);
-  setWizardText(body, "etat_interieur", payload, ["interior_state", "interiorState", "etat_interieur"]);
-  setWizardText(body, "etat_exterieur", payload, ["exterior_state", "exteriorState", "etat_exterieur"]);
-  setWizardNumber(body, "ETAGE", payload, ["floor", "etage", "ETAGE"]);
-  setWizardNumber(body, "NB_ETAGES", payload, ["floor_count", "floorCount", "NB_ETAGES"]);
-  setWizardNumber(body, "NB_BALCON", payload, ["balcony_count", "balconyCount", "NB_BALCON"]);
-  setWizardNumber(body, "SURFACE_BALCON", payload, ["balcony_surface", "balconySurface", "SURFACE_BALCON"]);
-  setWizardNumber(body, "NB_TERRASSE", payload, ["terrace_count", "terraceCount", "NB_TERRASSE"]);
-  setWizardNumber(body, "SURFACE_TERRASSE", payload, ["terrace_surface", "terraceSurface", "SURFACE_TERRASSE"]);
-  setWizardNumber(body, "GARAGE_BOX", payload, ["garage_count", "garageCount", "GARAGE_BOX"]);
-  setWizardNumber(body, "SURFACE_GARAGE", payload, ["garage_surface", "garageSurface", "SURFACE_GARAGE"]);
-  setWizardNumber(body, "NB_PARK_INT", payload, ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]);
-  setWizardNumber(body, "NB_PARK_EXT", payload, ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]);
-  setWizardText(body, "ASCENSEUR", payload, ["elevator", "ascenseur", "ASCENSEUR"]);
-  setWizardText(body, "ACCES_HANDI", payload, ["handicap_access", "handicapAccess", "ACCES_HANDI"]);
-  setWizardText(body, "climatisation", payload, ["air_conditioning", "airConditioning", "climatisation"]);
-  setWizardText(body, "double_vitrage", payload, ["double_glazing", "doubleGlazing", "double_vitrage"]);
-  setWizardText(body, "interphone", payload, ["intercom", "interphone"]);
-  setWizardText(body, "visiophone", payload, ["videophone", "visiophone"]);
-  setWizardText(body, "digicode", payload, ["digicode"]);
-  setWizardNumber(body, "ANNEE_CONS", payload, ["construction_year", "constructionYear", "ANNEE_CONS"]);
-  setWizardNumber(body, "dpe_cons", payload, ["dpe_value", "dpeValue", "dpe_cons"]);
-  setWizardNumber(body, "dpe_ges", payload, ["ges_value", "gesValue", "dpe_ges"]);
-  setWizardDate(body, "dpe_date", payload, ["dpe_date", "dpeDate"]);
-  setWizardText(body, "dpe_non_concerne", payload, ["dpe_non_concerne", "dpeNotApplicable", "chk_dpe_non_concerne"]);
-  setWizardText(body, "dpe_vierge", payload, ["dpe_vierge", "dpeBlank", "chk_dpe_vierge"]);
-  setWizardText(body, "isDpeAltitude", payload, ["isDpeAltitude", "dpeAltitude", "chk_isDpeAltitude"]);
-  setWizardText(body, "diagnostiqueur", payload, ["diagnostician", "diagnostiqueur"]);
-  setWizardText(body, "diag_risques_nat_tech_commentaire", payload, ["diagnostic_risk_comment", "diagnosticRiskComment", "diag_risques_nat_tech_commentaire"]);
-  setWizardText(body, "syndic", payload, ["syndic"]);
-  setWizardText(body, "copropriete", payload, ["copropriete", "copro"]);
-  setWizardNumber(body, "copropriete_nb_lot", payload, ["copro_lots", "coproLots", "copropriete_nb_lot"]);
-  setWizardNumber(body, "copropriete_quote_part", payload, ["copro_quote_part", "coproQuotePart", "copropriete_quote_part"]);
-  setWizardNumber(body, "montant_fonds_travaux", payload, ["copro_works_fund", "coproWorksFund", "montant_fonds_travaux"]);
+  setWizardNumberIfPresent(body, "NB_CHAMBRES", payload, ["bedroom_count", "bedroomCount", "NB_CHAMBRES"]);
+  setWizardNumberIfPresent(body, "NB_SDB", payload, ["bathroom_count", "bathroomCount", "NB_SDB", "sdb"]);
+  setWizardNumberIfPresent(body, "NB_SE", payload, ["shower_room_count", "showerRoomCount", "NB_SE", "salle_eau"]);
+  setWizardNumberIfPresent(body, "NB_WC", payload, ["wc_count", "wcCount", "NB_WC", "wc"]);
+  setWizardNumberIfPresent(body, "SURF_CARREZ", payload, ["carrez_surface", "carrezSurface", "SURF_CARREZ"]);
+  setWizardNumberIfPresent(body, "SURF_SEJOUR", payload, ["living_surface", "livingSurface", "SURF_SEJOUR"]);
+  setWizardTextIfPresent(body, "CUISINE", payload, ["kitchen", "cuisine", "CUISINE"]);
+  setWizardTextIfPresent(body, "CUISINE_EQUIPEMENT", payload, ["kitchen_equipment", "kitchenEquipment", "CUISINE_EQUIPEMENT"]);
+  setWizardTextIfPresent(body, "EXPOSITION", payload, ["exposure", "exposition", "EXPOSITION"]);
+  setWizardTextIfPresent(body, "vuee", payload, ["view", "vue", "vuee"]);
+  setWizardTextIfPresent(body, "etat_interieur", payload, ["interior_state", "interiorState", "etat_interieur"]);
+  setWizardTextIfPresent(body, "etat_exterieur", payload, ["exterior_state", "exteriorState", "etat_exterieur"]);
+  setWizardNumberIfPresent(body, "ETAGE", payload, ["floor", "etage", "ETAGE"]);
+  setWizardNumberIfPresent(body, "NB_ETAGES", payload, ["floor_count", "floorCount", "NB_ETAGES"]);
+  setWizardNumberIfPresent(body, "NB_BALCON", payload, ["balcony_count", "balconyCount", "NB_BALCON"]);
+  setWizardNumberIfPresent(body, "SURFACE_BALCON", payload, ["balcony_surface", "balconySurface", "SURFACE_BALCON"]);
+  setWizardNumberIfPresent(body, "NB_TERRASSE", payload, ["terrace_count", "terraceCount", "NB_TERRASSE"]);
+  setWizardNumberIfPresent(body, "SURFACE_TERRASSE", payload, ["terrace_surface", "terraceSurface", "SURFACE_TERRASSE"]);
+  setWizardNumberIfPresent(body, "GARAGE_BOX", payload, ["garage_count", "garageCount", "GARAGE_BOX"]);
+  setWizardNumberIfPresent(body, "SURFACE_GARAGE", payload, ["garage_surface", "garageSurface", "SURFACE_GARAGE"]);
+  setWizardNumberIfPresent(body, "NB_PARK_INT", payload, ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]);
+  setWizardNumberIfPresent(body, "NB_PARK_EXT", payload, ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]);
+  setWizardTextIfPresent(body, "ASCENSEUR", payload, ["elevator", "ascenseur", "ASCENSEUR"]);
+  setWizardTextIfPresent(body, "ACCES_HANDI", payload, ["handicap_access", "handicapAccess", "ACCES_HANDI"]);
+  setWizardTextIfPresent(body, "climatisation", payload, ["air_conditioning", "airConditioning", "climatisation"]);
+  setWizardTextIfPresent(body, "double_vitrage", payload, ["double_glazing", "doubleGlazing", "double_vitrage"]);
+  setWizardTextIfPresent(body, "interphone", payload, ["intercom", "interphone"]);
+  setWizardTextIfPresent(body, "visiophone", payload, ["videophone", "visiophone"]);
+  setWizardTextIfPresent(body, "digicode", payload, ["digicode"]);
+  setWizardNumberIfPresent(body, "ANNEE_CONS", payload, ["construction_year", "constructionYear", "ANNEE_CONS"]);
+  setWizardNumberIfPresent(body, "dpe_cons", payload, ["dpe_value", "dpeValue", "dpe_cons"]);
+  setWizardNumberIfPresent(body, "dpe_ges", payload, ["ges_value", "gesValue", "dpe_ges"]);
+  setWizardDateIfPresent(body, "dpe_date", payload, ["dpe_date", "dpeDate"]);
+  setWizardTextIfPresent(body, "dpe_non_concerne", payload, ["dpe_non_concerne", "dpeNotApplicable", "chk_dpe_non_concerne"]);
+  setWizardTextIfPresent(body, "dpe_vierge", payload, ["dpe_vierge", "dpeBlank", "chk_dpe_vierge"]);
+  setWizardTextIfPresent(body, "isDpeAltitude", payload, ["isDpeAltitude", "dpeAltitude", "chk_isDpeAltitude"]);
+  setWizardTextIfPresent(body, "diagnostiqueur", payload, ["diagnostician", "diagnostiqueur"]);
+  setWizardTextIfPresent(body, "diag_risques_nat_tech_commentaire", payload, ["diagnostic_risk_comment", "diagnosticRiskComment", "diag_risques_nat_tech_commentaire"]);
+  setWizardTextIfPresent(body, "syndic", payload, ["syndic"]);
+  setWizardTextIfPresent(body, "copropriete", payload, ["copropriete", "copro"]);
+  setWizardNumberIfPresent(body, "copropriete_nb_lot", payload, ["copro_lots", "coproLots", "copropriete_nb_lot"]);
+  setWizardNumberIfPresent(body, "copropriete_quote_part", payload, ["copro_quote_part", "coproQuotePart", "copropriete_quote_part"]);
+  setWizardNumberIfPresent(body, "montant_fonds_travaux", payload, ["copro_works_fund", "coproWorksFund", "montant_fonds_travaux"]);
   applyExactHektorWizardFields(body, payload, 6);
   return body;
 }
@@ -3737,33 +3932,33 @@ function buildWizardStep7Body(idannWizard, meta, html, payload) {
     extractHektorFormValues(html, "mandat_investissementloc"),
   );
   const body = wizardStepBaseBody(idannWizard, 7, meta, values);
-  setWizardDefault(body, "PRIXNETVENDEUR", "0");
-  setWizardDefault(body, "prix", "0");
-  setWizardDefault(body, "_selecterHonoraires2", "NON");
-  setWizardDefault(body, "_tauxHonoraire2", "0");
-  setWizardDefault(body, "_selecterHonoraires3", "NON");
-  setWizardDefault(body, "_tauxHonoraire3", "0");
-  setWizardDefault(body, "ESTIMATION_MONTANT", "0");
-  setWizardDefault(body, "ESTIMATION_DATE", "00-00-0000");
-  setWizardDefault(body, "DEPOT_GARANTIE", "0");
-  setWizardDefault(body, "TAXE_HABITATION", "0");
-  setWizardDefault(body, "TAXE_FONCIERE", "0");
-  setWizardDefault(body, "CHARGES", "0");
-  setWizardText(body, "titre", payload, ["title", "titre"]);
-  setWizardText(body, "corps", payload, ["description", "corps"]);
-  setWizardNumber(body, "PRIXNETVENDEUR", payload, ["net_seller_price", "netSellerPrice", "prix_net_vendeur"]);
-  setWizardNumber(body, "prix", payload, ["price", "prix"]);
-  setWizardNumber(body, "ESTIMATION_MONTANT", payload, ["estimation_amount", "estimationAmount", "ESTIMATION_MONTANT"]);
-  setWizardDate(body, "ESTIMATION_DATE", payload, ["estimation_date", "estimationDate", "ESTIMATION_DATE"]);
-  setWizardNumber(body, "DEPOT_GARANTIE", payload, ["deposit", "depot_garantie", "DEPOT_GARANTIE"]);
-  setWizardNumber(body, "TAXE_HABITATION", payload, ["housing_tax", "housingTax", "TAXE_HABITATION"]);
-  setWizardNumber(body, "TAXE_FONCIERE", payload, ["property_tax", "propertyTax", "TAXE_FONCIERE"]);
-  setWizardNumber(body, "CHARGES", payload, ["copro_charges", "coproCharges", "charges", "CHARGES"]);
-  setWizardText(body, "TRAVAUX", payload, ["works", "travaux", "TRAVAUX"]);
-  setWizardText(body, "CHARGES_DETAIL", payload, ["charges_detail", "chargesDetail", "CHARGES_DETAIL"]);
-  setWizardNumber(body, "Loc_EstimationLoyer", payload, ["rent_estimate", "rentEstimate", "Loc_EstimationLoyer"]);
-  setWizardNumber(body, "Loc_ChargeLocative", payload, ["rent_charges", "rentCharges", "Loc_ChargeLocative"]);
-  setWizardText(body, "Loc_Occupation", payload, ["rental_occupation", "rentalOccupation", "Loc_Occupation"]);
+  setWizardDefaultIfPresent(body, "PRIXNETVENDEUR", "0");
+  setWizardDefaultIfPresent(body, "prix", "0");
+  setWizardDefaultIfPresent(body, "_selecterHonoraires2", "NON");
+  setWizardDefaultIfPresent(body, "_tauxHonoraire2", "0");
+  setWizardDefaultIfPresent(body, "_selecterHonoraires3", "NON");
+  setWizardDefaultIfPresent(body, "_tauxHonoraire3", "0");
+  setWizardDefaultIfPresent(body, "ESTIMATION_MONTANT", "0");
+  setWizardDefaultIfPresent(body, "ESTIMATION_DATE", "00-00-0000");
+  setWizardDefaultIfPresent(body, "DEPOT_GARANTIE", "0");
+  setWizardDefaultIfPresent(body, "TAXE_HABITATION", "0");
+  setWizardDefaultIfPresent(body, "TAXE_FONCIERE", "0");
+  setWizardDefaultIfPresent(body, "CHARGES", "0");
+  setWizardTextIfPresent(body, "titre", payload, ["title", "titre"]);
+  setWizardTextIfPresent(body, "corps", payload, ["description", "corps"]);
+  setWizardNumberIfPresent(body, "PRIXNETVENDEUR", payload, ["net_seller_price", "netSellerPrice", "prix_net_vendeur"]);
+  setWizardNumberIfPresent(body, "prix", payload, ["price", "prix"]);
+  setWizardNumberIfPresent(body, "ESTIMATION_MONTANT", payload, ["estimation_amount", "estimationAmount", "ESTIMATION_MONTANT"]);
+  setWizardDateIfPresent(body, "ESTIMATION_DATE", payload, ["estimation_date", "estimationDate", "ESTIMATION_DATE"]);
+  setWizardNumberIfPresent(body, "DEPOT_GARANTIE", payload, ["deposit", "depot_garantie", "DEPOT_GARANTIE"]);
+  setWizardNumberIfPresent(body, "TAXE_HABITATION", payload, ["housing_tax", "housingTax", "TAXE_HABITATION"]);
+  setWizardNumberIfPresent(body, "TAXE_FONCIERE", payload, ["property_tax", "propertyTax", "TAXE_FONCIERE"]);
+  setWizardNumberIfPresent(body, "CHARGES", payload, ["copro_charges", "coproCharges", "charges", "CHARGES"]);
+  setWizardTextIfPresent(body, "TRAVAUX", payload, ["works", "travaux", "TRAVAUX"]);
+  setWizardTextIfPresent(body, "CHARGES_DETAIL", payload, ["charges_detail", "chargesDetail", "CHARGES_DETAIL"]);
+  setWizardNumberIfPresent(body, "Loc_EstimationLoyer", payload, ["rent_estimate", "rentEstimate", "Loc_EstimationLoyer"]);
+  setWizardNumberIfPresent(body, "Loc_ChargeLocative", payload, ["rent_charges", "rentCharges", "Loc_ChargeLocative"]);
+  setWizardTextIfPresent(body, "Loc_Occupation", payload, ["rental_occupation", "rentalOccupation", "Loc_Occupation"]);
   applyExactHektorWizardFields(body, payload, 7);
   body.set("diffusable", "0");
   return body;
@@ -3981,6 +4176,10 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ...(baseFields && typeof baseFields === "object" ? baseFields : {}),
     ...exactHektorWizardFields(payload),
   };
+  const profilePayload = {
+    ...(payload && typeof payload === "object" ? payload : {}),
+    ...fields,
+  };
   const clean = {};
   const textKeys = [
     ["title", ["title", "titre"]],
@@ -4012,6 +4211,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["carrez_surface", ["carrez_surface", "carrezSurface", "SURF_CARREZ"]],
     ["room_count", ["room_count", "roomCount", "nbpieces"]],
     ["bedroom_count", ["bedroom_count", "bedroomCount", "NB_CHAMBRES"]],
+    ["level_count", ["level_count", "levelCount", "NB_NIVEAUX"]],
     ["bathroom_count", ["bathroom_count", "bathroomCount", "NB_SDB", "SDB"]],
     ["shower_room_count", ["shower_room_count", "showerRoomCount", "NB_SE", "SE", "SDE"]],
     ["wc_count", ["wc_count", "wcCount", "NB_WC", "WC"]],
@@ -4019,6 +4219,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["garden_surface", ["garden_surface", "gardenSurface", "SURFACE_JARDIN"]],
     ["terrace_count", ["terrace_count", "terraceCount", "NB_TERRASSE", "TERRASSE"]],
     ["garage_count", ["garage_count", "garageCount", "GARAGE_BOX"]],
+    ["garage_surface", ["garage_surface", "garageSurface", "SURFACE_GARAGE"]],
     ["parking_inside_count", ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]],
     ["parking_outside_count", ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]],
     ["pool", ["pool", "PISCINE"]],
@@ -4047,7 +4248,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     if (value && !/^-?\d+(\.\d+)?$/.test(value)) throw new Error(`Champ numerique invalide: ${key}`);
     if (value) clean[key] = value;
   }
-  return clean;
+  return filterHektorAnnonceUpdateFieldsForProfile(profilePayload, clean);
 }
 
 function fieldSpec(value, candidates) {
@@ -4092,6 +4293,7 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
   if (cleanFields.bedroom_count != null) agInterieur.bedroom_count = fieldSpec(cleanFields.bedroom_count, ["NB_CHAMBRES"]);
+  if (cleanFields.level_count != null) agInterieur.level_count = fieldSpec(cleanFields.level_count, ["NB_NIVEAUX"]);
   if (cleanFields.surface != null) agInterieur.surface = fieldSpec(cleanFields.surface, ["surfappart"]);
   if (cleanFields.carrez_surface != null) agInterieur.carrez_surface = fieldSpec(cleanFields.carrez_surface, ["SURF_CARREZ"]);
   if (cleanFields.bathroom_count != null) agInterieur.bathroom_count = fieldSpec(cleanFields.bathroom_count, ["SDB", "NB_SDB", "nb_sdb", "sdb"]);
@@ -4106,6 +4308,7 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   if (cleanFields.garden_surface != null) agExterieur.garden_surface = fieldSpec(cleanFields.garden_surface, ["SURFACE_JARDIN"]);
   if (cleanFields.terrace_count != null) agExterieur.terrace_count = fieldSpec(cleanFields.terrace_count, ["NB_TERRASSE", "TERRASSE"]);
   if (cleanFields.garage_count != null) agExterieur.garage_count = fieldSpec(cleanFields.garage_count, ["GARAGE_BOX"]);
+  if (cleanFields.garage_surface != null) agExterieur.garage_surface = fieldSpec(cleanFields.garage_surface, ["SURFACE_GARAGE"]);
   if (cleanFields.parking_inside_count != null) agExterieur.parking_inside_count = fieldSpec(cleanFields.parking_inside_count, ["NB_PARK_INT"]);
   if (cleanFields.parking_outside_count != null) agExterieur.parking_outside_count = fieldSpec(cleanFields.parking_outside_count, ["NB_PARK_EXT"]);
   if (cleanFields.pool != null) agExterieur.pool = fieldSpec(cleanFields.pool, ["PISCINE"]);
