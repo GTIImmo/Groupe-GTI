@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -2497,6 +2497,17 @@ export async function loadUserProfile(userId: string): Promise<UserProfile | nul
   return (data as UserProfile | null) ?? null
 }
 
+export async function loadGoogleWorkspaceIdentity(userId: string): Promise<GoogleWorkspaceIdentity | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const { data, error } = await supabase
+    .from('app_google_workspace_identity')
+    .select('id,app_user_id,google_email,workspace_domain,hektor_user_id,hektor_negociateur_id,negociateur_email,link_status,is_active,last_login_at,last_checked_at,metadata_json')
+    .eq('app_user_id', userId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as GoogleWorkspaceIdentity | null) ?? null
+}
+
 export async function loadUserNegotiatorContext(email: string | null | undefined): Promise<UserNegotiatorContext | null> {
   const normalized = normalizeEmail(email)
   if (!normalized) return null
@@ -4537,6 +4548,94 @@ export type HektorContactIdentityInput = {
     action?: string | null
     hektorAnnonceId?: string | null
   } | null
+}
+
+export type OwnerAnnonceSearchOption = Pick<
+  Dossier,
+  | 'app_dossier_id'
+  | 'hektor_annonce_id'
+  | 'numero_dossier'
+  | 'numero_mandat'
+  | 'titre_bien'
+  | 'ville'
+  | 'code_postal'
+  | 'commercial_nom'
+  | 'agence_nom'
+  | 'statut_annonce'
+  | 'archive'
+>
+
+function normalizeOwnerAnnonceOption(row: OwnerAnnonceSearchOption): OwnerAnnonceSearchOption {
+  return {
+    ...row,
+    app_dossier_id: Number(row.app_dossier_id),
+    hektor_annonce_id: Number(row.hektor_annonce_id),
+  }
+}
+
+function matchesOwnerAnnonceSearch(item: OwnerAnnonceSearchOption, rawSearch: string) {
+  const search = normalizeSearchTerm(rawSearch).replace(/\s+/g, ' ').trim().toLowerCase()
+  if (!search) return true
+  const haystack = [
+    item.hektor_annonce_id,
+    item.numero_dossier,
+    item.numero_mandat,
+    item.titre_bien,
+    item.ville,
+    item.code_postal,
+    item.commercial_nom,
+    item.agence_nom,
+    item.statut_annonce,
+  ].map((value) => String(value ?? '').toLowerCase()).join(' ')
+  return haystack.includes(search)
+}
+
+export async function searchOwnerAnnonceOptions(input: {
+  search?: string
+  scope?: DataScope | null
+  limit?: number
+}): Promise<OwnerAnnonceSearchOption[]> {
+  const search = normalizeSearchTerm(input.search ?? '').replace(/\s+/g, ' ').trim()
+  const limit = Math.min(Math.max(input.limit ?? 12, 1), 30)
+  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive'
+
+  if (!hasSupabaseEnv || !supabase) {
+    return filterByNegotiatorEmail(mockDossiers, input.scope)
+      .filter((item) => (item.archive ?? '0') !== '1')
+      .filter((item) => matchesOwnerAnnonceSearch(item, search))
+      .slice(0, limit)
+      .map(normalizeOwnerAnnonceOption)
+  }
+
+  let query = applyNegotiatorScopeToQuery(
+    supabase
+      .from(dossiersCurrentView)
+      .select(select)
+      .eq('archive', '0')
+      .order('date_maj', { ascending: false, nullsFirst: false })
+      .order('hektor_annonce_id', { ascending: false })
+      .limit(limit),
+    input.scope,
+  )
+
+  if (search) {
+    const ilike = `%${search}%`
+    const filters = [
+      /^\d+$/.test(search) ? `hektor_annonce_id.eq.${search}` : null,
+      `numero_dossier.ilike.${ilike}`,
+      `numero_mandat.ilike.${ilike}`,
+      `titre_bien.ilike.${ilike}`,
+      `ville.ilike.${ilike}`,
+      `code_postal.ilike.${ilike}`,
+      `commercial_nom.ilike.${ilike}`,
+      `agence_nom.ilike.${ilike}`,
+    ].filter(Boolean).join(',')
+    query = query.or(filters)
+  }
+
+  const { data, error } = await query
+  if (error || !data) throw new Error(error?.message ?? 'Unable to search annonces')
+  return (data as OwnerAnnonceSearchOption[]).map(normalizeOwnerAnnonceOption)
 }
 
 function cleanOptionalText(value: string | null | undefined) {

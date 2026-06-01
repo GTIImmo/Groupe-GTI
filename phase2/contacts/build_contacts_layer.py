@@ -181,6 +181,23 @@ def first_non_empty(*values: Any) -> str | None:
     return None
 
 
+def normalize_contact_ids(values: Iterable[Any]) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values:
+        for chunk in clean_text(raw_value).replace(";", ",").split(","):
+            contact_id = clean_text(chunk)
+            if not contact_id:
+                continue
+            if not contact_id.isdigit():
+                raise ValueError(f"ID contact invalide: {contact_id}")
+            if contact_id in seen:
+                continue
+            seen.add(contact_id)
+            ids.append(contact_id)
+    return ids
+
+
 def active_archive_flag(value: Any) -> int:
     return 0 if parse_bool_archive(value) else 1
 
@@ -396,18 +413,28 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def load_contacts(conn: sqlite3.Connection, limit: int | None = None) -> list[ContactRow]:
+def load_contacts(
+    conn: sqlite3.Connection,
+    limit: int | None = None,
+    contact_ids: Iterable[str] | None = None,
+) -> list[ContactRow]:
+    ids = normalize_contact_ids(contact_ids or [])
+    params: list[Any] = []
     sql = """
         SELECT hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom,
                archive, date_enregistrement, date_maj, email, portable, fixe, ville, code_postal,
                typologie_json, raw_json, synced_at
         FROM hektor_contact
         WHERE NULLIF(TRIM(hektor_contact_id), '') IS NOT NULL
-        ORDER BY CAST(hektor_contact_id AS INTEGER)
     """
+    if ids:
+        placeholders = ",".join("?" for _ in ids)
+        sql += f" AND CAST(hektor_contact_id AS TEXT) IN ({placeholders})\n"
+        params.extend(ids)
+    sql += " ORDER BY CAST(hektor_contact_id AS INTEGER)"
     if limit and limit > 0:
         sql += f" LIMIT {int(limit)}"
-    return [contact_from_row(row) for row in conn.execute(sql).fetchall()]
+    return [contact_from_row(row) for row in conn.execute(sql, params).fetchall()]
 
 
 def table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -449,7 +476,12 @@ def contact_id_from_payload(value: Any) -> str:
     return first_non_empty(item.get("id"), item.get("id_contact"), item.get("contact_id")) or ""
 
 
-def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connection) -> tuple[dict[str, list[dict[str, Any]]], dict[str, set[str]]]:
+def load_relations(
+    hektor_conn: sqlite3.Connection,
+    phase2_conn: sqlite3.Connection,
+    contact_ids: Iterable[str] | None = None,
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, set[str]]]:
+    contact_filter = set(normalize_contact_ids(contact_ids or []))
     dossier_by_annonce: dict[str, sqlite3.Row] = {}
     for row in phase2_conn.execute(
         """
@@ -463,6 +495,8 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
 
     active_annonce_ids = load_active_annonce_ids(hektor_conn)
     relation_by_key: dict[str, dict[str, Any]] = {}
+    contact_filter_placeholders = ",".join("?" for _ in contact_filter)
+    contact_filter_params = sorted(contact_filter)
 
     def add_relation(
         *,
@@ -482,6 +516,8 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
         annonce_id = clean_text(annonce_id)
         role = clean_text(role) or "contact"
         if not contact_id or not annonce_id:
+            return
+        if contact_filter and contact_id not in contact_filter:
             return
         dossier = dossier_by_annonce.get(annonce_id)
         source_identity = relation_source if clean_text(transaction_id) else "non_transaction"
@@ -515,7 +551,7 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
             "last_seen_at": clean_text(last_seen_at) or None,
         }
 
-    if table_exists(hektor_conn, "hektor_annonce_detail"):
+    if table_exists(hektor_conn, "hektor_annonce_detail") and not contact_filter:
         for row in hektor_conn.execute(
             """
             SELECT hektor_annonce_id, proprietaires_json, synced_at
@@ -536,13 +572,21 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
                 )
 
     if table_exists(hektor_conn, "sync_annonce_contact_link"):
-        for row in hektor_conn.execute(
-            """
-            SELECT hektor_annonce_id, hektor_contact_id, role_contact, contact_date_maj, last_seen_at
-            FROM sync_annonce_contact_link
+        link_where = """
             WHERE NULLIF(TRIM(hektor_contact_id), '') IS NOT NULL
               AND NULLIF(TRIM(hektor_annonce_id), '') IS NOT NULL
-            """
+        """
+        link_params: list[Any] = []
+        if contact_filter:
+            link_where += f" AND CAST(hektor_contact_id AS TEXT) IN ({contact_filter_placeholders})"
+            link_params.extend(contact_filter_params)
+        for row in hektor_conn.execute(
+            f"""
+            SELECT hektor_annonce_id, hektor_contact_id, role_contact, contact_date_maj, last_seen_at
+            FROM sync_annonce_contact_link
+            {link_where}
+            """,
+            link_params,
         ):
             add_relation(
                 contact_id=clean_text(row["hektor_contact_id"]),
@@ -554,13 +598,19 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
             )
 
     if table_exists(hektor_conn, "hektor_offre"):
+        offre_where = "WHERE NULLIF(TRIM(hektor_annonce_id), '') IS NOT NULL"
+        offre_params: list[Any] = []
+        if contact_filter:
+            offre_where += f" AND CAST(hektor_acquereur_id AS TEXT) IN ({contact_filter_placeholders})"
+            offre_params.extend(contact_filter_params)
         for row in hektor_conn.execute(
-            """
+            f"""
             SELECT hektor_offre_id, hektor_annonce_id, hektor_mandat_id, hektor_acquereur_id,
                    offre_state, offre_event_date, raw_date, raw_montant, acquereur_json, synced_at
             FROM hektor_offre
-            WHERE NULLIF(TRIM(hektor_annonce_id), '') IS NOT NULL
-            """
+            {offre_where}
+            """,
+            offre_params,
         ):
             acquereur_items = json_items(row["acquereur_json"])
             acquereur = acquereur_items[0] if acquereur_items else {}
@@ -578,7 +628,7 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
                 last_seen_at=clean_text(row["synced_at"]) or None,
             )
 
-    if table_exists(hektor_conn, "hektor_compromis"):
+    if table_exists(hektor_conn, "hektor_compromis") and not contact_filter:
         for row in hektor_conn.execute(
             """
             SELECT hektor_compromis_id, hektor_annonce_id, hektor_mandat_id, compromis_state,
@@ -603,7 +653,7 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
                     last_seen_at=clean_text(row["synced_at"]) or None,
                 )
 
-    if table_exists(hektor_conn, "hektor_vente"):
+    if table_exists(hektor_conn, "hektor_vente") and not contact_filter:
         for row in hektor_conn.execute(
             """
             SELECT hektor_vente_id, hektor_annonce_id, hektor_mandat_id, date_vente, prix,
@@ -637,13 +687,20 @@ def load_relations(hektor_conn: sqlite3.Connection, phase2_conn: sqlite3.Connect
             for row in hektor_conn.execute("PRAGMA table_info(raw_api_response)").fetchall()
         }
         fetched_expr = "fetched_at" if "fetched_at" in raw_columns else "NULL AS fetched_at"
+        raw_where = "endpoint_name = 'contact_detail'"
+        raw_params: list[Any] = []
+        if contact_filter:
+            raw_where += f" AND (CAST(object_id AS TEXT) IN ({contact_filter_placeholders}) OR CAST(object_id_key AS TEXT) IN ({contact_filter_placeholders}))"
+            raw_params.extend(contact_filter_params)
+            raw_params.extend(contact_filter_params)
         detail_rows = hektor_conn.execute(
             f"""
             SELECT object_id, object_id_key, payload_json, {fetched_expr}
             FROM raw_api_response
-            WHERE endpoint_name = 'contact_detail'
+            WHERE {raw_where}
             ORDER BY id DESC
-            """
+            """,
+            raw_params,
         ).fetchall()
         seen_contacts: set[str] = set()
         for row in detail_rows:
@@ -704,20 +761,33 @@ def criteria_map(search: dict[str, Any]) -> dict[str, str]:
     return output
 
 
-def load_contact_searches(hektor_conn: sqlite3.Connection) -> tuple[list[dict[str, Any]], Counter[str], Counter[str]]:
+def load_contact_searches(
+    hektor_conn: sqlite3.Connection,
+    contact_ids: Iterable[str] | None = None,
+) -> tuple[list[dict[str, Any]], Counter[str], Counter[str]]:
     if not table_exists(hektor_conn, "raw_api_response"):
         return [], Counter(), Counter()
+
+    ids = normalize_contact_ids(contact_ids or [])
+    where_parts = ["endpoint_name = 'contact_detail'"]
+    params: list[Any] = []
+    if ids:
+        placeholders = ",".join("?" for _ in ids)
+        where_parts.append(f"(CAST(object_id AS TEXT) IN ({placeholders}) OR CAST(object_id_key AS TEXT) IN ({placeholders}))")
+        params.extend(ids)
+        params.extend(ids)
 
     search_rows: list[dict[str, Any]] = []
     total_counts: Counter[str] = Counter()
     active_counts: Counter[str] = Counter()
     rows = hektor_conn.execute(
-        """
+        f"""
         SELECT object_id, object_id_key, payload_json
         FROM raw_api_response
-        WHERE endpoint_name = 'contact_detail'
+        WHERE {" AND ".join(where_parts)}
         ORDER BY id DESC
-        """
+        """,
+        params,
     ).fetchall()
     seen_contacts: set[str] = set()
     for row in rows:
@@ -774,7 +844,11 @@ def load_contact_searches(hektor_conn: sqlite3.Connection) -> tuple[list[dict[st
     return search_rows, total_counts, active_counts
 
 
-def load_contact_detail_state(hektor_conn: sqlite3.Connection) -> dict[str, str | None]:
+def load_contact_detail_state(
+    hektor_conn: sqlite3.Connection,
+    contact_ids: Iterable[str] | None = None,
+) -> dict[str, str | None]:
+    ids = normalize_contact_ids(contact_ids or [])
     detail_state: dict[str, str | None] = {}
     if table_exists(hektor_conn, "sync_contact_state"):
         columns = {
@@ -782,12 +856,19 @@ def load_contact_detail_state(hektor_conn: sqlite3.Connection) -> dict[str, str 
             for row in hektor_conn.execute("PRAGMA table_info(sync_contact_state)").fetchall()
         }
         if {"hektor_contact_id", "last_detail_sync_at"}.issubset(columns):
+            state_where = "WHERE last_detail_sync_at IS NOT NULL"
+            state_params: list[Any] = []
+            if ids:
+                placeholders = ",".join("?" for _ in ids)
+                state_where += f" AND CAST(hektor_contact_id AS TEXT) IN ({placeholders})"
+                state_params.extend(ids)
             for row in hektor_conn.execute(
-                """
+                f"""
                 SELECT hektor_contact_id, last_detail_sync_at
                 FROM sync_contact_state
-                WHERE last_detail_sync_at IS NOT NULL
-                """
+                {state_where}
+                """,
+                state_params,
             ).fetchall():
                 contact_id = clean_text(row["hektor_contact_id"])
                 if contact_id:
@@ -799,13 +880,21 @@ def load_contact_detail_state(hektor_conn: sqlite3.Connection) -> dict[str, str 
             for row in hektor_conn.execute("PRAGMA table_info(raw_api_response)").fetchall()
         }
         fetched_expr = "fetched_at" if "fetched_at" in raw_columns else "NULL AS fetched_at"
+        raw_where = "endpoint_name = 'contact_detail'"
+        raw_params: list[Any] = []
+        if ids:
+            placeholders = ",".join("?" for _ in ids)
+            raw_where += f" AND (CAST(object_id AS TEXT) IN ({placeholders}) OR CAST(object_id_key AS TEXT) IN ({placeholders}))"
+            raw_params.extend(ids)
+            raw_params.extend(ids)
         rows = hektor_conn.execute(
             f"""
             SELECT object_id, object_id_key, {fetched_expr}
             FROM raw_api_response
-            WHERE endpoint_name = 'contact_detail'
+            WHERE {raw_where}
             ORDER BY id DESC
-            """
+            """,
+            raw_params,
         ).fetchall()
         for row in rows:
             contact_id = first_non_empty(row["object_id_key"], row["object_id"])
@@ -1057,6 +1146,90 @@ def replace_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str
     conn.commit()
 
 
+def insert_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str, Any]], refreshed_at: str) -> None:
+    if not rows:
+        return
+    keys = list(rows[0].keys())
+    if "refreshed_at" not in keys:
+        keys.append("refreshed_at")
+    placeholders = ",".join("?" for _ in keys)
+    columns = ",".join(keys)
+    values = [
+        tuple(refreshed_at if key == "refreshed_at" else row.get(key) for key in keys)
+        for row in rows
+    ]
+    conn.executemany(f"INSERT INTO {table} ({columns}) VALUES ({placeholders})", values)
+
+
+def load_existing_duplicate_fields(
+    conn: sqlite3.Connection,
+    contact_ids: Iterable[str],
+) -> dict[str, dict[str, Any]]:
+    ids = normalize_contact_ids(contact_ids)
+    if not ids:
+        return {}
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(
+        f"""
+        SELECT hektor_contact_id, duplicate_group_count, duplicate_max_severity, duplicate_primary_candidate_id
+        FROM app_contact_current
+        WHERE CAST(hektor_contact_id AS TEXT) IN ({placeholders})
+        """,
+        ids,
+    ).fetchall()
+    return {
+        clean_text(row["hektor_contact_id"]): {
+            "duplicate_group_count": row["duplicate_group_count"],
+            "duplicate_max_severity": row["duplicate_max_severity"],
+            "duplicate_primary_candidate_id": row["duplicate_primary_candidate_id"],
+        }
+        for row in rows
+    }
+
+
+def load_existing_relation_rows(
+    conn: sqlite3.Connection,
+    contact_ids: Iterable[str],
+) -> list[dict[str, Any]]:
+    ids = normalize_contact_ids(contact_ids)
+    if not ids:
+        return []
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(
+        f"""
+        SELECT *
+        FROM app_contact_relation_current
+        WHERE CAST(hektor_contact_id AS TEXT) IN ({placeholders})
+        """,
+        ids,
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def merge_relation_rows(
+    current_rows: list[dict[str, Any]],
+    previous_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    by_key = {clean_text(row.get("relation_key")): row for row in previous_rows if clean_text(row.get("relation_key"))}
+    for row in current_rows:
+        key = clean_text(row.get("relation_key"))
+        if key:
+            by_key[key] = row
+    return list(by_key.values())
+
+
+def preserve_duplicate_fields(
+    contact_rows: list[dict[str, Any]],
+    previous_duplicate_fields: dict[str, dict[str, Any]],
+) -> None:
+    for row in contact_rows:
+        previous = previous_duplicate_fields.get(clean_text(row.get("hektor_contact_id")))
+        if not previous:
+            continue
+        row.update(previous)
+        row["source_hash"] = stable_hash({key: value for key, value in row.items() if key != "source_hash"})
+
+
 def write_reports(report_dir: Path, summary: dict[str, Any], group_rows: list[dict[str, Any]], member_rows: list[dict[str, Any]]) -> None:
     report_dir.mkdir(parents=True, exist_ok=True)
     (report_dir / "contact_audit_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1081,6 +1254,96 @@ def write_reports(report_dir: Path, summary: dict[str, Any], group_rows: list[di
         writer = csv.DictWriter(handle, fieldnames=list(top_members[0].keys()) if top_members else ["duplicate_group_id", "hektor_contact_id"])
         writer.writeheader()
         writer.writerows(top_members)
+
+
+def refresh_contact_slice(
+    *,
+    contact_ids: Iterable[str],
+    hektor_db: Path = DEFAULT_HEKTOR_DB,
+    phase2_db: Path = DEFAULT_PHASE2_DB,
+) -> dict[str, Any]:
+    ids = normalize_contact_ids(contact_ids)
+    if not ids:
+        raise ValueError("Au moins un ID contact est requis")
+
+    started_at = now_utc_iso()
+    hektor_conn = connect(hektor_db)
+    phase2_conn = connect(phase2_db)
+    try:
+        init_contacts_schema(phase2_conn)
+        contacts = load_contacts(hektor_conn, contact_ids=ids)
+        valid_contact_ids = {contact.hektor_contact_id for contact in contacts}
+        relation_rows, roles_by_contact = load_relations(hektor_conn, phase2_conn, contact_ids=ids)
+        search_rows, total_search_counts, active_search_counts = load_contact_searches(hektor_conn, contact_ids=ids)
+        contact_detail_state = load_contact_detail_state(hektor_conn, contact_ids=ids)
+
+        raw_relation_total = sum(len(rows) for rows in relation_rows.values())
+        relation_rows = {
+            contact_id: rows
+            for contact_id, rows in relation_rows.items()
+            if contact_id in valid_contact_ids
+        }
+        raw_search_total = len(search_rows)
+        search_rows = [row for row in search_rows if row["hektor_contact_id"] in valid_contact_ids]
+        roles_by_contact = {
+            contact_id: roles
+            for contact_id, roles in roles_by_contact.items()
+            if contact_id in valid_contact_ids
+        }
+
+        negotiator_map, agency_map = load_directory_maps(hektor_conn)
+        previous_duplicate_fields = load_existing_duplicate_fields(phase2_conn, ids)
+        previous_relation_rows = load_existing_relation_rows(phase2_conn, ids)
+        contact_rows = build_contact_rows(
+            contacts,
+            relation_rows,
+            roles_by_contact,
+            total_search_counts,
+            active_search_counts,
+            Counter(),
+            {},
+            negotiator_map,
+            agency_map,
+            contact_detail_state,
+        )
+        preserve_duplicate_fields(contact_rows, previous_duplicate_fields)
+        current_relation_rows = [row for rows in relation_rows.values() for row in rows]
+        relation_flat_rows = merge_relation_rows(
+            current_relation_rows,
+            previous_relation_rows,
+        )
+        refreshed_at = now_utc_iso()
+
+        for contact_id in ids:
+            phase2_conn.execute("DELETE FROM app_contact_current WHERE hektor_contact_id = ?", (contact_id,))
+            phase2_conn.execute("DELETE FROM app_contact_relation_current WHERE hektor_contact_id = ?", (contact_id,))
+            phase2_conn.execute("DELETE FROM app_contact_search_current WHERE hektor_contact_id = ?", (contact_id,))
+
+        insert_table_rows(phase2_conn, "app_contact_current", contact_rows, refreshed_at)
+        insert_table_rows(phase2_conn, "app_contact_relation_current", relation_flat_rows, refreshed_at)
+        insert_table_rows(phase2_conn, "app_contact_search_current", search_rows, refreshed_at)
+        phase2_conn.commit()
+
+        missing_contact_ids = [contact_id for contact_id in ids if contact_id not in valid_contact_ids]
+        return {
+            "started_at": started_at,
+            "finished_at": refreshed_at,
+            "mode": "contact_slice",
+            "requested_contact_ids": ids,
+            "contacts_total": len(contact_rows),
+            "missing_contact_ids": missing_contact_ids,
+            "relations_total": len(relation_flat_rows),
+            "previous_relations_preserved": max(0, len(relation_flat_rows) - len(current_relation_rows)),
+            "relations_skipped_missing_contact": raw_relation_total - len(current_relation_rows),
+            "searches_total": len(search_rows),
+            "active_searches_total": sum(int(row["is_active"]) for row in search_rows),
+            "searches_skipped_missing_contact": raw_search_total - len(search_rows),
+            "supabase_sync_eligible_contacts": sum(int(row["supabase_sync_eligible"]) for row in contact_rows),
+            "duplicate_fields_preserved": sum(1 for row in contact_rows if row["hektor_contact_id"] in previous_duplicate_fields),
+        }
+    finally:
+        hektor_conn.close()
+        phase2_conn.close()
 
 
 def build_contacts_layer(
@@ -1206,19 +1469,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--phase2-db", type=Path, default=DEFAULT_PHASE2_DB)
     parser.add_argument("--report-dir", type=Path, default=DEFAULT_REPORT_DIR)
     parser.add_argument("--limit", type=int, default=0, help="Limite de contacts pour test local. 0 = tous.")
+    parser.add_argument(
+        "--contact-id",
+        action="append",
+        default=[],
+        help="Reconstruit uniquement un ou plusieurs contacts Hektor (valeurs separees par virgule acceptees).",
+    )
     parser.add_argument("--no-reports", action="store_true", help="Ne genere pas les CSV/JSON d'audit.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    summary = build_contacts_layer(
-        hektor_db=args.hektor_db,
-        phase2_db=args.phase2_db,
-        report_dir=args.report_dir,
-        limit=args.limit or None,
-        write_reports_enabled=not args.no_reports,
-    )
+    contact_ids = normalize_contact_ids(args.contact_id)
+    if contact_ids:
+        summary = refresh_contact_slice(
+            contact_ids=contact_ids,
+            hektor_db=args.hektor_db,
+            phase2_db=args.phase2_db,
+        )
+    else:
+        summary = build_contacts_layer(
+            hektor_db=args.hektor_db,
+            phase2_db=args.phase2_db,
+            report_dir=args.report_dir,
+            limit=args.limit or None,
+            write_reports_enabled=not args.no_reports,
+        )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 

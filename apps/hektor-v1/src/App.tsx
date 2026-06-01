@@ -41,6 +41,7 @@ import {
   loadHektorNegotiatorOptions,
   loadUserNegotiatorContext,
   loadUserProfile,
+  loadGoogleWorkspaceIdentity,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -82,11 +83,13 @@ import {
   loadContactsPage,
   loadContactStats,
   findContactDuplicateCandidates,
+  searchOwnerAnnonceOptions,
   type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
+  type OwnerAnnonceSearchOption,
 } from './lib/api'
-import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -7072,6 +7075,7 @@ export default function App() {
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [googleWorkspaceIdentity, setGoogleWorkspaceIdentity] = useState<GoogleWorkspaceIdentity | null>(null)
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [lightweightDetailTarget, setLightweightDetailTarget] = useState<LightweightDetailTarget | null>(null)
@@ -7097,6 +7101,7 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authPending, setAuthPending] = useState(false)
+  const [googleAuthPending, setGoogleAuthPending] = useState(false)
   const [recoveryMode, setRecoveryMode] = useState(false)
   const [recoveryPassword, setRecoveryPassword] = useState('')
   const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('')
@@ -7502,13 +7507,45 @@ export default function App() {
     let cancelled = false
     Promise.all([
       session?.user?.id ? loadUserProfile(session.user.id) : Promise.resolve(mockLocalProfile()),
+      session?.user?.id ? loadGoogleWorkspaceIdentity(session.user.id) : Promise.resolve(null),
       loadUserNegotiatorContext(session?.user?.email ?? null).catch(() => null),
       loadDiffusionRequests().catch(() => []),
       loadDiffusionRequestEvents().catch(() => []),
     ])
-      .then(([nextProfile, nextUserNegotiatorContext, rows, events]) => {
+      .then(([nextProfile, nextGoogleWorkspaceIdentity, nextUserNegotiatorContext, rows, events]) => {
         if (cancelled) return
+        const profileEmail = normalizeEmail(nextProfile?.email ?? session?.user?.email ?? null)
+        const authEmail = normalizeEmail(session?.user?.email ?? null)
+        const identityEmail = normalizeEmail(nextGoogleWorkspaceIdentity?.google_email ?? null)
+        const identityStatus = nextGoogleWorkspaceIdentity?.link_status ?? null
+        const identityOk = Boolean(
+          nextGoogleWorkspaceIdentity?.is_active
+          && identityStatus === 'linked'
+          && identityEmail
+          && identityEmail === authEmail,
+        )
+        if (hasSupabaseEnv && session && (!nextProfile?.is_active || !isGoogleWorkspaceEmail(profileEmail) || !identityOk)) {
+          setProfile(null)
+          setGoogleWorkspaceIdentity(null)
+          setUserNegotiatorContext(null)
+          setDiffusionRequests([])
+          setDiffusionRequestEvents([])
+          setErrorMessage(
+            !isGoogleWorkspaceEmail(profileEmail)
+              ? `Connexion refusee : utilise une adresse @${googleWorkspaceDomain}.`
+              : !nextProfile?.is_active
+                ? 'Connexion refusee : profil utilisateur inactif ou non cree dans l application.'
+                : identityStatus && identityStatus !== 'linked'
+                  ? 'Connexion refusee : liaison Google Workspace a controler par un admin.'
+                  : identityEmail && identityEmail !== authEmail
+                    ? 'Connexion refusee : compte Google different du profil autorise.'
+                    : 'Connexion refusee : liaison Google Workspace absente ou inactive.',
+          )
+          void signOut()
+          return
+        }
         setProfile(nextProfile)
+        setGoogleWorkspaceIdentity(nextGoogleWorkspaceIdentity)
         setUserNegotiatorContext(nextUserNegotiatorContext)
         setDiffusionRequests(rows)
         setDiffusionRequestEvents(events)
@@ -8032,12 +8069,28 @@ export default function App() {
     event.preventDefault()
     setAuthPending(true)
     setErrorMessage(null)
+    if (!isGoogleWorkspaceEmail(authEmail)) {
+      setErrorMessage(`Connexion refusee : utilise une adresse @${googleWorkspaceDomain}.`)
+      setAuthPending(false)
+      return
+    }
     try {
       await signInWithPassword(authEmail, authPassword)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Connexion impossible')
     } finally {
       setAuthPending(false)
+    }
+  }
+
+  async function handleGoogleWorkspaceSignIn() {
+    setGoogleAuthPending(true)
+    setErrorMessage(null)
+    try {
+      await signInWithGoogleWorkspace(typeof window !== 'undefined' ? window.location.origin : undefined)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Connexion Google impossible')
+      setGoogleAuthPending(false)
     }
   }
 
@@ -8054,6 +8107,7 @@ export default function App() {
       setSelectedDossier(null)
       setSelectedMandatId(null)
       setProfile(null)
+      setGoogleWorkspaceIdentity(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Deconnexion impossible')
     }
@@ -10416,6 +10470,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     ]
   }, [activeFilters.length, contactStats, mandatStats, screen, visibleDossiersCount, workItems.length, workItemsTotal])
   const isAdmin = profile?.role === 'admin'
+  const googleIdentityNegotiatorContext = useMemo<UserNegotiatorContext | null>(() => {
+    if (!googleWorkspaceIdentity?.is_active || googleWorkspaceIdentity.link_status !== 'linked') return null
+    if (!googleWorkspaceIdentity.negociateur_email && !googleWorkspaceIdentity.hektor_user_id) return null
+    return {
+      commercial_nom: profile?.display_name ?? null,
+      negociateur_email: googleWorkspaceIdentity.negociateur_email ?? googleWorkspaceIdentity.google_email ?? null,
+      agence_nom: null,
+      hektor_user_id: googleWorkspaceIdentity.hektor_user_id ?? null,
+    } satisfies UserNegotiatorContext
+  }, [googleWorkspaceIdentity, profile?.display_name])
   const inferredUserNegotiatorContext = useMemo<UserNegotiatorContext | null>(() => {
     if (!sessionEmail) return null
     const dossierMatch = dossiers.find((item) => normalizeEmail(item.negociateur_email) === sessionEmail)
@@ -10444,7 +10508,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     return null
   }, [dossiers, mandats, sessionEmail, workItems])
-  const resolvedUserNegotiatorContext = userNegotiatorContext ?? inferredUserNegotiatorContext
+  const resolvedUserNegotiatorContext = userNegotiatorContext ?? googleIdentityNegotiatorContext ?? inferredUserNegotiatorContext
   const canManageContacts = profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'commercial'
   const contactHektorUserEmail = resolvedUserNegotiatorContext?.negociateur_email ?? sessionEmail ?? null
   const contactHektorUserId = resolvedUserNegotiatorContext?.hektor_user_id ?? null
@@ -10623,6 +10687,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <p className="eyebrow">Accès sécurisé</p>
           <h1>Connexion à l'outil métier</h1>
           <p className="hero-copy">Les vues Supabase sont protégées par RLS. Connecte-toi avec un utilisateur actif pour lire les données.</p>
+          <div className="login-sso">
+            <button className="google-workspace-button" type="button" onClick={() => void handleGoogleWorkspaceSignIn()} disabled={googleAuthPending || authPending}>
+              <span className="google-workspace-mark" aria-hidden="true">G</span>
+              <span>{googleAuthPending ? 'Ouverture Google...' : 'Continuer avec Google Workspace'}</span>
+            </button>
+            <small>Réservé aux comptes @{googleWorkspaceDomain}</small>
+          </div>
+          <div className="login-separator"><span>Accès provisoire par mot de passe</span></div>
           <form className="login-form" onSubmit={handleSignIn}>
             <label><span>Email</span><input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required /></label>
             <label><span>Mot de passe</span><input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required /></label>
@@ -16974,6 +17046,29 @@ function hektorDefaultContactSearchOffer(kind: string) {
   return hektorContactSearchOfferOptionsByKind[kind]?.[0]?.value ?? '0'
 }
 
+function ownerAnnonceOptionTitle(option: OwnerAnnonceSearchOption) {
+  return option.titre_bien?.trim()
+    || option.numero_dossier?.trim()
+    || option.numero_mandat?.trim()
+    || `Annonce ${option.hektor_annonce_id}`
+}
+
+function ownerAnnonceOptionSubtitle(option: OwnerAnnonceSearchOption) {
+  return [
+    option.numero_dossier ? `Dossier ${option.numero_dossier}` : null,
+    option.numero_mandat ? `Mandat ${option.numero_mandat}` : null,
+    [option.code_postal, option.ville].filter(Boolean).join(' ') || null,
+  ].filter(Boolean).join(' - ')
+}
+
+function ownerAnnonceOptionMeta(option: OwnerAnnonceSearchOption) {
+  return [
+    option.commercial_nom,
+    option.agence_nom,
+    option.statut_annonce,
+  ].filter(Boolean).join(' - ')
+}
+
 function optionalBooleanSelectValue(value: boolean | null | undefined) {
   if (value === true) return 'true'
   if (value === false) return 'false'
@@ -17085,6 +17180,10 @@ function HektorContactIdentityForm(props: {
   const [searchLandSurfaceMax, setSearchLandSurfaceMax] = useState('')
   const [ownerNextAction, setOwnerNextAction] = useState<'finish' | 'link_existing' | 'create_property'>('finish')
   const [ownerAnnonceId, setOwnerAnnonceId] = useState('')
+  const [ownerAnnonceSearch, setOwnerAnnonceSearch] = useState('')
+  const [ownerAnnonceOptions, setOwnerAnnonceOptions] = useState<OwnerAnnonceSearchOption[]>([])
+  const [ownerAnnonceLoading, setOwnerAnnonceLoading] = useState(false)
+  const [ownerAnnonceError, setOwnerAnnonceError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [duplicateCandidates, setDuplicateCandidates] = useState<AppContact[]>([])
@@ -17097,6 +17196,9 @@ function HektorContactIdentityForm(props: {
   }, [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
   const selectedHektorEmail = selectedHektorUser?.email ?? props.contact?.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
   const selectedHektorId = selectedHektorUser?.idUser ?? (availableHektorNegotiators.length === 0 ? (selectedHektorUserId.trim() || props.hektorUserId || null) : null)
+  const selectedOwnerAnnonce = useMemo(() => {
+    return ownerAnnonceOptions.find((option) => String(option.hektor_annonce_id) === ownerAnnonceId) ?? null
+  }, [ownerAnnonceId, ownerAnnonceOptions])
   const isCreateMode = props.mode === 'create'
   const isPartnerKind = isCreateMode && contactKind === 'partenaire'
   const isCompanyPerson = isCreateMode && personType === 'personne_morale'
@@ -17123,6 +17225,9 @@ function HektorContactIdentityForm(props: {
     setSearchTypeIds(['2'])
     setOwnerNextAction('finish')
     setOwnerAnnonceId('')
+    setOwnerAnnonceSearch('')
+    setOwnerAnnonceOptions([])
+    setOwnerAnnonceError(null)
   }, [contactKind, isCreateMode])
 
   useEffect(() => {
@@ -17130,6 +17235,41 @@ function HektorContactIdentityForm(props: {
     setSearchCity(city)
     setSearchPostalCode(postalCode)
   }, [city, contactStep, isCreateMode, postalCode])
+
+  useEffect(() => {
+    if (!isCreateMode || contactStep !== 'owner' || ownerNextAction !== 'link_existing') {
+      setOwnerAnnonceLoading(false)
+      return
+    }
+    let cancelled = false
+    setOwnerAnnonceLoading(true)
+    setOwnerAnnonceError(null)
+    const handle = window.setTimeout(async () => {
+      try {
+        const rows = await searchOwnerAnnonceOptions({
+          search: ownerAnnonceSearch,
+          scope: selectedHektorEmail ? { negotiatorEmail: selectedHektorEmail } : null,
+          limit: 12,
+        })
+        if (cancelled) return
+        setOwnerAnnonceOptions(rows)
+        if (ownerAnnonceId && !rows.some((row) => String(row.hektor_annonce_id) === ownerAnnonceId)) {
+          const typedId = ownerAnnonceSearch.trim() === ownerAnnonceId
+          if (!typedId) setOwnerAnnonceId('')
+        }
+      } catch (searchError) {
+        if (cancelled) return
+        setOwnerAnnonceOptions([])
+        setOwnerAnnonceError(searchError instanceof Error ? searchError.message : 'Recherche annonce impossible.')
+      } finally {
+        if (!cancelled) setOwnerAnnonceLoading(false)
+      }
+    }, ownerAnnonceSearch.trim() ? 220 : 0)
+    return () => {
+      cancelled = true
+      window.clearTimeout(handle)
+    }
+  }, [contactStep, isCreateMode, ownerAnnonceId, ownerAnnonceSearch, ownerNextAction, selectedHektorEmail])
 
   useEffect(() => {
     const next = props.contact
@@ -17189,6 +17329,9 @@ function HektorContactIdentityForm(props: {
     setSearchLandSurfaceMax('')
     setOwnerNextAction('finish')
     setOwnerAnnonceId('')
+    setOwnerAnnonceSearch('')
+    setOwnerAnnonceOptions([])
+    setOwnerAnnonceError(null)
     setSelectedHektorUserId(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
   }, [defaultHektorOption?.idUser, props.contact?.hektor_contact_id, props.hektorUserEmail, props.hektorUserId, props.mode])
 
@@ -17323,30 +17466,30 @@ function HektorContactIdentityForm(props: {
       }
     }
     if (contactStep === 'owner' && ownerNextAction === 'link_existing' && !/^\d+$/.test(ownerAnnonceId.trim())) {
-      setError('ID annonce Hektor numerique requis pour rattacher le proprietaire.')
+      setError('Choisis une annonce dans la liste pour rattacher le proprietaire.')
       return
+    }
+    if (props.mode === 'create' && contactStep === 'identity') {
+      if (hasSearchStep) {
+        setSearchCity((current) => current || city)
+        setSearchPostalCode((current) => current || postalCode)
+        setDuplicateCandidates([])
+        setContactStep('search')
+        return
+      }
+      if (hasOwnerStep) {
+        setDuplicateCandidates([])
+        setContactStep('owner')
+        return
+      }
     }
     setPending(true)
     try {
-      if (props.mode === 'create' && contactStep === 'identity' && !duplicatesAccepted) {
+      if (props.mode === 'create' && !duplicatesAccepted) {
         const candidates = await findContactDuplicateCandidates({ email, phone, lastName: mainName, firstName })
         if (candidates.length > 0) {
           setDuplicateCandidates(candidates)
           setDuplicatesAccepted(true)
-          setPending(false)
-          return
-        }
-      }
-      if (props.mode === 'create' && contactStep === 'identity') {
-        if (hasSearchStep) {
-          setSearchCity((current) => current || city)
-          setSearchPostalCode((current) => current || postalCode)
-          setContactStep('search')
-          setPending(false)
-          return
-        }
-        if (hasOwnerStep) {
-          setContactStep('owner')
           setPending(false)
           return
         }
@@ -17408,6 +17551,9 @@ function HektorContactIdentityForm(props: {
         setSearchLandSurfaceMax('')
         setOwnerNextAction('finish')
         setOwnerAnnonceId('')
+        setOwnerAnnonceSearch('')
+        setOwnerAnnonceOptions([])
+        setOwnerAnnonceError(null)
       }
       props.onCancel?.()
     } catch (submitError) {
@@ -17792,11 +17938,51 @@ function HektorContactIdentityForm(props: {
             ))}
           </div>
           {ownerNextAction === 'link_existing' ? (
-            <div className="hektor-inline-grid contact-editor-grid contact-next-grid">
+            <div className="contact-owner-search-panel">
               <label>
-                <span>ID annonce Hektor</span>
-                <input value={ownerAnnonceId} onChange={(event) => setOwnerAnnonceId(event.target.value)} inputMode="numeric" required />
+                <span>Rechercher une annonce</span>
+                <input
+                  value={ownerAnnonceSearch}
+                  onChange={(event) => {
+                    setOwnerAnnonceSearch(event.target.value)
+                    setOwnerAnnonceId('')
+                  }}
+                  placeholder="Dossier, mandat, titre, ville, commercial..."
+                  autoComplete="off"
+                />
+                <small>{ownerAnnonceLoading ? 'Recherche...' : 'Selectionne le bien a rattacher au proprietaire.'}</small>
               </label>
+              {ownerAnnonceError ? <p className="form-error">{ownerAnnonceError}</p> : null}
+              <div className="contact-owner-result-list">
+                {ownerAnnonceOptions.length > 0 ? ownerAnnonceOptions.map((option) => {
+                  const selected = String(option.hektor_annonce_id) === ownerAnnonceId
+                  return (
+                    <button
+                      key={`owner-annonce-${option.hektor_annonce_id}`}
+                      type="button"
+                      className={selected ? 'is-selected' : ''}
+                      onClick={() => {
+                        setOwnerAnnonceId(String(option.hektor_annonce_id))
+                        setOwnerAnnonceSearch(ownerAnnonceOptionTitle(option))
+                      }}
+                    >
+                      <span>
+                        <strong>{ownerAnnonceOptionTitle(option)}</strong>
+                        <small>{ownerAnnonceOptionSubtitle(option) || `Annonce ${option.hektor_annonce_id}`}</small>
+                      </span>
+                      <em>{ownerAnnonceOptionMeta(option) || `ID ${option.hektor_annonce_id}`}</em>
+                    </button>
+                  )
+                }) : (
+                  <p>{ownerAnnonceLoading ? 'Recherche en cours...' : ownerAnnonceSearch.trim() ? 'Aucune annonce trouvee.' : 'Les annonces recentes du negociateur apparaissent ici.'}</p>
+                )}
+              </div>
+              {selectedOwnerAnnonce ? (
+                <div className="contact-owner-selected">
+                  <strong>Bien selectionne</strong>
+                  <span>{ownerAnnonceOptionTitle(selectedOwnerAnnonce)} - ID {selectedOwnerAnnonce.hektor_annonce_id}</span>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -17805,7 +17991,7 @@ function HektorContactIdentityForm(props: {
       <div className="hektor-inline-actions">
         {contactStep !== 'identity' ? <button className="ghost-button" type="button" onClick={() => setContactStep('identity')} disabled={pending}>Retour</button> : null}
         {props.onCancel ? <button className="ghost-button" type="button" onClick={props.onCancel} disabled={pending}>Annuler</button> : null}
-        <button className="primary-action" type="submit" disabled={pending}>{pending ? 'Envoi...' : duplicatesAccepted && props.mode === 'create' && contactStep === 'identity' ? 'Continuer malgre doublon' : props.mode === 'create' && contactStep === 'identity' && (hasSearchStep || hasOwnerStep) ? 'Etape suivante' : props.mode === 'create' ? 'Creer le contact' : 'Enregistrer'}</button>
+        <button className="primary-action" type="submit" disabled={pending}>{pending ? 'Envoi...' : duplicatesAccepted && props.mode === 'create' ? 'Continuer malgre doublon' : props.mode === 'create' && contactStep === 'identity' && (hasSearchStep || hasOwnerStep) ? 'Etape suivante' : props.mode === 'create' ? 'Creer le contact' : 'Enregistrer'}</button>
       </div>
     </form>
   )

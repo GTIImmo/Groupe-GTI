@@ -59,6 +59,30 @@ def bool_value(value: Any) -> bool:
     return value in (True, 1, "1", "true", "oui")
 
 
+def explicit_contact_ids(values: Iterable[str]) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values:
+        for chunk in str(raw_value or "").replace(";", ",").split(","):
+            contact_id = chunk.strip()
+            if not contact_id:
+                continue
+            if not contact_id.isdigit():
+                raise RuntimeError(f"ID contact invalide: {contact_id}")
+            if contact_id in seen:
+                continue
+            seen.add(contact_id)
+            ids.append(contact_id)
+    return ids
+
+
+def sqlite_text_in(column: str, values: list[str]) -> str:
+    if not values:
+        return ""
+    quoted = ",".join("'" + value.replace("'", "''") + "'" for value in values)
+    return f"CAST({column} AS TEXT) IN ({quoted})"
+
+
 def build_search_text(row: dict[str, Any]) -> str | None:
     parts = [
         row.get("display_name"),
@@ -281,6 +305,14 @@ class SupabaseRestClient:
             count += len(batch)
         return count
 
+    def delete_rows_by_filter(self, table: str, column: str, values: list[str], batch_size: int) -> int:
+        count = 0
+        for batch in chunked([str(value) for value in values], batch_size):
+            encoded = ",".join(urllib.parse.quote(value, safe="") for value in batch)
+            self.request(method="DELETE", path=f"{table}?{column}=in.({encoded})", prefer="return=minimal")
+            count += len(batch)
+        return count
+
 
 def load_rows(db_path: Path, table: str, normalizer, where: str = "") -> list[dict[str, Any]]:
     conn = sqlite3.connect(db_path)
@@ -349,11 +381,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-archived-relations", action="store_true", help="Pousse aussi les relations rattachees uniquement a des annonces archivees.")
     parser.add_argument("--include-archived-searches", action="store_true", help="Pousse aussi les recherches archivees. Par defaut seules les recherches actives partent.")
     parser.add_argument("--include-duplicates", action="store_true", help="Pousse aussi les tables d'audit doublons reservees admin/manager.")
+    parser.add_argument(
+        "--contact-id",
+        action="append",
+        default=[],
+        help="Pousse uniquement un ou plusieurs contacts Hektor (valeurs separees par virgule acceptees).",
+    )
+    parser.add_argument("--skip-stats", action="store_true", help="Ne pousse pas le snapshot de statistiques globales contacts.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    contact_ids = explicit_contact_ids(args.contact_id)
     if args.contacts_scope == "eligible":
         contact_where = "WHERE supabase_sync_eligible = 1"
     elif args.contacts_scope == "active":
@@ -364,6 +404,12 @@ def main() -> int:
         contact_where = ""
     relation_where = "" if args.include_archived_relations else "WHERE is_active_annonce = 1"
     search_where = "" if args.include_archived_searches else "WHERE is_active = 1"
+    stats_contact_where = contact_where
+    if contact_ids:
+        contact_id_where = sqlite_text_in("hektor_contact_id", contact_ids)
+        contact_where = scoped_where(contact_where, contact_id_where)
+        relation_where = scoped_where(relation_where, contact_id_where)
+        search_where = scoped_where(search_where, contact_id_where)
     table_specs = [
         ("app_contact_current", normalize_contact_row, contact_where),
         ("app_contact_relation_current", normalize_relation_row, relation_where),
@@ -382,8 +428,8 @@ def main() -> int:
         rows = load_rows(args.phase2_db, table, normalizer, where)
         loaded.append((table, rows))
     loaded_counts = {table: len(rows) for table, rows in loaded}
-    contact_stats = build_contact_stats_row(args.phase2_db, args.contacts_scope, contact_where)
-    stale_by_table = find_stale_row_keys(args.phase2_db, loaded)
+    contact_stats = None if args.skip_stats else build_contact_stats_row(args.phase2_db, args.contacts_scope, stats_contact_where)
+    stale_by_table = {} if contact_ids else find_stale_row_keys(args.phase2_db, loaded)
 
     if args.reset_push_state:
         conn = sqlite3.connect(args.phase2_db)
@@ -394,21 +440,39 @@ def main() -> int:
         finally:
             conn.close()
 
-    if args.push_mode == "update":
+    if args.push_mode == "update" and not contact_ids:
         loaded = filter_changed_rows(args.phase2_db, loaded)
 
     if args.dry_run:
+        dry_run_summary = {
+            table: {
+                "loaded": loaded_counts.get(table, len(rows)),
+                "to_upload": len(rows),
+                "to_delete": len(stale_by_table.get(table, [])),
+                "push_mode": "contact_replace" if contact_ids else args.push_mode,
+            }
+            for table, rows in loaded
+        }
+        if contact_stats is not None:
+            dry_run_summary[CONTACT_STATS_TABLE] = {
+                "loaded": 1,
+                "to_upload": 1,
+                "to_delete": 0,
+                "push_mode": "snapshot",
+                "stats": contact_stats,
+            }
+        if contact_ids:
+            dry_run_summary["_contact_scope"] = {
+                "contact_ids": contact_ids,
+                "delete_before_upsert": [
+                    "app_contact_current",
+                    "app_contact_relation_current",
+                    "app_contact_search_current",
+                ],
+            }
         print(
             json.dumps(
-                {
-                    table: {
-                        "loaded": loaded_counts.get(table, len(rows)),
-                        "to_upload": len(rows),
-                        "to_delete": len(stale_by_table.get(table, [])),
-                        "push_mode": args.push_mode,
-                    }
-                    for table, rows in loaded
-                } | {CONTACT_STATS_TABLE: {"loaded": 1, "to_upload": 1, "to_delete": 0, "push_mode": "snapshot", "stats": contact_stats}},
+                dry_run_summary,
                 ensure_ascii=False,
                 indent=2,
             )
@@ -426,15 +490,20 @@ def main() -> int:
     results = {}
     deleted_results = {}
     deleted_state: dict[str, list[str]] = {}
-    for table, stale_row_keys in stale_by_table.items():
-        column = key_column(table)
-        if column is None:
-            continue
-        deleted_results[table] = client.delete_rows_by_key(table, column, stale_row_keys, args.batch_size)
-        deleted_state[table] = stale_row_keys
+    if contact_ids:
+        for table in ["app_contact_current", "app_contact_relation_current", "app_contact_search_current"]:
+            deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", contact_ids, args.batch_size)
+    else:
+        for table, stale_row_keys in stale_by_table.items():
+            column = key_column(table)
+            if column is None:
+                continue
+            deleted_results[table] = client.delete_rows_by_key(table, column, stale_row_keys, args.batch_size)
+            deleted_state[table] = stale_row_keys
     for table, rows in loaded:
         results[table] = client.upsert_rows(table, rows, args.batch_size)
-    results[CONTACT_STATS_TABLE] = client.upsert_rows(CONTACT_STATS_TABLE, [contact_stats], 1)
+    if contact_stats is not None:
+        results[CONTACT_STATS_TABLE] = client.upsert_rows(CONTACT_STATS_TABLE, [contact_stats], 1)
     if deleted_state:
         mark_deleted_rows(args.phase2_db, deleted_state)
     mark_pushed_rows(args.phase2_db, loaded)

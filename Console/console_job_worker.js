@@ -2545,15 +2545,23 @@ async function handleRefreshConsoleContactData(job) {
     stderr: detailOutput.stderr,
   });
 
-  const normalizeOutput = await runProjectPythonScript(["normalize_source.py"], { timeoutMs: 120000, previewSize: 2000 });
-  const buildOutput = await runProjectPythonScript(["phase2/contacts/build_contacts_layer.py", "--no-reports"], { timeoutMs: 180000, previewSize: 3000 });
+  const normalizeOutput = await runProjectPythonScript(["normalize_source.py", "--contact-id", hektorContactId], { timeoutMs: 60000, previewSize: 2000 });
+  const buildOutput = await runProjectPythonScript([
+    "phase2/contacts/build_contacts_layer.py",
+    "--contact-id",
+    hektorContactId,
+    "--no-reports",
+  ], { timeoutMs: 60000, previewSize: 3000 });
   const pushOutput = await runProjectPythonScript([
     "phase2/sync/push_contacts_to_supabase.py",
+    "--contact-id",
+    hektorContactId,
     "--push-mode",
-    "update",
+    "full",
     "--contacts-scope",
     "active_or_eligible",
-  ], { timeoutMs: 180000, previewSize: 3000 });
+    "--skip-stats",
+  ], { timeoutMs: 60000, previewSize: 3000 });
 
   await logJob(job.id, "refresh_console_contact_data", "done", "Contact reconstruit et pousse vers Supabase", {
     hektor_contact_id: hektorContactId,
@@ -6645,24 +6653,8 @@ async function handleDeleteHektorContact(job) {
   } catch (error) {
     cleanup.errors.push({ step: "local", error: error && error.message ? error.message : String(error) });
   }
-  try {
-    const buildOutput = await runProjectPythonScript(["phase2/contacts/build_contacts_layer.py", "--no-reports"], { timeoutMs: 180000, previewSize: 3000 });
-    cleanup.build = { stdout: buildOutput.stdout, stderr: buildOutput.stderr };
-  } catch (error) {
-    cleanup.errors.push({ step: "build_contacts_layer", error: error && error.message ? error.message : String(error) });
-  }
-  try {
-    const pushOutput = await runProjectPythonScript([
-      "phase2/sync/push_contacts_to_supabase.py",
-      "--push-mode",
-      "update",
-      "--contacts-scope",
-      "active_or_eligible",
-    ], { timeoutMs: 180000, previewSize: 3000 });
-    cleanup.push = { stdout: pushOutput.stdout, stderr: pushOutput.stderr };
-  } catch (error) {
-    cleanup.errors.push({ step: "push_contacts_to_supabase", error: error && error.message ? error.message : String(error) });
-  }
+  cleanup.build = { status: "skipped", reason: "contact_delete_cleanup_is_already_scoped" };
+  cleanup.push = { status: "skipped", reason: "contact_delete_cleanup_is_already_scoped" };
 
   const result = {
     deleted_hektor_contact_id: contactId,

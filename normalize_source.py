@@ -45,8 +45,61 @@ def latest_detail_map(rows: Iterable[sqlite3.Row]) -> Dict[str, Dict[str, Any]]:
     for row in rows:
         payload = json.loads(row["payload_json"])
         data = payload.get("data")
-        object_id = str(row["object_id"] or "").strip()
+        object_id_key = row["object_id_key"] if "object_id_key" in row.keys() else None
+        object_id = str(object_id_key or row["object_id"] or "").strip()
         if object_id and isinstance(data, dict):
+            output[object_id] = data
+    return output
+
+
+def explicit_numeric_ids(values: Iterable[str]) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values:
+        for chunk in str(raw_value or "").replace(";", ",").split(","):
+            item_id = chunk.strip()
+            if not item_id:
+                continue
+            if not item_id.isdigit():
+                raise RuntimeError(f"ID invalide: {item_id}")
+            if item_id in seen:
+                continue
+            seen.add(item_id)
+            ids.append(item_id)
+    return ids
+
+
+def latest_contact_detail_map(conn: sqlite3.Connection, contact_ids: Iterable[str] | None = None) -> Dict[str, Dict[str, Any]]:
+    ids = explicit_numeric_ids(contact_ids or [])
+    if not ids:
+        return latest_detail_map(fetch_latest_raw_payloads(conn, "contact_detail"))
+
+    raw_columns = {row[1] for row in conn.execute("PRAGMA table_info(raw_api_response)").fetchall()}
+    object_key_expr = "object_id_key" if "object_id_key" in raw_columns else "NULL AS object_id_key"
+    placeholders = ",".join("?" for _ in ids)
+    conditions = [f"CAST(object_id AS TEXT) IN ({placeholders})"]
+    params = list(ids)
+    if "object_id_key" in raw_columns:
+        conditions.append(f"CAST(object_id_key AS TEXT) IN ({placeholders})")
+        params.extend(ids)
+
+    rows = conn.execute(
+        f"""
+        SELECT object_id, {object_key_expr}, payload_json
+        FROM raw_api_response
+        WHERE endpoint_name = 'contact_detail'
+          AND ({" OR ".join(conditions)})
+        ORDER BY id DESC
+        """,
+        params,
+    ).fetchall()
+
+    output: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        payload = json.loads(row["payload_json"])
+        data = payload.get("data")
+        object_id = str(row["object_id_key"] or row["object_id"] or "").strip()
+        if object_id and object_id not in output and isinstance(data, dict):
             output[object_id] = data
     return output
 
@@ -783,63 +836,88 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def upsert_contacts(conn: sqlite3.Connection) -> None:
-    detail_map = latest_detail_map(fetch_latest_raw_payloads(conn, "contact_detail"))
+def upsert_contact_from_sources(
+    conn: sqlite3.Connection,
+    item: Dict[str, Any],
+    detail_source: Dict[str, Any] | None = None,
+) -> bool:
+    source = detail_source or item
+    if not isinstance(source, dict):
+        return False
+    contact_id = str(source.get("id") or item.get("id") or "").strip()
+    if not contact_id:
+        return False
+    coords = source.get("coordonnees") or {}
+    localite = source.get("localite") or {}
+    inner = localite.get("localite") if isinstance(localite, dict) else {}
+    conn.execute(
+        """
+        INSERT INTO hektor_contact(
+            hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom, archive, date_enregistrement,
+            date_maj, email, portable, fixe, ville, code_postal, typologie_json, raw_json, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(hektor_contact_id) DO UPDATE SET
+            hektor_agence_id = excluded.hektor_agence_id,
+            hektor_negociateur_id = excluded.hektor_negociateur_id,
+            civilite = excluded.civilite,
+            nom = excluded.nom,
+            prenom = excluded.prenom,
+            archive = excluded.archive,
+            date_enregistrement = excluded.date_enregistrement,
+            date_maj = excluded.date_maj,
+            email = excluded.email,
+            portable = excluded.portable,
+            fixe = excluded.fixe,
+            ville = excluded.ville,
+            code_postal = excluded.code_postal,
+            typologie_json = excluded.typologie_json,
+            raw_json = excluded.raw_json,
+            synced_at = excluded.synced_at
+        """,
+        (
+            contact_id,
+            normalized_id(source.get("agence") or item.get("agence")),
+            normalized_id(source.get("id_negociateur") or item.get("id_negociateur")),
+            source.get("civilite") or item.get("civilite"),
+            source.get("nom") or item.get("nom"),
+            source.get("prenom") or item.get("prenom"),
+            source.get("archive") if source.get("archive") is not None else item.get("archive"),
+            source.get("dateenr") or item.get("dateenr"),
+            source.get("datemaj") or item.get("datemaj"),
+            coords.get("email") if isinstance(coords, dict) else None,
+            coords.get("portable") if isinstance(coords, dict) else None,
+            coords.get("fixe") if isinstance(coords, dict) else None,
+            inner.get("ville") if isinstance(inner, dict) else None,
+            inner.get("code") if isinstance(inner, dict) else None,
+            json_dumps(source.get("typologie")),
+            json_dumps(source),
+            now_utc_iso(),
+        ),
+    )
+    return True
 
-    def upsert_contact_from_sources(item: Dict[str, Any], detail_source: Dict[str, Any] | None = None) -> None:
-        source = detail_source or item
-        if not isinstance(source, dict):
-            return
-        contact_id = str(source.get("id") or item.get("id") or "").strip()
-        if not contact_id:
-            return
-        coords = source.get("coordonnees") or {}
-        localite = source.get("localite") or {}
-        inner = localite.get("localite") if isinstance(localite, dict) else {}
-        conn.execute(
-            """
-            INSERT INTO hektor_contact(
-                hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom, archive, date_enregistrement,
-                date_maj, email, portable, fixe, ville, code_postal, typologie_json, raw_json, synced_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(hektor_contact_id) DO UPDATE SET
-                hektor_agence_id = excluded.hektor_agence_id,
-                hektor_negociateur_id = excluded.hektor_negociateur_id,
-                civilite = excluded.civilite,
-                nom = excluded.nom,
-                prenom = excluded.prenom,
-                archive = excluded.archive,
-                date_enregistrement = excluded.date_enregistrement,
-                date_maj = excluded.date_maj,
-                email = excluded.email,
-                portable = excluded.portable,
-                fixe = excluded.fixe,
-                ville = excluded.ville,
-                code_postal = excluded.code_postal,
-                typologie_json = excluded.typologie_json,
-                raw_json = excluded.raw_json,
-                synced_at = excluded.synced_at
-            """,
-            (
-                contact_id,
-                normalized_id(source.get("agence") or item.get("agence")),
-                normalized_id(source.get("id_negociateur") or item.get("id_negociateur")),
-                source.get("civilite") or item.get("civilite"),
-                source.get("nom") or item.get("nom"),
-                source.get("prenom") or item.get("prenom"),
-                source.get("archive") if source.get("archive") is not None else item.get("archive"),
-                source.get("dateenr") or item.get("dateenr"),
-                source.get("datemaj") or item.get("datemaj"),
-                coords.get("email") if isinstance(coords, dict) else None,
-                coords.get("portable") if isinstance(coords, dict) else None,
-                coords.get("fixe") if isinstance(coords, dict) else None,
-                inner.get("ville") if isinstance(inner, dict) else None,
-                inner.get("code") if isinstance(inner, dict) else None,
-                json_dumps(source.get("typologie")),
-                json_dumps(source),
-                now_utc_iso(),
-            ),
-        )
+
+def upsert_contacts(conn: sqlite3.Connection, contact_ids: Iterable[str] | None = None) -> int:
+    requested_ids = explicit_numeric_ids(contact_ids or [])
+    detail_map = latest_contact_detail_map(conn, requested_ids or None)
+
+    if requested_ids:
+        updated_count = 0
+        missing_detail_ids = set(requested_ids) - set(detail_map)
+        listing_items: Dict[str, Dict[str, Any]] = {}
+        if missing_detail_ids:
+            for endpoint_name in CONTACT_ENDPOINTS:
+                for item in iter_listing_items(fetch_latest_raw_payloads(conn, endpoint_name)):
+                    contact_id = str(item.get("id") or "").strip()
+                    if contact_id in missing_detail_ids and contact_id not in listing_items:
+                        listing_items[contact_id] = item
+        for contact_id in requested_ids:
+            item = listing_items.get(contact_id, {"id": contact_id})
+            source = get_detail_payload(detail_map.get(contact_id, item), "contact")
+            if upsert_contact_from_sources(conn, item, source):
+                updated_count += 1
+        conn.commit()
+        return updated_count
 
     seen_contact_ids: set[str] = set()
     for endpoint_name in CONTACT_ENDPOINTS:
@@ -848,7 +926,7 @@ def upsert_contacts(conn: sqlite3.Connection) -> None:
             if contact_id:
                 seen_contact_ids.add(contact_id)
             source = get_detail_payload(detail_map.get(contact_id, item), "contact")
-            upsert_contact_from_sources(item, source)
+            upsert_contact_from_sources(conn, item, source)
 
     for contact_id, detail_payload in detail_map.items():
         if contact_id in seen_contact_ids:
@@ -856,8 +934,9 @@ def upsert_contacts(conn: sqlite3.Connection) -> None:
         source = get_detail_payload(detail_payload, "contact")
         if not isinstance(source, dict) or not source:
             continue
-        upsert_contact_from_sources({"id": contact_id}, source)
+        upsert_contact_from_sources(conn, {"id": contact_id}, source)
     conn.commit()
+    return len(seen_contact_ids)
 
 
 def upsert_offres(conn: sqlite3.Connection) -> None:
@@ -1169,11 +1248,23 @@ def upsert_broadcast_states(conn: sqlite3.Connection) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Normalize raw Hektor payloads into source tables.")
-    _ = parser.parse_args()
+    parser.add_argument(
+        "--contact-id",
+        action="append",
+        default=[],
+        help="Normalise uniquement un ou plusieurs contacts Hektor (valeurs separees par virgule acceptees).",
+    )
+    args = parser.parse_args()
 
     settings = Settings.from_env()
     conn = connect_db(settings.db_path)
     init_db(conn)
+    contact_ids = explicit_numeric_ids(args.contact_id)
+    if contact_ids:
+        updated_count = upsert_contacts(conn, contact_ids)
+        print(f"Targeted contact normalization into {settings.db_path}: contacts={updated_count} ids={','.join(contact_ids)}")
+        return 0
+
     active_annonce_ids = active_annonce_ids_from_raw(conn)
     
     upsert_agences(conn)
