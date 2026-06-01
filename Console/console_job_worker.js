@@ -4941,27 +4941,7 @@ async function handleLinkHektorMandant(job) {
   if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
 
   const annonceId = String(dossier.hektor_annonce_id);
-  const before = await fetchHektorProspectsList(annonceId);
-  if (hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
-    return {
-      status: "already_linked",
-      hektor_annonce_id: annonceId,
-      hektor_contact_id: contactId,
-    };
-  }
-
-  await logJob(job.id, "hektor_mandant", "running", "Association mandant/proprietaire dans Hektor", {
-    hektor_annonce_id: annonceId,
-    hektor_contact_id: contactId,
-  });
-
-  await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(contactId)}&idann=${encodeURIComponent(annonceId)}`);
-  await sleep(1800);
-
-  const after = await fetchHektorProspectsList(annonceId);
-  if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
-    throw new Error(`Association mandant non confirmee pour contact ${contactId} sur annonce ${annonceId}`);
-  }
+  const linkResult = await linkHektorMandantContact(job, annonceId, contactId, "hektor_mandant");
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "link_hektor_mandant",
@@ -4969,10 +4949,50 @@ async function handleLinkHektorMandant(job) {
   });
 
   return {
+    status: linkResult.status,
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+    wait_attempts: linkResult.waitAttempts,
+    sync_job: syncJob,
+  };
+}
+
+async function waitForHektorMandantLink(job, annonceId, contactId, step, options = {}) {
+  const attempts = Number(options.attempts || 4);
+  const intervalMs = Number(options.intervalMs || 650);
+  for (let index = 0; index < attempts; index += 1) {
+    const list = await fetchHektorProspectsList(annonceId);
+    if (hektorProspectLinkedInHtml(list.text, contactId, annonceId)) {
+      return { status: "confirmed", waitAttempts: index + 1 };
+    }
+    if (index < attempts - 1) await sleep(intervalMs);
+  }
+  throw new Error(`Association mandant non confirmee pour contact ${contactId} sur annonce ${annonceId}`);
+}
+
+async function linkHektorMandantContact(job, annonceId, contactId, step = "hektor_mandant") {
+  const before = await fetchHektorProspectsList(annonceId);
+  if (hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
+    return {
+      status: "already_linked",
+      hektor_annonce_id: annonceId,
+      hektor_contact_id: contactId,
+      waitAttempts: 0,
+    };
+  }
+
+  await logJob(job.id, step, "running", "Association mandant/proprietaire dans Hektor", {
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+  });
+
+  await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(contactId)}&idann=${encodeURIComponent(annonceId)}`);
+  const confirmed = await waitForHektorMandantLink(job, annonceId, contactId, `${step}_confirm`);
+  return {
     status: "linked",
     hektor_annonce_id: annonceId,
     hektor_contact_id: contactId,
-    sync_job: syncJob,
+    waitAttempts: confirmed.waitAttempts,
   };
 }
 
@@ -5033,6 +5053,29 @@ function normalizeMandatContactIds(payload) {
       : typeof payload.idMandants === "string"
         ? payload.idMandants.split("|")
         : [];
+  const ids = [];
+  const seen = new Set();
+  for (const value of raw) {
+    const id = String(value || "").trim();
+    if (/^\d+$/.test(id) && !seen.has(id)) {
+      ids.push(id);
+      seen.add(id);
+    }
+  }
+  return ids;
+}
+
+function normalizeInitialMandantContactIds(payload) {
+  const raw = Array.isArray(payload.initial_mandant_contact_ids)
+    ? payload.initial_mandant_contact_ids
+    : Array.isArray(payload.initialMandantContactIds)
+      ? payload.initialMandantContactIds
+      : [
+          payload.initial_mandant_contact_id,
+          payload.initialMandantContactId,
+          payload.contact_id_mandant,
+          payload.hektor_mandant_contact_id,
+        ];
   const ids = [];
   const seen = new Set();
   for (const value of raw) {
@@ -5981,21 +6024,8 @@ async function applyHektorOwnerNextStep(job, contactId, payload) {
   const annonceId = cleanString(next.hektorAnnonceId || next.hektor_annonce_id || next.annonce_id);
   if (!/^\d+$/.test(annonceId || "")) throw new Error("ID annonce Hektor numerique requis pour rattacher le proprietaire");
 
-  const before = await fetchHektorProspectsList(annonceId);
-  if (hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
-    return { status: "already_linked", action, hektor_contact_id: String(contactId), hektor_annonce_id: annonceId };
-  }
-  await logJob(job.id, "hektor_contact_owner_link", "running", "Rattachement proprietaire au bien Hektor", {
-    hektor_contact_id: String(contactId),
-    hektor_annonce_id: annonceId,
-  });
-  await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(contactId)}&idann=${encodeURIComponent(annonceId)}`);
-  await sleep(1800);
-  const after = await fetchHektorProspectsList(annonceId);
-  if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
-    throw new Error(`Rattachement proprietaire non confirme pour contact ${contactId} sur annonce ${annonceId}`);
-  }
-  return { status: "linked", action, hektor_contact_id: String(contactId), hektor_annonce_id: annonceId };
+  const linkResult = await linkHektorMandantContact(job, annonceId, String(contactId), "hektor_contact_owner_link");
+  return { status: linkResult.status, action, hektor_contact_id: String(contactId), hektor_annonce_id: annonceId, wait_attempts: linkResult.waitAttempts };
 }
 
 async function applyHektorContactPostCreateStep(job, created, payload) {
@@ -6979,6 +7009,42 @@ async function handleCreateHektorDraftAnnonce(job) {
     throw new Error(`Creation annonce Hektor non confirmee par GraphQL apres enregistrement wizard ${idannWizard}`);
   }
 
+  let initialMandantLinks = { status: "skipped", reason: "not_requested", links: [] };
+  const initialMandantContactIds = normalizeInitialMandantContactIds(payload);
+  if (initialMandantContactIds.length) {
+    const links = [];
+    for (const contactId of initialMandantContactIds) {
+      try {
+        await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false, required: true });
+        const linkResult = await linkHektorMandantContact(job, String(created.id), contactId, "hektor_mandant_link_initial");
+        links.push(linkResult);
+        await logJob(job.id, "hektor_mandant_link_initial", "done", "Mandant existant associe a l annonce creee", {
+          hektor_annonce_id: String(created.id),
+          hektor_contact_id: contactId,
+          status: linkResult.status,
+          wait_attempts: linkResult.waitAttempts,
+        });
+      } catch (error) {
+        const message = error && error.message ? error.message : String(error);
+        links.push({
+          status: "error",
+          hektor_annonce_id: String(created.id),
+          hektor_contact_id: contactId,
+          error: message,
+        });
+        await logJob(job.id, "hektor_mandant_link_initial", "error", "Annonce creee, mais mandant existant non associe", {
+          hektor_annonce_id: String(created.id),
+          hektor_contact_id: contactId,
+          error: message,
+        });
+      }
+    }
+    initialMandantLinks = {
+      status: links.some((link) => link.status === "error") ? "partial_error" : "linked",
+      links,
+    };
+  }
+
   let initialMandantCreate = { status: "skipped", reason: "not_requested" };
   const initialMandantPayload = payload.initial_mandant || payload.initialMandant || null;
   if (initialMandantPayload && (cleanString(initialMandantPayload.last_name || initialMandantPayload.nom || initialMandantPayload.name) || cleanString(initialMandantPayload.email))) {
@@ -7045,6 +7111,7 @@ async function handleCreateHektorDraftAnnonce(job) {
     created_at_hektor: created.createdAt || null,
     property_type: created.type && created.type.name ? created.type.name : payload.property_type || null,
     initial_fields_update: initialFieldsUpdate,
+    initial_mandant_links: initialMandantLinks,
     initial_mandant_create: initialMandantCreate,
     sync_job: syncJob,
     requested_payload: {
@@ -7056,6 +7123,8 @@ async function handleCreateHektorDraftAnnonce(job) {
       surface: payload.surface || null,
       room_count: payload.room_count || null,
       bedroom_count: payload.bedroom_count || null,
+      initial_mandant_contact_ids: initialMandantContactIds,
+      initial_mandant_contact_label: payload.initial_mandant_contact_label || payload.initialMandantContactLabel || null,
       initial_mandant: initialMandantPayload ? {
         last_name: initialMandantPayload.last_name || initialMandantPayload.nom || null,
         first_name: initialMandantPayload.first_name || initialMandantPayload.prenom || null,

@@ -83,8 +83,10 @@ import {
   loadContactStats,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
+  searchMandantContactOptions,
   type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
+  type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
 import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
@@ -1733,6 +1735,7 @@ function isHektorAdvancedFieldVisibleForProfile(profileKind: HektorPropertyProfi
 
 const draftAnnonceStepOrder = ['offre', 'photos', 'secteur', 'composition', 'details', 'mandatPrix', 'diffusion'] as const
 type DraftAnnonceStepKey = typeof draftAnnonceStepOrder[number]
+type DraftMandantChoice = 'none' | 'existing' | 'new'
 
 const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: string; subtitle: string; hint: string }> = {
   offre: {
@@ -7139,7 +7142,12 @@ export default function App() {
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
   const [draftAnnonceAdvanced, setDraftAnnonceAdvanced] = useState<Record<DraftAnnonceAdvancedKey, string>>(() => buildEmptyDraftAnnonceAdvanced())
   const [draftAnnonceWizardFields, setDraftAnnonceWizardFields] = useState<Record<string, string>>({})
-  const [draftMandantOpen, setDraftMandantOpen] = useState(false)
+  const [draftMandantChoice, setDraftMandantChoice] = useState<DraftMandantChoice>('none')
+  const [draftExistingMandantSearch, setDraftExistingMandantSearch] = useState('')
+  const [draftExistingMandantId, setDraftExistingMandantId] = useState('')
+  const [draftExistingMandantOptions, setDraftExistingMandantOptions] = useState<MandantContactSearchOption[]>([])
+  const [draftExistingMandantLoading, setDraftExistingMandantLoading] = useState(false)
+  const [draftExistingMandantError, setDraftExistingMandantError] = useState<string | null>(null)
   const [draftMandantCivility, setDraftMandantCivility] = useState('')
   const [draftMandantLastName, setDraftMandantLastName] = useState('')
   const [draftMandantFirstName, setDraftMandantFirstName] = useState('')
@@ -7314,6 +7322,9 @@ export default function App() {
   const selectedDraftNegotiator = useMemo(() => {
     return draftNegotiatorOptions.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, draftNegotiatorOptions])
+  const selectedDraftExistingMandant = useMemo(() => {
+    return draftExistingMandantOptions.find((item) => item.hektor_contact_id === draftExistingMandantId) ?? null
+  }, [draftExistingMandantId, draftExistingMandantOptions])
   const draftAnnonceSelectedTypeGroup = draftAnnoncePropertyGroupForTypeId(draftAnnonceTypeId)
   const draftAnnonceSelectedTypeOptions = draftAnnonceTypeOptionsForGroup(draftAnnonceSelectedTypeGroup.id)
   const draftAnnonceTypeRules = draftAnnonceTypeProfile(draftAnnonceTypeId)
@@ -7352,7 +7363,17 @@ export default function App() {
   const draftAnnonceDetailGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 5)
   const draftAnnonceMandatGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 6)
   const draftAnnonceDiffusionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 7)
-  const draftAnnonceHasMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
+  const draftAnnonceHasNewMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
+  const draftAnnonceHasExistingMandantDraft = draftMandantChoice === 'existing' && /^\d+$/.test(draftExistingMandantId.trim())
+  const draftAnnonceMandantReviewLabel = draftAnnonceHasExistingMandantDraft
+    ? mandantContactOptionTitle(selectedDraftExistingMandant) || `Contact ${draftExistingMandantId}`
+    : draftMandantChoice === 'new' && draftAnnonceHasNewMandantDraft
+      ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer'
+      : draftMandantChoice === 'new'
+        ? 'Nouveau mandant a completer'
+        : draftMandantChoice === 'existing'
+          ? 'Contact a selectionner'
+          : 'Non ajoute'
   const draftAnnonceCreationStatus = screen === 'estimations' ? 'estimation' : 'active'
   const draftAnnonceCreationStatusLabel = draftAnnonceCreationStatus === 'estimation' ? 'Estimation' : 'Actif'
   const negotiatorAssignAgency = useMemo(() => {
@@ -7555,6 +7576,49 @@ export default function App() {
       setDraftAnnonceNegotiatorId('')
     }
   }, [draftAnnonceModalOpen, draftAnnonceNegotiatorId, draftNegotiatorOptions, hektorNegotiators, profile?.role, sessionEmail])
+
+  useEffect(() => {
+    if (!draftAnnonceModalOpen || draftAnnonceStep !== 'mandatPrix' || draftMandantChoice !== 'existing') {
+      setDraftExistingMandantLoading(false)
+      return
+    }
+    if (!selectedDraftNegotiator?.email) {
+      setDraftExistingMandantOptions([])
+      setDraftExistingMandantError('Choisis le negociateur Hektor avant de rechercher un mandant.')
+      return
+    }
+
+    let cancelled = false
+    setDraftExistingMandantLoading(true)
+    setDraftExistingMandantError(null)
+    const timer = window.setTimeout(() => {
+      searchMandantContactOptions({
+        search: draftExistingMandantSearch,
+        scope: { negotiatorEmail: selectedDraftNegotiator.email },
+        limit: 12,
+      })
+        .then((rows) => {
+          if (cancelled) return
+          setDraftExistingMandantOptions(rows)
+          if (draftExistingMandantId && !rows.some((row) => row.hektor_contact_id === draftExistingMandantId)) {
+            setDraftExistingMandantId('')
+          }
+        })
+        .catch((error) => {
+          if (cancelled) return
+          setDraftExistingMandantOptions([])
+          setDraftExistingMandantError(error instanceof Error ? error.message : 'Recherche mandant impossible.')
+        })
+        .finally(() => {
+          if (!cancelled) setDraftExistingMandantLoading(false)
+        })
+    }, draftExistingMandantSearch.trim() ? 220 : 0)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [draftAnnonceModalOpen, draftAnnonceStep, draftExistingMandantId, draftExistingMandantSearch, draftMandantChoice, selectedDraftNegotiator?.email])
 
   useEffect(() => {
     if (!negotiatorAssignTarget || !negotiatorAssignValue) return
@@ -8418,7 +8482,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceScanMessage(null)
     setDraftAnnonceScanWarnings([])
     setDraftAnnonceScanInputVersion((value) => value + 1)
-    setDraftMandantOpen(false)
+    setDraftMandantChoice('none')
+    setDraftExistingMandantSearch('')
+    setDraftExistingMandantId('')
+    setDraftExistingMandantOptions([])
+    setDraftExistingMandantError(null)
+    setDraftExistingMandantLoading(false)
     setDraftMandantCivility('')
     setDraftMandantLastName('')
     setDraftMandantFirstName('')
@@ -8568,7 +8637,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
 
     const hasMandant = ['mandantCivility', 'mandantLastName', 'mandantFirstName', 'mandantEmail', 'mandantPhone'].some((key) => value(key as keyof DraftAnnonceSheetScanPayload['fields']))
-    if (hasMandant) setDraftMandantOpen(true)
+    if (hasMandant) {
+      setDraftMandantChoice('new')
+    }
 
     const lowConfidence = Object.entries(scan.fields)
       .filter(([, field]) => field.value?.trim() && typeof field.confidence === 'number' && field.confidence < 0.75)
@@ -8767,11 +8838,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setDraftAnnonceStep('offre')
       return
     }
-    const hasInitialMandant = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
-    if (hasInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
+    const hasNewInitialMandant = draftMandantChoice === 'new' && [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
+    const hasExistingInitialMandant = draftMandantChoice === 'existing' && /^\d+$/.test(draftExistingMandantId.trim())
+    if (draftMandantChoice === 'existing' && !hasExistingInitialMandant) {
+      setErrorMessage('Choisis un contact dans la liste pour associer le mandant.')
+      setDraftAnnonceStep('mandatPrix')
+      return
+    }
+    if (draftMandantChoice === 'new' && !hasNewInitialMandant) {
+      setErrorMessage('Renseigne le nouveau mandant ou repasse sur "Aucun mandant".')
+      setDraftAnnonceStep('mandatPrix')
+      return
+    }
+    if (hasNewInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
       setErrorMessage('Pour ajouter un mandant initial, renseigne au minimum le nom et l email.')
       setDraftAnnonceStep('mandatPrix')
-      setDraftMandantOpen(true)
       return
     }
     const queuedPhotos = draftAnnoncePhotoDrafts.map(({ id, file, visible }) => ({ id, file, visible }))
@@ -8847,7 +8928,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         coproWorksFund: draftAdvancedValue('coproWorksFund'),
         wizardFields: hektorWizardFields,
         note: draftAnnonceNote,
-        initialMandant: hasInitialMandant ? {
+        initialMandantContactId: hasExistingInitialMandant ? draftExistingMandantId.trim() : null,
+        initialMandantContactLabel: hasExistingInitialMandant ? mandantContactOptionTitle(selectedDraftExistingMandant) : null,
+        initialMandant: hasNewInitialMandant ? {
           civility: draftMandantCivility,
           lastName: draftMandantLastName,
           firstName: draftMandantFirstName,
@@ -10986,13 +11069,87 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
                       </label>
                     </section>
-                    <section className={`draft-mandant-panel ${draftMandantOpen ? 'is-open' : ''}`}>
-                      <button className="draft-mandant-toggle" type="button" onClick={() => setDraftMandantOpen((value) => !value)}>
-                        <span aria-hidden="true">{draftMandantOpen ? '-' : '+'}</span>
-                        <strong>Ajouter un mandant initial</strong>
-                        <small>{draftMandantOpen ? 'Nom et email minimum' : 'Optionnel, ferme par defaut'}</small>
-                      </button>
-                      {draftMandantOpen ? (
+                    <section className={`draft-mandant-panel ${draftMandantChoice !== 'none' ? 'is-open' : ''}`}>
+                      <div className="draft-annonce-section-title">
+                        <span>Mandant</span>
+                        <strong>Mandant lie au bien</strong>
+                      </div>
+                      <div className="draft-mandant-choice-grid" role="group" aria-label="Choix du mandant">
+                        {[
+                          { value: 'none' as const, title: 'Aucun mandant', text: 'Continuer sans association' },
+                          { value: 'existing' as const, title: 'Associer un mandant', text: 'Recherche par nom ou prenom' },
+                          { value: 'new' as const, title: 'Ajouter un nouveau mandant', text: 'Creation puis association' },
+                        ].map((choice) => (
+                          <button
+                            key={choice.value}
+                            className={draftMandantChoice === choice.value ? 'is-selected' : ''}
+                            type="button"
+                            onClick={() => {
+                              setDraftMandantChoice(choice.value)
+                              if (choice.value !== 'existing') {
+                                setDraftExistingMandantId('')
+                                setDraftExistingMandantSearch('')
+                                setDraftExistingMandantOptions([])
+                                setDraftExistingMandantError(null)
+                              }
+                            }}
+                          >
+                            <strong>{choice.title}</strong>
+                            <small>{choice.text}</small>
+                          </button>
+                        ))}
+                      </div>
+                      {draftMandantChoice === 'existing' ? (
+                        <div className="draft-mandant-search-panel">
+                          <label className="filter-field draft-annonce-field-wide">
+                            <span>Recherche mandant</span>
+                            <input
+                              value={draftExistingMandantSearch}
+                              onChange={(event) => {
+                                setDraftExistingMandantSearch(event.target.value)
+                                setDraftExistingMandantId('')
+                              }}
+                              placeholder="Nom, prenom, email ou telephone"
+                            />
+                          </label>
+                          <small>{draftExistingMandantLoading ? 'Recherche...' : 'Selectionne le contact a associer comme mandant.'}</small>
+                          {draftExistingMandantError ? <p className="draft-mandant-error">{draftExistingMandantError}</p> : null}
+                          <div className="contact-owner-result-list draft-mandant-result-list">
+                            {draftExistingMandantOptions.length > 0 ? draftExistingMandantOptions.map((option) => {
+                              const selected = option.hektor_contact_id === draftExistingMandantId
+                              return (
+                                <button
+                                  key={`draft-mandant-contact-${option.hektor_contact_id}`}
+                                  className={selected ? 'is-selected' : ''}
+                                  type="button"
+                                  onClick={() => {
+                                    setDraftExistingMandantId(option.hektor_contact_id)
+                                    setDraftExistingMandantSearch(mandantContactOptionTitle(option))
+                                  }}
+                                >
+                                  <span>
+                                    <strong>{mandantContactOptionTitle(option)}</strong>
+                                    <small>{mandantContactOptionSubtitle(option) || 'Contact Hektor actif'}</small>
+                                  </span>
+                                  <em>{mandantContactOptionMeta(option) || 'Mandant potentiel'}</em>
+                                </button>
+                              )
+                            }) : (
+                              <p>{draftExistingMandantLoading ? 'Recherche en cours...' : draftExistingMandantSearch.trim() ? 'Aucun contact trouve pour ce negociateur.' : 'Les contacts actifs du negociateur apparaissent ici.'}</p>
+                            )}
+                          </div>
+                          {selectedDraftExistingMandant ? (
+                            <div className="contact-owner-selected draft-mandant-selected">
+                              <strong>Mandant selectionne</strong>
+                              <span>{[
+                                mandantContactOptionTitle(selectedDraftExistingMandant),
+                                mandantContactOptionSubtitle(selectedDraftExistingMandant),
+                              ].filter(Boolean).join(' - ')}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {draftMandantChoice === 'new' ? (
                         <div className="draft-mandant-fields">
                           <label className="filter-field is-small">
                             <span>Civilite</span>
@@ -11054,7 +11211,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <article><span>Pieces / chambres</span><strong>{draftAnnonceTypeRules.showRooms || draftAnnonceTypeRules.showBedrooms ? [draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ') : 'Non demande'}</strong></article>
                         <article><span>Photos</span><strong>{draftAnnoncePhotoDrafts.length ? `${draftAnnoncePhotoDrafts.length} en attente` : 'Aucune'}</strong></article>
                         <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
-                        <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>
+                        <article><span>Mandant initial</span><strong>{draftAnnonceMandantReviewLabel}</strong></article>
                         <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
                       </div>
                       <p className="draft-annonce-review-warning">La creation sera en statut {draftAnnonceCreationStatusLabel}, non diffusee. La diffusion reste une action separee dans Hektor.</p>
@@ -16996,6 +17153,44 @@ function ownerAnnonceOptionMeta(option: OwnerAnnonceSearchOption) {
     option.commercial_nom,
     option.agence_nom,
     option.statut_annonce,
+  ].filter(Boolean).join(' - ')
+}
+
+function mandantContactOptionTitle(option: MandantContactSearchOption | null | undefined) {
+  if (!option) return ''
+  return [option.civilite, option.prenom, option.nom].map((value) => String(value ?? '').trim()).filter(Boolean).join(' ')
+    || option.display_name?.trim()
+    || `Contact ${option.hektor_contact_id}`
+}
+
+function mandantContactOptionSubtitle(option: MandantContactSearchOption) {
+  return [
+    option.email,
+    option.phone_primary || option.phone_secondary,
+    [option.code_postal, option.ville].filter(Boolean).join(' ') || null,
+  ].filter(Boolean).join(' - ')
+}
+
+function mandantContactOptionTypologies(option: MandantContactSearchOption) {
+  const raw = option.typologies_json ?? option.relation_roles_json
+  if (Array.isArray(raw)) return raw.filter(Boolean).join(', ')
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).join(', ')
+    } catch {
+      return raw
+    }
+    return raw
+  }
+  return ''
+}
+
+function mandantContactOptionMeta(option: MandantContactSearchOption) {
+  return [
+    option.commercial_nom,
+    option.agence_nom,
+    mandantContactOptionTypologies(option),
   ].filter(Boolean).join(' - ')
 }
 

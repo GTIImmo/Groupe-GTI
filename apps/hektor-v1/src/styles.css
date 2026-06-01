@@ -29012,6 +29012,73 @@ body {
   border-color: rgba(15, 104, 116, 0.38) !important;
 }
 
+.draft-mandant-panel .draft-annonce-section-title {
+  padding: 14px 14px 0 !important;
+}
+
+.draft-mandant-choice-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 14px !important;
+}
+
+.draft-mandant-choice-grid button {
+  display: grid !important;
+  gap: 4px !important;
+  min-height: 70px !important;
+  padding: 12px !important;
+  border: 1px solid rgba(34, 35, 35, 0.12) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--gti-final-ink, #222323) !important;
+  text-align: left !important;
+  box-shadow: 0 8px 18px rgba(21, 32, 43, 0.04) !important;
+}
+
+.draft-mandant-choice-grid button.is-selected {
+  border-color: rgba(197, 0, 95, 0.38) !important;
+  background: rgba(197, 0, 95, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(197, 0, 95, 0.12) !important;
+}
+
+.draft-mandant-choice-grid strong {
+  font-size: 0.85rem !important;
+  line-height: 1.2 !important;
+}
+
+.draft-mandant-choice-grid small,
+.draft-mandant-search-panel > small {
+  color: rgba(34, 35, 35, 0.62) !important;
+  font-size: 0.74rem !important;
+  font-weight: 760 !important;
+}
+
+.draft-mandant-search-panel {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 0 14px 14px !important;
+}
+
+.draft-mandant-result-list {
+  max-height: 250px !important;
+}
+
+.draft-mandant-selected {
+  margin-top: 2px !important;
+}
+
+.draft-mandant-error {
+  margin: 0 !important;
+  padding: 9px 11px !important;
+  border: 1px solid rgba(169, 39, 39, 0.2) !important;
+  border-radius: 8px !important;
+  background: rgba(169, 39, 39, 0.07) !important;
+  color: #8b1f1f !important;
+  font-size: 0.78rem !important;
+  font-weight: 780 !important;
+}
+
 .draft-mandant-toggle {
   grid-template-columns: 34px minmax(0, 1fr) auto !important;
   min-height: 58px !important;
@@ -29293,6 +29360,10 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
+  .draft-mandant-choice-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   .detail-edit-popup-grid {
     grid-template-columns: 1fr !important;
   }
@@ -29368,6 +29439,19 @@ body {
   }
 
   .draft-mandant-fields {
+    grid-template-columns: 1fr !important;
+  }
+
+  .draft-mandant-choice-grid {
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+  }
+
+  .draft-mandant-search-panel {
+    padding: 0 12px 12px !important;
+  }
+
+  .draft-mandant-result-list button {
     grid-template-columns: 1fr !important;
   }
 

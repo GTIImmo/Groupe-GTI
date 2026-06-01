@@ -4440,6 +4440,7 @@ export async function createPrepareHistoricalAnnonceDetailJob(input: {
 export async function createLinkHektorMandantJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   contactId: string
+  contactLabel?: string | null
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -4454,6 +4455,7 @@ export async function createLinkHektorMandantJob(input: {
       hektor_annonce_id: String(input.dossier.hektor_annonce_id),
       payload_json: {
         contact_id: cleanContactId,
+        contact_label: input.contactLabel?.trim() || null,
         hektor_user_email: input.dossier.negociateur_email ?? null,
       },
       priority: input.priority ?? 18,
@@ -4625,6 +4627,67 @@ export async function searchOwnerAnnonceOptions(input: {
   const { data, error } = await query
   if (error || !data) throw new Error(error?.message ?? 'Unable to search annonces')
   return (data as OwnerAnnonceSearchOption[]).map(normalizeOwnerAnnonceOption)
+}
+
+export type MandantContactSearchOption = Pick<AppContact,
+  | 'hektor_contact_id'
+  | 'negociateur_email'
+  | 'commercial_nom'
+  | 'agence_nom'
+  | 'civilite'
+  | 'nom'
+  | 'prenom'
+  | 'display_name'
+  | 'archive'
+  | 'email'
+  | 'phone_primary'
+  | 'phone_secondary'
+  | 'ville'
+  | 'code_postal'
+  | 'typologies_json'
+  | 'relation_roles_json'
+  | 'linked_annonce_count'
+>
+
+function normalizeMandantContactOption(row: MandantContactSearchOption): MandantContactSearchOption {
+  return {
+    ...row,
+    hektor_contact_id: String(row.hektor_contact_id),
+    linked_annonce_count: Number(row.linked_annonce_count ?? 0),
+  }
+}
+
+export async function searchMandantContactOptions(input: {
+  search?: string
+  scope?: DataScope | null
+  limit?: number
+}): Promise<MandantContactSearchOption[]> {
+  const search = normalizeSearchTerm(input.search ?? '').replace(/\s+/g, ' ').trim()
+  const limit = Math.min(Math.max(input.limit ?? 12, 1), 30)
+
+  if (!hasSupabaseEnv || !supabase) return []
+
+  let query = applyNegotiatorScopeToQuery(
+    supabase
+      .from(contactsCurrentView)
+      .select(contactsListingSelect)
+      .eq('archive', false)
+      .order('date_maj', { ascending: false, nullsFirst: false })
+      .order('display_name', { ascending: true })
+      .limit(limit),
+    input.scope,
+  )
+
+  if (search) {
+    const ilike = `%${search}%`
+    query = /^\d+$/.test(search)
+      ? query.or(`hektor_contact_id.eq.${search},search_text.ilike.${ilike}`)
+      : query.ilike('search_text', ilike)
+  }
+
+  const { data, error } = await query
+  if (error || !data) throw new Error(error?.message ?? 'Unable to search mandant contacts')
+  return (data as MandantContactSearchOption[]).map(normalizeMandantContactOption)
 }
 
 function cleanOptionalText(value: string | null | undefined) {
@@ -5330,6 +5393,8 @@ export type HektorDraftAnnonceJobInput = {
   wizardFields?: Record<string, string | number | null | undefined>
   note?: string | null
   initialMandant?: HektorMandantContactInput | null
+  initialMandantContactId?: string | null
+  initialMandantContactLabel?: string | null
   priority?: number
 }
 
@@ -5391,6 +5456,8 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
         ? Object.fromEntries(Object.entries(input.wizardFields).map(([key, value]) => [key, value == null ? null : String(value).trim() || null]))
         : null,
       note: input.note?.trim() || null,
+      initial_mandant_contact_id: input.initialMandantContactId?.trim() || null,
+      initial_mandant_contact_label: input.initialMandantContactLabel?.trim() || null,
       initial_mandant: input.initialMandant ? {
         civilite: input.initialMandant.civility?.trim() || null,
         last_name: input.initialMandant.lastName.trim(),
