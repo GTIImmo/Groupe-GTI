@@ -4727,6 +4727,7 @@ export type HektorAnnonceUpdateFields = {
   carrezSurface?: string | number | null
   roomCount?: string | number | null
   bedroomCount?: string | number | null
+  levelCount?: string | number | null
   bathroomCount?: string | number | null
   showerRoomCount?: string | number | null
   wcCount?: string | number | null
@@ -5160,6 +5161,7 @@ export type HektorDraftAnnonceJobInput = {
   livingSurface?: string | number | null
   roomCount?: string | number | null
   bedroomCount?: string | number | null
+  levelCount?: string | number | null
   bathroomCount?: string | number | null
   showerRoomCount?: string | number | null
   wcCount?: string | number | null
@@ -5169,10 +5171,13 @@ export type HektorDraftAnnonceJobInput = {
   interiorState?: string | null
   exteriorState?: string | null
   landSurface?: string | number | null
+  garden?: string | null
   terraceCount?: string | number | null
   garageCount?: string | number | null
+  garageSurface?: string | number | null
   parkingInsideCount?: string | number | null
   parkingOutsideCount?: string | number | null
+  pool?: string | null
   constructionYear?: string | number | null
   dpeValue?: string | number | null
   gesValue?: string | number | null
@@ -5215,6 +5220,7 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       living_surface: input.livingSurface == null ? null : String(input.livingSurface).trim() || null,
       room_count: input.roomCount == null ? null : String(input.roomCount).trim() || null,
       bedroom_count: input.bedroomCount == null ? null : String(input.bedroomCount).trim() || null,
+      level_count: input.levelCount == null ? null : String(input.levelCount).trim() || null,
       bathroom_count: input.bathroomCount == null ? null : String(input.bathroomCount).trim() || null,
       shower_room_count: input.showerRoomCount == null ? null : String(input.showerRoomCount).trim() || null,
       wc_count: input.wcCount == null ? null : String(input.wcCount).trim() || null,
@@ -5224,10 +5230,13 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       interior_state: input.interiorState?.trim() || null,
       exterior_state: input.exteriorState?.trim() || null,
       land_surface: input.landSurface == null ? null : String(input.landSurface).trim() || null,
+      garden: input.garden?.trim() || null,
       terrace_count: input.terraceCount == null ? null : String(input.terraceCount).trim() || null,
       garage_count: input.garageCount == null ? null : String(input.garageCount).trim() || null,
+      garage_surface: input.garageSurface == null ? null : String(input.garageSurface).trim() || null,
       parking_inside_count: input.parkingInsideCount == null ? null : String(input.parkingInsideCount).trim() || null,
       parking_outside_count: input.parkingOutsideCount == null ? null : String(input.parkingOutsideCount).trim() || null,
+      pool: input.pool?.trim() || null,
       construction_year: input.constructionYear == null ? null : String(input.constructionYear).trim() || null,
       dpe_value: input.dpeValue == null ? null : String(input.dpeValue).trim() || null,
       ges_value: input.gesValue == null ? null : String(input.gesValue).trim() || null,

@@ -3404,6 +3404,14 @@ function setWizardNumber(values, target, payload, aliases) {
   if (value != null) values.set(target, value);
 }
 
+function setWizardNumberIfPresent(values, target, payload, aliases) {
+  if (values.has(target)) setWizardNumber(values, target, payload, aliases);
+}
+
+function setWizardTextIfPresent(values, target, payload, aliases) {
+  if (values.has(target)) setWizardText(values, target, payload, aliases);
+}
+
 function setWizardDate(values, target, payload, aliases) {
   const value = payloadFrenchDateValue(payload, aliases);
   if (value != null) values.set(target, value);
@@ -3411,6 +3419,10 @@ function setWizardDate(values, target, payload, aliases) {
 
 function setWizardDefault(values, target, value) {
   if (!values.has(target)) values.set(target, value);
+}
+
+function setWizardDefaultIfPresent(values, target, value) {
+  if (values.has(target) && !values.get(target)) values.set(target, value);
 }
 
 function normalizeHektorSearchText(value) {
@@ -3573,21 +3585,23 @@ function buildWizardStep2Body(idannWizard, meta, html, payload) {
   body.set("offredem", String(meta.offredem));
   setWizardDefault(body, "idpays", "1");
   setWizardDefault(body, "prix", "0");
-  setWizardDefault(body, "surfappart", "0");
-  setWizardDefault(body, "nbpieces", "0");
   setWizardDefault(body, "PRIXNETVENDEUR", "0");
-  setWizardDefault(body, "NB_CHAMBRES", "0");
-  setWizardDefault(body, "NB_NIVEAUX", "0");
-  setWizardDefault(body, "GARAGE_BOX", "0");
+  for (const field of ["surfappart", "surfterrain", "SURFACE_GARAGE", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "GARAGE_BOX"]) {
+    setWizardDefaultIfPresent(body, field, "0");
+  }
   setWizardNumber(body, "prix", payload, ["price", "prix"]);
   setWizardNumber(body, "PRIXNETVENDEUR", payload, ["net_seller_price", "netSellerPrice", "prix_net_vendeur"]);
-  setWizardNumber(body, "surfappart", payload, ["surface", "surfappart", "surface_habitable"]);
-  setWizardNumber(body, "nbpieces", payload, ["room_count", "roomCount", "nbpieces", "pieces"]);
-  setWizardNumber(body, "NB_CHAMBRES", payload, ["bedroom_count", "bedroomCount", "NB_CHAMBRES", "chambres"]);
-  setWizardNumber(body, "NB_NIVEAUX", payload, ["level_count", "levelCount", "NB_NIVEAUX", "niveaux"]);
-  setWizardNumber(body, "GARAGE_BOX", payload, ["garage_count", "garageCount", "GARAGE_BOX"]);
-  setWizardText(body, "EXPOSITION", payload, ["exposure", "exposition", "EXPOSITION"]);
-  setWizardText(body, "vuee", payload, ["view", "vue", "vuee"]);
+  setWizardNumberIfPresent(body, "surfappart", payload, ["surface", "surfappart", "surface_habitable"]);
+  setWizardNumberIfPresent(body, "surfterrain", payload, ["land_surface", "landSurface", "surfterrain", "surface_terrain"]);
+  setWizardNumberIfPresent(body, "SURFACE_GARAGE", payload, ["garage_surface", "garageSurface", "SURFACE_GARAGE"]);
+  setWizardNumberIfPresent(body, "nbpieces", payload, ["room_count", "roomCount", "nbpieces", "pieces"]);
+  setWizardNumberIfPresent(body, "NB_CHAMBRES", payload, ["bedroom_count", "bedroomCount", "NB_CHAMBRES", "chambres"]);
+  setWizardNumberIfPresent(body, "NB_NIVEAUX", payload, ["level_count", "levelCount", "NB_NIVEAUX", "niveaux"]);
+  setWizardNumberIfPresent(body, "GARAGE_BOX", payload, ["garage_count", "garageCount", "GARAGE_BOX"]);
+  setWizardTextIfPresent(body, "JARDIN-", payload, ["garden", "jardin", "JARDIN-"]);
+  setWizardTextIfPresent(body, "PISCINE-", payload, ["pool", "piscine", "PISCINE-"]);
+  setWizardTextIfPresent(body, "EXPOSITION", payload, ["exposure", "exposition", "EXPOSITION"]);
+  setWizardTextIfPresent(body, "vuee", payload, ["view", "vue", "vuee"]);
   setWizardText(body, "NO_DOSSIER", payload, ["folder_number", "folderNumber", "no_dossier", "NO_DOSSIER"]);
   const formNegotiatorId = payloadTextValue(payload, ["hektor_negociator_form_id", "negociator_form_id", "NEGOCIATEUR"]);
   if (formNegotiatorId && !body.has("NEGOCIATEUR")) body.set("NEGOCIATEUR", formNegotiatorId);
@@ -3687,6 +3701,7 @@ function buildWizardStep6Body(idannWizard, meta, html, payload) {
   setWizardNumber(body, "NB_TERRASSE", payload, ["terrace_count", "terraceCount", "NB_TERRASSE"]);
   setWizardNumber(body, "SURFACE_TERRASSE", payload, ["terrace_surface", "terraceSurface", "SURFACE_TERRASSE"]);
   setWizardNumber(body, "GARAGE_BOX", payload, ["garage_count", "garageCount", "GARAGE_BOX"]);
+  setWizardNumber(body, "SURFACE_GARAGE", payload, ["garage_surface", "garageSurface", "SURFACE_GARAGE"]);
   setWizardNumber(body, "NB_PARK_INT", payload, ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]);
   setWizardNumber(body, "NB_PARK_EXT", payload, ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]);
   setWizardText(body, "ASCENSEUR", payload, ["elevator", "ascenseur", "ASCENSEUR"]);

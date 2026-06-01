@@ -426,18 +426,191 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
   },
 ]
 
-const draftAnnoncePropertyTypes = [
-  { id: '2', label: 'Appartement' },
-  { id: '1', label: 'Maison' },
-  { id: '5', label: 'Terrain' },
-  { id: '7', label: 'Immeuble' },
-  { id: '25', label: 'Villa' },
-  { id: '26', label: 'Studio' },
-  { id: '27', label: 'Duplex' },
-  { id: '3', label: 'Parking / Garage' },
-  { id: '6', label: 'Local' },
-  { id: '4', label: 'Bureau' },
+type DraftAnnoncePropertyGroupId = 'maisons' | 'appartements' | 'terrains' | 'autres'
+
+type DraftAnnoncePropertyTypeOption = {
+  id: string
+  label: string
+  group: DraftAnnoncePropertyGroupId
+}
+
+const draftAnnoncePropertyGroups: Array<{ id: DraftAnnoncePropertyGroupId; label: string; hint: string; types: Array<{ id: string; label: string }> }> = [
+  {
+    id: 'maisons',
+    label: 'Les maisons',
+    hint: 'Maison, villa, propriete',
+    types: [
+      { id: '11', label: 'Bastide' },
+      { id: '28', label: 'Chateau' },
+      { id: '30', label: 'Ferme' },
+      { id: '1', label: 'Maison' },
+      { id: '39', label: 'Maison de village' },
+      { id: '10', label: 'Mas' },
+      { id: '22', label: 'Propriete' },
+      { id: '27', label: 'Rez de villa' },
+      { id: '49', label: 'Viager maison' },
+      { id: '25', label: 'Villa' },
+    ],
+  },
+  {
+    id: 'appartements',
+    label: 'Les appartements',
+    hint: 'Appartement, studio, duplex',
+    types: [
+      { id: '2', label: 'Appartement' },
+      { id: '18', label: 'Duplex' },
+      { id: '31', label: 'Loft' },
+      { id: '26', label: 'Rez de jardin' },
+      { id: '4', label: 'Studio' },
+      { id: '41', label: 'Triplex' },
+      { id: '50', label: 'Viager appartement' },
+    ],
+  },
+  {
+    id: 'terrains',
+    label: 'Les terrains',
+    hint: 'Terrain, agricole, loisir',
+    types: [
+      { id: '5', label: 'Terrain' },
+      { id: '44', label: 'Terrain agricole' },
+      { id: '45', label: 'Terrain de loisir' },
+      { id: '43', label: 'Terrain a batir' },
+    ],
+  },
+  {
+    id: 'autres',
+    label: 'Les autres types',
+    hint: 'Garage, immeuble, cave',
+    types: [
+      { id: '20', label: 'Autre' },
+      { id: '24', label: 'Cabanon' },
+      { id: '29', label: 'Cave' },
+      { id: '17', label: 'Chalet' },
+      { id: '15', label: 'Garage' },
+      { id: '21', label: 'Immeuble' },
+      { id: '16', label: 'Parking' },
+      { id: '7', label: 'Viager' },
+    ],
+  },
 ]
+
+const draftAnnoncePropertyTypes: DraftAnnoncePropertyTypeOption[] = draftAnnoncePropertyGroups.flatMap((group) => (
+  group.types.map((type) => ({ ...type, group: group.id }))
+))
+
+type DraftAnnonceTypeProfile = {
+  surfaceMode: 'habitable' | 'terrain' | 'garage' | 'none'
+  showRooms: boolean
+  showBedrooms: boolean
+  showLevels: boolean
+  showGarageCount: boolean
+  showGardenPool: boolean
+  showExposure: boolean
+  showView: boolean
+  showInteriorDetails: boolean
+  showOutdoorDetails: boolean
+  showCoproDetails: boolean
+}
+
+function draftAnnoncePropertyGroupForTypeId(id: string): (typeof draftAnnoncePropertyGroups)[number] {
+  return draftAnnoncePropertyGroups.find((group) => group.types.some((type) => type.id === id)) ?? draftAnnoncePropertyGroups[1]
+}
+
+function draftAnnonceTypeOptionsForGroup(groupId: DraftAnnoncePropertyGroupId) {
+  return draftAnnoncePropertyTypes.filter((item) => item.group === groupId)
+}
+
+function draftAnnonceTypeProfile(id: string): DraftAnnonceTypeProfile {
+  const group = draftAnnoncePropertyGroupForTypeId(id).id
+  if (group === 'terrains') {
+    return {
+      surfaceMode: 'terrain',
+      showRooms: false,
+      showBedrooms: false,
+      showLevels: false,
+      showGarageCount: false,
+      showGardenPool: false,
+      showExposure: false,
+      showView: false,
+      showInteriorDetails: false,
+      showOutdoorDetails: false,
+      showCoproDetails: false,
+    }
+  }
+  if (id === '15' || id === '16' || id === '29') {
+    return {
+      surfaceMode: 'garage',
+      showRooms: false,
+      showBedrooms: false,
+      showLevels: false,
+      showGarageCount: false,
+      showGardenPool: false,
+      showExposure: false,
+      showView: false,
+      showInteriorDetails: false,
+      showOutdoorDetails: false,
+      showCoproDetails: false,
+    }
+  }
+  if (id === '21') {
+    return {
+      surfaceMode: 'habitable',
+      showRooms: false,
+      showBedrooms: false,
+      showLevels: false,
+      showGarageCount: false,
+      showGardenPool: false,
+      showExposure: false,
+      showView: false,
+      showInteriorDetails: false,
+      showOutdoorDetails: true,
+      showCoproDetails: false,
+    }
+  }
+  if (group === 'maisons' || id === '17') {
+    return {
+      surfaceMode: 'habitable',
+      showRooms: true,
+      showBedrooms: true,
+      showLevels: true,
+      showGarageCount: true,
+      showGardenPool: true,
+      showExposure: true,
+      showView: true,
+      showInteriorDetails: true,
+      showOutdoorDetails: true,
+      showCoproDetails: false,
+    }
+  }
+  if (group === 'autres') {
+    return {
+      surfaceMode: 'habitable',
+      showRooms: false,
+      showBedrooms: false,
+      showLevels: false,
+      showGarageCount: false,
+      showGardenPool: false,
+      showExposure: false,
+      showView: false,
+      showInteriorDetails: false,
+      showOutdoorDetails: false,
+      showCoproDetails: false,
+    }
+  }
+  return {
+    surfaceMode: 'habitable',
+    showRooms: true,
+    showBedrooms: true,
+    showLevels: true,
+    showGarageCount: true,
+    showGardenPool: false,
+    showExposure: true,
+    showView: true,
+    showInteriorDetails: true,
+    showOutdoorDetails: true,
+    showCoproDetails: true,
+  }
+}
 
 function draftAnnoncePropertyTypeLabel(id: string) {
   return draftAnnoncePropertyTypes.find((item) => item.id === id)?.label ?? 'Appartement'
@@ -455,6 +628,14 @@ function normalizeDraftAnnonceScanText(value: string | null | undefined) {
 function draftAnnoncePropertyTypeIdFromLabel(value: string | null | undefined) {
   const normalized = normalizeDraftAnnonceScanText(value)
   if (!normalized) return ''
+  const legacyMatches: Array<{ id: string; labels: string[] }> = [
+    { id: '15', labels: ['parking garage', 'garage parking'] },
+    { id: '21', labels: ['immeuble'] },
+    { id: '2', labels: ['appartement meuble'] },
+    { id: '1', labels: ['maison meublee'] },
+  ]
+  const legacy = legacyMatches.find((item) => item.labels.some((label) => normalized === label || normalized.includes(label)))
+  if (legacy) return legacy.id
   const direct = draftAnnoncePropertyTypes.find((item) => normalizeDraftAnnonceScanText(item.label) === normalized)
   if (direct) return direct.id
   return draftAnnoncePropertyTypes.find((item) => normalized.includes(normalizeDraftAnnonceScanText(item.label)) || normalizeDraftAnnonceScanText(item.label).includes(normalized))?.id ?? ''
@@ -486,6 +667,7 @@ type DraftAnnonceAdvancedKey =
   | 'netSellerPrice'
   | 'carrezSurface'
   | 'livingSurface'
+  | 'garageSurface'
   | 'bathroomCount'
   | 'showerRoomCount'
   | 'wcCount'
@@ -495,10 +677,12 @@ type DraftAnnonceAdvancedKey =
   | 'interiorState'
   | 'exteriorState'
   | 'landSurface'
+  | 'garden'
   | 'terraceCount'
   | 'garageCount'
   | 'parkingInsideCount'
   | 'parkingOutsideCount'
+  | 'pool'
   | 'constructionYear'
   | 'dpeValue'
   | 'gesValue'
@@ -513,7 +697,14 @@ type DraftAnnonceAdvancedField = {
   placeholder?: string
   inputMode?: 'decimal' | 'numeric'
   multiline?: boolean
+  options?: Array<{ value: string; label: string }>
 }
+
+const draftAnnonceOuiNonOptions = [
+  { value: '', label: 'Non precise' },
+  { value: 'OUI', label: 'Oui' },
+  { value: 'NON', label: 'Non' },
+]
 
 const draftAnnonceAdvancedSections: Array<{ title: string; fields: DraftAnnonceAdvancedField[] }> = [
   {
@@ -542,10 +733,13 @@ const draftAnnonceAdvancedSections: Array<{ title: string; fields: DraftAnnonceA
     fields: [
       { key: 'exteriorState', label: 'Etat exterieur' },
       { key: 'landSurface', label: 'Terrain', inputMode: 'decimal' },
+      { key: 'garden', label: 'Jardin', options: draftAnnonceOuiNonOptions },
       { key: 'terraceCount', label: 'Terrasses', inputMode: 'numeric' },
       { key: 'garageCount', label: 'Garages', inputMode: 'numeric' },
+      { key: 'garageSurface', label: 'Surface garage', inputMode: 'decimal' },
       { key: 'parkingInsideCount', label: 'Parking int.', inputMode: 'numeric' },
       { key: 'parkingOutsideCount', label: 'Parking ext.', inputMode: 'numeric' },
+      { key: 'pool', label: 'Piscine', options: draftAnnonceOuiNonOptions },
     ],
   },
   {
@@ -6237,6 +6431,7 @@ export default function App() {
   const [draftAnnonceSurface, setDraftAnnonceSurface] = useState('')
   const [draftAnnonceRoomCount, setDraftAnnonceRoomCount] = useState('')
   const [draftAnnonceBedroomCount, setDraftAnnonceBedroomCount] = useState('')
+  const [draftAnnonceLevelCount, setDraftAnnonceLevelCount] = useState('')
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
   const [draftAnnonceAdvanced, setDraftAnnonceAdvanced] = useState<Record<DraftAnnonceAdvancedKey, string>>(() => buildEmptyDraftAnnonceAdvanced())
   const [draftAnnonceWizardFields, setDraftAnnonceWizardFields] = useState<Record<string, string>>({})
@@ -6415,9 +6610,17 @@ export default function App() {
   const selectedDraftNegotiator = useMemo(() => {
     return draftNegotiatorOptions.find((item) => item.idUser === draftAnnonceNegotiatorId) ?? null
   }, [draftAnnonceNegotiatorId, draftNegotiatorOptions])
+  const draftAnnonceSelectedTypeGroup = draftAnnoncePropertyGroupForTypeId(draftAnnonceTypeId)
+  const draftAnnonceSelectedTypeOptions = draftAnnonceTypeOptionsForGroup(draftAnnonceSelectedTypeGroup.id)
+  const draftAnnonceTypeRules = draftAnnonceTypeProfile(draftAnnonceTypeId)
   const draftAnnonceStepIndex = Math.max(0, draftAnnonceStepOrder.indexOf(draftAnnonceStep))
   const draftAnnonceStepProgress = ((draftAnnonceStepIndex + 1) / draftAnnonceStepOrder.length) * 100
   const draftAnnonceCurrentStep = draftAnnonceStepMeta[draftAnnonceStep]
+  const draftAnnonceReviewSurface = draftAnnonceTypeRules.surfaceMode === 'terrain'
+    ? draftAnnonceAdvanced.landSurface
+    : draftAnnonceTypeRules.surfaceMode === 'garage'
+      ? draftAnnonceAdvanced.garageSurface
+      : draftAnnonceSurface
   const draftAnnonceCoreFilledCount = [
     draftAnnonceTitle,
     draftAnnonceAgency,
@@ -6426,9 +6629,10 @@ export default function App() {
     draftAnnoncePostalCode,
     draftAnnonceCity,
     draftAnnoncePrice,
-    draftAnnonceSurface,
-    draftAnnonceRoomCount,
-    draftAnnonceBedroomCount,
+    draftAnnonceReviewSurface,
+    draftAnnonceTypeRules.showRooms ? draftAnnonceRoomCount : '',
+    draftAnnonceTypeRules.showBedrooms ? draftAnnonceBedroomCount : '',
+    draftAnnonceTypeRules.showLevels ? draftAnnonceLevelCount : '',
   ].filter((value) => value.trim()).length
   const draftAnnonceAdvancedFilledCount = Object.values(draftAnnonceAdvanced).filter((value) => value.trim()).length
   const draftAnnonceWizardFilledCount = Object.values(draftAnnonceWizardFields).filter((value) => value.trim()).length
@@ -7496,6 +7700,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceSurface('')
     setDraftAnnonceRoomCount('')
     setDraftAnnonceBedroomCount('')
+    setDraftAnnonceLevelCount('')
     setDraftAnnonceNote('')
     setDraftAnnonceAdvanced(buildEmptyDraftAnnonceAdvanced())
     setDraftAnnonceWizardFields({})
@@ -7702,14 +7907,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     )
   }
 
+  function isDraftAnnonceAdvancedFieldVisible(key: DraftAnnonceAdvancedKey) {
+    if (key === 'landSurface') return draftAnnonceTypeRules.showGardenPool || draftAnnonceTypeRules.surfaceMode === 'terrain'
+    if (key === 'garden' || key === 'pool') return draftAnnonceTypeRules.showGardenPool
+    if (key === 'garageSurface') return draftAnnonceTypeRules.surfaceMode === 'garage'
+    if (['bathroomCount', 'showerRoomCount', 'wcCount', 'kitchen', 'livingSurface', 'carrezSurface'].includes(key)) return draftAnnonceTypeRules.showInteriorDetails
+    if (['terraceCount', 'garageCount', 'parkingInsideCount', 'parkingOutsideCount'].includes(key)) return draftAnnonceTypeRules.showOutdoorDetails
+    if (['coproLots', 'coproCharges', 'coproQuotePart', 'coproWorksFund'].includes(key)) return draftAnnonceTypeRules.showCoproDetails
+    return true
+  }
+
   function renderDraftAnnonceAdvancedSection(section: (typeof draftAnnonceAdvancedSections)[number]) {
+    const visibleFields = section.fields.filter((field) => isDraftAnnonceAdvancedFieldVisible(field.key))
+    if (visibleFields.length === 0) return null
     return (
       <section key={section.title} className="draft-annonce-section draft-annonce-advanced-section">
         <div className="draft-annonce-section-title">
           <span>Detail app</span>
           <strong>{section.title}</strong>
         </div>
-        {section.fields.map((field) => (
+        {visibleFields.map((field) => (
           field.multiline ? (
             <label key={`${section.title}-${field.key}`} className="filter-field draft-annonce-field-wide">
               <span>{field.label}</span>
@@ -7719,6 +7936,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onChange={(event) => updateDraftAnnonceAdvanced(field.key, event.target.value)}
                 placeholder={field.placeholder ?? field.key}
               />
+            </label>
+          ) : field.options ? (
+            <label key={`${section.title}-${field.key}`} className="filter-field">
+              <span>{field.label}</span>
+              <select
+                value={draftAnnonceAdvanced[field.key]}
+                onChange={(event) => updateDraftAnnonceAdvanced(field.key, event.target.value)}
+              >
+                {field.options.map((option) => (
+                  <option key={`${field.key}-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
             </label>
           ) : (
             <label key={`${section.title}-${field.key}`} className="filter-field">
@@ -7842,6 +8071,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
     const queuedPhotos = draftAnnoncePhotoDrafts.map(({ id, file, visible }) => ({ id, file, visible }))
+    const hektorWizardFields = { ...draftAnnonceWizardFields }
+    const setHektorWizardField = (key: string, value: string) => {
+      const clean = value.trim()
+      if (clean) hektorWizardFields[key] = clean
+    }
+    if (draftAnnonceTypeRules.surfaceMode === 'terrain') setHektorWizardField('surfterrain', draftAnnonceAdvanced.landSurface)
+    if (draftAnnonceTypeRules.surfaceMode === 'garage') setHektorWizardField('SURFACE_GARAGE', draftAnnonceAdvanced.garageSurface)
+    if (draftAnnonceTypeRules.showLevels) setHektorWizardField('NB_NIVEAUX', draftAnnonceLevelCount)
+    if (draftAnnonceTypeRules.showGarageCount) setHektorWizardField('GARAGE_BOX', draftAnnonceAdvanced.garageCount)
+    if (draftAnnonceTypeRules.showGardenPool) {
+      setHektorWizardField('surfterrain', draftAnnonceAdvanced.landSurface)
+      setHektorWizardField('JARDIN-', draftAnnonceAdvanced.garden)
+      setHektorWizardField('PISCINE-', draftAnnonceAdvanced.pool)
+    }
+    if (draftAnnonceTypeRules.showExposure) setHektorWizardField('EXPOSITION', draftAnnonceAdvanced.exposure)
+    if (draftAnnonceTypeRules.showView) setHektorWizardField('vuee', draftAnnonceAdvanced.view)
     setDraftAnnoncePending(true)
     setNoticeMessage(null)
     setErrorMessage(null)
@@ -7863,11 +8108,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         city: draftAnnonceCity,
         price: draftAnnoncePrice,
         netSellerPrice: draftAnnonceAdvanced.netSellerPrice,
-        surface: draftAnnonceSurface,
+        surface: draftAnnonceTypeRules.surfaceMode === 'habitable' ? draftAnnonceSurface : null,
         carrezSurface: draftAnnonceAdvanced.carrezSurface,
         livingSurface: draftAnnonceAdvanced.livingSurface,
-        roomCount: draftAnnonceRoomCount,
-        bedroomCount: draftAnnonceBedroomCount,
+        roomCount: draftAnnonceTypeRules.showRooms ? draftAnnonceRoomCount : null,
+        bedroomCount: draftAnnonceTypeRules.showBedrooms ? draftAnnonceBedroomCount : null,
+        levelCount: draftAnnonceTypeRules.showLevels ? draftAnnonceLevelCount : null,
         bathroomCount: draftAnnonceAdvanced.bathroomCount,
         showerRoomCount: draftAnnonceAdvanced.showerRoomCount,
         wcCount: draftAnnonceAdvanced.wcCount,
@@ -7876,11 +8122,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         view: draftAnnonceAdvanced.view,
         interiorState: draftAnnonceAdvanced.interiorState,
         exteriorState: draftAnnonceAdvanced.exteriorState,
-        landSurface: draftAnnonceAdvanced.landSurface,
+        landSurface: draftAnnonceTypeRules.surfaceMode === 'terrain' || draftAnnonceTypeRules.showGardenPool ? draftAnnonceAdvanced.landSurface : null,
+        garden: draftAnnonceTypeRules.showGardenPool ? draftAnnonceAdvanced.garden : null,
         terraceCount: draftAnnonceAdvanced.terraceCount,
-        garageCount: draftAnnonceAdvanced.garageCount,
+        garageCount: draftAnnonceTypeRules.showGarageCount ? draftAnnonceAdvanced.garageCount : null,
+        garageSurface: draftAnnonceTypeRules.surfaceMode === 'garage' ? draftAnnonceAdvanced.garageSurface : null,
         parkingInsideCount: draftAnnonceAdvanced.parkingInsideCount,
         parkingOutsideCount: draftAnnonceAdvanced.parkingOutsideCount,
+        pool: draftAnnonceTypeRules.showGardenPool ? draftAnnonceAdvanced.pool : null,
         constructionYear: draftAnnonceAdvanced.constructionYear,
         dpeValue: draftAnnonceAdvanced.dpeValue,
         gesValue: draftAnnonceAdvanced.gesValue,
@@ -7888,7 +8137,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         coproCharges: draftAnnonceAdvanced.coproCharges,
         coproQuotePart: draftAnnonceAdvanced.coproQuotePart,
         coproWorksFund: draftAnnonceAdvanced.coproWorksFund,
-        wizardFields: draftAnnonceWizardFields,
+        wizardFields: hektorWizardFields,
         note: draftAnnonceNote,
         initialMandant: hasInitialMandant ? {
           civility: draftMandantCivility,
@@ -9816,22 +10065,28 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           ))}
                         </select>
                       </label>
-                      <label className="filter-field">
-                        <span>Type Hektor</span>
-                        <select value={draftAnnonceTypeId} onChange={(event) => setDraftAnnonceTypeId(event.target.value)}>
-                          {draftAnnoncePropertyTypes.map((item) => (
-                            <option key={item.id} value={item.id}>{item.label}</option>
-                          ))}
-                        </select>
-                      </label>
                     </section>
                     <section className="draft-annonce-section draft-annonce-type-section">
                       <div className="draft-annonce-section-title">
                         <span>1. Offre</span>
-                        <strong>Type de bien</strong>
+                        <strong>Choisissez le type correspondant a votre bien</strong>
                       </div>
-                      <div className="draft-annonce-type-grid" role="group" aria-label="Type de bien">
-                        {draftAnnoncePropertyTypes.map((item) => (
+                      <div className="draft-annonce-type-grid draft-annonce-family-grid" role="group" aria-label="Famille de bien">
+                        {draftAnnoncePropertyGroups.map((group) => (
+                          <button
+                            key={group.id}
+                            className={`draft-annonce-type-choice ${draftAnnonceSelectedTypeGroup.id === group.id ? 'is-selected' : ''}`}
+                            type="button"
+                            onClick={() => setDraftAnnonceTypeId(group.types[0]?.id ?? '2')}
+                          >
+                            <span aria-hidden="true">{group.label.replace(/^Les\s+/i, '').slice(0, 1)}</span>
+                            <strong>{group.label}</strong>
+                            <small>{group.hint}</small>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="draft-annonce-type-grid draft-annonce-subtype-grid" role="group" aria-label="Sous-type de bien">
+                        {draftAnnonceSelectedTypeOptions.map((item) => (
                           <button
                             key={item.id}
                             className={`draft-annonce-type-choice ${draftAnnonceTypeId === item.id ? 'is-selected' : ''}`}
@@ -9847,26 +10102,83 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <section className="draft-annonce-section draft-annonce-section-values">
                       <div className="draft-annonce-section-title">
                         <span>1. Offre</span>
-                        <strong>Champs principaux</strong>
+                        <strong>Donnees obligatoires Hektor</strong>
                       </div>
                       <label className="filter-field">
                         <span>Prix</span>
                         <input value={draftAnnoncePrice} onChange={(event) => setDraftAnnoncePrice(event.target.value)} inputMode="numeric" placeholder="0" />
                       </label>
-                      <label className="filter-field">
-                        <span>Surface</span>
-                        <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
-                      </label>
-                      <label className="filter-field">
-                        <span>Pieces</span>
-                        <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
-                      </label>
-                      <label className="filter-field">
-                        <span>Chambres</span>
-                        <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
-                      </label>
+                      {draftAnnonceTypeRules.surfaceMode === 'habitable' ? (
+                        <label className="filter-field">
+                          <span>Surface habitable</span>
+                          <input value={draftAnnonceSurface} onChange={(event) => setDraftAnnonceSurface(event.target.value)} inputMode="decimal" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.surfaceMode === 'terrain' ? (
+                        <label className="filter-field">
+                          <span>Surface terrain</span>
+                          <input value={draftAnnonceAdvanced.landSurface} onChange={(event) => updateDraftAnnonceAdvanced('landSurface', event.target.value)} inputMode="decimal" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.surfaceMode === 'garage' ? (
+                        <label className="filter-field">
+                          <span>Surface</span>
+                          <input value={draftAnnonceAdvanced.garageSurface} onChange={(event) => updateDraftAnnonceAdvanced('garageSurface', event.target.value)} inputMode="decimal" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.showRooms ? (
+                        <label className="filter-field">
+                          <span>Pieces</span>
+                          <input value={draftAnnonceRoomCount} onChange={(event) => setDraftAnnonceRoomCount(event.target.value)} inputMode="numeric" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.showBedrooms ? (
+                        <label className="filter-field">
+                          <span>Chambres</span>
+                          <input value={draftAnnonceBedroomCount} onChange={(event) => setDraftAnnonceBedroomCount(event.target.value)} inputMode="numeric" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.showLevels ? (
+                        <label className="filter-field">
+                          <span>Niveaux</span>
+                          <input value={draftAnnonceLevelCount} onChange={(event) => setDraftAnnonceLevelCount(event.target.value)} inputMode="numeric" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.showGardenPool ? (
+                        <>
+                          <label className="filter-field">
+                            <span>Jardin</span>
+                            <select value={draftAnnonceAdvanced.garden} onChange={(event) => updateDraftAnnonceAdvanced('garden', event.target.value)}>
+                              {draftAnnonceOuiNonOptions.map((option) => <option key={`garden-${option.value}`} value={option.value}>{option.label}</option>)}
+                            </select>
+                          </label>
+                          <label className="filter-field">
+                            <span>Piscine</span>
+                            <select value={draftAnnonceAdvanced.pool} onChange={(event) => updateDraftAnnonceAdvanced('pool', event.target.value)}>
+                              {draftAnnonceOuiNonOptions.map((option) => <option key={`pool-${option.value}`} value={option.value}>{option.label}</option>)}
+                            </select>
+                          </label>
+                        </>
+                      ) : null}
+                      {draftAnnonceTypeRules.showGarageCount ? (
+                        <label className="filter-field">
+                          <span>Garage</span>
+                          <input value={draftAnnonceAdvanced.garageCount} onChange={(event) => updateDraftAnnonceAdvanced('garageCount', event.target.value)} inputMode="numeric" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.showExposure ? (
+                        <label className="filter-field">
+                          <span>Situation</span>
+                          <input value={draftAnnonceAdvanced.exposure} onChange={(event) => updateDraftAnnonceAdvanced('exposure', event.target.value)} placeholder="Exposition" />
+                        </label>
+                      ) : null}
+                      {draftAnnonceTypeRules.showView ? (
+                        <label className="filter-field">
+                          <span>Vue</span>
+                          <input value={draftAnnonceAdvanced.view} onChange={(event) => updateDraftAnnonceAdvanced('view', event.target.value)} />
+                        </label>
+                      ) : null}
                     </section>
-                    {draftAnnonceOfferGroups.map(renderDraftAnnonceWizardSection)}
                   </>
                 ) : null}
                 {draftAnnonceStep === 'photos' ? (
@@ -10030,8 +10342,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <article><span>Statut Hektor</span><strong>{draftAnnonceCreationStatusLabel}</strong></article>
                         <article><span>Adresse</span><strong>{[draftAnnonceAddress, draftAnnoncePostalCode, draftAnnonceCity].filter((value) => value.trim()).join(' ') || '-'}</strong></article>
                         <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
-                        <article><span>Surface</span><strong>{draftAnnonceSurface.trim() ? `${draftAnnonceSurface} m2` : '-'}</strong></article>
-                        <article><span>Pieces / chambres</span><strong>{[draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ')}</strong></article>
+                        <article><span>Surface</span><strong>{draftAnnonceReviewSurface.trim() ? `${draftAnnonceReviewSurface} m2` : '-'}</strong></article>
+                        <article><span>Pieces / chambres</span><strong>{draftAnnonceTypeRules.showRooms || draftAnnonceTypeRules.showBedrooms ? [draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ') : 'Non demande'}</strong></article>
                         <article><span>Photos</span><strong>{draftAnnoncePhotoDrafts.length ? `${draftAnnoncePhotoDrafts.length} en attente` : 'Aucune'}</strong></article>
                         <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
                         <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>

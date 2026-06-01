@@ -523,6 +523,14 @@
   gap: 10px !important;
 }
 
+.draft-annonce-family-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.draft-annonce-subtype-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
 .draft-annonce-type-choice {
   display: grid !important;
   grid-template-columns: 34px minmax(0, 1fr) !important;
@@ -556,6 +564,18 @@
   color: inherit !important;
   font-size: 13px !important;
   font-weight: 900 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.draft-annonce-type-choice small {
+  grid-column: 2 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: inherit !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  opacity: 0.78 !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
