@@ -29001,7 +29001,12 @@ body {
 
 .draft-mandant-panel {
   grid-column: 1 / -1 !important;
-  overflow: hidden !important;
+  display: grid !important;
+  grid-template-rows: auto auto auto !important;
+  align-self: start !important;
+  height: auto !important;
+  min-height: 150px !important;
+  overflow: visible !important;
   border: 1px solid #cfe1df !important;
   border-radius: 8px !important;
   background: #ffffff !important;
