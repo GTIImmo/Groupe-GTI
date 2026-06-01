@@ -41,6 +41,7 @@ import {
   loadHektorNegotiatorOptions,
   loadUserNegotiatorContext,
   loadUserProfile,
+  loadGoogleWorkspaceIdentity,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -89,8 +90,8 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import { getCurrentSession, hasSupabaseEnv, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -7077,6 +7078,7 @@ export default function App() {
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [googleWorkspaceIdentity, setGoogleWorkspaceIdentity] = useState<GoogleWorkspaceIdentity | null>(null)
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [lightweightDetailTarget, setLightweightDetailTarget] = useState<LightweightDetailTarget | null>(null)
@@ -7102,6 +7104,7 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authPending, setAuthPending] = useState(false)
+  const [googleAuthPending, setGoogleAuthPending] = useState(false)
   const [recoveryMode, setRecoveryMode] = useState(false)
   const [recoveryPassword, setRecoveryPassword] = useState('')
   const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('')
@@ -7525,13 +7528,45 @@ export default function App() {
     let cancelled = false
     Promise.all([
       session?.user?.id ? loadUserProfile(session.user.id) : Promise.resolve(mockLocalProfile()),
+      session?.user?.id ? loadGoogleWorkspaceIdentity(session.user.id) : Promise.resolve(null),
       loadUserNegotiatorContext(session?.user?.email ?? null).catch(() => null),
       loadDiffusionRequests().catch(() => []),
       loadDiffusionRequestEvents().catch(() => []),
     ])
-      .then(([nextProfile, nextUserNegotiatorContext, rows, events]) => {
+      .then(([nextProfile, nextGoogleWorkspaceIdentity, nextUserNegotiatorContext, rows, events]) => {
         if (cancelled) return
+        const profileEmail = normalizeEmail(nextProfile?.email ?? session?.user?.email ?? null)
+        const authEmail = normalizeEmail(session?.user?.email ?? null)
+        const identityEmail = normalizeEmail(nextGoogleWorkspaceIdentity?.google_email ?? null)
+        const identityStatus = nextGoogleWorkspaceIdentity?.link_status ?? null
+        const identityOk = Boolean(
+          nextGoogleWorkspaceIdentity?.is_active
+          && identityStatus === 'linked'
+          && identityEmail
+          && identityEmail === authEmail,
+        )
+        if (hasSupabaseEnv && session && (!nextProfile?.is_active || !isGoogleWorkspaceEmail(profileEmail) || !identityOk)) {
+          setProfile(null)
+          setGoogleWorkspaceIdentity(null)
+          setUserNegotiatorContext(null)
+          setDiffusionRequests([])
+          setDiffusionRequestEvents([])
+          setErrorMessage(
+            !isGoogleWorkspaceEmail(profileEmail)
+              ? `Connexion refusee : utilise une adresse @${googleWorkspaceDomain}.`
+              : !nextProfile?.is_active
+                ? 'Connexion refusee : profil utilisateur inactif ou non cree dans l application.'
+                : identityStatus && identityStatus !== 'linked'
+                  ? 'Connexion refusee : liaison Google Workspace a controler par un admin.'
+                  : identityEmail && identityEmail !== authEmail
+                    ? 'Connexion refusee : compte Google different du profil autorise.'
+                    : 'Connexion refusee : liaison Google Workspace absente ou inactive.',
+          )
+          void signOut()
+          return
+        }
         setProfile(nextProfile)
+        setGoogleWorkspaceIdentity(nextGoogleWorkspaceIdentity)
         setUserNegotiatorContext(nextUserNegotiatorContext)
         setDiffusionRequests(rows)
         setDiffusionRequestEvents(events)
@@ -8098,12 +8133,28 @@ export default function App() {
     event.preventDefault()
     setAuthPending(true)
     setErrorMessage(null)
+    if (!isGoogleWorkspaceEmail(authEmail)) {
+      setErrorMessage(`Connexion refusee : utilise une adresse @${googleWorkspaceDomain}.`)
+      setAuthPending(false)
+      return
+    }
     try {
       await signInWithPassword(authEmail, authPassword)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Connexion impossible')
     } finally {
       setAuthPending(false)
+    }
+  }
+
+  async function handleGoogleWorkspaceSignIn() {
+    setGoogleAuthPending(true)
+    setErrorMessage(null)
+    try {
+      await signInWithGoogleWorkspace(typeof window !== 'undefined' ? window.location.origin : undefined)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Connexion Google impossible')
+      setGoogleAuthPending(false)
     }
   }
 
@@ -8120,6 +8171,7 @@ export default function App() {
       setSelectedDossier(null)
       setSelectedMandatId(null)
       setProfile(null)
+      setGoogleWorkspaceIdentity(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Deconnexion impossible')
     }
@@ -10516,6 +10568,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     ]
   }, [activeFilters.length, contactStats, mandatStats, screen, visibleDossiersCount, workItems.length, workItemsTotal])
   const isAdmin = profile?.role === 'admin'
+  const googleIdentityNegotiatorContext = useMemo<UserNegotiatorContext | null>(() => {
+    if (!googleWorkspaceIdentity?.is_active || googleWorkspaceIdentity.link_status !== 'linked') return null
+    if (!googleWorkspaceIdentity.negociateur_email && !googleWorkspaceIdentity.hektor_user_id) return null
+    return {
+      commercial_nom: profile?.display_name ?? null,
+      negociateur_email: googleWorkspaceIdentity.negociateur_email ?? googleWorkspaceIdentity.google_email ?? null,
+      agence_nom: null,
+      hektor_user_id: googleWorkspaceIdentity.hektor_user_id ?? null,
+    } satisfies UserNegotiatorContext
+  }, [googleWorkspaceIdentity, profile?.display_name])
   const inferredUserNegotiatorContext = useMemo<UserNegotiatorContext | null>(() => {
     if (!sessionEmail) return null
     const dossierMatch = dossiers.find((item) => normalizeEmail(item.negociateur_email) === sessionEmail)
@@ -10544,7 +10606,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     return null
   }, [dossiers, mandats, sessionEmail, workItems])
-  const resolvedUserNegotiatorContext = userNegotiatorContext ?? inferredUserNegotiatorContext
+  const resolvedUserNegotiatorContext = userNegotiatorContext ?? googleIdentityNegotiatorContext ?? inferredUserNegotiatorContext
   const canManageContacts = profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'commercial'
   const contactHektorUserEmail = resolvedUserNegotiatorContext?.negociateur_email ?? sessionEmail ?? null
   const contactHektorUserId = resolvedUserNegotiatorContext?.hektor_user_id ?? null
@@ -10723,6 +10785,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <p className="eyebrow">Accès sécurisé</p>
           <h1>Connexion à l'outil métier</h1>
           <p className="hero-copy">Les vues Supabase sont protégées par RLS. Connecte-toi avec un utilisateur actif pour lire les données.</p>
+          <div className="login-sso">
+            <button className="google-workspace-button" type="button" onClick={() => void handleGoogleWorkspaceSignIn()} disabled={googleAuthPending || authPending}>
+              <span className="google-workspace-mark" aria-hidden="true">G</span>
+              <span>{googleAuthPending ? 'Ouverture Google...' : 'Continuer avec Google Workspace'}</span>
+            </button>
+            <small>Reserve aux comptes @{googleWorkspaceDomain}</small>
+          </div>
+          <div className="login-separator"><span>Acces provisoire par mot de passe</span></div>
           <form className="login-form" onSubmit={handleSignIn}>
             <label><span>Email</span><input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required /></label>
             <label><span>Mot de passe</span><input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required /></label>
