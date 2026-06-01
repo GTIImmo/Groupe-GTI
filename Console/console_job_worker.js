@@ -2097,7 +2097,33 @@ async function ensureHektorAgencySession(job, agencyContext, reason) {
   return after;
 }
 
+function resolveHektorCreationStatus(payload) {
+  const raw = firstDefined(payload || {}, [
+    "statutAnnonce",
+    "statut_annonce",
+    "status_annonce",
+    "statusAnnonceWizard",
+    "creation_status",
+    "creationStatus",
+  ]);
+  const text = String(raw == null ? "" : raw).trim().toLowerCase();
+  if (["1", "estimation", "estimate", "estim"].includes(text)) {
+    return { statutAnnonce: "1", label: "Estimation" };
+  }
+  if (["2", "active", "actif", "annonce", "mandat"].includes(text)) {
+    return { statutAnnonce: "2", label: "Actif" };
+  }
+  if (/^\d+$/.test(text)) {
+    return { statutAnnonce: text, label: text };
+  }
+  return { statutAnnonce: "2", label: "Actif" };
+}
+
 async function createHektorAnnonceWithPlaywright(job, payload) {
+  const creationStatus = resolveHektorCreationStatus(payload);
+  if (creationStatus.statutAnnonce !== "2") {
+    throw new Error("Fallback Playwright refuse pour une creation Estimation; la route directe Hektor doit confirmer statutAnnonce=1.");
+  }
   const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
   let browser = null;
   try {
@@ -2155,7 +2181,8 @@ async function createHektorAnnonceWithPlaywright(job, payload) {
 async function createHektorAnnonceWithHttpDirect(job, payload) {
   const offredem = String(payload.offredem ?? payload.offer_demand ?? 0);
   const idType = String(payload.hektor_id_type ?? payload.idType ?? payload.id_type ?? 2);
-  const statutAnnonce = String(payload.statutAnnonce ?? payload.statut_annonce ?? payload.status_annonce ?? 2);
+  const creationStatus = resolveHektorCreationStatus(payload);
+  const statutAnnonce = creationStatus.statutAnnonce;
   const programmeNeuf = String(payload.programme_neuf ?? 0);
   const captured = [];
   let idannWizard = null;
@@ -2172,6 +2199,7 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
     offredem,
     idType,
     statutAnnonce,
+    status_label: creationStatus.label,
     programme_neuf: programmeNeuf,
   });
 
@@ -2271,6 +2299,7 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
 }
 
 async function createHektorAnnonce(job, payload) {
+  const creationStatus = resolveHektorCreationStatus(payload);
   if (CREATE_HEKTOR_HTTP_DIRECT) {
     try {
       return await createHektorAnnonceWithHttpDirect(job, payload);
@@ -2280,10 +2309,11 @@ async function createHektorAnnonce(job, payload) {
       await logJob(job.id, "hektor_annonce_http", "error", "Creation HTTP directe Hektor echouee", {
         error: error && error.message ? error.message : String(error),
         created_hektor_annonce_id: createdId,
-        playwright_fallback: CREATE_HEKTOR_PLAYWRIGHT_FALLBACK && !createdId && !sessionExpired,
+        playwright_fallback: CREATE_HEKTOR_PLAYWRIGHT_FALLBACK && !createdId && !sessionExpired && creationStatus.statutAnnonce === "2",
         session_retry: sessionExpired,
+        requested_status: creationStatus.label,
       });
-      if (createdId || sessionExpired || !CREATE_HEKTOR_PLAYWRIGHT_FALLBACK) throw error;
+      if (createdId || sessionExpired || !CREATE_HEKTOR_PLAYWRIGHT_FALLBACK || creationStatus.statutAnnonce !== "2") throw error;
     }
   }
   const result = await createHektorAnnonceWithPlaywright(job, payload);
@@ -3383,6 +3413,111 @@ function setWizardDefault(values, target, value) {
   if (!values.has(target)) values.set(target, value);
 }
 
+function normalizeHektorSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function textFromClass(html, className) {
+  const pattern = new RegExp(`<[^>]*class=["'][^"']*\\b${className}\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/[^>]+>`, "i");
+  const match = String(html || "").match(pattern);
+  return match ? decodeHtmlEntities(match[1].replace(/<[^>]+>/g, "")).trim() : "";
+}
+
+function parseHektorLocalityCandidate(html, postalCode, city) {
+  const source = String(html || "");
+  const cityNeedle = normalizeHektorSearchText(city);
+  const postalNeedle = String(postalCode || "").trim();
+  const candidates = [];
+  const liRegex = /<li\b[^>]*>[\s\S]*?<\/li>/gi;
+  let match;
+  while ((match = liRegex.exec(source))) {
+    const block = match[0];
+    const text = decodeHtmlEntities(block.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    const code = textFromClass(block, "code") || text.match(/\b\d{5}\b/)?.[0] || "";
+    const name = textFromClass(block, "frontal") || textFromClass(block, "nameCode") || text;
+    const idVille = textFromClass(block, "idVille") || attrValue(block, "idVille") || attrValue(block, "data-idville") || "";
+    const idCode = textFromClass(block, "idVilleCode") || attrValue(block, "idCode") || attrValue(block, "data-idcode") || "";
+    const latitude = textFromClass(block, "latitude") || attrValue(block, "data-latitude") || "";
+    const longitude = textFromClass(block, "longitude") || attrValue(block, "data-longitude") || attrValue(block, "data-lng") || "";
+    const normalizedText = normalizeHektorSearchText(`${name} ${text}`);
+    let score = 0;
+    if (postalNeedle && code === postalNeedle) score += 4;
+    if (cityNeedle && normalizedText.includes(cityNeedle)) score += 3;
+    if (idVille) score += 1;
+    if (idCode) score += 1;
+    if (score > 0) candidates.push({ score, code, name, idVille, idCode, latitude, longitude });
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0] || null;
+}
+
+async function resolveHektorPublicLocality(postalCode, city) {
+  const cleanPostal = cleanString(postalCode);
+  const cleanCity = cleanString(city);
+  if (!cleanPostal && !cleanCity) return null;
+
+  const body = new URLSearchParams({
+    scope: cleanCity ? "ville" : "code",
+    ville: cleanCity || cleanPostal,
+    wellformed: "true",
+    idpays: "1",
+    country: "France",
+    uCountry: "true",
+  });
+  if (cleanPostal) body.set("scopeCode", cleanPostal);
+  if (cleanCity) body.set("scopeVille", cleanCity);
+
+  let candidate = null;
+  try {
+    const response = await hektorFetch(`${ADMIN_URL}?call=ac_villes`, {
+      method: "POST",
+      body,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Referer: ADMIN_URL,
+      },
+      timeoutMs: 20000,
+    });
+    candidate = parseHektorLocalityCandidate(response.text, cleanPostal, cleanCity);
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    if (/Hektor 403|Session Hektor/i.test(message)) throw error;
+    return null;
+  }
+
+  if (!candidate) return null;
+  if (candidate.idVille && candidate.idCode && (!candidate.latitude || !candidate.longitude)) {
+    try {
+      const params = new URLSearchParams({
+        mode: "villes-assocVilleFromHA",
+        externalIdVille: candidate.idVille,
+        externalIdCode: candidate.idCode,
+      });
+      const response = await hektorFetch(`${XMLRPC_URL}?${params.toString()}`, { timeoutMs: 20000 });
+      const data = JSON.parse(response.text);
+      if (data && !data.error) {
+        return {
+          code: cleanString(data.code) || candidate.code,
+          name: cleanString(data.name) || candidate.name,
+          idVille: cleanString(data.idVille) || cleanString(data.id) || candidate.idVille,
+          idCode: cleanString(data.idCode) || candidate.idCode,
+          latitude: cleanString(data.latitude) || candidate.latitude,
+          longitude: cleanString(data.longitude) || candidate.longitude,
+        };
+      }
+    } catch (error) {
+      const message = error && error.message ? error.message : String(error);
+      if (/Hektor 403|Session Hektor/i.test(message)) throw error;
+    }
+  }
+  return candidate;
+}
+
 function exactHektorWizardFields(payload) {
   const source = payload && typeof payload === "object"
     ? (payload.hektor_wizard_fields || payload.wizard_fields || payload.wizardFields || null)
@@ -3460,7 +3595,7 @@ function buildWizardStep2Body(idannWizard, meta, html, payload) {
   return body;
 }
 
-function buildWizardStep4Body(idannWizard, meta, html, payload) {
+async function buildWizardStep4Body(idannWizard, meta, html, payload) {
   const values = mergeHektorFormValues(
     extractHektorFormValues(html, "wizard_secteur"),
     extractHektorFormValues(html, "wizard_obligatoire"),
@@ -3476,10 +3611,22 @@ function buildWizardStep4Body(idannWizard, meta, html, payload) {
   if (postalCode) body.set("codepublique", postalCode);
   if (city) body.set("villepublique", city);
   if (address) body.set("ADRESSE_COMPL", address);
+  const locality = await resolveHektorPublicLocality(postalCode, city);
+  if (locality) {
+    if (locality.code && !postalCode) body.set("codepublique", locality.code);
+    if (locality.name && !city) body.set("villepublique", locality.name);
+    if (locality.idCode) body.set("idCodepublique", locality.idCode);
+    if (locality.idVille) body.set("idVillepublique", locality.idVille);
+    if (locality.latitude) body.set("latitude", locality.latitude);
+    if (locality.longitude) body.set("longitude", locality.longitude);
+  }
   setWizardText(body, "immeuble", payload, ["building", "immeuble"]);
   setWizardText(body, "TRANSPORT", payload, ["transport", "TRANSPORT"]);
   setWizardText(body, "PROXIMITE", payload, ["proximity", "proximite", "PROXIMITE"]);
   setWizardText(body, "ENVIRONNEMENT", payload, ["environment", "environnement", "ENVIRONNEMENT"]);
+  setWizardText(body, "idCodepublique", payload, ["idCodepublique", "id_codepublique", "hektor_public_postal_code_id"]);
+  setWizardText(body, "idVillepublique", payload, ["idVillepublique", "id_villepublique", "hektor_public_city_id"]);
+  setWizardText(body, "idLocalitePrivee", payload, ["idLocalitePrivee", "id_localite_privee", "hektor_private_locality_id"]);
   setWizardNumber(body, "latitude", payload, ["latitude", "lat"]);
   setWizardNumber(body, "longitude", payload, ["longitude", "lng", "lon"]);
   applyExactHektorWizardFields(body, payload, 4);
@@ -3553,7 +3700,11 @@ function buildWizardStep6Body(idannWizard, meta, html, payload) {
   setWizardNumber(body, "dpe_cons", payload, ["dpe_value", "dpeValue", "dpe_cons"]);
   setWizardNumber(body, "dpe_ges", payload, ["ges_value", "gesValue", "dpe_ges"]);
   setWizardDate(body, "dpe_date", payload, ["dpe_date", "dpeDate"]);
+  setWizardText(body, "dpe_non_concerne", payload, ["dpe_non_concerne", "dpeNotApplicable", "chk_dpe_non_concerne"]);
+  setWizardText(body, "dpe_vierge", payload, ["dpe_vierge", "dpeBlank", "chk_dpe_vierge"]);
+  setWizardText(body, "isDpeAltitude", payload, ["isDpeAltitude", "dpeAltitude", "chk_isDpeAltitude"]);
   setWizardText(body, "diagnostiqueur", payload, ["diagnostician", "diagnostiqueur"]);
+  setWizardText(body, "diag_risques_nat_tech_commentaire", payload, ["diagnostic_risk_comment", "diagnosticRiskComment", "diag_risques_nat_tech_commentaire"]);
   setWizardText(body, "syndic", payload, ["syndic"]);
   setWizardText(body, "copropriete", payload, ["copropriete", "copro"]);
   setWizardNumber(body, "copropriete_nb_lot", payload, ["copro_lots", "coproLots", "copropriete_nb_lot"]);
@@ -3565,6 +3716,7 @@ function buildWizardStep6Body(idannWizard, meta, html, payload) {
 
 function buildWizardStep7Body(idannWizard, meta, html, payload) {
   const values = mergeHektorFormValues(
+    extractHektorFormValues(html, "wizard_titleDescription"),
     extractHektorFormValues(html, "wizard_Mandant_BienInsert"),
     extractHektorFormValues(html, "mandat_infofi"),
     extractHektorFormValues(html, "mandat_investissementloc"),
@@ -3582,6 +3734,8 @@ function buildWizardStep7Body(idannWizard, meta, html, payload) {
   setWizardDefault(body, "TAXE_HABITATION", "0");
   setWizardDefault(body, "TAXE_FONCIERE", "0");
   setWizardDefault(body, "CHARGES", "0");
+  setWizardText(body, "titre", payload, ["title", "titre"]);
+  setWizardText(body, "corps", payload, ["description", "corps"]);
   setWizardNumber(body, "PRIXNETVENDEUR", payload, ["net_seller_price", "netSellerPrice", "prix_net_vendeur"]);
   setWizardNumber(body, "prix", payload, ["price", "prix"]);
   setWizardNumber(body, "ESTIMATION_MONTANT", payload, ["estimation_amount", "estimationAmount", "ESTIMATION_MONTANT"]);
@@ -3673,7 +3827,7 @@ async function applyHektorCreateWizardFields(job, fetcher, idannWizard, meta, pa
   ];
 
   for (const item of steps) {
-    const body = item.build(idannWizard, meta, html, payload);
+    const body = await item.build(idannWizard, meta, html, payload);
     const result = await postHektorWizardCreateStep(job, fetcher, idannWizard, meta, item.step, body);
     captured.push(result);
     if (item.step !== 7) {
@@ -3816,6 +3970,13 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
   const textKeys = [
     ["title", ["title", "titre"]],
     ["description", ["description", "corps"]],
+    ["address", ["address", "adresse", "ADRESSE_COMPL"]],
+    ["postal_code", ["postal_code", "postalCode", "code_postal", "codepublique"]],
+    ["city", ["city", "ville", "villepublique"]],
+    ["building", ["building", "immeuble"]],
+    ["transport", ["transport", "TRANSPORT"]],
+    ["proximity", ["proximity", "proximite", "PROXIMITE"]],
+    ["environment", ["environment", "environnement", "ENVIRONNEMENT"]],
     ["kitchen", ["kitchen", "cuisine", "CUISINE"]],
     ["exposure", ["exposure", "exposition", "EXPOSITION"]],
     ["view", ["view", "vue", "vuee"]],
@@ -3823,7 +3984,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["exterior_state", ["exterior_state", "exteriorState", "etat_exterieur", "ETAT_EXTERIEUR"]],
     ["dpe_value", ["dpe_value", "dpeValue", "DPE", "dpe_cons"]],
     ["ges_value", ["ges_value", "gesValue", "GES", "dpe_ges"]],
-    ["diagnostic_note", ["diagnostic_note", "diagnosticNote", "diag_risques_nat_tech_date"]],
+    ["diagnostic_risk_comment", ["diagnostic_risk_comment", "diagnosticRiskComment", "diagnostic_note", "diagnosticNote", "diag_risques_nat_tech_commentaire"]],
     ["mandate_number", ["mandate_number", "mandateNumber", "NO_MANDAT"]],
     ["mandate_type", ["mandate_type", "mandateType"]],
     ["mandate_start_date", ["mandate_start_date", "mandateStartDate"]],
@@ -3852,6 +4013,8 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["copro_quote_part", ["copro_quote_part", "coproQuotePart", "copropriete_quote_part"]],
     ["copro_works_fund", ["copro_works_fund", "coproWorksFund", "montant_fonds_travaux"]],
     ["fees", ["fees", "HONORAIRES", "honoraires"]],
+    ["latitude", ["latitude", "lat"]],
+    ["longitude", ["longitude", "lng", "lon"]],
   ];
   const skippedFinancial = new Set(options.skipFinancial ? ["price", "net_seller_price", "copro_charges", "fees"] : []);
   for (const [key, aliases] of textKeys) {
@@ -3892,6 +4055,25 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   });
   if (textResult) results.push(textResult);
 
+  const secteur = {};
+  if (cleanFields.postal_code != null) secteur.postal_code = fieldSpec(cleanFields.postal_code, ["codepublique"]);
+  if (cleanFields.city != null) secteur.city = fieldSpec(cleanFields.city, ["villepublique"]);
+  if (cleanFields.address != null) secteur.address = fieldSpec(cleanFields.address, ["ADRESSE_COMPL"]);
+  if (cleanFields.building != null) secteur.building = fieldSpec(cleanFields.building, ["immeuble"]);
+  if (cleanFields.transport != null) secteur.transport = fieldSpec(cleanFields.transport, ["TRANSPORT"]);
+  if (cleanFields.proximity != null) secteur.proximity = fieldSpec(cleanFields.proximity, ["PROXIMITE"]);
+  if (cleanFields.environment != null) secteur.environment = fieldSpec(cleanFields.environment, ["ENVIRONNEMENT"]);
+  if (cleanFields.latitude != null) secteur.latitude = fieldSpec(cleanFields.latitude, ["latitude"]);
+  if (cleanFields.longitude != null) secteur.longitude = fieldSpec(cleanFields.longitude, ["longitude"]);
+  if (cleanFields.postal_code != null || cleanFields.city != null) {
+    const locality = await resolveHektorPublicLocality(cleanFields.postal_code, cleanFields.city);
+    if (locality && locality.idCode) secteur.id_codepublique = fieldSpec(locality.idCode, ["idCodepublique"]);
+    if (locality && locality.idVille) secteur.id_villepublique = fieldSpec(locality.idVille, ["idVillepublique"]);
+    if (locality && locality.latitude && cleanFields.latitude == null) secteur.latitude = fieldSpec(locality.latitude, ["latitude"]);
+    if (locality && locality.longitude && cleanFields.longitude == null) secteur.longitude = fieldSpec(locality.longitude, ["longitude"]);
+  }
+  await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe", secteur);
+
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
   if (cleanFields.bedroom_count != null) agInterieur.bedroom_count = fieldSpec(cleanFields.bedroom_count, ["NB_CHAMBRES"]);
@@ -3903,11 +4085,9 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   if (cleanFields.kitchen != null) agInterieur.kitchen = fieldSpec(cleanFields.kitchen, ["CUISINE", "cuisine"]);
   if (cleanFields.exposure != null) agInterieur.exposure = fieldSpec(cleanFields.exposure, ["EXPOSITION", "exposition"]);
   if (cleanFields.view != null) agInterieur.view = fieldSpec(cleanFields.view, ["vuee", "VUE", "vue"]);
-  if (cleanFields.interior_state != null) agInterieur.interior_state = fieldSpec(cleanFields.interior_state, ["ETAT_INTERIEUR", "ETATINT", "etat_interieur"]);
   await pushHektorGroupUpdate(results, job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur);
 
   const agExterieur = {};
-  if (cleanFields.exterior_state != null) agExterieur.exterior_state = fieldSpec(cleanFields.exterior_state, ["ETAT_EXTERIEUR", "ETAT_EXT", "etat_exterieur"]);
   if (cleanFields.garden_surface != null) agExterieur.garden_surface = fieldSpec(cleanFields.garden_surface, ["SURFACE_JARDIN"]);
   if (cleanFields.terrace_count != null) agExterieur.terrace_count = fieldSpec(cleanFields.terrace_count, ["NB_TERRASSE", "TERRASSE"]);
   if (cleanFields.garage_count != null) agExterieur.garage_count = fieldSpec(cleanFields.garage_count, ["GARAGE_BOX"]);
@@ -3921,10 +4101,12 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   await pushHektorGroupUpdate(results, job, annonceId, "terrain", "ihmChargeGroupe", terrain);
 
   const diagnostics = {};
+  if (cleanFields.interior_state != null) diagnostics.interior_state = fieldSpec(cleanFields.interior_state, ["etat_interieur", "ETAT_INTERIEUR"]);
+  if (cleanFields.exterior_state != null) diagnostics.exterior_state = fieldSpec(cleanFields.exterior_state, ["etat_exterieur", "ETAT_EXTERIEUR"]);
   if (cleanFields.dpe_value != null) diagnostics.dpe_value = fieldSpec(cleanFields.dpe_value, ["dpe_cons", "DPE", "dpe", "classe_energie"]);
   if (cleanFields.ges_value != null) diagnostics.ges_value = fieldSpec(cleanFields.ges_value, ["dpe_ges", "GES", "ges", "classe_ges"]);
   if (cleanFields.construction_year != null) diagnostics.construction_year = fieldSpec(cleanFields.construction_year, ["ANNEE_CONS", "ANNEE_CONSTRUCTION", "annee_construction", "construction_year"]);
-  if (cleanFields.diagnostic_note != null) diagnostics.diagnostic_note = fieldSpec(cleanFields.diagnostic_note, ["diag_risques_nat_tech_date", "dpe_date"]);
+  if (cleanFields.diagnostic_risk_comment != null) diagnostics.diagnostic_risk_comment = fieldSpec(cleanFields.diagnostic_risk_comment, ["diag_risques_nat_tech_commentaire"]);
   await pushHektorGroupUpdate(results, job, annonceId, "diagnostiques", "ihmChargeGroupe", diagnostics);
 
   const copropriete = {};

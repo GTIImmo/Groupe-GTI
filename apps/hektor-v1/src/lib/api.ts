@@ -4712,6 +4712,15 @@ export async function createUpdateHektorMandantContactJob(input: {
 export type HektorAnnonceUpdateFields = {
   title?: string | null
   description?: string | null
+  address?: string | null
+  postalCode?: string | null
+  city?: string | null
+  building?: string | null
+  transport?: string | null
+  proximity?: string | null
+  environment?: string | null
+  latitude?: string | number | null
+  longitude?: string | number | null
   price?: string | number | null
   netSellerPrice?: string | number | null
   surface?: string | number | null
@@ -4736,6 +4745,7 @@ export type HektorAnnonceUpdateFields = {
   dpeValue?: string | null
   gesValue?: string | null
   constructionYear?: string | number | null
+  diagnosticRiskComment?: string | null
   diagnosticNote?: string | null
   coproLots?: string | number | null
   coproCharges?: string | number | null
@@ -4767,6 +4777,15 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
   const cleanFields = {
     title: input.fields.title?.trim() || null,
     description: input.fields.description?.trim() || null,
+    address: input.fields.address?.trim() || null,
+    postal_code: input.fields.postalCode?.trim() || null,
+    city: input.fields.city?.trim() || null,
+    building: input.fields.building?.trim() || null,
+    transport: input.fields.transport?.trim() || null,
+    proximity: input.fields.proximity?.trim() || null,
+    environment: input.fields.environment?.trim() || null,
+    latitude: input.fields.latitude == null ? null : String(input.fields.latitude).trim() || null,
+    longitude: input.fields.longitude == null ? null : String(input.fields.longitude).trim() || null,
     price: input.fields.price == null ? null : String(input.fields.price).trim() || null,
     net_seller_price: input.fields.netSellerPrice == null ? null : String(input.fields.netSellerPrice).trim() || null,
     surface: input.fields.surface == null ? null : String(input.fields.surface).trim() || null,
@@ -4791,7 +4810,7 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
     dpe_value: input.fields.dpeValue?.trim() || null,
     ges_value: input.fields.gesValue?.trim() || null,
     construction_year: input.fields.constructionYear == null ? null : String(input.fields.constructionYear).trim() || null,
-    diagnostic_note: input.fields.diagnosticNote?.trim() || null,
+    diagnostic_risk_comment: input.fields.diagnosticRiskComment?.trim() || input.fields.diagnosticNote?.trim() || null,
     copro_lots: input.fields.coproLots == null ? null : String(input.fields.coproLots).trim() || null,
     copro_charges: input.fields.coproCharges == null ? null : String(input.fields.coproCharges).trim() || null,
     copro_quote_part: input.fields.coproQuotePart == null ? null : String(input.fields.coproQuotePart).trim() || null,
@@ -5127,6 +5146,7 @@ export type HektorDraftAnnonceJobInput = {
   hektorNegociateurId?: string | null
   hektorUserLabel?: string | null
   hektorUserEmail?: string | null
+  creationStatus?: 'active' | 'estimation'
   propertyType?: string | null
   hektorIdType?: string | number | null
   offerType?: 'sale' | 'rental'
@@ -5169,6 +5189,7 @@ export type HektorDraftAnnonceJobInput = {
 export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
+  const creationStatus = input.creationStatus === 'estimation' ? 'estimation' : 'active'
   const { data, error } = await supabase.rpc('app_console_create_draft_annonce_job', {
     draft_payload: {
       title: input.title?.trim() || null,
@@ -5178,6 +5199,9 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       hektor_negociator_form_id: input.hektorNegociateurId?.trim() || null,
       hektor_user_label: input.hektorUserLabel?.trim() || null,
       hektor_user_email: input.hektorUserEmail?.trim() || null,
+      creation_status: creationStatus,
+      status_label: creationStatus === 'estimation' ? 'Estimation' : 'Actif',
+      statut_annonce: creationStatus === 'estimation' ? '1' : '2',
       property_type: input.propertyType?.trim() || 'Appartement',
       hektor_id_type: input.hektorIdType == null ? '2' : String(input.hektorIdType).trim() || '2',
       offer_type: input.offerType ?? 'sale',

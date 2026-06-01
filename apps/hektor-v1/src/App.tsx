@@ -280,6 +280,15 @@ function numericDraft(value: unknown): string {
 type HektorAdvancedFieldKey =
   | 'title'
   | 'description'
+  | 'address'
+  | 'postalCode'
+  | 'city'
+  | 'building'
+  | 'transport'
+  | 'proximity'
+  | 'environment'
+  | 'latitude'
+  | 'longitude'
   | 'price'
   | 'surface'
   | 'roomCount'
@@ -302,7 +311,7 @@ type HektorAdvancedFieldKey =
   | 'dpeValue'
   | 'gesValue'
   | 'constructionYear'
-  | 'diagnosticNote'
+  | 'diagnosticRiskComment'
   | 'coproLots'
   | 'coproCharges'
   | 'coproQuotePart'
@@ -331,6 +340,21 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
       { key: 'surface', label: 'Surface', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'roomCount', label: 'Pieces', placeholder: 'Pieces', inputMode: 'numeric' },
       { key: 'bedroomCount', label: 'Chambres', placeholder: 'Chambres', inputMode: 'numeric' },
+    ],
+  },
+  {
+    title: '3. Secteur',
+    tone: 'location',
+    fields: [
+      { key: 'address', label: 'Adresse privee' },
+      { key: 'postalCode', label: 'Code postal', inputMode: 'numeric' },
+      { key: 'city', label: 'Ville' },
+      { key: 'building', label: 'Immeuble / residence' },
+      { key: 'transport', label: 'Transport' },
+      { key: 'proximity', label: 'Proximite' },
+      { key: 'environment', label: 'Environnement' },
+      { key: 'latitude', label: 'Latitude', inputMode: 'decimal' },
+      { key: 'longitude', label: 'Longitude', inputMode: 'decimal' },
     ],
   },
   {
@@ -367,7 +391,7 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
       { key: 'dpeValue', label: 'DPE' },
       { key: 'gesValue', label: 'GES' },
       { key: 'constructionYear', label: 'Annee construction', inputMode: 'numeric' },
-      { key: 'diagnosticNote', label: 'Diagnostic principal' },
+      { key: 'diagnosticRiskComment', label: 'Commentaire risques', multiline: true },
     ],
   },
   {
@@ -897,6 +921,15 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
   return {
     title: dossier.titre_bien ?? '',
     description: '',
+    address: firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail),
+    postalCode: firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal),
+    city: firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail),
+    building: rawDetailFirstProp(detail, 'secteur', ['immeuble', 'IMMEUBLE']),
+    transport: rawDetailFirstProp(detail, 'secteur', ['TRANSPORT', 'transport']),
+    proximity: rawDetailFirstProp(detail, 'secteur', ['PROXIMITE', 'proximite']),
+    environment: rawDetailFirstProp(detail, 'secteur', ['ENVIRONNEMENT', 'environnement']),
+    latitude: numericDraft(detail.latitude_detail ?? rawDetailProp(detail, 'secteur', 'latitude')),
+    longitude: numericDraft(detail.longitude_detail ?? rawDetailProp(detail, 'secteur', 'longitude')),
     price: numericDraft(dossier.prix),
     surface: numericDraft(detail.surface_habitable_detail ?? detail.surface),
     roomCount: numericDraft(detail.nb_pieces),
@@ -907,8 +940,8 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
     kitchen: rawDetailProp(detail, 'ag_interieur', 'CUISINE'),
     exposure: rawDetailProp(detail, 'ag_interieur', 'EXPOSITION'),
     view: rawDetailProp(detail, 'ag_interieur', 'vuee'),
-    interiorState: rawDetailFirstProp(detail, 'ag_interieur', ['etat_interieur', 'ETAT_INTERIEUR']),
-    exteriorState: rawDetailFirstProp(detail, 'ag_exterieur', ['etat_exterieur', 'ETAT_EXTERIEUR']),
+    interiorState: rawDetailFirstProp(detail, 'diagnostiques', ['etat_interieur', 'ETAT_INTERIEUR']),
+    exteriorState: rawDetailFirstProp(detail, 'diagnostiques', ['etat_exterieur', 'ETAT_EXTERIEUR']),
     landSurface: numericDraft(detail.surface_terrain_detail || rawDetailProp(detail, 'terrain', 'surfterrain')),
     gardenSurface: rawDetailProp(detail, 'ag_exterieur', 'SURFACE_JARDIN'),
     terraceCount: rawDetailFirstProp(detail, 'ag_exterieur', ['NB_TERRASSE', 'TERRASSE']),
@@ -919,7 +952,7 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
     dpeValue: rawDetailFirstProp(detail, 'diagnostiques', ['dpe_cons', 'DPE']),
     gesValue: rawDetailFirstProp(detail, 'diagnostiques', ['dpe_ges', 'GES']),
     constructionYear: rawDetailFirstProp(detail, 'diagnostiques', ['ANNEE_CONS', 'ANNEE_CONSTRUCTION']),
-    diagnosticNote: rawDetailProp(detail, 'diagnostiques', 'diag_risques_nat_tech_date'),
+    diagnosticRiskComment: rawDetailProp(detail, 'diagnostiques', 'diag_risques_nat_tech_commentaire'),
     coproLots: rawDetailProp(detail, 'copropriete', 'copropriete_nb_lot'),
     coproCharges: rawDetailProp(detail, 'mandat_infofi', 'CHARGES'),
     coproQuotePart: rawDetailProp(detail, 'copropriete', 'copropriete_quote_part'),
@@ -960,7 +993,7 @@ function HektorAnnonceUpdateForm(props: {
     setMessage(null)
     setError(null)
     setPending(false)
-  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_mandat, detail.detail_raw_json, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
+  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_mandat, detail.detail_raw_json, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
 
   const updateField = (key: HektorAdvancedFieldKey, value: string) => {
     setValues((current) => ({ ...current, [key]: value }))
@@ -1010,7 +1043,7 @@ function HektorAnnonceUpdateForm(props: {
         <span className="hektor-inline-icon" aria-hidden="true">M</span>
         <div>
           <strong>Modifier dans Hektor</strong>
-          <small>Ordre Hektor : Offre, Details, Mandat / Prix, puis Diffusion.</small>
+          <small>Ordre Hektor : Offre, Secteur, Details, Mandat / Prix, puis Diffusion.</small>
         </div>
       </div>
       <div className="hektor-advanced-sections">
@@ -1061,6 +1094,9 @@ function HektorMandantContactForm(props: {
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [city, setCity] = useState('')
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -1072,6 +1108,9 @@ function HektorMandantContactForm(props: {
     setFirstName('')
     setEmail('')
     setPhone('')
+    setAddress('')
+    setPostalCode('')
+    setCity('')
     setMessage(null)
     setError(null)
     setPending(false)
@@ -1099,6 +1138,9 @@ function HektorMandantContactForm(props: {
           firstName,
           email,
           phone,
+          address,
+          postalCode,
+          city,
         },
         priority: 18,
       })
@@ -1107,6 +1149,9 @@ function HektorMandantContactForm(props: {
       setFirstName('')
       setEmail('')
       setPhone('')
+      setAddress('')
+      setPostalCode('')
+      setCity('')
       props.onJobCreated?.(job)
       setMessage(null)
       setOpen(false)
@@ -1160,6 +1205,18 @@ function HektorMandantContactForm(props: {
         <label>
           <span>Telephone</span>
           <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
+        </label>
+        <label>
+          <span>Adresse</span>
+          <input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Adresse" />
+        </label>
+        <label className="is-small">
+          <span>CP</span>
+          <input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} inputMode="numeric" />
+        </label>
+        <label>
+          <span>Ville</span>
+          <input value={city} onChange={(event) => setCity(event.target.value)} />
         </label>
       </div>
       <div className="hektor-inline-actions">
@@ -6189,6 +6246,9 @@ export default function App() {
   const [draftMandantFirstName, setDraftMandantFirstName] = useState('')
   const [draftMandantEmail, setDraftMandantEmail] = useState('')
   const [draftMandantPhone, setDraftMandantPhone] = useState('')
+  const [draftMandantAddress, setDraftMandantAddress] = useState('')
+  const [draftMandantPostalCode, setDraftMandantPostalCode] = useState('')
+  const [draftMandantCity, setDraftMandantCity] = useState('')
   const [deleteAnnonceTarget, setDeleteAnnonceTarget] = useState<Dossier | null>(null)
   const [deleteAnnonceReason, setDeleteAnnonceReason] = useState('')
   const [deleteAnnonceConfirmText, setDeleteAnnonceConfirmText] = useState('')
@@ -6378,7 +6438,9 @@ export default function App() {
   const draftAnnonceDetailGroups = draftAnnonceWizardGroups.filter((section) => section.step === 5)
   const draftAnnonceMandatGroups = draftAnnonceWizardGroups.filter((section) => section.step === 6)
   const draftAnnonceDiffusionGroups = draftAnnonceWizardGroups.filter((section) => section.step === 7)
-  const draftAnnonceHasMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
+  const draftAnnonceHasMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
+  const draftAnnonceCreationStatus = screen === 'estimations' ? 'estimation' : 'active'
+  const draftAnnonceCreationStatusLabel = draftAnnonceCreationStatus === 'estimation' ? 'Estimation' : 'Actif'
   const negotiatorAssignAgency = useMemo(() => {
     return hektorAgencies.find((item) => item.idAgence === negotiatorAssignAgencyValue) ?? null
   }, [hektorAgencies, negotiatorAssignAgencyValue])
@@ -7447,6 +7509,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftMandantFirstName('')
     setDraftMandantEmail('')
     setDraftMandantPhone('')
+    setDraftMandantAddress('')
+    setDraftMandantPostalCode('')
+    setDraftMandantCity('')
     setNoticeMessage(null)
     setErrorMessage(null)
     setDraftAnnonceModalOpen(true)
@@ -7769,7 +7834,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setDraftAnnonceStep('offre')
       return
     }
-    const hasInitialMandant = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone].some((value) => value.trim())
+    const hasInitialMandant = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
     if (hasInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
       setErrorMessage('Pour ajouter un mandant initial, renseigne au minimum le nom et l email.')
       setDraftAnnonceStep('mandatPrix')
@@ -7789,6 +7854,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         hektorNegociateurId: selectedDraftNegotiator.hektorNegociateurId,
         hektorUserLabel: selectedDraftNegotiator.label,
         hektorUserEmail: selectedDraftNegotiator.email,
+        creationStatus: draftAnnonceCreationStatus,
         propertyType: draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
         hektorIdType: draftAnnonceTypeId,
         offerType: 'sale',
@@ -7830,6 +7896,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           firstName: draftMandantFirstName,
           email: draftMandantEmail,
           phone: draftMandantPhone,
+          address: draftMandantAddress,
+          postalCode: draftMandantPostalCode,
+          city: draftMandantCity,
         } : null,
         priority: 10,
       })
@@ -9930,6 +9999,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <span>Telephone</span>
                             <input value={draftMandantPhone} onChange={(event) => setDraftMandantPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
                           </label>
+                          <label className="filter-field draft-annonce-field-wide">
+                            <span>Adresse mandant</span>
+                            <input value={draftMandantAddress} onChange={(event) => setDraftMandantAddress(event.target.value)} placeholder="Adresse du mandant" />
+                          </label>
+                          <label className="filter-field is-small">
+                            <span>CP mandant</span>
+                            <input value={draftMandantPostalCode} onChange={(event) => setDraftMandantPostalCode(event.target.value)} inputMode="numeric" />
+                          </label>
+                          <label className="filter-field">
+                            <span>Ville mandant</span>
+                            <input value={draftMandantCity} onChange={(event) => setDraftMandantCity(event.target.value)} />
+                          </label>
                         </div>
                       ) : null}
                     </section>
@@ -9946,6 +10027,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       </div>
                       <div className="draft-annonce-review-grid">
                         <article><span>Negociateur</span><strong>{selectedDraftNegotiator?.label || '-'}</strong></article>
+                        <article><span>Statut Hektor</span><strong>{draftAnnonceCreationStatusLabel}</strong></article>
                         <article><span>Adresse</span><strong>{[draftAnnonceAddress, draftAnnoncePostalCode, draftAnnonceCity].filter((value) => value.trim()).join(' ') || '-'}</strong></article>
                         <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
                         <article><span>Surface</span><strong>{draftAnnonceSurface.trim() ? `${draftAnnonceSurface} m2` : '-'}</strong></article>
@@ -9955,7 +10037,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <article><span>Mandant initial</span><strong>{draftAnnonceHasMandantDraft ? [draftMandantLastName, draftMandantFirstName].filter((value) => value.trim()).join(' ') || draftMandantEmail || 'A completer' : 'Non ajoute'}</strong></article>
                         <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
                       </div>
-                      <p className="draft-annonce-review-warning">La creation reste en brouillon non diffuse. La diffusion reste une action separee dans Hektor.</p>
+                      <p className="draft-annonce-review-warning">La creation sera en statut {draftAnnonceCreationStatusLabel}, non diffusee. La diffusion reste une action separee dans Hektor.</p>
                     </section>
                   </>
                 ) : null}
