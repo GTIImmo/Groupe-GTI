@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -2495,17 +2495,6 @@ export async function loadUserProfile(userId: string): Promise<UserProfile | nul
   const { data, error } = await supabase.from('app_user_profile').select('*').eq('id', userId).maybeSingle()
   if (error) throw new Error(error.message)
   return (data as UserProfile | null) ?? null
-}
-
-export async function loadGoogleWorkspaceIdentity(userId: string): Promise<GoogleWorkspaceIdentity | null> {
-  if (!hasSupabaseEnv || !supabase) return null
-  const { data, error } = await supabase
-    .from('app_google_workspace_identity')
-    .select('id,app_user_id,google_email,workspace_domain,hektor_user_id,hektor_negociateur_id,negociateur_email,link_status,is_active,last_login_at,last_checked_at,metadata_json')
-    .eq('app_user_id', userId)
-    .maybeSingle()
-  if (error) throw new Error(error.message)
-  return (data as GoogleWorkspaceIdentity | null) ?? null
 }
 
 export async function loadUserNegotiatorContext(email: string | null | undefined): Promise<UserNegotiatorContext | null> {
