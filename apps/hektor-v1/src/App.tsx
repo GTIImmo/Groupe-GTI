@@ -11058,17 +11058,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : null}
                 {draftAnnonceStep === 'mandatPrix' ? (
                   <>
-                    {draftAnnonceMandatGroups.map(renderDraftAnnonceWizardSection)}
-                    <section className="draft-annonce-section draft-annonce-section-note">
-                      <div className="draft-annonce-section-title">
-                        <span>Note</span>
-                        <strong>Consignes internes</strong>
-                      </div>
-                      <label className="filter-field draft-annonce-field-wide">
-                        <span>Note</span>
-                        <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
-                      </label>
-                    </section>
                     <section className={`draft-mandant-panel ${draftMandantChoice !== 'none' ? 'is-open' : ''}`}>
                       <div className="draft-annonce-section-title">
                         <span>Mandant</span>
@@ -11190,6 +11179,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </label>
                         </div>
                       ) : null}
+                    </section>
+                    {draftAnnonceMandatGroups.map(renderDraftAnnonceWizardSection)}
+                    <section className="draft-annonce-section draft-annonce-section-note">
+                      <div className="draft-annonce-section-title">
+                        <span>Note</span>
+                        <strong>Consignes internes</strong>
+                      </div>
+                      <label className="filter-field draft-annonce-field-wide">
+                        <span>Note</span>
+                        <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
+                      </label>
                     </section>
                   </>
                 ) : null}
