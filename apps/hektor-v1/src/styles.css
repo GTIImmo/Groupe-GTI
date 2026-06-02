@@ -13892,6 +13892,49 @@ button.metric-card.is-active {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.google-agenda-suggestions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08);
+}
+.google-agenda-suggestion-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.google-agenda-suggestion {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 10px;
+  border: 1px solid rgba(37, 132, 82, 0.22);
+  border-radius: 8px;
+  background: rgba(37, 132, 82, 0.08);
+  color: var(--gti-final-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.google-agenda-suggestion:hover {
+  border-color: rgba(37, 132, 82, 0.42);
+  background: rgba(37, 132, 82, 0.12);
+}
+.google-agenda-suggestion strong,
+.google-agenda-suggestion span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.google-agenda-suggestion strong {
+  font-size: 12px;
+  font-weight: 950;
+}
+.google-agenda-suggestion span {
+  color: rgba(34, 35, 35, 0.68);
+  font-size: 12px;
+  font-weight: 750;
+}
 .google-agenda-day-slots {
   display: grid;
   gap: 8px;
@@ -15236,6 +15279,7 @@ tbody tr.is-selected {
   .google-agenda-modal-meta,
   .google-agenda-modal-layout,
   .google-agenda-day-grid,
+  .google-agenda-suggestion-list,
   .google-agenda-form,
   .detail-screen .detail-appointment-section .detail-stack {
     grid-template-columns: 1fr;

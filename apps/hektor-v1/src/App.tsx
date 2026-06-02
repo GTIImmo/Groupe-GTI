@@ -17065,6 +17065,29 @@ function minutesBetweenWindow(window: GoogleAgendaWindow) {
   return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000))
 }
 
+function addMinutesIso(value: string, minutes: number) {
+  const date = new Date(value)
+  date.setMinutes(date.getMinutes() + minutes)
+  return date.toISOString()
+}
+
+function buildGoogleAgendaSuggestedWindows(freeWindows: GoogleAgendaWindow[], requestedMinutes: number, maxCount = 5) {
+  const cleanMinutes = Number.isFinite(requestedMinutes) && requestedMinutes > 0 ? requestedMinutes : 60
+  const stepMinutes = 15
+  const suggestions: GoogleAgendaWindow[] = []
+  for (const window of freeWindows) {
+    let cursor = new Date(window.start).getTime()
+    const end = new Date(window.end).getTime()
+    while (cursor + cleanMinutes * 60000 <= end && suggestions.length < maxCount) {
+      const startIso = new Date(cursor).toISOString()
+      suggestions.push({ start: startIso, end: addMinutesIso(startIso, cleanMinutes) })
+      cursor += stepMinutes * 60000
+    }
+    if (suggestions.length >= maxCount) break
+  }
+  return suggestions
+}
+
 function buildGoogleAgendaDayWindows(dayValue: string, availability: GoogleCalendarAvailability | null) {
   const range = googleAgendaDayRange(dayValue)
   const dayStart = new Date(range.startAt)
@@ -17181,6 +17204,8 @@ function GoogleAgendaAnnonceSection(props: {
   const availabilityBusy = availability?.busy ?? []
   const canCheckAvailability = canUseCalendarEmail && Boolean(startAt) && Boolean(durationMinutes)
   const dayWindows = buildGoogleAgendaDayWindows(agendaDate, dayAvailability)
+  const requestedDurationMinutes = Number(durationMinutes)
+  const suggestedWindows = buildGoogleAgendaSuggestedWindows(dayWindows.free, requestedDurationMinutes, 5)
   const nextLinkedEvent = activeEvents
     .filter((item) => new Date(item.starts_at).getTime() >= Date.now())
     .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())[0]
@@ -17503,35 +17528,50 @@ function GoogleAgendaAnnonceSection(props: {
                   </div>
                 </div>
                 {dayAvailability ? (
-                  <div className="google-agenda-day-grid">
-                    <div>
-                      <span className="detail-label">Occupes</span>
-                      <div className="google-agenda-day-slots">
-                        {dayWindows.busy.length > 0 ? dayWindows.busy.map((slot) => (
-                          <article key={`busy-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
-                            <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
-                            <span>Occupe</span>
-                          </article>
-                        )) : <p className="empty-state">Aucun creneau occupe sur cette journee.</p>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="detail-label">Libres</span>
-                      <div className="google-agenda-day-slots">
-                        {dayWindows.free.length > 0 ? dayWindows.free.map((slot) => (
-                          <article key={`free-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
-                            <div>
-                              <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
-                              <span>{minutesBetweenWindow(slot)} min libres</span>
-                            </div>
-                            <button className="ghost-button button-subtle" type="button" onClick={() => handleUseGoogleAgendaWindow(slot)}>
-                              Utiliser
+                  <>
+                    <div className="google-agenda-suggestions">
+                      <span className="detail-label">Creneaux proposes</span>
+                      {suggestedWindows.length > 0 ? (
+                        <div className="google-agenda-suggestion-list">
+                          {suggestedWindows.map((slot, index) => (
+                            <button key={`suggestion-${slot.start}-${slot.end}`} className="google-agenda-suggestion" type="button" onClick={() => handleUseGoogleAgendaWindow(slot)}>
+                              <strong>{index === 0 ? 'Meilleur creneau' : `Option ${index + 1}`}</strong>
+                              <span>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</span>
                             </button>
-                          </article>
-                        )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
+                          ))}
+                        </div>
+                      ) : <p className="empty-state">Aucun creneau assez long pour la duree choisie.</p>}
+                    </div>
+                    <div className="google-agenda-day-grid">
+                      <div>
+                        <span className="detail-label">Occupes</span>
+                        <div className="google-agenda-day-slots">
+                          {dayWindows.busy.length > 0 ? dayWindows.busy.map((slot) => (
+                            <article key={`busy-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
+                              <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                              <span>Occupe</span>
+                            </article>
+                          )) : <p className="empty-state">Aucun creneau occupe sur cette journee.</p>}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="detail-label">Libres</span>
+                        <div className="google-agenda-day-slots">
+                          {dayWindows.free.length > 0 ? dayWindows.free.map((slot) => (
+                            <article key={`free-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
+                              <div>
+                                <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                                <span>{minutesBetweenWindow(slot)} min libres</span>
+                              </div>
+                              <button className="ghost-button button-subtle" type="button" onClick={() => handleUseGoogleAgendaWindow(slot)}>
+                                Utiliser
+                              </button>
+                            </article>
+                          )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement de la journee...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
               </section>
               <section className="google-agenda-panel google-agenda-links-panel">
