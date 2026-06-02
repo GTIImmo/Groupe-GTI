@@ -43,6 +43,7 @@ import {
   loadUserProfile,
   loadGoogleWorkspaceIdentity,
   loadGoogleCalendarEventLinks,
+  checkGoogleCalendarAvailability,
   createGoogleCalendarEvent,
   updateGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
@@ -91,6 +92,7 @@ import {
   searchMandantContactOptions,
   type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
+  type GoogleCalendarAvailability,
   type GoogleCalendarEventLink,
   type HektorCompositionPieceInput,
   type MandantContactSearchOption,
@@ -17062,6 +17064,8 @@ function GoogleAgendaAnnonceSection(props: {
   const [events, setEvents] = useState<GoogleCalendarEventLink[]>([])
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState(false)
+  const [availabilityPending, setAvailabilityPending] = useState(false)
+  const [availability, setAvailability] = useState<GoogleCalendarAvailability | null>(null)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -17100,10 +17104,16 @@ function GoogleAgendaAnnonceSection(props: {
     setEditingEventId(null)
   }, [appDossierId, hektorAnnonceId])
 
+  useEffect(() => {
+    setAvailability(null)
+  }, [calendarEmail, durationMinutes, startAt])
+
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const activeEvents = events.filter((item) => item.status !== 'deleted')
   const isEditingGoogleAgendaEvent = Boolean(editingEventId)
   const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
+  const availabilityBusy = availability?.busy ?? []
+  const canCheckAvailability = canUseCalendarEmail && Boolean(startAt) && Boolean(durationMinutes)
 
   const reloadEvents = useCallback(async () => {
     if (!appDossierId && !hektorAnnonceId) return
@@ -17135,6 +17145,7 @@ function GoogleAgendaAnnonceSection(props: {
     setLocation(defaultLocation)
     setAttendeesText('')
     setDescription('')
+    setAvailability(null)
   }
 
   function handleEditGoogleAgendaEvent(link: GoogleCalendarEventLink) {
@@ -17148,8 +17159,32 @@ function GoogleAgendaAnnonceSection(props: {
     setLocation(link.location ?? '')
     setAttendeesText(Array.isArray(link.attendees_json) ? link.attendees_json.join(', ') : '')
     setDescription('')
+    setAvailability(null)
     setMessage(null)
     setError(null)
+  }
+
+  async function handleCheckGoogleAgendaAvailability() {
+    setAvailabilityPending(true)
+    setAvailability(null)
+    setMessage(null)
+    setError(null)
+    try {
+      const minutes = Number(durationMinutes)
+      const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
+      if (!endAt) throw new Error('Horaire RDV invalide')
+      const result = await checkGoogleCalendarAvailability({
+        subjectEmail: calendarEmail,
+        startAt,
+        endAt,
+      })
+      if (!result.ok) throw new Error('Verification disponibilite Google impossible')
+      setAvailability(result)
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Verification disponibilite Google impossible')
+    } finally {
+      setAvailabilityPending(false)
+    }
   }
 
   async function handleSubmitGoogleAgendaEvent(event: FormEvent<HTMLFormElement>) {
@@ -17199,6 +17234,7 @@ function GoogleAgendaAnnonceSection(props: {
         setMessage('RDV Google cree.')
         setAttendeesText('')
       }
+      setAvailability(null)
       await reloadEvents()
     } catch (eventError) {
       setError(eventError instanceof Error ? eventError.message : 'Enregistrement RDV Google impossible')
@@ -17279,12 +17315,23 @@ function GoogleAgendaAnnonceSection(props: {
             {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
             {message ? <p className="google-agenda-success">{message}</p> : null}
             {error ? <p className="google-agenda-error">{error}</p> : null}
+            {availability ? (
+              <div className={availability.isAvailable ? 'google-agenda-success' : 'google-agenda-warning'}>
+                <strong>{availability.isAvailable ? 'Disponible sur ce creneau.' : `Conflit agenda : ${availability.busyCount ?? availabilityBusy.length} creneau occupe.`}</strong>
+                {!availability.isAvailable && availabilityBusy.length > 0 ? (
+                  <span>{availabilityBusy.slice(0, 3).map((slot) => `${formatDateTime(slot.start)} - ${formatDateTime(slot.end)}`).join(' | ')}</span>
+                ) : null}
+              </div>
+            ) : null}
             <div className="modal-actions google-agenda-actions">
               {isEditingGoogleAgendaEvent ? (
                 <button className="ghost-button button-subtle" type="button" onClick={resetGoogleAgendaForm} disabled={pending}>
                   Annuler
                 </button>
               ) : null}
+              <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckGoogleAgendaAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
+                {availabilityPending ? 'Verification...' : 'Verifier dispo'}
+              </button>
               <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !summary.trim()}>
                 {pending ? (isEditingGoogleAgendaEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleAgendaEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
               </button>

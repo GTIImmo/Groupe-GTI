@@ -87,6 +87,12 @@ class GoogleCalendarEventCreatePayload(BaseModel):
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
+class GoogleCalendarAvailabilityPayload(BaseModel):
+    subjectEmail: EmailStr
+    startAt: str = Field(min_length=10)
+    endAt: str = Field(min_length=10)
+
+
 class GoogleCalendarEventBusinessUpdatePayload(BaseModel):
     summary: str | None = Field(default=None, min_length=1, max_length=240)
     startAt: str | None = None
@@ -275,6 +281,25 @@ def list_google_calendar_event_links(
             limit=limit,
         ),
     }
+
+
+@router.post("/calendar/availability")
+def check_google_calendar_availability(
+    payload: GoogleCalendarAvailabilityPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: GoogleWorkspaceService = Depends(get_google_workspace_service),
+):
+    user = get_authenticated_user(settings, authorization)
+    admin_service.assert_calendar_subject_allowed(user, str(payload.subjectEmail))
+    return service.check_calendar_availability(
+        subject_email=str(payload.subjectEmail),
+        start_at=payload.startAt,
+        end_at=payload.endAt,
+        requested_by=user.id,
+        requested_by_email=user.email,
+    )
 
 
 @router.post("/calendar/events")

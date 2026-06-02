@@ -13775,6 +13775,7 @@ button.metric-card.is-active {
 .google-agenda-field-wide,
 .google-agenda-form .google-agenda-actions,
 .google-agenda-form .google-agenda-success,
+.google-agenda-form .google-agenda-warning,
 .google-agenda-form .google-agenda-error {
   grid-column: 1 / -1;
 }
@@ -13786,6 +13787,7 @@ button.metric-card.is-active {
   margin-top: 0;
 }
 .google-agenda-success,
+.google-agenda-warning,
 .google-agenda-error {
   margin: 0;
   padding: 10px 12px;
@@ -13793,10 +13795,23 @@ button.metric-card.is-active {
   font-size: 13px;
   font-weight: 700;
 }
+.google-agenda-success span,
+.google-agenda-warning span,
+.google-agenda-error span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
 .google-agenda-success {
   border: 1px solid rgba(37, 132, 82, 0.24);
   background: rgba(37, 132, 82, 0.08);
   color: #145a34;
+}
+.google-agenda-warning {
+  border: 1px solid rgba(199, 127, 24, 0.28);
+  background: rgba(199, 127, 24, 0.1);
+  color: #7a4708;
 }
 .google-agenda-error {
   border: 1px solid rgba(197, 0, 95, 0.24);

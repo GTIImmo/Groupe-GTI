@@ -146,8 +146,8 @@ class GoogleWorkspaceService:
         requested_by_email: str | None = None,
     ) -> dict[str, Any]:
         clean_subject = self._validate_workspace_email(subject_email)
-        start = self._parse_datetime(time_min) if time_min else datetime.now(timezone.utc)
-        end = self._parse_datetime(time_max) if time_max else start + timedelta(hours=8)
+        start = self._parse_datetime(time_min, default_timezone=ZoneInfo(DEFAULT_CALENDAR_TIMEZONE)) if time_min else datetime.now(timezone.utc)
+        end = self._parse_datetime(time_max, default_timezone=ZoneInfo(DEFAULT_CALENDAR_TIMEZONE)) if time_max else start + timedelta(hours=8)
         if end <= start:
             raise ValueError("time_max doit etre posterieur a time_min")
 
@@ -213,6 +213,47 @@ class GoogleWorkspaceService:
             "timeMax": end.isoformat(),
             "calendars": payload.get("calendars", {}),
             "groups": payload.get("groups", {}),
+        }
+
+    def check_calendar_availability(
+        self,
+        *,
+        subject_email: str,
+        start_at: str,
+        end_at: str,
+        requested_by: str | None = None,
+        requested_by_email: str | None = None,
+    ) -> dict[str, Any]:
+        result = self.calendar_freebusy(
+            subject_email=subject_email,
+            time_min=start_at,
+            time_max=end_at,
+            calendar_ids=None,
+            requested_by=requested_by,
+            requested_by_email=requested_by_email,
+        )
+        if not result.get("ok"):
+            return result
+
+        busy_slots: list[dict[str, str]] = []
+        calendars = result.get("calendars") if isinstance(result.get("calendars"), dict) else {}
+        for calendar_id, calendar_payload in calendars.items():
+            if not isinstance(calendar_payload, dict):
+                continue
+            for slot in calendar_payload.get("busy") or []:
+                if not isinstance(slot, dict):
+                    continue
+                busy_slots.append({
+                    "calendarId": str(calendar_id),
+                    "start": str(slot.get("start") or ""),
+                    "end": str(slot.get("end") or ""),
+                })
+
+        return {
+            **result,
+            "isAvailable": len(busy_slots) == 0,
+            "busyCount": len(busy_slots),
+            "busy": busy_slots,
         }
 
     def send_gmail_message(

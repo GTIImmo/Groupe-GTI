@@ -442,6 +442,22 @@ export type GoogleCalendarEventLink = {
   updated_at: string
 }
 
+export type GoogleCalendarAvailability = {
+  ok: boolean
+  subjectEmail?: string
+  timeMin?: string
+  timeMax?: string
+  isAvailable?: boolean
+  busyCount?: number
+  busy?: Array<{
+    calendarId?: string
+    start?: string
+    end?: string
+  }>
+  statusCode?: number
+  error?: unknown
+}
+
 export async function loadGoogleCalendarEventLinks(input: {
   appDossierId?: number | null
   hektorAnnonceId?: number | null
@@ -460,6 +476,17 @@ export async function loadGoogleCalendarEventLinks(input: {
     method: 'GET',
   })
   return payload.events ?? []
+}
+
+export async function checkGoogleCalendarAvailability(input: {
+  subjectEmail: string
+  startAt: string
+  endAt: string
+}) {
+  return invokeBackendApi<GoogleCalendarAvailability>('/google-workspace/calendar/availability', {
+    method: 'POST',
+    body: input,
+  })
 }
 
 export async function createGoogleCalendarEvent(input: {
