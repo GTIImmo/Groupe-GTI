@@ -13415,6 +13415,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
+                canManageContacts={canManageContacts}
+                contactHektorUserEmail={contactHektorUserEmail}
+                contactHektorUserId={contactHektorUserId}
+                hektorNegotiators={hektorNegotiators}
+                profileRole={profile?.role ?? null}
+                sessionEmail={sessionEmail}
               />
             </section>
           </div>
@@ -14056,7 +14062,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -15928,6 +15934,12 @@ function DossierDetailLayout(props: {
   onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
+  canManageContacts?: boolean
+  contactHektorUserEmail?: string | null
+  contactHektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   if (!props.selectedDossier) {
@@ -16674,7 +16686,20 @@ function DossierDetailLayout(props: {
               </section>
               ) : null}
 
-              {activeDetailTab === 'commercial' ? <GoogleAgendaAnnonceSection dossier={dossier} detail={props.detail} /> : null}
+              {activeDetailTab === 'commercial' ? (
+                <GoogleAgendaAnnonceSection
+                  dossier={dossier}
+                  detail={props.detail}
+                  contacts={props.contacts}
+                  canManageContacts={props.canManageContacts}
+                  hektorUserEmail={props.contactHektorUserEmail}
+                  hektorUserId={props.contactHektorUserId}
+                  hektorNegotiators={props.hektorNegotiators}
+                  profileRole={props.profileRole}
+                  sessionEmail={props.sessionEmail}
+                  onHektorActionJobCreated={props.onHektorActionJobCreated}
+                />
+              ) : null}
               {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
               </div>
             </main>
@@ -17040,6 +17065,29 @@ function splitEmailList(value: string) {
     .filter((item, index, list) => item && item.includes('@') && list.indexOf(item) === index)
 }
 
+function joinEmailList(values: string[]) {
+  return values
+    .map((item) => item.trim().toLowerCase())
+    .filter((item, index, list) => item && item.includes('@') && list.indexOf(item) === index)
+    .join(', ')
+}
+
+function detailContactAgendaEmail(contact: DetailContact) {
+  return safeText(contact.email).toLowerCase()
+}
+
+function detailContactAgendaLabel(contact: DetailContact) {
+  return contactPersonDisplayName(contact) || contact.name || contact.email || contact.phone || 'Contact'
+}
+
+function contactOptionAgendaEmail(contact: MandantContactSearchOption) {
+  return safeText(contact.email).toLowerCase()
+}
+
+function hektorContactInputAgendaEmail(contact: HektorContactIdentityInput) {
+  return safeText(contact.email).toLowerCase()
+}
+
 type GoogleAgendaWindow = {
   start: string
   end: string
@@ -17124,6 +17172,14 @@ function buildGoogleAgendaDayWindows(dayValue: string, availability: GoogleCalen
 function GoogleAgendaAnnonceSection(props: {
   dossier: Dossier | null
   detail: DossierDetailPayload
+  contacts: DetailContact[]
+  canManageContacts?: boolean
+  hektorUserEmail?: string | null
+  hektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
 }) {
   const dossier = props.dossier
   const appDossierId = dossier?.app_dossier_id ?? null
@@ -17147,6 +17203,11 @@ function GoogleAgendaAnnonceSection(props: {
   const [agendaDate, setAgendaDate] = useState(dateInputFromDateTimeLocal(defaultGoogleAgendaStartValue()))
   const [dayAvailabilityPending, setDayAvailabilityPending] = useState(false)
   const [dayAvailability, setDayAvailability] = useState<GoogleCalendarAvailability | null>(null)
+  const [contactSearch, setContactSearch] = useState('')
+  const [contactOptions, setContactOptions] = useState<MandantContactSearchOption[]>([])
+  const [contactSearchLoading, setContactSearchLoading] = useState(false)
+  const [contactSearchError, setContactSearchError] = useState<string | null>(null)
+  const [contactCreateOpen, setContactCreateOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState(false)
   const [availabilityPending, setAvailabilityPending] = useState(false)
@@ -17197,8 +17258,42 @@ function GoogleAgendaAnnonceSection(props: {
     setAgendaDate(dateInputFromDateTimeLocal(startAt))
   }, [startAt])
 
+  useEffect(() => {
+    if (!modalOpen) return
+    const search = contactSearch.trim()
+    if (search.length < 2) {
+      setContactOptions([])
+      setContactSearchLoading(false)
+      setContactSearchError(null)
+      return
+    }
+    let cancelled = false
+    setContactSearchLoading(true)
+    setContactSearchError(null)
+    const handle = window.setTimeout(async () => {
+      try {
+        const rows = await searchMandantContactOptions({ search, limit: 10 })
+        if (cancelled) return
+        setContactOptions(rows)
+      } catch (searchError) {
+        if (cancelled) return
+        setContactOptions([])
+        setContactSearchError(searchError instanceof Error ? searchError.message : 'Recherche contact impossible.')
+      } finally {
+        if (!cancelled) setContactSearchLoading(false)
+      }
+    }, 260)
+    return () => {
+      cancelled = true
+      window.clearTimeout(handle)
+    }
+  }, [contactSearch, modalOpen])
+
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const activeEvents = events.filter((item) => item.status !== 'deleted')
+  const linkedAgendaContacts = props.contacts
+    .map((contact) => ({ contact, email: detailContactAgendaEmail(contact) }))
+    .filter((item, index, list) => item.email && list.findIndex((other) => other.email === item.email) === index)
   const isEditingGoogleAgendaEvent = Boolean(editingEventId)
   const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
   const availabilityBusy = availability?.busy ?? []
@@ -17325,6 +17420,24 @@ function GoogleAgendaAnnonceSection(props: {
       setDurationMinutes(String(windowMinutes))
     }
     setAvailability(null)
+  }
+
+  function handleAddAgendaInvitee(email: string) {
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail || !cleanEmail.includes('@')) return
+    setAttendeesText((current) => joinEmailList([...splitEmailList(current), cleanEmail]))
+  }
+
+  function handleRemoveAgendaInvitee(email: string) {
+    const cleanEmail = email.trim().toLowerCase()
+    setAttendeesText((current) => joinEmailList(splitEmailList(current).filter((item) => item !== cleanEmail)))
+  }
+
+  function handleGoogleAgendaContactJobCreated(contact: HektorContactIdentityInput) {
+    const createdEmail = hektorContactInputAgendaEmail(contact)
+    if (createdEmail) handleAddAgendaInvitee(createdEmail)
+    setContactCreateOpen(false)
+    setMessage(createdEmail ? 'Contact envoye au worker et ajoute aux invites.' : 'Contact envoye au worker.')
   }
 
   async function handleSubmitGoogleAgendaEvent(event: FormEvent<HTMLFormElement>) {
@@ -17484,6 +17597,63 @@ function GoogleAgendaAnnonceSection(props: {
                     <span>Invites</span>
                     <input value={attendeesText} onChange={(inputEvent) => setAttendeesText(inputEvent.target.value)} placeholder="client@email.fr" />
                   </label>
+                  <div className="google-agenda-field-wide google-agenda-invitees">
+                    <div className="google-agenda-invitee-selected">
+                      <span className="detail-label">Invites selectionnes</span>
+                      {splitEmailList(attendeesText).length > 0 ? (
+                        <div className="google-agenda-invitee-chip-row">
+                          {splitEmailList(attendeesText).map((email) => (
+                            <button key={`invitee-${email}`} className="google-agenda-invitee-chip" type="button" onClick={() => handleRemoveAgendaInvitee(email)}>
+                              {email}
+                              <span aria-hidden="true">x</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : <p className="empty-state">Aucun invite ajoute.</p>}
+                    </div>
+                    <div className="google-agenda-invitee-tools">
+                      <div>
+                        <span className="detail-label">Contacts lies a l'annonce</span>
+                        {linkedAgendaContacts.length > 0 ? (
+                          <div className="google-agenda-contact-list">
+                            {linkedAgendaContacts.map(({ contact, email }) => (
+                              <button key={`linked-contact-${email}`} className="google-agenda-contact-button" type="button" onClick={() => handleAddAgendaInvitee(email)}>
+                                <strong>{detailContactAgendaLabel(contact)}</strong>
+                                <span>{email}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : <p className="empty-state">Aucun contact lie avec email.</p>}
+                      </div>
+                      <div>
+                        <span className="detail-label">Recherche etendue</span>
+                        <div className="google-agenda-contact-search">
+                          <input value={contactSearch} onChange={(inputEvent) => setContactSearch(inputEvent.target.value)} placeholder="Nom, email, telephone..." />
+                          {props.canManageContacts ? (
+                            <button className="ghost-button button-subtle" type="button" onClick={() => setContactCreateOpen(true)}>
+                              Nouveau contact
+                            </button>
+                          ) : null}
+                        </div>
+                        {contactSearchLoading ? <p className="empty-state">Recherche contacts...</p> : null}
+                        {contactSearchError ? <p className="google-agenda-error">{contactSearchError}</p> : null}
+                        {contactOptions.length > 0 ? (
+                          <div className="google-agenda-contact-list">
+                            {contactOptions.map((option) => {
+                              const email = contactOptionAgendaEmail(option)
+                              return (
+                                <button key={`contact-option-${option.hektor_contact_id}`} className="google-agenda-contact-button" type="button" onClick={() => handleAddAgendaInvitee(email)} disabled={!email}>
+                                  <strong>{mandantContactOptionTitle(option)}</strong>
+                                  <span>{email || option.phone_primary || option.phone_secondary || 'Email absent'}</span>
+                                  <small>{mandantContactOptionSubtitle(option)}</small>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : contactSearch.trim().length >= 2 && !contactSearchLoading ? <p className="empty-state">Aucun contact trouve.</p> : null}
+                      </div>
+                    </div>
+                  </div>
                   <label className="filter-field google-agenda-field-wide">
                     <span>Description</span>
                     <textarea className="inline-textarea" value={description} onChange={(inputEvent) => setDescription(inputEvent.target.value)} placeholder={isEditingGoogleAgendaEvent ? 'Vide = description Google conservee' : undefined} />
@@ -17606,6 +17776,27 @@ function GoogleAgendaAnnonceSection(props: {
                 ) : <p className="empty-state">{loading ? 'Chargement des RDV Google...' : 'Aucun RDV Google lie a cette annonce.'}</p>}
               </section>
             </div>
+            {contactCreateOpen && props.canManageContacts ? (
+              <ContactWorkflowModal
+                title="Nouveau contact"
+                eyebrow="Creation Hektor"
+                summary="Creation via le workflow contact existant, puis ajout aux invites si un email est renseigne."
+                tone="create"
+                onClose={() => setContactCreateOpen(false)}
+              >
+                <HektorContactIdentityForm
+                  mode="create"
+                  hektorUserEmail={props.hektorUserEmail}
+                  hektorUserId={props.hektorUserId}
+                  hektorNegotiators={props.hektorNegotiators}
+                  profileRole={props.profileRole}
+                  sessionEmail={props.sessionEmail}
+                  onCancel={() => setContactCreateOpen(false)}
+                  onJobCreated={props.onHektorActionJobCreated}
+                  onContactInputCreated={handleGoogleAgendaContactJobCreated}
+                />
+              </ContactWorkflowModal>
+            ) : null}
           </section>
         </div>,
         document.body,
@@ -17709,6 +17900,12 @@ function AnnonceScreen(props: {
   detailLoading: boolean
   onBack: () => void
   onMissingNegotiator?: MissingNegotiatorHandler
+  canManageContacts?: boolean
+  contactHektorUserEmail?: string | null
+  contactHektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
 }) {
   return <DossierDetailLayout {...props} eyebrow="Annonce complete" backLabel="Retour stock" detailVariant="annonce" />
 }
@@ -17740,6 +17937,12 @@ function DossierDetailScreen(props: {
   sourceScreen: 'mandats' | 'suivi'
   onBack: () => void
   onMissingNegotiator?: MissingNegotiatorHandler
+  canManageContacts?: boolean
+  contactHektorUserEmail?: string | null
+  contactHektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
 }) {
   return (
     <DossierDetailLayout
@@ -17800,6 +18003,12 @@ function MobileDossierDetail(props: {
   onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
+  canManageContacts?: boolean
+  contactHektorUserEmail?: string | null
+  contactHektorUserId?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   detailVariant?: 'annonce' | 'mandat' | 'suivi'
 }) {
   const dossier = props.selectedDossier
@@ -18808,6 +19017,7 @@ function HektorContactIdentityForm(props: {
   compact?: boolean
   onCancel?: () => void
   onJobCreated?: (job: ConsoleJob) => void
+  onContactInputCreated?: (contact: HektorContactIdentityInput, job: ConsoleJob) => void
 }) {
   const normalizedSessionEmail = normalizeEmail(props.sessionEmail)
   const availableHektorNegotiators = useMemo(() => {
@@ -19201,6 +19411,7 @@ function HektorContactIdentityForm(props: {
         ? await createUpdateHektorContactJob({ contactId: props.contact.hektor_contact_id, contact: contactInput, priority: 16 })
         : await createHektorContactJob({ contact: contactInput, priority: 18 })
       props.onJobCreated?.(job)
+      if (props.mode === 'create') props.onContactInputCreated?.(contactInput, job)
       if (props.mode === 'create') {
         setCivility('')
         setLastName('')
