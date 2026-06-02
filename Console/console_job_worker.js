@@ -2261,6 +2261,9 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
   );
   captured.push(...wizardFieldCaptures);
 
+  const compositionCaptures = await applyHektorCompositionPieces(job, idannWizard, payload);
+  captured.push(...compositionCaptures);
+
   const activationCommands = [
     { champ: "etatAnnonce", val: "1" },
     { champ: "diffusable", val: "0" },
@@ -3613,11 +3616,20 @@ const HEKTOR_WIZARD_COMMON_FIELDS = new Set([
   "Loc_ChargeLocative", "Loc_Occupation",
 ]);
 
+const HEKTOR_COMPOSITION_LEGACY_FIELD_KEYS = new Set([
+  "typePiece",
+  "detailPiece",
+  "etagePiece",
+  "surfacePiece",
+  "notePublique",
+  "notePrivee",
+  "noteInterAgence",
+]);
+
 const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
   apartment: new Set([
     "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "GARAGE_BOX", "EXPOSITION", "vuee",
-    "immeuble", "typePiece", "detailPiece", "etagePiece", "surfacePiece", "notePublique",
-    "notePrivee", "noteInterAgence", "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ",
+    "immeuble", "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ",
     "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "floorState", "ETAGE", "DERNIER_ETAGE",
     "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON",
     "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
@@ -3639,8 +3651,7 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
   ]),
   house: new Set([
     "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "surfterrain", "JARDIN-",
-    "PISCINE-", "GARAGE_BOX", "EXPOSITION", "vuee", "typePiece", "detailPiece",
-    "etagePiece", "surfacePiece", "notePublique", "notePrivee", "noteInterAgence",
+    "PISCINE-", "GARAGE_BOX", "EXPOSITION", "vuee",
     "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE",
     "CUISINE_EQUIPEMENT", "MURS_MITOYENS", "NB_ETAGES", "CAVE", "SURFACE_CAVE",
     "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
@@ -3669,8 +3680,7 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
     "ACCES_HANDI", "EAU", "CLES", "moyens_visite",
   ]),
   building: new Set([
-    "surfappart", "immeuble", "typePiece", "detailPiece", "etagePiece", "surfacePiece",
-    "notePublique", "notePrivee", "noteInterAgence", "SURF_CARREZ", "SURF_SEJOUR",
+    "surfappart", "immeuble", "SURF_CARREZ", "SURF_SEJOUR",
     "MURS_MITOYENS", "NB_ETAGES", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT",
     "NB_PARK_EXT", "RESIDENCE", "TYPE_RESIDENCE", "ASCENSEUR", "ACCES_HANDI", "EAU",
     "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ANNEE_CONS", "etat_exterieur", "dpe_date",
@@ -3688,6 +3698,7 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
 };
 
 function isHektorWizardFieldAllowedForPayload(payload, key) {
+  if (HEKTOR_COMPOSITION_LEGACY_FIELD_KEYS.has(key)) return false;
   const profile = resolveHektorPropertyProfile(payload);
   if (!profile.explicit) return true;
   if (HEKTOR_WIZARD_COMMON_FIELDS.has(key)) return true;
@@ -3757,7 +3768,7 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "ag_interieur",
     mode: "ihmChargeGroupe",
-    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee", "typePiece", "detailPiece", "etagePiece", "surfacePiece", "notePublique", "notePrivee", "noteInterAgence"]),
+    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]),
   },
   {
     group: "ag_exterieur",
@@ -4271,6 +4282,172 @@ async function postHektorPrincipalTextUpdate(job, annonceId, fields) {
   };
 }
 
+function hektorCompositionPayloadCandidates(payload) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  const fieldsJson = source.fields_json && typeof source.fields_json === "object" ? source.fields_json : {};
+  const fields = source.fields && typeof source.fields === "object" ? source.fields : {};
+  return [
+    source.composition_pieces,
+    source.compositionPieces,
+    source.hektor_composition_pieces,
+    fieldsJson.composition_pieces,
+    fieldsJson.compositionPieces,
+    fields.composition_pieces,
+    fields.compositionPieces,
+  ];
+}
+
+function hektorCompositionRowsFromUnknown(value) {
+  if (!value) return [];
+  if (typeof value === "string") return hektorCompositionRowsFromUnknown(safeJsonParse(value, null));
+  if (Array.isArray(value)) return value.filter((item) => item && typeof item === "object" && !Array.isArray(item));
+  if (typeof value === "object") {
+    return hektorCompositionRowsFromUnknown(value.pieces || value.rows || value.data || value.items);
+  }
+  return [];
+}
+
+function textFromCompositionPiece(piece, keys) {
+  for (const key of keys) {
+    const value = piece[key];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function normalizeHektorCompositionPiece(piece, index) {
+  const actionRaw = textFromCompositionPiece(piece, ["action", "_action", "mode"]).toLowerCase();
+  const action = actionRaw === "delete" || actionRaw === "remove" || actionRaw === "deleted"
+    ? "delete"
+    : actionRaw === "update" || actionRaw === "edit"
+      ? "update"
+      : "add";
+  const idPiece = textFromCompositionPiece(piece, ["idPiece", "id_piece", "id", "ID", "idpiece"]);
+  const idTypePiece = textFromCompositionPiece(piece, ["idTypePiece", "id_type_piece", "typePiece", "type_piece", "typePieceId", "idType"]) || "1";
+  const detailPiece = textFromCompositionPiece(piece, ["detailPiece", "detail_piece", "detail", "description"]);
+  const namePiece = textFromCompositionPiece(piece, ["namePiece", "name_piece", "name", "customName"]);
+  const surfacePiece = textFromCompositionPiece(piece, ["surfacePiece", "surface_piece", "surface"]).replace(",", ".");
+  const etagePiece = textFromCompositionPiece(piece, ["etagePiece", "etage_piece", "etage", "floor"]);
+  const notePublique = textFromCompositionPiece(piece, ["notePublique", "note_publique", "notePublic", "note_public"]);
+  const notePrivee = textFromCompositionPiece(piece, ["notePrivee", "note_privee", "notePrivate", "note_private"]);
+  const noteInterAgence = textFromCompositionPiece(piece, ["noteInterAgence", "note_inter_agence", "noteInterAgency", "note_interagency"]);
+  const photosPiece = textFromCompositionPiece(piece, ["photosPiece", "photos_piece", "photos"]);
+
+  if (action === "delete" && !idPiece) {
+    throw new Error(`Piece ${index + 1}: idPiece obligatoire pour supprimer`);
+  }
+  if (surfacePiece && !/^-?\d+(\.\d+)?$/.test(surfacePiece)) {
+    throw new Error(`Piece ${index + 1}: surfacePiece invalide`);
+  }
+  const hasContent = [idTypePiece, detailPiece, namePiece, surfacePiece, etagePiece, notePublique, notePrivee, noteInterAgence, photosPiece]
+    .some((value) => String(value || "").trim());
+  if (!hasContent && action !== "delete") return null;
+  return {
+    action,
+    idPiece,
+    idTypePiece,
+    detailPiece,
+    namePiece,
+    surfacePiece,
+    etagePiece,
+    notePublique,
+    notePrivee,
+    noteInterAgence,
+    photosPiece,
+  };
+}
+
+function hektorCompositionPiecesFromPayload(payload) {
+  for (const candidate of hektorCompositionPayloadCandidates(payload)) {
+    const rows = hektorCompositionRowsFromUnknown(candidate);
+    if (!rows.length) continue;
+    return rows
+      .map((piece, index) => normalizeHektorCompositionPiece(piece, index))
+      .filter(Boolean);
+  }
+  return [];
+}
+
+async function postHektorCompositionPieceMutation(job, annonceId, piece, index) {
+  const body = new URLSearchParams();
+  const action = piece.action || (piece.idPiece ? "update" : "add");
+  if (action === "delete") {
+    body.set("mode", "piece-deletePiece");
+    body.set("idPiece", piece.idPiece);
+  } else {
+    body.set("mode", action === "update" && piece.idPiece ? "piece-updatePiece" : "piece-addNewPiece");
+    if (piece.idPiece) body.set("idPiece", piece.idPiece);
+    body.set("idTypePiece", piece.idTypePiece || "1");
+    body.set("surfacePiece", piece.surfacePiece || "");
+    body.set("etagePiece", piece.etagePiece || "");
+    body.set("namePiece", piece.namePiece || "");
+    body.set("notePublique", piece.notePublique || "");
+    body.set("notePrivee", piece.notePrivee || "");
+    body.set("noteInterAgence", piece.noteInterAgence || "");
+    body.set("photosPiece", piece.photosPiece || "");
+    body.set("detailPiece", piece.detailPiece || "");
+    body.set("idAnnonce", String(annonceId));
+  }
+
+  await logJob(job.id, "hektor_annonce_piece", "running", `Sauvegarde piece ${index + 1}`, {
+    hektor_annonce_id: String(annonceId),
+    action,
+    idPiece: piece.idPiece || null,
+    idTypePiece: piece.idTypePiece || null,
+    detailPiece: piece.detailPiece || null,
+  });
+
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(String(annonceId))}`,
+    },
+  });
+  let parsed = null;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = null;
+  }
+  if (parsed && Object.prototype.hasOwnProperty.call(parsed, "result") && String(parsed.result) !== "1") {
+    throw new Error(`Hektor ${body.get("mode")} refuse: ${response.text.slice(0, 500)}`);
+  }
+  if (!parsed && /Credential Error|Forbidden|403/i.test(response.text)) {
+    throw new Error(`Hektor ${body.get("mode")} refuse: ${response.text.slice(0, 500)}`);
+  }
+  return {
+    group: "composition_piece",
+    mode: body.get("mode"),
+    action,
+    idPiece: piece.idPiece || null,
+    idTypePiece: piece.idTypePiece || null,
+    response: parsed || response.text.slice(0, 300),
+  };
+}
+
+async function applyHektorCompositionPieces(job, annonceId, payload) {
+  const pieces = hektorCompositionPiecesFromPayload(payload);
+  if (!pieces.length) return [];
+  await logJob(job.id, "hektor_annonce_piece", "running", "Application des pieces de composition", {
+    hektor_annonce_id: String(annonceId),
+    count: pieces.length,
+    actions: pieces.map((piece) => piece.action),
+  });
+  const results = [];
+  for (const [index, piece] of pieces.entries()) {
+    results.push(await postHektorCompositionPieceMutation(job, annonceId, piece, index));
+  }
+  await logJob(job.id, "hektor_annonce_piece", "done", "Pieces de composition sauvegardees", {
+    hektor_annonce_id: String(annonceId),
+    count: results.length,
+  });
+  return results;
+}
+
 function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
   const baseFields = payload && payload.fields_json && typeof payload.fields_json === "object" ? payload.fields_json : payload.fields || payload;
   const fields = {
@@ -4371,6 +4548,9 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
     description: cleanFields.description,
   });
   if (textResult) results.push(textResult);
+
+  const compositionResults = await applyHektorCompositionPieces(job, annonceId, fields);
+  results.push(...compositionResults);
 
   for (const update of buildExactWizardGroupUpdates(fields)) {
     await pushHektorGroupUpdate(results, job, annonceId, update.group, update.mode, update.fields);

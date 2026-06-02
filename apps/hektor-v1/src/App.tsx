@@ -91,6 +91,7 @@ import {
   type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
   type GoogleCalendarEventLink,
+  type HektorCompositionPieceInput,
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
@@ -345,6 +346,59 @@ type HektorAdvancedField = {
 type HektorPropertyProfileKind = 'apartment' | 'house' | 'land' | 'garage' | 'building' | 'other'
 
 type HektorSelectOption = { value: string; label: string }
+
+type HektorCompositionPieceDraft = {
+  localId: string
+  idPiece: string
+  idTypePiece: string
+  typeLabel: string
+  namePiece: string
+  detailPiece: string
+  etagePiece: string
+  surfacePiece: string
+  notePublique: string
+  notePrivee: string
+  noteInterAgence: string
+  photosPiece: string
+  deleted?: boolean
+}
+
+type HektorCompositionPieceDraftKey = Exclude<keyof HektorCompositionPieceDraft, 'localId' | 'deleted'>
+
+const hektorCompositionPieceTypeOptions: HektorSelectOption[] = [
+  { value: '1', label: 'Chambre' },
+  { value: '13', label: 'Cuisine' },
+  { value: '2', label: 'Salon/sejour' },
+  { value: '9', label: 'Salle de bains' },
+  { value: '15', label: 'Bureau' },
+  { value: '16', label: 'WC' },
+  { value: '26', label: 'Entree' },
+  { value: '14', label: 'Piece a vivre' },
+  { value: '21', label: 'Dressing' },
+  { value: '11', label: 'Buanderie' },
+  { value: '12', label: 'Cave' },
+  { value: '5', label: 'Garage' },
+  { value: '8', label: 'Parking' },
+  { value: '18', label: 'Balcon' },
+  { value: '17', label: 'Terrasse' },
+  { value: '4', label: 'Jardin' },
+  { value: '32', label: 'Piscine' },
+  { value: '20', label: 'Veranda' },
+  { value: '25', label: 'Accueil' },
+  { value: '6', label: 'Annexe' },
+  { value: '59', label: 'Chambre de bonne' },
+  { value: '60', label: 'Chambre de service' },
+  { value: '27', label: 'Chambre froide' },
+  { value: '28', label: 'Depot' },
+  { value: '29', label: 'Entrepot' },
+  { value: '30', label: 'Espace bien-etre' },
+  { value: '31', label: 'Mezzanine' },
+  { value: '24', label: 'Reserve' },
+  { value: '23', label: 'Salle' },
+  { value: '33', label: 'Suite' },
+  { value: '3', label: 'Terrain' },
+  { value: '34', label: 'Vestiaire' },
+]
 
 const hektorExposureOptions: HektorSelectOption[] = [
   { value: "", label: "Non défini" },
@@ -1137,15 +1191,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   {
     step: 4,
     title: '4. Composition',
-    fields: [
-      wf('typePiece', 'Type piece'),
-      wf('detailPiece', 'Detail piece'),
-      wf('etagePiece', 'Etage piece'),
-      wf('surfacePiece', 'Surface piece', { inputMode: 'decimal' }),
-      wf('notePublique', 'Note publique piece', { multiline: true }),
-      wf('notePrivee', 'Note privee piece', { multiline: true }),
-      wf('noteInterAgence', 'Note inter-agence piece', { multiline: true }),
-    ],
+    fields: [],
   },
   {
     step: 5,
@@ -1459,7 +1505,6 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
   apartment: {
     1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
     3: ['immeuble'],
-    4: ['typePiece', 'detailPiece', 'etagePiece', 'surfacePiece', 'notePublique', 'notePrivee', 'noteInterAgence'],
     5: [
       'Particularites',
       'NB_CHAMBRES',
@@ -1558,7 +1603,6 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
   },
   house: {
     1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'surfterrain', 'JARDIN-', 'PISCINE-', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
-    4: ['typePiece', 'detailPiece', 'etagePiece', 'surfacePiece', 'notePublique', 'notePrivee', 'noteInterAgence'],
     5: [
       'Particularites',
       'NB_CHAMBRES',
@@ -1685,7 +1729,6 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
   building: {
     1: ['surfappart'],
     3: ['immeuble'],
-    4: ['typePiece', 'detailPiece', 'etagePiece', 'surfacePiece', 'notePublique', 'notePrivee', 'noteInterAgence'],
     5: [
       'Particularites',
       'SURF_CARREZ',
@@ -2202,6 +2245,112 @@ const hektorFinancialFieldKeys = new Set<HektorAdvancedFieldKey>([
 
 const hektorUnsupportedDirectUpdateWizardFields = new Set(['diffusable'])
 
+function HektorCompositionPiecesEditor(props: {
+  title: string
+  subtitle?: string
+  pieces: HektorCompositionPieceDraft[]
+  draft: HektorCompositionPieceDraft
+  disabled?: boolean
+  className?: string
+  onDraftChange: (key: HektorCompositionPieceDraftKey, value: string) => void
+  onAddDraft: () => void
+  onPieceChange: (localId: string, key: HektorCompositionPieceDraftKey, value: string) => void
+  onRemovePiece: (localId: string) => void
+  onRestorePiece?: (localId: string) => void
+}) {
+  const activePieces = props.pieces.filter((piece) => !piece.deleted)
+  const deletedPieces = props.pieces.filter((piece) => piece.deleted)
+  const renderPieceFields = (piece: HektorCompositionPieceDraft, prefix: string, onChange: (key: HektorCompositionPieceDraftKey, value: string) => void) => (
+    <>
+      <label className="filter-field">
+        <span>Type de piece</span>
+        <select
+          value={piece.idTypePiece}
+          onChange={(event) => onChange('idTypePiece', event.target.value)}
+          disabled={props.disabled}
+        >
+          {hektorCompositionPieceTypeOptions.map((option) => (
+            <option key={`${prefix}-type-${option.value}`} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+      <label className="filter-field">
+        <span>Detail</span>
+        <input value={piece.detailPiece} onChange={(event) => onChange('detailPiece', event.target.value)} disabled={props.disabled} placeholder="Ex : suite parentale" />
+      </label>
+      <label className="filter-field is-small">
+        <span>Etage</span>
+        <input value={piece.etagePiece} onChange={(event) => onChange('etagePiece', event.target.value)} disabled={props.disabled} inputMode="numeric" placeholder="0" />
+      </label>
+      <label className="filter-field is-small">
+        <span>Surface</span>
+        <input value={piece.surfacePiece} onChange={(event) => onChange('surfacePiece', event.target.value)} disabled={props.disabled} inputMode="decimal" placeholder="m2" />
+      </label>
+      <label className="filter-field hektor-composition-note">
+        <span>Note publique</span>
+        <textarea value={piece.notePublique} onChange={(event) => onChange('notePublique', event.target.value)} disabled={props.disabled} placeholder="Visible dans Hektor" />
+      </label>
+      <label className="filter-field hektor-composition-note">
+        <span>Note privee</span>
+        <textarea value={piece.notePrivee} onChange={(event) => onChange('notePrivee', event.target.value)} disabled={props.disabled} placeholder="Interne" />
+      </label>
+      <label className="filter-field hektor-composition-note">
+        <span>Note inter-agence</span>
+        <textarea value={piece.noteInterAgence} onChange={(event) => onChange('noteInterAgence', event.target.value)} disabled={props.disabled} placeholder="Inter-agence" />
+      </label>
+    </>
+  )
+
+  return (
+    <section className={`hektor-composition-editor ${props.className ?? ''}`}>
+      <div className="draft-annonce-section-title hektor-composition-title">
+        <span>Page 4</span>
+        <strong>{props.title}</strong>
+      </div>
+      {props.subtitle ? <p className="hektor-composition-subtitle">{props.subtitle}</p> : null}
+      <div className="hektor-composition-draft">
+        <div className="hektor-composition-draft-head">
+          <strong>Ajouter une piece</strong>
+          <span>{activePieces.length} piece(s) preparee(s)</span>
+        </div>
+        <div className="hektor-composition-grid">
+          {renderPieceFields(props.draft, 'draft-composition-piece', props.onDraftChange)}
+        </div>
+        <div className="hektor-composition-actions">
+          <button className="ghost-button button-primary" type="button" onClick={props.onAddDraft} disabled={props.disabled || !hektorCompositionPieceHasContent(props.draft)}>Ajouter la piece</button>
+        </div>
+      </div>
+      <div className="hektor-composition-list">
+        {activePieces.length ? activePieces.map((piece, index) => (
+          <article key={piece.localId} className="hektor-composition-card">
+            <div className="hektor-composition-card-head">
+              <span>{index + 1}</span>
+              <strong>{hektorCompositionPieceDisplayTitle(piece)}</strong>
+              <button className="ghost-button button-subtle" type="button" onClick={() => props.onRemovePiece(piece.localId)} disabled={props.disabled}>
+                Supprimer
+              </button>
+            </div>
+            <div className="hektor-composition-grid">
+              {renderPieceFields(piece, piece.localId, (key, value) => props.onPieceChange(piece.localId, key, value))}
+            </div>
+          </article>
+        )) : (
+          <p className="hektor-composition-empty">Aucune piece ajoutee. Ajoute les pieces une par une comme dans Hektor.</p>
+        )}
+        {deletedPieces.length ? (
+          <div className="hektor-composition-deleted">
+            {deletedPieces.map((piece) => (
+              <button key={`deleted-${piece.localId}`} type="button" onClick={() => props.onRestorePiece?.(piece.localId)} disabled={props.disabled || !props.onRestorePiece}>
+                Restaurer {hektorCompositionPieceDisplayTitle(piece)}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
 function HektorAnnonceUpdateForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_dossier' | 'numero_mandat' | 'negociateur_email' | 'type_bien' | 'diffusable'>
   detail: DossierDetailPayload
@@ -2213,6 +2362,8 @@ function HektorAnnonceUpdateForm(props: {
 }) {
   const { dossier, detail } = props
   const [values, setValues] = useState<Record<string, string>>(() => buildHektorWizardUpdateDraft(dossier, detail))
+  const [compositionPieces, setCompositionPieces] = useState<HektorCompositionPieceDraft[]>(() => buildHektorCompositionPiecesFromDetail(detail))
+  const [compositionDraft, setCompositionDraft] = useState<HektorCompositionPieceDraft>(() => createEmptyHektorCompositionPieceDraft())
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -2224,16 +2375,61 @@ function HektorAnnonceUpdateForm(props: {
     }))
     .filter((section) => section.fields.length > 0)
   const visibleFieldNames = new Set(visibleSections.flatMap((section) => section.fields.map((field) => field.name)))
+  const sectionsBeforeComposition = visibleSections.filter((section) => section.step < 4)
+  const sectionsAfterComposition = visibleSections.filter((section) => section.step > 4)
 
   useEffect(() => {
     setValues(buildHektorWizardUpdateDraft(dossier, detail))
+    setCompositionPieces(buildHektorCompositionPiecesFromDetail(detail))
+    setCompositionDraft(createEmptyHektorCompositionPieceDraft())
     setMessage(null)
     setError(null)
     setPending(false)
-  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_dossier, dossier.numero_mandat, dossier.diffusable, dossier.type_bien, detail.detail_raw_json, detail.texte_principal_titre, detail.texte_principal_html, detail.corps_listing_html, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres, detail.diffusable])
+  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_dossier, dossier.numero_mandat, dossier.diffusable, dossier.type_bien, detail.detail_raw_json, detail.pieces_json, detail.texte_principal_titre, detail.texte_principal_html, detail.corps_listing_html, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres, detail.diffusable])
 
   const updateField = (name: string, value: string) => {
     setValues((current) => ({ ...current, [name]: value }))
+  }
+
+  const updateCompositionDraft = (key: HektorCompositionPieceDraftKey, value: string) => {
+    setCompositionDraft((current) => ({
+      ...current,
+      [key]: value,
+      typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : current.typeLabel,
+    }))
+  }
+
+  const addCompositionDraft = () => {
+    if (!hektorCompositionPieceHasContent(compositionDraft)) {
+      setError('Ajoute au moins un type, une surface ou un detail pour la piece.')
+      return
+    }
+    setCompositionPieces((current) => [...current, createEmptyHektorCompositionPieceDraft({
+      ...compositionDraft,
+      localId: '',
+      typeLabel: compositionDraft.typeLabel || hektorCompositionPieceTypeLabel(compositionDraft.idTypePiece),
+    })])
+    setCompositionDraft(createEmptyHektorCompositionPieceDraft())
+    setError(null)
+  }
+
+  const updateCompositionPiece = (localId: string, key: HektorCompositionPieceDraftKey, value: string) => {
+    setCompositionPieces((current) => current.map((piece) => piece.localId === localId ? {
+      ...piece,
+      [key]: value,
+      typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : piece.typeLabel,
+    } : piece))
+  }
+
+  const removeCompositionPiece = (localId: string) => {
+    setCompositionPieces((current) => current.flatMap((piece) => {
+      if (piece.localId !== localId) return [piece]
+      return piece.idPiece ? [{ ...piece, deleted: true }] : []
+    }))
+  }
+
+  const restoreCompositionPiece = (localId: string) => {
+    setCompositionPieces((current) => current.map((piece) => piece.localId === localId ? { ...piece, deleted: false } : piece))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -2248,7 +2444,8 @@ function HektorAnnonceUpdateForm(props: {
     const changedValues = Object.fromEntries(
       Object.entries(values).filter(([key, value]) => visibleFieldNames.has(key) && String(value ?? '').trim() !== String(baseline[key] ?? '').trim()),
     ) as Record<string, string>
-    if (Object.keys(changedValues).length === 0) {
+    const changedCompositionPieces = buildChangedHektorCompositionPieces(compositionPieces, buildHektorCompositionPiecesFromDetail(detail))
+    if (Object.keys(changedValues).length === 0 && changedCompositionPieces.length === 0) {
       setError('Aucune modification a envoyer.')
       return
     }
@@ -2259,6 +2456,7 @@ function HektorAnnonceUpdateForm(props: {
         fields: {
           propertyProfile: profileKind,
           wizardFields: changedValues,
+          compositionPieces: changedCompositionPieces,
         },
         priority: 14,
       })
@@ -2272,6 +2470,40 @@ function HektorAnnonceUpdateForm(props: {
     }
   }
 
+  const renderUpdateSection = (section: DraftAnnonceWizardGroup) => (
+    <section key={section.title} className={`hektor-advanced-section hektor-advanced-section-step-${section.step}`}>
+      <div className="hektor-advanced-section-head">
+        <strong>{section.title}</strong>
+        <span>{section.fields.length}</span>
+      </div>
+      <div className="hektor-advanced-grid">
+        {section.fields.map((field) => (
+          field.multiline ? (
+            <label key={field.name} className="hektor-inline-textarea hektor-advanced-textarea">
+              <span>{field.label}</span>
+              <textarea value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)} placeholder={field.placeholder ?? draftAnnonceWizardPlaceholder(field)} />
+            </label>
+          ) : field.options ? (
+            <label key={field.name}>
+              <span>{field.label}</span>
+              <select value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)}>
+                {field.options.some((option) => option.value === '') ? null : <option value="">-</option>}
+                {field.options.map((option) => (
+                  <option key={`${field.name}-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label key={field.name}>
+              <span>{field.label}</span>
+              <input value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)} inputMode={field.inputMode} placeholder={field.placeholder ?? draftAnnonceWizardPlaceholder(field)} />
+            </label>
+          )
+        ))}
+      </div>
+    </section>
+  )
+
   return (
     <form className={`hektor-inline-form hektor-annonce-update-form ${props.compact ? 'is-compact' : ''} ${props.fieldPanel ? 'is-field-panel' : ''}`} onSubmit={handleSubmit}>
       <div className="hektor-inline-form-head">
@@ -2282,39 +2514,21 @@ function HektorAnnonceUpdateForm(props: {
         </div>
       </div>
       <div className="hektor-advanced-sections">
-        {visibleSections.map((section) => (
-          <section key={section.title} className={`hektor-advanced-section hektor-advanced-section-step-${section.step}`}>
-            <div className="hektor-advanced-section-head">
-              <strong>{section.title}</strong>
-              <span>{section.fields.length}</span>
-            </div>
-            <div className="hektor-advanced-grid">
-              {section.fields.map((field) => (
-                field.multiline ? (
-                  <label key={field.name} className="hektor-inline-textarea hektor-advanced-textarea">
-                    <span>{field.label}</span>
-                    <textarea value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)} placeholder={field.placeholder ?? draftAnnonceWizardPlaceholder(field)} />
-                  </label>
-                ) : field.options ? (
-                  <label key={field.name}>
-                    <span>{field.label}</span>
-                    <select value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)}>
-                      {field.options.some((option) => option.value === '') ? null : <option value="">-</option>}
-                      {field.options.map((option) => (
-                        <option key={`${field.name}-${option.value}`} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <label key={field.name}>
-                    <span>{field.label}</span>
-                    <input value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)} inputMode={field.inputMode} placeholder={field.placeholder ?? draftAnnonceWizardPlaceholder(field)} />
-                  </label>
-                )
-              ))}
-            </div>
-          </section>
-        ))}
+        {sectionsBeforeComposition.map(renderUpdateSection)}
+        <HektorCompositionPiecesEditor
+          title="4. Composition"
+          subtitle="Ajoute ou corrige les pieces une par une, comme dans Hektor."
+          pieces={compositionPieces}
+          draft={compositionDraft}
+          disabled={pending}
+          className="hektor-advanced-section hektor-advanced-section-step-4"
+          onDraftChange={updateCompositionDraft}
+          onAddDraft={addCompositionDraft}
+          onPieceChange={updateCompositionPiece}
+          onRemovePiece={removeCompositionPiece}
+          onRestorePiece={restoreCompositionPiece}
+        />
+        {sectionsAfterComposition.map(renderUpdateSection)}
       </div>
       <div className="hektor-inline-actions">
         <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer vers Hektor'}</button>
@@ -2331,8 +2545,32 @@ function HektorAnnonceFieldDetailPanel(props: {
   detail: DossierDetailPayload
 }) {
   const groups = buildHektorWizardDetailGroups(props.dossier, props.detail)
-  const totalFields = groups.reduce((count, group) => count + group.fields.length, 0)
+  const compositionPieces = buildHektorCompositionPiecesFromDetail(props.detail)
+  const groupsBeforeComposition = groups.filter((group) => group.step < 4)
+  const groupsAfterComposition = groups.filter((group) => group.step > 4)
+  const totalFields = groups.reduce((count, group) => count + group.fields.length, 0) + compositionPieces.length
   const filledFields = groups.reduce((count, group) => count + group.fields.filter((field) => String(field.value ?? '').trim()).length, 0)
+    + compositionPieces.filter((piece) => hektorCompositionPieceHasContent(piece)).length
+  const renderDetailGroup = (group: HektorWizardDetailGroup, index: number) => {
+    const groupFilled = group.fields.filter((field) => String(field.value ?? '').trim()).length
+    return (
+      <details key={`hektor-detail-group-${group.title}`} className="hektor-detail-field-group" open={index < 3}>
+        <summary>
+          <strong>{group.title}</strong>
+          <span>{groupFilled}/{group.fields.length}</span>
+        </summary>
+        <div className="hektor-detail-field-grid">
+          {group.fields.map((field) => (
+            <article key={`hektor-detail-field-${group.title}-${field.name}`} className={String(field.value ?? '').trim() ? 'is-filled' : 'is-empty'}>
+              <span>{field.label}</span>
+              <strong>{wizardDisplayValue(field, field.value)}</strong>
+              <small>{field.name}</small>
+            </article>
+          ))}
+        </div>
+      </details>
+    )
+  }
 
   return (
     <section className="detail-section detail-hektor-fields-section">
@@ -2341,26 +2579,31 @@ function HektorAnnonceFieldDetailPanel(props: {
         <span>{filledFields}/{totalFields} renseignes</span>
       </div>
       <div className="hektor-detail-field-groups">
-        {groups.map((group, index) => {
-          const groupFilled = group.fields.filter((field) => String(field.value ?? '').trim()).length
-          return (
-            <details key={`hektor-detail-group-${group.title}`} className="hektor-detail-field-group" open={index < 3}>
-              <summary>
-                <strong>{group.title}</strong>
-                <span>{groupFilled}/{group.fields.length}</span>
-              </summary>
-              <div className="hektor-detail-field-grid">
-                {group.fields.map((field) => (
-                  <article key={`hektor-detail-field-${group.title}-${field.name}`} className={String(field.value ?? '').trim() ? 'is-filled' : 'is-empty'}>
-                    <span>{field.label}</span>
-                    <strong>{wizardDisplayValue(field, field.value)}</strong>
-                    <small>{field.name}</small>
-                  </article>
-                ))}
-              </div>
-            </details>
-          )
-        })}
+        {groupsBeforeComposition.map(renderDetailGroup)}
+        <details className="hektor-detail-field-group hektor-detail-composition-group" open>
+          <summary>
+            <strong>4. Composition</strong>
+            <span>{compositionPieces.length}</span>
+          </summary>
+          {compositionPieces.length ? (
+            <div className="hektor-detail-composition-list">
+              {compositionPieces.map((piece, index) => (
+                <article key={`detail-composition-${piece.localId}`}>
+                  <span>{index + 1}</span>
+                  <strong>{hektorCompositionPieceDisplayTitle(piece)}</strong>
+                  <small>{[
+                    piece.surfacePiece ? `${piece.surfacePiece} m2` : '',
+                    piece.etagePiece ? `Etage ${piece.etagePiece}` : '',
+                    hektorCompositionPieceTypeLabel(piece.idTypePiece, piece.typeLabel),
+                  ].filter(Boolean).join(' - ') || 'Piece Hektor'}</small>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="hektor-detail-composition-empty">Aucune piece detaillee remontee par la synchronisation Hektor.</p>
+          )}
+        </details>
+        {groupsAfterComposition.map((group, index) => renderDetailGroup(group, index + groupsBeforeComposition.length + 1))}
       </div>
     </section>
   )
@@ -2866,6 +3109,145 @@ function valueFromJsonList(value: string | null | undefined, keys: string[]) {
     }
   }
   return ''
+}
+
+function hektorCompositionPieceTypeLabel(idTypePiece: unknown, fallback = '') {
+  const id = String(idTypePiece ?? '').trim()
+  if (!id) return fallback
+  return hektorCompositionPieceTypeOptions.find((option) => option.value === id)?.label ?? fallback
+}
+
+function createEmptyHektorCompositionPieceDraft(seed: Partial<HektorCompositionPieceDraft> = {}): HektorCompositionPieceDraft {
+  const idTypePiece = firstNonEmpty(seed.idTypePiece, '1')
+  return {
+    localId: seed.localId || `piece-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    idPiece: seed.idPiece ?? '',
+    idTypePiece,
+    typeLabel: seed.typeLabel || hektorCompositionPieceTypeLabel(idTypePiece),
+    namePiece: seed.namePiece ?? '',
+    detailPiece: seed.detailPiece ?? '',
+    etagePiece: seed.etagePiece ?? '',
+    surfacePiece: seed.surfacePiece ?? '',
+    notePublique: seed.notePublique ?? '',
+    notePrivee: seed.notePrivee ?? '',
+    noteInterAgence: seed.noteInterAgence ?? '',
+    photosPiece: seed.photosPiece ?? '',
+    deleted: seed.deleted,
+  }
+}
+
+function compositionPieceRecordText(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = firstNonEmpty(record[key])
+    if (value) return value
+  }
+  return ''
+}
+
+function compositionPieceRowsFromUnknown(value: unknown): Record<string, unknown>[] {
+  if (!value) return []
+  if (typeof value === 'string') return compositionPieceRowsFromUnknown(parseJson<unknown>(value, null))
+  if (Array.isArray(value)) return value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object' && !Array.isArray(item)))
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    return compositionPieceRowsFromUnknown(record.pieces ?? record.rows ?? record.data ?? record.items)
+  }
+  return []
+}
+
+function normalizeHektorCompositionPieceDraft(item: Record<string, unknown>, index: number): HektorCompositionPieceDraft | null {
+  const idPiece = compositionPieceRecordText(item, ['idPiece', 'id_piece', 'id', 'ID', 'idpiece'])
+  const idTypePiece = compositionPieceRecordText(item, ['idTypePiece', 'id_type_piece', 'typePiece', 'idType', 'type_id', 'type'])
+  const typeLabel = compositionPieceRecordText(item, ['typeLabel', 'type_label', 'type_piece', 'typePieceLabel', 'labelTypePiece', 'libelleTypePiece', 'libelle', 'label'])
+  const detailPiece = compositionPieceRecordText(item, ['detailPiece', 'detail_piece', 'detail', 'description', 'namePiece', 'name', 'nom'])
+  const piece = createEmptyHektorCompositionPieceDraft({
+    localId: idPiece ? `remote-piece-${idPiece}` : `remote-piece-${index + 1}`,
+    idPiece,
+    idTypePiece: idTypePiece || '1',
+    typeLabel: typeLabel || hektorCompositionPieceTypeLabel(idTypePiece),
+    namePiece: compositionPieceRecordText(item, ['namePiece', 'name_piece', 'customName']),
+    detailPiece,
+    etagePiece: compositionPieceRecordText(item, ['etagePiece', 'etage_piece', 'etage', 'floor']),
+    surfacePiece: compositionPieceRecordText(item, ['surfacePiece', 'surface_piece', 'surface']),
+    notePublique: compositionPieceRecordText(item, ['notePublique', 'note_publique', 'notePublic', 'note_public']),
+    notePrivee: compositionPieceRecordText(item, ['notePrivee', 'note_privee', 'notePrivate', 'note_private']),
+    noteInterAgence: compositionPieceRecordText(item, ['noteInterAgence', 'note_inter_agence', 'noteInterAgency', 'note_interagency']),
+    photosPiece: compositionPieceRecordText(item, ['photosPiece', 'photos_piece', 'photos']),
+  })
+  const hasData = [piece.idPiece, piece.idTypePiece, piece.typeLabel, piece.namePiece, piece.detailPiece, piece.etagePiece, piece.surfacePiece, piece.notePublique, piece.notePrivee, piece.noteInterAgence, piece.photosPiece]
+    .some((value) => value.trim())
+  return hasData ? piece : null
+}
+
+function buildHektorCompositionPiecesFromDetail(detail: DossierDetailPayload): HektorCompositionPieceDraft[] {
+  const fromDedicatedJson = compositionPieceRowsFromUnknown(parseJson<unknown>(detail.pieces_json, null))
+  const raw = parseJson<Record<string, unknown>>(detail.detail_raw_json, {})
+  const rows = fromDedicatedJson.length ? fromDedicatedJson : compositionPieceRowsFromUnknown(raw.pieces)
+  return rows
+    .map((item, index) => normalizeHektorCompositionPieceDraft(item, index))
+    .filter((item): item is HektorCompositionPieceDraft => Boolean(item))
+}
+
+function hektorCompositionPieceHasContent(piece: HektorCompositionPieceDraft) {
+  if (piece.deleted) return Boolean(piece.idPiece)
+  return [piece.idTypePiece, piece.namePiece, piece.detailPiece, piece.etagePiece, piece.surfacePiece, piece.notePublique, piece.notePrivee, piece.noteInterAgence, piece.photosPiece]
+    .some((value) => value.trim())
+}
+
+function hektorCompositionPieceDisplayTitle(piece: HektorCompositionPieceDraft) {
+  return firstNonEmpty(piece.detailPiece, piece.namePiece, piece.typeLabel, hektorCompositionPieceTypeLabel(piece.idTypePiece), 'Piece')
+}
+
+function hektorCompositionPieceToInput(piece: HektorCompositionPieceDraft, action?: string): HektorCompositionPieceInput {
+  return {
+    idPiece: piece.idPiece || null,
+    action: action ?? null,
+    idTypePiece: piece.idTypePiece || '1',
+    typeLabel: piece.typeLabel || hektorCompositionPieceTypeLabel(piece.idTypePiece) || null,
+    namePiece: piece.namePiece || null,
+    detailPiece: piece.detailPiece || null,
+    etagePiece: piece.etagePiece || null,
+    surfacePiece: piece.surfacePiece || null,
+    notePublique: piece.notePublique || null,
+    notePrivee: piece.notePrivee || null,
+    noteInterAgence: piece.noteInterAgence || null,
+    photosPiece: piece.photosPiece || null,
+  }
+}
+
+function hektorCompositionPieceComparable(piece: HektorCompositionPieceDraft) {
+  return {
+    idTypePiece: piece.idTypePiece.trim(),
+    namePiece: piece.namePiece.trim(),
+    detailPiece: piece.detailPiece.trim(),
+    etagePiece: piece.etagePiece.trim(),
+    surfacePiece: piece.surfacePiece.trim(),
+    notePublique: piece.notePublique.trim(),
+    notePrivee: piece.notePrivee.trim(),
+    noteInterAgence: piece.noteInterAgence.trim(),
+    photosPiece: piece.photosPiece.trim(),
+  }
+}
+
+function buildChangedHektorCompositionPieces(current: HektorCompositionPieceDraft[], baseline: HektorCompositionPieceDraft[]) {
+  const baselineById = new Map(baseline.filter((piece) => piece.idPiece).map((piece) => [piece.idPiece, piece]))
+  const changed: HektorCompositionPieceInput[] = []
+  for (const piece of current) {
+    if (piece.deleted) {
+      if (piece.idPiece) changed.push(hektorCompositionPieceToInput(piece, 'delete'))
+      continue
+    }
+    if (!hektorCompositionPieceHasContent(piece)) continue
+    if (!piece.idPiece) {
+      changed.push(hektorCompositionPieceToInput(piece, 'add'))
+      continue
+    }
+    const baselinePiece = baselineById.get(piece.idPiece)
+    if (!baselinePiece || JSON.stringify(hektorCompositionPieceComparable(piece)) !== JSON.stringify(hektorCompositionPieceComparable(baselinePiece))) {
+      changed.push(hektorCompositionPieceToInput(piece, 'update'))
+    }
+  }
+  return changed
 }
 
 function formatDraftDate(value: string) {
@@ -7556,6 +7938,8 @@ export default function App() {
   const [draftAnnonceNote, setDraftAnnonceNote] = useState('')
   const [draftAnnonceAdvanced, setDraftAnnonceAdvanced] = useState<Record<DraftAnnonceAdvancedKey, string>>(() => buildEmptyDraftAnnonceAdvanced())
   const [draftAnnonceWizardFields, setDraftAnnonceWizardFields] = useState<Record<string, string>>({})
+  const [draftAnnonceCompositionPieces, setDraftAnnonceCompositionPieces] = useState<HektorCompositionPieceDraft[]>([])
+  const [draftAnnonceCompositionDraft, setDraftAnnonceCompositionDraft] = useState<HektorCompositionPieceDraft>(() => createEmptyHektorCompositionPieceDraft())
   const [draftMandantChoice, setDraftMandantChoice] = useState<DraftMandantChoice>('none')
   const [draftExistingMandantSearch, setDraftExistingMandantSearch] = useState('')
   const [draftExistingMandantId, setDraftExistingMandantId] = useState('')
@@ -7771,9 +8155,9 @@ export default function App() {
   const draftAnnonceWizardFilledCount = Object.entries(draftAnnonceWizardFields)
     .filter(([key, value]) => draftAnnonceVisibleWizardFieldNames.has(key) && value.trim())
     .length
+  const draftAnnonceCompositionFilledCount = draftAnnonceCompositionPieces.filter((piece) => hektorCompositionPieceHasContent(piece)).length
   const draftAnnonceOfferGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 1)
   const draftAnnonceSecteurGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 3)
-  const draftAnnonceCompositionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 4)
   const draftAnnonceDetailGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 5)
   const draftAnnonceMandatGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 6)
   const draftAnnonceDiffusionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 7)
@@ -8941,6 +9325,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceNote('')
     setDraftAnnonceAdvanced(buildEmptyDraftAnnonceAdvanced())
     setDraftAnnonceWizardFields({})
+    setDraftAnnonceCompositionPieces([])
+    setDraftAnnonceCompositionDraft(createEmptyHektorCompositionPieceDraft())
     setDraftAnnonceStep('offre')
     setDraftAnnonceScanMessage(null)
     setDraftAnnonceScanWarnings([])
@@ -8970,6 +9356,41 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function updateDraftAnnonceWizardField(key: string, value: string) {
     setDraftAnnonceWizardFields((current) => ({ ...current, [key]: value }))
+  }
+
+  function updateDraftAnnonceCompositionDraft(key: HektorCompositionPieceDraftKey, value: string) {
+    setDraftAnnonceCompositionDraft((current) => ({
+      ...current,
+      [key]: value,
+      typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : current.typeLabel,
+    }))
+  }
+
+  function addDraftAnnonceCompositionPiece() {
+    if (!hektorCompositionPieceHasContent(draftAnnonceCompositionDraft)) {
+      setErrorMessage('Ajoute au moins un type, une surface ou un detail pour la piece.')
+      setDraftAnnonceStep('composition')
+      return
+    }
+    setDraftAnnonceCompositionPieces((current) => [...current, createEmptyHektorCompositionPieceDraft({
+      ...draftAnnonceCompositionDraft,
+      localId: '',
+      typeLabel: draftAnnonceCompositionDraft.typeLabel || hektorCompositionPieceTypeLabel(draftAnnonceCompositionDraft.idTypePiece),
+    })])
+    setDraftAnnonceCompositionDraft(createEmptyHektorCompositionPieceDraft())
+    setErrorMessage(null)
+  }
+
+  function updateDraftAnnonceCompositionPiece(localId: string, key: HektorCompositionPieceDraftKey, value: string) {
+    setDraftAnnonceCompositionPieces((current) => current.map((piece) => piece.localId === localId ? {
+      ...piece,
+      [key]: value,
+      typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : piece.typeLabel,
+    } : piece))
+  }
+
+  function removeDraftAnnonceCompositionPiece(localId: string) {
+    setDraftAnnonceCompositionPieces((current) => current.filter((piece) => piece.localId !== localId))
   }
 
   function goToDraftAnnonceStep(step: DraftAnnonceStepKey) {
@@ -9405,6 +9826,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         coproQuotePart: draftAdvancedValue('coproQuotePart'),
         coproWorksFund: draftAdvancedValue('coproWorksFund'),
         wizardFields: hektorWizardFields,
+        compositionPieces: draftAnnonceCompositionPieces
+          .filter((piece) => hektorCompositionPieceHasContent(piece))
+          .map((piece) => hektorCompositionPieceToInput(piece, 'add')),
         note: draftAnnonceNote,
         initialMandantContactId: hasExistingInitialMandant ? draftExistingMandantId.trim() : null,
         initialMandantContactLabel: hasExistingInitialMandant ? mandantContactOptionTitle(selectedDraftExistingMandant) : null,
@@ -11301,7 +11725,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <p>{draftAnnonceCurrentStep.subtitle}</p>
                   </div>
                   <div className="draft-annonce-page-score">
-                    <strong>{draftAnnonceCoreFilledCount + draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount}</strong>
+                    <strong>{draftAnnonceCoreFilledCount + draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount + draftAnnonceCompositionFilledCount}</strong>
                     <span>champs remplis</span>
                   </div>
                 </div>
@@ -11546,9 +11970,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </>
                 ) : null}
                 {draftAnnonceStep === 'composition' ? (
-                  <>
-                    {draftAnnonceCompositionGroups.map(renderDraftAnnonceWizardSection)}
-                  </>
+                  <HektorCompositionPiecesEditor
+                    title="4. Composition"
+                    subtitle="Ajoute les pieces une par une : type, surface, etage et notes."
+                    pieces={draftAnnonceCompositionPieces}
+                    draft={draftAnnonceCompositionDraft}
+                    disabled={draftAnnoncePending || draftAnnonceScanPending}
+                    className="draft-annonce-section draft-annonce-composition-section"
+                    onDraftChange={updateDraftAnnonceCompositionDraft}
+                    onAddDraft={addDraftAnnonceCompositionPiece}
+                    onPieceChange={updateDraftAnnonceCompositionPiece}
+                    onRemovePiece={removeDraftAnnonceCompositionPiece}
+                  />
                 ) : null}
                 {draftAnnonceStep === 'details' ? (
                   <>
@@ -11722,6 +12155,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <article><span>Prix</span><strong>{draftAnnoncePrice.trim() ? formatPrice(draftAnnoncePrice) : '-'}</strong></article>
                         <article><span>Surface</span><strong>{draftAnnonceReviewSurface.trim() ? `${draftAnnonceReviewSurface} m2` : '-'}</strong></article>
                         <article><span>Pieces / chambres</span><strong>{draftAnnonceTypeRules.showRooms || draftAnnonceTypeRules.showBedrooms ? [draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ') : 'Non demande'}</strong></article>
+                        <article><span>Composition</span><strong>{draftAnnonceCompositionFilledCount ? `${draftAnnonceCompositionFilledCount} piece(s)` : 'Aucune'}</strong></article>
                         <article><span>Photos</span><strong>{draftAnnoncePhotoDrafts.length ? `${draftAnnoncePhotoDrafts.length} en attente` : 'Aucune'}</strong></article>
                         <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
                         <article><span>Mandant initial</span><strong>{draftAnnonceMandantReviewLabel}</strong></article>

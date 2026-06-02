@@ -12221,6 +12221,7 @@ button.metric-card.is-active {
 .hektor-advanced-section-main,
 .hektor-advanced-section-mandate,
 .hektor-advanced-section-step-1,
+.hektor-advanced-section-step-4,
 .hektor-advanced-section-step-6,
 .hektor-advanced-section-step-7 {
   grid-column: 1 / -1;
@@ -29186,6 +29187,191 @@ body {
   grid-column: span 3 !important;
 }
 
+.hektor-composition-editor {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+.draft-annonce-composition-section {
+  grid-template-columns: 1fr !important;
+}
+
+.hektor-composition-subtitle {
+  margin: 0 !important;
+  color: #68727a !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+
+.hektor-composition-draft,
+.hektor-composition-card {
+  display: grid !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  padding: 12px !important;
+  border: 1px solid #dbe3e8 !important;
+  border-radius: 8px !important;
+  background: #f8fafb !important;
+}
+
+.hektor-composition-draft-head,
+.hektor-composition-card-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.hektor-composition-draft-head strong,
+.hektor-composition-card-head strong {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #15202b !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.hektor-composition-draft-head span {
+  color: #0f6874 !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+.hektor-composition-grid {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.hektor-composition-grid .filter-field {
+  grid-column: span 3 !important;
+}
+
+.hektor-composition-grid .filter-field.is-small {
+  grid-column: span 2 !important;
+}
+
+.hektor-composition-grid .hektor-composition-note {
+  grid-column: span 4 !important;
+}
+
+.hektor-composition-grid textarea {
+  min-height: 74px !important;
+  resize: vertical !important;
+}
+
+.hektor-composition-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+.hektor-composition-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.hektor-composition-card-head {
+  grid-template-columns: 30px minmax(0, 1fr) auto !important;
+}
+
+.hektor-composition-card-head > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  background: rgba(15, 104, 116, 0.1) !important;
+  color: #0f6874 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.hektor-composition-empty,
+.hektor-detail-composition-empty {
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 1px dashed #cfd9df !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #68727a !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+
+.hektor-composition-deleted {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.hektor-composition-deleted button {
+  min-height: 32px !important;
+  border: 1px solid rgba(15, 104, 116, 0.16) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  background: #ffffff !important;
+  color: #0f6874 !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+.hektor-detail-composition-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.hektor-detail-composition-list article {
+  display: grid !important;
+  grid-template-columns: 28px minmax(0, 1fr) !important;
+  gap: 2px 8px !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  padding: 10px !important;
+  border: 1px solid #dbe3e8 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+}
+
+.hektor-detail-composition-list article > span {
+  grid-row: 1 / span 2 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 8px !important;
+  background: rgba(15, 104, 116, 0.1) !important;
+  color: #0f6874 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.hektor-detail-composition-list strong,
+.hektor-detail-composition-list small {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.hektor-detail-composition-list strong {
+  color: #15202b !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.hektor-detail-composition-list small {
+  color: #68727a !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
 .draft-mandant-panel {
   grid-column: 1 / -1 !important;
   position: relative !important;
@@ -29580,6 +29766,7 @@ body {
 .detail-edit-popup .hektor-advanced-section-main,
 .detail-edit-popup .hektor-advanced-section-mandate,
 .detail-edit-popup .hektor-advanced-section-step-1,
+.detail-edit-popup .hektor-advanced-section-step-4,
 .detail-edit-popup .hektor-advanced-section-step-6,
 .detail-edit-popup .hektor-advanced-section-step-7 {
   grid-column: 1 / -1 !important;
@@ -29593,6 +29780,7 @@ body {
 .detail-edit-popup .hektor-advanced-section-main .hektor-advanced-grid,
 .detail-edit-popup .hektor-advanced-section-mandate .hektor-advanced-grid,
 .detail-edit-popup .hektor-advanced-section-step-1 .hektor-advanced-grid,
+.detail-edit-popup .hektor-advanced-section-step-4 .hektor-composition-grid,
 .detail-edit-popup .hektor-advanced-section-step-6 .hektor-advanced-grid,
 .detail-edit-popup .hektor-advanced-section-step-7 .hektor-advanced-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
@@ -29655,6 +29843,16 @@ body {
     grid-column: span 6 !important;
   }
 
+  .hektor-composition-grid .filter-field,
+  .hektor-composition-grid .filter-field.is-small,
+  .hektor-composition-grid .hektor-composition-note {
+    grid-column: span 6 !important;
+  }
+
+  .hektor-detail-composition-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
   .draft-mandant-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
@@ -29707,6 +29905,17 @@ body {
   .draft-annonce-section {
     grid-template-columns: 1fr !important;
     padding: 12px !important;
+  }
+
+  .hektor-composition-grid,
+  .hektor-detail-composition-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hektor-composition-grid .filter-field,
+  .hektor-composition-grid .filter-field.is-small,
+  .hektor-composition-grid .hektor-composition-note {
+    grid-column: 1 / -1 !important;
   }
 
   .draft-annonce-section-title {

@@ -5054,6 +5054,52 @@ export type HektorAnnonceUpdateFields = {
   mandateEndDate?: string | null
   fees?: string | number | null
   wizardFields?: Record<string, string | number | null | undefined>
+  compositionPieces?: HektorCompositionPieceInput[]
+}
+
+export type HektorCompositionPieceInput = {
+  idPiece?: string | number | null
+  id?: string | number | null
+  action?: 'add' | 'update' | 'delete' | string | null
+  idTypePiece?: string | number | null
+  typePiece?: string | number | null
+  typeLabel?: string | null
+  namePiece?: string | null
+  detailPiece?: string | null
+  etagePiece?: string | number | null
+  surfacePiece?: string | number | null
+  notePublique?: string | null
+  notePrivee?: string | null
+  noteInterAgence?: string | null
+  photosPiece?: string | null
+}
+
+function cleanHektorCompositionPieces(pieces: HektorCompositionPieceInput[] | null | undefined) {
+  if (!Array.isArray(pieces)) return null
+  const cleaned = pieces
+    .map((piece) => {
+      const idPiece = piece.idPiece ?? piece.id
+      const idTypePiece = piece.idTypePiece ?? piece.typePiece
+      return {
+        idPiece: idPiece == null ? null : String(idPiece).trim() || null,
+        action: piece.action == null ? null : String(piece.action).trim() || null,
+        idTypePiece: idTypePiece == null ? null : String(idTypePiece).trim() || null,
+        typeLabel: piece.typeLabel?.trim() || null,
+        namePiece: piece.namePiece?.trim() || null,
+        detailPiece: piece.detailPiece?.trim() || null,
+        etagePiece: piece.etagePiece == null ? null : String(piece.etagePiece).trim() || null,
+        surfacePiece: piece.surfacePiece == null ? null : String(piece.surfacePiece).trim() || null,
+        notePublique: piece.notePublique?.trim() || null,
+        notePrivee: piece.notePrivee?.trim() || null,
+        noteInterAgence: piece.noteInterAgence?.trim() || null,
+        photosPiece: piece.photosPiece?.trim() || null,
+      }
+    })
+    .filter((piece) => {
+      if (piece.action === 'delete') return Boolean(piece.idPiece)
+      return Boolean(piece.idTypePiece || piece.namePiece || piece.detailPiece || piece.etagePiece || piece.surfacePiece || piece.notePublique || piece.notePrivee || piece.noteInterAgence || piece.photosPiece)
+    })
+  return cleaned.length ? cleaned : null
 }
 
 export type HektorMandatAutoNumberInput = {
@@ -5123,6 +5169,7 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
     hektor_wizard_fields: input.fields.wizardFields
       ? Object.fromEntries(Object.entries(input.fields.wizardFields).map(([key, value]) => [key, value == null ? null : String(value).trim() || null]))
       : null,
+    composition_pieces: cleanHektorCompositionPieces(input.fields.compositionPieces),
   }
   const updateFields = Object.fromEntries(Object.entries(cleanFields).filter(([, value]) => value !== null))
   if (Object.keys(updateFields).length === 0) throw new Error('Aucune modification a envoyer')
@@ -5489,6 +5536,7 @@ export type HektorDraftAnnonceJobInput = {
   coproQuotePart?: string | number | null
   coproWorksFund?: string | number | null
   wizardFields?: Record<string, string | number | null | undefined>
+  compositionPieces?: HektorCompositionPieceInput[]
   note?: string | null
   initialMandant?: HektorMandantContactInput | null
   initialMandantContactId?: string | null
@@ -5553,6 +5601,7 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       hektor_wizard_fields: input.wizardFields
         ? Object.fromEntries(Object.entries(input.wizardFields).map(([key, value]) => [key, value == null ? null : String(value).trim() || null]))
         : null,
+      composition_pieces: cleanHektorCompositionPieces(input.compositionPieces),
       note: input.note?.trim() || null,
       initial_mandant_contact_id: input.initialMandantContactId?.trim() || null,
       initial_mandant_contact_label: input.initialMandantContactLabel?.trim() || null,
