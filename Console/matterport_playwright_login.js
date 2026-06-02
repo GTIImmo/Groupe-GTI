@@ -6,6 +6,19 @@ const { chromium } = require("playwright");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", "matterport", ".env") });
 
+function browserLaunchOptions(options = {}) {
+  const executablePath = [
+    process.env.CONSOLE_CHROME_EXE,
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  ].find((candidate) => candidate && fs.existsSync(candidate)) || "";
+  return {
+    ...options,
+    ...(executablePath ? { executablePath } : {}),
+  };
+}
+
 const LOGIN_URL = process.env.MATTERPORT_LOGIN_URL || "https://authn.matterport.com/login";
 const MODELS_URL = process.env.MATTERPORT_MODELS_URL || "https://my.matterport.com/models";
 const STORAGE_STATE_PATH = process.env.MATTERPORT_STORAGE_STATE_PATH || path.resolve(__dirname, "matterport_storage_state.json");
@@ -73,10 +86,10 @@ async function main() {
   ensureDir(STORAGE_STATE_PATH);
   fs.mkdirSync(DEBUG_DIR, { recursive: true });
 
-  const browser = await chromium.launch({
+  const browser = await chromium.launch(browserLaunchOptions({
     headless: false,
     slowMo: 40,
-  });
+  }));
 
   const context = await browser.newContext({
     viewport: { width: 1440, height: 950 },

@@ -3,11 +3,11 @@ param(
     [switch]$SkipAndroid,
     [switch]$SkipContactDetails,
     [int]$DailyRawMaxPages = 5,
-    [int]$ContactDetailLimit = 100,
+    [int]$ContactDetailLimit = 1000,
     [int]$ContactDetailBatchSize = 100,
     [int]$ContactDetailMaxAttempts = 1,
     [int]$ContactDetailRetryDelaySeconds = 600,
-    [int]$ContactDetailRequestDelaySeconds = 1,
+    [double]$ContactDetailRequestDelaySeconds = 0.1,
     [int]$ContactDetailBatchPauseSeconds = 0,
     [int]$ContactDetailMaxHardErrors = 1,
     [int]$ContactDetailMaxConsecutiveHardErrors = 1,
@@ -19,6 +19,8 @@ param(
     [switch]$ContactsEligibleOnly,
     [switch]$IncludeArchivedContactRelations,
     [switch]$IncludeArchivedContactSearches,
+    [ValidateSet("full", "update")]
+    [string]$MatterportPushMode = "update",
     [switch]$FullRebuildSupabase,
     [switch]$EnqueueConsoleDocuments,
     [switch]$EnqueueAllConsoleDocumentsLocal,
@@ -122,7 +124,7 @@ Set-Location $projectRoot
 
 Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"
-Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly"
+Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly MatterportPushMode=$MatterportPushMode"
 
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
@@ -138,13 +140,14 @@ Invoke-Step -Label "normalize_source" -Arguments @(
 
 if (-not $SkipContactDetails) {
     $contactDetailsOk = $false
+    $contactDetailRequestDelayArg = $ContactDetailRequestDelaySeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)
     Invoke-OptionalStepWithRetry -Label "contact details delta" -Arguments @(
         "phase2\sync\sync_contact_details.py",
         "--limit", [string]$ContactDetailLimit,
         "--batch-size", [string]$ContactDetailBatchSize,
         "--skip-listing-refresh",
         "--changed-only",
-        "--request-delay-seconds", [string]$ContactDetailRequestDelaySeconds,
+        "--request-delay-seconds", $contactDetailRequestDelayArg,
         "--batch-pause-seconds", [string]$ContactDetailBatchPauseSeconds,
         "--max-hard-errors", [string]$ContactDetailMaxHardErrors,
         "--max-consecutive-hard-errors", [string]$ContactDetailMaxConsecutiveHardErrors,
@@ -250,7 +253,8 @@ if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
 Invoke-Step -Label "phase2 sync Matterport links to supabase" -Arguments @(
     "phase2\sync\sync_matterport_models.py",
     "--max-models", "0",
-    "--supabase-upsert"
+    "--supabase-upsert",
+    "--supabase-push-mode", $MatterportPushMode
 )
 
 Invoke-Step -Label "backfill appointment public links" -Arguments @(

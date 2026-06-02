@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import csv
+import hashlib
 import json
 import os
 import re
@@ -30,6 +31,10 @@ MATTERPORT_GRAPHQL_URL = "https://api.matterport.com/api/models/graph"
 MATTERPORT_SHOW_URL = "https://my.matterport.com/show/?m={model_id}"
 MATTERPORT_GROUP_NAMESPACE = uuid.UUID("8b741103-5a9b-4432-8b25-e5fb53df5cf8")
 MATTERPORT_MODEL_NAMESPACE = uuid.UUID("a0dcfb5d-e5e7-4577-9452-efad253de4f5")
+MATTERPORT_PUSH_STATE_TABLE = "app_matterport_supabase_push_state"
+MATTERPORT_GROUP_TABLE = "app_matterport_group"
+MATTERPORT_MODEL_TABLE = "app_matterport_group_model"
+VOLATILE_SUPABASE_COLUMNS = {"synced_at", "updated_at"}
 
 
 FOLDER_PAGE_SIZE = 100
@@ -463,6 +468,15 @@ def write_outputs(rows: list[dict[str, Any]], groups: list[dict[str, Any]], csv_
     )
 
 
+def load_preview_json(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("rows") or []
+    groups = payload.get("groups") or []
+    if not isinstance(rows, list) or not isinstance(groups, list):
+        raise RuntimeError(f"Invalid Matterport preview JSON: {path}")
+    return rows, groups
+
+
 def summarize(rows: list[dict[str, Any]], groups: list[dict[str, Any]]) -> dict[str, Any]:
     by_status: dict[str, int] = defaultdict(int)
     by_group_size: dict[str, int] = defaultdict(int)
@@ -476,6 +490,166 @@ def summarize(rows: list[dict[str, Any]], groups: list[dict[str, Any]]) -> dict[
         "groups_matched_current": len(groups),
         "match_status_counts": dict(sorted(by_status.items())),
         "group_size_counts": dict(sorted(by_group_size.items())),
+    }
+
+
+def stable_payload_hash(row: dict[str, Any]) -> str:
+    payload = {
+        key: value
+        for key, value in row.items()
+        if key not in VOLATILE_SUPABASE_COLUMNS
+    }
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def supabase_row_key(table: str, row: dict[str, Any]) -> str:
+    if table == MATTERPORT_GROUP_TABLE:
+        return str(row["id"])
+    if table == MATTERPORT_MODEL_TABLE:
+        return str(row["matterport_model_id"])
+    raise ValueError(f"Unknown Matterport Supabase table: {table}")
+
+
+def ensure_matterport_push_state(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {MATTERPORT_PUSH_STATE_TABLE} (
+            table_name TEXT NOT NULL,
+            row_key TEXT NOT NULL,
+            payload_hash TEXT NOT NULL,
+            pushed_at TEXT NOT NULL,
+            PRIMARY KEY (table_name, row_key)
+        )
+        """
+    )
+    conn.commit()
+
+
+def load_push_hashes(db_path: Path) -> dict[str, dict[str, str]]:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        ensure_matterport_push_state(conn)
+        state: dict[str, dict[str, str]] = defaultdict(dict)
+        rows = conn.execute(
+            f"""
+            SELECT table_name, row_key, payload_hash
+            FROM {MATTERPORT_PUSH_STATE_TABLE}
+            WHERE table_name IN (?, ?)
+            """,
+            (MATTERPORT_GROUP_TABLE, MATTERPORT_MODEL_TABLE),
+        ).fetchall()
+        for row in rows:
+            state[str(row["table_name"])][str(row["row_key"])] = str(row["payload_hash"])
+        return dict(state)
+    finally:
+        conn.close()
+
+
+def reset_push_state(db_path: Path) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    try:
+        ensure_matterport_push_state(conn)
+        conn.execute(
+            f"DELETE FROM {MATTERPORT_PUSH_STATE_TABLE} WHERE table_name IN (?, ?)",
+            (MATTERPORT_GROUP_TABLE, MATTERPORT_MODEL_TABLE),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def mark_push_state(db_path: Path, loaded: list[tuple[str, list[dict[str, Any]]]]) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    try:
+        ensure_matterport_push_state(conn)
+        pushed_at = utc_now_iso()
+        for table, rows in loaded:
+            conn.executemany(
+                f"""
+                INSERT INTO {MATTERPORT_PUSH_STATE_TABLE}(table_name, row_key, payload_hash, pushed_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(table_name, row_key) DO UPDATE SET
+                    payload_hash = excluded.payload_hash,
+                    pushed_at = excluded.pushed_at
+                """,
+                [
+                    (table, supabase_row_key(table, row), stable_payload_hash(row), pushed_at)
+                    for row in rows
+                ],
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def remove_push_state(db_path: Path, rows_to_remove: list[tuple[str, list[str]]]) -> None:
+    if not rows_to_remove:
+        return
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    try:
+        ensure_matterport_push_state(conn)
+        for table, keys in rows_to_remove:
+            conn.executemany(
+                f"DELETE FROM {MATTERPORT_PUSH_STATE_TABLE} WHERE table_name = ? AND row_key = ?",
+                [(table, key) for key in keys],
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def replace_push_state(db_path: Path, loaded: list[tuple[str, list[dict[str, Any]]]]) -> None:
+    reset_push_state(db_path)
+    mark_push_state(db_path, loaded)
+
+
+def build_delta_payload(
+    group_rows: list[dict[str, Any]],
+    model_rows: list[dict[str, Any]],
+    *,
+    state_db: Path,
+    allow_stale_deletes: bool,
+) -> dict[str, Any]:
+    state = load_push_hashes(state_db)
+    group_state = state.get(MATTERPORT_GROUP_TABLE, {})
+    model_state = state.get(MATTERPORT_MODEL_TABLE, {})
+
+    changed_group_rows = [
+        row
+        for row in group_rows
+        if group_state.get(supabase_row_key(MATTERPORT_GROUP_TABLE, row)) != stable_payload_hash(row)
+    ]
+    changed_model_rows = [
+        row
+        for row in model_rows
+        if model_state.get(supabase_row_key(MATTERPORT_MODEL_TABLE, row)) != stable_payload_hash(row)
+    ]
+
+    touched_group_ids = {str(row["id"]) for row in changed_group_rows}
+    touched_group_ids.update(str(row["group_id"]) for row in changed_model_rows)
+
+    groups_to_upsert = [row for row in group_rows if str(row["id"]) in touched_group_ids]
+    models_to_upsert = [row for row in model_rows if str(row["group_id"]) in touched_group_ids]
+
+    current_group_keys = {supabase_row_key(MATTERPORT_GROUP_TABLE, row) for row in group_rows}
+    current_model_keys = {supabase_row_key(MATTERPORT_MODEL_TABLE, row) for row in model_rows}
+    groups_to_delete = sorted(set(group_state) - current_group_keys) if allow_stale_deletes else []
+    models_to_delete = sorted(set(model_state) - current_model_keys) if allow_stale_deletes else []
+
+    return {
+        "groups_to_upsert": groups_to_upsert,
+        "models_to_upsert": models_to_upsert,
+        "model_group_ids_to_replace": sorted(touched_group_ids),
+        "groups_to_delete": groups_to_delete,
+        "models_to_delete": models_to_delete,
+        "loaded_groups": len(group_rows),
+        "loaded_models": len(model_rows),
     }
 
 
@@ -574,48 +748,190 @@ def build_supabase_rows(rows: list[dict[str, Any]], groups: list[dict[str, Any]]
     return group_rows, model_rows
 
 
-def upsert_supabase(rows: list[dict[str, Any]], groups: list[dict[str, Any]], limit_groups: int | None = None) -> dict[str, int]:
+def upsert_supabase(
+    rows: list[dict[str, Any]],
+    groups: list[dict[str, Any]],
+    limit_groups: int | None = None,
+    *,
+    push_mode: str = "full",
+    dry_run: bool = False,
+    state_db: Path = PHASE2_DB,
+    reset_state: bool = False,
+) -> dict[str, Any]:
     load_env_file(DEFAULT_ENV_FILE)
-    url = os.getenv("SUPABASE_URL", "").strip()
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
-    if not url or not key:
-        raise RuntimeError(f"Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in {DEFAULT_ENV_FILE}")
     selected_groups = groups[:limit_groups] if limit_groups is not None else groups
     selected_group_ids = {group["id"] for group in selected_groups}
     group_rows, model_rows = build_supabase_rows(rows, selected_groups)
     model_rows = [row for row in model_rows if row["group_id"] in selected_group_ids]
-    supabase_request(url, key, "app_matterport_group", group_rows, "id")
-    supabase_delete_by_ids(url, key, "app_matterport_group_model", "group_id", sorted(selected_group_ids))
-    supabase_request(url, key, "app_matterport_group_model", model_rows, "matterport_model_id")
-    return {"groups_upserted": len(group_rows), "models_upserted": len(model_rows)}
+    if reset_state:
+        reset_push_state(state_db)
+
+    if push_mode == "update":
+        delta = build_delta_payload(
+            group_rows,
+            model_rows,
+            state_db=state_db,
+            allow_stale_deletes=limit_groups is None,
+        )
+        groups_to_upsert = delta["groups_to_upsert"]
+        models_to_upsert = delta["models_to_upsert"]
+        group_ids_to_replace = delta["model_group_ids_to_replace"]
+        groups_to_delete = delta["groups_to_delete"]
+        models_to_delete = delta["models_to_delete"]
+    else:
+        groups_to_upsert = group_rows
+        models_to_upsert = model_rows
+        group_ids_to_replace = sorted(selected_group_ids)
+        groups_to_delete = []
+        models_to_delete = []
+        delta = {
+            "loaded_groups": len(group_rows),
+            "loaded_models": len(model_rows),
+        }
+
+    result: dict[str, Any] = {
+        "mode": push_mode,
+        "loaded_groups": int(delta["loaded_groups"]),
+        "loaded_models": int(delta["loaded_models"]),
+        "groups_upserted": len(groups_to_upsert),
+        "models_upserted": len(models_to_upsert),
+        "model_groups_replaced": len(group_ids_to_replace),
+        "groups_deleted": len(groups_to_delete),
+        "models_deleted": len(models_to_delete),
+    }
+    if dry_run:
+        result["dry_run"] = True
+        return result
+
+    url = os.getenv("SUPABASE_URL", "").strip()
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not url or not key:
+        raise RuntimeError(f"Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in {DEFAULT_ENV_FILE}")
+
+    supabase_request(url, key, MATTERPORT_GROUP_TABLE, groups_to_upsert, "id")
+    supabase_delete_by_ids(url, key, MATTERPORT_MODEL_TABLE, "group_id", group_ids_to_replace)
+    supabase_request(url, key, MATTERPORT_MODEL_TABLE, models_to_upsert, "matterport_model_id")
+    supabase_delete_by_ids(url, key, MATTERPORT_MODEL_TABLE, "matterport_model_id", models_to_delete)
+    supabase_delete_by_ids(url, key, MATTERPORT_GROUP_TABLE, "id", groups_to_delete)
+
+    if push_mode == "full" and limit_groups is None:
+        replace_push_state(
+            state_db,
+            [
+                (MATTERPORT_GROUP_TABLE, group_rows),
+                (MATTERPORT_MODEL_TABLE, model_rows),
+            ],
+        )
+    else:
+        mark_push_state(
+            state_db,
+            [
+                (MATTERPORT_GROUP_TABLE, groups_to_upsert),
+                (MATTERPORT_MODEL_TABLE, models_to_upsert),
+            ],
+        )
+        remove_push_state(
+            state_db,
+            [
+                (MATTERPORT_GROUP_TABLE, groups_to_delete),
+                (MATTERPORT_MODEL_TABLE, models_to_delete),
+            ],
+        )
+    return result
+
+
+def adopt_supabase_baseline(
+    rows: list[dict[str, Any]],
+    groups: list[dict[str, Any]],
+    limit_groups: int | None = None,
+    *,
+    state_db: Path = PHASE2_DB,
+    reset_state: bool = False,
+) -> dict[str, Any]:
+    selected_groups = groups[:limit_groups] if limit_groups is not None else groups
+    selected_group_ids = {group["id"] for group in selected_groups}
+    group_rows, model_rows = build_supabase_rows(rows, selected_groups)
+    model_rows = [row for row in model_rows if row["group_id"] in selected_group_ids]
+    if reset_state or limit_groups is None:
+        replace_push_state(
+            state_db,
+            [
+                (MATTERPORT_GROUP_TABLE, group_rows),
+                (MATTERPORT_MODEL_TABLE, model_rows),
+            ],
+        )
+    else:
+        mark_push_state(
+            state_db,
+            [
+                (MATTERPORT_GROUP_TABLE, group_rows),
+                (MATTERPORT_MODEL_TABLE, model_rows),
+            ],
+        )
+    return {
+        "mode": "adopt_baseline",
+        "loaded_groups": len(group_rows),
+        "loaded_models": len(model_rows),
+        "groups_marked_synced": len(group_rows),
+        "models_marked_synced": len(model_rows),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Scan Matterport models, match them with Hektor mandates, and upsert read-only links into Supabase.")
     parser.add_argument("--max-models", type=int, default=25, help="Small dry-run limit. Use 0 for no limit.")
+    parser.add_argument("--input-json", type=Path, default=None, help="Reuse a previously generated matterport_sync_preview.json instead of calling Matterport.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--json-output", type=Path, default=DEFAULT_JSON_OUTPUT)
     parser.add_argument("--min-mandat-digits", type=int, default=4, help="Ignore shorter numbers to avoid matching street numbers or floors.")
     parser.add_argument("--supabase-upsert", action="store_true", help="Actually upsert matched current Matterport groups/models into Supabase.")
+    parser.add_argument("--supabase-push-mode", choices=["full", "update"], default="full", help="full = replace current behavior; update = only changed/new rows plus proven stale cleanup.")
+    parser.add_argument("--supabase-dry-run", action="store_true", help="Calculate the Supabase payload without writing to Supabase.")
+    parser.add_argument("--supabase-adopt-baseline", action="store_true", help="Mark the current Matterport payload as already synced locally, without writing to Supabase.")
+    parser.add_argument("--supabase-reset-push-state", action="store_true", help="Clear the local Matterport push state before calculating.")
+    parser.add_argument("--supabase-state-db", type=Path, default=PHASE2_DB, help="SQLite DB used to store Matterport Supabase push hashes.")
     parser.add_argument("--supabase-limit-groups", type=int, default=0, help="Safety limit for Supabase upsert groups. Use 0 for all matched groups.")
     args = parser.parse_args(argv)
 
     max_models = None if args.max_models == 0 else args.max_models
 
-    credentials = load_credentials()
-    client = MatterportClient(credentials)
-    models, _folders = scan_matterport_models(client, max_models=max_models)
-    rows, groups = build_preview_rows(models, min_mandat_digits=args.min_mandat_digits)
-    write_outputs(rows, groups, args.output, args.json_output)
+    if args.input_json:
+        rows, groups = load_preview_json(args.input_json)
+    else:
+        credentials = load_credentials()
+        client = MatterportClient(credentials)
+        models, _folders = scan_matterport_models(client, max_models=max_models)
+        rows, groups = build_preview_rows(models, min_mandat_digits=args.min_mandat_digits)
+        write_outputs(rows, groups, args.output, args.json_output)
     summary = summarize(rows, groups)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    print(f"CSV: {args.output}")
-    print(f"JSON: {args.json_output}")
+    if args.input_json:
+        print(f"JSON: {args.input_json}")
+    else:
+        print(f"CSV: {args.output}")
+        print(f"JSON: {args.json_output}")
 
     print("READ_ONLY: no Matterport write operation exists in this script.")
-    if args.supabase_upsert:
-        limit_groups = None if args.supabase_limit_groups == 0 else args.supabase_limit_groups
-        result = upsert_supabase(rows, groups, limit_groups=limit_groups)
+    limit_groups = None if args.supabase_limit_groups == 0 else args.supabase_limit_groups
+    if args.supabase_adopt_baseline:
+        result = adopt_supabase_baseline(
+            rows,
+            groups,
+            limit_groups=limit_groups,
+            state_db=args.supabase_state_db,
+            reset_state=args.supabase_reset_push_state,
+        )
+        print(json.dumps({"supabase_baseline_result": result}, ensure_ascii=False, indent=2))
+    elif args.supabase_upsert or args.supabase_dry_run:
+        result = upsert_supabase(
+            rows,
+            groups,
+            limit_groups=limit_groups,
+            push_mode=args.supabase_push_mode,
+            dry_run=args.supabase_dry_run,
+            state_db=args.supabase_state_db,
+            reset_state=args.supabase_reset_push_state,
+        )
         print(json.dumps({"supabase_upsert_result": result}, ensure_ascii=False, indent=2))
     else:
         print("DRY_RUN: no Supabase write performed.")
