@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, FormEvent, Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Session } from '@supabase/supabase-js'
 import {
@@ -42,6 +42,9 @@ import {
   loadUserNegotiatorContext,
   loadUserProfile,
   loadGoogleWorkspaceIdentity,
+  loadGoogleCalendarEventLinks,
+  createGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -87,6 +90,7 @@ import {
   searchMandantContactOptions,
   type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
+  type GoogleCalendarEventLink,
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
@@ -4155,6 +4159,32 @@ function formatDate(value: string | null | undefined) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return new Intl.DateTimeFormat('fr-FR').format(date)
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+}
+
+function toDateTimeLocalValue(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function defaultGoogleAgendaStartValue() {
+  const date = new Date()
+  date.setDate(date.getDate() + 1)
+  date.setHours(10, 0, 0, 0)
+  return toDateTimeLocalValue(date)
+}
+
+function addMinutesToDateTimeLocal(value: string, minutes: number) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  date.setMinutes(date.getMinutes() + minutes)
+  return toDateTimeLocalValue(date)
 }
 
 function parseJson<T>(value: string | null | undefined, fallback: T): T {
@@ -16181,6 +16211,7 @@ function DossierDetailLayout(props: {
               </section>
               ) : null}
 
+              {activeDetailTab === 'commercial' ? <GoogleAgendaAnnonceSection dossier={dossier} detail={props.detail} /> : null}
               {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
               </div>
             </main>
@@ -16524,6 +16555,247 @@ function DossierInlineDetail(props: {
         ) : <p>Aucune demande liee sur ce dossier.</p>}
       </article>
     </div>
+  )
+}
+
+const googleAgendaEventTypeOptions: Array<{ value: GoogleCalendarEventLink['event_type']; label: string }> = [
+  { value: 'visite', label: 'Visite' },
+  { value: 'estimation', label: 'Estimation' },
+  { value: 'mandat', label: 'Mandat' },
+  { value: 'compromis', label: 'Compromis' },
+  { value: 'relance', label: 'Relance' },
+  { value: 'agence', label: 'Agence' },
+  { value: 'autre', label: 'Autre' },
+]
+
+function splitEmailList(value: string) {
+  return value
+    .split(/[;,\s]+/g)
+    .map((item) => item.trim().toLowerCase())
+    .filter((item, index, list) => item && item.includes('@') && list.indexOf(item) === index)
+}
+
+function GoogleAgendaAnnonceSection(props: {
+  dossier: Dossier | null
+  detail: DossierDetailPayload
+}) {
+  const dossier = props.dossier
+  const defaultCalendarEmail = safeText(props.detail.appointment_negociateur_email) || safeText(dossier?.negociateur_email)
+  const defaultLocation = [
+    safeText(props.detail.adresse_privee_listing) || safeText(props.detail.adresse_detail),
+    safeText(props.detail.code_postal_public_listing) || safeText(props.detail.code_postal_detail) || safeText(dossier?.code_postal),
+    safeText(props.detail.ville_publique_listing) || safeText(props.detail.ville_privee_detail) || safeText(dossier?.ville),
+  ].filter(Boolean).join(' ')
+  const [calendarEmail, setCalendarEmail] = useState(defaultCalendarEmail)
+  const [eventType, setEventType] = useState<GoogleCalendarEventLink['event_type']>('visite')
+  const [summary, setSummary] = useState('')
+  const [startAt, setStartAt] = useState(defaultGoogleAgendaStartValue)
+  const [durationMinutes, setDurationMinutes] = useState('60')
+  const [location, setLocation] = useState(defaultLocation)
+  const [attendeesText, setAttendeesText] = useState('')
+  const [description, setDescription] = useState('')
+  const [events, setEvents] = useState<GoogleCalendarEventLink[]>([])
+  const [loading, setLoading] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCalendarEmail(defaultCalendarEmail)
+  }, [defaultCalendarEmail])
+
+  useEffect(() => {
+    setLocation(defaultLocation)
+  }, [defaultLocation])
+
+  useEffect(() => {
+    const title = dossier?.titre_bien || dossier?.numero_dossier || (dossier?.hektor_annonce_id ? `Annonce ${dossier.hektor_annonce_id}` : 'Annonce GTI')
+    const label = googleAgendaEventTypeOptions.find((option) => option.value === eventType)?.label ?? 'RDV'
+    setSummary(`${label} GTI - ${title}`)
+  }, [dossier?.hektor_annonce_id, dossier?.numero_dossier, dossier?.titre_bien, eventType])
+
+  useEffect(() => {
+    const title = dossier?.titre_bien || dossier?.numero_dossier || `Annonce ${dossier?.hektor_annonce_id ?? ''}`.trim()
+    setDescription([
+      'RDV cree depuis GTI.',
+      title ? `Bien : ${title}` : '',
+      dossier?.hektor_annonce_id ? `Annonce Hektor : ${dossier.hektor_annonce_id}` : '',
+      dossier?.numero_dossier ? `Dossier : ${dossier.numero_dossier}` : '',
+      dossier?.numero_mandat ? `Mandat : ${dossier.numero_mandat}` : '',
+    ].filter(Boolean).join('\n'))
+  }, [dossier?.hektor_annonce_id, dossier?.numero_dossier, dossier?.numero_mandat, dossier?.titre_bien])
+
+  const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
+  const activeEvents = events.filter((item) => item.status !== 'deleted')
+
+  const reloadEvents = useCallback(async () => {
+    if (!dossier) return
+    setLoading(true)
+    setError(null)
+    try {
+      const rows = await loadGoogleCalendarEventLinks({
+        appDossierId: dossier.app_dossier_id,
+        hektorAnnonceId: dossier.hektor_annonce_id,
+        limit: 25,
+      })
+      setEvents(rows)
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Chargement Agenda Google impossible')
+    } finally {
+      setLoading(false)
+    }
+  }, [dossier])
+
+  useEffect(() => {
+    void reloadEvents()
+  }, [reloadEvents])
+
+  async function handleCreateGoogleAgendaEvent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!dossier) return
+    setPending(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const minutes = Number(durationMinutes)
+      const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
+      if (!endAt) throw new Error('Horaire RDV invalide')
+      await createGoogleCalendarEvent({
+        subjectEmail: calendarEmail,
+        eventType,
+        relatedEntityType: 'annonce',
+        relatedEntityId: String(dossier.app_dossier_id),
+        appDossierId: dossier.app_dossier_id,
+        hektorAnnonceId: dossier.hektor_annonce_id,
+        summary,
+        startAt,
+        endAt,
+        description,
+        location,
+        attendees: splitEmailList(attendeesText),
+        sendUpdates: 'all',
+        metadata: {
+          source: 'fiche_annonce',
+          numero_dossier: dossier.numero_dossier,
+          numero_mandat: dossier.numero_mandat,
+        },
+      })
+      setMessage('RDV Google cree.')
+      setAttendeesText('')
+      await reloadEvents()
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Creation RDV Google impossible')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleDeleteGoogleAgendaEvent(link: GoogleCalendarEventLink) {
+    if (!window.confirm(`Supprimer ce RDV Google : ${link.summary} ?`)) return
+    setDeletingId(link.id)
+    setMessage(null)
+    setError(null)
+    try {
+      await deleteGoogleCalendarEvent(link.id, { sendUpdates: 'all' })
+      setMessage('RDV Google supprime.')
+      await reloadEvents()
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Suppression RDV Google impossible')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  return (
+    <section className="detail-section detail-google-agenda-section">
+      <div className="section-header">
+        <DetailSectionTitle icon="commercial" title="Agenda Google" />
+        {loading ? <span>Chargement...</span> : null}
+      </div>
+      <div className="detail-stack google-agenda-grid">
+        <article className="detail-card google-agenda-form-card">
+          <span className="detail-label">Créer un RDV</span>
+          <form className="google-agenda-form" onSubmit={handleCreateGoogleAgendaEvent}>
+            <label className="filter-field">
+              <span>Agenda</span>
+              <input value={calendarEmail} onChange={(inputEvent) => setCalendarEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required />
+            </label>
+            <label className="filter-field">
+              <span>Type</span>
+              <select value={eventType} onChange={(inputEvent) => setEventType(inputEvent.target.value as GoogleCalendarEventLink['event_type'])}>
+                {googleAgendaEventTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="filter-field google-agenda-field-wide">
+              <span>Titre</span>
+              <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
+            </label>
+            <label className="filter-field">
+              <span>Début</span>
+              <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
+            </label>
+            <label className="filter-field">
+              <span>Durée</span>
+              <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">1 h</option>
+                <option value="90">1 h 30</option>
+                <option value="120">2 h</option>
+              </select>
+            </label>
+            <label className="filter-field google-agenda-field-wide">
+              <span>Lieu</span>
+              <input value={location} onChange={(inputEvent) => setLocation(inputEvent.target.value)} />
+            </label>
+            <label className="filter-field google-agenda-field-wide">
+              <span>Invités</span>
+              <input value={attendeesText} onChange={(inputEvent) => setAttendeesText(inputEvent.target.value)} placeholder="client@email.fr" />
+            </label>
+            <label className="filter-field google-agenda-field-wide">
+              <span>Description</span>
+              <textarea className="inline-textarea" value={description} onChange={(inputEvent) => setDescription(inputEvent.target.value)} />
+            </label>
+            {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
+            {message ? <p className="google-agenda-success">{message}</p> : null}
+            {error ? <p className="google-agenda-error">{error}</p> : null}
+            <div className="modal-actions google-agenda-actions">
+              <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !summary.trim()}>
+                {pending ? 'Création...' : 'Créer RDV Google'}
+              </button>
+            </div>
+          </form>
+        </article>
+        <article className="detail-card google-agenda-list-card">
+          <span className="detail-label">RDV liés</span>
+          {activeEvents.length > 0 ? (
+            <div className="google-agenda-event-list">
+              {activeEvents.map((item) => (
+                <article key={item.id} className="google-agenda-event-card">
+                  <div>
+                    <strong>{item.summary}</strong>
+                    <span>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</span>
+                    <span>{item.google_calendar_email}</span>
+                    {item.location ? <span>{item.location}</span> : null}
+                  </div>
+                  <div className="google-agenda-event-actions">
+                    {item.google_html_link ? (
+                      <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Ouvrir</a>
+                    ) : null}
+                    <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleAgendaEvent(item)} disabled={deletingId === item.id}>
+                      {deletingId === item.id ? 'Suppression...' : 'Supprimer'}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : <p className="empty-state">{loading ? 'Chargement des RDV Google...' : 'Aucun RDV Google lié à cette annonce.'}</p>}
+        </article>
+      </div>
+    </section>
   )
 }
 

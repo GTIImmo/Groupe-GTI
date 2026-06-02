@@ -361,7 +361,7 @@ async function getFreshSupabaseAccessToken() {
   return accessToken
 }
 
-async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST'; body?: Record<string, unknown> }) {
+async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: Record<string, unknown> }) {
   if (!backendApiBaseUrl) {
     throw new Error('Backend API is not configured')
   }
@@ -416,6 +416,89 @@ async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST
     throw new Error(message)
   }
   return payload as T
+}
+
+export type GoogleCalendarEventLink = {
+  id: string
+  event_type: 'visite' | 'estimation' | 'mandat' | 'compromis' | 'relance' | 'agence' | 'autre'
+  related_entity_type: 'annonce' | 'contact' | 'affaire' | 'visite' | 'relance' | 'other'
+  related_entity_id?: string | null
+  app_dossier_id?: number | null
+  hektor_annonce_id?: number | null
+  hektor_contact_id?: string | null
+  google_calendar_email: string
+  google_event_id: string
+  google_html_link?: string | null
+  summary: string
+  location?: string | null
+  starts_at: string
+  ends_at: string
+  attendees_json?: string[] | null
+  status: 'active' | 'cancelled' | 'deleted'
+  metadata_json?: Record<string, unknown> | null
+  created_by_email?: string | null
+  updated_by_email?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function loadGoogleCalendarEventLinks(input: {
+  appDossierId?: number | null
+  hektorAnnonceId?: number | null
+  hektorContactId?: string | null
+  calendarEmail?: string | null
+  limit?: number
+}) {
+  const params = new URLSearchParams()
+  if (input.appDossierId) params.set('appDossierId', String(input.appDossierId))
+  if (input.hektorAnnonceId) params.set('hektorAnnonceId', String(input.hektorAnnonceId))
+  if (input.hektorContactId?.trim()) params.set('hektorContactId', input.hektorContactId.trim())
+  if (input.calendarEmail?.trim()) params.set('calendarEmail', input.calendarEmail.trim())
+  if (input.limit) params.set('limit', String(input.limit))
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  const payload = await invokeBackendApi<{ ok: true; events: GoogleCalendarEventLink[] }>(`/google-workspace/calendar/events${suffix}`, {
+    method: 'GET',
+  })
+  return payload.events ?? []
+}
+
+export async function createGoogleCalendarEvent(input: {
+  subjectEmail: string
+  eventType: GoogleCalendarEventLink['event_type']
+  relatedEntityType: GoogleCalendarEventLink['related_entity_type']
+  relatedEntityId?: string | null
+  appDossierId?: number | null
+  hektorAnnonceId?: number | null
+  hektorContactId?: string | null
+  summary: string
+  startAt: string
+  endAt: string
+  description?: string | null
+  location?: string | null
+  attendees?: string[]
+  sendUpdates?: 'all' | 'externalOnly' | 'none'
+  dryRun?: boolean
+  metadata?: Record<string, unknown>
+}) {
+  return invokeBackendApi<{ ok: true; eventId?: string | null; htmlLink?: string | null; linkSaved?: boolean; link?: GoogleCalendarEventLink }>('/google-workspace/calendar/events', {
+    method: 'POST',
+    body: {
+      ...input,
+      attendees: input.attendees ?? [],
+      sendUpdates: input.sendUpdates ?? 'all',
+      dryRun: Boolean(input.dryRun),
+      metadata: input.metadata ?? {},
+    },
+  })
+}
+
+export async function deleteGoogleCalendarEvent(linkId: string, input: { sendUpdates?: 'all' | 'externalOnly' | 'none' } = {}) {
+  return invokeBackendApi<{ ok: true; eventId?: string | null; linkSaved?: boolean; link?: GoogleCalendarEventLink }>(`/google-workspace/calendar/events/${encodeURIComponent(linkId)}`, {
+    method: 'DELETE',
+    body: {
+      sendUpdates: input.sendUpdates ?? 'all',
+    },
+  })
 }
 
 export type DraftAnnonceSheetScanFieldKey =

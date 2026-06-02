@@ -13752,6 +13752,91 @@ button.metric-card.is-active {
   border-left: 5px solid rgba(197, 0, 95, 0.72);
 }
 
+.detail-screen .detail-google-agenda-section .google-agenda-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: start;
+}
+.detail-screen .detail-google-agenda-section .detail-card {
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  background: #ffffff;
+}
+.detail-screen .detail-google-agenda-section .google-agenda-form-card {
+  border-left: 5px solid var(--gti-final-ink);
+}
+.detail-screen .detail-google-agenda-section .google-agenda-list-card {
+  border-left: 5px solid rgba(197, 0, 95, 0.72);
+}
+.google-agenda-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.google-agenda-field-wide,
+.google-agenda-form .google-agenda-actions,
+.google-agenda-form .google-agenda-success,
+.google-agenda-form .google-agenda-error {
+  grid-column: 1 / -1;
+}
+.google-agenda-form .inline-textarea {
+  min-height: 104px;
+}
+.google-agenda-actions {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+.google-agenda-success,
+.google-agenda-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.google-agenda-success {
+  border: 1px solid rgba(37, 132, 82, 0.24);
+  background: rgba(37, 132, 82, 0.08);
+  color: #145a34;
+}
+.google-agenda-error {
+  border: 1px solid rgba(197, 0, 95, 0.24);
+  background: rgba(197, 0, 95, 0.08);
+  color: #8a0042;
+}
+.google-agenda-event-list {
+  display: grid;
+  gap: 10px;
+}
+.google-agenda-event-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #f8f9f9;
+}
+.google-agenda-event-card > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.google-agenda-event-card strong,
+.google-agenda-event-card span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.google-agenda-event-card span {
+  color: rgba(34, 35, 35, 0.7);
+  font-size: 12px;
+}
+.google-agenda-event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* GTI fuchsia icon accents: selective highlights without repainting the whole popup. */
 .detail-screen .detail-tab-button:hover .detail-tab-icon,
 .detail-screen .detail-tab-button.is-active .detail-tab-icon {
@@ -14959,6 +15044,8 @@ tbody tr.is-selected {
   .detail-screen .detail-photo-section .detail-media-grid,
   .detail-screen .detail-features-section .info-grid,
   .detail-screen .detail-latest-requests-section .detail-request-row,
+  .detail-screen .detail-google-agenda-section .google-agenda-grid,
+  .google-agenda-form,
   .detail-screen .detail-appointment-section .detail-stack {
     grid-template-columns: 1fr;
   }
