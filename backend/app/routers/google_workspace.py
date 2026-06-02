@@ -100,6 +100,7 @@ class GoogleCalendarEventBusinessUpdatePayload(BaseModel):
     description: str | None = Field(default=None, max_length=12000)
     location: str | None = Field(default=None, max_length=500)
     attendees: list[EmailStr] | None = None
+    metadata: dict[str, object] | None = None
     sendUpdates: Literal["all", "externalOnly", "none"] = "all"
     dryRun: bool = False
 
@@ -407,6 +408,7 @@ def update_google_calendar_event(
         google_html_link=result.get("htmlLink"),
         metadata_patch={
             **(link.get("metadata_json") if isinstance(link.get("metadata_json"), dict) else {}),
+            **(payload.metadata or {}),
             "last_send_updates": payload.sendUpdates,
         },
     )

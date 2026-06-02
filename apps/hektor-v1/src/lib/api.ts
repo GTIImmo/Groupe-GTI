@@ -526,6 +526,7 @@ export async function updateGoogleCalendarEvent(linkId: string, input: {
   description?: string | null
   location?: string | null
   attendees?: string[] | null
+  metadata?: Record<string, unknown> | null
   sendUpdates?: 'all' | 'externalOnly' | 'none'
   dryRun?: boolean
 }) {

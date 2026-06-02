@@ -16697,6 +16697,7 @@ function DossierDetailLayout(props: {
                   hektorNegotiators={props.hektorNegotiators}
                   profileRole={props.profileRole}
                   sessionEmail={props.sessionEmail}
+                  onOpenContact={props.onOpenContact}
                   onHektorActionJobCreated={props.onHektorActionJobCreated}
                 />
               ) : null}
@@ -17088,6 +17089,93 @@ function hektorContactInputAgendaEmail(contact: HektorContactIdentityInput) {
   return safeText(contact.email).toLowerCase()
 }
 
+type GoogleAgendaInviteeContactLink = {
+  email: string
+  label?: string | null
+  hektorContactId?: string | null
+  source?: string | null
+}
+
+function normalizeGoogleAgendaInviteeContactLink(value: unknown): GoogleAgendaInviteeContactLink | null {
+  if (!value || typeof value !== 'object') return null
+  const record = value as Record<string, unknown>
+  const email = safeText(record.email).toLowerCase()
+  if (!email || !email.includes('@')) return null
+  return {
+    email,
+    label: safeText(record.label) || null,
+    hektorContactId: safeText(record.hektor_contact_id) || safeText(record.hektorContactId) || null,
+    source: safeText(record.source) || null,
+  }
+}
+
+function mergeGoogleAgendaInviteeContactLinks(
+  current: GoogleAgendaInviteeContactLink[],
+  next: GoogleAgendaInviteeContactLink[],
+  emailScope?: string[],
+) {
+  const allowed = emailScope ? new Set(emailScope.map((email) => email.trim().toLowerCase()).filter(Boolean)) : null
+  const links = new Map<string, GoogleAgendaInviteeContactLink>()
+  const addLink = (link: GoogleAgendaInviteeContactLink) => {
+    const normalized = normalizeGoogleAgendaInviteeContactLink(link)
+    if (!normalized || (allowed && !allowed.has(normalized.email))) return
+    const existing = links.get(normalized.email)
+    links.set(normalized.email, {
+      email: normalized.email,
+      label: normalized.label || existing?.label || null,
+      hektorContactId: normalized.hektorContactId || existing?.hektorContactId || null,
+      source: normalized.source || existing?.source || null,
+    })
+  }
+  current.forEach(addLink)
+  next.forEach(addLink)
+  return Array.from(links.values())
+}
+
+function googleAgendaEventInviteeContacts(event: GoogleCalendarEventLink) {
+  const raw = event.metadata_json?.attendee_contacts
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map(normalizeGoogleAgendaInviteeContactLink)
+    .filter((item): item is GoogleAgendaInviteeContactLink => Boolean(item))
+}
+
+function googleAgendaInviteeContactMetadata(links: GoogleAgendaInviteeContactLink[], attendees: string[]) {
+  return mergeGoogleAgendaInviteeContactLinks(links, [], attendees).map((link) => ({
+    email: link.email,
+    label: link.label ?? null,
+    hektor_contact_id: link.hektorContactId ?? null,
+    source: link.source ?? null,
+  }))
+}
+
+function detailContactAgendaLink(contact: DetailContact, email = detailContactAgendaEmail(contact)): GoogleAgendaInviteeContactLink | null {
+  if (!email) return null
+  return {
+    email,
+    label: detailContactAgendaLabel(contact),
+    hektorContactId: detailContactDirectoryId(contact),
+    source: 'annonce_contact',
+  }
+}
+
+function contactOptionAgendaLink(contact: MandantContactSearchOption, email = contactOptionAgendaEmail(contact)): GoogleAgendaInviteeContactLink | null {
+  if (!email) return null
+  return {
+    email,
+    label: mandantContactOptionTitle(contact),
+    hektorContactId: contact.hektor_contact_id,
+    source: 'contact_search',
+  }
+}
+
+function contactInputAgendaLabel(contact: HektorContactIdentityInput) {
+  return [contact.civility, contact.firstName, contact.lastName]
+    .map((value) => safeText(value))
+    .filter(Boolean)
+    .join(' ') || safeText(contact.companyName) || safeText(contact.email)
+}
+
 type GoogleAgendaWindow = {
   start: string
   end: string
@@ -17179,6 +17267,7 @@ function GoogleAgendaAnnonceSection(props: {
   hektorNegotiators?: HektorNegotiatorOption[]
   profileRole?: UserProfile['role'] | null
   sessionEmail?: string | null
+  onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
 }) {
   const dossier = props.dossier
@@ -17197,6 +17286,7 @@ function GoogleAgendaAnnonceSection(props: {
   const [durationMinutes, setDurationMinutes] = useState('60')
   const [location, setLocation] = useState(defaultLocation)
   const [attendeesText, setAttendeesText] = useState('')
+  const [attendeeContactLinks, setAttendeeContactLinks] = useState<GoogleAgendaInviteeContactLink[]>([])
   const [description, setDescription] = useState('')
   const [events, setEvents] = useState<GoogleCalendarEventLink[]>([])
   const [modalOpen, setModalOpen] = useState(false)
@@ -17334,6 +17424,7 @@ function GoogleAgendaAnnonceSection(props: {
     setDurationMinutes('60')
     setLocation(defaultLocation)
     setAttendeesText('')
+    setAttendeeContactLinks([])
     setDescription('')
     setAvailability(null)
   }
@@ -17347,7 +17438,9 @@ function GoogleAgendaAnnonceSection(props: {
     setStartAt(nextStartAt)
     setDurationMinutes(minutesBetweenDateTimes(link.starts_at, link.ends_at))
     setLocation(link.location ?? '')
-    setAttendeesText(Array.isArray(link.attendees_json) ? link.attendees_json.join(', ') : '')
+    const nextAttendees = Array.isArray(link.attendees_json) ? link.attendees_json : []
+    setAttendeesText(nextAttendees.join(', '))
+    setAttendeeContactLinks(mergeGoogleAgendaInviteeContactLinks([], googleAgendaEventInviteeContacts(link), nextAttendees))
     setDescription('')
     setAvailability(null)
     setMessage(null)
@@ -17422,20 +17515,39 @@ function GoogleAgendaAnnonceSection(props: {
     setAvailability(null)
   }
 
-  function handleAddAgendaInvitee(email: string) {
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail || !cleanEmail.includes('@')) return
-    setAttendeesText((current) => joinEmailList([...splitEmailList(current), cleanEmail]))
+  function handleAttendeesTextChange(value: string) {
+    setAttendeesText(value)
+    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, [], splitEmailList(value)))
+  }
+
+  function handleAddAgendaInvitee(link: GoogleAgendaInviteeContactLink | string) {
+    const normalized = typeof link === 'string'
+      ? normalizeGoogleAgendaInviteeContactLink({ email: link })
+      : normalizeGoogleAgendaInviteeContactLink(link)
+    if (!normalized) return
+    const nextText = joinEmailList([...splitEmailList(attendeesText), normalized.email])
+    const nextAttendees = splitEmailList(nextText)
+    setAttendeesText(nextText)
+    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, [normalized], nextAttendees))
   }
 
   function handleRemoveAgendaInvitee(email: string) {
     const cleanEmail = email.trim().toLowerCase()
-    setAttendeesText((current) => joinEmailList(splitEmailList(current).filter((item) => item !== cleanEmail)))
+    const nextText = joinEmailList(splitEmailList(attendeesText).filter((item) => item !== cleanEmail))
+    const nextAttendees = splitEmailList(nextText)
+    setAttendeesText(nextText)
+    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, [], nextAttendees))
   }
 
   function handleGoogleAgendaContactJobCreated(contact: HektorContactIdentityInput) {
     const createdEmail = hektorContactInputAgendaEmail(contact)
-    if (createdEmail) handleAddAgendaInvitee(createdEmail)
+    if (createdEmail) {
+      handleAddAgendaInvitee({
+        email: createdEmail,
+        label: contactInputAgendaLabel(contact),
+        source: 'contact_create_pending',
+      })
+    }
     setContactCreateOpen(false)
     setMessage(createdEmail ? 'Contact envoye au worker et ajoute aux invites.' : 'Contact envoye au worker.')
   }
@@ -17451,6 +17563,7 @@ function GoogleAgendaAnnonceSection(props: {
       const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
       if (!endAt) throw new Error('Horaire RDV invalide')
       const attendees = splitEmailList(attendeesText)
+      const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
       if (editingEventId) {
         await updateGoogleCalendarEvent(editingEventId, {
           summary,
@@ -17459,6 +17572,10 @@ function GoogleAgendaAnnonceSection(props: {
           description: description.trim() ? description : undefined,
           location,
           attendees,
+          metadata: {
+            attendee_contacts: attendeeContacts,
+            attendee_contact_count: attendeeContacts.length,
+          },
           sendUpdates: 'all',
         })
         resetGoogleAgendaForm()
@@ -17482,10 +17599,13 @@ function GoogleAgendaAnnonceSection(props: {
             source: 'fiche_annonce',
             numero_dossier: dossier.numero_dossier,
             numero_mandat: dossier.numero_mandat,
+            attendee_contacts: attendeeContacts,
+            attendee_contact_count: attendeeContacts.length,
           },
         })
         setMessage('RDV Google cree.')
         setAttendeesText('')
+        setAttendeeContactLinks([])
       }
       setAvailability(null)
       await reloadEvents()
@@ -17595,19 +17715,23 @@ function GoogleAgendaAnnonceSection(props: {
                   </label>
                   <label className="filter-field google-agenda-field-wide">
                     <span>Invites</span>
-                    <input value={attendeesText} onChange={(inputEvent) => setAttendeesText(inputEvent.target.value)} placeholder="client@email.fr" />
+                    <input value={attendeesText} onChange={(inputEvent) => handleAttendeesTextChange(inputEvent.target.value)} placeholder="client@email.fr" />
                   </label>
                   <div className="google-agenda-field-wide google-agenda-invitees">
                     <div className="google-agenda-invitee-selected">
                       <span className="detail-label">Invites selectionnes</span>
                       {splitEmailList(attendeesText).length > 0 ? (
                         <div className="google-agenda-invitee-chip-row">
-                          {splitEmailList(attendeesText).map((email) => (
-                            <button key={`invitee-${email}`} className="google-agenda-invitee-chip" type="button" onClick={() => handleRemoveAgendaInvitee(email)}>
-                              {email}
-                              <span aria-hidden="true">x</span>
-                            </button>
-                          ))}
+                          {splitEmailList(attendeesText).map((email) => {
+                            const contactLink = attendeeContactLinks.find((item) => item.email === email)
+                            return (
+                              <button key={`invitee-${email}`} className={`google-agenda-invitee-chip${contactLink?.hektorContactId ? ' is-linked' : ''}`} type="button" onClick={() => handleRemoveAgendaInvitee(email)}>
+                                <strong>{contactLink?.label || email}</strong>
+                                <small>{contactLink?.hektorContactId ? `Contact ${contactLink.hektorContactId}` : email}</small>
+                                <span aria-hidden="true">x</span>
+                              </button>
+                            )
+                          })}
                         </div>
                       ) : <p className="empty-state">Aucun invite ajoute.</p>}
                     </div>
@@ -17616,12 +17740,16 @@ function GoogleAgendaAnnonceSection(props: {
                         <span className="detail-label">Contacts lies a l'annonce</span>
                         {linkedAgendaContacts.length > 0 ? (
                           <div className="google-agenda-contact-list">
-                            {linkedAgendaContacts.map(({ contact, email }) => (
-                              <button key={`linked-contact-${email}`} className="google-agenda-contact-button" type="button" onClick={() => handleAddAgendaInvitee(email)}>
-                                <strong>{detailContactAgendaLabel(contact)}</strong>
-                                <span>{email}</span>
-                              </button>
-                            ))}
+                            {linkedAgendaContacts.map(({ contact, email }) => {
+                              const contactLink = detailContactAgendaLink(contact, email)
+                              return (
+                                <button key={`linked-contact-${email}`} className="google-agenda-contact-button" type="button" onClick={() => contactLink && handleAddAgendaInvitee(contactLink)}>
+                                  <strong>{detailContactAgendaLabel(contact)}</strong>
+                                  <span>{email}</span>
+                                  {contactLink?.hektorContactId ? <small>Contact {contactLink.hektorContactId}</small> : null}
+                                </button>
+                              )
+                            })}
                           </div>
                         ) : <p className="empty-state">Aucun contact lie avec email.</p>}
                       </div>
@@ -17641,8 +17769,9 @@ function GoogleAgendaAnnonceSection(props: {
                           <div className="google-agenda-contact-list">
                             {contactOptions.map((option) => {
                               const email = contactOptionAgendaEmail(option)
+                              const contactLink = contactOptionAgendaLink(option, email)
                               return (
-                                <button key={`contact-option-${option.hektor_contact_id}`} className="google-agenda-contact-button" type="button" onClick={() => handleAddAgendaInvitee(email)} disabled={!email}>
+                                <button key={`contact-option-${option.hektor_contact_id}`} className="google-agenda-contact-button" type="button" onClick={() => contactLink && handleAddAgendaInvitee(contactLink)} disabled={!contactLink}>
                                   <strong>{mandantContactOptionTitle(option)}</strong>
                                   <span>{email || option.phone_primary || option.phone_secondary || 'Email absent'}</span>
                                   <small>{mandantContactOptionSubtitle(option)}</small>
@@ -17751,27 +17880,44 @@ function GoogleAgendaAnnonceSection(props: {
                 </div>
                 {activeEvents.length > 0 ? (
                   <div className="google-agenda-event-list">
-                    {activeEvents.map((item) => (
-                      <article key={item.id} className="google-agenda-event-card">
-                        <div>
-                          <strong>{item.summary}</strong>
-                          <span>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</span>
-                          <span>{item.google_calendar_email}</span>
-                          {item.location ? <span>{item.location}</span> : null}
-                        </div>
-                        <div className="google-agenda-event-actions">
-                          {item.google_html_link ? (
-                            <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Ouvrir</a>
-                          ) : null}
-                          <button className="ghost-button button-subtle" type="button" onClick={() => handleEditGoogleAgendaEvent(item)} disabled={pending || deletingId === item.id}>
-                            Modifier
-                          </button>
-                          <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleAgendaEvent(item)} disabled={deletingId === item.id}>
-                            {deletingId === item.id ? 'Suppression...' : 'Supprimer'}
-                          </button>
-                        </div>
-                      </article>
-                    ))}
+                    {activeEvents.map((item) => {
+                      const eventInvitees = Array.isArray(item.attendees_json) ? item.attendees_json : []
+                      const eventInviteeContacts = googleAgendaEventInviteeContacts(item)
+                      return (
+                        <article key={item.id} className="google-agenda-event-card">
+                          <div>
+                            <strong>{item.summary}</strong>
+                            <span>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</span>
+                            <span>{item.google_calendar_email}</span>
+                            {item.location ? <span>{item.location}</span> : null}
+                            {eventInvitees.length > 0 ? <span>Invites : {eventInvitees.join(', ')}</span> : null}
+                            {eventInviteeContacts.length > 0 ? (
+                              <div className="google-agenda-event-contact-row">
+                                {eventInviteeContacts.map((contactLink) => contactLink.hektorContactId && props.onOpenContact ? (
+                                  <button key={`event-contact-${item.id}-${contactLink.email}`} type="button" onClick={() => props.onOpenContact?.(contactLink.hektorContactId as string)}>
+                                    <strong>{contactLink.label || contactLink.email}</strong>
+                                    <span>Contact {contactLink.hektorContactId}</span>
+                                  </button>
+                                ) : (
+                                  <span key={`event-contact-${item.id}-${contactLink.email}`}>{contactLink.label || contactLink.email}</span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="google-agenda-event-actions">
+                            {item.google_html_link ? (
+                              <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Ouvrir</a>
+                            ) : null}
+                            <button className="ghost-button button-subtle" type="button" onClick={() => handleEditGoogleAgendaEvent(item)} disabled={pending || deletingId === item.id}>
+                              Modifier
+                            </button>
+                            <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleAgendaEvent(item)} disabled={deletingId === item.id}>
+                              {deletingId === item.id ? 'Suppression...' : 'Supprimer'}
+                            </button>
+                          </div>
+                        </article>
+                      )
+                    })}
                   </div>
                 ) : <p className="empty-state">{loading ? 'Chargement des RDV Google...' : 'Aucun RDV Google lie a cette annonce.'}</p>}
               </section>
