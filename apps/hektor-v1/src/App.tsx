@@ -2035,6 +2035,101 @@ function rawDetailFirstProp(detail: DossierDetailPayload, group: string, keys: s
   return ''
 }
 
+const hektorWizardRawDetailGroups = [
+  'mandat_infofi',
+  'mandat_mandatdispo',
+  'secteur',
+  'ag_interieur',
+  'ag_exterieur',
+  'terrain',
+  'equipements',
+  'diagnostiques',
+  'copropriete',
+  'organiser_visite',
+]
+
+function wizardFieldRawCandidates(name: string) {
+  const candidates = [name]
+  if (name.endsWith('-')) candidates.push(name.slice(0, -1))
+  else candidates.push(`${name}-`)
+  return candidates
+}
+
+function rawWizardDetailField(detail: DossierDetailPayload, name: string) {
+  const candidates = wizardFieldRawCandidates(name)
+  for (const group of hektorWizardRawDetailGroups) {
+    const value = rawDetailFirstProp(detail, group, candidates)
+    if (value) return value
+  }
+  return ''
+}
+
+function wizardDetailValue(
+  dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_dossier' | 'diffusable'>,
+  detail: DossierDetailPayload,
+  field: DraftAnnonceWizardField,
+) {
+  const name = field.name
+  const mapped: Record<string, unknown> = {
+    titre: firstNonEmpty(detail.texte_principal_titre, dossier.titre_bien),
+    corps: firstNonEmpty(detail.texte_principal_html, detail.corps_listing_html),
+    prix: firstNonEmpty(detail.prix_publique, dossier.prix),
+    PRIXNETVENDEUR: detail.prix_net_vendeur,
+    surfappart: firstNonEmpty(detail.surface_habitable_detail, detail.surface),
+    surfterrain: detail.surface_terrain_detail,
+    nbpieces: detail.nb_pieces,
+    NB_CHAMBRES: detail.nb_chambres,
+    codepublique: firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_detail, detail.code_postal),
+    villepublique: firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail),
+    ADRESSE_COMPL: firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail),
+    latitude: detail.latitude_detail,
+    longitude: detail.longitude_detail,
+    NO_DOSSIER: firstNonEmpty(dossier.numero_dossier, rawDetailProp(detail, 'mandat_mandatdispo', 'NO_DOSSIER')),
+    dateenr: firstNonEmpty(detail.date_enregistrement_annonce, rawDetailProp(detail, 'mandat_mandatdispo', 'dateenr')),
+    diffusable: isDiffusableValue(firstNonEmpty(detail.diffusable, dossier.diffusable)) ? '1' : '0',
+  }
+  const direct = mapped[name]
+  if (direct != null && String(direct).trim()) return String(direct).trim()
+  const raw = rawWizardDetailField(detail, name)
+  if (raw) return raw
+  return field.defaultValue ?? ''
+}
+
+type HektorWizardDetailGroup = Omit<DraftAnnonceWizardGroup, 'fields'> & {
+  fields: Array<DraftAnnonceWizardField & { value: string }>
+}
+
+function buildHektorWizardDetailGroups(
+  dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_dossier' | 'diffusable' | 'type_bien'>,
+  detail: DossierDetailPayload,
+): HektorWizardDetailGroup[] {
+  const profileKind = hektorPropertyProfileKindForDetail(dossier, detail)
+  return filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, profileKind).map((group) => ({
+    ...group,
+    fields: group.fields.map((field) => ({
+      ...field,
+      value: wizardDetailValue(dossier, detail, field),
+    })),
+  }))
+}
+
+function buildHektorWizardUpdateDraft(
+  dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_dossier' | 'diffusable' | 'type_bien'>,
+  detail: DossierDetailPayload,
+) {
+  return Object.fromEntries(
+    buildHektorWizardDetailGroups(dossier, detail)
+      .flatMap((group) => group.fields.map((field) => [field.name, field.value])),
+  ) as Record<string, string>
+}
+
+function wizardDisplayValue(field: DraftAnnonceWizardField, value: string) {
+  const clean = String(value ?? '').trim()
+  if (!clean) return '-'
+  const option = field.options?.find((item) => item.value === clean)
+  return option?.label ?? clean
+}
+
 function hektorPropertyProfileKindForDetail(
   dossier: Pick<Dossier, 'type_bien'>,
   detail: DossierDetailPayload,
@@ -2101,8 +2196,10 @@ const hektorFinancialFieldKeys = new Set<HektorAdvancedFieldKey>([
   'fees',
 ])
 
+const hektorUnsupportedDirectUpdateWizardFields = new Set(['diffusable'])
+
 function HektorAnnonceUpdateForm(props: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email' | 'type_bien'>
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'titre_bien' | 'prix' | 'numero_dossier' | 'numero_mandat' | 'negociateur_email' | 'type_bien' | 'diffusable'>
   detail: DossierDetailPayload
   compact?: boolean
   fieldPanel?: boolean
@@ -2111,28 +2208,28 @@ function HektorAnnonceUpdateForm(props: {
   onMissingNegotiator?: MissingNegotiatorHandler
 }) {
   const { dossier, detail } = props
-  const [values, setValues] = useState<Record<HektorAdvancedFieldKey, string>>(() => buildHektorAdvancedDraft(dossier, detail))
+  const [values, setValues] = useState<Record<string, string>>(() => buildHektorWizardUpdateDraft(dossier, detail))
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const profileKind = hektorPropertyProfileKindForDetail(dossier, detail)
-  const visibleSections = hektorAdvancedSections
+  const visibleSections = filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, profileKind)
     .map((section) => ({
       ...section,
-      fields: section.fields.filter((field) => isHektorAdvancedFieldVisibleForProfile(profileKind, field.key)),
+      fields: section.fields.filter((field) => !hektorUnsupportedDirectUpdateWizardFields.has(field.name)),
     }))
     .filter((section) => section.fields.length > 0)
-  const visibleFieldKeys = new Set(visibleSections.flatMap((section) => section.fields.map((field) => field.key)))
+  const visibleFieldNames = new Set(visibleSections.flatMap((section) => section.fields.map((field) => field.name)))
 
   useEffect(() => {
-    setValues(buildHektorAdvancedDraft(dossier, detail))
+    setValues(buildHektorWizardUpdateDraft(dossier, detail))
     setMessage(null)
     setError(null)
     setPending(false)
-  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_mandat, dossier.type_bien, detail.detail_raw_json, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres])
+  }, [dossier.app_dossier_id, dossier.titre_bien, dossier.prix, dossier.numero_dossier, dossier.numero_mandat, dossier.diffusable, dossier.type_bien, detail.detail_raw_json, detail.texte_principal_titre, detail.texte_principal_html, detail.corps_listing_html, detail.adresse_privee_listing, detail.adresse_detail, detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal, detail.ville_publique_listing, detail.ville_privee_detail, detail.latitude_detail, detail.longitude_detail, detail.surface_habitable_detail, detail.surface, detail.nb_pieces, detail.nb_chambres, detail.diffusable])
 
-  const updateField = (key: HektorAdvancedFieldKey, value: string) => {
-    setValues((current) => ({ ...current, [key]: value }))
+  const updateField = (name: string, value: string) => {
+    setValues((current) => ({ ...current, [name]: value }))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -2143,17 +2240,12 @@ function HektorAnnonceUpdateForm(props: {
       props.onMissingNegotiator?.(dossier)
       return
     }
-    const baseline = buildHektorAdvancedDraft(dossier, detail)
+    const baseline = buildHektorWizardUpdateDraft(dossier, detail)
     const changedValues = Object.fromEntries(
-      Object.entries(values).filter(([key, value]) => visibleFieldKeys.has(key as HektorAdvancedFieldKey) && String(value ?? '').trim() !== String(baseline[key as HektorAdvancedFieldKey] ?? '').trim()),
-    ) as Partial<Record<HektorAdvancedFieldKey, string>>
+      Object.entries(values).filter(([key, value]) => visibleFieldNames.has(key) && String(value ?? '').trim() !== String(baseline[key] ?? '').trim()),
+    ) as Record<string, string>
     if (Object.keys(changedValues).length === 0) {
       setError('Aucune modification a envoyer.')
-      return
-    }
-    const blockedFinancialFields = Object.keys(changedValues).filter((key) => hektorFinancialFieldKeys.has(key as HektorAdvancedFieldKey))
-    if (blockedFinancialFields.length > 0) {
-      setError("Hektor refuse la modification directe du prix et des champs financiers depuis cette fiche. Utilise le workflow mandat/statut adapte ou modifie ces champs directement dans Hektor.")
       return
     }
     setPending(true)
@@ -2161,8 +2253,8 @@ function HektorAnnonceUpdateForm(props: {
       const job = await createUpdateHektorAnnonceFieldsJob({
         dossier,
         fields: {
-          ...changedValues,
           propertyProfile: profileKind,
+          wizardFields: changedValues,
         },
         priority: 14,
       })
@@ -2182,12 +2274,12 @@ function HektorAnnonceUpdateForm(props: {
         <span className="hektor-inline-icon" aria-hidden="true">M</span>
         <div>
           <strong>Modifier dans Hektor</strong>
-          <small>Ordre Hektor : Offre, Secteur, Details, Mandat / Prix, puis Diffusion.</small>
+          <small>Memes pages et champs techniques que la creation Hektor.</small>
         </div>
       </div>
       <div className="hektor-advanced-sections">
         {visibleSections.map((section) => (
-          <section key={section.title} className={`hektor-advanced-section hektor-advanced-section-${section.tone}`}>
+          <section key={section.title} className={`hektor-advanced-section hektor-advanced-section-step-${section.step}`}>
             <div className="hektor-advanced-section-head">
               <strong>{section.title}</strong>
               <span>{section.fields.length}</span>
@@ -2195,23 +2287,24 @@ function HektorAnnonceUpdateForm(props: {
             <div className="hektor-advanced-grid">
               {section.fields.map((field) => (
                 field.multiline ? (
-                  <label key={field.key} className="hektor-inline-textarea hektor-advanced-textarea">
+                  <label key={field.name} className="hektor-inline-textarea hektor-advanced-textarea">
                     <span>{field.label}</span>
-                    <textarea value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)} placeholder={field.placeholder} />
+                    <textarea value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)} placeholder={field.placeholder ?? draftAnnonceWizardPlaceholder(field)} />
                   </label>
                 ) : field.options ? (
-                  <label key={field.key}>
+                  <label key={field.name}>
                     <span>{field.label}</span>
-                    <select value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)}>
+                    <select value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)}>
+                      {field.options.some((option) => option.value === '') ? null : <option value="">-</option>}
                       {field.options.map((option) => (
-                        <option key={`${field.key}-${option.value}`} value={option.value}>{option.label}</option>
+                        <option key={`${field.name}-${option.value}`} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </label>
                 ) : (
-                  <label key={field.key}>
+                  <label key={field.name}>
                     <span>{field.label}</span>
-                    <input value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)} inputMode={field.inputMode} placeholder={field.placeholder ?? field.label} />
+                    <input value={values[field.name] ?? ''} onChange={(event) => updateField(field.name, event.target.value)} inputMode={field.inputMode} placeholder={field.placeholder ?? draftAnnonceWizardPlaceholder(field)} />
                   </label>
                 )
               ))}
@@ -2226,6 +2319,46 @@ function HektorAnnonceUpdateForm(props: {
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
       </div>
     </form>
+  )
+}
+
+function HektorAnnonceFieldDetailPanel(props: {
+  dossier: Pick<Dossier, 'titre_bien' | 'prix' | 'numero_dossier' | 'diffusable' | 'type_bien'>
+  detail: DossierDetailPayload
+}) {
+  const groups = buildHektorWizardDetailGroups(props.dossier, props.detail)
+  const totalFields = groups.reduce((count, group) => count + group.fields.length, 0)
+  const filledFields = groups.reduce((count, group) => count + group.fields.filter((field) => String(field.value ?? '').trim()).length, 0)
+
+  return (
+    <section className="detail-section detail-hektor-fields-section">
+      <div className="section-header">
+        <DetailSectionTitle icon="summary" title="Champs Hektor" />
+        <span>{filledFields}/{totalFields} renseignes</span>
+      </div>
+      <div className="hektor-detail-field-groups">
+        {groups.map((group, index) => {
+          const groupFilled = group.fields.filter((field) => String(field.value ?? '').trim()).length
+          return (
+            <details key={`hektor-detail-group-${group.title}`} className="hektor-detail-field-group" open={index < 3}>
+              <summary>
+                <strong>{group.title}</strong>
+                <span>{groupFilled}/{group.fields.length}</span>
+              </summary>
+              <div className="hektor-detail-field-grid">
+                {group.fields.map((field) => (
+                  <article key={`hektor-detail-field-${group.title}-${field.name}`} className={String(field.value ?? '').trim() ? 'is-filled' : 'is-empty'}>
+                    <span>{field.label}</span>
+                    <strong>{wizardDisplayValue(field, field.value)}</strong>
+                    <small>{field.name}</small>
+                  </article>
+                ))}
+              </div>
+            </details>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -15898,6 +16031,10 @@ function DossierDetailLayout(props: {
               ) : null}
 
               {activeDetailTab === 'content' ? (
+                <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
+              ) : null}
+
+              {activeDetailTab === 'content' ? (
               <section className="detail-section detail-features-section">
                 <div className="section-header"><DetailSectionTitle icon="summary" title="Caracteristiques du bien" /></div>
                 <div className="info-grid">
@@ -16855,6 +16992,9 @@ function MobileDossierDetail(props: {
             <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
           </div>
         ) : null}
+        <div className="mobile-detail-embedded">
+          <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
+        </div>
         {!isLightweightDetail ? <div className="mobile-console-documents">
           <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
         </div> : null}

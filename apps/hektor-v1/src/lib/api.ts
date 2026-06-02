@@ -4970,6 +4970,7 @@ export type HektorAnnonceUpdateFields = {
   mandateStartDate?: string | null
   mandateEndDate?: string | null
   fees?: string | number | null
+  wizardFields?: Record<string, string | number | null | undefined>
 }
 
 export type HektorMandatAutoNumberInput = {
@@ -5036,6 +5037,9 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
     mandate_start_date: input.fields.mandateStartDate?.trim() || null,
     mandate_end_date: input.fields.mandateEndDate?.trim() || null,
     fees: input.fields.fees == null ? null : String(input.fields.fees).trim() || null,
+    hektor_wizard_fields: input.fields.wizardFields
+      ? Object.fromEntries(Object.entries(input.fields.wizardFields).map(([key, value]) => [key, value == null ? null : String(value).trim() || null]))
+      : null,
   }
   const updateFields = Object.fromEntries(Object.entries(cleanFields).filter(([, value]) => value !== null))
   if (Object.keys(updateFields).length === 0) throw new Error('Aucune modification a envoyer')

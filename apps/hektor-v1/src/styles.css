@@ -12219,7 +12219,10 @@ button.metric-card.is-active {
     rgba(255, 255, 255, 0.9);
 }
 .hektor-advanced-section-main,
-.hektor-advanced-section-mandate {
+.hektor-advanced-section-mandate,
+.hektor-advanced-section-step-1,
+.hektor-advanced-section-step-6,
+.hektor-advanced-section-step-7 {
   grid-column: 1 / -1;
 }
 .hektor-advanced-section-head {
@@ -12270,7 +12273,9 @@ button.metric-card.is-active {
   font-weight: 900;
   text-transform: uppercase;
 }
-.hektor-advanced-grid input {
+.hektor-advanced-grid input,
+.hektor-advanced-grid select,
+.hektor-advanced-grid textarea {
   width: 100%;
   min-height: 38px;
   border: 1px solid rgba(34, 35, 35, 0.16);
@@ -12282,13 +12287,108 @@ button.metric-card.is-active {
   font-weight: 800;
   outline: none;
 }
-.hektor-advanced-grid input:focus {
+.hektor-advanced-grid select {
+  appearance: auto;
+}
+.hektor-advanced-grid textarea {
+  line-height: 1.4;
+}
+.hektor-advanced-grid input:focus,
+.hektor-advanced-grid select:focus,
+.hektor-advanced-grid textarea:focus {
   border-color: rgba(197, 0, 95, 0.48);
   box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.1);
 }
 .hektor-inline-textarea textarea {
   min-height: 72px;
   resize: vertical;
+}
+.hektor-detail-field-groups {
+  display: grid;
+  gap: 10px;
+}
+.hektor-detail-field-group {
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+}
+.hektor-detail-field-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(15, 104, 116, 0.08), rgba(197, 0, 95, 0.05));
+}
+.hektor-detail-field-group summary strong {
+  font-size: 13px;
+  font-weight: 950;
+  color: var(--gti-final-ink);
+}
+.hektor-detail-field-group summary span {
+  min-width: 42px;
+  text-align: center;
+  border-radius: 8px;
+  padding: 4px 7px;
+  background: rgba(15, 104, 116, 0.1);
+  color: #0f6874;
+  font-size: 11px;
+  font-weight: 950;
+}
+.hektor-detail-field-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+.hektor-detail-field-grid article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(34, 35, 35, 0.08);
+  border-radius: 8px;
+  padding: 9px;
+  background: #fbfcfd;
+}
+.hektor-detail-field-grid article.is-empty {
+  opacity: 0.62;
+}
+.hektor-detail-field-grid article span,
+.hektor-detail-field-grid article small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hektor-detail-field-grid article span {
+  color: #687070;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hektor-detail-field-grid article strong {
+  min-height: 18px;
+  color: var(--gti-final-ink);
+  font-size: 13px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.hektor-detail-field-grid article small {
+  color: rgba(104, 112, 112, 0.72);
+  font-size: 10px;
+  font-weight: 800;
+}
+@media (max-width: 920px) {
+  .hektor-detail-field-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .hektor-detail-field-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .hektor-inline-actions {
   display: flex;
@@ -29391,7 +29491,10 @@ body {
 }
 
 .detail-edit-popup .hektor-advanced-section-main,
-.detail-edit-popup .hektor-advanced-section-mandate {
+.detail-edit-popup .hektor-advanced-section-mandate,
+.detail-edit-popup .hektor-advanced-section-step-1,
+.detail-edit-popup .hektor-advanced-section-step-6,
+.detail-edit-popup .hektor-advanced-section-step-7 {
   grid-column: 1 / -1 !important;
 }
 
@@ -29401,7 +29504,10 @@ body {
 }
 
 .detail-edit-popup .hektor-advanced-section-main .hektor-advanced-grid,
-.detail-edit-popup .hektor-advanced-section-mandate .hektor-advanced-grid {
+.detail-edit-popup .hektor-advanced-section-mandate .hektor-advanced-grid,
+.detail-edit-popup .hektor-advanced-section-step-1 .hektor-advanced-grid,
+.detail-edit-popup .hektor-advanced-section-step-6 .hektor-advanced-grid,
+.detail-edit-popup .hektor-advanced-section-step-7 .hektor-advanced-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 }
 
@@ -29419,6 +29525,8 @@ body {
 }
 
 .detail-edit-popup .hektor-advanced-grid input,
+.detail-edit-popup .hektor-advanced-grid select,
+.detail-edit-popup .hektor-advanced-grid textarea,
 .detail-edit-popup .hektor-inline-grid input,
 .detail-edit-popup .hektor-inline-grid select,
 .detail-edit-popup .hektor-inline-textarea textarea {

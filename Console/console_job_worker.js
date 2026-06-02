@@ -3543,9 +3543,18 @@ async function resolveHektorPublicLocality(postalCode, city) {
 }
 
 function exactHektorWizardFields(payload) {
-  const source = payload && typeof payload === "object"
-    ? (payload.hektor_wizard_fields || payload.wizard_fields || payload.wizardFields || null)
-    : null;
+  let source = null;
+  if (payload && typeof payload === "object") {
+    source = payload.hektor_wizard_fields || payload.wizard_fields || payload.wizardFields || null;
+    const nested = payload.fields_json && typeof payload.fields_json === "object"
+      ? payload.fields_json
+      : payload.fields && typeof payload.fields === "object"
+        ? payload.fields
+        : null;
+    if (!source && nested) {
+      source = nested.hektor_wizard_fields || nested.wizard_fields || nested.wizardFields || null;
+    }
+  }
   return source && typeof source === "object" && !Array.isArray(source) ? source : {};
 }
 
@@ -3737,6 +3746,90 @@ function filterHektorAnnonceUpdateFieldsForProfile(payload, clean) {
     if (HEKTOR_UPDATE_COMMON_FIELDS.has(key) || allowed.has(key)) filtered[key] = value;
   }
   return filtered;
+}
+
+const HEKTOR_WIZARD_UPDATE_GROUPS = [
+  {
+    group: "secteur",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["codepublique", "villepublique", "idCodepublique", "idVillepublique", "idLocalitePrivee", "ADRESSE_COMPL", "adresse", "immeuble", "TRANSPORT", "PROXIMITE", "ENVIRONNEMENT", "latitude", "longitude"]),
+  },
+  {
+    group: "ag_interieur",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee", "typePiece", "detailPiece", "etagePiece", "surfacePiece", "notePublique", "notePrivee", "noteInterAgence"]),
+  },
+  {
+    group: "ag_exterieur",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "RESIDENCE", "TYPE_RESIDENCE"]),
+  },
+  {
+    group: "terrain",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["surfterrain"]),
+  },
+  {
+    group: "equipements",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["formatChauff", "typeChauff", "energieChauff", "ASCENSEUR", "ACCES_HANDI", "climatisation", "climatisationspec", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ENERGIE_EAU", "cheminee", "volets_elctriques", "gardien", "double_vitrage", "triple_vitrage", "cable", "porte_blindee", "interphone", "visiophone", "alarme", "digicode", "detecteur_fumee"]),
+  },
+  {
+    group: "diagnostiques",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["ANNEE_CONS", "ANNEE_CONSTRUCTION", "etat_exterieur", "ETAT_EXTERIEUR", "etat_interieur", "ETAT_INTERIEUR", "dpe_date", "dpe_non_concerne", "dpe_vierge", "isDpeAltitude", "dpe_cons", "DPE", "dpe_ges", "GES", "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference", "diagnostiqueur", "syndic", "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante", "diag_amiante_date", "diag_amiante_commentaire", "diag_electrique", "diag_electrique_date", "diag_electrique_commentaire", "diag_loi_carrez", "diag_loi_carrez_date", "diag_loi_carrez_commentaire", "diag_risques_nat_tech", "diag_risques_nat_tech_date", "diag_risques_nat_tech_commentaire", "diag_plomb", "diag_plomb_date", "diag_plomb_commentaire", "diag_gaz", "diag_gaz_date", "diag_gaz_commentaire", "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire", "clearing"]),
+  },
+  {
+    group: "copropriete",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["copropriete", "copropriete_lot", "copropriete_nb_lot", "copropriete_quote_part", "montant_fonds_travaux", "copropriete_plan_sauvegarde", "copropriete_statut_syndicat"]),
+  },
+  {
+    group: "organiser_visite",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite"]),
+  },
+  {
+    group: "mandat_infofi",
+    mode: "ihmChargeGroupe_MandatPrix",
+    fields: new Set(["prix", "PRIXNETVENDEUR", "_selecterHonoraires2", "_tauxHonoraire2", "_pourcentHonoraire2", "_detailHonoraire2", "_selecterHonoraires3", "_tauxHonoraire3", "_pourcentHonoraire3", "_detailHonoraire3", "masque", "ESTIMATION_MONTANT", "ESTIMATION_DATE", "TRAVAUX", "DEPOT_GARANTIE", "TAXE_HABITATION", "TAXE_FONCIERE", "CHARGES", "CHARGES_DETAIL", "Loc_EstimationLoyer", "Loc_ChargeLocative", "Loc_RendementBrut", "Loc_Occupation"]),
+  },
+  {
+    group: "mandat_mandatdispo",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["NO_DOSSIER", "dateenr"]),
+  },
+];
+
+function exactWizardCandidateKeys(key) {
+  const candidates = [key];
+  if (key.endsWith("-")) candidates.push(key.slice(0, -1));
+  else candidates.push(`${key}-`);
+  return candidates;
+}
+
+function buildExactWizardGroupUpdates(payload) {
+  const exact = exactHektorWizardFields(payload);
+  const protectedKeys = new Set(["mode", "step", "idann", "offredem", "programme_neuf", "isInterkabActive", "enabled", "content_pdf", "mdn_id", "diffusable", "titre", "corps"]);
+  const grouped = new Map();
+
+  for (const [rawKey, rawValue] of Object.entries(exact)) {
+    const key = String(rawKey || "").trim();
+    if (!key || protectedKeys.has(key)) continue;
+    if (!/^[A-Za-z0-9_[\]-]+$/.test(key)) continue;
+    if (!isHektorWizardFieldAllowedForPayload(payload, key)) continue;
+    if (rawValue === undefined || rawValue === null) continue;
+    const value = String(rawValue).trim();
+    if (!value) continue;
+    const candidates = exactWizardCandidateKeys(key);
+    const config = HEKTOR_WIZARD_UPDATE_GROUPS.find((item) => candidates.some((candidate) => item.fields.has(candidate)));
+    if (!config) continue;
+    const current = grouped.get(config.group) || { mode: config.mode, fields: {} };
+    current.fields[key] = fieldSpec(value, candidates);
+    grouped.set(config.group, current);
+  }
+
+  return Array.from(grouped.entries()).map(([group, config]) => ({ group, mode: config.mode, fields: config.fields }));
 }
 
 function applyExactHektorWizardFields(body, payload, step) {
@@ -4278,6 +4371,10 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
     description: cleanFields.description,
   });
   if (textResult) results.push(textResult);
+
+  for (const update of buildExactWizardGroupUpdates(fields)) {
+    await pushHektorGroupUpdate(results, job, annonceId, update.group, update.mode, update.fields);
+  }
 
   const secteur = {};
   if (cleanFields.postal_code != null) secteur.postal_code = fieldSpec(cleanFields.postal_code, ["codepublique"]);
