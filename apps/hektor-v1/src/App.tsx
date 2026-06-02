@@ -802,9 +802,43 @@ function buildEmptyDraftAnnonceAdvanced(): Record<DraftAnnonceAdvancedKey, strin
   ) as Record<DraftAnnonceAdvancedKey, string>
 }
 
+const draftAnnonceAdvancedPlaceholderByKey: Partial<Record<DraftAnnonceAdvancedKey, string>> = {
+  description: 'Texte annonce',
+  netSellerPrice: 'Ex : 170000',
+  carrezSurface: 'Ex : 72',
+  livingSurface: 'Ex : 30',
+  garageSurface: 'Ex : 18',
+  bathroomCount: 'Ex : 1',
+  showerRoomCount: 'Ex : 1',
+  wcCount: 'Ex : 1',
+  landSurface: 'Ex : 450',
+  terraceCount: 'Ex : 1',
+  garageCount: 'Ex : 1',
+  parkingInsideCount: 'Ex : 1',
+  parkingOutsideCount: 'Ex : 1',
+  constructionYear: 'Ex : 1985',
+  dpeValue: 'Ex : 180',
+  gesValue: 'Ex : 30',
+  coproLots: 'Ex : 24',
+  coproCharges: 'Ex : 120',
+  coproQuotePart: 'Ex : 250',
+  coproWorksFund: 'Ex : 0',
+}
+
+function draftAnnonceAdvancedPlaceholder(field: DraftAnnonceAdvancedField) {
+  if (field.placeholder) return field.placeholder
+  const mapped = draftAnnonceAdvancedPlaceholderByKey[field.key]
+  if (mapped) return mapped
+  if (field.multiline) return 'Saisir le detail'
+  if (field.inputMode === 'decimal') return 'Ex : 0'
+  if (field.inputMode === 'numeric') return 'Ex : 1'
+  return 'A renseigner'
+}
+
 type DraftAnnonceWizardField = {
   name: string
   label: string
+  placeholder?: string
   inputMode?: 'decimal' | 'numeric'
   multiline?: boolean
   options?: Array<{ value: string; label: string }>
@@ -854,6 +888,47 @@ const wizardProcedureOptions = [
 
 function wf(name: string, label: string, options?: Partial<DraftAnnonceWizardField>): DraftAnnonceWizardField {
   return { name, label, ...options }
+}
+
+const draftAnnonceWizardPlaceholderByName: Record<string, string> = {
+  prix: 'Ex : 180000',
+  PRIXNETVENDEUR: 'Ex : 170000',
+  surfappart: 'Ex : 75',
+  surfterrain: 'Ex : 450',
+  SURFACE_GARAGE: 'Ex : 18',
+  nbpieces: 'Ex : 4',
+  NB_CHAMBRES: 'Ex : 3',
+  NB_NIVEAUX: 'Ex : 2',
+  GARAGE_BOX: 'Ex : 1',
+  codepublique: 'Ex : 42000',
+  villepublique: 'Ex : Saint-Etienne',
+  latitude: 'Ex : 45.4397',
+  longitude: 'Ex : 4.3872',
+  _tauxHonoraire2: 'Ex : 10000',
+  _pourcentHonoraire2: 'Ex : 5',
+  _detailHonoraire2: 'Detail des honoraires acquereur',
+  _tauxHonoraire3: 'Ex : 10000',
+  _pourcentHonoraire3: 'Ex : 5',
+  _detailHonoraire3: 'Detail des honoraires vendeur',
+  ESTIMATION_MONTANT: 'Ex : 180000',
+  ESTIMATION_DATE: 'jj-mm-aaaa',
+  DEPOT_GARANTIE: 'Ex : 1000',
+  TAXE_HABITATION: 'Ex : 800',
+  TAXE_FONCIERE: 'Ex : 1200',
+  CHARGES: 'Ex : 120',
+  Loc_EstimationLoyer: 'Ex : 750',
+  Loc_ChargeLocative: 'Ex : 80',
+  Loc_RendementBrut: 'Ex : 5',
+}
+
+function draftAnnonceWizardPlaceholder(field: DraftAnnonceWizardField) {
+  if (field.placeholder) return field.placeholder
+  const mapped = draftAnnonceWizardPlaceholderByName[field.name]
+  if (mapped) return mapped
+  if (field.multiline) return 'Saisir le detail'
+  if (field.inputMode === 'decimal') return 'Ex : 0'
+  if (field.inputMode === 'numeric') return 'Ex : 1'
+  return 'A renseigner'
 }
 
 const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
@@ -8776,7 +8851,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 className="inline-textarea"
                 value={draftAnnonceAdvanced[field.key]}
                 onChange={(event) => updateDraftAnnonceAdvanced(field.key, event.target.value)}
-                placeholder={field.placeholder ?? field.key}
+                placeholder={draftAnnonceAdvancedPlaceholder(field)}
               />
             </label>
           ) : field.options ? (
@@ -8798,7 +8873,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 value={draftAnnonceAdvanced[field.key]}
                 onChange={(event) => updateDraftAnnonceAdvanced(field.key, event.target.value)}
                 inputMode={field.inputMode}
-                placeholder={field.placeholder ?? field.key}
+                placeholder={draftAnnonceAdvancedPlaceholder(field)}
               />
             </label>
           )
@@ -8822,7 +8897,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 className="inline-textarea"
                 value={draftAnnonceWizardFields[field.name] ?? ''}
                 onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
-                placeholder={field.name}
+                placeholder={draftAnnonceWizardPlaceholder(field)}
               />
             </label>
           ) : field.options ? (
@@ -8844,7 +8919,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 value={draftAnnonceWizardFields[field.name] ?? ''}
                 onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
                 inputMode={field.inputMode}
-                placeholder={field.name}
+                placeholder={draftAnnonceWizardPlaceholder(field)}
               />
             </label>
           )
