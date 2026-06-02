@@ -9,6 +9,10 @@ import requests
 from fastapi import HTTPException
 
 from ..settings import Settings
+from .google_workspace_service import GMAIL_SEND_SCOPE, GoogleWorkspaceService
+
+
+LEGACY_PERSONAL_GMAIL_SENDERS = {"frederic.gerphagnon@gti-immobilier.fr"}
 
 
 class NotificationService:
@@ -22,6 +26,24 @@ class NotificationService:
             and self.settings.google_refresh_token
             and self.settings.google_sender_email
         )
+
+    def _has_google_workspace(self) -> bool:
+        service_account_file = self.settings.google_workspace_service_account_file
+        configured_scopes = set(self.settings.google_workspace_scopes)
+        return bool(
+            self.settings.google_workspace_auth_mode == "domain_wide_delegation"
+            and self.settings.google_workspace_dwd_client_id
+            and service_account_file
+            and service_account_file.exists()
+            and self.settings.google_workspace_subject_email
+            and GMAIL_SEND_SCOPE in configured_scopes
+        )
+
+    def _has_smtp(self) -> bool:
+        return bool(self.settings.smtp_host and self.settings.smtp_user and self.settings.smtp_pass)
+
+    def _is_legacy_personal_gmail_sender(self) -> bool:
+        return (self.settings.google_sender_email or "").strip().lower() in LEGACY_PERSONAL_GMAIL_SENDERS
 
     def _assert_smtp_configured(self) -> None:
         if not self.settings.smtp_host or not self.settings.smtp_user or not self.settings.smtp_pass:
@@ -127,8 +149,55 @@ class NotificationService:
 
         return {"ok": True, "messageId": message.get("Message-Id")}
 
+    def _send_with_google_workspace(self, payload: dict[str, Any]) -> dict[str, Any]:
+        subject_email = str(self.settings.google_workspace_subject_email or "").strip().lower()
+        to = str(payload.get("to") or "").strip()
+        subject = str(payload.get("subject") or "").strip()
+        body_text = str(payload.get("bodyText") or "").strip()
+        body_html = str(payload.get("bodyHtml") or "").strip() or None
+        from_name = str(payload.get("fromName") or "").strip() or "Application GTI"
+        from_email = str(payload.get("fromEmail") or "").strip() or None
+        reply_to = str(payload.get("replyTo") or "").strip() or from_email
+
+        try:
+            result = GoogleWorkspaceService(self.settings).send_gmail_message(
+                subject_email=subject_email,
+                to=[to],
+                subject=subject,
+                body_text=body_text,
+                body_html=body_html,
+                from_name=from_name,
+                reply_to=reply_to,
+                dry_run=False,
+                requested_by_email=from_email,
+                related_entity_type="notification",
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+        if not result.get("ok"):
+            raise HTTPException(status_code=500, detail=str(result.get("error") or "Envoi Gmail Workspace impossible"))
+        return {"ok": True, "messageId": result.get("messageId")}
+
     def send_diffusion_decision(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self._has_google_workspace():
+            return self._send_with_google_workspace(payload)
+
         message = self._build_message(payload)
+        if self._has_smtp():
+            return self._send_with_smtp(message)
+
         if self._has_google_oauth():
+            if self._is_legacy_personal_gmail_sender():
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Ancien Gmail personnel desactive pour les notifications. "
+                        "Configurer Google Workspace accueil@gti-immobilier.fr ou SMTP."
+                    ),
+                )
             return self._send_with_gmail_api(message)
+
         return self._send_with_smtp(message)
