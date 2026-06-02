@@ -492,6 +492,26 @@ export async function createGoogleCalendarEvent(input: {
   })
 }
 
+export async function updateGoogleCalendarEvent(linkId: string, input: {
+  summary?: string | null
+  startAt?: string | null
+  endAt?: string | null
+  description?: string | null
+  location?: string | null
+  attendees?: string[] | null
+  sendUpdates?: 'all' | 'externalOnly' | 'none'
+  dryRun?: boolean
+}) {
+  return invokeBackendApi<{ ok: true; eventId?: string | null; htmlLink?: string | null; linkSaved?: boolean; link?: GoogleCalendarEventLink }>(`/google-workspace/calendar/events/${encodeURIComponent(linkId)}`, {
+    method: 'PATCH',
+    body: {
+      ...input,
+      sendUpdates: input.sendUpdates ?? 'all',
+      dryRun: Boolean(input.dryRun),
+    },
+  })
+}
+
 export async function deleteGoogleCalendarEvent(linkId: string, input: { sendUpdates?: 'all' | 'externalOnly' | 'none' } = {}) {
   return invokeBackendApi<{ ok: true; eventId?: string | null; linkSaved?: boolean; link?: GoogleCalendarEventLink }>(`/google-workspace/calendar/events/${encodeURIComponent(linkId)}`, {
     method: 'DELETE',
