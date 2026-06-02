@@ -3144,6 +3144,19 @@ function compositionPieceRecordText(record: Record<string, unknown>, keys: strin
   return ''
 }
 
+function compositionPieceTypeIdFromRecord(record: Record<string, unknown>) {
+  const direct = compositionPieceRecordText(record, ['idTypePiece', 'id_type_piece', 'id_type', 'typePiece', 'idType', 'type_id'])
+  if (direct) return direct
+  const typeValue = compositionPieceRecordText(record, ['type'])
+  return /^\d+$/.test(typeValue) ? typeValue : ''
+}
+
+function formatCompositionPieceLabel(value: string) {
+  const clean = value.trim()
+  if (!clean) return ''
+  return clean.slice(0, 1).toUpperCase() + clean.slice(1)
+}
+
 function compositionPieceRowsFromUnknown(value: unknown): Record<string, unknown>[] {
   if (!value) return []
   if (typeof value === 'string') return compositionPieceRowsFromUnknown(parseJson<unknown>(value, null))
@@ -3157,18 +3170,18 @@ function compositionPieceRowsFromUnknown(value: unknown): Record<string, unknown
 
 function normalizeHektorCompositionPieceDraft(item: Record<string, unknown>, index: number): HektorCompositionPieceDraft | null {
   const idPiece = compositionPieceRecordText(item, ['idPiece', 'id_piece', 'id', 'ID', 'idpiece'])
-  const idTypePiece = compositionPieceRecordText(item, ['idTypePiece', 'id_type_piece', 'typePiece', 'idType', 'type_id', 'type'])
-  const typeLabel = compositionPieceRecordText(item, ['typeLabel', 'type_label', 'type_piece', 'typePieceLabel', 'labelTypePiece', 'libelleTypePiece', 'libelle', 'label'])
+  const idTypePiece = compositionPieceTypeIdFromRecord(item)
+  const typeLabel = compositionPieceRecordText(item, ['typeLabel', 'type_label', 'type_piece', 'typePieceLabel', 'labelTypePiece', 'libelleTypePiece', 'libelle', 'label', 'type'])
   const detailPiece = compositionPieceRecordText(item, ['detailPiece', 'detail_piece', 'detail', 'description', 'namePiece', 'name', 'nom'])
   const piece = createEmptyHektorCompositionPieceDraft({
     localId: idPiece ? `remote-piece-${idPiece}` : `remote-piece-${index + 1}`,
     idPiece,
     idTypePiece: idTypePiece || '1',
-    typeLabel: typeLabel || hektorCompositionPieceTypeLabel(idTypePiece),
+    typeLabel: hektorCompositionPieceTypeLabel(idTypePiece) || formatCompositionPieceLabel(typeLabel),
     namePiece: compositionPieceRecordText(item, ['namePiece', 'name_piece', 'customName']),
     detailPiece,
     etagePiece: compositionPieceRecordText(item, ['etagePiece', 'etage_piece', 'etage', 'floor']),
-    surfacePiece: compositionPieceRecordText(item, ['surfacePiece', 'surface_piece', 'surface']),
+    surfacePiece: compositionPieceRecordText(item, ['surfacePiece', 'surface_piece', 'surface', 'superficie', 'superficiePiece', 'surface_m2']),
     notePublique: compositionPieceRecordText(item, ['notePublique', 'note_publique', 'notePublic', 'note_public']),
     notePrivee: compositionPieceRecordText(item, ['notePrivee', 'note_privee', 'notePrivate', 'note_private']),
     noteInterAgence: compositionPieceRecordText(item, ['noteInterAgence', 'note_inter_agence', 'noteInterAgency', 'note_interagency']),
