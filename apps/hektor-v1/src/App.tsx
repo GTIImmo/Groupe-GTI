@@ -5254,6 +5254,7 @@ function buildDiffusionDecisionEmail(input: {
         '',
         `Dossier : ${dossierLabel}`,
         `Statut : ${isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation mandat acceptee' : 'Validation acceptee'}`,
+        `Traite par : ${actorLabel}`,
         trimmedResponse ? `Commentaire : ${trimmedResponse}` : null,
         '',
         `Action : ${isPriceDrop ? "Ouvrir l'application pour suivre la demande de prix." : isCancellation ? "Ouvrir l'application pour suivre la demande d'annulation de mandat." : "Ouvrir l'application pour suivre la validation."}`,
@@ -5265,6 +5266,7 @@ function buildDiffusionDecisionEmail(input: {
         '',
         `Dossier : ${dossierLabel}`,
         trimmedRefusalReason ? `Motif : ${trimmedRefusalReason}` : 'Motif : non précisé',
+        `Traite par : ${actorLabel}`,
         trimmedResponse ? `Commentaire : ${trimmedResponse}` : null,
         '',
         `Action : ${isPriceDrop ? "Completer l'avenant puis renvoyer la demande dans l'application." : isCancellation ? "Corriger ou completer la demande d'annulation dans l'application." : "Corriger le dossier puis renvoyer la demande de validation dans l'application."}`,
@@ -5352,7 +5354,7 @@ function buildDiffusionDecisionEmail(input: {
             ${appButton}
           </div>
           <div style="font-size:12px;line-height:1.6;color:#7a828c;border-top:1px solid #efe4d4;padding-top:14px;">
-            Notification automatique GTI. Répondez à cet email pour contacter ${actorLabel}.
+            Notification automatique GTI. Traitement effectue par ${actorLabel}. Ouvrez la demande dans GTI pour repondre ou corriger le dossier.
           </div>
         </div>
       </div>
@@ -5365,8 +5367,8 @@ function buildDiffusionDecisionEmail(input: {
     bodyText: bodyLines.join('\n'),
     bodyHtml,
     fromEmail: actorEmail,
-    fromName: actorLabel,
-    replyTo: actorEmail,
+    fromName: 'GTI Immobilier',
+    replyTo: null,
   }
 }
 

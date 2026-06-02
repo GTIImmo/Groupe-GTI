@@ -67,7 +67,7 @@ class NotificationService:
         effective_sender_email = (
             self.settings.google_sender_email
             if self._has_google_oauth()
-            else (from_email if (self.settings.smtp_allow_user_from and from_email) else (self.settings.smtp_from or self.settings.smtp_user or ""))
+            else (self.settings.smtp_from or self.settings.smtp_user or "")
         )
         if not effective_sender_email:
             raise HTTPException(status_code=500, detail="Adresse d'expéditeur introuvable")
@@ -76,8 +76,8 @@ class NotificationService:
         message["To"] = to
         message["Subject"] = subject
         message["From"] = f'"{from_name.replace("\"", "\'")}" <{effective_sender_email}>'
-        if reply_to or from_email:
-            message["Reply-To"] = reply_to or from_email or ""
+        if reply_to:
+            message["Reply-To"] = reply_to
         message.set_content(body_text)
         if body_html:
             message.add_alternative(body_html, subtype="html")
@@ -157,7 +157,7 @@ class NotificationService:
         body_html = str(payload.get("bodyHtml") or "").strip() or None
         from_name = str(payload.get("fromName") or "").strip() or "Application GTI"
         from_email = str(payload.get("fromEmail") or "").strip() or None
-        reply_to = str(payload.get("replyTo") or "").strip() or from_email
+        reply_to = str(payload.get("replyTo") or "").strip() or None
 
         try:
             result = GoogleWorkspaceService(self.settings).send_gmail_message(
