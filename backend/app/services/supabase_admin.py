@@ -223,6 +223,48 @@ class SupabaseAdminService:
             raise HTTPException(status_code=403, detail="Acces admin refuse")
         return profile
 
+    def assert_active_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
+        profile = self.load_profile(user)
+        if not profile:
+            raise HTTPException(status_code=403, detail=f"Profil utilisateur introuvable pour {user.email or user.id}")
+        if profile.get("is_active") is not True:
+            raise HTTPException(status_code=403, detail="Compte utilisateur inactif")
+        return profile
+
+    def assert_calendar_subject_allowed(self, user: AuthenticatedUser, subject_email: str) -> dict[str, Any]:
+        profile = self.assert_active_profile(user)
+        normalized_subject = self._normalize_email(subject_email)
+        if not self._is_workspace_email(normalized_subject):
+            raise HTTPException(status_code=400, detail=f"Compte Agenda hors domaine {self.settings.google_workspace_domain}")
+
+        role = str(profile.get("role") or "")
+        if role in {"admin", "manager"}:
+            return profile
+        if role != "commercial":
+            raise HTTPException(status_code=403, detail="Role non autorise pour modifier Google Agenda")
+
+        identity_rows = self._rest_rows(
+            "app_google_workspace_identity",
+            {
+                "select": "google_email,negociateur_email,link_status,is_active",
+                "app_user_id": f"eq.{user.id}",
+                "is_active": "eq.true",
+                "limit": 1,
+            },
+            "Unable to read Google Workspace identity",
+        )
+        identity = identity_rows[0] if identity_rows else {}
+        allowed_emails = {
+            self._normalize_email(user.email),
+            self._normalize_email(profile.get("email")),
+            self._normalize_email(identity.get("google_email")),
+            self._normalize_email(identity.get("negociateur_email")),
+        }
+        allowed_emails.discard("")
+        if normalized_subject not in allowed_emails or identity.get("link_status") != "linked":
+            raise HTTPException(status_code=403, detail="Agenda Google non autorise pour cet utilisateur")
+        return profile
+
     def list_users(self) -> list[dict[str, Any]]:
         response = requests.get(
             f"{self.settings.supabase_url}/rest/v1/app_user_profile",
