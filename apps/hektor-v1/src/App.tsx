@@ -17014,6 +17014,8 @@ function GoogleAgendaAnnonceSection(props: {
   detail: DossierDetailPayload
 }) {
   const dossier = props.dossier
+  const appDossierId = dossier?.app_dossier_id ?? null
+  const hektorAnnonceId = dossier?.hektor_annonce_id ?? null
   const defaultCalendarEmail = safeText(props.detail.appointment_negociateur_email) || safeText(dossier?.negociateur_email)
   const defaultLocation = [
     safeText(props.detail.adresse_privee_listing) || safeText(props.detail.adresse_detail),
@@ -17064,13 +17066,13 @@ function GoogleAgendaAnnonceSection(props: {
   const activeEvents = events.filter((item) => item.status !== 'deleted')
 
   const reloadEvents = useCallback(async () => {
-    if (!dossier) return
+    if (!appDossierId && !hektorAnnonceId) return
     setLoading(true)
     setError(null)
     try {
       const rows = await loadGoogleCalendarEventLinks({
-        appDossierId: dossier.app_dossier_id,
-        hektorAnnonceId: dossier.hektor_annonce_id,
+        appDossierId,
+        hektorAnnonceId,
         limit: 25,
       })
       setEvents(rows)
@@ -17079,7 +17081,7 @@ function GoogleAgendaAnnonceSection(props: {
     } finally {
       setLoading(false)
     }
-  }, [dossier])
+  }, [appDossierId, hektorAnnonceId])
 
   useEffect(() => {
     void reloadEvents()
