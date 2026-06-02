@@ -17040,6 +17040,64 @@ function splitEmailList(value: string) {
     .filter((item, index, list) => item && item.includes('@') && list.indexOf(item) === index)
 }
 
+type GoogleAgendaWindow = {
+  start: string
+  end: string
+}
+
+function dateInputFromDateTimeLocal(value: string | null | undefined) {
+  const date = new Date(value ?? '')
+  if (Number.isNaN(date.getTime())) return toDateTimeLocalValue(new Date()).slice(0, 10)
+  return toDateTimeLocalValue(date).slice(0, 10)
+}
+
+function googleAgendaDayRange(dayValue: string) {
+  const cleanDay = dayValue || toDateTimeLocalValue(new Date()).slice(0, 10)
+  return {
+    startAt: `${cleanDay}T08:00`,
+    endAt: `${cleanDay}T19:00`,
+  }
+}
+
+function minutesBetweenWindow(window: GoogleAgendaWindow) {
+  const start = new Date(window.start)
+  const end = new Date(window.end)
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000))
+}
+
+function buildGoogleAgendaDayWindows(dayValue: string, availability: GoogleCalendarAvailability | null) {
+  const range = googleAgendaDayRange(dayValue)
+  const dayStart = new Date(range.startAt)
+  const dayEnd = new Date(range.endAt)
+  const busy = (availability?.busy ?? [])
+    .map((slot) => {
+      const start = new Date(slot.start ?? '')
+      const end = new Date(slot.end ?? '')
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null
+      const clampedStart = new Date(Math.max(start.getTime(), dayStart.getTime()))
+      const clampedEnd = new Date(Math.min(end.getTime(), dayEnd.getTime()))
+      if (clampedEnd <= clampedStart) return null
+      return { start: clampedStart.toISOString(), end: clampedEnd.toISOString() }
+    })
+    .filter((slot): slot is GoogleAgendaWindow => Boolean(slot))
+    .sort((left, right) => new Date(left.start).getTime() - new Date(right.start).getTime())
+
+  const free: GoogleAgendaWindow[] = []
+  let cursor = dayStart.getTime()
+  for (const slot of busy) {
+    const start = new Date(slot.start).getTime()
+    const end = new Date(slot.end).getTime()
+    if (start > cursor) {
+      free.push({ start: new Date(cursor).toISOString(), end: new Date(start).toISOString() })
+    }
+    cursor = Math.max(cursor, end)
+  }
+  if (cursor < dayEnd.getTime()) {
+    free.push({ start: new Date(cursor).toISOString(), end: dayEnd.toISOString() })
+  }
+  return { busy, free }
+}
+
 function GoogleAgendaAnnonceSection(props: {
   dossier: Dossier | null
   detail: DossierDetailPayload
@@ -17062,6 +17120,10 @@ function GoogleAgendaAnnonceSection(props: {
   const [attendeesText, setAttendeesText] = useState('')
   const [description, setDescription] = useState('')
   const [events, setEvents] = useState<GoogleCalendarEventLink[]>([])
+  const [modalOpen, setModalOpen] = useState(false)
+  const [agendaDate, setAgendaDate] = useState(dateInputFromDateTimeLocal(defaultGoogleAgendaStartValue()))
+  const [dayAvailabilityPending, setDayAvailabilityPending] = useState(false)
+  const [dayAvailability, setDayAvailability] = useState<GoogleCalendarAvailability | null>(null)
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState(false)
   const [availabilityPending, setAvailabilityPending] = useState(false)
@@ -17108,12 +17170,20 @@ function GoogleAgendaAnnonceSection(props: {
     setAvailability(null)
   }, [calendarEmail, durationMinutes, startAt])
 
+  useEffect(() => {
+    setAgendaDate(dateInputFromDateTimeLocal(startAt))
+  }, [startAt])
+
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const activeEvents = events.filter((item) => item.status !== 'deleted')
   const isEditingGoogleAgendaEvent = Boolean(editingEventId)
   const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
   const availabilityBusy = availability?.busy ?? []
   const canCheckAvailability = canUseCalendarEmail && Boolean(startAt) && Boolean(durationMinutes)
+  const dayWindows = buildGoogleAgendaDayWindows(agendaDate, dayAvailability)
+  const nextLinkedEvent = activeEvents
+    .filter((item) => new Date(item.starts_at).getTime() >= Date.now())
+    .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())[0]
 
   const reloadEvents = useCallback(async () => {
     if (!appDossierId && !hektorAnnonceId) return
@@ -17185,6 +17255,51 @@ function GoogleAgendaAnnonceSection(props: {
     } finally {
       setAvailabilityPending(false)
     }
+  }
+
+  async function handleLoadGoogleAgendaDay(dayValue = agendaDate) {
+    setDayAvailabilityPending(true)
+    setDayAvailability(null)
+    setError(null)
+    try {
+      if (!canUseCalendarEmail) throw new Error('Agenda Google Workspace requis')
+      const range = googleAgendaDayRange(dayValue)
+      const result = await checkGoogleCalendarAvailability({
+        subjectEmail: calendarEmail,
+        startAt: range.startAt,
+        endAt: range.endAt,
+      })
+      if (!result.ok) throw new Error('Chargement occupation agenda impossible')
+      setDayAvailability(result)
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Chargement occupation agenda impossible')
+    } finally {
+      setDayAvailabilityPending(false)
+    }
+  }
+
+  function handleOpenGoogleAgendaModal() {
+    const nextDate = dateInputFromDateTimeLocal(startAt)
+    setAgendaDate(nextDate)
+    setModalOpen(true)
+    void reloadEvents()
+    if (canUseCalendarEmail) {
+      void handleLoadGoogleAgendaDay(nextDate)
+    }
+  }
+
+  function handleCloseGoogleAgendaModal() {
+    setModalOpen(false)
+  }
+
+  function handleUseGoogleAgendaWindow(window: GoogleAgendaWindow) {
+    const windowMinutes = minutesBetweenWindow(window)
+    const requestedMinutes = Number(durationMinutes)
+    setStartAt(toDateTimeLocalValue(new Date(window.start)))
+    if (Number.isFinite(requestedMinutes) && requestedMinutes > windowMinutes) {
+      setDurationMinutes(String(windowMinutes))
+    }
+    setAvailability(null)
   }
 
   async function handleSubmitGoogleAgendaEvent(event: FormEvent<HTMLFormElement>) {
@@ -17265,108 +17380,196 @@ function GoogleAgendaAnnonceSection(props: {
         <DetailSectionTitle icon="commercial" title="Agenda Google" />
         {loading ? <span>Chargement...</span> : null}
       </div>
-      <div className="detail-stack google-agenda-grid">
-        <article className="detail-card google-agenda-form-card">
-          <span className="detail-label">{isEditingGoogleAgendaEvent ? 'Modifier le RDV' : 'Creer un RDV'}</span>
-          <form className="google-agenda-form" onSubmit={handleSubmitGoogleAgendaEvent}>
-            <label className="filter-field">
-              <span>Agenda</span>
-              <input value={calendarEmail} onChange={(inputEvent) => setCalendarEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required disabled={isEditingGoogleAgendaEvent} />
-            </label>
-            <label className="filter-field">
-              <span>Type</span>
-              <select value={eventType} onChange={(inputEvent) => setEventType(inputEvent.target.value as GoogleCalendarEventLink['event_type'])}>
-                {googleAgendaEventTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="filter-field google-agenda-field-wide">
-              <span>Titre</span>
-              <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
-            </label>
-            <label className="filter-field">
-              <span>Début</span>
-              <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
-            </label>
-            <label className="filter-field">
-              <span>Durée</span>
-              <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
-                {hasCustomDuration ? <option value={durationMinutes}>{durationMinutes} min</option> : null}
-                <option value="30">30 min</option>
-                <option value="45">45 min</option>
-                <option value="60">1 h</option>
-                <option value="90">1 h 30</option>
-                <option value="120">2 h</option>
-              </select>
-            </label>
-            <label className="filter-field google-agenda-field-wide">
-              <span>Lieu</span>
-              <input value={location} onChange={(inputEvent) => setLocation(inputEvent.target.value)} />
-            </label>
-            <label className="filter-field google-agenda-field-wide">
-              <span>Invités</span>
-              <input value={attendeesText} onChange={(inputEvent) => setAttendeesText(inputEvent.target.value)} placeholder="client@email.fr" />
-            </label>
-            <label className="filter-field google-agenda-field-wide">
-              <span>Description</span>
-              <textarea className="inline-textarea" value={description} onChange={(inputEvent) => setDescription(inputEvent.target.value)} placeholder={isEditingGoogleAgendaEvent ? 'Vide = description Google conservee' : undefined} />
-            </label>
-            {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
-            {message ? <p className="google-agenda-success">{message}</p> : null}
-            {error ? <p className="google-agenda-error">{error}</p> : null}
-            {availability ? (
-              <div className={availability.isAvailable ? 'google-agenda-success' : 'google-agenda-warning'}>
-                <strong>{availability.isAvailable ? 'Disponible sur ce creneau.' : `Conflit agenda : ${availability.busyCount ?? availabilityBusy.length} creneau occupe.`}</strong>
-                {!availability.isAvailable && availabilityBusy.length > 0 ? (
-                  <span>{availabilityBusy.slice(0, 3).map((slot) => `${formatDateTime(slot.start)} - ${formatDateTime(slot.end)}`).join(' | ')}</span>
-                ) : null}
+      <article className="detail-card google-agenda-entry-card">
+        <div>
+          <span className="detail-label">Rendez-vous Google</span>
+          <div className="info-grid">
+            <InfoCard label="Agenda" value={calendarEmail || '-'} />
+            <InfoCard label="RDV lies" value={String(activeEvents.length)} />
+            <InfoCard label="Prochain RDV" value={nextLinkedEvent ? formatDateTime(nextLinkedEvent.starts_at) : '-'} />
+          </div>
+        </div>
+        <div className="google-agenda-entry-actions">
+          {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
+          <button className="ghost-button button-primary" type="button" onClick={handleOpenGoogleAgendaModal}>
+            Ouvrir les RDV Google
+          </button>
+        </div>
+      </article>
+      {modalOpen && typeof document !== 'undefined' ? createPortal(
+        <div className="modal-overlay google-agenda-modal-overlay" onClick={handleCloseGoogleAgendaModal}>
+          <section className="modal-panel google-agenda-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="google-agenda-modal-head">
+              <div>
+                <span className="eyebrow">Google Agenda</span>
+                <h3>Rendez-vous Google</h3>
+                <p>{dossier?.titre_bien || dossier?.numero_dossier || 'Annonce GTI'}</p>
               </div>
-            ) : null}
-            <div className="modal-actions google-agenda-actions">
-              {isEditingGoogleAgendaEvent ? (
-                <button className="ghost-button button-subtle" type="button" onClick={resetGoogleAgendaForm} disabled={pending}>
-                  Annuler
-                </button>
-              ) : null}
-              <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckGoogleAgendaAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
-                {availabilityPending ? 'Verification...' : 'Verifier dispo'}
-              </button>
-              <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !summary.trim()}>
-                {pending ? (isEditingGoogleAgendaEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleAgendaEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
-              </button>
+              <button className="request-modal-close" type="button" onClick={handleCloseGoogleAgendaModal}>Fermer</button>
             </div>
-          </form>
-        </article>
-        <article className="detail-card google-agenda-list-card">
-          <span className="detail-label">RDV liés</span>
-          {activeEvents.length > 0 ? (
-            <div className="google-agenda-event-list">
-              {activeEvents.map((item) => (
-                <article key={item.id} className="google-agenda-event-card">
-                  <div>
-                    <strong>{item.summary}</strong>
-                    <span>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</span>
-                    <span>{item.google_calendar_email}</span>
-                    {item.location ? <span>{item.location}</span> : null}
-                  </div>
-                  <div className="google-agenda-event-actions">
-                    {item.google_html_link ? (
-                      <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Ouvrir</a>
+            <div className="google-agenda-modal-meta">
+              <span><strong>Agenda</strong>{calendarEmail || '-'}</span>
+              <span><strong>Commercial</strong>{dossier?.commercial_nom || '-'}</span>
+              <span><strong>Mandat</strong>{dossier?.numero_mandat || '-'}</span>
+              <span><strong>RDV lies</strong>{activeEvents.length}</span>
+            </div>
+            <div className="google-agenda-modal-layout">
+              <section className="google-agenda-panel google-agenda-planner-panel">
+                <div className="google-agenda-panel-head">
+                  <span>{isEditingGoogleAgendaEvent ? 'Modification' : 'Creation'}</span>
+                  <strong>{isEditingGoogleAgendaEvent ? 'Modifier le RDV' : 'Planifier un RDV'}</strong>
+                </div>
+                <form className="google-agenda-form" onSubmit={handleSubmitGoogleAgendaEvent}>
+                  <label className="filter-field">
+                    <span>Agenda</span>
+                    <input value={calendarEmail} onChange={(inputEvent) => setCalendarEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required disabled={isEditingGoogleAgendaEvent} />
+                  </label>
+                  <label className="filter-field">
+                    <span>Type</span>
+                    <select value={eventType} onChange={(inputEvent) => setEventType(inputEvent.target.value as GoogleCalendarEventLink['event_type'])}>
+                      {googleAgendaEventTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="filter-field google-agenda-field-wide">
+                    <span>Titre</span>
+                    <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
+                  </label>
+                  <label className="filter-field">
+                    <span>Debut</span>
+                    <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
+                  </label>
+                  <label className="filter-field">
+                    <span>Duree</span>
+                    <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
+                      {hasCustomDuration ? <option value={durationMinutes}>{durationMinutes} min</option> : null}
+                      <option value="30">30 min</option>
+                      <option value="45">45 min</option>
+                      <option value="60">1 h</option>
+                      <option value="90">1 h 30</option>
+                      <option value="120">2 h</option>
+                    </select>
+                  </label>
+                  <label className="filter-field google-agenda-field-wide">
+                    <span>Lieu</span>
+                    <input value={location} onChange={(inputEvent) => setLocation(inputEvent.target.value)} />
+                  </label>
+                  <label className="filter-field google-agenda-field-wide">
+                    <span>Invites</span>
+                    <input value={attendeesText} onChange={(inputEvent) => setAttendeesText(inputEvent.target.value)} placeholder="client@email.fr" />
+                  </label>
+                  <label className="filter-field google-agenda-field-wide">
+                    <span>Description</span>
+                    <textarea className="inline-textarea" value={description} onChange={(inputEvent) => setDescription(inputEvent.target.value)} placeholder={isEditingGoogleAgendaEvent ? 'Vide = description Google conservee' : undefined} />
+                  </label>
+                  {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
+                  {message ? <p className="google-agenda-success">{message}</p> : null}
+                  {error ? <p className="google-agenda-error">{error}</p> : null}
+                  {availability ? (
+                    <div className={availability.isAvailable ? 'google-agenda-success' : 'google-agenda-warning'}>
+                      <strong>{availability.isAvailable ? 'Disponible sur ce creneau.' : `Conflit agenda : ${availability.busyCount ?? availabilityBusy.length} creneau occupe.`}</strong>
+                      {!availability.isAvailable && availabilityBusy.length > 0 ? (
+                        <span>{availabilityBusy.slice(0, 3).map((slot) => `${formatDateTime(slot.start)} - ${formatDateTime(slot.end)}`).join(' | ')}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div className="modal-actions google-agenda-actions">
+                    {isEditingGoogleAgendaEvent ? (
+                      <button className="ghost-button button-subtle" type="button" onClick={resetGoogleAgendaForm} disabled={pending}>
+                        Annuler
+                      </button>
                     ) : null}
-                    <button className="ghost-button button-subtle" type="button" onClick={() => handleEditGoogleAgendaEvent(item)} disabled={pending || deletingId === item.id}>
-                      Modifier
+                    <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckGoogleAgendaAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
+                      {availabilityPending ? 'Verification...' : 'Verifier dispo'}
                     </button>
-                    <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleAgendaEvent(item)} disabled={deletingId === item.id}>
-                      {deletingId === item.id ? 'Suppression...' : 'Supprimer'}
+                    <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !summary.trim()}>
+                      {pending ? (isEditingGoogleAgendaEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleAgendaEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
                     </button>
                   </div>
-                </article>
-              ))}
+                </form>
+              </section>
+              <section className="google-agenda-panel google-agenda-day-panel">
+                <div className="google-agenda-panel-head google-agenda-day-head">
+                  <div>
+                    <span>Agenda negociateur</span>
+                    <strong>Occupation journee</strong>
+                  </div>
+                  <div className="google-agenda-day-actions">
+                    <input value={agendaDate} onChange={(inputEvent) => { setAgendaDate(inputEvent.target.value); setDayAvailability(null) }} type="date" />
+                    <button className="ghost-button button-subtle" type="button" onClick={() => void handleLoadGoogleAgendaDay()} disabled={dayAvailabilityPending || !canUseCalendarEmail}>
+                      {dayAvailabilityPending ? 'Chargement...' : 'Actualiser'}
+                    </button>
+                  </div>
+                </div>
+                {dayAvailability ? (
+                  <div className="google-agenda-day-grid">
+                    <div>
+                      <span className="detail-label">Occupes</span>
+                      <div className="google-agenda-day-slots">
+                        {dayWindows.busy.length > 0 ? dayWindows.busy.map((slot) => (
+                          <article key={`busy-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
+                            <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                            <span>Occupe</span>
+                          </article>
+                        )) : <p className="empty-state">Aucun creneau occupe sur cette journee.</p>}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="detail-label">Libres</span>
+                      <div className="google-agenda-day-slots">
+                        {dayWindows.free.length > 0 ? dayWindows.free.map((slot) => (
+                          <article key={`free-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
+                            <div>
+                              <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                              <span>{minutesBetweenWindow(slot)} min libres</span>
+                            </div>
+                            <button className="ghost-button button-subtle" type="button" onClick={() => handleUseGoogleAgendaWindow(slot)}>
+                              Utiliser
+                            </button>
+                          </article>
+                        )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
+                      </div>
+                    </div>
+                  </div>
+                ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement de la journee...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
+              </section>
+              <section className="google-agenda-panel google-agenda-links-panel">
+                <div className="google-agenda-panel-head">
+                  <span>Annonce GTI</span>
+                  <strong>RDV lies</strong>
+                </div>
+                {activeEvents.length > 0 ? (
+                  <div className="google-agenda-event-list">
+                    {activeEvents.map((item) => (
+                      <article key={item.id} className="google-agenda-event-card">
+                        <div>
+                          <strong>{item.summary}</strong>
+                          <span>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</span>
+                          <span>{item.google_calendar_email}</span>
+                          {item.location ? <span>{item.location}</span> : null}
+                        </div>
+                        <div className="google-agenda-event-actions">
+                          {item.google_html_link ? (
+                            <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Ouvrir</a>
+                          ) : null}
+                          <button className="ghost-button button-subtle" type="button" onClick={() => handleEditGoogleAgendaEvent(item)} disabled={pending || deletingId === item.id}>
+                            Modifier
+                          </button>
+                          <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleAgendaEvent(item)} disabled={deletingId === item.id}>
+                            {deletingId === item.id ? 'Suppression...' : 'Supprimer'}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : <p className="empty-state">{loading ? 'Chargement des RDV Google...' : 'Aucun RDV Google lie a cette annonce.'}</p>}
+              </section>
             </div>
-          ) : <p className="empty-state">{loading ? 'Chargement des RDV Google...' : 'Aucun RDV Google lié à cette annonce.'}</p>}
-        </article>
-      </div>
+          </section>
+        </div>,
+        document.body,
+      ) : null}
     </section>
   )
 }

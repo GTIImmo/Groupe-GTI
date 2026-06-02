@@ -13767,6 +13767,177 @@ button.metric-card.is-active {
 .detail-screen .detail-google-agenda-section .google-agenda-list-card {
   border-left: 5px solid rgba(197, 0, 95, 0.72);
 }
+.google-agenda-entry-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: end;
+  border-left: 5px solid var(--gti-final-ink);
+}
+.google-agenda-entry-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  min-width: min(260px, 100%);
+}
+.google-agenda-modal-overlay {
+  z-index: 92;
+  padding: 18px;
+  overflow: auto;
+}
+.google-agenda-modal {
+  width: min(1360px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid rgba(34, 35, 35, 0.14);
+  border-radius: 12px;
+  background: #ffffff;
+}
+.google-agenda-modal-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.1);
+}
+.google-agenda-modal-head h3 {
+  margin: 2px 0 4px;
+  color: var(--gti-final-ink);
+  font-size: 26px;
+  line-height: 1.08;
+}
+.google-agenda-modal-head p {
+  margin: 0;
+  color: rgba(34, 35, 35, 0.68);
+  font-size: 13px;
+  font-weight: 700;
+}
+.google-agenda-modal-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 0;
+}
+.google-agenda-modal-meta span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #f8f9f9;
+  color: rgba(34, 35, 35, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.google-agenda-modal-meta strong {
+  color: var(--gti-final-ink);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+.google-agenda-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.95fr) minmax(360px, 1.08fr) minmax(320px, 0.92fr);
+  gap: 14px;
+  align-items: start;
+}
+.google-agenda-panel {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.google-agenda-panel-head {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+.google-agenda-panel-head span {
+  color: var(--gti-final-magenta);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+.google-agenda-panel-head strong {
+  color: var(--gti-final-ink);
+  font-size: 15px;
+  font-weight: 950;
+}
+.google-agenda-day-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.google-agenda-day-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.google-agenda-day-actions input {
+  min-height: 36px;
+  border: 1px solid rgba(34, 35, 35, 0.14);
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--gti-final-ink);
+  font-weight: 800;
+}
+.google-agenda-day-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.google-agenda-day-slots {
+  display: grid;
+  gap: 8px;
+}
+.google-agenda-day-slot {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #f8f9f9;
+}
+.google-agenda-day-slot.is-free {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: rgba(37, 132, 82, 0.22);
+  background: rgba(37, 132, 82, 0.07);
+}
+.google-agenda-day-slot.is-busy {
+  border-color: rgba(199, 127, 24, 0.24);
+  background: rgba(199, 127, 24, 0.08);
+}
+.google-agenda-day-slot strong,
+.google-agenda-day-slot span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.google-agenda-day-slot strong {
+  color: var(--gti-final-ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+.google-agenda-day-slot span {
+  color: rgba(34, 35, 35, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+}
+@media (max-width: 1180px) {
+  .google-agenda-modal-layout {
+    grid-template-columns: 1fr;
+  }
+  .google-agenda-modal-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .google-agenda-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -15061,8 +15232,35 @@ tbody tr.is-selected {
   .detail-screen .detail-features-section .info-grid,
   .detail-screen .detail-latest-requests-section .detail-request-row,
   .detail-screen .detail-google-agenda-section .google-agenda-grid,
+  .google-agenda-entry-card,
+  .google-agenda-modal-meta,
+  .google-agenda-modal-layout,
+  .google-agenda-day-grid,
   .google-agenda-form,
   .detail-screen .detail-appointment-section .detail-stack {
+    grid-template-columns: 1fr;
+  }
+  .google-agenda-entry-actions,
+  .google-agenda-day-actions {
+    justify-items: stretch;
+    justify-content: stretch;
+  }
+  .google-agenda-entry-actions .ghost-button,
+  .google-agenda-day-actions .ghost-button,
+  .google-agenda-day-actions input {
+    width: 100%;
+  }
+  .google-agenda-modal-overlay {
+    padding: 10px;
+  }
+  .google-agenda-modal {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 12px;
+  }
+  .google-agenda-modal-head,
+  .google-agenda-day-head,
+  .google-agenda-day-slot.is-free {
     grid-template-columns: 1fr;
   }
   .detail-screen .detail-mandate-section .detail-mandat-grid {
