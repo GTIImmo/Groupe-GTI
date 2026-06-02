@@ -335,9 +335,170 @@ type HektorAdvancedField = {
   placeholder?: string
   inputMode?: 'decimal' | 'numeric'
   multiline?: boolean
+  options?: HektorSelectOption[]
 }
 
 type HektorPropertyProfileKind = 'apartment' | 'house' | 'land' | 'garage' | 'building' | 'other'
+
+type HektorSelectOption = { value: string; label: string }
+
+const hektorExposureOptions: HektorSelectOption[] = [
+  { value: "", label: "Non défini" },
+  { value: "NORD", label: "Nord" },
+  { value: "NORD-EST", label: "Nord-Est" },
+  { value: "EST", label: "Est" },
+  { value: "SUD-EST", label: "Sud-Est" },
+  { value: "SUD", label: "Sud" },
+  { value: "SUD-OUEST", label: "Sud-Ouest" },
+  { value: "OUEST", label: "Ouest" },
+  { value: "NORD-OUEST", label: "Nord-Ouest" },
+  { value: "NORD-SUD", label: "Nord-Sud" },
+  { value: "EST-OUEST", label: "Est-Ouest" },
+]
+
+const hektorParticularityOptions: HektorSelectOption[] = [
+  { value: "", label: "Non défini" },
+  { value: "2", label: "Investissement" },
+  { value: "1", label: "Prestige" },
+  { value: "3", label: "Autre" },
+]
+
+const hektorKitchenOptions: HektorSelectOption[] = [
+  { value: "", label: "Non défini" },
+  { value: "AMERICAINE", label: "Américaine" },
+  { value: "KITCHENETTE", label: "Kitchenette" },
+  { value: "SEPAREE", label: "Séparée" },
+  { value: "SANS", label: "Sans" },
+]
+
+const hektorKitchenEquipmentOptions: HektorSelectOption[] = [
+  { value: "", label: "Non défini" },
+  { value: "SEMI-EQUIPEE", label: "Semi équipée" },
+  { value: "EQUIPEE", label: "Équipée" },
+]
+
+const hektorPartyWallOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "0", label: "Indépendant" },
+  { value: "1", label: "1 côté" },
+  { value: "2", label: "2 côtés" },
+  { value: "3", label: "3 côtés" },
+  { value: "4", label: "4 côtés" },
+]
+
+const hektorResidenceOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "OUVERT", label: "Ouverte" },
+  { value: "FERME", label: "Fermée" },
+  { value: "SECURISE", label: "Securisée" },
+]
+
+const hektorResidenceTypeOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "ANCIEN", label: "Ancien" },
+  { value: "NEUF", label: "Neuf" },
+  { value: "STANDING", label: "Standing" },
+]
+
+const hektorHeatingFormatOptions: HektorSelectOption[] = [
+  { value: "4", label: "Non précisé" },
+  { value: "3", label: "Central" },
+  { value: "1", label: "Collectif" },
+  { value: "2", label: "Individuel" },
+  { value: "5", label: "Urbain" },
+]
+
+const hektorHeatingTypeOptions: HektorSelectOption[] = [
+  { value: "4", label: "Air" },
+  { value: "10", label: "Air/Eau" },
+  { value: "9", label: "Non précisé" },
+  { value: "1", label: "Chaudière" },
+  { value: "8", label: "Cheminée" },
+  { value: "5", label: "Convecteur" },
+  { value: "7", label: "Poêle" },
+  { value: "2", label: "Radiateur" },
+  { value: "6", label: "Rayonnant" },
+  { value: "3", label: "Sol" },
+]
+
+const hektorHeatingEnergyOptions: HektorSelectOption[] = [
+  { value: "15", label: "Aérothermie" },
+  { value: "14", label: "Non précisé" },
+  { value: "6", label: "Bois" },
+  { value: "5", label: "Charbon" },
+  { value: "11", label: "Climatisation" },
+  { value: "3", label: "Électrique" },
+  { value: "4", label: "Fioul" },
+  { value: "2", label: "Gaz" },
+  { value: "1", label: "Gaz de ville" },
+  { value: "9", label: "Géothermie" },
+  { value: "7", label: "Granules" },
+  { value: "12", label: "Mixte" },
+  { value: "10", label: "Pompe à chaleur" },
+  { value: "13", label: "Sans" },
+  { value: "8", label: "Solaire" },
+]
+
+const hektorWaterOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "SANS", label: "Sans" },
+  { value: "INDIVIDUEL", label: "Individuel" },
+  { value: "COLLECTIF", label: "Collectif" },
+  { value: "PUIT", label: "Puits" },
+]
+
+const hektorSanitationOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "SANS", label: "Sans" },
+  { value: "TOUT A L'EGOUT", label: "Tout à l'égout" },
+  { value: "FOSSE SEPTIQUE", label: "Fosse septique" },
+  { value: "FOSSE TOUTES EAUX", label: "Fosse toutes eaux" },
+  { value: "MICRO STATION", label: "Micro-station" },
+]
+
+const hektorHotWaterDistributionOptions: HektorSelectOption[] = [
+  { value: "", label: "Non défini" },
+  { value: "COLLECTIF", label: "Collective" },
+  { value: "INDIVIDUEL", label: "Individuelle" },
+  { value: "CENTRAL", label: "Centrale" },
+]
+
+const hektorHotWaterEnergyOptions: HektorSelectOption[] = [
+  { value: "", label: "Non défini" },
+  { value: "GAZ", label: "Gaz" },
+  { value: "BALLON ELECTRIQUE", label: "Ballon électrique" },
+  { value: "FIOUL", label: "Fioul" },
+  { value: "SOLAIRE", label: "Solaire" },
+  { value: "GEOTHERMIE", label: "Géothermie" },
+  { value: "MIXTE", label: "Mixte" },
+  { value: "SANS", label: "Sans" },
+  { value: "AUTRE", label: "Autre" },
+  { value: "AEROTHERMIE", label: "Aérothermie" },
+  { value: "THERMODYNAMIQUE", label: "Thermodynamique" },
+  { value: "POMPE A CHALEUR", label: "Pompe à chaleur" },
+]
+
+const hektorExteriorStateOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "2", label: "Travaux à prévoir" },
+  { value: "3", label: "A rafraichir" },
+  { value: "5", label: "Etat moyen" },
+  { value: "6", label: "Bon état" },
+  { value: "7", label: "Excellent état" },
+]
+
+const hektorInteriorStateOptions: HektorSelectOption[] = [
+  { value: "", label: "Non précisé" },
+  { value: "1", label: "Gros travaux à prévoir" },
+  { value: "2", label: "Travaux à prévoir" },
+  { value: "3", label: "A rafraichir" },
+  { value: "4", label: "Habitable (m²)" },
+  { value: "5", label: "Etat moyen" },
+  { value: "6", label: "Bon état" },
+  { value: "7", label: "Excellent état" },
+  { value: "8", label: "Neuf" },
+  { value: "9", label: "Refait à neuf" },
+]
 
 const hektorAdvancedSections: Array<{ title: string; tone: string; fields: HektorAdvancedField[] }> = [
   {
@@ -372,17 +533,17 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
       { key: 'bathroomCount', label: 'SDB', inputMode: 'numeric' },
       { key: 'showerRoomCount', label: "Salle d'eau", inputMode: 'numeric' },
       { key: 'wcCount', label: 'WC', inputMode: 'numeric' },
-      { key: 'kitchen', label: 'Cuisine' },
-      { key: 'exposure', label: 'Exposition' },
+      { key: 'kitchen', label: 'Cuisine', options: hektorKitchenOptions },
+      { key: 'exposure', label: 'Exposition', options: hektorExposureOptions },
       { key: 'view', label: 'Vue' },
-      { key: 'interiorState', label: 'Etat interieur' },
+      { key: 'interiorState', label: 'Etat interieur', options: hektorInteriorStateOptions },
     ],
   },
   {
     title: '5. Details - Exterieur',
     tone: 'outside',
     fields: [
-      { key: 'exteriorState', label: 'Etat exterieur' },
+      { key: 'exteriorState', label: 'Etat exterieur', options: hektorExteriorStateOptions },
       { key: 'landSurface', label: 'Terrain', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'gardenSurface', label: 'Jardin', placeholder: 'm2', inputMode: 'decimal' },
       { key: 'terraceCount', label: 'Terrasse', inputMode: 'numeric' },
@@ -737,7 +898,7 @@ type DraftAnnonceAdvancedField = {
   placeholder?: string
   inputMode?: 'decimal' | 'numeric'
   multiline?: boolean
-  options?: Array<{ value: string; label: string }>
+  options?: HektorSelectOption[]
 }
 
 const draftAnnonceOuiNonOptions = [
@@ -762,16 +923,16 @@ const draftAnnonceAdvancedSections: Array<{ title: string; fields: DraftAnnonceA
       { key: 'bathroomCount', label: 'SDB', inputMode: 'numeric' },
       { key: 'showerRoomCount', label: "Salle d'eau", inputMode: 'numeric' },
       { key: 'wcCount', label: 'WC', inputMode: 'numeric' },
-      { key: 'kitchen', label: 'Cuisine' },
-      { key: 'exposure', label: 'Exposition' },
+      { key: 'kitchen', label: 'Cuisine', options: hektorKitchenOptions },
+      { key: 'exposure', label: 'Exposition', options: hektorExposureOptions },
       { key: 'view', label: 'Vue' },
-      { key: 'interiorState', label: 'Etat interieur' },
+      { key: 'interiorState', label: 'Etat interieur', options: hektorInteriorStateOptions },
     ],
   },
   {
     title: 'Exterieur',
     fields: [
-      { key: 'exteriorState', label: 'Etat exterieur' },
+      { key: 'exteriorState', label: 'Etat exterieur', options: hektorExteriorStateOptions },
       { key: 'landSurface', label: 'Terrain', inputMode: 'decimal' },
       { key: 'garden', label: 'Jardin', options: draftAnnonceOuiNonOptions },
       { key: 'terraceCount', label: 'Terrasses', inputMode: 'numeric' },
@@ -841,7 +1002,8 @@ type DraftAnnonceWizardField = {
   placeholder?: string
   inputMode?: 'decimal' | 'numeric'
   multiline?: boolean
-  options?: Array<{ value: string; label: string }>
+  options?: HektorSelectOption[]
+  defaultValue?: string
 }
 
 type DraftAnnonceWizardGroup = {
@@ -947,7 +1109,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('JARDIN-', 'Jardin', { options: wizardUnknownOuiNon }),
       wf('PISCINE-', 'Piscine', { options: wizardUnknownOuiNon }),
       wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
-      wf('EXPOSITION', 'Exposition'),
+      wf('EXPOSITION', 'Exposition', { options: hektorExposureOptions }),
       wf('vuee', 'Vue'),
       wf('NO_DOSSIER', 'Numero dossier'),
       wf('dateenr', 'Date creation'),
@@ -985,16 +1147,16 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     step: 5,
     title: '5. Details - Interieur',
     fields: [
-      wf('Particularites', 'Particularites'),
+      wf('Particularites', 'Particularites', { options: hektorParticularityOptions }),
       wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
       wf('NB_SDB', 'Salles de bain', { inputMode: 'numeric' }),
       wf('NB_SE', "Salles d'eau", { inputMode: 'numeric' }),
       wf('NB_WC', 'WC', { inputMode: 'numeric' }),
       wf('SURF_CARREZ', 'Surface Carrez', { inputMode: 'decimal' }),
       wf('SURF_SEJOUR', 'Surface sejour', { inputMode: 'decimal' }),
-      wf('CUISINE', 'Cuisine'),
-      wf('CUISINE_EQUIPEMENT', 'Equipement cuisine'),
-      wf('EXPOSITION', 'Exposition'),
+      wf('CUISINE', 'Cuisine', { options: hektorKitchenOptions }),
+      wf('CUISINE_EQUIPEMENT', 'Equipement cuisine', { options: hektorKitchenEquipmentOptions }),
+      wf('EXPOSITION', 'Exposition', { options: hektorExposureOptions }),
       wf('vuee', 'Vue'),
     ],
   },
@@ -1002,7 +1164,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     step: 5,
     title: '5. Details - Exterieur',
     fields: [
-      wf('MURS_MITOYENS', 'Murs mitoyens'),
+      wf('MURS_MITOYENS', 'Murs mitoyens', { options: hektorPartyWallOptions }),
       wf('floorState', 'Indication etage', { options: wizardFloorStateOptions }),
       wf('ETAGE', 'Etage', { inputMode: 'numeric' }),
       wf('DERNIER_ETAGE', 'Dernier etage', { options: wizardUnknownOuiNon }),
@@ -1019,31 +1181,31 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('SURFACE_GARAGE', 'Surface garage', { inputMode: 'decimal' }),
       wf('NB_PARK_INT', 'Parking interieur', { inputMode: 'numeric' }),
       wf('NB_PARK_EXT', 'Parking exterieur', { inputMode: 'numeric' }),
-      wf('RESIDENCE', 'Residence'),
-      wf('TYPE_RESIDENCE', 'Type residence'),
+      wf('RESIDENCE', 'Residence', { options: hektorResidenceOptions }),
+      wf('TYPE_RESIDENCE', 'Type residence', { options: hektorResidenceTypeOptions }),
     ],
   },
   {
     step: 5,
     title: '5. Details - Equipements',
     fields: [
-      wf('formatChauff', 'Format chauffage'),
-      wf('typeChauff', 'Type chauffage'),
-      wf('energieChauff', 'Energie chauffage'),
+      wf('formatChauff', 'Format chauffage', { options: hektorHeatingFormatOptions, defaultValue: '4' }),
+      wf('typeChauff', 'Type chauffage', { options: hektorHeatingTypeOptions, defaultValue: '9' }),
+      wf('energieChauff', 'Energie chauffage', { options: hektorHeatingEnergyOptions, defaultValue: '14' }),
       wf('ASCENSEUR', 'Ascenseur', { options: wizardUnknownOuiNon }),
       wf('ACCES_HANDI', 'Acces handicape', { options: wizardUnknownOuiNon }),
       wf('climatisation', 'Climatisation', { options: wizardUnknownOuiNon }),
       wf('climatisationspec', 'Specification climatisation'),
-      wf('EAU', 'Eau'),
-      wf('ASSAINISSEMENT', 'Assainissement'),
-      wf('DISTRIBUTION_EAU', 'Distribution eau'),
-      wf('ENERGIE_EAU', 'Energie eau'),
+      wf('EAU', 'Eau', { options: hektorWaterOptions }),
+      wf('ASSAINISSEMENT', 'Assainissement', { options: hektorSanitationOptions }),
+      wf('DISTRIBUTION_EAU', 'Distribution eau', { options: hektorHotWaterDistributionOptions }),
+      wf('ENERGIE_EAU', 'Energie eau', { options: hektorHotWaterEnergyOptions }),
       wf('cheminee', 'Cheminee', { options: wizardUnknownOuiNon }),
       wf('volets_elctriques', 'Volets electriques', { options: wizardUnknownOuiNon }),
       wf('gardien', 'Gardien', { options: wizardUnknownOuiNon }),
       wf('double_vitrage', 'Double vitrage', { options: wizardUnknownOuiNon }),
       wf('triple_vitrage', 'Triple vitrage', { options: wizardUnknownOuiNon }),
-      wf('cable', 'Cable', { options: wizardUnknownOuiNon }),
+      wf('cable', 'Fibre optique', { options: wizardUnknownOuiNon }),
       wf('porte_blindee', 'Porte blindee', { options: wizardUnknownOuiNon }),
       wf('interphone', 'Interphone', { options: wizardUnknownOuiNon }),
       wf('visiophone', 'Visiophone', { options: wizardUnknownOuiNon }),
@@ -1057,8 +1219,8 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     title: '5. Details - Diagnostics',
     fields: [
       wf('ANNEE_CONS', 'Annee construction', { inputMode: 'numeric' }),
-      wf('etat_exterieur', 'Etat exterieur'),
-      wf('etat_interieur', 'Etat interieur'),
+      wf('etat_exterieur', 'Etat exterieur', { options: hektorExteriorStateOptions }),
+      wf('etat_interieur', 'Etat interieur', { options: hektorInteriorStateOptions }),
       wf('dpe_date', 'Date DPE'),
       wf('dpe_non_concerne', 'DPE non concerne', { options: wizardNonOui }),
       wf('dpe_vierge', 'DPE vierge', { options: wizardNonOui }),
@@ -1095,7 +1257,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('diag_assainissement', 'Assainissement diag.', { options: wizardUnknownOuiNon }),
       wf('diag_assainissement_date', 'Date assainissement'),
       wf('diag_assainissement_commentaire', 'Commentaire assainissement', { multiline: true }),
-      wf('clearing', 'Clearing'),
+      wf('clearing', 'Clearing', { options: wizardUnknownOuiNon }),
     ],
   },
   {
@@ -1163,7 +1325,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('JARDIN-', 'Jardin', { options: wizardUnknownOuiNon }),
       wf('PISCINE-', 'Piscine', { options: wizardUnknownOuiNon }),
       wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
-      wf('EXPOSITION', 'Exposition'),
+      wf('EXPOSITION', 'Exposition', { options: hektorExposureOptions }),
       wf('vuee', 'Vue'),
       wf('NO_DOSSIER', 'Numero dossier'),
       wf('dateenr', 'Date creation'),
@@ -2036,6 +2198,15 @@ function HektorAnnonceUpdateForm(props: {
                   <label key={field.key} className="hektor-inline-textarea hektor-advanced-textarea">
                     <span>{field.label}</span>
                     <textarea value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)} placeholder={field.placeholder} />
+                  </label>
+                ) : field.options ? (
+                  <label key={field.key}>
+                    <span>{field.label}</span>
+                    <select value={values[field.key]} onChange={(event) => updateField(field.key, event.target.value)}>
+                      {field.options.map((option) => (
+                        <option key={`${field.key}-${option.value}`} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
                   </label>
                 ) : (
                   <label key={field.key}>
@@ -8904,7 +9075,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <label key={`${section.title}-${field.name}`} className="filter-field">
               <span>{field.label}</span>
               <select
-                value={draftAnnonceWizardFields[field.name] ?? ''}
+                value={draftAnnonceWizardFields[field.name] ?? field.defaultValue ?? ''}
                 onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
               >
                 {field.options.map((option) => (
@@ -11120,7 +11291,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {draftAnnonceTypeRules.showExposure ? (
                         <label className="filter-field">
                           <span>Situation</span>
-                          <input value={draftAnnonceAdvanced.exposure} onChange={(event) => updateDraftAnnonceAdvanced('exposure', event.target.value)} placeholder="Exposition" />
+                          <select value={draftAnnonceAdvanced.exposure} onChange={(event) => updateDraftAnnonceAdvanced('exposure', event.target.value)}>
+                            {hektorExposureOptions.map((option) => (
+                              <option key={`draft-exposure-${option.value}`} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.showView ? (
