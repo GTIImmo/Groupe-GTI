@@ -114,6 +114,7 @@ export type CommercialRequestStats = {
 
 export type DataScope = {
   negotiatorEmail?: string | null
+  agencyName?: string | null
 }
 
 type AppointmentSummaryResponse = {
@@ -254,13 +255,15 @@ function normalizeAgencyName(value: string | null | undefined) {
 function normalizeScope(scope?: DataScope | null) {
   return {
     negotiatorEmail: normalizeEmail(scope?.negotiatorEmail),
+    agencyName: (scope?.agencyName ?? '').trim(),
   }
 }
 
-function filterByNegotiatorEmail<T extends { negociateur_email?: string | null }>(rows: T[], scope?: DataScope | null) {
-  const { negotiatorEmail } = normalizeScope(scope)
-  if (!negotiatorEmail) return rows
-  return rows.filter((item) => normalizeEmail(item.negociateur_email) === negotiatorEmail)
+function filterByNegotiatorEmail<T extends { negociateur_email?: string | null; agence_nom?: string | null }>(rows: T[], scope?: DataScope | null) {
+  const { negotiatorEmail, agencyName } = normalizeScope(scope)
+  if (agencyName) return rows.filter((item) => item.agence_nom === agencyName)
+  if (negotiatorEmail) return rows.filter((item) => normalizeEmail(item.negociateur_email) === negotiatorEmail)
+  return rows
 }
 
 function isMissingDiffusionTargetTableError(message: string | undefined) {
@@ -1301,9 +1304,10 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
 }
 
 function applyNegotiatorScopeToQuery(baseQuery: any, scope?: DataScope | null) {
-  const { negotiatorEmail } = normalizeScope(scope)
-  if (!negotiatorEmail) return baseQuery
-  return baseQuery.eq('negociateur_email', negotiatorEmail)
+  const { negotiatorEmail, agencyName } = normalizeScope(scope)
+  if (agencyName) return baseQuery.eq('agence_nom', agencyName)
+  if (negotiatorEmail) return baseQuery.eq('negociateur_email', negotiatorEmail)
+  return baseQuery
 }
 
 function contactRoleFilterValues(role: string) {

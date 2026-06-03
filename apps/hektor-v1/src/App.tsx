@@ -17434,9 +17434,12 @@ function GoogleAgendaAnnonceSection(props: {
     const contactSearchNegotiatorEmail = normalizeEmail(hektorContactSearchOwner?.email)
       || normalizeEmail(dossier?.negociateur_email)
       || scopedCalendarEmail
-    const contactScope = contactSearchNegotiatorEmail.endsWith(`@${googleWorkspaceDomain}`)
-      ? { negotiatorEmail: contactSearchNegotiatorEmail }
-      : null
+    const contactSearchAgencyName = (hektorContactSearchOwner?.agenceNom || dossier?.agence_nom || '').trim()
+    const contactScope = contactSearchAgencyName
+      ? { agencyName: contactSearchAgencyName, negotiatorEmail: contactSearchNegotiatorEmail || null }
+      : contactSearchNegotiatorEmail.endsWith(`@${googleWorkspaceDomain}`)
+        ? { negotiatorEmail: contactSearchNegotiatorEmail }
+        : null
     const minSearchLength = /^\d+$/.test(search) ? 1 : 3
     if (search.length < minSearchLength) {
       setContactOptions([])
@@ -17464,7 +17467,7 @@ function GoogleAgendaAnnonceSection(props: {
       cancelled = true
       window.clearTimeout(handle)
     }
-  }, [calendarEmail, contactSearch, dossier?.commercial_id, dossier?.negociateur_email, modalOpen, props.hektorNegotiators])
+  }, [calendarEmail, contactSearch, dossier?.agence_nom, dossier?.commercial_id, dossier?.negociateur_email, modalOpen, props.hektorNegotiators])
 
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const activeEvents = events.filter((item) => item.status !== 'deleted')
@@ -17884,7 +17887,7 @@ function GoogleAgendaAnnonceSection(props: {
                               )
                             })}
                           </div>
-                        ) : contactSearch.trim().length >= (/^\d+$/.test(contactSearch.trim()) ? 1 : 3) && !contactSearchLoading ? <p className="empty-state">Aucun contact trouve pour ce negociateur.</p> : null}
+                        ) : contactSearch.trim().length >= (/^\d+$/.test(contactSearch.trim()) ? 1 : 3) && !contactSearchLoading ? <p className="empty-state">Aucun contact trouve dans le perimetre agence/negociateur.</p> : null}
                       </div>
                     </div>
                   </div>
