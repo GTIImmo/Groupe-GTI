@@ -20298,6 +20298,163 @@ function googleAgendaEventAnnonceOption(event: GoogleCalendarEventLink | null | 
   }
 }
 
+function googleAgendaVisitRelation(event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
+  const appDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
+  const hektorAnnonceId = Number(event.hektor_annonce_id ?? event.metadata_json?.hektor_annonce_id)
+  return relations.find((relation) => (
+    (Number.isFinite(appDossierId) && relation.app_dossier_id === appDossierId)
+    || (Number.isFinite(hektorAnnonceId) && Number(relation.hektor_annonce_id) === hektorAnnonceId)
+  )) ?? null
+}
+
+function visitVoucherPropertyTitle(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
+  return safeText(relation?.titre_bien)
+    || safeText(event.metadata_json?.titre_bien)
+    || safeText(event.summary)
+    || 'Bien presente'
+}
+
+function visitVoucherPropertyMandate(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
+  return safeText(relation?.numero_mandat) || safeText(event.metadata_json?.numero_mandat)
+}
+
+function visitVoucherPropertyDossier(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
+  return safeText(relation?.numero_dossier) || safeText(event.metadata_json?.numero_dossier)
+}
+
+function visitVoucherPropertyId(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
+  return safeText(relation?.hektor_annonce_id) || safeText(event.hektor_annonce_id) || safeText(event.metadata_json?.hektor_annonce_id)
+}
+
+function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
+  const relation = googleAgendaVisitRelation(event, relations)
+  const contactName = appContactAgendaLabel(contact)
+  const contactAddress = [contact.code_postal, contact.ville].filter(Boolean).join(' ')
+  const propertyTitle = visitVoucherPropertyTitle(event, relation)
+  const propertyMandate = visitVoucherPropertyMandate(event, relation)
+  const propertyDossier = visitVoucherPropertyDossier(event, relation)
+  const propertyId = visitVoucherPropertyId(event, relation)
+  const propertyLines = [
+    propertyTitle,
+    event.location ? `Adresse / lieu : ${event.location}` : '',
+    propertyDossier ? `Dossier : ${propertyDossier}` : '',
+    propertyMandate ? `Mandat : ${propertyMandate}` : '',
+    propertyId ? `Annonce Hektor : ${propertyId}` : '',
+    `Rendez-vous : ${formatDateTime(event.starts_at)}`,
+  ].filter(Boolean)
+  const voucherNumber = `BDV-${event.id.slice(0, 8).toUpperCase()}`
+  const agencyName = safeText(contact.agence_nom) || 'Groupe GTI'
+  const negotiatorName = safeText(contact.commercial_nom) || safeText(event.google_calendar_email) || 'A completer'
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Bon de visite ${escapeHtml(voucherNumber)}</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;background:#eef1f4;color:#2b2b2b;font-family:Arial,Helvetica,sans-serif}
+    .print-actions{display:flex;justify-content:center;gap:10px;padding:14px}
+    .print-actions button{border:1px solid #c2185b;background:#c2185b;color:#fff;border-radius:8px;padding:10px 16px;font-weight:800;cursor:pointer}
+    .sheet{width:210mm;min-height:297mm;margin:0 auto 18px;background:#fff;padding:12mm 13mm;box-shadow:0 18px 60px rgba(15,23,42,.18);font-size:12px;line-height:1.35}
+    .head{display:grid;grid-template-columns:42% 58%;gap:10px;align-items:center;margin-bottom:10px}
+    .title-box{background:linear-gradient(135deg,#f7f2f5 0%,#efe6eb 100%);border:1px solid #e3d5dd;border-left:4px solid #c2185b;padding:8px 12px;border-radius:8px}
+    .title-box h1{margin:0;color:#1f1f1f;font-size:22px;line-height:1.1;letter-spacing:1px;text-transform:uppercase}
+    .title-box p{margin:3px 0 0;color:#7a6a72;font-size:10px}
+    .head-meta{text-align:right;color:#4a4a52;font-size:11px}
+    .head-meta strong{display:block;color:#c2185b}
+    .identity-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:10px}
+    .card{border:1px solid #ead7e0;border-radius:10px;padding:12px;background:#fffafb;min-height:105px}
+    .card.is-agency{background:#f7f7f9;border-color:#e4e4e8}
+    .label{display:block;margin-bottom:6px;color:#c2185b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    .name{font-size:14px;font-weight:800;margin-bottom:6px}
+    .notice{padding:12px;background:#fff6fa;border:1px solid #f0d4e2;border-left:4px solid #c2185b;border-radius:10px;margin-bottom:10px;text-align:justify}
+    .property-table{width:100%;border-collapse:collapse;border:1px solid #23232a;margin-bottom:10px}
+    .property-table th{width:28%;background:#2c2c2c;color:#fff;text-align:left;padding:10px;font-size:11px;text-transform:uppercase}
+    .property-table td{padding:10px;background:#fff}
+    .property-table p{margin:0 0 4px}
+    .commitment{padding:12px;background:#f7f7f9;border:1px solid #e4e4e8;border-radius:10px;margin-bottom:10px;text-align:justify}
+    .formalisation{display:grid;grid-template-columns:60% 40%;gap:10px;align-items:center;margin-bottom:8px}
+    .formalisation > div:first-child{background:#fffafb;border:1px solid #ead7e0;border-radius:8px;padding:8px 10px;font-size:11px}
+    .signature{margin-top:8px;padding:20px;border:2px solid #e7d2dc;border-radius:14px;text-align:center}
+    .signature-chip{display:inline-block;margin-bottom:8px;padding:6px 14px;border:1px solid #f0c7d9;border-radius:20px;background:#fff0f6;color:#c2185b;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+    .signature-area{height:95px;border:2px dashed #d8b8c6;border-radius:10px;margin:10px 20px;background:#fff}
+    @page{size:A4;margin:10mm}
+    @media print{
+      html,body{background:#fff}
+      .print-actions{display:none}
+      .sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="print-actions"><button type="button" onclick="window.print()">Imprimer le bon de visite</button></div>
+  <main class="sheet">
+    <section class="head">
+      <div class="title-box">
+        <h1>Bon de visite</h1>
+        <p>Reconnaissance de presentation d'un bien immobilier</p>
+      </div>
+      <div class="head-meta">
+        <strong>Bon de visite n ${escapeHtml(voucherNumber)}</strong>
+        <span>${escapeHtml(formatDate(event.starts_at))}</span>
+      </div>
+    </section>
+
+    <section class="identity-grid">
+      <article class="card">
+        <span class="label">Acquereur</span>
+        <div class="name">${escapeHtml(contactName)}</div>
+        <div><strong>Adresse :</strong> ${escapeHtml(contactAddress || '..................................................')}</div>
+        <div><strong>Telephone :</strong> ${escapeHtml(contact.phone_primary || contact.phone_secondary || '')}</div>
+        <div><strong>Email :</strong> ${escapeHtml(contact.email || '')}</div>
+      </article>
+      <article class="card is-agency">
+        <span class="label">Agence</span>
+        <div class="name">${escapeHtml(agencyName)}</div>
+        <div><strong>Represente par :</strong> ${escapeHtml(negotiatorName)}</div>
+        <div><strong>Mandat :</strong> ${escapeHtml(propertyMandate || '')}</div>
+      </article>
+    </section>
+
+    <div class="notice">Je soussigne(e) <strong>${escapeHtml(contactName)}</strong>, reconnais que le bien ci-dessous m'a ete presente par l'agence <strong>${escapeHtml(agencyName)}</strong>.</div>
+
+    <table class="property-table">
+      <tbody>
+        <tr>
+          <th>Bien presente</th>
+          <td>${propertyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="commitment">
+      <span class="label">Engagement de l'acquereur</span>
+      L'acquereur reconnait que ce bien lui a ete presente par l'agence susmentionnee. Il s'engage a ne pas traiter directement, pendant 24 mois, avec le proprietaire pour ce bien sans passer par l'agence qui le lui a fait visiter.
+    </div>
+
+    <section class="formalisation">
+      <div><strong>Formalisation</strong><br />Fait a .................................................. &nbsp;&nbsp; Le ${escapeHtml(formatDate(event.starts_at))}</div>
+      <div style="color:#666;text-align:right;font-size:11px;">Bon pour reconnaissance de visite</div>
+    </section>
+
+    <section class="signature">
+      <div class="signature-chip">Signature acquereur</div>
+      <div style="font-size:14px;font-weight:bold;margin-bottom:8px;">L'acquereur</div>
+      <div class="signature-area"></div>
+      <div style="font-size:11px;color:#555;">Signature precedee de la mention<br /><strong>&laquo; Bon pour visite &raquo;</strong></div>
+    </section>
+  </main>
+</body>
+</html>`
+}
+
+function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
+  const blob = new Blob([visitVoucherHtml(contact, event, relations)], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
 function GoogleAgendaContactModal(props: {
   contact: AppContact
   relations: AppContactRelation[]
@@ -21050,6 +21207,11 @@ function ContactDetailPopup(props: {
                         ) : null}
                         {event.google_html_link ? (
                           <a className="ghost-button button-subtle" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
+                        ) : null}
+                        {event.event_type === 'visite' ? (
+                          <button className="ghost-button button-primary" type="button" onClick={() => openVisitVoucherPrint(props.contact, event, props.relations)} disabled={googleContactAgendaDeletingId === event.id}>
+                            Bon de visite
+                          </button>
                         ) : null}
                         <button className="ghost-button button-subtle" type="button" onClick={() => handleOpenEditGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>
                           Modifier
