@@ -4105,3 +4105,86 @@
     justify-content: flex-start !important;
   }
 }
+
+/* Mobile create-annonce wizard: keep every step reachable without taking vertical space. */
+.draft-annonce-modal .draft-annonce-stepper {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain !important;
+  scrollbar-width: thin !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+@media (max-width: 900px) {
+  .draft-annonce-modal .draft-annonce-stepper {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(118px, 42vw) !important;
+    grid-template-columns: none !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    padding: 0 2px 8px !important;
+    scroll-snap-type: x proximity !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step {
+    grid-template-columns: 30px minmax(0, 1fr) !important;
+    min-height: 54px !important;
+    padding: 8px 9px !important;
+    scroll-snap-align: start !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-number {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-copy strong {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-copy small {
+    display: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .draft-annonce-modal .draft-annonce-stepper {
+    width: min(100%, calc(100vw - 64px), 326px) !important;
+    max-width: 100% !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    grid-template-columns: repeat(7, minmax(26px, 1fr)) !important;
+    align-items: start !important;
+    gap: 4px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: visible !important;
+    padding: 0 0 8px !important;
+    scroll-snap-type: none !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: start !important;
+    height: 38px !important;
+    max-height: 38px !important;
+    min-height: 38px !important;
+    padding: 4px !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-number {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-copy {
+    display: none !important;
+  }
+}
