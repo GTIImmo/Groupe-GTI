@@ -4819,12 +4819,106 @@ export type MandantContactSearchOption = Pick<AppContact,
   | 'linked_annonce_count'
 >
 
+type AnnonceContactRelationInfo = {
+  role_contact?: string | null
+  relation_source?: string | null
+}
+
+export type AnnonceContactInviteeOption = MandantContactSearchOption & AnnonceContactRelationInfo
+
 function normalizeMandantContactOption(row: MandantContactSearchOption): MandantContactSearchOption {
   return {
     ...row,
     hektor_contact_id: String(row.hektor_contact_id),
     linked_annonce_count: Number(row.linked_annonce_count ?? 0),
   }
+}
+
+function fallbackAnnonceContactInviteeOption(contactId: string, relation: AnnonceContactRelationInfo): AnnonceContactInviteeOption {
+  return {
+    hektor_contact_id: contactId,
+    negociateur_email: null,
+    commercial_nom: null,
+    agence_nom: null,
+    civilite: null,
+    nom: null,
+    prenom: null,
+    display_name: `Contact ${contactId}`,
+    archive: false,
+    email: null,
+    phone_primary: null,
+    phone_secondary: null,
+    ville: null,
+    code_postal: null,
+    typologies_json: null,
+    relation_roles_json: null,
+    linked_annonce_count: 1,
+    role_contact: relation.role_contact,
+    relation_source: relation.relation_source,
+  }
+}
+
+export async function loadAnnonceContactInvitees(input: {
+  appDossierId?: number | null
+  hektorAnnonceId?: number | string | null
+  limit?: number
+}): Promise<AnnonceContactInviteeOption[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+
+  const appDossierId = Number(input.appDossierId ?? 0)
+  const hektorAnnonceId = String(input.hektorAnnonceId ?? '').trim()
+  if ((!Number.isFinite(appDossierId) || appDossierId <= 0) && !hektorAnnonceId) return []
+
+  const limit = Math.min(Math.max(input.limit ?? 24, 1), 60)
+  let relationQuery = supabase
+    .from(contactRelationsCurrentView)
+    .select('hektor_contact_id,role_contact,relation_source,last_seen_at')
+    .order('last_seen_at', { ascending: false, nullsFirst: false })
+    .limit(limit * 2)
+
+  relationQuery = Number.isFinite(appDossierId) && appDossierId > 0
+    ? relationQuery.eq('app_dossier_id', appDossierId)
+    : relationQuery.eq('hektor_annonce_id', hektorAnnonceId)
+
+  const { data: relationRows, error: relationError } = await relationQuery
+  if (relationError || !relationRows) throw new Error(relationError?.message ?? 'Unable to load annonce contact relations')
+
+  const relationByContact = new Map<string, AnnonceContactRelationInfo>()
+  const contactIds: string[] = []
+  for (const relation of relationRows as AppContactRelation[]) {
+    const contactId = String(relation.hektor_contact_id ?? '').trim()
+    if (!contactId || relationByContact.has(contactId)) continue
+    relationByContact.set(contactId, {
+      role_contact: relation.role_contact,
+      relation_source: relation.relation_source,
+    })
+    contactIds.push(contactId)
+    if (contactIds.length >= limit) break
+  }
+  if (contactIds.length === 0) return []
+
+  const { data: contactRows, error: contactError } = await supabase
+    .from(contactsCurrentView)
+    .select(contactsListingSelect)
+    .in('hektor_contact_id', contactIds)
+  if (contactError || !contactRows) throw new Error(contactError?.message ?? 'Unable to load annonce contact invitees')
+
+  const contactsById = new Map(
+    (contactRows as unknown as MandantContactSearchOption[]).map((row) => {
+      const normalized = normalizeMandantContactOption(row)
+      return [normalized.hektor_contact_id, normalized]
+    }),
+  )
+
+  return contactIds.map((contactId) => {
+    const relation = relationByContact.get(contactId) ?? { role_contact: null, relation_source: null }
+    const contact = contactsById.get(contactId) ?? fallbackAnnonceContactInviteeOption(contactId, relation)
+    return {
+      ...contact,
+      role_contact: relation.role_contact,
+      relation_source: relation.relation_source,
+    }
+  })
 }
 
 export async function searchMandantContactOptions(input: {

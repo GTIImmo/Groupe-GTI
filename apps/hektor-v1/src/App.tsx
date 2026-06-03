@@ -43,6 +43,7 @@ import {
   loadUserProfile,
   loadGoogleWorkspaceIdentity,
   loadGoogleCalendarEventLinks,
+  loadAnnonceContactInvitees,
   checkGoogleCalendarAvailability,
   createGoogleCalendarEvent,
   updateGoogleCalendarEvent,
@@ -90,6 +91,7 @@ import {
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
   searchMandantContactOptions,
+  type AnnonceContactInviteeOption,
   type DraftAnnonceSheetScanPayload,
   type HektorContactIdentityInput,
   type GoogleCalendarAvailability,
@@ -17096,6 +17098,15 @@ type GoogleAgendaInviteeContactLink = {
   source?: string | null
 }
 
+type GoogleAgendaLinkedInviteeOption = {
+  key: string
+  label: string
+  email: string
+  meta: string
+  hektorContactId?: string | null
+  link: GoogleAgendaInviteeContactLink | null
+}
+
 function normalizeGoogleAgendaInviteeContactLink(value: unknown): GoogleAgendaInviteeContactLink | null {
   if (!value || typeof value !== 'object') return null
   const record = value as Record<string, unknown>
@@ -17167,6 +17178,15 @@ function contactOptionAgendaLink(contact: MandantContactSearchOption, email = co
     hektorContactId: contact.hektor_contact_id,
     source: 'contact_search',
   }
+}
+
+function googleAgendaRelationRoleLabel(value: string | null | undefined) {
+  const text = safeText(value).replace(/[_-]+/g, ' ').toLowerCase()
+  if (!text) return 'Relation annonce'
+  if (text.includes('proprietaire') || text.includes('mandant')) return 'Mandant'
+  if (text.includes('acquereur')) return 'Acquereur'
+  if (text.includes('offre')) return 'Offre'
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 function contactInputAgendaLabel(contact: HektorContactIdentityInput) {
@@ -17367,6 +17387,9 @@ function GoogleAgendaAnnonceSection(props: {
   const [contactOptions, setContactOptions] = useState<MandantContactSearchOption[]>([])
   const [contactSearchLoading, setContactSearchLoading] = useState(false)
   const [contactSearchError, setContactSearchError] = useState<string | null>(null)
+  const [linkedRelationContactOptions, setLinkedRelationContactOptions] = useState<AnnonceContactInviteeOption[]>([])
+  const [linkedRelationContactsLoading, setLinkedRelationContactsLoading] = useState(false)
+  const [linkedRelationContactsError, setLinkedRelationContactsError] = useState<string | null>(null)
   const [contactCreateOpen, setContactCreateOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState(false)
@@ -17374,6 +17397,7 @@ function GoogleAgendaAnnonceSection(props: {
   const [availability, setAvailability] = useState<GoogleCalendarAvailability | null>(null)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [printingId, setPrintingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -17469,11 +17493,79 @@ function GoogleAgendaAnnonceSection(props: {
     }
   }, [calendarEmail, contactSearch, dossier?.agence_nom, dossier?.commercial_id, dossier?.negociateur_email, modalOpen, props.hektorNegotiators])
 
+  useEffect(() => {
+    if (!modalOpen || (!appDossierId && !hektorAnnonceId)) {
+      setLinkedRelationContactOptions([])
+      setLinkedRelationContactsLoading(false)
+      setLinkedRelationContactsError(null)
+      return
+    }
+    let cancelled = false
+    setLinkedRelationContactsLoading(true)
+    setLinkedRelationContactsError(null)
+    void loadAnnonceContactInvitees({ appDossierId, hektorAnnonceId, limit: 24 })
+      .then((rows) => {
+        if (!cancelled) setLinkedRelationContactOptions(rows)
+      })
+      .catch((relationError) => {
+        if (cancelled) return
+        setLinkedRelationContactOptions([])
+        setLinkedRelationContactsError(relationError instanceof Error ? relationError.message : 'Contacts lies impossibles a charger.')
+      })
+      .finally(() => {
+        if (!cancelled) setLinkedRelationContactsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [appDossierId, hektorAnnonceId, modalOpen])
+
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const activeEvents = events.filter((item) => item.status !== 'deleted')
-  const linkedAgendaContacts = props.contacts
-    .map((contact) => ({ contact, email: detailContactAgendaEmail(contact) }))
-    .filter((item, index, list) => item.email && list.findIndex((other) => other.email === item.email) === index)
+  const linkedAgendaContacts = useMemo(() => {
+    const contactsByKey = new Map<string, GoogleAgendaLinkedInviteeOption>()
+    const addContact = (item: Omit<GoogleAgendaLinkedInviteeOption, 'key'>) => {
+      const hektorContactId = safeText(item.hektorContactId)
+      const email = safeText(item.email).toLowerCase()
+      const key = hektorContactId ? `contact-${hektorContactId}` : email ? `email-${email}` : `label-${item.label}-${contactsByKey.size}`
+      const link = item.link ?? (email ? {
+        email,
+        label: item.label,
+        hektorContactId: hektorContactId || null,
+        source: 'annonce_contact',
+      } : null)
+      const next = { ...item, key, email, hektorContactId: hektorContactId || null, link }
+      const existing = contactsByKey.get(key)
+      if (!existing || (!existing.email && next.email)) contactsByKey.set(key, next)
+    }
+
+    props.contacts.forEach((contact) => {
+      const email = detailContactAgendaEmail(contact)
+      const contactId = detailContactDirectoryId(contact)
+      addContact({
+        label: detailContactAgendaLabel(contact),
+        email,
+        meta: email || contact.phone || 'Email absent',
+        hektorContactId: contactId,
+        link: detailContactAgendaLink(contact, email),
+      })
+    })
+
+    linkedRelationContactOptions.forEach((option) => {
+      const email = contactOptionAgendaEmail(option)
+      const relationLabel = googleAgendaRelationRoleLabel(option.role_contact)
+      const secondary = email || option.phone_primary || option.phone_secondary || 'Email absent'
+      addContact({
+        label: mandantContactOptionTitle(option),
+        email,
+        meta: `${relationLabel} - ${secondary}`,
+        hektorContactId: option.hektor_contact_id,
+        link: contactOptionAgendaLink(option, email),
+      })
+    })
+
+    return Array.from(contactsByKey.values())
+  }, [linkedRelationContactOptions, props.contacts])
   const isEditingGoogleAgendaEvent = Boolean(editingEventId)
   const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
   const availabilityBusy = availability?.busy ?? []
@@ -17739,6 +17831,26 @@ function GoogleAgendaAnnonceSection(props: {
     }
   }
 
+  async function handlePrintGoogleAgendaVisitVoucher(link: GoogleCalendarEventLink) {
+    if (!dossier) return
+    const voucherContact = visitVoucherContactFromAnnonceEvent(link, props.contacts)
+    const voucherRelations = visitVoucherRelationsFromDossier(dossier)
+    const printWindow = window.open('', '_blank')
+    writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml())
+    setPrintingId(link.id)
+    setMessage(null)
+    setError(null)
+    let photoUrl: string | null = null
+    try {
+      photoUrl = await loadVisitVoucherPhotoUrl(link, voucherRelations)
+    } catch (photoError) {
+      console.warn('Visit voucher photo loading failed', photoError)
+    } finally {
+      openVisitVoucherPrint(voucherContact, link, voucherRelations, photoUrl, printWindow)
+      setPrintingId(null)
+    }
+  }
+
   return (
     <section className="detail-section detail-google-agenda-section">
       <div className="section-header">
@@ -17845,20 +17957,21 @@ function GoogleAgendaAnnonceSection(props: {
                     <div className="google-agenda-invitee-tools">
                       <div>
                         <span className="detail-label">Contacts lies a l'annonce</span>
+                        {linkedRelationContactsLoading ? <p className="empty-state">Chargement contacts lies...</p> : null}
+                        {linkedRelationContactsError ? <p className="google-agenda-error">{linkedRelationContactsError}</p> : null}
                         {linkedAgendaContacts.length > 0 ? (
                           <div className="google-agenda-contact-list">
-                            {linkedAgendaContacts.map(({ contact, email }) => {
-                              const contactLink = detailContactAgendaLink(contact, email)
+                            {linkedAgendaContacts.map((option) => {
                               return (
-                                <button key={`linked-contact-${email}`} className="google-agenda-contact-button" type="button" onClick={() => contactLink && handleAddAgendaInvitee(contactLink)}>
-                                  <strong>{detailContactAgendaLabel(contact)}</strong>
-                                  <span>{email}</span>
-                                  {contactLink?.hektorContactId ? <small>Contact {contactLink.hektorContactId}</small> : null}
+                                <button key={`linked-contact-${option.key}`} className="google-agenda-contact-button" type="button" onClick={() => option.link && handleAddAgendaInvitee(option.link)} disabled={!option.link}>
+                                  <strong>{option.label}</strong>
+                                  <span>{option.meta}</span>
+                                  {option.hektorContactId ? <small>Contact {option.hektorContactId}</small> : <small>{option.email ? 'Email direct' : 'Email absent'}</small>}
                                 </button>
                               )
                             })}
                           </div>
-                        ) : <p className="empty-state">Aucun contact lie avec email.</p>}
+                        ) : !linkedRelationContactsLoading ? <p className="empty-state">Aucun contact lie trouve.</p> : null}
                       </div>
                       <div>
                         <span className="detail-label">Recherche etendue</span>
@@ -18045,6 +18158,11 @@ function GoogleAgendaAnnonceSection(props: {
                           <div className="google-agenda-event-actions">
                             {item.google_html_link ? (
                               <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Ouvrir</a>
+                            ) : null}
+                            {canPrintVisitVoucher(item) ? (
+                              <button className="ghost-button button-primary" type="button" onClick={() => void handlePrintGoogleAgendaVisitVoucher(item)} disabled={pending || deletingId === item.id || printingId === item.id}>
+                                {printingId === item.id ? 'Preparation...' : 'Bon de visite'}
+                              </button>
                             ) : null}
                             <button className="ghost-button button-subtle" type="button" onClick={() => handleEditGoogleAgendaEvent(item)} disabled={pending || deletingId === item.id}>
                               Modifier
@@ -20307,6 +20425,85 @@ function googleAgendaVisitRelation(event: GoogleCalendarEventLink, relations: Ap
   )) ?? null
 }
 
+function visitVoucherRelationsFromDossier(dossier: Dossier): AppContactRelation[] {
+  return [{
+    hektor_contact_id: '',
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    app_dossier_id: dossier.app_dossier_id,
+    numero_dossier: dossier.numero_dossier ?? null,
+    numero_mandat: dossier.numero_mandat ?? null,
+    titre_bien: dossier.titre_bien ?? null,
+    role_contact: 'visite',
+    is_active_annonce: true,
+  }]
+}
+
+function appContactFromDetailContact(contact: DetailContact | null | undefined, fallbackEmail = ''): AppContact | null {
+  if (!contact && !fallbackEmail) return null
+  const email = safeText(contact?.email) || safeText(fallbackEmail)
+  const displayName = contact ? detailContactAgendaLabel(contact) : email
+  return {
+    hektor_contact_id: contact ? detailContactDirectoryId(contact) || email || 'invite' : email || 'invite',
+    display_name: displayName || 'Invite visite',
+    archive: false,
+    email,
+    phone_primary: contact?.phone || null,
+    phone_secondary: null,
+    ville: contact?.city || null,
+    code_postal: contact?.postalCode || null,
+    civilite: contact?.civility || null,
+    nom: contact?.lastName || null,
+    prenom: contact?.firstName || null,
+    relation_roles_json: null,
+    typologies_json: null,
+    linked_annonce_count: null,
+    active_search_count: null,
+    total_search_count: null,
+    duplicate_group_count: null,
+  }
+}
+
+function visitVoucherContactFromAnnonceEvent(event: GoogleCalendarEventLink, contacts: DetailContact[]) {
+  const attendeeContacts = googleAgendaEventInviteeContacts(event)
+  const linkedContactIds = attendeeContacts
+    .map((item) => item.hektorContactId)
+    .filter(Boolean) as string[]
+  const byLinkedId = contacts.find((contact) => {
+    const contactId = detailContactDirectoryId(contact)
+    return contactId ? linkedContactIds.includes(contactId) : false
+  })
+  if (byLinkedId) return appContactFromDetailContact(byLinkedId) as AppContact
+
+  const attendeeEmails = [
+    ...attendeeContacts.map((item) => item.email),
+    ...(Array.isArray(event.attendees_json) ? event.attendees_json : []),
+  ].map((email) => safeText(email).toLowerCase()).filter(Boolean)
+  const byEmail = contacts.find((contact) => attendeeEmails.includes(detailContactAgendaEmail(contact)))
+  if (byEmail) return appContactFromDetailContact(byEmail) as AppContact
+
+  const firstAttendee = attendeeContacts[0]
+  const fallbackEmail = firstAttendee?.email || attendeeEmails[0] || ''
+  return {
+    hektor_contact_id: firstAttendee?.hektorContactId || fallbackEmail || 'invite',
+    display_name: firstAttendee?.label || fallbackEmail || 'Invite visite',
+    archive: false,
+    email: fallbackEmail,
+    phone_primary: null,
+    phone_secondary: null,
+    ville: null,
+    code_postal: null,
+    civilite: null,
+    nom: firstAttendee?.label || null,
+    prenom: null,
+    relation_roles_json: null,
+    typologies_json: null,
+    linked_annonce_count: null,
+    active_search_count: null,
+    total_search_count: null,
+    duplicate_group_count: null,
+  }
+}
+
 function visitVoucherPropertyTitle(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
   return safeText(relation?.titre_bien)
     || safeText(event.metadata_json?.titre_bien)
@@ -20326,7 +20523,63 @@ function visitVoucherPropertyId(event: GoogleCalendarEventLink, relation: AppCon
   return safeText(relation?.hektor_annonce_id) || safeText(event.hektor_annonce_id) || safeText(event.metadata_json?.hektor_annonce_id)
 }
 
-function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
+function visitVoucherAppDossierId(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
+  const candidates = [event.app_dossier_id, event.metadata_json?.app_dossier_id, relation?.app_dossier_id]
+  for (const candidate of candidates) {
+    const value = Number(candidate)
+    if (Number.isFinite(value) && value > 0) return value
+  }
+  return null
+}
+
+function safeVisitVoucherPhotoUrl(value: string | null | undefined) {
+  const text = safeText(value)
+  if (!text) return null
+  try {
+    const url = new URL(text)
+    const host = url.hostname.toLowerCase()
+    if (url.protocol !== 'https:') return null
+    if (host === 'groupe-gti-immobilier.la-boite-immo.com') return null
+    if (host.endsWith('staticlbi.com') || host.endsWith('supabase.co')) return url.toString()
+  } catch {
+    return null
+  }
+  return null
+}
+
+function primaryVisitVoucherPhotoUrl(photos: ConsolePhoto[]) {
+  const photo = photos.find((item) => item.visible && safeVisitVoucherPhotoUrl(item.url_hd || item.url_preview))
+    ?? photos.find((item) => item.visible && safeVisitVoucherPhotoUrl(item.url_preview || item.url_hd))
+  return photo ? safeVisitVoucherPhotoUrl(photo.url_hd || photo.url_preview) : null
+}
+
+async function loadVisitVoucherPhotoUrl(event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
+  const relation = googleAgendaVisitRelation(event, relations)
+  const appDossierId = visitVoucherAppDossierId(event, relation)
+  if (!appDossierId) return null
+  const photos = await loadConsolePhotos(appDossierId)
+  return primaryVisitVoucherPhotoUrl(photos)
+}
+
+function visitVoucherLoadingHtml() {
+  return `<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8" /><title>Preparation bon de visite</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;padding:24px;color:#222">
+  <strong>Preparation du bon de visite...</strong>
+</body>
+</html>`
+}
+
+function writeVisitVoucherWindow(targetWindow: Window | null | undefined, html: string) {
+  if (!targetWindow || targetWindow.closed) return false
+  targetWindow.document.open()
+  targetWindow.document.write(html)
+  targetWindow.document.close()
+  return true
+}
+
+function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null) {
   const relation = googleAgendaVisitRelation(event, relations)
   const contactName = appContactAgendaLabel(contact)
   const contactAddress = [contact.code_postal, contact.ville].filter(Boolean).join(' ')
@@ -20334,6 +20587,11 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
   const propertyMandate = visitVoucherPropertyMandate(event, relation)
   const propertyDossier = visitVoucherPropertyDossier(event, relation)
   const propertyId = visitVoucherPropertyId(event, relation)
+  const safePhotoUrl = safeVisitVoucherPhotoUrl(propertyPhotoUrl)
+  const propertyPhotoBlock = safePhotoUrl ? `
+    <section class="property-photo">
+      <img src="${escapeHtml(safePhotoUrl)}" alt="${escapeHtml(propertyTitle)}" />
+    </section>` : ''
   const propertyLines = [
     propertyTitle,
     event.location ? `Adresse / lieu : ${event.location}` : '',
@@ -20368,6 +20626,8 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
     .label{display:block;margin-bottom:6px;color:#c2185b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
     .name{font-size:14px;font-weight:800;margin-bottom:6px}
     .notice{padding:12px;background:#fff6fa;border:1px solid #f0d4e2;border-left:4px solid #c2185b;border-radius:10px;margin-bottom:10px;text-align:justify}
+    .property-photo{height:56mm;margin-bottom:10px;border:1px solid #e4e4e8;border-radius:10px;background:#f7f7f9;overflow:hidden}
+    .property-photo img{width:100%;height:100%;object-fit:cover;display:block}
     .property-table{width:100%;border-collapse:collapse;border:1px solid #23232a;margin-bottom:10px}
     .property-table th{width:28%;background:#2c2c2c;color:#fff;text-align:left;padding:10px;font-size:11px;text-transform:uppercase}
     .property-table td{padding:10px;background:#fff}
@@ -20418,6 +20678,8 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
 
     <div class="notice">Je soussigne(e) <strong>${escapeHtml(contactName)}</strong>, reconnais que le bien ci-dessous m'a ete presente par l'agence <strong>${escapeHtml(agencyName)}</strong>.</div>
 
+    ${propertyPhotoBlock}
+
     <table class="property-table">
       <tbody>
         <tr>
@@ -20448,8 +20710,10 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
 </html>`
 }
 
-function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
-  const blob = new Blob([visitVoucherHtml(contact, event, relations)], { type: 'text/html;charset=utf-8' })
+function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null, targetWindow?: Window | null) {
+  const html = visitVoucherHtml(contact, event, relations, propertyPhotoUrl)
+  if (writeVisitVoucherWindow(targetWindow, html)) return
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   window.open(url, '_blank', 'noopener,noreferrer')
   window.setTimeout(() => URL.revokeObjectURL(url), 60000)
@@ -20927,6 +21191,7 @@ function ContactDetailPopup(props: {
   const [googleContactAgendaOpen, setGoogleContactAgendaOpen] = useState(false)
   const [googleContactAgendaEditingEvent, setGoogleContactAgendaEditingEvent] = useState<GoogleCalendarEventLink | null>(null)
   const [googleContactAgendaDeletingId, setGoogleContactAgendaDeletingId] = useState<string | null>(null)
+  const [googleContactAgendaPrintingId, setGoogleContactAgendaPrintingId] = useState<string | null>(null)
   const [googleContactEvents, setGoogleContactEvents] = useState<GoogleCalendarEventLink[]>([])
   const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
   const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
@@ -20948,6 +21213,7 @@ function ContactDetailPopup(props: {
     setGoogleContactAgendaOpen(false)
     setGoogleContactAgendaEditingEvent(null)
     setGoogleContactAgendaDeletingId(null)
+    setGoogleContactAgendaPrintingId(null)
   }, [props.contact.hektor_contact_id])
 
   const reloadGoogleContactEvents = useCallback(async () => {
@@ -21020,6 +21286,22 @@ function ContactDetailPopup(props: {
       setGoogleContactEventsError(error instanceof Error ? error.message : 'Suppression RDV Google impossible.')
     } finally {
       setGoogleContactAgendaDeletingId(null)
+    }
+  }
+
+  async function handleOpenVisitVoucherPrint(event: GoogleCalendarEventLink) {
+    const printWindow = window.open('', '_blank')
+    writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml())
+    setGoogleContactAgendaPrintingId(event.id)
+    setGoogleContactEventsError(null)
+    let photoUrl: string | null = null
+    try {
+      photoUrl = await loadVisitVoucherPhotoUrl(event, props.relations)
+    } catch (error) {
+      console.warn('Visit voucher photo loading failed', error)
+    } finally {
+      openVisitVoucherPrint(props.contact, event, props.relations, photoUrl, printWindow)
+      setGoogleContactAgendaPrintingId(null)
     }
   }
 
@@ -21216,8 +21498,8 @@ function ContactDetailPopup(props: {
                           <a className="ghost-button button-subtle" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
                         ) : null}
                         {canPrintVisitVoucher(event) ? (
-                          <button className="ghost-button button-primary" type="button" onClick={() => openVisitVoucherPrint(props.contact, event, props.relations)} disabled={googleContactAgendaDeletingId === event.id}>
-                            Bon de visite
+                          <button className="ghost-button button-primary" type="button" onClick={() => void handleOpenVisitVoucherPrint(event)} disabled={googleContactAgendaDeletingId === event.id || googleContactAgendaPrintingId === event.id}>
+                            {googleContactAgendaPrintingId === event.id ? 'Preparation...' : 'Bon de visite'}
                           </button>
                         ) : null}
                         <button className="ghost-button button-subtle" type="button" onClick={() => handleOpenEditGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>
