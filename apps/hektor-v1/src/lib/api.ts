@@ -4700,7 +4700,10 @@ export type OwnerAnnonceSearchOption = Pick<
   | 'agence_nom'
   | 'statut_annonce'
   | 'archive'
->
+> & {
+  adresse_privee_listing?: string | null
+  adresse_detail?: string | null
+}
 
 function normalizeOwnerAnnonceOption(row: OwnerAnnonceSearchOption): OwnerAnnonceSearchOption {
   return {
@@ -4718,6 +4721,8 @@ function matchesOwnerAnnonceSearch(item: OwnerAnnonceSearchOption, rawSearch: st
     item.numero_dossier,
     item.numero_mandat,
     item.titre_bien,
+    item.adresse_privee_listing,
+    item.adresse_detail,
     item.ville,
     item.code_postal,
     item.commercial_nom,
@@ -4734,7 +4739,7 @@ export async function searchOwnerAnnonceOptions(input: {
 }): Promise<OwnerAnnonceSearchOption[]> {
   const search = normalizeSearchTerm(input.search ?? '').replace(/\s+/g, ' ').trim()
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 30)
-  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive'
+  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,adresse_privee_listing,adresse_detail,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive'
 
   if (!hasSupabaseEnv || !supabase) {
     return filterByNegotiatorEmail(mockDossiers, input.scope)
@@ -4749,7 +4754,6 @@ export async function searchOwnerAnnonceOptions(input: {
       .from(dossiersCurrentView)
       .select(select)
       .eq('archive', '0')
-      .order('date_maj', { ascending: false, nullsFirst: false })
       .order('hektor_annonce_id', { ascending: false })
       .limit(limit),
     input.scope,
@@ -4762,6 +4766,8 @@ export async function searchOwnerAnnonceOptions(input: {
       `numero_dossier.ilike.${ilike}`,
       `numero_mandat.ilike.${ilike}`,
       `titre_bien.ilike.${ilike}`,
+      `adresse_privee_listing.ilike.${ilike}`,
+      `adresse_detail.ilike.${ilike}`,
       `ville.ilike.${ilike}`,
       `code_postal.ilike.${ilike}`,
       `commercial_nom.ilike.${ilike}`,

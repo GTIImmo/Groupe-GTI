@@ -19211,7 +19211,9 @@ function ownerAnnonceOptionTitle(option: OwnerAnnonceSearchOption) {
 }
 
 function ownerAnnonceOptionSubtitle(option: OwnerAnnonceSearchOption) {
+  const address = safeText(option.adresse_privee_listing) || safeText(option.adresse_detail)
   return [
+    address || null,
     option.numero_dossier ? `Dossier ${option.numero_dossier}` : null,
     option.numero_mandat ? `Mandat ${option.numero_mandat}` : null,
     [option.code_postal, option.ville].filter(Boolean).join(' ') || null,
