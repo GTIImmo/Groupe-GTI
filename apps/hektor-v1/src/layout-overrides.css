@@ -4755,3 +4755,854 @@
     height: 28px !important;
   }
 }
+
+/* Phase 1.7 refonte UI: details annonce/contact and action dialogs. */
+.modal-panel-detail,
+.contact-detail-modal,
+.request-modal-panel,
+.diffusion-modal-panel,
+.delete-annonce-modal,
+.archive-annonce-modal,
+.status-change-modal,
+.negotiator-assign-modal,
+.price-drop-popup {
+  --refonte-ink: #222323;
+  --refonte-ink-soft: #4f5858;
+  --refonte-muted: #747d7d;
+  --refonte-bg: #f4f6f6;
+  --refonte-card: #ffffff;
+  --refonte-line: rgba(34, 35, 35, 0.12);
+  --refonte-line-strong: rgba(34, 35, 35, 0.18);
+  --refonte-magenta: #c5005f;
+  --refonte-teal: #0f6874;
+  --refonte-gold: #a78a43;
+  --refonte-danger: #c64040;
+  --refonte-shadow: 0 30px 80px rgba(34, 35, 35, 0.24);
+  --refonte-card-shadow: 0 14px 36px rgba(34, 35, 35, 0.065);
+}
+
+.modal-panel-detail,
+.contact-detail-modal,
+.request-modal-panel,
+.diffusion-modal-panel,
+.delete-annonce-modal,
+.archive-annonce-modal,
+.status-change-modal,
+.negotiator-assign-modal {
+  border: 1px solid var(--refonte-line-strong) !important;
+  border-radius: 8px !important;
+  background: var(--refonte-bg) !important;
+  box-shadow: var(--refonte-shadow) !important;
+  overflow: hidden !important;
+}
+
+.modal-panel-detail {
+  width: min(1400px, calc(100vw - 42px)) !important;
+  max-width: 1400px !important;
+  max-height: calc(100vh - 36px) !important;
+  overflow: auto !important;
+}
+
+.modal-panel-detail .detail-screen,
+.modal-panel-detail .detail-cockpit-panel {
+  background:
+    radial-gradient(circle at 0 0, rgba(197, 0, 95, 0.045), transparent 32%),
+    var(--refonte-bg) !important;
+}
+
+.modal-panel-detail .detail-cockpit-panel {
+  padding: 16px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.modal-panel-detail .full-detail-layout,
+.modal-panel-detail .detail-cockpit-body {
+  gap: 16px !important;
+}
+
+.modal-panel-detail .detail-overview {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.2) 0%, rgba(15, 104, 116, 0.13) 45%, transparent 72%),
+    var(--refonte-ink) !important;
+  box-shadow: 0 20px 52px rgba(34, 35, 35, 0.22) !important;
+}
+
+.modal-panel-detail .detail-overview::before {
+  background: var(--refonte-magenta) !important;
+}
+
+.modal-panel-detail .detail-overview::after {
+  opacity: 0.2 !important;
+}
+
+.modal-panel-detail .detail-header-topline {
+  gap: 12px !important;
+  align-items: stretch !important;
+  min-width: 0 !important;
+}
+
+.modal-panel-detail .detail-overview-summary,
+.modal-panel-detail .detail-property-title,
+.modal-panel-detail .detail-editable-title-row,
+.contact-detail-modal .contact-detail-title,
+.request-modal-title {
+  min-width: 0 !important;
+}
+
+.modal-panel-detail .detail-property-title > span {
+  display: inline-flex !important;
+  width: fit-content !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.modal-panel-detail .detail-property-title h2 {
+  max-width: 780px !important;
+  color: #ffffff !important;
+  font-size: clamp(24px, 2vw, 34px) !important;
+  letter-spacing: 0 !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.modal-panel-detail .detail-summary-address {
+  max-width: 780px !important;
+  color: rgba(255, 255, 255, 0.74) !important;
+}
+
+.modal-panel-detail .detail-owner-card,
+.modal-panel-detail .detail-keyfact-item,
+.modal-panel-detail .detail-keyfact-main,
+.modal-panel-detail .detail-delete-annonce-button,
+.modal-panel-detail .detail-archive-annonce-button,
+.modal-panel-detail .detail-status-annonce-button {
+  border-radius: 8px !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.modal-panel-detail .detail-owner-copy span,
+.modal-panel-detail .detail-owner-copy small,
+.modal-panel-detail .detail-keyfact-item span,
+.modal-panel-detail .detail-keyfact-main span {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.modal-panel-detail .detail-owner-copy strong,
+.modal-panel-detail .detail-keyfact-item strong,
+.modal-panel-detail .detail-keyfact-main strong {
+  color: #ffffff !important;
+}
+
+.modal-panel-detail .detail-owner-avatar {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: #ffffff !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.modal-panel-detail .detail-delete-annonce-button {
+  border-color: rgba(198, 64, 64, 0.38) !important;
+  background: rgba(198, 64, 64, 0.14) !important;
+}
+
+.modal-panel-detail .detail-archive-annonce-button,
+.modal-panel-detail .detail-status-annonce-button {
+  border-color: rgba(15, 104, 116, 0.35) !important;
+  background: rgba(15, 104, 116, 0.16) !important;
+}
+
+.modal-panel-detail .detail-overview-close {
+  min-height: 40px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.modal-panel-detail .detail-tabbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 8 !important;
+  gap: 8px !important;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid var(--refonte-line) !important;
+  background: rgba(244, 246, 246, 0.94) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.modal-panel-detail .detail-tab-button {
+  min-height: 48px !important;
+  border: 1px solid var(--refonte-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--refonte-ink) !important;
+  box-shadow: 0 8px 22px rgba(34, 35, 35, 0.045) !important;
+}
+
+.modal-panel-detail .detail-tab-button:hover {
+  border-color: rgba(197, 0, 95, 0.24) !important;
+  transform: translateY(-1px) !important;
+}
+
+.modal-panel-detail .detail-tab-button.is-active {
+  border-color: var(--refonte-ink) !important;
+  background: var(--refonte-ink) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(34, 35, 35, 0.12) !important;
+}
+
+.modal-panel-detail .detail-tab-button.is-active .detail-tab-icon {
+  background: #ffffff !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.modal-panel-detail .detail-section,
+.modal-panel-detail .detail-subsection,
+.modal-panel-detail .detail-summary-card,
+.modal-panel-detail .detail-entity-card,
+.modal-panel-detail .transaction-card,
+.modal-panel-detail .rich-text-card,
+.modal-panel-detail .timeline-card,
+.modal-panel-detail .detail-action-console,
+.modal-panel-detail .hektor-context-panel,
+.modal-panel-detail .matterport-group-card,
+.modal-panel-detail .detail-readonly-banner,
+.modal-panel-detail .detail-admin-pilot,
+.modal-panel-detail .detail-admin-inline-pilot {
+  border: 1px solid var(--refonte-line) !important;
+  border-radius: 8px !important;
+  background: var(--refonte-card) !important;
+  box-shadow: var(--refonte-card-shadow) !important;
+}
+
+.modal-panel-detail .detail-section {
+  padding: 18px !important;
+}
+
+.modal-panel-detail .section-header,
+.modal-panel-detail .detail-summary-card-head,
+.modal-panel-detail .transaction-card-head,
+.modal-panel-detail .matterport-group-head {
+  border-bottom-color: rgba(34, 35, 35, 0.08) !important;
+}
+
+.modal-panel-detail .detail-section-icon,
+.modal-panel-detail .detail-summary-card-icon,
+.modal-panel-detail .detail-tab-icon,
+.modal-panel-detail .hektor-context-panel-icon,
+.modal-panel-detail .contact-info-icon {
+  border-color: rgba(197, 0, 95, 0.16) !important;
+  background: rgba(197, 0, 95, 0.075) !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.modal-panel-detail .detail-action-console {
+  position: sticky !important;
+  top: 14px !important;
+  padding: 14px !important;
+}
+
+.modal-panel-detail .detail-action-console-head {
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08) !important;
+}
+
+.modal-panel-detail .detail-action-console-list .action-menu-item,
+.modal-panel-detail .hektor-context-action-button,
+.modal-panel-detail .section-toggle-button,
+.modal-panel-detail .contact-open-directory-button,
+.modal-panel-detail .mandants-toggle-button,
+.modal-panel-detail .detail-owner-reassign {
+  border-radius: 8px !important;
+}
+
+.modal-panel-detail .detail-action-console-list .action-menu-item {
+  display: grid !important;
+  grid-template-columns: 48px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+.modal-panel-detail .detail-action-console-list .action-menu-item > span:last-child {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+
+.modal-panel-detail .detail-action-console-list .action-menu-item strong,
+.modal-panel-detail .detail-action-console-list .action-menu-item small {
+  display: block !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.modal-panel-detail .detail-action-console-list .action-menu-item:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 10px 24px rgba(34, 35, 35, 0.08) !important;
+}
+
+.modal-panel-detail .detail-photo-placeholder,
+.modal-panel-detail .readonly-photo-grid button,
+.modal-panel-detail .detail-summary-main-image,
+.modal-panel-detail .detail-contact-summary-strip,
+.modal-panel-detail .transaction-highlight,
+.modal-panel-detail .transaction-detail-drawer,
+.modal-panel-detail .info-grid .info-card {
+  border-radius: 8px !important;
+}
+
+.contact-detail-overlay {
+  align-items: center !important;
+  justify-items: center !important;
+  padding: 28px !important;
+  background: rgba(14, 21, 25, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.contact-detail-modal {
+  width: min(1280px, calc(100vw - 42px)) !important;
+  max-width: 1280px !important;
+  max-height: calc(100vh - 36px) !important;
+  overflow: auto !important;
+}
+
+.contact-detail-modal .contact-detail-modal-head {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 14px !important;
+  padding: 18px 20px !important;
+  border-bottom: 0 !important;
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.18), rgba(15, 104, 116, 0.1) 52%, transparent),
+    var(--refonte-ink) !important;
+  color: #ffffff !important;
+}
+
+.contact-detail-modal .contact-detail-modal-head::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: 5px !important;
+  background: var(--refonte-magenta) !important;
+}
+
+.contact-detail-modal .contact-detail-heading-main {
+  display: grid !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+}
+
+.contact-detail-modal .contact-detail-title h3 {
+  color: #ffffff !important;
+  font-size: clamp(23px, 2vw, 32px) !important;
+  letter-spacing: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.contact-detail-modal .contact-detail-title .eyebrow,
+.contact-detail-modal .contact-detail-title span {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.contact-detail-modal .contact-communication-panel {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.contact-detail-modal .contact-quick-action,
+.contact-detail-modal .contact-management-button,
+.contact-detail-modal .contact-detail-hero-stats span {
+  border-radius: 8px !important;
+}
+
+.contact-detail-modal .contact-quick-action {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.contact-detail-modal .contact-quick-action small {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.contact-detail-modal .contact-quick-action-icon,
+.contact-detail-modal .contact-management-button span:first-child {
+  background: #ffffff !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.contact-detail-modal .contact-management-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(112px, 1fr)) !important;
+  align-content: start !important;
+  gap: 8px !important;
+}
+
+.contact-detail-modal .contact-management-button {
+  min-height: 42px !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.contact-detail-modal .contact-management-button.is-delete {
+  border-color: rgba(198, 64, 64, 0.42) !important;
+  background: rgba(198, 64, 64, 0.18) !important;
+}
+
+.contact-detail-modal .contact-management-button.is-close {
+  grid-column: 1 / -1 !important;
+}
+
+.contact-detail-modal .contact-detail-hero-stats {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.contact-detail-modal .contact-detail-hero-stats span {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.contact-detail-modal .contact-detail-hero-stats small {
+  color: rgba(255, 255, 255, 0.66) !important;
+}
+
+.contact-detail-modal .contact-detail-modal-grid {
+  gap: 16px !important;
+  padding: 18px !important;
+  background: var(--refonte-bg) !important;
+}
+
+.contact-detail-modal .detail-card,
+.contact-detail-modal .contact-info-item,
+.contact-detail-modal .contact-search-item,
+.contact-detail-modal .contact-google-agenda-item,
+.contact-detail-modal .contact-relation-list button,
+.contact-detail-modal .contact-delete-panel {
+  border: 1px solid var(--refonte-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: var(--refonte-card-shadow) !important;
+}
+
+.contact-detail-modal .contact-card-heading {
+  border-bottom-color: rgba(34, 35, 35, 0.08) !important;
+}
+
+.contact-detail-modal .detail-label {
+  color: var(--refonte-magenta) !important;
+}
+
+.contact-detail-modal .contact-info-icon {
+  border-color: rgba(197, 0, 95, 0.16) !important;
+  background: rgba(197, 0, 95, 0.075) !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.contact-detail-modal .contact-search-overview div,
+.contact-detail-modal .contact-search-criteria small,
+.contact-detail-modal .tag-row .status-pill,
+.contact-detail-modal .contact-chip-row span {
+  border-radius: 8px !important;
+}
+
+.request-modal-panel,
+.diffusion-modal-panel,
+.delete-annonce-modal,
+.archive-annonce-modal,
+.status-change-modal,
+.negotiator-assign-modal {
+  width: min(920px, calc(100vw - 42px)) !important;
+  max-width: 920px !important;
+  max-height: calc(100vh - 36px) !important;
+  padding: 0 !important;
+  overflow: auto !important;
+}
+
+.diffusion-modal-panel,
+.status-change-modal {
+  width: min(1040px, calc(100vw - 42px)) !important;
+  max-width: 1040px !important;
+}
+
+.request-modal-head,
+.diffusion-modal-head,
+.delete-annonce-head,
+.status-change-head {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 8 !important;
+  display: grid !important;
+  grid-template-columns: 54px minmax(0, 1fr) auto !important;
+  gap: 14px !important;
+  align-items: center !important;
+  padding: 18px 20px !important;
+  border-bottom: 0 !important;
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.17), rgba(15, 104, 116, 0.09) 52%, transparent),
+    var(--refonte-ink) !important;
+  color: #ffffff !important;
+}
+
+.request-modal-head::before,
+.diffusion-modal-head::before,
+.delete-annonce-head::before,
+.status-change-head::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: 5px !important;
+  background: var(--refonte-magenta) !important;
+}
+
+.request-modal-head .eyebrow,
+.diffusion-modal-head .eyebrow,
+.delete-annonce-head .eyebrow,
+.status-change-head .eyebrow,
+.request-modal-title .eyebrow {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.request-modal-head h3,
+.diffusion-modal-head h3,
+.delete-annonce-head h3,
+.status-change-head h3,
+.request-modal-title h3 {
+  color: #ffffff !important;
+  letter-spacing: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.request-modal-head .ghost-button,
+.diffusion-modal-head .ghost-button,
+.delete-annonce-head .ghost-button,
+.status-change-head .ghost-button {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.request-modal-head .modal-hero-icon,
+.diffusion-modal-head .modal-hero-icon,
+.delete-annonce-head .modal-hero-icon,
+.status-change-head .modal-hero-icon {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: #ffffff !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.request-modal-panel .modal-subline {
+  margin: 0 !important;
+  padding: 12px 20px !important;
+  border-bottom: 1px solid var(--refonte-line) !important;
+  background: #ffffff !important;
+  color: var(--refonte-ink-soft) !important;
+}
+
+.request-modal-panel > .request-summary-card,
+.request-modal-panel > .request-form-grid,
+.request-modal-panel > .request-history-card,
+.request-modal-panel > .request-message-field,
+.diffusion-modal-panel > .diffusion-form,
+.delete-annonce-form,
+.status-change-form {
+  margin: 16px 20px !important;
+}
+
+.request-summary-card,
+.request-summary-metric,
+.request-history-card,
+.request-message-field,
+.request-form-grid,
+.delete-annonce-warning,
+.archive-annonce-warning,
+.status-change-summary,
+.status-change-section,
+.status-change-note,
+.diffusion-modal-panel .detail-card {
+  border: 1px solid var(--refonte-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: var(--refonte-card-shadow) !important;
+}
+
+.request-summary-card {
+  padding: 18px !important;
+}
+
+.request-summary-heading,
+.status-change-summary strong,
+.delete-annonce-warning strong,
+.archive-annonce-warning strong {
+  color: var(--refonte-ink) !important;
+}
+
+.request-summary-kicker,
+.request-summary-metric-label,
+.request-modal-panel .detail-label {
+  color: var(--refonte-magenta) !important;
+}
+
+.request-modal-panel .filter-field input,
+.request-modal-panel .filter-field select,
+.request-modal-panel .inline-textarea,
+.diffusion-modal-panel .filter-field input,
+.diffusion-modal-panel .filter-field select,
+.diffusion-modal-panel .inline-textarea,
+.delete-annonce-form .filter-field input,
+.delete-annonce-form .filter-field select,
+.delete-annonce-form .inline-textarea,
+.status-change-form .filter-field input,
+.status-change-form .filter-field select,
+.status-change-form .inline-textarea {
+  border-radius: 8px !important;
+  border-color: rgba(34, 35, 35, 0.16) !important;
+  background: #ffffff !important;
+}
+
+.request-modal-panel .filter-field input:focus,
+.request-modal-panel .filter-field select:focus,
+.request-modal-panel .inline-textarea:focus,
+.diffusion-modal-panel .filter-field input:focus,
+.diffusion-modal-panel .filter-field select:focus,
+.diffusion-modal-panel .inline-textarea:focus,
+.delete-annonce-form .filter-field input:focus,
+.delete-annonce-form .filter-field select:focus,
+.delete-annonce-form .inline-textarea:focus,
+.status-change-form .filter-field input:focus,
+.status-change-form .filter-field select:focus,
+.status-change-form .inline-textarea:focus {
+  border-color: rgba(197, 0, 95, 0.46) !important;
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.08) !important;
+}
+
+.request-modal-panel .modal-actions,
+.diffusion-modal-panel .modal-actions,
+.delete-annonce-modal .modal-actions,
+.archive-annonce-modal .modal-actions,
+.status-change-modal .modal-actions,
+.negotiator-assign-modal .modal-actions {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 7 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 14px 20px !important;
+  border-top: 1px solid var(--refonte-line) !important;
+  background: rgba(244, 246, 246, 0.94) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.request-modal-panel .modal-actions .ghost-button,
+.diffusion-modal-panel .modal-actions .ghost-button,
+.delete-annonce-modal .modal-actions .ghost-button,
+.archive-annonce-modal .modal-actions .ghost-button,
+.status-change-modal .modal-actions .ghost-button,
+.negotiator-assign-modal .modal-actions .ghost-button {
+  min-height: 42px !important;
+  border-radius: 8px !important;
+}
+
+.price-drop-popup-overlay {
+  background: rgba(14, 21, 25, 0.62) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.price-drop-popup {
+  width: min(470px, calc(100vw - 34px)) !important;
+  border: 1px solid var(--refonte-line-strong) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: var(--refonte-shadow) !important;
+}
+
+.price-drop-popup::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 0 auto !important;
+  height: 5px !important;
+  background: var(--refonte-magenta) !important;
+}
+
+.price-drop-popup-icon {
+  border-color: rgba(197, 0, 95, 0.16) !important;
+  background: rgba(197, 0, 95, 0.075) !important;
+  color: var(--refonte-magenta) !important;
+}
+
+.price-drop-popup-eyebrow {
+  color: var(--refonte-magenta) !important;
+}
+
+.price-drop-popup-actions .ghost-button {
+  min-height: 42px !important;
+  border-radius: 8px !important;
+}
+
+@media (max-width: 980px) {
+  .modal-panel-detail .detail-header-topline,
+  .contact-detail-modal .contact-detail-modal-head {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-panel-detail .detail-overview-actions,
+  .contact-detail-modal .contact-management-actions {
+    justify-content: stretch !important;
+  }
+
+  .modal-panel-detail .detail-action-console {
+    position: static !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .contact-detail-overlay {
+    padding: 8px !important;
+  }
+
+  .modal-panel-detail,
+  .contact-detail-modal,
+  .request-modal-panel,
+  .diffusion-modal-panel,
+  .delete-annonce-modal,
+  .archive-annonce-modal,
+  .status-change-modal,
+  .negotiator-assign-modal {
+    width: calc(100vw - 12px) !important;
+    max-width: calc(100vw - 12px) !important;
+    max-height: calc(100vh - 12px) !important;
+    border-radius: 8px !important;
+  }
+
+  .modal-panel-detail .detail-cockpit-panel {
+    padding: 10px !important;
+  }
+
+  .modal-panel-detail .detail-overview {
+    padding: 16px !important;
+  }
+
+  .modal-panel-detail .detail-property-title h2 {
+    font-size: 24px !important;
+  }
+
+  .modal-panel-detail .detail-keyfacts,
+  .modal-panel-detail .detail-keyfact-grid,
+  .contact-detail-modal .contact-communication-panel,
+  .contact-detail-modal .contact-detail-hero-stats,
+  .request-summary-metrics,
+  .admin-form-grid.request-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-panel-detail .detail-tabbar {
+    overflow-x: auto !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(134px, 1fr) !important;
+    grid-template-columns: none !important;
+    padding: 10px 0 !important;
+  }
+
+  .modal-panel-detail .detail-tab-button {
+    min-width: 134px !important;
+  }
+
+  .modal-panel-detail .detail-status-list div,
+  .modal-panel-detail .detail-entity-line,
+  .modal-panel-detail .detail-mandat-cell,
+  .modal-panel-detail .transaction-highlight div,
+  .modal-panel-detail .info-card {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+    justify-items: start !important;
+  }
+
+  .modal-panel-detail .detail-status-list strong,
+  .modal-panel-detail .detail-entity-line strong,
+  .modal-panel-detail .detail-mandat-cell strong,
+  .modal-panel-detail .transaction-highlight strong,
+  .modal-panel-detail .info-card strong {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    text-align: left !important;
+  }
+
+  .contact-detail-modal .contact-detail-modal-head {
+    padding: 16px !important;
+  }
+
+  .contact-detail-modal .contact-management-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-detail-modal .contact-detail-modal-grid {
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+  }
+
+  .request-modal-head,
+  .diffusion-modal-head,
+  .delete-annonce-head,
+  .status-change-head {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    padding: 16px !important;
+  }
+
+  .request-modal-head .request-modal-close,
+  .request-modal-head .request-modal-hektor-link,
+  .diffusion-modal-head .ghost-button,
+  .delete-annonce-head .ghost-button,
+  .status-change-head .ghost-button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .request-modal-panel > .request-summary-card,
+  .request-modal-panel > .request-form-grid,
+  .request-modal-panel > .request-history-card,
+  .request-modal-panel > .request-message-field,
+  .diffusion-modal-panel > .diffusion-form,
+  .delete-annonce-form,
+  .status-change-form {
+    margin: 12px !important;
+  }
+
+  .request-modal-panel .modal-actions,
+  .diffusion-modal-panel .modal-actions,
+  .delete-annonce-modal .modal-actions,
+  .archive-annonce-modal .modal-actions,
+  .status-change-modal .modal-actions,
+  .negotiator-assign-modal .modal-actions,
+  .price-drop-popup-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+}
