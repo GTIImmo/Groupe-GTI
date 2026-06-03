@@ -11784,11 +11784,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <button
                         key={step}
                         className={`draft-annonce-step ${stateClass}`}
+                        data-step={step}
                         type="button"
                         onClick={() => goToDraftAnnonceStep(step)}
                         disabled={draftAnnoncePending || draftAnnonceScanPending}
                       >
-                        <span className="draft-annonce-step-number">{index + 1}</span>
+                        <span className="draft-annonce-step-number draft-annonce-step-icon" data-step={step} aria-hidden="true">
+                          <span className="draft-annonce-step-count">{index + 1}</span>
+                        </span>
                         <span className="draft-annonce-step-copy">
                           <strong>{meta.label}</strong>
                           <small>{meta.hint}</small>

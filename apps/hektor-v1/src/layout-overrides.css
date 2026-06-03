@@ -4378,3 +4378,296 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Add annonce visual identity: GTI colors and distinctive step pictograms. */
+.draft-annonce-modal {
+  --draft-ink: #222323;
+  --draft-ink-soft: #4e5656;
+  --draft-magenta: #c5005f;
+  --draft-teal: #0f6874;
+  --draft-gold: #c9a96e;
+  --draft-bg: #f4f6f6;
+  --draft-surface: #ffffff;
+  --draft-line: #dde5e5;
+  --draft-shadow: rgba(34, 35, 35, 0.16);
+  border-color: rgba(34, 35, 35, 0.14) !important;
+  background: var(--draft-bg) !important;
+  box-shadow: 0 34px 84px rgba(34, 35, 35, 0.3) !important;
+}
+
+.draft-annonce-head {
+  position: relative !important;
+  overflow: hidden !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #222323 !important;
+  color: #ffffff !important;
+}
+
+.draft-annonce-head::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: 5px !important;
+  background: var(--draft-magenta) !important;
+}
+
+.draft-annonce-head .modal-hero-icon {
+  position: relative !important;
+  z-index: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: var(--draft-magenta) !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 28px rgba(197, 0, 95, 0.28) !important;
+}
+
+.draft-annonce-head .eyebrow {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.draft-annonce-head h3 {
+  color: #ffffff !important;
+}
+
+.draft-annonce-head .ghost-button {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.draft-annonce-head .ghost-button:hover {
+  border-color: rgba(255, 255, 255, 0.34) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+.draft-annonce-form {
+  background: var(--draft-bg) !important;
+}
+
+.draft-annonce-stepper {
+  padding: 2px 2px 8px !important;
+}
+
+.draft-annonce-step {
+  position: relative !important;
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  min-height: 68px !important;
+  border-color: var(--draft-line) !important;
+  background: var(--draft-surface) !important;
+  color: var(--draft-ink) !important;
+  box-shadow: 0 10px 22px rgba(34, 35, 35, 0.055) !important;
+}
+
+.draft-annonce-step:hover:not(:disabled) {
+  border-color: rgba(197, 0, 95, 0.24) !important;
+  box-shadow: 0 12px 26px rgba(34, 35, 35, 0.08) !important;
+}
+
+.draft-annonce-step.is-active {
+  border-color: var(--draft-magenta) !important;
+  background: var(--draft-ink) !important;
+  color: #ffffff !important;
+  box-shadow: 0 18px 34px rgba(34, 35, 35, 0.2) !important;
+}
+
+.draft-annonce-step.is-done {
+  border-color: rgba(15, 104, 116, 0.24) !important;
+  background: #f7fbfa !important;
+}
+
+.draft-annonce-step-copy strong {
+  color: inherit !important;
+}
+
+.draft-annonce-step-copy small {
+  color: #667171 !important;
+}
+
+.draft-annonce-step.is-active .draft-annonce-step-copy small {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.draft-annonce-step-icon {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 40px !important;
+  height: 40px !important;
+  border: 1px solid color-mix(in srgb, var(--step-accent, var(--draft-magenta)) 28%, transparent) !important;
+  border-radius: 8px !important;
+  background: color-mix(in srgb, var(--step-accent, var(--draft-magenta)) 10%, #ffffff) !important;
+  color: var(--step-accent, var(--draft-magenta)) !important;
+}
+
+.draft-annonce-step-icon::before {
+  content: "" !important;
+  width: 21px !important;
+  height: 21px !important;
+  background: currentColor !important;
+  -webkit-mask: var(--step-icon) center / contain no-repeat !important;
+  mask: var(--step-icon) center / contain no-repeat !important;
+}
+
+.draft-annonce-step-count {
+  position: absolute !important;
+  right: -4px !important;
+  bottom: -5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 17px !important;
+  height: 17px !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 999px !important;
+  background: var(--draft-ink) !important;
+  color: #ffffff !important;
+  font-size: 10px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.draft-annonce-step.is-active .draft-annonce-step-icon {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: #ffffff !important;
+  color: var(--step-accent, var(--draft-magenta)) !important;
+}
+
+.draft-annonce-step.is-active .draft-annonce-step-count {
+  background: var(--draft-magenta) !important;
+}
+
+.draft-annonce-step[data-step="offre"] {
+  --step-accent: var(--draft-magenta);
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11.5 12 5l8 6.5'/%3E%3Cpath d='M6.5 10.5V20h11v-9.5'/%3E%3Cpath d='M9 20v-6h6v6'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-step[data-step="photos"] {
+  --step-accent: var(--draft-teal);
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='16' height='14' rx='2.5'/%3E%3Ccircle cx='9' cy='10' r='1.6'/%3E%3Cpath d='m7 17 4.2-4.2 2.8 2.8 1.8-1.8L20 18'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-step[data-step="secteur"] {
+  --step-accent: #276c8f;
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s6-5.2 6-11a6 6 0 0 0-12 0c0 5.8 6 11 6 11Z'/%3E%3Ccircle cx='12' cy='10' r='2.1'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-step[data-step="composition"] {
+  --step-accent: var(--draft-gold);
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='7' height='7' rx='1.5'/%3E%3Crect x='13' y='4' width='7' height='7' rx='1.5'/%3E%3Crect x='4' y='13' width='7' height='7' rx='1.5'/%3E%3Crect x='13' y='13' width='7' height='7' rx='1.5'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-step[data-step="details"] {
+  --step-accent: #5e6268;
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7h14'/%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M5 17h14'/%3E%3Ccircle cx='9' cy='7' r='1.7' fill='black' stroke='none'/%3E%3Ccircle cx='15' cy='12' r='1.7' fill='black' stroke='none'/%3E%3Ccircle cx='11' cy='17' r='1.7' fill='black' stroke='none'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-step[data-step="mandatPrix"] {
+  --step-accent: #a78a43;
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z'/%3E%3Cpath d='M14 3.5V8h4'/%3E%3Cpath d='M9 12h6'/%3E%3Cpath d='M9 16h4'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-step[data-step="diffusion"] {
+  --step-accent: #0f6874;
+  --step-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 12 16-7-5.5 15-3.2-6.3L4 12Z'/%3E%3Cpath d='m11.3 13.7 3.2-3.2'/%3E%3C/svg%3E");
+}
+
+.draft-annonce-progress {
+  background: #e3e8e8 !important;
+}
+
+.draft-annonce-progress span {
+  background: var(--draft-magenta) !important;
+}
+
+.draft-annonce-page-head {
+  border-color: rgba(34, 35, 35, 0.1) !important;
+  background:
+    linear-gradient(90deg, rgba(197, 0, 95, 0.045), transparent 38%),
+    #ffffff !important;
+  box-shadow: 0 12px 28px rgba(34, 35, 35, 0.07) !important;
+}
+
+.draft-annonce-page-head span {
+  color: var(--draft-magenta) !important;
+}
+
+.draft-annonce-page-head h4 {
+  color: var(--draft-ink) !important;
+}
+
+.draft-annonce-page-head p {
+  color: var(--draft-ink-soft) !important;
+}
+
+.draft-annonce-page-score {
+  border-color: rgba(197, 0, 95, 0.18) !important;
+  background: rgba(197, 0, 95, 0.065) !important;
+}
+
+.draft-annonce-page-score strong {
+  color: var(--draft-magenta) !important;
+}
+
+.draft-annonce-section {
+  border-color: rgba(34, 35, 35, 0.1) !important;
+  box-shadow: 0 14px 34px rgba(34, 35, 35, 0.055) !important;
+}
+
+.draft-annonce-section-title span {
+  border-color: rgba(197, 0, 95, 0.16) !important;
+  background: rgba(197, 0, 95, 0.07) !important;
+  color: var(--draft-magenta) !important;
+}
+
+.draft-annonce-section-title strong {
+  color: var(--draft-ink) !important;
+}
+
+.draft-annonce-form .filter-field input:focus,
+.draft-annonce-form .filter-field select:focus,
+.draft-annonce-form .filter-field textarea:focus {
+  border-color: rgba(197, 0, 95, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.08) !important;
+}
+
+@media (max-width: 900px) {
+  .draft-annonce-modal .draft-annonce-step {
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-icon::before {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .draft-annonce-modal .draft-annonce-step {
+    grid-template-columns: 1fr !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-icon::before {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  .draft-annonce-modal .draft-annonce-step-count {
+    right: -5px !important;
+    bottom: -5px !important;
+    width: 15px !important;
+    height: 15px !important;
+    font-size: 9px !important;
+  }
+}
