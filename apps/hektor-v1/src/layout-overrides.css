@@ -3546,3 +3546,236 @@
   background:
     linear-gradient(90deg, rgba(197, 0, 95, 0.065), #ffffff 48%) !important;
 }
+
+/* Final action controls pass: compact table actions without touching state logic. */
+.app-shell-modern .listing-table-active th:last-child,
+.app-shell-modern .listing-table-active td:last-child {
+  width: 126px !important;
+  min-width: 126px !important;
+  max-width: 126px !important;
+}
+
+.app-shell-modern .listing-table-estimation th:last-child,
+.app-shell-modern .listing-table-estimation td:last-child {
+  width: 134px !important;
+  min-width: 134px !important;
+  max-width: 134px !important;
+}
+
+.app-shell-modern .suivi-layout table th:last-child,
+.app-shell-modern .suivi-layout table td:last-child {
+  width: 206px !important;
+  min-width: 206px !important;
+}
+
+.app-shell-modern table td > .row-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-shell {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex: 0 0 88px !important;
+  width: 88px !important;
+  min-width: 0 !important;
+  max-width: 88px !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger,
+.app-shell-modern table td > .row-actions > .ghost-button,
+.app-shell-modern table td > .row-actions .estimation-action-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger {
+  flex: 0 0 88px !important;
+  width: 88px !important;
+  min-width: 88px !important;
+  max-width: 88px !important;
+  gap: 7px !important;
+}
+
+.app-shell-modern table td > .row-actions > .ghost-button {
+  flex: 0 0 72px !important;
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 88px !important;
+  border-color: rgba(34, 35, 35, 0.15) !important;
+  background: #ffffff !important;
+  color: #222323 !important;
+  box-shadow: none !important;
+}
+
+.app-shell-modern table td > .row-actions > .ghost-button:hover {
+  border-color: rgba(197, 0, 95, 0.34) !important;
+  color: var(--gti-final-magenta) !important;
+  background: #ffffff !important;
+}
+
+.app-shell-modern table td > .row-actions .estimation-action-button {
+  width: 112px !important;
+  min-width: 112px !important;
+  max-width: 112px !important;
+  border-color: rgba(15, 104, 116, 0.22) !important;
+  background: #ffffff !important;
+  color: #222323 !important;
+  box-shadow: none !important;
+}
+
+.app-shell-modern table td > .row-actions .estimation-action-button:hover {
+  border-color: rgba(197, 0, 95, 0.38) !important;
+  color: var(--gti-final-magenta) !important;
+  background: #ffffff !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-dot {
+  flex: 0 0 8px !important;
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-neutral {
+  border-color: rgba(34, 35, 35, 0.16) !important;
+  background: #ffffff !important;
+  color: #222323 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-neutral:hover {
+  border-color: rgba(197, 0, 95, 0.34) !important;
+  color: var(--gti-final-magenta) !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-neutral .action-menu-trigger-dot {
+  background: #8c9494 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-creation {
+  border-color: rgba(79, 143, 181, 0.34) !important;
+  background: #eef7fa !important;
+  color: #21485c !important;
+  box-shadow: 0 8px 18px rgba(79, 143, 181, 0.10) !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-creation:hover {
+  border-color: rgba(79, 143, 181, 0.48) !important;
+  background: #e6f2f7 !important;
+  color: #21485c !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-creation .action-menu-trigger-dot {
+  background: #4f8fb5 !important;
+  box-shadow: 0 0 0 4px rgba(79, 143, 181, 0.14) !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-correction {
+  border-color: rgba(221, 122, 24, 0.36) !important;
+  background: #fff6ea !important;
+  color: #824004 !important;
+  box-shadow: 0 8px 18px rgba(221, 122, 24, 0.10) !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-correction:hover {
+  border-color: rgba(221, 122, 24, 0.54) !important;
+  background: #ffefd9 !important;
+  color: #824004 !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-correction .action-menu-trigger-dot {
+  background: #dd7a18 !important;
+  box-shadow: 0 0 0 4px rgba(221, 122, 24, 0.14) !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-rejected {
+  border-color: rgba(209, 83, 71, 0.36) !important;
+  background: #fff1ef !important;
+  color: #8c3329 !important;
+  box-shadow: 0 8px 18px rgba(209, 83, 71, 0.10) !important;
+  animation: none !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-rejected:hover {
+  border-color: rgba(209, 83, 71, 0.52) !important;
+  background: #ffe8e5 !important;
+  color: #8c3329 !important;
+}
+
+.app-shell-modern table td > .row-actions .action-menu-trigger-rejected .action-menu-trigger-dot {
+  background: #d15347 !important;
+  box-shadow: 0 0 0 4px rgba(209, 83, 71, 0.14) !important;
+  animation: none !important;
+}
+
+.app-shell-modern table td > .row-actions .lightweight-row-action {
+  width: 112px !important;
+  min-width: 112px !important;
+  max-width: 112px !important;
+  min-height: 38px !important;
+  padding: 5px 8px !important;
+  border-radius: 8px !important;
+  gap: 7px !important;
+  box-shadow: none !important;
+}
+
+.app-shell-modern table td > .row-actions .lightweight-row-action-icon {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  border-radius: 7px !important;
+  font-size: 11px !important;
+}
+
+.app-shell-modern table td > .row-actions .lightweight-row-action-label {
+  min-width: 0 !important;
+}
+
+.app-shell-modern table td > .row-actions .lightweight-row-action-label strong,
+.app-shell-modern table td > .row-actions .lightweight-row-action-label small {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 980px) {
+  .app-shell-modern .listing-table-active th:last-child,
+  .app-shell-modern .listing-table-active td:last-child,
+  .app-shell-modern .listing-table-estimation th:last-child,
+  .app-shell-modern .listing-table-estimation td:last-child {
+    width: 118px !important;
+    min-width: 118px !important;
+    max-width: 118px !important;
+  }
+
+  .app-shell-modern table td > .row-actions .action-menu-trigger,
+  .app-shell-modern table td > .row-actions .estimation-action-button,
+  .app-shell-modern table td > .row-actions .lightweight-row-action {
+    width: 104px !important;
+    min-width: 104px !important;
+    max-width: 104px !important;
+  }
+}
