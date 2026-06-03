@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type AppScreen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'suivi'
+export type AppScreen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi'
 
 type MobileLayoutProps = {
   children: ReactNode
@@ -19,6 +19,7 @@ const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; ad
   { screen: 'mandats', label: 'Annonces', icon: 'home' },
   { screen: 'estimations', label: 'Estimations', icon: 'trend' },
   { screen: 'contacts', label: 'Contacts', icon: 'contact' },
+  { screen: 'agenda', label: 'Agenda', icon: 'calendar' },
   { screen: 'registre', label: 'Mandats', icon: 'doc' },
   { screen: 'suivi', label: 'Suivi', icon: 'target', adminOnly: true },
 ]

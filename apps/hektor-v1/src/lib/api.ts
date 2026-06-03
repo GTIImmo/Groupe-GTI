@@ -466,6 +466,8 @@ export async function loadGoogleCalendarEventLinks(input: {
   hektorAnnonceId?: number | null
   hektorContactId?: string | null
   calendarEmail?: string | null
+  startAt?: string | null
+  endAt?: string | null
   limit?: number
 }) {
   const params = new URLSearchParams()
@@ -473,6 +475,8 @@ export async function loadGoogleCalendarEventLinks(input: {
   if (input.hektorAnnonceId) params.set('hektorAnnonceId', String(input.hektorAnnonceId))
   if (input.hektorContactId?.trim()) params.set('hektorContactId', input.hektorContactId.trim())
   if (input.calendarEmail?.trim()) params.set('calendarEmail', input.calendarEmail.trim())
+  if (input.startAt?.trim()) params.set('startAt', input.startAt.trim())
+  if (input.endAt?.trim()) params.set('endAt', input.endAt.trim())
   if (input.limit) params.set('limit', String(input.limit))
   const suffix = params.toString() ? `?${params.toString()}` : ''
   const payload = await invokeBackendApi<{ ok: true; events: GoogleCalendarEventLink[] }>(`/google-workspace/calendar/events${suffix}`, {

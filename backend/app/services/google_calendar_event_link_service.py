@@ -82,14 +82,20 @@ class GoogleCalendarEventLinkService:
         hektor_annonce_id: int | None = None,
         hektor_contact_id: str | None = None,
         calendar_email: str | None = None,
+        start_at: str | None = None,
+        end_at: str | None = None,
         limit: int = 50,
     ) -> list[dict[str, Any]]:
         clean_limit = max(1, min(limit, 100))
         params = {
             "select": "*",
-            "order": "starts_at.desc",
+            "order": "starts_at.asc" if start_at or end_at else "starts_at.desc",
             "limit": str(clean_limit),
         }
+        if start_at:
+            params["ends_at"] = f"gt.{start_at}"
+        if end_at:
+            params["starts_at"] = f"lt.{end_at}"
         if app_dossier_id is not None:
             params["app_dossier_id"] = f"eq.{app_dossier_id}"
         if hektor_annonce_id is not None:

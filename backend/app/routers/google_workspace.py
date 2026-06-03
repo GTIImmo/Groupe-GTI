@@ -257,6 +257,8 @@ def list_google_calendar_event_links(
     hektorAnnonceId: int | None = Query(default=None, gt=0),
     hektorContactId: str | None = Query(default=None, max_length=80),
     calendarEmail: EmailStr | None = Query(default=None),
+    startAt: str | None = Query(default=None, max_length=40),
+    endAt: str | None = Query(default=None, max_length=40),
     limit: int = Query(default=50, ge=1, le=100),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
@@ -279,6 +281,8 @@ def list_google_calendar_event_links(
             hektor_annonce_id=hektorAnnonceId,
             hektor_contact_id=hektorContactId,
             calendar_email=scoped_calendar_email,
+            start_at=startAt,
+            end_at=endAt,
             limit=limit,
         ),
     }

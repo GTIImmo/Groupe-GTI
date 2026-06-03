@@ -105,7 +105,7 @@
   left: 10px;
   z-index: 82;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
   gap: 6px;
   padding: 8px;
   border: 1px solid rgba(34, 35, 35, 0.1);
@@ -223,6 +223,22 @@
   border: 2px solid currentColor;
   border-radius: 50%;
   box-shadow: 7px 5px 0 -3px currentColor;
+}
+
+.mobile-nav-icon-calendar::before {
+  inset: 4px 3px 3px;
+  border: 2px solid currentColor;
+  border-radius: 5px;
+}
+
+.mobile-nav-icon-calendar::after {
+  top: 3px;
+  left: 7px;
+  width: 7px;
+  height: 5px;
+  border-right: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  box-shadow: 0 7px 0 -3px currentColor;
 }
 
 .mobile-bottom-nav-item strong {
