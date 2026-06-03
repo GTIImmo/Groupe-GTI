@@ -4251,3 +4251,130 @@
 .app-shell-modern .register-table tbody tr.register-row-state-cancelled.is-selected:hover td:first-child {
   background: #f4f6f6 !important;
 }
+
+/* Suivi top panel: keep title, KPI cards and action buttons in separate grid areas. */
+.app-shell-modern .suivi-command-panel {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 14px !important;
+}
+
+.app-shell-modern .suivi-command-panel > .panel-head {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  z-index: 1 !important;
+}
+
+.app-shell-modern .suivi-command-panel > .suivi-header-kpis {
+  grid-column: 1 / 9 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.app-shell-modern .suivi-command-panel > .header-control-row {
+  grid-column: 9 / -1 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.app-shell-modern .suivi-command-panel > .header-control-row .kpi-toggle-button {
+  display: grid !important;
+  grid-template-columns: 28px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 76px !important;
+  padding: 12px 14px !important;
+  white-space: normal !important;
+}
+
+.app-shell-modern .suivi-command-panel > .header-control-row .kpi-toggle-button span:not(.control-icon) {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.app-shell-modern .suivi-command-panel > .header-control-row .kpi-toggle-button strong {
+  justify-self: end !important;
+  min-width: 18px !important;
+}
+
+.app-shell-modern .suivi-command-panel > .priority-dropdown {
+  grid-column: 1 / -1 !important;
+  grid-row: 3 !important;
+}
+
+.app-shell-modern .suivi-command-panel > .header-kpis-secondary {
+  grid-column: 1 / -1 !important;
+  grid-row: 4 !important;
+}
+
+@media (max-width: 1280px) {
+  .app-shell-modern .suivi-command-panel > .suivi-header-kpis {
+    grid-column: 1 / 8 !important;
+  }
+
+  .app-shell-modern .suivi-command-panel > .header-control-row {
+    grid-column: 8 / -1 !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .app-shell-modern .suivi-command-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell-modern .suivi-command-panel > .panel-head,
+  .app-shell-modern .suivi-command-panel > .suivi-header-kpis,
+  .app-shell-modern .suivi-command-panel > .header-control-row,
+  .app-shell-modern .suivi-command-panel > .priority-dropdown,
+  .app-shell-modern .suivi-command-panel > .header-kpis-secondary {
+    grid-column: 1 !important;
+  }
+
+  .app-shell-modern .suivi-command-panel > .header-control-row {
+    grid-row: 2 !important;
+  }
+
+  .app-shell-modern .suivi-command-panel > .suivi-header-kpis {
+    grid-row: 3 !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell-modern .suivi-command-panel > .priority-dropdown {
+    grid-row: 4 !important;
+  }
+
+  .app-shell-modern .suivi-command-panel > .header-kpis-secondary {
+    grid-row: 5 !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-shell-modern .suivi-command-panel > .suivi-header-kpis,
+  .app-shell-modern .suivi-command-panel > .header-control-row {
+    grid-template-columns: 1fr !important;
+  }
+}
