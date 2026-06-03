@@ -20231,6 +20231,422 @@ function ContactWorkflowModal(props: {
   )
 }
 
+function appContactAgendaEmail(contact: AppContact) {
+  return normalizeEmail(contact.email)
+}
+
+function appContactAgendaLabel(contact: AppContact) {
+  return [contact.civilite, contact.prenom, contact.nom].map((value) => safeText(value)).filter(Boolean).join(' ')
+    || safeText(contact.display_name)
+    || `Contact ${contact.hektor_contact_id}`
+}
+
+function appContactAgendaLink(contact: AppContact): GoogleAgendaInviteeContactLink | null {
+  const email = appContactAgendaEmail(contact)
+  if (!email) return null
+  return {
+    email,
+    label: appContactAgendaLabel(contact),
+    hektorContactId: contact.hektor_contact_id,
+    source: 'fiche_contact',
+  }
+}
+
+function relationToOwnerAnnonceOption(relation: AppContactRelation): OwnerAnnonceSearchOption | null {
+  if (!relation.app_dossier_id) return null
+  const hektorAnnonceId = Number(relation.hektor_annonce_id)
+  if (!Number.isFinite(hektorAnnonceId)) return null
+  return {
+    app_dossier_id: relation.app_dossier_id,
+    hektor_annonce_id: hektorAnnonceId,
+    numero_dossier: relation.numero_dossier ?? null,
+    numero_mandat: relation.numero_mandat ?? null,
+    titre_bien: relation.titre_bien || `Annonce ${relation.hektor_annonce_id}`,
+    ville: null,
+    code_postal: null,
+    commercial_nom: null,
+    agence_nom: null,
+    statut_annonce: contactBool(relation.is_active_annonce) ? 'Actif' : null,
+    archive: '0',
+  }
+}
+
+function GoogleAgendaContactModal(props: {
+  contact: AppContact
+  relations: AppContactRelation[]
+  hektorNegotiators?: HektorNegotiatorOption[]
+  sessionEmail?: string | null
+  onClose: () => void
+  onCreated?: (event: GoogleCalendarEventLink | null) => void
+}) {
+  const contactEmail = appContactAgendaEmail(props.contact)
+  const contactLabel = appContactAgendaLabel(props.contact)
+  const contactInvitee = appContactAgendaLink(props.contact)
+  const defaultCalendarEmail = normalizeEmail(props.contact.negociateur_email) || normalizeEmail(props.sessionEmail)
+  const linkedAnnonceOptions = useMemo(() => {
+    const byId = new Map<number, OwnerAnnonceSearchOption>()
+    props.relations.forEach((relation) => {
+      const option = relationToOwnerAnnonceOption(relation)
+      if (option) byId.set(option.hektor_annonce_id, option)
+    })
+    return Array.from(byId.values())
+  }, [props.relations])
+  const contactSearchOwner = findContactHektorOption(props.hektorNegotiators ?? [], {
+    email: props.contact.negociateur_email || defaultCalendarEmail,
+  })
+  const annonceScope = useMemo<DataScope | null>(() => {
+    const negotiatorEmail = normalizeEmail(contactSearchOwner?.email) || normalizeEmail(props.contact.negociateur_email) || defaultCalendarEmail
+    const agencyName = safeText(contactSearchOwner?.agenceNom) || safeText(props.contact.agence_nom)
+    if (agencyName) return { agencyName, negotiatorEmail: negotiatorEmail || null }
+    return negotiatorEmail.endsWith(`@${googleWorkspaceDomain}`) ? { negotiatorEmail } : null
+  }, [contactSearchOwner?.agenceNom, contactSearchOwner?.email, defaultCalendarEmail, props.contact.agence_nom, props.contact.negociateur_email])
+  const [calendarEmail, setCalendarEmail] = useState(defaultCalendarEmail)
+  const [eventType, setEventType] = useState<GoogleCalendarEventLink['event_type']>('visite')
+  const [selectedAnnonce, setSelectedAnnonce] = useState<OwnerAnnonceSearchOption | null>(linkedAnnonceOptions[0] ?? null)
+  const [annonceSearch, setAnnonceSearch] = useState(linkedAnnonceOptions[0] ? ownerAnnonceOptionTitle(linkedAnnonceOptions[0]) : '')
+  const [annonceOptions, setAnnonceOptions] = useState<OwnerAnnonceSearchOption[]>([])
+  const [annonceLoading, setAnnonceLoading] = useState(false)
+  const [annonceError, setAnnonceError] = useState<string | null>(null)
+  const [summary, setSummary] = useState('')
+  const [startAt, setStartAt] = useState(defaultGoogleAgendaStartValue)
+  const [durationMinutes, setDurationMinutes] = useState('60')
+  const [location, setLocation] = useState('')
+  const [attendeesText, setAttendeesText] = useState(contactEmail)
+  const [attendeeContactLinks, setAttendeeContactLinks] = useState<GoogleAgendaInviteeContactLink[]>(contactInvitee ? [contactInvitee] : [])
+  const [description, setDescription] = useState('')
+  const [pending, setPending] = useState(false)
+  const [availabilityPending, setAvailabilityPending] = useState(false)
+  const [availability, setAvailability] = useState<GoogleCalendarAvailability | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const isVisit = eventType === 'visite'
+  const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
+  const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
+  const availabilityBusy = availability?.busy ?? []
+  const canCheckAvailability = canUseCalendarEmail && Boolean(startAt) && Boolean(durationMinutes)
+  const canSubmit = canUseCalendarEmail && Boolean(summary.trim()) && (!isVisit || Boolean(selectedAnnonce))
+
+  useEffect(() => {
+    const label = googleAgendaEventTypeOptions.find((option) => option.value === eventType)?.label ?? 'RDV'
+    const annonceTitle = selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : 'Bien a selectionner'
+    setSummary(isVisit ? `Visite GTI - ${annonceTitle} - ${contactLabel}` : `${label} GTI - ${contactLabel}`)
+  }, [contactLabel, eventType, isVisit, selectedAnnonce])
+
+  useEffect(() => {
+    if (selectedAnnonce || !linkedAnnonceOptions[0]) return
+    setSelectedAnnonce(linkedAnnonceOptions[0])
+    setAnnonceSearch(ownerAnnonceOptionTitle(linkedAnnonceOptions[0]))
+  }, [linkedAnnonceOptions, selectedAnnonce])
+
+  useEffect(() => {
+    const annonceTitle = selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : ''
+    setDescription([
+      'RDV cree depuis GTI.',
+      `Contact : ${contactLabel}`,
+      props.contact.hektor_contact_id ? `Contact Hektor : ${props.contact.hektor_contact_id}` : '',
+      contactEmail ? `Email contact : ${contactEmail}` : '',
+      selectedAnnonce ? `Bien : ${annonceTitle}` : '',
+      selectedAnnonce?.hektor_annonce_id ? `Annonce Hektor : ${selectedAnnonce.hektor_annonce_id}` : '',
+      selectedAnnonce?.numero_dossier ? `Dossier : ${selectedAnnonce.numero_dossier}` : '',
+      selectedAnnonce?.numero_mandat ? `Mandat : ${selectedAnnonce.numero_mandat}` : '',
+      isVisit ? 'Preparation bon de visite : bien et contact lies au RDV.' : '',
+    ].filter(Boolean).join('\n'))
+  }, [contactEmail, contactLabel, isVisit, props.contact.hektor_contact_id, selectedAnnonce])
+
+  useEffect(() => {
+    if (isVisit && selectedAnnonce) {
+      setLocation([selectedAnnonce.code_postal, selectedAnnonce.ville].filter(Boolean).join(' '))
+    } else if (!isVisit) {
+      setLocation([props.contact.code_postal, props.contact.ville].filter(Boolean).join(' '))
+    }
+  }, [isVisit, props.contact.code_postal, props.contact.ville, selectedAnnonce])
+
+  useEffect(() => {
+    setAvailability(null)
+  }, [calendarEmail, durationMinutes, startAt])
+
+  useEffect(() => {
+    if (!isVisit) {
+      setAnnonceOptions([])
+      setAnnonceLoading(false)
+      setAnnonceError(null)
+      return
+    }
+    const search = annonceSearch.trim()
+    const minSearchLength = /^\d+$/.test(search) ? 1 : 3
+    if (search.length < minSearchLength) {
+      setAnnonceOptions([])
+      setAnnonceLoading(false)
+      setAnnonceError(null)
+      return
+    }
+    let cancelled = false
+    setAnnonceLoading(true)
+    setAnnonceError(null)
+    const handle = window.setTimeout(async () => {
+      try {
+        const rows = await searchOwnerAnnonceOptions({ search, scope: annonceScope, limit: 8 })
+        if (cancelled) return
+        setAnnonceOptions(rows)
+      } catch (searchError) {
+        if (cancelled) return
+        setAnnonceOptions([])
+        setAnnonceError(searchError instanceof Error ? searchError.message : 'Recherche bien impossible.')
+      } finally {
+        if (!cancelled) setAnnonceLoading(false)
+      }
+    }, 260)
+    return () => {
+      cancelled = true
+      window.clearTimeout(handle)
+    }
+  }, [annonceScope, annonceSearch, isVisit])
+
+  function handleAttendeesTextChange(value: string) {
+    setAttendeesText(value)
+    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, contactInvitee ? [contactInvitee] : [], splitEmailList(value)))
+  }
+
+  function handleSelectAnnonce(option: OwnerAnnonceSearchOption) {
+    setSelectedAnnonce(option)
+    setAnnonceSearch(ownerAnnonceOptionTitle(option))
+    setAnnonceOptions([])
+    setAnnonceError(null)
+  }
+
+  async function handleCheckAvailability() {
+    setAvailabilityPending(true)
+    setAvailability(null)
+    setMessage(null)
+    setError(null)
+    try {
+      const minutes = Number(durationMinutes)
+      const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
+      if (!endAt) throw new Error('Horaire RDV invalide')
+      const result = await checkGoogleCalendarAvailability({
+        subjectEmail: calendarEmail,
+        startAt,
+        endAt,
+      })
+      if (!result.ok) throw new Error('Verification disponibilite Google impossible')
+      setAvailability(result)
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Verification disponibilite Google impossible')
+    } finally {
+      setAvailabilityPending(false)
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setPending(true)
+    setMessage(null)
+    setError(null)
+    try {
+      if (isVisit && !selectedAnnonce) throw new Error('Selectionne le bien a visiter avant de creer le RDV.')
+      const minutes = Number(durationMinutes)
+      const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
+      if (!endAt) throw new Error('Horaire RDV invalide')
+      const attendees = splitEmailList(attendeesText)
+      const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
+      const created = await createGoogleCalendarEvent({
+        subjectEmail: calendarEmail,
+        eventType,
+        relatedEntityType: selectedAnnonce ? 'annonce' : 'contact',
+        relatedEntityId: selectedAnnonce ? String(selectedAnnonce.app_dossier_id) : props.contact.hektor_contact_id,
+        appDossierId: selectedAnnonce?.app_dossier_id ?? null,
+        hektorAnnonceId: selectedAnnonce?.hektor_annonce_id ?? null,
+        hektorContactId: props.contact.hektor_contact_id,
+        summary,
+        startAt,
+        endAt,
+        description,
+        location,
+        attendees,
+        sendUpdates: 'all',
+        metadata: {
+          source: 'fiche_contact',
+          contact_id: props.contact.hektor_contact_id,
+          contact_label: contactLabel,
+          contact_email: contactEmail || null,
+          hektor_annonce_id: selectedAnnonce?.hektor_annonce_id ?? null,
+          app_dossier_id: selectedAnnonce?.app_dossier_id ?? null,
+          titre_bien: selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : null,
+          numero_dossier: selectedAnnonce?.numero_dossier ?? null,
+          numero_mandat: selectedAnnonce?.numero_mandat ?? null,
+          bon_visite_ready: isVisit && Boolean(selectedAnnonce),
+          attendee_contacts: attendeeContacts,
+          attendee_contact_count: attendeeContacts.length,
+        },
+      })
+      setMessage('RDV Google cree et lie au contact.')
+      setAvailability(null)
+      props.onCreated?.(created.link ?? null)
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Creation RDV Google impossible')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="modal-overlay google-agenda-modal-overlay" onClick={props.onClose}>
+      <section className="modal-panel google-agenda-modal google-agenda-contact-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="google-agenda-modal-head">
+          <div>
+            <span className="eyebrow">Google Agenda</span>
+            <h3>Creer RDV Google</h3>
+            <p>{contactLabel}</p>
+          </div>
+          <button className="request-modal-close" type="button" onClick={props.onClose}>Fermer</button>
+        </div>
+        <div className="google-agenda-modal-meta">
+          <span><strong>Contact</strong>{contactLabel}</span>
+          <span><strong>Email</strong>{contactEmail || '-'}</span>
+          <span><strong>Agenda</strong>{calendarEmail || '-'}</span>
+          <span><strong>Agence</strong>{props.contact.agence_nom || '-'}</span>
+        </div>
+        <div className="google-agenda-modal-layout">
+          <section className="google-agenda-panel google-agenda-planner-panel">
+            <div className="google-agenda-panel-head">
+              <span>Creation</span>
+              <strong>Planifier un RDV contact</strong>
+            </div>
+            <form className="google-agenda-form" onSubmit={handleSubmit}>
+              <label className="filter-field">
+                <span>Agenda</span>
+                <input value={calendarEmail} onChange={(inputEvent) => setCalendarEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required />
+              </label>
+              <label className="filter-field">
+                <span>Type</span>
+                <select value={eventType} onChange={(inputEvent) => setEventType(inputEvent.target.value as GoogleCalendarEventLink['event_type'])}>
+                  {googleAgendaEventTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              {isVisit ? (
+                <div className="google-agenda-field-wide google-agenda-invitees">
+                  <div className="google-agenda-invitee-tools">
+                    <div>
+                      <span className="detail-label">Bien a visiter</span>
+                      <div className="google-agenda-contact-search">
+                        <input value={annonceSearch} onChange={(inputEvent) => {
+                          setAnnonceSearch(inputEvent.target.value)
+                          setSelectedAnnonce(null)
+                        }} placeholder="Adresse, ville, dossier, mandat..." />
+                      </div>
+                      {annonceError ? <p className="google-agenda-error">{annonceError}</p> : null}
+                      {linkedAnnonceOptions.length > 0 ? (
+                        <div className="google-agenda-contact-list">
+                          {linkedAnnonceOptions.map((option) => (
+                            <button key={`linked-annonce-${option.hektor_annonce_id}`} className="google-agenda-contact-button" type="button" onClick={() => handleSelectAnnonce(option)}>
+                              <strong>{ownerAnnonceOptionTitle(option)}</strong>
+                              <span>{ownerAnnonceOptionSubtitle(option) || `Annonce ${option.hektor_annonce_id}`}</span>
+                              <small>{ownerAnnonceOptionMeta(option) || 'Annonce liee au contact'}</small>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                      {annonceOptions.length > 0 ? (
+                        <div className="google-agenda-contact-list">
+                          {annonceOptions.map((option) => (
+                            <button key={`annonce-option-${option.hektor_annonce_id}`} className="google-agenda-contact-button" type="button" onClick={() => handleSelectAnnonce(option)}>
+                              <strong>{ownerAnnonceOptionTitle(option)}</strong>
+                              <span>{ownerAnnonceOptionSubtitle(option) || `Annonce ${option.hektor_annonce_id}`}</span>
+                              <small>{ownerAnnonceOptionMeta(option)}</small>
+                            </button>
+                          ))}
+                        </div>
+                      ) : annonceSearch.trim().length >= (/^\d+$/.test(annonceSearch.trim()) ? 1 : 3) && !annonceLoading ? <p className="empty-state">Aucun bien trouve dans le perimetre agence/negociateur.</p> : null}
+                      {annonceLoading ? <p className="empty-state">Recherche biens...</p> : null}
+                      {selectedAnnonce ? (
+                        <div className="contact-owner-selected">
+                          <strong>Bien selectionne</strong>
+                          <span>{ownerAnnonceOptionTitle(selectedAnnonce)} - ID {selectedAnnonce.hektor_annonce_id}</span>
+                        </div>
+                      ) : <p className="empty-state">Le bien est obligatoire pour une visite.</p>}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <label className="filter-field google-agenda-field-wide">
+                <span>Titre</span>
+                <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
+              </label>
+              <label className="filter-field">
+                <span>Debut</span>
+                <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
+              </label>
+              <label className="filter-field">
+                <span>Duree</span>
+                <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
+                  {hasCustomDuration ? <option value={durationMinutes}>{durationMinutes} min</option> : null}
+                  <option value="30">30 min</option>
+                  <option value="45">45 min</option>
+                  <option value="60">1 h</option>
+                  <option value="90">1 h 30</option>
+                  <option value="120">2 h</option>
+                </select>
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Lieu</span>
+                <input value={location} onChange={(inputEvent) => setLocation(inputEvent.target.value)} />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Invite client</span>
+                <input value={attendeesText} onChange={(inputEvent) => handleAttendeesTextChange(inputEvent.target.value)} placeholder="client@email.fr" />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Description</span>
+                <textarea className="inline-textarea" value={description} onChange={(inputEvent) => setDescription(inputEvent.target.value)} />
+              </label>
+              {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
+              {message ? <p className="google-agenda-success">{message}</p> : null}
+              {error ? <p className="google-agenda-error">{error}</p> : null}
+              {availability ? (
+                <div className={availability.isAvailable ? 'google-agenda-success' : 'google-agenda-warning'}>
+                  <strong>{availability.isAvailable ? 'Disponible sur ce creneau.' : `Conflit agenda : ${availability.busyCount ?? availabilityBusy.length} creneau occupe.`}</strong>
+                  {!availability.isAvailable && availabilityBusy.length > 0 ? (
+                    <span>{availabilityBusy.slice(0, 3).map((slot) => `${formatDateTime(slot.start)} - ${formatDateTime(slot.end)}`).join(' | ')}</span>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="modal-actions google-agenda-actions">
+                <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
+                  {availabilityPending ? 'Verification...' : 'Verifier dispo'}
+                </button>
+                <button className="ghost-button button-primary" type="submit" disabled={pending || !canSubmit}>
+                  {pending ? 'Creation...' : 'Creer RDV Google'}
+                </button>
+              </div>
+            </form>
+          </section>
+          <section className="google-agenda-panel google-agenda-links-panel">
+            <div className="google-agenda-panel-head">
+              <span>Preparation metier</span>
+              <strong>{isVisit ? 'Visite avec bien' : 'RDV contact'}</strong>
+            </div>
+            <div className="detail-rich-copy">
+              <p>{isVisit ? 'Le RDV sera relie au contact et au bien selectionne. Cette liaison servira ensuite pour preparer le bon de visite.' : 'Le RDV sera relie au contact dans GTI.'}</p>
+            </div>
+            <div className="info-grid">
+              <InfoCard label="Contact" value={contactLabel} />
+              <InfoCard label="Bien" value={selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : '-'} />
+              <InfoCard label="Mandat" value={selectedAnnonce?.numero_mandat || '-'} />
+              <InfoCard label="Dossier" value={selectedAnnonce?.numero_dossier || '-'} />
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>,
+    document.body,
+  )
+}
+
 function ContactDetailPopup(props: {
   contact: AppContact
   relations: AppContactRelation[]
@@ -20253,6 +20669,7 @@ function ContactDetailPopup(props: {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [googleContactAgendaOpen, setGoogleContactAgendaOpen] = useState(false)
   const [googleContactEvents, setGoogleContactEvents] = useState<GoogleCalendarEventLink[]>([])
   const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
   const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
@@ -20271,6 +20688,24 @@ function ContactDetailPopup(props: {
     setDeleteConfirmText('')
     setDeleteError(null)
     setDeletePending(false)
+    setGoogleContactAgendaOpen(false)
+  }, [props.contact.hektor_contact_id])
+
+  const reloadGoogleContactEvents = useCallback(async () => {
+    setGoogleContactEvents([])
+    setGoogleContactEventsError(null)
+    setGoogleContactEventsLoading(true)
+    try {
+      const rows = await loadGoogleCalendarEventLinks({
+        hektorContactId: props.contact.hektor_contact_id,
+        limit: 25,
+      })
+      setGoogleContactEvents(rows)
+    } catch (error) {
+      setGoogleContactEventsError(error instanceof Error ? error.message : 'Chargement RDV Google impossible.')
+    } finally {
+      setGoogleContactEventsLoading(false)
+    }
   }, [props.contact.hektor_contact_id])
 
   useEffect(() => {
@@ -20295,6 +20730,10 @@ function ContactDetailPopup(props: {
       cancelled = true
     }
   }, [props.contact.hektor_contact_id])
+
+  function handleGoogleContactAgendaCreated() {
+    void reloadGoogleContactEvents()
+  }
 
   const handleDeleteContact = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -20448,8 +20887,13 @@ function ContactDetailPopup(props: {
 
             <article className="detail-card contact-google-agenda-card">
             <div className="contact-card-heading">
-              <span className="detail-label">RDV Google</span>
-              <strong>{googleContactEventsLoading ? 'Chargement...' : `${activeGoogleContactEvents.length} rendez-vous lie(s)`}</strong>
+              <div>
+                <span className="detail-label">RDV Google</span>
+                <strong>{googleContactEventsLoading ? 'Chargement...' : `${activeGoogleContactEvents.length} rendez-vous lie(s)`}</strong>
+              </div>
+              <button className="ghost-button button-primary" type="button" onClick={() => setGoogleContactAgendaOpen(true)}>
+                Creer RDV Google
+              </button>
             </div>
             {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
             {activeGoogleContactEvents.length > 0 ? (
@@ -20490,6 +20934,16 @@ function ContactDetailPopup(props: {
               </div>
             ) : <p>{googleContactEventsLoading ? 'Chargement des rendez-vous...' : 'Aucun RDV Google lie a ce contact pour le moment.'}</p>}
             </article>
+            {googleContactAgendaOpen ? (
+              <GoogleAgendaContactModal
+                contact={props.contact}
+                relations={props.relations}
+                hektorNegotiators={props.hektorNegotiators}
+                sessionEmail={props.sessionEmail}
+                onClose={() => setGoogleContactAgendaOpen(false)}
+                onCreated={handleGoogleContactAgendaCreated}
+              />
+            ) : null}
 
             <article className="detail-card contact-search-detail">
             <span className="detail-label">Recherches acquereurs</span>

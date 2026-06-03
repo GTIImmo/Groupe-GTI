@@ -13845,6 +13845,9 @@ button.metric-card.is-active {
   gap: 14px;
   align-items: start;
 }
+.google-agenda-contact-modal .google-agenda-modal-layout {
+  grid-template-columns: minmax(360px, 1fr) minmax(320px, 0.72fr);
+}
 .google-agenda-panel {
   min-width: 0;
   padding: 14px;
@@ -27659,6 +27662,33 @@ body {
   font-weight: 950 !important;
   line-height: 1.2 !important;
   overflow-wrap: anywhere !important;
+}
+
+.contact-google-agenda-card .contact-card-heading {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  gap: 12px !important;
+}
+
+.contact-google-agenda-card .contact-card-heading > div {
+  display: grid !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+}
+
+.contact-google-agenda-card .contact-card-heading .ghost-button {
+  min-height: 40px !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .contact-google-agenda-card .contact-card-heading {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-google-agenda-card .contact-card-heading .ghost-button {
+    width: 100% !important;
+  }
 }
 
 .contact-info-list {
