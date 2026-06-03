@@ -4300,6 +4300,17 @@ function safeUploadFilename(name: string, fallback: string) {
   return clean || fallback
 }
 
+function safeStorageObjectFilename(name: string, fallback: string) {
+  const cleanFallback = fallback.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '')
+  const clean = safeUploadFilename(name, fallback)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  return clean || cleanFallback || 'upload'
+}
+
 function filenameExtension(name: string) {
   const match = name.match(/(\.[a-z0-9]{1,12})$/i)
   return match ? match[1] : ''
@@ -4368,7 +4379,8 @@ export async function createUploadHektorPhotoJob(input: {
   const userId = await requireSupabaseUserId()
   const jobId = crypto.randomUUID()
   const originalName = safeUploadFilename(input.file.name, 'photo.jpg')
-  const storagePath = `temp/photos/${jobId}/${originalName}`
+  const storageFilename = safeStorageObjectFilename(originalName, 'photo.jpg')
+  const storagePath = `temp/photos/${jobId}/${storageFilename}`
   const { data: jobData, error: jobError } = await supabase
     .from('app_console_job')
     .insert({
@@ -4456,7 +4468,8 @@ export async function createUploadDocumentToHektorJob(input: {
   const extension = filenameExtension(originalName)
   const requestedLabel = filenameStem(safeUploadFilename(input.documentLabel ?? '', ''))
   const uploadFilename = safeUploadFilename(requestedLabel ? `${requestedLabel}${extension}` : originalName, originalName)
-  const storagePath = `temp/uploads/${jobId}/${uploadFilename}`
+  const storageFilename = safeStorageObjectFilename(uploadFilename, originalName)
+  const storagePath = `temp/uploads/${jobId}/${storageFilename}`
   const { data: jobData, error: jobError } = await supabase
     .from('app_console_job')
     .insert({

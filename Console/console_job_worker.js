@@ -1617,8 +1617,9 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     return null;
   }
 
+  const forceRemoteSwitch = Boolean(options.forceRemoteSwitch);
   let current = currentHektorSessionIdentity();
-  if (current && current.userId === String(target.idUser)) {
+  if (current && current.userId === String(target.idUser) && !forceRemoteSwitch) {
     await logJob(job.id, "hektor_context", "done", "Contexte Hektor negociateur deja actif", {
       id_user: target.idUser,
       label: target.label,
@@ -1626,8 +1627,16 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     });
     return target;
   }
+  if (current && current.userId === String(target.idUser) && forceRemoteSwitch) {
+    await logJob(job.id, "hektor_context", "running", "Verification distante du contexte Hektor negociateur", {
+      id_user: target.idUser,
+      label: target.label,
+      source: target.source,
+      current_role: current.role || null,
+    });
+  }
 
-  current = await ensureAdminHektorWriteSession(job, "context_switch_admin_login");
+  current = await ensureAdminHektorWriteSession(job, forceRemoteSwitch ? "context_switch_forced_admin_login" : "context_switch_admin_login");
 
   await logJob(job.id, "hektor_context", "running", "Changement de contexte Hektor negociateur", {
     current_user_id: current && current.userId ? current.userId : null,
@@ -1765,7 +1774,16 @@ async function hektorFetch(url, options = {}) {
     };
   } catch (error) {
     if (error && error.name === "AbortError") throw new Error(`Hektor timeout ${timeoutMs}ms on ${url}`);
-    throw error;
+    const message = error && error.message ? error.message : String(error);
+    if (/^(Hektor \d+ on |Session Hektor|Session console)/i.test(message)) throw error;
+    const cause = error && error.cause ? error.cause : null;
+    const details = [
+      message,
+      error && error.code ? `code=${error.code}` : null,
+      cause && cause.code ? `cause_code=${cause.code}` : null,
+      cause && cause.message ? `cause=${cause.message}` : null,
+    ].filter(Boolean).join(" | ");
+    throw new Error(`Hektor fetch failed on ${url}: ${details || "network error"}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -2975,11 +2993,26 @@ async function handleSyncConsoleDocuments(job) {
 }
 
 async function handleSyncHektorPhotos(job) {
+  const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
+  const photoContextOptions = { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true };
+  await ensureHektorExecutionContext(job, dossier, payload, photoContextOptions);
   await logJob(job.id, "hektor_photos", "running", "Lecture photos Console", {
     hektor_annonce_id: dossier.hektor_annonce_id,
   });
-  const entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+  let entries;
+  try {
+    entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+  } catch (error) {
+    if (!isHektorForbiddenError(error)) throw error;
+    await logJob(job.id, "hektor_photos", "running", "Lecture photos refusee par Hektor, relance session puis retry", {
+      hektor_annonce_id: dossier.hektor_annonce_id,
+      error: error.message || String(error),
+    });
+    await refreshHektorSession("photo_403_retry");
+    await ensureHektorExecutionContext(job, dossier, payload, photoContextOptions);
+    entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+  }
   const rows = await upsertConsolePhotos(dossier, entries);
   const visibleCount = rows.filter((row) => row.visible).length;
   const hiddenCount = rows.length - visibleCount;
