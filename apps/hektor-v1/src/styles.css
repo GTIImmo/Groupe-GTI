@@ -27785,6 +27785,63 @@ body {
   border-radius: 8px !important;
 }
 
+.contact-google-agenda-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.contact-google-agenda-item {
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  padding: 13px 14px !important;
+  border: 1px solid rgba(37, 132, 82, 0.18) !important;
+  border-radius: 8px !important;
+  background: rgba(37, 132, 82, 0.055) !important;
+}
+
+.contact-google-agenda-item-head {
+  display: grid !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+}
+
+.contact-google-agenda-item-head span {
+  color: var(--gti-final-magenta) !important;
+  font-size: 10px !important;
+  font-weight: 950 !important;
+  text-transform: uppercase !important;
+}
+
+.contact-google-agenda-item-head strong {
+  min-width: 0 !important;
+  color: var(--gti-final-ink) !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.contact-google-agenda-facts {
+  display: grid !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+}
+
+.contact-google-agenda-facts span {
+  min-width: 0 !important;
+  color: rgba(34, 35, 35, 0.68) !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.contact-google-agenda-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+
 .contact-relation-button-head {
   align-items: center !important;
 }

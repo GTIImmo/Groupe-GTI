@@ -20253,10 +20253,14 @@ function ContactDetailPopup(props: {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [googleContactEvents, setGoogleContactEvents] = useState<GoogleCalendarEventLink[]>([])
+  const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
+  const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
   const selectedArchivedSearches = props.searches.filter((search) => !contactBool(search.is_active))
+  const activeGoogleContactEvents = googleContactEvents.filter((event) => event.status !== 'deleted')
   const duplicateCount = props.contact.duplicate_group_count ?? 0
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
 
@@ -20267,6 +20271,29 @@ function ContactDetailPopup(props: {
     setDeleteConfirmText('')
     setDeleteError(null)
     setDeletePending(false)
+  }, [props.contact.hektor_contact_id])
+
+  useEffect(() => {
+    let cancelled = false
+    setGoogleContactEvents([])
+    setGoogleContactEventsError(null)
+    setGoogleContactEventsLoading(true)
+    loadGoogleCalendarEventLinks({
+      hektorContactId: props.contact.hektor_contact_id,
+      limit: 25,
+    })
+      .then((rows) => {
+        if (!cancelled) setGoogleContactEvents(rows)
+      })
+      .catch((error) => {
+        if (!cancelled) setGoogleContactEventsError(error instanceof Error ? error.message : 'Chargement RDV Google impossible.')
+      })
+      .finally(() => {
+        if (!cancelled) setGoogleContactEventsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [props.contact.hektor_contact_id])
 
   const handleDeleteContact = async (event: FormEvent<HTMLFormElement>) => {
@@ -20417,6 +20444,51 @@ function ContactDetailPopup(props: {
               {contactBool(props.contact.has_contact_detail) && props.contact.contact_detail_synced_at ? <span>Detail lu le {formatDate(props.contact.contact_detail_synced_at)}</span> : null}
               {props.contact.duplicate_primary_candidate_id ? <span>Candidat principal: {props.contact.duplicate_primary_candidate_id}</span> : null}
             </div>
+            </article>
+
+            <article className="detail-card contact-google-agenda-card">
+            <div className="contact-card-heading">
+              <span className="detail-label">RDV Google</span>
+              <strong>{googleContactEventsLoading ? 'Chargement...' : `${activeGoogleContactEvents.length} rendez-vous lie(s)`}</strong>
+            </div>
+            {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
+            {activeGoogleContactEvents.length > 0 ? (
+              <div className="contact-google-agenda-list">
+                {activeGoogleContactEvents.map((event) => {
+                  const eventInvitees = Array.isArray(event.attendees_json) ? event.attendees_json : []
+                  const inviteeContacts = googleAgendaEventInviteeContacts(event)
+                  const contactInvitee = inviteeContacts.find((item) => item.hektorContactId === props.contact.hektor_contact_id)
+                  return (
+                    <article key={`contact-google-event-${event.id}`} className="contact-google-agenda-item">
+                      <div className="contact-google-agenda-item-head">
+                        <span>{googleAgendaEventTypeOptions.find((option) => option.value === event.event_type)?.label ?? 'RDV'}</span>
+                        <strong>{event.summary}</strong>
+                      </div>
+                      <div className="contact-google-agenda-facts">
+                        <span>{formatDateTime(event.starts_at)} - {formatDateTime(event.ends_at)}</span>
+                        <span>{event.google_calendar_email}</span>
+                        {event.location ? <span>{event.location}</span> : null}
+                        {contactInvitee?.label ? <span>Invite : {contactInvitee.label}</span> : null}
+                        {eventInvitees.length > 0 ? <span>{eventInvitees.length} invite(s)</span> : null}
+                      </div>
+                      <div className="contact-google-agenda-actions">
+                        {event.app_dossier_id ? (
+                          <button className="ghost-button button-subtle" type="button" onClick={() => {
+                            props.onClose()
+                            props.onOpenDossier(event.app_dossier_id as number)
+                          }}>
+                            Ouvrir dossier
+                          </button>
+                        ) : null}
+                        {event.google_html_link ? (
+                          <a className="ghost-button button-subtle" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
+                        ) : null}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            ) : <p>{googleContactEventsLoading ? 'Chargement des rendez-vous...' : 'Aucun RDV Google lie a ce contact pour le moment.'}</p>}
             </article>
 
             <article className="detail-card contact-search-detail">

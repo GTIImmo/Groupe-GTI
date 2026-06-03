@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -83,19 +84,39 @@ class GoogleCalendarEventLinkService:
         calendar_email: str | None = None,
         limit: int = 50,
     ) -> list[dict[str, Any]]:
+        clean_limit = max(1, min(limit, 100))
         params = {
             "select": "*",
             "order": "starts_at.desc",
-            "limit": str(max(1, min(limit, 100))),
+            "limit": str(clean_limit),
         }
         if app_dossier_id is not None:
             params["app_dossier_id"] = f"eq.{app_dossier_id}"
         if hektor_annonce_id is not None:
             params["hektor_annonce_id"] = f"eq.{hektor_annonce_id}"
-        if hektor_contact_id:
-            params["hektor_contact_id"] = f"eq.{hektor_contact_id}"
         if calendar_email:
             params["google_calendar_email"] = f"ilike.{calendar_email}"
+        if hektor_contact_id:
+            direct_params = {**params, "hektor_contact_id": f"eq.{hektor_contact_id}"}
+            attendee_params = {
+                **params,
+                "metadata_json->attendee_contacts": f"cs.{json.dumps([{'hektor_contact_id': hektor_contact_id}], separators=(',', ':'))}",
+            }
+            rows_by_id: dict[str, dict[str, Any]] = {}
+            rows = self._rest_get(direct_params)
+            try:
+                rows.extend(self._rest_get(attendee_params))
+            except HTTPException:
+                pass
+            for row in rows:
+                row_id = str(row.get("id") or "")
+                if row_id:
+                    rows_by_id[row_id] = row
+            return sorted(
+                rows_by_id.values(),
+                key=lambda row: str(row.get("starts_at") or ""),
+                reverse=True,
+            )[:clean_limit]
         return self._rest_get(params)
 
     def create_link(
