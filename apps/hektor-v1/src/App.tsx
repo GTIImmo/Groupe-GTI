@@ -20455,6 +20455,13 @@ function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLi
   window.setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
+function canPrintVisitVoucher(event: GoogleCalendarEventLink) {
+  const type = safeText(event.event_type).toLowerCase()
+  if (type === 'visite') return true
+  if (event.metadata_json?.bon_visite_ready === true) return true
+  return Boolean(event.app_dossier_id || event.hektor_annonce_id || event.metadata_json?.app_dossier_id || event.metadata_json?.hektor_annonce_id)
+}
+
 function GoogleAgendaContactModal(props: {
   contact: AppContact
   relations: AppContactRelation[]
@@ -21208,7 +21215,7 @@ function ContactDetailPopup(props: {
                         {event.google_html_link ? (
                           <a className="ghost-button button-subtle" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
                         ) : null}
-                        {event.event_type === 'visite' ? (
+                        {canPrintVisitVoucher(event) ? (
                           <button className="ghost-button button-primary" type="button" onClick={() => openVisitVoucherPrint(props.contact, event, props.relations)} disabled={googleContactAgendaDeletingId === event.id}>
                             Bon de visite
                           </button>
