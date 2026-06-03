@@ -3157,3 +3157,174 @@
     text-align: center !important;
   }
 }
+
+/* Hotfix refonte header: keep search, actions and KPI toggles aligned. */
+@media (min-width: 1600px) {
+  .app-shell-modern .content > .hero {
+    overflow: visible !important;
+  }
+
+  .app-shell-modern .hero-stack {
+    display: grid !important;
+    grid-template-columns: minmax(420px, 1fr) auto minmax(330px, 360px) !important;
+    grid-auto-rows: auto !important;
+    gap: 14px 18px !important;
+    align-items: center !important;
+  }
+
+  .app-shell-modern .hero-top-row,
+  .app-shell-modern .header-kpi-stack {
+    display: contents !important;
+  }
+
+  .app-shell-modern .search-box {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .app-shell-modern .workspace-shell .hero-actions {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-self: start !important;
+    align-self: center !important;
+    gap: 10px !important;
+    width: auto !important;
+    min-width: max-content !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 4 !important;
+  }
+
+  .app-shell-modern .hero-actions .ghost-button {
+    flex: 0 0 auto !important;
+    min-width: 128px !important;
+    max-width: none !important;
+    min-height: 56px !important;
+    padding: 0 22px !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+  }
+
+  .app-shell-modern .hero-actions .draft-annonce-open-button {
+    min-width: 196px !important;
+  }
+
+  .app-shell-modern .header-control-row,
+  .app-shell-modern .header-control-row.is-inline {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(158px, 1fr)) !important;
+    gap: 14px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+    align-self: stretch !important;
+  }
+
+  .app-shell-modern .kpi-toggle-button {
+    min-width: 0 !important;
+    min-height: 74px !important;
+    padding: 0 18px !important;
+    display: grid !important;
+    grid-template-columns: 34px minmax(62px, 1fr) auto !important;
+    gap: 12px !important;
+    align-items: center !important;
+  }
+
+  .app-shell-modern .kpi-toggle-button span:not(.control-icon) {
+    min-width: 0 !important;
+    overflow: visible !important;
+    color: #111827 !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    line-height: 1.15 !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  .app-shell-modern .kpi-toggle-button strong {
+    justify-self: end !important;
+    min-width: 18px !important;
+    color: #111827 !important;
+    font-size: 15px !important;
+  }
+
+  .app-shell-modern .priority-dropdown,
+  .app-shell-modern .header-kpis-secondary {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 1599px) {
+  .app-shell-modern .hero-stack {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .app-shell-modern .hero-top-row,
+  .app-shell-modern .header-kpi-stack {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .app-shell-modern .hero-top-row {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .app-shell-modern .header-kpi-stack {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .app-shell-modern .search-box,
+  .app-shell-modern .workspace-shell .hero-actions,
+  .app-shell-modern .header-control-row,
+  .app-shell-modern .header-control-row.is-inline {
+    grid-column: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .app-shell-modern .search-box {
+    grid-row: 1 !important;
+  }
+
+  .app-shell-modern .workspace-shell .hero-actions {
+    grid-row: 2 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .app-shell-modern .workspace-shell .hero-actions,
+  .app-shell-modern .header-control-row,
+  .app-shell-modern .header-control-row.is-inline {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    justify-content: flex-start !important;
+  }
+
+  .app-shell-modern .header-control-row,
+  .app-shell-modern .header-control-row.is-inline {
+    grid-row: 1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(160px, 1fr)) !important;
+  }
+
+  .app-shell-modern .hero-actions .ghost-button,
+  .app-shell-modern .kpi-toggle-button {
+    min-height: 48px !important;
+    white-space: nowrap !important;
+  }
+}

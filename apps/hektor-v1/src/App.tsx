@@ -13124,7 +13124,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   if (!responsiveExperience.isDesktop) {
     const mobileScreenTitle = screenHeader.title
     const mobileUserLabel = resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'
-    const mobileAgencyLabel = resolvedUserNegotiatorContext?.agence_nom || 'Agence non dÃ©tectÃ©e'
+    const mobileAgencyLabel = resolvedUserNegotiatorContext?.agence_nom || 'Agence non detectee'
     const mobileMetrics = statsMetrics.slice(0, 5)
     const mobileDetailMessages = selectedDossierRequestEvents
       .filter((event) => parseJson<{ message?: string | null }>(event.payload_json, {}).message)
@@ -13158,7 +13158,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <input
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder={screen === 'contacts' ? 'Nom, email, ville, ID...' : screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, nÃ©gociateur...'}
+              placeholder={screen === 'contacts' ? 'Nom, email, ville, ID...' : screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, negociateur...'}
             />
           </label>
           <div className="mobile-command-actions">
@@ -13175,7 +13175,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               Stats
               {mobileMetrics.length > 0 ? <span>{mobileMetrics.length}</span> : null}
             </button>
-            <button type="button" onClick={resetFilters}>RÃ©initialiser</button>
+            <button type="button" onClick={resetFilters}>Reinitialiser</button>
           </div>
           {mobileStatsOpen && mobileMetrics.length > 0 ? (
             <div className="mobile-metric-strip" aria-label="Indicateurs">
@@ -13238,7 +13238,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
               </div>
               <div className="filter-grid">
-                <FilterSelect label="NÃ©gociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {screen === 'contacts' ? (
                   <>
@@ -13547,11 +13547,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <button
             className="sidebar-collapse-button"
             type="button"
-            aria-label={sidebarCollapsed ? 'Agrandir le menu' : 'RÃ©duire le menu'}
+            aria-label={sidebarCollapsed ? 'Agrandir le menu' : 'Reduire le menu'}
             aria-pressed={sidebarCollapsed}
             onClick={() => setSidebarCollapsed((value) => !value)}
           >
-            <span>{sidebarCollapsed ? 'Ouvrir' : 'RÃ©duire'}</span>
+            <span>{sidebarCollapsed ? 'Ouvrir' : 'Reduire'}</span>
           </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
@@ -13569,11 +13569,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="user-avatar">{userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}</div>
               <div className="user-meta">
                 <strong>{resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}</strong>
-                <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non dÃ©tectÃ©e'}</span>
+                <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non detectee'}</span>
               </div>
               <div className="user-card-actions">
                 {isAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
-                {session ? <button className="signout-button-inline" type="button" title="Se dÃ©connecter" data-short="S" onClick={handleSignOut}>Se dÃ©connecter</button> : null}
+                {session ? <button className="signout-button-inline" type="button" title="Se deconnecter" data-short="S" onClick={handleSignOut}>Se deconnecter</button> : null}
               </div>
             </div>
           </div>
@@ -13595,7 +13595,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
                     : canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
-                  <button className="ghost-button" type="button" onClick={resetFilters}>RÃ©initialiser</button>
+                  <button className="ghost-button" type="button" onClick={resetFilters}>Reinitialiser</button>
                 </div>
               </div>
             {screen === 'mandats' ? (
@@ -13616,7 +13616,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
-                    <span>PrioritÃ©s</span>
+                    <span>Priorites</span>
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
@@ -13662,7 +13662,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
-                    <span>PrioritÃ©s</span>
+                    <span>Priorites</span>
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
@@ -13708,7 +13708,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
-                    <span>PrioritÃ©s</span>
+                    <span>Priorites</span>
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
@@ -16201,7 +16201,7 @@ function SuiviMandatsScreenV2(props: {
             onClick={() => setPriorityPanelOpen((value) => !value)}
           >
             <span className="control-icon control-icon-priority" aria-hidden="true" />
-            <span>PrioritÃ©s</span>
+            <span>Priorites</span>
             <strong>{suiviPriorities.length}</strong>
           </button>
         </div>
