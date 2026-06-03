@@ -3779,3 +3779,329 @@
     max-width: 104px !important;
   }
 }
+
+/* Final command bar pass: search, creation, filters and stats stay on one clean line. */
+.app-shell-modern .content > .hero {
+  overflow: visible !important;
+  padding: 14px 16px !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  border-color: rgba(34, 35, 35, 0.08) !important;
+  box-shadow: 0 12px 30px rgba(34, 35, 35, 0.055) !important;
+}
+
+.app-shell-modern .content > .hero .hero-stack {
+  display: grid !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.app-shell-modern .content > .hero .search-box {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 44px !important;
+  padding: 0 14px 0 44px !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 0 0 1px rgba(34, 35, 35, 0.08) !important;
+}
+
+.app-shell-modern .content > .hero .search-box span {
+  color: #5c6464 !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.app-shell-modern .content > .hero .search-box input {
+  min-width: 0 !important;
+  font-size: 14px !important;
+}
+
+.app-shell-modern .content > .hero .hero-actions,
+.app-shell-modern .content > .hero .header-control-row,
+.app-shell-modern .content > .hero .header-control-row.is-inline {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.app-shell-modern .content > .hero .hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  width: auto !important;
+}
+
+.app-shell-modern .content > .hero .hero-actions .ghost-button {
+  height: 44px !important;
+  min-height: 44px !important;
+  min-width: 82px !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
+  border-color: rgba(34, 35, 35, 0.12) !important;
+  background: #ffffff !important;
+  color: #222323 !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell-modern .content > .hero .hero-actions .ghost-button:hover {
+  border-color: rgba(197, 0, 95, 0.34) !important;
+  color: #c5005f !important;
+  background: #ffffff !important;
+  transform: none !important;
+}
+
+.app-shell-modern .content > .hero .hero-actions .draft-annonce-open-button {
+  min-width: 150px !important;
+  padding-inline: 18px !important;
+  border-color: #c5005f !important;
+  background: #c5005f !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(197, 0, 95, 0.18) !important;
+}
+
+.app-shell-modern .content > .hero .hero-actions .draft-annonce-open-button:hover {
+  background: #a90051 !important;
+  border-color: #a90051 !important;
+  color: #ffffff !important;
+}
+
+.app-shell-modern .content > .hero .header-control-row,
+.app-shell-modern .content > .hero .header-control-row.is-inline {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(128px, 132px)) !important;
+  gap: 8px !important;
+  width: auto !important;
+  justify-content: end !important;
+  align-items: center !important;
+}
+
+.app-shell-modern .content > .hero .kpi-toggle-button {
+  height: 44px !important;
+  min-height: 44px !important;
+  min-width: 0 !important;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+  display: grid !important;
+  grid-template-columns: 20px minmax(0, 1fr) auto !important;
+  gap: 7px !important;
+  align-items: center !important;
+  background: #ffffff !important;
+  border-color: rgba(34, 35, 35, 0.12) !important;
+  color: #222323 !important;
+  box-shadow: none !important;
+}
+
+.app-shell-modern .content > .hero .kpi-toggle-button:hover,
+.app-shell-modern .content > .hero .kpi-toggle-button.is-open {
+  border-color: rgba(197, 0, 95, 0.36) !important;
+  background: rgba(197, 0, 95, 0.06) !important;
+  color: #c5005f !important;
+  transform: none !important;
+}
+
+.app-shell-modern .content > .hero .control-icon {
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 7px !important;
+}
+
+.app-shell-modern .content > .hero .kpi-toggle-button span:not(.control-icon) {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: inherit !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  line-height: 1.05 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.app-shell-modern .content > .hero .kpi-toggle-button strong {
+  justify-self: end !important;
+  min-width: 16px !important;
+  color: inherit !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  text-align: right !important;
+}
+
+@media (min-width: 1180px) {
+  .app-shell-modern .content > .hero .hero-stack {
+    grid-template-columns: minmax(270px, 1fr) max-content max-content !important;
+  }
+
+  .app-shell-modern .content > .hero .hero-top-row,
+  .app-shell-modern .content > .hero .header-kpi-stack {
+    display: contents !important;
+  }
+
+  .app-shell-modern .content > .hero .search-box {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .app-shell-modern .content > .hero .hero-actions {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    justify-self: start !important;
+  }
+
+  .app-shell-modern .content > .hero .header-control-row,
+  .app-shell-modern .content > .hero .header-control-row.is-inline {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    justify-self: end !important;
+  }
+
+  .app-shell-modern .content > .hero .priority-dropdown,
+  .app-shell-modern .content > .hero .header-kpis-secondary {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    margin-top: 2px !important;
+  }
+}
+
+@media (min-width: 760px) and (max-width: 1179px) {
+  .app-shell-modern .content > .hero .hero-stack {
+    grid-template-columns: minmax(280px, 1fr) max-content !important;
+  }
+
+  .app-shell-modern .content > .hero .hero-top-row,
+  .app-shell-modern .content > .hero .header-kpi-stack {
+    display: contents !important;
+  }
+
+  .app-shell-modern .content > .hero .search-box {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .app-shell-modern .content > .hero .hero-actions {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    justify-self: end !important;
+  }
+
+  .app-shell-modern .content > .hero .header-control-row,
+  .app-shell-modern .content > .hero .header-control-row.is-inline {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-content: start !important;
+  }
+
+  .app-shell-modern .content > .hero .priority-dropdown,
+  .app-shell-modern .content > .hero .header-kpis-secondary {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+  }
+}
+
+@media (max-width: 759px) {
+  .app-shell-modern .content > .hero .hero-stack,
+  .app-shell-modern .content > .hero .hero-top-row,
+  .app-shell-modern .content > .hero .header-kpi-stack {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .app-shell-modern .content > .hero .hero-actions,
+  .app-shell-modern .content > .hero .header-control-row,
+  .app-shell-modern .content > .hero .header-control-row.is-inline {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell-modern .content > .hero .hero-actions .ghost-button,
+  .app-shell-modern .content > .hero .hero-actions .draft-annonce-open-button,
+  .app-shell-modern .content > .hero .kpi-toggle-button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Listing first-line pass: stable title/pagination row on Annonces and Mandats. */
+@media (min-width: 760px) {
+  .app-shell-modern .panel-active-listing > .panel-head,
+  .app-shell-modern .panel-estimation-listing > .panel-head,
+  .app-shell-modern .panel:has(.register-table-wrap) > .panel-head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+
+  .app-shell-modern .listing-title-stack,
+  .app-shell-modern .panel:has(.register-table-wrap) > .panel-head > div:first-child {
+    min-width: 0 !important;
+  }
+
+  .app-shell-modern .listing-title-stack h3,
+  .app-shell-modern .panel:has(.register-table-wrap) > .panel-head h3 {
+    overflow-wrap: anywhere !important;
+  }
+
+  .app-shell-modern .page-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    min-width: 0 !important;
+  }
+
+  .app-shell-modern .page-controls > span {
+    white-space: nowrap !important;
+  }
+
+  .app-shell-modern .page-controls .ghost-button {
+    min-width: 56px !important;
+    width: 56px !important;
+    padding-inline: 0 !important;
+  }
+
+  .app-shell-modern .page-jump {
+    flex: 0 0 auto !important;
+    gap: 6px !important;
+  }
+
+  .app-shell-modern .page-jump input {
+    width: 64px !important;
+    min-width: 64px !important;
+  }
+
+  .app-shell-modern .listing-table-active th:first-child,
+  .app-shell-modern .listing-table-active td:first-child {
+    width: 96px !important;
+    min-width: 96px !important;
+  }
+
+  .app-shell-modern .listing-table-active td:first-child strong,
+  .app-shell-modern .register-table td:first-child strong {
+    max-width: 100% !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 759px) {
+  .app-shell-modern .panel-active-listing > .panel-head,
+  .app-shell-modern .panel-estimation-listing > .panel-head,
+  .app-shell-modern .panel:has(.register-table-wrap) > .panel-head {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell-modern .page-controls {
+    justify-content: flex-start !important;
+  }
+}
