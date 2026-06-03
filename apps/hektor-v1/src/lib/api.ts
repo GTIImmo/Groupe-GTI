@@ -410,6 +410,15 @@ async function invokeBackendApi<T>(path: string, init?: { method?: 'GET' | 'POST
         }
       } else if (typeof record.error === 'string' && record.error.trim()) {
         message = record.error.trim()
+      } else if (record.error && typeof record.error === 'object') {
+        const nested = record.error as Record<string, unknown>
+        if (typeof nested.message === 'string' && nested.message.trim()) {
+          message = nested.message.trim()
+        } else if (typeof nested.error === 'string' && nested.error.trim()) {
+          message = nested.error.trim()
+        } else {
+          message = JSON.stringify(record.error)
+        }
       } else if (typeof record.message === 'string' && record.message.trim()) {
         message = record.message.trim()
       } else {

@@ -157,50 +157,9 @@ export const mockMandatBroadcasts: MandatBroadcast[] = [
   },
 ]
 
-export const mockDiffusionRequests: DiffusionRequest[] = [
-  {
-    id: 'req-1',
-    app_dossier_id: 32621,
-    hektor_annonce_id: 4,
-    numero_dossier: 'VA1926',
-    numero_mandat: '17125',
-    titre_bien: 'Grand T3 secteur Bellevue avec Garage',
-    commercial_nom: 'Melanie LEGRAND',
-    request_type: 'demande_diffusion',
-    requested_by: 'local-user',
-    requested_by_label: 'Mode local',
-    requested_by_name: 'Mode local',
-    requested_at: '2026-03-27T08:45:00Z',
-    request_status: 'pending',
-    request_comment: 'Merci de verifier la diffusion multi-portails.',
-    request_reason: 'Merci de verifier la diffusion multi-portails.',
-    admin_response: null,
-    refusal_reason: null,
-    follow_up_needed: false,
-    follow_up_at: null,
-    relaunch_count: 0,
-    processed_by: null,
-    processed_by_label: null,
-    processed_by_name: null,
-    processed_at: null,
-    processing_comment: null,
-  },
-]
+export const mockDiffusionRequests: DiffusionRequest[] = []
 
-export const mockDiffusionRequestEvents: DiffusionRequestEvent[] = [
-  {
-    id: 'event-1',
-    diffusion_request_id: 'req-1',
-    event_type: 'request_created',
-    event_label: 'Demande envoyee',
-    event_at: '2026-03-27T08:45:00Z',
-    actor_user_id: 'local-user',
-    actor_name: 'Mode local',
-    actor_role: 'nego',
-    payload_json: JSON.stringify({ message: 'Merci de verifier la diffusion multi-portails.' }),
-    created_at: '2026-03-27T08:45:00Z',
-  },
-]
+export const mockDiffusionRequestEvents: DiffusionRequestEvent[] = []
 
 export const mockDiffusionTargets: DiffusionTarget[] = [
   {

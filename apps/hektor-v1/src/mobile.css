@@ -226,19 +226,19 @@
 }
 
 .mobile-nav-icon-calendar::before {
-  inset: 4px 3px 3px;
+  inset: 3px 3px 2px;
   border: 2px solid currentColor;
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .mobile-nav-icon-calendar::after {
-  top: 3px;
-  left: 7px;
-  width: 7px;
-  height: 5px;
-  border-right: 2px solid currentColor;
-  border-left: 2px solid currentColor;
-  box-shadow: 0 7px 0 -3px currentColor;
+  left: 6px;
+  right: 6px;
+  top: 8px;
+  height: 6px;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  box-shadow: 0 -5px 0 -1px currentColor;
 }
 
 .mobile-bottom-nav-item strong {

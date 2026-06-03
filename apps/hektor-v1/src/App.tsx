@@ -93,9 +93,9 @@ import {
   searchMandantContactOptions,
   type AnnonceContactInviteeOption,
   type DraftAnnonceSheetScanPayload,
-  type HektorContactIdentityInput,
   type GoogleCalendarAvailability,
   type GoogleCalendarEventLink,
+  type HektorContactIdentityInput,
   type HektorCompositionPieceInput,
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
@@ -169,9 +169,25 @@ const heavyListingFilterKeys = new Set<keyof AppFilters>([
   'offreStatus',
   'compromisStatus',
 ])
-type Screen = 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi'
+type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type LightweightDetailTarget = Dossier | MandatRecord
+type HomeDashboardVariant = 'admin' | 'commercial' | 'pauline'
+
+function isPaulineAdministrativeProfile(profile: UserProfile | null | undefined, isAdmin: boolean) {
+  if (!isAdmin) return false
+  const identity = [profile?.display_name, profile?.email, profile?.first_name, profile?.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return identity.includes('pauline')
+}
+
+function homeDashboardVariant(profile: UserProfile | null | undefined, isAdmin: boolean): HomeDashboardVariant {
+  if (isPaulineAdministrativeProfile(profile, isAdmin)) return 'pauline'
+  if (isAdmin) return 'admin'
+  return 'commercial'
+}
 
 function isHistoricalListingStatus(value: unknown) {
   return value === 'Vendu' || value === 'Clos'
@@ -406,161 +422,161 @@ const hektorCompositionPieceTypeOptions: HektorSelectOption[] = [
 ]
 
 const hektorExposureOptions: HektorSelectOption[] = [
-  { value: "", label: "Non défini" },
-  { value: "NORD", label: "Nord" },
-  { value: "NORD-EST", label: "Nord-Est" },
-  { value: "EST", label: "Est" },
-  { value: "SUD-EST", label: "Sud-Est" },
-  { value: "SUD", label: "Sud" },
-  { value: "SUD-OUEST", label: "Sud-Ouest" },
-  { value: "OUEST", label: "Ouest" },
-  { value: "NORD-OUEST", label: "Nord-Ouest" },
-  { value: "NORD-SUD", label: "Nord-Sud" },
-  { value: "EST-OUEST", label: "Est-Ouest" },
+  { value: '', label: 'Non dÃ©fini' },
+  { value: 'NORD', label: 'Nord' },
+  { value: 'NORD-EST', label: 'Nord-Est' },
+  { value: 'EST', label: 'Est' },
+  { value: 'SUD-EST', label: 'Sud-Est' },
+  { value: 'SUD', label: 'Sud' },
+  { value: 'SUD-OUEST', label: 'Sud-Ouest' },
+  { value: 'OUEST', label: 'Ouest' },
+  { value: 'NORD-OUEST', label: 'Nord-Ouest' },
+  { value: 'NORD-SUD', label: 'Nord-Sud' },
+  { value: 'EST-OUEST', label: 'Est-Ouest' },
 ]
 
 const hektorParticularityOptions: HektorSelectOption[] = [
-  { value: "", label: "Non défini" },
-  { value: "2", label: "Investissement" },
-  { value: "1", label: "Prestige" },
-  { value: "3", label: "Autre" },
+  { value: '', label: 'Non dÃ©fini' },
+  { value: '2', label: 'Investissement' },
+  { value: '1', label: 'Prestige' },
+  { value: '3', label: 'Autre' },
 ]
 
 const hektorKitchenOptions: HektorSelectOption[] = [
-  { value: "", label: "Non défini" },
-  { value: "AMERICAINE", label: "Américaine" },
-  { value: "KITCHENETTE", label: "Kitchenette" },
-  { value: "SEPAREE", label: "Séparée" },
-  { value: "SANS", label: "Sans" },
+  { value: '', label: 'Non dÃ©fini' },
+  { value: 'AMERICAINE', label: 'AmÃ©ricaine' },
+  { value: 'KITCHENETTE', label: 'Kitchenette' },
+  { value: 'SEPAREE', label: 'SÃ©parÃ©e' },
+  { value: 'SANS', label: 'Sans' },
 ]
 
 const hektorKitchenEquipmentOptions: HektorSelectOption[] = [
-  { value: "", label: "Non défini" },
-  { value: "SEMI-EQUIPEE", label: "Semi équipée" },
-  { value: "EQUIPEE", label: "Équipée" },
+  { value: '', label: 'Non dÃ©fini' },
+  { value: 'SEMI-EQUIPEE', label: 'Semi Ã©quipÃ©e' },
+  { value: 'EQUIPEE', label: 'Ã‰quipÃ©e' },
 ]
 
 const hektorPartyWallOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "0", label: "Indépendant" },
-  { value: "1", label: "1 côté" },
-  { value: "2", label: "2 côtés" },
-  { value: "3", label: "3 côtés" },
-  { value: "4", label: "4 côtés" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: '0', label: 'IndÃ©pendant' },
+  { value: '1', label: '1 cÃ´tÃ©' },
+  { value: '2', label: '2 cÃ´tÃ©s' },
+  { value: '3', label: '3 cÃ´tÃ©s' },
+  { value: '4', label: '4 cÃ´tÃ©s' },
 ]
 
 const hektorResidenceOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "OUVERT", label: "Ouverte" },
-  { value: "FERME", label: "Fermée" },
-  { value: "SECURISE", label: "Securisée" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: 'OUVERT', label: 'Ouverte' },
+  { value: 'FERME', label: 'FermÃ©e' },
+  { value: 'SECURISE', label: 'SecurisÃ©e' },
 ]
 
 const hektorResidenceTypeOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "ANCIEN", label: "Ancien" },
-  { value: "NEUF", label: "Neuf" },
-  { value: "STANDING", label: "Standing" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: 'ANCIEN', label: 'Ancien' },
+  { value: 'NEUF', label: 'Neuf' },
+  { value: 'STANDING', label: 'Standing' },
 ]
 
 const hektorHeatingFormatOptions: HektorSelectOption[] = [
-  { value: "4", label: "Non précisé" },
-  { value: "3", label: "Central" },
-  { value: "1", label: "Collectif" },
-  { value: "2", label: "Individuel" },
-  { value: "5", label: "Urbain" },
+  { value: '4', label: 'Non prÃ©cisÃ©' },
+  { value: '3', label: 'Central' },
+  { value: '1', label: 'Collectif' },
+  { value: '2', label: 'Individuel' },
+  { value: '5', label: 'Urbain' },
 ]
 
 const hektorHeatingTypeOptions: HektorSelectOption[] = [
-  { value: "4", label: "Air" },
-  { value: "10", label: "Air/Eau" },
-  { value: "9", label: "Non précisé" },
-  { value: "1", label: "Chaudière" },
-  { value: "8", label: "Cheminée" },
-  { value: "5", label: "Convecteur" },
-  { value: "7", label: "Poêle" },
-  { value: "2", label: "Radiateur" },
-  { value: "6", label: "Rayonnant" },
-  { value: "3", label: "Sol" },
+  { value: '4', label: 'Air' },
+  { value: '10', label: 'Air/Eau' },
+  { value: '9', label: 'Non prÃ©cisÃ©' },
+  { value: '1', label: 'ChaudiÃ¨re' },
+  { value: '8', label: 'CheminÃ©e' },
+  { value: '5', label: 'Convecteur' },
+  { value: '7', label: 'PoÃªle' },
+  { value: '2', label: 'Radiateur' },
+  { value: '6', label: 'Rayonnant' },
+  { value: '3', label: 'Sol' },
 ]
 
 const hektorHeatingEnergyOptions: HektorSelectOption[] = [
-  { value: "15", label: "Aérothermie" },
-  { value: "14", label: "Non précisé" },
-  { value: "6", label: "Bois" },
-  { value: "5", label: "Charbon" },
-  { value: "11", label: "Climatisation" },
-  { value: "3", label: "Électrique" },
-  { value: "4", label: "Fioul" },
-  { value: "2", label: "Gaz" },
-  { value: "1", label: "Gaz de ville" },
-  { value: "9", label: "Géothermie" },
-  { value: "7", label: "Granules" },
-  { value: "12", label: "Mixte" },
-  { value: "10", label: "Pompe à chaleur" },
-  { value: "13", label: "Sans" },
-  { value: "8", label: "Solaire" },
+  { value: '15', label: 'AÃ©rothermie' },
+  { value: '14', label: 'Non prÃ©cisÃ©' },
+  { value: '6', label: 'Bois' },
+  { value: '5', label: 'Charbon' },
+  { value: '11', label: 'Climatisation' },
+  { value: '3', label: 'Ã‰lectrique' },
+  { value: '4', label: 'Fioul' },
+  { value: '2', label: 'Gaz' },
+  { value: '1', label: 'Gaz de ville' },
+  { value: '9', label: 'GÃ©othermie' },
+  { value: '7', label: 'Granules' },
+  { value: '12', label: 'Mixte' },
+  { value: '10', label: 'Pompe Ã  chaleur' },
+  { value: '13', label: 'Sans' },
+  { value: '8', label: 'Solaire' },
 ]
 
 const hektorWaterOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "SANS", label: "Sans" },
-  { value: "INDIVIDUEL", label: "Individuel" },
-  { value: "COLLECTIF", label: "Collectif" },
-  { value: "PUIT", label: "Puits" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: 'SANS', label: 'Sans' },
+  { value: 'INDIVIDUEL', label: 'Individuel' },
+  { value: 'COLLECTIF', label: 'Collectif' },
+  { value: 'PUIT', label: 'Puits' },
 ]
 
 const hektorSanitationOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "SANS", label: "Sans" },
-  { value: "TOUT A L'EGOUT", label: "Tout à l'égout" },
-  { value: "FOSSE SEPTIQUE", label: "Fosse septique" },
-  { value: "FOSSE TOUTES EAUX", label: "Fosse toutes eaux" },
-  { value: "MICRO STATION", label: "Micro-station" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: 'SANS', label: 'Sans' },
+  { value: "TOUT A L'EGOUT", label: "Tout Ã  l'Ã©gout" },
+  { value: 'FOSSE SEPTIQUE', label: 'Fosse septique' },
+  { value: 'FOSSE TOUTES EAUX', label: 'Fosse toutes eaux' },
+  { value: 'MICRO STATION', label: 'Micro-station' },
 ]
 
 const hektorHotWaterDistributionOptions: HektorSelectOption[] = [
-  { value: "", label: "Non défini" },
-  { value: "COLLECTIF", label: "Collective" },
-  { value: "INDIVIDUEL", label: "Individuelle" },
-  { value: "CENTRAL", label: "Centrale" },
+  { value: '', label: 'Non dÃ©fini' },
+  { value: 'COLLECTIF', label: 'Collective' },
+  { value: 'INDIVIDUEL', label: 'Individuelle' },
+  { value: 'CENTRAL', label: 'Centrale' },
 ]
 
 const hektorHotWaterEnergyOptions: HektorSelectOption[] = [
-  { value: "", label: "Non défini" },
-  { value: "GAZ", label: "Gaz" },
-  { value: "BALLON ELECTRIQUE", label: "Ballon électrique" },
-  { value: "FIOUL", label: "Fioul" },
-  { value: "SOLAIRE", label: "Solaire" },
-  { value: "GEOTHERMIE", label: "Géothermie" },
-  { value: "MIXTE", label: "Mixte" },
-  { value: "SANS", label: "Sans" },
-  { value: "AUTRE", label: "Autre" },
-  { value: "AEROTHERMIE", label: "Aérothermie" },
-  { value: "THERMODYNAMIQUE", label: "Thermodynamique" },
-  { value: "POMPE A CHALEUR", label: "Pompe à chaleur" },
+  { value: '', label: 'Non dÃ©fini' },
+  { value: 'GAZ', label: 'Gaz' },
+  { value: 'BALLON ELECTRIQUE', label: 'Ballon Ã©lectrique' },
+  { value: 'FIOUL', label: 'Fioul' },
+  { value: 'SOLAIRE', label: 'Solaire' },
+  { value: 'GEOTHERMIE', label: 'GÃ©othermie' },
+  { value: 'MIXTE', label: 'Mixte' },
+  { value: 'SANS', label: 'Sans' },
+  { value: 'AUTRE', label: 'Autre' },
+  { value: 'AEROTHERMIE', label: 'AÃ©rothermie' },
+  { value: 'THERMODYNAMIQUE', label: 'Thermodynamique' },
+  { value: 'POMPE A CHALEUR', label: 'Pompe Ã  chaleur' },
 ]
 
 const hektorExteriorStateOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "2", label: "Travaux à prévoir" },
-  { value: "3", label: "A rafraichir" },
-  { value: "5", label: "Etat moyen" },
-  { value: "6", label: "Bon état" },
-  { value: "7", label: "Excellent état" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: '2', label: 'Travaux Ã  prÃ©voir' },
+  { value: '3', label: 'A rafraichir' },
+  { value: '5', label: 'Etat moyen' },
+  { value: '6', label: 'Bon Ã©tat' },
+  { value: '7', label: 'Excellent Ã©tat' },
 ]
 
 const hektorInteriorStateOptions: HektorSelectOption[] = [
-  { value: "", label: "Non précisé" },
-  { value: "1", label: "Gros travaux à prévoir" },
-  { value: "2", label: "Travaux à prévoir" },
-  { value: "3", label: "A rafraichir" },
-  { value: "4", label: "Habitable (m²)" },
-  { value: "5", label: "Etat moyen" },
-  { value: "6", label: "Bon état" },
-  { value: "7", label: "Excellent état" },
-  { value: "8", label: "Neuf" },
-  { value: "9", label: "Refait à neuf" },
+  { value: '', label: 'Non prÃ©cisÃ©' },
+  { value: '1', label: 'Gros travaux Ã  prÃ©voir' },
+  { value: '2', label: 'Travaux Ã  prÃ©voir' },
+  { value: '3', label: 'A rafraichir' },
+  { value: '4', label: 'Habitable (mÂ²)' },
+  { value: '5', label: 'Etat moyen' },
+  { value: '6', label: 'Bon Ã©tat' },
+  { value: '7', label: 'Excellent Ã©tat' },
+  { value: '8', label: 'Neuf' },
+  { value: '9', label: 'Refait Ã  neuf' },
 ]
 
 const hektorAdvancedSections: Array<{ title: string; tone: string; fields: HektorAdvancedField[] }> = [
@@ -641,7 +657,7 @@ const hektorAdvancedSections: Array<{ title: string; tone: string; fields: Hekto
     title: '6. Mandat / Prix',
     tone: 'mandate',
     fields: [
-      { key: 'mandateNumber', label: 'N° mandat' },
+      { key: 'mandateNumber', label: 'NÂ° mandat' },
       { key: 'mandateType', label: 'Type mandat' },
       { key: 'mandateStartDate', label: 'Date debut' },
       { key: 'mandateEndDate', label: 'Date fin' },
@@ -1154,6 +1170,13 @@ function draftAnnonceWizardPlaceholder(field: DraftAnnonceWizardField) {
   if (field.inputMode === 'decimal') return 'Ex : 0'
   if (field.inputMode === 'numeric') return 'Ex : 1'
   return 'A renseigner'
+}
+
+function optionValueForSelect(value: string | undefined, options: HektorSelectOption[], defaultValue = '') {
+  const candidate = value ?? ''
+  if (options.some((option) => option.value === candidate)) return candidate
+  if (defaultValue && options.some((option) => option.value === defaultValue)) return defaultValue
+  return options[0]?.value ?? ''
 }
 
 const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
@@ -2654,7 +2677,7 @@ function HektorMandantContactForm(props: {
     setMessage(null)
     setError(null)
     if (!lastName.trim() || !email.trim()) {
-      setError('Nom et email sont obligatoires pour créer le contact Hektor.')
+      setError('Nom et email sont obligatoires pour crÃ©er le contact Hektor.')
       return
     }
     if (!hasHektorNegotiator(props.dossier)) {
@@ -2709,8 +2732,8 @@ function HektorMandantContactForm(props: {
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">+</span>
         <div>
-          <strong>Créer un mandant Hektor</strong>
-          <small>Le contact est créé puis associé automatiquement à cette annonce.</small>
+          <strong>CrÃ©er un mandant Hektor</strong>
+          <small>Le contact est crÃ©Ã© puis associÃ© automatiquement Ã  cette annonce.</small>
         </div>
       </div>
       <div className="hektor-inline-grid">
@@ -2753,7 +2776,7 @@ function HektorMandantContactForm(props: {
         </label>
       </div>
       <div className="hektor-inline-actions">
-        <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Créer et associer'}</button>
+        <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'CrÃ©er et associer'}</button>
         <button className="button-subtle" type="button" onClick={() => setOpen(false)} disabled={pending}>Annuler</button>
         {message ? <span className="hektor-inline-feedback is-success">{message}</span> : null}
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
@@ -2843,7 +2866,7 @@ function HektorMandantContactEditForm(props: {
   return (
     <div className={`hektor-inline-form hektor-mandant-edit-form ${props.compact ? 'is-compact' : ''}`}>
       <button className="hektor-contact-edit-toggle" type="button" disabled={!canEdit} onClick={() => setOpen((value) => !value)}>
-        <span aria-hidden="true">✎</span>
+        <span aria-hidden="true">âœŽ</span>
         {open ? 'Fermer' : 'Modifier'}
       </button>
       {open ? (
@@ -2994,7 +3017,7 @@ function HektorMandatNumberForm(props: {
       {!open ? (
         <button className={`hektor-mandat-number-card ${hasMandat ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
           <span aria-hidden="true">{hasMandat ? 'N' : '#'}</span>
-          <strong>{hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le N° mandat'}</strong>
+          <strong>{hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le NÂ° mandat'}</strong>
           <small>{hasMandat ? 'Numero deja present dans l app.' : props.contacts.length ? 'Hektor attribue automatiquement le prochain numero.' : 'Ajoute un mandant avant cette etape.'}</small>
         </button>
       ) : null}
@@ -3003,7 +3026,7 @@ function HektorMandatNumberForm(props: {
           <div className="hektor-inline-form-head">
             <span className="hektor-inline-icon" aria-hidden="true">#</span>
             <div>
-              <strong>Generer le N° mandat Hektor</strong>
+              <strong>Generer le NÂ° mandat Hektor</strong>
               <small>Le prochain numero est reserve par Hektor au moment de l envoi.</small>
             </div>
           </div>
@@ -4171,7 +4194,7 @@ function MandatDocumentEditor(props: {
                         <button className="ghost-button button-subtle" type="button" onClick={() => removeSignatureRecipient(index)}>Retirer</button>
                       </div>
                       <div className="mandat-document-form-grid">
-                        <label className="is-wide"><span>Nom affiché</span><input value={recipient.nomComplet} onChange={(event) => updateSignatureRecipient(index, 'nomComplet', event.target.value)} /></label>
+                        <label className="is-wide"><span>Nom affichÃ©</span><input value={recipient.nomComplet} onChange={(event) => updateSignatureRecipient(index, 'nomComplet', event.target.value)} /></label>
                         <label><span>Role</span><input value={recipient.role} onChange={(event) => updateSignatureRecipient(index, 'role', event.target.value)} /></label>
                         <label><span>Canal</span><select value={recipient.mode} onChange={(event) => updateSignatureRecipient(index, 'mode', event.target.value as MandatSignatureRecipient['mode'])}><option value="email">Email</option><option value="sms">SMS</option><option value="email_sms">Email + SMS</option></select></label>
                         <label><span>Email</span><input value={recipient.email} onChange={(event) => updateSignatureRecipient(index, 'email', event.target.value)} /></label>
@@ -4288,15 +4311,15 @@ const followUpPresetOptions = [
   { value: '7', label: 'Relance sous 7 jours' },
 ]
 const refusalReasonOptions = [
-  { value: 'elements_manquants', label: 'Éléments manquants' },
+  { value: 'elements_manquants', label: 'Ã‰lÃ©ments manquants' },
   { value: 'mandat_non_valide', label: 'Mandat non valide' },
   { value: 'bien_non_diffusable', label: 'Bien non diffusable' },
-  { value: 'dpe_diagnostic_manquant', label: 'Diagnostic de performance énergétique manquant' },
-  { value: 'justificatif_propriete_manquant', label: 'Justificatif de propriété manquant' },
-  { value: 'justificatif_identite_manquant', label: "Justificatif d'identité manquant" },
+  { value: 'dpe_diagnostic_manquant', label: 'Diagnostic de performance Ã©nergÃ©tique manquant' },
+  { value: 'justificatif_propriete_manquant', label: 'Justificatif de propriÃ©tÃ© manquant' },
+  { value: 'justificatif_identite_manquant', label: "Justificatif d'identitÃ© manquant" },
   { value: 'photos_non_conformes', label: 'Photos non conformes' },
   { value: 'texte_annonce_incomplet', label: "Texte d'annonce incomplet" },
-  { value: 'bareme_honoraire_non_respecte', label: "Barème d'honoraires non respecté" },
+  { value: 'bareme_honoraire_non_respecte', label: "BarÃ¨me d'honoraires non respectÃ©" },
   { value: 'validation_interne_requise', label: 'Validation interne requise' },
   { value: 'correction_fiche_bien', label: 'Correction de la fiche bien' },
   { value: 'autre', label: 'Autre' },
@@ -4405,6 +4428,13 @@ const emptyFilters: AppFilters = {
 }
 
 function defaultFiltersForScreen(screen: Screen): AppFilters {
+  if (screen === 'accueil') {
+    return {
+      ...emptyFilters,
+      archive: activeArchiveFilterValue,
+      statut: activeListingsFilterValue,
+    }
+  }
   if (screen === 'registre') {
     return {
       ...emptyFilters,
@@ -4433,6 +4463,12 @@ function defaultFiltersForScreen(screen: Screen): AppFilters {
     }
   }
   if (screen === 'contacts') {
+    return {
+      ...emptyFilters,
+      archive: activeArchiveFilterValue,
+    }
+  }
+  if (screen === 'agenda') {
     return {
       ...emptyFilters,
       archive: activeArchiveFilterValue,
@@ -4528,10 +4564,10 @@ function formatPrice(value: number | string | null | undefined) {
 
 function formatSurface(value: number | string | null | undefined) {
   if (value == null || value === '') return '-'
-  if (typeof value === 'string' && /[a-zA-Z²]/.test(value)) return value
+  if (typeof value === 'string' && /[a-zA-ZÂ²]/.test(value)) return value
   const amount = typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
   if (Number.isNaN(amount)) return String(value)
-  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount)} m²`
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount)} mÂ²`
 }
 
 function normalizeRequestedPriceInput(value: string | null | undefined) {
@@ -4954,9 +4990,9 @@ function requestCreateLabel(value: string | null | undefined) {
 }
 
 function requestAcceptedLabel(value: string | null | undefined) {
-  if (isPriceDropRequest(value)) return 'Baisse de prix acceptée'
-  if (isMandateCancellationRequest(value)) return 'Annulation de mandat acceptée'
-  return 'Demande acceptée'
+  if (isPriceDropRequest(value)) return 'Baisse de prix acceptÃ©e'
+  if (isMandateCancellationRequest(value)) return 'Annulation de mandat acceptÃ©e'
+  return 'Demande acceptÃ©e'
 }
 
 function requestRefusedLabel(value: string | null | undefined) {
@@ -4966,9 +5002,9 @@ function requestRefusedLabel(value: string | null | undefined) {
 }
 
 function requestPendingLabel(value: string | null | undefined) {
-  if (isPriceDropRequest(value)) return 'Baisse de prix envoyée'
-  if (isMandateCancellationRequest(value)) return 'Annulation mandat envoyée'
-  return 'Demande envoyée'
+  if (isPriceDropRequest(value)) return 'Baisse de prix envoyÃ©e'
+  if (isMandateCancellationRequest(value)) return 'Annulation mandat envoyÃ©e'
+  return 'Demande envoyÃ©e'
 }
 
 function normalizeRequestType(value: string | null | undefined): BusinessRequestType {
@@ -5050,7 +5086,7 @@ function paulineActionLabel(request: DiffusionRequest | null) {
   if (request.request_status === 'pending' || request.request_status === 'in_progress') return 'A traiter'
   if (request.request_status === 'waiting_commercial') return 'A corriger'
   if (request.request_status === 'refused') return isPriceDropRequest(request.request_type) ? 'Rejetee' : 'Refusee'
-  if (request.request_status === 'accepted') return 'Acceptée'
+  if (request.request_status === 'accepted') return 'AcceptÃ©e'
   return 'A traiter'
 }
 
@@ -5065,17 +5101,17 @@ function negociateurDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'va
     return { label: requestPendingLabel(request?.request_type), tone: 'pending', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isPriceDropRequest(request?.request_type)) {
-    return { label: 'Baisse de prix acceptée', tone: 'ready', opens: 'request' as const }
+    return { label: 'Baisse de prix acceptÃ©e', tone: 'ready', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isMandateCancellationRequest(request?.request_type)) {
-    return { label: 'Annulation acceptée', tone: 'ready', opens: 'request' as const }
+    return { label: 'Annulation acceptÃ©e', tone: 'ready', opens: 'request' as const }
   }
   return { label: 'Demande de validation', tone: 'idle', opens: 'request' as const }
 }
 
 function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'validation_diffusion_state'>, request: DiffusionRequest | null) {
   if ((!request || isValidationRequest(request.request_type)) && isValidationApproved(mandat.validation_diffusion_state)) {
-    return { label: 'Acceptée', tone: 'ready', opens: 'diffusion' as const }
+    return { label: 'AcceptÃ©e', tone: 'ready', opens: 'diffusion' as const }
   }
   if (request?.request_status === 'waiting_commercial') {
     return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a corriger' : isMandateCancellationRequest(request?.request_type) ? 'Annulation a corriger' : 'A corriger', tone: 'warning', opens: 'request' as const }
@@ -5087,10 +5123,10 @@ function paulineDiffusionState(mandat: Pick<MandatRecord, 'diffusable' | 'valida
     return { label: isPriceDropRequest(request?.request_type) ? 'Baisse de prix a traiter' : isMandateCancellationRequest(request?.request_type) ? 'Annulation a traiter' : 'A traiter', tone: 'pending', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isPriceDropRequest(request?.request_type)) {
-    return { label: 'Baisse de prix acceptée', tone: 'ready', opens: 'request' as const }
+    return { label: 'Baisse de prix acceptÃ©e', tone: 'ready', opens: 'request' as const }
   }
   if (request?.request_status === 'accepted' && isMandateCancellationRequest(request?.request_type)) {
-    return { label: 'Annulation acceptée', tone: 'ready', opens: 'request' as const }
+    return { label: 'Annulation acceptÃ©e', tone: 'ready', opens: 'request' as const }
   }
   return { label: 'Aucune demande', tone: 'idle', opens: 'request' as const }
 }
@@ -5121,10 +5157,10 @@ function isMandateEndDateStillValid(value: string | null | undefined) {
 
 function mandateLifecycleState(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin'>) {
   const status = normalizeMandateLifecycleStatus(item.statut_annonce)
-  if (status.includes('vendu') || status.includes('vente') || status.includes('clos') || status.includes('clotur')) return 'Annulé'
+  if (status.includes('vendu') || status.includes('vente') || status.includes('clos') || status.includes('clotur')) return 'AnnulÃ©'
   if (status.includes('offre') || status.includes('compromis')) return 'En cours'
   if (status === 'actif' && isMandateEndDateStillValid(item.mandat_date_fin)) return 'En cours'
-  return 'Annulé'
+  return 'AnnulÃ©'
 }
 
 function hasActiveMandateForDocument(item: Pick<Dossier, 'statut_annonce' | 'numero_mandat'> & Pick<DossierDetailPayload, 'mandat_date_fin' | 'mandat_numero_source'>) {
@@ -5140,7 +5176,7 @@ function mandateLifecycleRowClass(item: Pick<MandatRecord, 'statut_annonce' | 'm
 }
 
 function hasCancelledMandateExposureAnomaly(mandat: Pick<MandatRecord, 'diffusable' | 'nb_portails_actifs' | 'statut_annonce' | 'mandat_date_fin'>) {
-  return mandateLifecycleState(mandat) === 'Annulé' && (((mandat.diffusable ?? '0') === '1') || Boolean(mandat.nb_portails_actifs))
+  return mandateLifecycleState(mandat) === 'AnnulÃ©' && (((mandat.diffusable ?? '0') === '1') || Boolean(mandat.nb_portails_actifs))
 }
 
 type MandateAnomalyType =
@@ -5166,11 +5202,11 @@ function mandateAnomalyTypeLabel(type: MandateAnomalyType) {
     case 'missing_mandate':
       return 'Mandat manquant'
     case 'cancelled_exposed':
-      return 'Mandat annulé exposé'
+      return 'Mandat annulÃ© exposÃ©'
     case 'not_published':
-      return 'Diffusable non publié'
+      return 'Diffusable non publiÃ©'
     case 'unauthorized_publication':
-      return 'Publication non autorisée'
+      return 'Publication non autorisÃ©e'
     case 'gateway_error':
       return 'Erreur passerelle'
     default:
@@ -5286,13 +5322,13 @@ function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diff
   const cancelledExposure = hasCancelledMandateExposureAnomaly(mandat)
   const labels = [
     !mandat.numero_mandat ? 'Mandat manquant' : null,
-    cancelledExposure ? 'Mandat annulé encore exposé' : null,
-    !cancelledExposure && shouldCheckPublishability && (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publié' : null,
-    !cancelledExposure && (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs) ? 'Publication active non autorisée' : null,
+    cancelledExposure ? 'Mandat annulÃ© encore exposÃ©' : null,
+    !cancelledExposure && shouldCheckPublishability && (mandat.diffusable ?? '0') === '1' && !mandat.nb_portails_actifs ? 'Diffusable non publiÃ©' : null,
+    !cancelledExposure && (mandat.diffusable ?? '0') !== '1' && Boolean(mandat.nb_portails_actifs) ? 'Publication active non autorisÃ©e' : null,
     Boolean(mandat.has_diffusion_error) ? 'Erreur de passerelle' : null,
   ].filter(Boolean) as string[]
   return {
-    primary: labels[0] ?? 'Anomalie à qualifier',
+    primary: labels[0] ?? 'Anomalie Ã  qualifier',
     secondary: [
       ...labels.slice(1),
       ...(cancelledExposure && (mandat.diffusable ?? '0') === '1' ? ['Annonce encore diffusable'] : []),
@@ -5305,7 +5341,7 @@ function projectIdentityLines(item: Pick<MandatRecord, 'numero_dossier' | 'numer
   return {
     title: item.numero_dossier ?? '-',
     mandate: item.numero_mandat ? `Mandat ${item.numero_mandat}` : 'Sans mandat',
-    context: [propertyTypeLabel(item.type_bien), item.ville].filter((value) => value && value !== '-').join(' · ') || '-',
+    context: [propertyTypeLabel(item.type_bien), item.ville].filter((value) => value && value !== '-').join(' Â· ') || '-',
   }
 }
 
@@ -5314,11 +5350,11 @@ function listingProgressLabel(item: Pick<MandatRecord, 'statut_annonce' | 'numer
   if (item.vente_id) return 'Vendu'
   if (item.compromis_id) return 'Compromis en cours'
   if (item.offre_id) return 'Offre en cours'
-  if (!item.numero_mandat) return 'Annonce créée · mandat manquant'
-  if (!isValidationApproved(item.validation_diffusion_state)) return 'Mandat à valider'
-  if ((item.diffusable ?? '0') === '1' && Boolean(item.nb_portails_actifs)) return 'Diffusé'
-  if ((item.diffusable ?? '0') === '1') return 'Mandat validé · non diffusé'
-  return 'Mandat validé · diffusion à ouvrir'
+  if (!item.numero_mandat) return 'Annonce crÃ©Ã©e Â· mandat manquant'
+  if (!isValidationApproved(item.validation_diffusion_state)) return 'Mandat Ã  valider'
+  if ((item.diffusable ?? '0') === '1' && Boolean(item.nb_portails_actifs)) return 'DiffusÃ©'
+  if ((item.diffusable ?? '0') === '1') return 'Mandat validÃ© Â· non diffusÃ©'
+  return 'Mandat validÃ© Â· diffusion Ã  ouvrir'
 }
 
 type ActionButtonTypeTone = 'validation' | 'price-drop' | 'cancellation' | 'diffusion' | 'hektor'
@@ -5504,7 +5540,7 @@ function actionMenuHelperText(typeLabel: string, stateLabel: string) {
   if (stateLabel === 'Envoyee' || stateLabel === 'En cours') return 'Consulter la demande deja envoyee'
   if (stateLabel === 'Modifier') return 'Ajuster les reglages et portails de diffusion'
   if (stateLabel === 'Refusee' || stateLabel === 'Rejetee') return 'Consulter le refus et le motif'
-  if (stateLabel === 'Acceptée') return 'Consulter la demande acceptee'
+  if (stateLabel === 'AcceptÃ©e') return 'Consulter la demande acceptee'
   if (typeLabel === 'Diffusion') return "Diffuser l'annonce sur les portails"
   if (typeLabel === 'Baisse de prix') return 'Proposer une baisse du prix'
   if (typeLabel === 'Valider') return 'Confirmer et activer le mandat'
@@ -5574,7 +5610,7 @@ function buildMandatActionModel(input: {
     const label = requestActionLabel(activeDiffusionRequest, 'demande_diffusion')
     if (label === 'Demande de validation') return 'Ajouter'
     if (label === 'A corriger') return 'Corriger'
-    if (label === 'Demande envoyée') return 'Envoyée'
+    if (label === 'Demande envoyÃ©e') return 'EnvoyÃ©e'
     if (label === 'Demande en traitement') return 'En cours'
     return label
   })()
@@ -5582,7 +5618,7 @@ function buildMandatActionModel(input: {
     const label = requestActionLabel(activePriceDropRequest, 'demande_baisse_prix')
     if (label === 'Demande de baisse de prix') return 'Ajouter'
     if (label === 'Baisse de prix a corriger') return 'Corriger'
-    if (label === 'Baisse de prix envoyée') return 'Envoyée'
+    if (label === 'Baisse de prix envoyÃ©e') return 'EnvoyÃ©e'
     if (label === 'Baisse de prix en traitement') return 'En cours'
     return label
   })()
@@ -5590,7 +5626,7 @@ function buildMandatActionModel(input: {
     const label = requestActionLabel(activeCancellationRequest, 'demande_annulation_mandat')
     if (label === 'Demande annulation mandat') return 'Ajouter'
     if (label === 'Annulation a corriger') return 'Corriger'
-    if (label === 'Annulation mandat envoyée') return 'Envoyée'
+    if (label === 'Annulation mandat envoyÃ©e') return 'EnvoyÃ©e'
     if (label === 'Annulation en traitement') return 'En cours'
     return label
   })()
@@ -5822,8 +5858,8 @@ function buildDiffusionDecisionEmail(input: {
   )
 
   const subject = input.status === 'accepted'
-    ? `${isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation mandat acceptee' : 'Validation acceptee'} · ${dossierLabel}`
-    : `${isPriceDrop ? 'Baisse de prix refusee' : isCancellation ? 'Annulation mandat refusee' : 'Validation refusee'} · ${dossierLabel}`
+    ? `${isPriceDrop ? 'Baisse de prix acceptee' : isCancellation ? 'Annulation mandat acceptee' : 'Validation acceptee'} Â· ${dossierLabel}`
+    : `${isPriceDrop ? 'Baisse de prix refusee' : isCancellation ? 'Annulation mandat refusee' : 'Validation refusee'} Â· ${dossierLabel}`
 
   const bodyLines = input.status === 'accepted'
     ? [
@@ -5839,10 +5875,10 @@ function buildDiffusionDecisionEmail(input: {
       ]
         .filter(Boolean) as string[]
     : [
-        isPriceDrop ? 'Demande de baisse de prix refusée.' : isCancellation ? 'Demande d annulation de mandat refusee.' : 'Demande de validation refusee.',
+        isPriceDrop ? 'Demande de baisse de prix refusÃ©e.' : isCancellation ? 'Demande d annulation de mandat refusee.' : 'Demande de validation refusee.',
         '',
         `Dossier : ${dossierLabel}`,
-        trimmedRefusalReason ? `Motif : ${trimmedRefusalReason}` : 'Motif : non précisé',
+        trimmedRefusalReason ? `Motif : ${trimmedRefusalReason}` : 'Motif : non prÃ©cisÃ©',
         `Traite par : ${actorLabel}`,
         trimmedResponse ? `Commentaire : ${trimmedResponse}` : null,
         '',
@@ -5891,7 +5927,7 @@ function buildDiffusionDecisionEmail(input: {
           <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8b6b4a;margin:0 0 14px 0;font-weight:700;">GTI IMMOBILIER</div>
           <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:${theme.accentSoft};color:${theme.accent};font-weight:700;font-size:12px;letter-spacing:0.02em;">${theme.badge}</div>
           <h1 style="margin:16px 0 6px 0;font-size:26px;line-height:1.1;color:#18232d;letter-spacing:-0.02em;">${summaryLabel}</h1>
-          <p style="margin:0;font-size:14px;line-height:1.6;color:#6b7280;">Dossier ${dossierLabel} • Notification automatique GTI</p>
+          <p style="margin:0;font-size:14px;line-height:1.6;color:#6b7280;">Dossier ${dossierLabel} â€¢ Notification automatique GTI</p>
         </div>
         <div style="padding:28px 30px 30px;">
           <div style="background:#ffffff;border:1px solid #eadfce;border-radius:20px;padding:18px 18px 16px;margin:0 0 18px 0;">
@@ -6075,9 +6111,9 @@ function pageLabel(total: number, pageSize: number, page: number) {
 const hektorStatusTargetOptions: Array<{ value: HektorAnnonceStatusTarget; label: string; description: string }> = [
   { value: 'active', label: 'Actif', description: 'Remet la fiche en statut actif.' },
   { value: 'offer', label: 'Offre', description: 'Enregistre une offre et alimente la transaction.' },
-  { value: 'compromise', label: 'Compromis', description: 'Enregistre un compromis avec les données clés.' },
+  { value: 'compromise', label: 'Compromis', description: 'Enregistre un compromis avec les donnÃ©es clÃ©s.' },
   { value: 'sold', label: 'Vendu', description: 'Enregistre la vente dans le suivi transaction.' },
-  { value: 'closed', label: 'Clos', description: 'Clôture le mandat et coupe la diffusion.' },
+  { value: 'closed', label: 'Clos', description: 'ClÃ´ture le mandat et coupe la diffusion.' },
 ]
 
 function hektorStatusTargetLabel(value: HektorAnnonceStatusTarget | string | null | undefined) {
@@ -6529,8 +6565,8 @@ function mandateRegisterMandantsLabel(item: MandatRecord) {
 
   const cutPatterns = [
     /\b\d{5}\b/,
-    /\d+\s*(?:bis|ter|quater|[a-z])?\s+(?:rue|route|avenue|av\.?|impasse|chemin|allee|all[ée]e|boulevard|bd|place|lotissement|lot|residence|r[ée]sidence|mont[ée]e|faubourg|hameau|quartier|lieu-dit|ld)\b/i,
-    /(?:^|[\s,-])(?:rue|route|avenue|av\.?|impasse|chemin|allee|all[ée]e|boulevard|bd|place|lotissement|lot|residence|r[ée]sidence|mont[ée]e|faubourg|hameau|quartier|lieu-dit|ld)\b/i,
+    /\d+\s*(?:bis|ter|quater|[a-z])?\s+(?:rue|route|avenue|av\.?|impasse|chemin|allee|all[Ã©e]e|boulevard|bd|place|lotissement|lot|residence|r[Ã©e]sidence|mont[Ã©e]e|faubourg|hameau|quartier|lieu-dit|ld)\b/i,
+    /(?:^|[\s,-])(?:rue|route|avenue|av\.?|impasse|chemin|allee|all[Ã©e]e|boulevard|bd|place|lotissement|lot|residence|r[Ã©e]sidence|mont[Ã©e]e|faubourg|hameau|quartier|lieu-dit|ld)\b/i,
     /\s-\s/,
   ]
 
@@ -6560,7 +6596,7 @@ function mandateRegisterNatureLabel(item: MandatRecord) {
     .filter((value, index, values) => values.indexOf(value) === index)
     .join(', ')
   const type = propertyTypeLabel(item.type_bien)
-  return [type !== '-' ? type : '', address].filter(Boolean).join(' · ') || '-'
+  return [type !== '-' ? type : '', address].filter(Boolean).join(' Â· ') || '-'
 }
 
 function mandateRegisterRowKey(item: MandatRecord) {
@@ -6655,7 +6691,7 @@ function priceChangeSummaryLine(
   if (!count) return ''
   const label = `${count} modif${count > 1 ? 's' : ''} prix`
   const date = formatDate((value.price_change_last_detected_at as string | null | undefined) ?? null)
-  return date && date !== '-' ? `${label} · ${date}` : label
+  return date && date !== '-' ? `${label} Â· ${date}` : label
 }
 
 function mandateRegisterValidationLabel(value: string | null | undefined) {
@@ -7546,7 +7582,7 @@ function MandatActionMenu(props: {
               </button>
             </div>
             <p className="action-menu-dialog-copy">
-              Mandat {props.mandat.numero_mandat ?? '-'} · Choisis une action directe pour gerer la validation, la diffusion ou ouvrir Hektor.
+              Mandat {props.mandat.numero_mandat ?? '-'} Â· Choisis une action directe pour gerer la validation, la diffusion ou ouvrir Hektor.
             </p>
             <div className="action-menu-dialog-list">
               {actionModel.items.map((item) => (
@@ -7604,7 +7640,7 @@ function DetailDossierActionPanel(props: {
             onClick={() => setExtraActionsOpen((value) => !value)}
           >
             <span>Plus d&apos;actions</span>
-            <span aria-hidden="true">⋮</span>
+            <span aria-hidden="true">â‹®</span>
           </button>
         ) : null}
       </div>
@@ -7822,9 +7858,9 @@ function sameSessionIdentity(left: Session | null, right: Session | null) {
 function activeFilterEntries(filters: AppFilters) {
   return [
     filters.query.trim() ? ['Recherche', filters.query.trim()] : null,
-    filters.mandatNumber.trim() ? ['N° mandat', filters.mandatNumber.trim()] : null,
+    filters.mandatNumber.trim() ? ['NÂ° mandat', filters.mandatNumber.trim()] : null,
     filters.mandantName.trim() ? ['Mandant', filters.mandantName.trim()] : null,
-    filters.mandateState !== allFilterValue ? ['État mandat', filters.mandateState] : null,
+    filters.mandateState !== allFilterValue ? ['Ã‰tat mandat', filters.mandateState] : null,
     filters.commercial !== allFilterValue ? ['Negociateur', filters.commercial === withoutCommercialFilterValue ? 'Sans' : filters.commercial] : null,
     filters.agency !== allFilterValue ? ['Agence', filters.agency] : null,
     filters.archive === activeArchiveFilterValue ? ['Archive', 'Actives'] : null,
@@ -7865,9 +7901,9 @@ function activeFilterEntries(filters: AppFilters) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('mandats')
+  const [screen, setScreen] = useState<Screen>('accueil')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
-  const [filters, setFilters] = useState<AppFilters>(() => defaultFiltersForScreen('mandats'))
+  const [filters, setFilters] = useState<AppFilters>(() => defaultFiltersForScreen('accueil'))
   const [searchDraft, setSearchDraft] = useState('')
   const [annonceSearchScope, setAnnonceSearchScope] = useState<AnnonceSearchScope>('current')
   const [dossiers, setDossiers] = useState<Dossier[]>([])
@@ -7939,6 +7975,10 @@ export default function App() {
   const [forgotPasswordPending, setForgotPasswordPending] = useState(false)
   const [deepLinkHandled, setDeepLinkHandled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('gti-sidebar-collapsed') === '1'
+  })
   const [requestComment, setRequestComment] = useState('')
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
@@ -9203,10 +9243,10 @@ export default function App() {
                 : 'refused'
       const nextSuiviLabel =
         action === 'suivi_a_traiter'
-          ? { eyebrow: '', title: 'Demandes à traiter' }
+          ? { eyebrow: '', title: 'Demandes Ã  traiter' }
           : action === 'suivi_acceptees'
-            ? { eyebrow: '', title: 'Demandes acceptées' }
-            : { eyebrow: '', title: 'Demandes rejetées' }
+            ? { eyebrow: '', title: 'Demandes acceptÃ©es' }
+            : { eyebrow: '', title: 'Demandes rejetÃ©es' }
       setScreen('suivi')
       setFiltersOpen(false)
       setPriorityPanelOpen(false)
@@ -9229,29 +9269,29 @@ export default function App() {
         : action === 'offres_en_cours'
           ? { eyebrow: '', title: "Offres d'achat en cours" }
           : action === 'offres_refusees'
-            ? { eyebrow: '', title: "Offres d'achat refusées" }
+            ? { eyebrow: '', title: "Offres d'achat refusÃ©es" }
             : action === 'compromis_en_cours'
               ? { eyebrow: '', title: 'Compromis en cours' }
               : action === 'compromis_annules'
-                ? { eyebrow: '', title: 'Compromis annulés' }
+                ? { eyebrow: '', title: 'Compromis annulÃ©s' }
                 : action === 'demandes_envoyees'
-                  ? { eyebrow: '', title: 'Demandes envoyées' }
+                  ? { eyebrow: '', title: 'Demandes envoyÃ©es' }
                   : action === 'correction_attente'
                     ? { eyebrow: '', title: 'Corrections en attente' }
                     : action === 'mandat_diffuse'
-                      ? { eyebrow: '', title: 'Mandats diffusés' }
+                      ? { eyebrow: '', title: 'Mandats diffusÃ©s' }
                       : action === 'mandat_valide'
-                        ? { eyebrow: '', title: 'Mandats validés' }
+                        ? { eyebrow: '', title: 'Mandats validÃ©s' }
                         : action === 'mandat_non_valide'
-                          ? { eyebrow: '', title: 'Mandats non validés' }
+                          ? { eyebrow: '', title: 'Mandats non validÃ©s' }
                           : action === 'mandat_non_diffuse'
-                            ? { eyebrow: '', title: 'Mandats non diffusés' }
+                            ? { eyebrow: '', title: 'Mandats non diffusÃ©s' }
                             : action === 'sans_mandat'
                               ? { eyebrow: '', title: 'Sans mandat' }
                               : action === 'leboncoin'
-                                ? { eyebrow: '', title: 'Diffusées sur LeBonCoin' }
+                                ? { eyebrow: '', title: 'DiffusÃ©es sur LeBonCoin' }
                                 : action === 'bienici'
-                                  ? { eyebrow: '', title: "Diffusées sur Bien'ici" }
+                                  ? { eyebrow: '', title: "DiffusÃ©es sur Bien'ici" }
                                   : null
     setScreen('mandats')
     setFiltersOpen(false)
@@ -9694,7 +9734,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <label key={`${section.title}-${field.name}`} className="filter-field">
               <span>{field.label}</span>
               <select
-                value={draftAnnonceWizardFields[field.name] ?? field.defaultValue ?? ''}
+                value={optionValueForSelect(draftAnnonceWizardFields[field.name], field.options, field.defaultValue)}
                 onChange={(event) => updateDraftAnnonceWizardField(field.name, event.target.value)}
               >
                 {field.options.map((option) => (
@@ -10055,7 +10095,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function openMissingNegotiatorModal(dossier: HektorNegotiatorRequiredDossier) {
     if (!isAdmin) {
-      setErrorMessage("Cette action nécessite un négociateur Hektor sur l'annonce. Demande à un administrateur de l'affecter.")
+      setErrorMessage("Cette action nÃ©cessite un nÃ©gociateur Hektor sur l'annonce. Demande Ã  un administrateur de l'affecter.")
       return
     }
     const dossierAgency = (dossier.agence_nom ?? '').trim().toLowerCase()
@@ -10091,7 +10131,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     const negotiator = negotiatorAssignOptions.find((item) => item.hektorNegociateurId === negotiatorAssignValue)
     if (!negotiator) {
-      setErrorMessage('Choisis un négociateur Hektor avant de lancer l’affectation.')
+      setErrorMessage('Choisis un nÃ©gociateur Hektor avant de lancer lâ€™affectation.')
       return
     }
     if (activeAdminAnnonceJobIds.has(String(negotiatorAssignTarget.hektor_annonce_id))) {
@@ -10114,7 +10154,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setNegotiatorAssignAgencyValue('')
       setNegotiatorAssignValue('')
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible de créer la demande d’affectation négociateur.')
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de crÃ©er la demande dâ€™affectation nÃ©gociateur.')
     } finally {
       setNegotiatorAssignPending(false)
     }
@@ -10426,7 +10466,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         if (!check.matches) {
           setPriceDropCheckPrompt({
             kind: 'mismatch',
-            message: 'Opération refusée : Prix différent Hektor',
+            message: 'OpÃ©ration refusÃ©e : Prix diffÃ©rent Hektor',
             hektorAnnonceId: currentRequest.hektor_annonce_id,
             requestedPrice: check.requested_price,
             observedPrice: check.observed_price,
@@ -10435,7 +10475,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         }
         setPriceDropCheckPrompt({
           kind: 'confirmed',
-          message: 'Opération validé ! Voulez vous diffusé et activer toute les passerelles ?',
+          message: 'OpÃ©ration validÃ© ! Voulez vous diffusÃ© et activer toute les passerelles ?',
           hektorAnnonceId: currentRequest.hektor_annonce_id,
           requestedPrice: check.requested_price,
           observedPrice: check.observed_price,
@@ -10504,7 +10544,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             const failureDetails = summarizeApplyFailures(acceptanceResult.failed)
             setValidationCheckPrompt({
               kind: 'mismatch',
-              title: 'Opération refusée par Hektor',
+              title: 'OpÃ©ration refusÃ©e par Hektor',
               message: 'La demande n a pas ete acceptee : Hektor a refuse la validation ou l activation des passerelles.',
               detail: failureDetails || acceptanceResult.waiting_message || null,
               hektorAnnonceId: currentRequest.hektor_annonce_id,
@@ -10698,7 +10738,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         if (input.status === 'accepted' && currentRequest && currentRequestType === 'demande_diffusion') {
           setValidationCheckPrompt({
             kind: 'mismatch',
-            title: 'Opération refusée par Hektor',
+            title: 'OpÃ©ration refusÃ©e par Hektor',
             message: 'La demande n a pas ete acceptee : Hektor a bloque la validation ou la diffusion.',
             detail: message,
             hektorAnnonceId: currentRequest.hektor_annonce_id,
@@ -11118,7 +11158,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     ? `${new Intl.NumberFormat('fr-FR').format(mandatsTotal)} resultat${mandatsTotal > 1 ? 's' : ''} dans ${annonceSearchScopeText(dataFilters)}`
     : null
   const lightweightAnnonceFiltersActive = screen === 'mandats' && usesLightweightAnnonceIndex(filters)
+  const isAdmin = profile?.role === 'admin'
   const screenHeader = useMemo(() => {
+    if (screen === 'accueil') {
+      if (isPaulineAdministrativeProfile(profile, isAdmin)) return { title: 'Accueil Pauline administratif', copy: '' }
+      if (isAdmin) return { title: 'Accueil Admin', copy: '' }
+      return { title: 'Accueil commercial', copy: '' }
+    }
     if (screen === 'annonces') {
       return { title: 'Annonces', copy: '' }
     }
@@ -11141,7 +11187,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return { title: 'Agenda Google', copy: '' }
     }
     return { title: 'Suivi des mandats', copy: '' }
-  }, [screen, mandatDrilldownLabel, currentAnnonceListingLabels])
+  }, [screen, mandatDrilldownLabel, currentAnnonceListingLabels, profile, isAdmin])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('gti-sidebar-collapsed', sidebarCollapsed ? '1' : '0')
+  }, [sidebarCollapsed])
+
   const dossierCountLabel = activeFilters.length > 0 ? 'Dossiers apres filtres' : 'Tous les dossiers'
   const address = [detail.adresse_privee_listing || detail.adresse_detail, detail.code_postal_public_listing || detail.code_postal_prive_detail || detail.code_postal, detail.ville_publique_listing || detail.ville_privee_detail || selectedDossier?.ville]
     .filter(Boolean)
@@ -11217,7 +11269,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         hektorBroadcastId,
         observedEnabled: targetEnabled,
         hasError: false,
-        details: [targetEnabled ? 'Cible phase 2 · active' : 'Cible phase 2 · inactive'],
+        details: [targetEnabled ? 'Cible phase 2 Â· active' : 'Cible phase 2 Â· inactive'],
       })
     }
     for (const item of diffusionModalBroadcasts) {
@@ -11346,15 +11398,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return [
         { label: 'Annonces', value: new Intl.NumberFormat('fr-FR').format(mandatStats.total), tone: 'volume', action: 'all_annonces' },
         { label: 'Offres en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresEnCours), tone: 'affaires', action: 'offres_en_cours' },
-        { label: 'Offres refusées', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresRefusees), tone: 'affaires', action: 'offres_refusees' },
+        { label: 'Offres refusÃ©es', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresRefusees), tone: 'affaires', action: 'offres_refusees' },
         { label: 'Compromis en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisEnCours), tone: 'affaires', action: 'compromis_en_cours' },
-        { label: 'Compromis annulés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisAnnules), tone: 'affaires', action: 'compromis_annules' },
+        { label: 'Compromis annulÃ©s', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisAnnules), tone: 'affaires', action: 'compromis_annules' },
         { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide' },
         { label: 'Mandats non valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'diffusion', action: 'mandat_non_valide' },
-        { label: 'Mandat diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
-        { label: 'Mandat non diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
+        { label: 'Mandat diffusÃ©', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
+        { label: 'Mandat non diffusÃ©', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
         { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'diffusion', action: 'sans_mandat' },
-        { label: 'Demande envoyée', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.sent), tone: 'demandes', action: 'demandes_envoyees' },
+        { label: 'Demande envoyÃ©e', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.sent), tone: 'demandes', action: 'demandes_envoyees' },
         { label: 'Correction en attente', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.waitingCorrection), tone: 'demandes', action: 'correction_attente' },
         { label: 'Diffuse sur LeBonCoin', value: new Intl.NumberFormat('fr-FR').format(mandatStats.leboncoin), tone: 'diffusion', action: 'leboncoin' },
         { label: "Diffuse sur Bien'ici", value: new Intl.NumberFormat('fr-FR').format(mandatStats.bienici), tone: 'diffusion', action: 'bienici' },
@@ -11362,9 +11414,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     if (screen === 'registre') {
       return [
-        { label: 'Mandats enregistrés', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'volume', action: 'all_annonces' },
+        { label: 'Mandats enregistrÃ©s', value: new Intl.NumberFormat('fr-FR').format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), tone: 'volume', action: 'all_annonces' },
         { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide' },
-        { label: 'Mandats non validés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'warning', action: 'mandat_non_valide' },
+        { label: 'Mandats non validÃ©s', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'warning', action: 'mandat_non_valide' },
         { label: 'Mandats diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
         { label: 'Mandats non diffusable', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
       ]
@@ -11381,16 +11433,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         { label: 'Contacts', value: new Intl.NumberFormat('fr-FR').format(contactStats.total), tone: 'volume', action: null },
         { label: 'Actifs', value: new Intl.NumberFormat('fr-FR').format(contactStats.active), tone: 'diffusion', action: null },
         { label: 'Recherches actives', value: new Intl.NumberFormat('fr-FR').format(contactStats.activeSearchContacts), tone: 'demandes', action: null },
-        { label: 'Archivés', value: new Intl.NumberFormat('fr-FR').format(contactStats.archived), tone: 'neutral', action: null },
+        { label: 'ArchivÃ©s', value: new Intl.NumberFormat('fr-FR').format(contactStats.archived), tone: 'neutral', action: null },
         { label: 'Doublons', value: new Intl.NumberFormat('fr-FR').format(contactStats.duplicates), tone: 'warning', action: null },
         { label: 'Risque fort', value: new Intl.NumberFormat('fr-FR').format(contactStats.highRiskDuplicates), tone: 'warning', action: null },
-        { label: 'Liés annonces', value: new Intl.NumberFormat('fr-FR').format(contactStats.linked), tone: 'demandes', action: null },
+        { label: 'LiÃ©s annonces', value: new Intl.NumberFormat('fr-FR').format(contactStats.linked), tone: 'demandes', action: null },
       ]
     }
     return [
-      { label: 'Demandes à traiter', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.pendingOrInProgress), tone: 'demandes', action: 'suivi_a_traiter' },
-      { label: 'Demandes acceptées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.acceptedHistorical), tone: 'demandes', action: 'suivi_acceptees' },
-      { label: 'Demandes rejetées', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.refused), tone: 'demandes', action: 'suivi_rejetees' },
+      { label: 'Demandes Ã  traiter', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.pendingOrInProgress), tone: 'demandes', action: 'suivi_a_traiter' },
+      { label: 'Demandes acceptÃ©es', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.acceptedHistorical), tone: 'demandes', action: 'suivi_acceptees' },
+      { label: 'Demandes rejetÃ©es', value: new Intl.NumberFormat('fr-FR').format(suiviRequestStats.refused), tone: 'demandes', action: 'suivi_rejetees' },
       { label: 'Affaires en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.affairesEnCours), tone: 'affaires', action: null },
     ]
   }, [screen, visibleDossiersCount, workItemsTotal, workItems.length, mandatStats, commercialRequestStats, suiviRequestStats, contactStats])
@@ -11405,22 +11457,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const format = (value: number) => new Intl.NumberFormat('fr-FR').format(value)
     if (screen === 'mandats') {
       return [
-        { label: 'Diffusion à ouvrir', value: format(mandatStats.mandatNonDiffuse), detail: 'Ouvrir les portails non activés', tone: 'diffusion', action: 'mandat_non_diffuse' },
-        { label: 'Mandats à valider', value: format(mandatStats.mandatNonValide), detail: 'Vérifier et valider les nouveaux mandats', tone: 'warning', action: 'mandat_non_valide' },
+        { label: 'Diffusion Ã  ouvrir', value: format(mandatStats.mandatNonDiffuse), detail: 'Ouvrir les portails non activÃ©s', tone: 'diffusion', action: 'mandat_non_diffuse' },
+        { label: 'Mandats Ã  valider', value: format(mandatStats.mandatNonValide), detail: 'VÃ©rifier et valider les nouveaux mandats', tone: 'warning', action: 'mandat_non_valide' },
         { label: 'Erreur passerelle', value: format(workItemsTotal || workItems.length), detail: 'Corrections requises sur les portails', tone: 'warning', action: 'correction_attente' },
       ]
     }
     if (screen === 'registre') {
       return [
-        { label: 'Non validés', value: format(mandatStats.mandatNonValide), detail: 'Mandats enregistrés à contrôler', tone: 'warning', action: 'mandat_non_valide' },
-        { label: 'Non diffusables', value: format(mandatStats.mandatNonDiffuse), detail: 'Mandats à préparer avant diffusion', tone: 'diffusion', action: 'mandat_non_diffuse' },
+        { label: 'Non validÃ©s', value: format(mandatStats.mandatNonValide), detail: 'Mandats enregistrÃ©s Ã  contrÃ´ler', tone: 'warning', action: 'mandat_non_valide' },
+        { label: 'Non diffusables', value: format(mandatStats.mandatNonDiffuse), detail: 'Mandats Ã  prÃ©parer avant diffusion', tone: 'diffusion', action: 'mandat_non_diffuse' },
         { label: 'Registre', value: format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), detail: 'Mandats disponibles dans la vue', tone: 'volume', action: 'all_annonces' },
       ]
     }
     if (screen === 'estimations') {
       return [
-        { label: 'Sans mandat', value: format(mandatStats.withoutMandat), detail: 'Estimations à transformer ou qualifier', tone: 'warning', action: null },
-        { label: 'Futurs mandats', value: format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), detail: 'Projets déjà reliés à un mandat', tone: 'diffusion', action: null },
+        { label: 'Sans mandat', value: format(mandatStats.withoutMandat), detail: 'Estimations Ã  transformer ou qualifier', tone: 'warning', action: null },
+        { label: 'Futurs mandats', value: format(Math.max(0, mandatStats.total - mandatStats.withoutMandat)), detail: 'Projets dÃ©jÃ  reliÃ©s Ã  un mandat', tone: 'diffusion', action: null },
         { label: 'Portefeuille', value: format(mandatStats.total), detail: 'Estimations visibles avec les filtres courants', tone: 'volume', action: null },
       ]
     }
@@ -11433,12 +11485,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ]
     }
     return [
-      { label: 'À traiter', value: format(workItemsTotal || workItems.length), detail: 'Demandes à revoir dans les dossiers visibles', tone: 'demandes', action: 'correction_attente' },
+      { label: 'Ã€ traiter', value: format(workItemsTotal || workItems.length), detail: 'Demandes Ã  revoir dans les dossiers visibles', tone: 'demandes', action: 'correction_attente' },
       { label: 'Visibles', value: format(visibleDossiersCount), detail: 'Dossiers correspondant aux filtres actuels', tone: 'volume', action: 'all_annonces' },
-      { label: 'Filtres actifs', value: format(activeFilters.length), detail: 'Critères qui réduisent le listing', tone: 'neutral', action: null },
+      { label: 'Filtres actifs', value: format(activeFilters.length), detail: 'CritÃ¨res qui rÃ©duisent le listing', tone: 'neutral', action: null },
     ]
   }, [activeFilters.length, contactStats, mandatStats, screen, visibleDossiersCount, workItems.length, workItemsTotal])
-  const isAdmin = profile?.role === 'admin'
   const googleIdentityNegotiatorContext = useMemo<UserNegotiatorContext | null>(() => {
     if (!googleWorkspaceIdentity?.is_active || googleWorkspaceIdentity.link_status !== 'linked') return null
     if (!googleWorkspaceIdentity.negociateur_email && !googleWorkspaceIdentity.hektor_user_id) return null
@@ -11575,8 +11626,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             ['Cloture', safeText(current.cloture)] as [string, string],
             ['Montant', safeText(current.montant)] as [string, string],
             ['Mandants', safeText(current.mandants)] as [string, string],
-            ['Versions', sortedVersions.length > 1 ? `${sortedVersions.length} versions détectées` : '1 version'] as [string, string],
-            ['Avenants', embeddedAvenants.length > 0 ? embeddedAvenants.map((entry) => [safeText(entry.numero), safeText(entry.date), safeText(entry.detail)].filter(Boolean).join(' · ')).join(' | ') : ''] as [string, string],
+            ['Versions', sortedVersions.length > 1 ? `${sortedVersions.length} versions dÃ©tectÃ©es` : '1 version'] as [string, string],
+            ['Avenants', embeddedAvenants.length > 0 ? embeddedAvenants.map((entry) => [safeText(entry.numero), safeText(entry.date), safeText(entry.detail)].filter(Boolean).join(' Â· ')).join(' | ') : ''] as [string, string],
             ['Note', safeText(current.note)] as [string, string],
           ].filter((entry) => entry[1]),
         }
@@ -11610,7 +11661,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   const priorityPanel = priorityPanelOpen ? (
-    <div className="priority-dropdown" role="region" aria-label="Priorités de la vue">
+    <div className="priority-dropdown" role="region" aria-label="PrioritÃ©s de la vue">
       {viewPriorities.map((item) => (
         <button
           key={item.label}
@@ -11635,13 +11686,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return (
       <div className="login-shell">
         <section className="login-panel">
-          <p className="eyebrow">Récupération</p>
-          <h1>Définir un nouveau mot de passe</h1>
-          <p className="hero-copy">Choisissez un nouveau mot de passe pour finaliser la récupération de votre compte.</p>
+          <p className="eyebrow">RÃ©cupÃ©ration</p>
+          <h1>DÃ©finir un nouveau mot de passe</h1>
+          <p className="hero-copy">Choisissez un nouveau mot de passe pour finaliser la rÃ©cupÃ©ration de votre compte.</p>
           <form className="login-form" onSubmit={handleResetRecoveredPassword}>
             <label><span>Nouveau mot de passe</span><input type="password" value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} required /></label>
             <label><span>Confirmation</span><input type="password" value={recoveryPasswordConfirm} onChange={(event) => setRecoveryPasswordConfirm(event.target.value)} required /></label>
-            <button type="submit" disabled={recoveryPending}>{recoveryPending ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}</button>
+            <button type="submit" disabled={recoveryPending}>{recoveryPending ? 'Mise Ã  jour...' : 'Mettre Ã  jour le mot de passe'}</button>
           </form>
           {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
         </section>
@@ -11653,9 +11704,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return (
       <div className="login-shell">
         <section className="login-panel">
-          <p className="eyebrow">Accès sécurisé</p>
-          <h1>Connexion à l'outil métier</h1>
-          <p className="hero-copy">Les vues Supabase sont protégées par RLS. Connecte-toi avec un utilisateur actif pour lire les données.</p>
+          <p className="eyebrow">AccÃ¨s sÃ©curisÃ©</p>
+          <h1>Connexion Ã  l'outil mÃ©tier</h1>
+          <p className="hero-copy">Les vues Supabase sont protÃ©gÃ©es par RLS. Connecte-toi avec un utilisateur actif pour lire les donnÃ©es.</p>
           <div className="login-sso">
             <button className="google-workspace-button" type="button" onClick={() => void handleGoogleWorkspaceSignIn()} disabled={googleAuthPending || authPending}>
               <span className="google-workspace-mark" aria-hidden="true">G</span>
@@ -11671,7 +11722,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </form>
           <div className="hero-actions">
             <button className="ghost-button" type="button" onClick={() => setForgotPasswordOpen((open) => !open)}>
-              {forgotPasswordOpen ? 'Masquer la réinitialisation' : 'Mot de passe oublié ?'}
+              {forgotPasswordOpen ? 'Masquer la rÃ©initialisation' : 'Mot de passe oubliÃ© ?'}
             </button>
           </div>
           {forgotPasswordOpen ? (
@@ -12356,7 +12407,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <section className="status-change-summary">
                   <div>
                     <strong>{negotiatorAssignTarget.titre_bien || negotiatorAssignTarget.numero_dossier || `Annonce ${negotiatorAssignTarget.hektor_annonce_id}`}</strong>
-                    <span>{negotiatorAssignTarget.numero_dossier ?? '-'} · mandat {negotiatorAssignTarget.numero_mandat ?? '-'}</span>
+                    <span>{negotiatorAssignTarget.numero_dossier ?? '-'} Â· mandat {negotiatorAssignTarget.numero_mandat ?? '-'}</span>
                   </div>
                   <StatusPill value={hasHektorNegotiator(negotiatorAssignTarget) ? 'Reaffectation' : 'Nego requis'} />
                 </section>
@@ -12425,7 +12476,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <section className="status-change-summary">
                   <div>
                     <strong>{statusChangeTarget.titre_bien || statusChangeTarget.numero_dossier || `Annonce ${statusChangeTarget.hektor_annonce_id}`}</strong>
-                    <span>{statusChangeTarget.numero_dossier ?? '-'} · mandat {statusChangeTarget.numero_mandat ?? '-'}</span>
+                    <span>{statusChangeTarget.numero_dossier ?? '-'} Â· mandat {statusChangeTarget.numero_mandat ?? '-'}</span>
                   </div>
                   <StatusPill value={statusChangeTarget.statut_annonce} />
                 </section>
@@ -12572,7 +12623,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             ? 'Decision sur l annulation'
                             : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                               ? 'Correction prete a renvoyer'
-                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyÃ©e')
                                 ? 'Demande deja transmise'
                                 : 'Annulation en preparation'
                           : requestModalRole === 'pauline'
@@ -12581,7 +12632,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             : 'Decision de Pauline'
                             : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                             ? 'Correction prete a renvoyer'
-                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyÃ©e')
                               ? 'Demande deja transmise'
                               : 'Validation en preparation'}
                       </h4>
@@ -12591,7 +12642,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
                             : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                               ? 'La demande a ete completee. Tu peux la renvoyer a Pauline.'
-                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyÃ©e')
                                 ? 'La demande est partie. Il reste a suivre le retour de Pauline.'
                                 : 'Explique le motif d annulation pour que Pauline controle le mandat dans Hektor.'
                           : requestModalRole === 'pauline'
@@ -12600,7 +12651,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
                           : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                             ? 'Le dossier a ete ajuste. Tu peux renvoyer une version propre a Pauline.'
-                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyÃ©e')
                               ? 'La demande est partie. Il reste a suivre le retour de validation.'
                               : 'Une fois approuvee, la diffusion et les passerelles par defaut seront activees automatiquement.'}
                       </p>
@@ -12757,12 +12808,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       : handleCreateDiffusionRequest({ mandatId: requestModalMandat.app_dossier_id, comment: requestModalComment, requestType: requestModalEffectiveType, requestedPrice: requestModalPriceValue })}
                     disabled={
                       requestPending ||
-                      requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ||
+                      requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyÃ©e') ||
                       (requestModalEffectiveType === 'demande_baisse_prix' && (!requestModalEligibleForPriceDrop || !requestModalPriceValue.trim())) ||
                       (requestModalEffectiveType === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
                     }
                   >
-                    {requestPending ? 'Envoi en cours...' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Envoyer la correction' : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Envoyer la demande d annulation' : 'Envoyer la demande de validation'}
+                    {requestPending ? 'Envoi en cours...' : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger') ? 'Envoyer la correction' : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyÃ©e') ? 'Demande deja envoyee' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Envoyer la demande de baisse' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Envoyer la demande d annulation' : 'Envoyer la demande de validation'}
                   </button>
                 )}
               </div>
@@ -12779,9 +12830,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onClick={(event) => event.stopPropagation()}
             >
               <div className="price-drop-popup-icon" aria-hidden="true" />
-              <p className="price-drop-popup-eyebrow">Contrôle prix Hektor</p>
+              <p className="price-drop-popup-eyebrow">ContrÃ´le prix Hektor</p>
               <h3 id="price-drop-popup-title">
-                {priceDropCheckPrompt.kind === 'mismatch' ? 'Prix différent Hektor' : 'Prix confirmé'}
+                {priceDropCheckPrompt.kind === 'mismatch' ? 'Prix diffÃ©rent Hektor' : 'Prix confirmÃ©'}
               </h3>
               <p className="price-drop-popup-message">{priceDropCheckPrompt.message}</p>
               <div className="price-drop-popup-prices">
@@ -12961,7 +13012,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button diffusion-close-button" type="button" onClick={closeDiffusionModal}>Fermer</button>
               </div>
               <p className="diffusion-subline">
-                {diffusionModalMandat.numero_dossier ?? '-'} · {diffusionModalMandat.numero_mandat ?? '-'} · {commercialDisplay(diffusionModalMandat)}
+                {diffusionModalMandat.numero_dossier ?? '-'} Â· {diffusionModalMandat.numero_mandat ?? '-'} Â· {commercialDisplay(diffusionModalMandat)}
               </p>
               <div className="diffusion-head-strip">
                 <StatusPill value={diffusionModalMandat.statut_annonce} />
@@ -12995,8 +13046,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   {diffusionApplyResult ? (
                     <div className="diffusion-result-note">
                       <strong>{diffusionApplyResult.dry_run ? 'Simulation Hektor' : 'Application Hektor'}</strong>
-                      <span>Ajouts : {diffusionApplyResult.to_add_count} · Retraits : {diffusionApplyResult.to_remove_count}</span>
-                      <span>Succes : {diffusionApplyResult.applied.length} · Erreurs : {diffusionApplyResult.failed.length}</span>
+                      <span>Ajouts : {diffusionApplyResult.to_add_count} Â· Retraits : {diffusionApplyResult.to_remove_count}</span>
+                      <span>Succes : {diffusionApplyResult.applied.length} Â· Erreurs : {diffusionApplyResult.failed.length}</span>
                     </div>
                   ) : null}
                 </article>
@@ -13073,7 +13124,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   if (!responsiveExperience.isDesktop) {
     const mobileScreenTitle = screenHeader.title
     const mobileUserLabel = resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'
-    const mobileAgencyLabel = resolvedUserNegotiatorContext?.agence_nom || 'Agence non détectée'
+    const mobileAgencyLabel = resolvedUserNegotiatorContext?.agence_nom || 'Agence non dÃ©tectÃ©e'
     const mobileMetrics = statsMetrics.slice(0, 5)
     const mobileDetailMessages = selectedDossierRequestEvents
       .filter((event) => parseJson<{ message?: string | null }>(event.payload_json, {}).message)
@@ -13085,6 +13136,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         date: event.event_at,
         message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
       }))
+    const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda'
 
     return (
       <>
@@ -13099,14 +13151,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         onOpenUsers={isAdmin ? () => void openUserTool() : undefined}
         onSignOut={session ? handleSignOut : undefined}
       >
-        {screen !== 'agenda' ? (
+        {showMobileCommandCard ? (
         <section className="mobile-command-card">
           <label className="mobile-search-field">
             <span>Recherche</span>
             <input
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder={screen === 'contacts' ? 'Nom, email, ville, ID...' : screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, négociateur...'}
+              placeholder={screen === 'contacts' ? 'Nom, email, ville, ID...' : screen === 'registre' ? 'Mandat, bien, mandant...' : 'Annonce, ville, nÃ©gociateur...'}
             />
           </label>
           <div className="mobile-command-actions">
@@ -13123,7 +13175,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               Stats
               {mobileMetrics.length > 0 ? <span>{mobileMetrics.length}</span> : null}
             </button>
-            <button type="button" onClick={resetFilters}>Réinitialiser</button>
+            <button type="button" onClick={resetFilters}>RÃ©initialiser</button>
           </div>
           {mobileStatsOpen && mobileMetrics.length > 0 ? (
             <div className="mobile-metric-strip" aria-label="Indicateurs">
@@ -13143,7 +13195,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           ) : null}
           {screen === 'mandats' && annonceSearchScopeSummary ? (
             <div className={`mobile-search-scope ${annonceSearchScope === 'extended' ? 'is-extended' : ''}`}>
-              <span>{annonceSearchScope === 'extended' ? 'Recherche étendue' : canExtendAnnonceSearch ? 'Recherche limitée' : 'Recherche filtrée'}</span>
+              <span>{annonceSearchScope === 'extended' ? 'Recherche Ã©tendue' : canExtendAnnonceSearch ? 'Recherche limitÃ©e' : 'Recherche filtrÃ©e'}</span>
               <strong>{annonceSearchScopeSummary}</strong>
               {annonceSearchScope === 'extended' ? (
                 <button
@@ -13167,7 +13219,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     setDossierPage(1)
                   }}
                 >
-                  Étendre
+                  Ã‰tendre
                 </button>
               ) : null}
             </div>
@@ -13175,7 +13227,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </section>
         ) : null}
 
-        {filtersOpen ? (
+        {showMobileCommandCard && filtersOpen ? (
           <div className="filters-overlay mobile-filter-overlay" onClick={() => setFiltersOpen(false)}>
             <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
               <div className="filters-head">
@@ -13186,7 +13238,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
               </div>
               <div className="filter-grid">
-                <FilterSelect label="Négociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                <FilterSelect label="NÃ©gociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {screen === 'contacts' ? (
                   <>
@@ -13231,7 +13283,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         onChange={(value) => updateFilter('archive', value)}
                         options={[
                           { value: activeArchiveFilterValue, label: 'Actives' },
-                          { value: archivedFilterValue, label: 'Archivées' },
+                          { value: archivedFilterValue, label: 'ArchivÃ©es' },
                         ]}
                       />
                     ) : null}
@@ -13239,12 +13291,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     {screen === 'mandats' ? (
                       <>
                         <FilterSelect
-                          label="Détail"
+                          label="DÃ©tail"
                           value={filters.detailAvailability}
                           onChange={(value) => updateFilter('detailAvailability', value)}
                           options={[
                             { value: 'available', label: 'Disponible' },
-                            { value: 'to_load', label: 'À charger' },
+                            { value: 'to_load', label: 'Ã€ charger' },
                           ]}
                         />
                         <FilterSelect
@@ -13285,14 +13337,33 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </div>
         ) : null}
 
-        {bootLoading && dossiers.length === 0 && workItems.length === 0 ? <section className="info-banner">Chargement initial des données...</section> : null}
+        {bootLoading && dossiers.length === 0 && workItems.length === 0 ? <section className="info-banner">Chargement initial des donnÃ©es...</section> : null}
         {noticeMessage ? <section className="info-banner">{noticeMessage}</section> : null}
         {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
 
-        {screen === 'agenda' ? (
+        {screen === 'accueil' ? (
+          <HomeDashboardScreen
+            variant={homeDashboardVariant(profile, isAdmin)}
+            profile={profile}
+            isAdmin={isAdmin}
+            mandats={mandats}
+            dossiers={dossiers}
+            requests={diffusionRequests}
+            workItems={workItems}
+            mandatStats={mandatStats}
+            contactStats={contactStats}
+            suiviRequestStats={suiviRequestStats}
+            commercialRequestStats={commercialRequestStats}
+            onOpenScreen={openScreen}
+            onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={openRequestModal}
+            onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
+            onCreateContact={canManageContacts ? () => setContactCreateOpen(true) : undefined}
+          />
+        ) : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
             defaultCalendarEmail={contactHektorUserEmail}
-            userLabel={mobileUserLabel}
+            userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
             hektorNegotiators={hektorNegotiators}
             profileRole={profile?.role ?? null}
             onOpenDossier={openDossierDetailPage}
@@ -13457,7 +13528,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   return (
     <DesktopLayout>
-    <div className="app-shell">
+    <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
       <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
         <button
           className="mobile-nav-toggle"
@@ -13473,14 +13544,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <p className="eyebrow">GTI Immobilier</p>
           <h1>{screenHeader.title}</h1>
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
+          <button
+            className="sidebar-collapse-button"
+            type="button"
+            aria-label={sidebarCollapsed ? 'Agrandir le menu' : 'RÃ©duire le menu'}
+            aria-pressed={sidebarCollapsed}
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            <span>{sidebarCollapsed ? 'Ouvrir' : 'RÃ©duire'}</span>
+          </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
-          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('mandats')}>Annonces</button>
-          <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('estimations')}>Estimations</button>
-          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('registre')}>Mandats</button>
-          <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('contacts')}>Contacts</button>
-          <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('agenda')}>Agenda</button>
-          {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" onClick={() => openScreen('suivi')}>Suivi</button> : null}
+          <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
+          <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" title="Annonces" onClick={() => openScreen('mandats')}>Annonces</button>
+          <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" title="Estimations" onClick={() => openScreen('estimations')}>Estimations</button>
+          <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" title="Mandats" onClick={() => openScreen('registre')}>Mandats</button>
+          <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" title="Contacts" onClick={() => openScreen('contacts')}>Contacts</button>
+          <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" title="Agenda" onClick={() => openScreen('agenda')}>Agenda</button>
+          {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
         </nav>
         <div className="header-user-stack">
           <div className="side-card user-card">
@@ -13488,11 +13569,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="user-avatar">{userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}</div>
               <div className="user-meta">
                 <strong>{resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}</strong>
-                <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non détectée'}</span>
+                <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non dÃ©tectÃ©e'}</span>
               </div>
               <div className="user-card-actions">
-                {isAdmin ? <button className="signout-button-inline" type="button" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
-                {session ? <button className="signout-button-inline" type="button" onClick={handleSignOut}>Se déconnecter</button> : null}
+                {isAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
+                {session ? <button className="signout-button-inline" type="button" title="Se dÃ©connecter" data-short="S" onClick={handleSignOut}>Se dÃ©connecter</button> : null}
               </div>
             </div>
           </div>
@@ -13501,7 +13582,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
       <div className="workspace-shell">
         <main className="content">
-        {screen !== 'suivi' && screen !== 'agenda' ? (
+        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' ? (
         <section className="hero">
           <div className="hero-stack">
               <div className="hero-top-row">
@@ -13514,7 +13595,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
                     : canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
-                  <button className="ghost-button" type="button" onClick={resetFilters}>Réinitialiser</button>
+                  <button className="ghost-button" type="button" onClick={resetFilters}>RÃ©initialiser</button>
                 </div>
               </div>
             {screen === 'mandats' ? (
@@ -13535,7 +13616,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
-                    <span>Priorités</span>
+                    <span>PrioritÃ©s</span>
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
@@ -13581,7 +13662,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
-                    <span>Priorités</span>
+                    <span>PrioritÃ©s</span>
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
@@ -13627,7 +13708,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
-                    <span>Priorités</span>
+                    <span>PrioritÃ©s</span>
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
@@ -13665,7 +13746,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <div className="filters-head">
               <div>
                 <p className="eyebrow">{screen === 'annonces' ? 'Filtres annonces' : screen === 'mandats' ? 'Filtres annonces' : screen === 'estimations' ? 'Filtres estimations' : screen === 'registre' ? 'Filtres registre' : 'Filtres suivi administratif'}</p>
-                <strong>{screen === 'annonces' ? 'Appliqués côté serveur' : screen === 'mandats' ? 'Projets, mandats et diffusion' : screen === 'estimations' ? 'Futurs mandats potentiels' : screen === 'registre' ? 'Mandats avec numéro' : 'Demandes et parc mandat'}</strong>
+                <strong>{screen === 'annonces' ? 'AppliquÃ©s cÃ´tÃ© serveur' : screen === 'mandats' ? 'Projets, mandats et diffusion' : screen === 'estimations' ? 'Futurs mandats potentiels' : screen === 'registre' ? 'Mandats avec numÃ©ro' : 'Demandes et parc mandat'}</strong>
               </div>
               <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
             </div>
@@ -13893,7 +13974,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             ) : screen === 'registre' ? (
               <>
                 <label className="filter-field">
-                  <span>N° de mandat</span>
+                  <span>NÂ° de mandat</span>
                   <input
                     value={filters.mandatNumber}
                     onChange={(event) => updateFilter('mandatNumber', event.target.value)}
@@ -13917,7 +13998,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   onChange={(value) => updateFilter('mandateState', value)}
                   options={[
                     { value: 'En cours', label: 'En cours' },
-                    { value: 'Annulé', label: 'Annulé' },
+                    { value: 'AnnulÃ©', label: 'AnnulÃ©' },
                   ]}
                 />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
@@ -14071,7 +14152,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {noticeMessage ? <section className="info-banner">{noticeMessage}</section> : null}
         {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
 
-        {screen === 'agenda' ? (
+        {screen === 'accueil' ? (
+          <HomeDashboardScreen
+            variant={homeDashboardVariant(profile, isAdmin)}
+            profile={profile}
+            isAdmin={isAdmin}
+            mandats={mandats}
+            dossiers={dossiers}
+            requests={diffusionRequests}
+            workItems={workItems}
+            mandatStats={mandatStats}
+            contactStats={contactStats}
+            suiviRequestStats={suiviRequestStats}
+            commercialRequestStats={commercialRequestStats}
+            onOpenScreen={openScreen}
+            onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={openRequestModal}
+            onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
+            onCreateContact={canManageContacts ? () => setContactCreateOpen(true) : undefined}
+          />
+        ) : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
             defaultCalendarEmail={contactHektorUserEmail}
             userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
@@ -14382,7 +14482,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <article key={user.id} className="timeline-card">
                       <strong>{userFullName(user)}</strong>
                       <span>{user.email ?? '-'}</span>
-                      <span>{profileRoleLabel(user.role)} · {user.is_active ? 'Actif' : 'Archive'}</span>
+                      <span>{profileRoleLabel(user.role)} Â· {user.is_active ? 'Actif' : 'Archive'}</span>
                       <div className="hero-actions">
                         <button className="ghost-button" type="button" onClick={() => startEditUser(user)}>Modifier</button>
                         <button className="ghost-button" type="button" onClick={() => void handleSendPasswordReset(user.email)}>Mot de passe perdu</button>
@@ -14438,6 +14538,357 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ) : null}
     </div>
     </DesktopLayout>
+  )
+}
+
+function homeHasImage(item: Pick<MandatRecord, 'photo_url_listing' | 'images_preview_json'>) {
+  if (item.photo_url_listing) return true
+  const previews = parseJson<Array<{ url?: string | null }>>(item.images_preview_json ?? '[]', [])
+  return previews.some((preview) => Boolean(preview.url))
+}
+
+function homeIsActiveMandat(item: Pick<MandatRecord, 'statut_annonce'>) {
+  return activeListingStatusTokens.has(screenStatusToken(item.statut_annonce))
+}
+
+function homeDateWithinDays(value: string | null | undefined, days: number) {
+  if (!value) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  const now = new Date()
+  const delta = date.getTime() - now.getTime()
+  return delta >= 0 && delta <= days * 24 * 60 * 60 * 1000
+}
+
+function homeRequestIsOpen(request: DiffusionRequest) {
+  return request.request_status === 'pending' || request.request_status === 'in_progress' || request.request_status === 'waiting_commercial'
+}
+
+function homeRequestTone(request: DiffusionRequest) {
+  if (request.request_status === 'accepted') return 'success'
+  if (request.request_status === 'refused' || request.request_status === 'waiting_commercial') return 'danger'
+  if (request.request_status === 'in_progress') return 'warning'
+  return 'accent'
+}
+
+function homeRequestShortStatus(request: DiffusionRequest) {
+  if (request.request_status === 'pending') return 'A traiter'
+  if (request.request_status === 'in_progress') return 'En cours'
+  if (request.request_status === 'waiting_commercial') return 'Correction'
+  if (request.request_status === 'accepted') return 'Valide'
+  if (request.request_status === 'refused') return 'Refuse'
+  return requestStatusLabel(request.request_status)
+}
+
+function homeUserLabel(profile: UserProfile | null | undefined, fallback = 'Utilisateur') {
+  return profile?.display_name || profile?.email || fallback
+}
+
+type HomeDashboardTone = 'magenta' | 'teal'
+type HomeDashboardKpi = {
+  label: string
+  value: string
+  detail: string
+  tone: HomeDashboardTone
+  icon: DetailIconKey
+  actionScreen?: Screen
+}
+
+function HomeDashboardScreen(props: {
+  variant: HomeDashboardVariant
+  profile: UserProfile | null
+  isAdmin: boolean
+  mandats: MandatRecord[]
+  dossiers: Dossier[]
+  requests: DiffusionRequest[]
+  workItems: WorkItem[]
+  mandatStats: MandatStats
+  contactStats: ContactStats
+  suiviRequestStats: SuiviRequestStats
+  commercialRequestStats: CommercialRequestStats
+  onOpenScreen: (screen: Screen) => void
+  onOpenDetailPage: (id: number) => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
+  onCreateAnnonce?: () => void
+  onCreateContact?: () => void
+}) {
+  const activeMandats = props.mandats.filter(homeIsActiveMandat)
+  const openRequests = props.requests.filter(homeRequestIsOpen)
+  const correctionRequests = props.requests.filter((request) => request.request_status === 'waiting_commercial' || request.request_status === 'refused')
+  const acceptedRequests = props.requests.filter((request) => request.request_status === 'accepted')
+  const priceDropRequests = props.requests.filter((request) => normalizeRequestType(request.request_type) === 'demande_baisse_prix' && homeRequestIsOpen(request))
+  const withoutPhoto = activeMandats.filter((item) => !homeHasImage(item))
+  const withoutMandat = activeMandats.filter((item) => !item.numero_mandat)
+  const nonDiffuse = activeMandats.filter((item) => !isDiffusableValue(item.diffusable) || !item.nb_portails_actifs)
+  const expiringMandats = activeMandats.filter((item) => homeDateWithinDays(item.mandat_date_fin, 30))
+  const followedMandats = activeMandats.slice(0, 3)
+  const latestRequests = openRequests.slice(0, 5)
+  const latestWorkItems = props.workItems.slice(0, 5)
+  const userLabel = homeUserLabel(props.profile, props.variant === 'pauline' ? 'Pauline' : props.variant === 'admin' ? 'Admin' : 'Commercial')
+  const requestRole = props.variant === 'pauline' ? 'pauline' : 'nego'
+  const pageTitle =
+    props.variant === 'admin'
+      ? 'Accueil Admin'
+      : props.variant === 'pauline'
+        ? 'Accueil Pauline administratif'
+        : 'Accueil commercial'
+
+  const commercialRows = Array.from(
+    activeMandats.reduce((map, mandat) => {
+      const key = mandat.commercial_nom || 'Sans commercial'
+      const current = map.get(key) ?? { label: key, mandats: 0, demandes: 0 }
+      current.mandats += 1
+      current.demandes += props.requests.filter((request) => request.app_dossier_id === mandat.app_dossier_id && homeRequestIsOpen(request)).length
+      map.set(key, current)
+      return map
+    }, new Map<string, { label: string; mandats: number; demandes: number }>()).values(),
+  ).slice(0, 5)
+
+  const adminKpis: HomeDashboardKpi[] = [
+    { label: 'Portefeuille actif', value: String(activeMandats.length), detail: 'Biens actifs visibles', tone: 'teal', icon: 'summary' },
+    { label: 'Mandats actifs', value: String(props.mandatStats.total || activeMandats.length), detail: `${props.mandatStats.withoutMandat || withoutMandat.length} a completer`, tone: 'teal', icon: 'mandate' },
+    { label: 'Demandes en attente', value: String(openRequests.length), detail: `${correctionRequests.length} corrections`, tone: 'magenta', icon: 'actions' },
+    { label: 'Diffusions actives', value: String(props.mandatStats.mandatDiffuse || activeMandats.filter((item) => isDiffusableValue(item.diffusable)).length), detail: `${props.mandatStats.withErrors || 0} erreurs`, tone: 'teal', icon: 'diffusion' },
+  ]
+
+  const commercialKpis: HomeDashboardKpi[] = [
+    { label: "Mes visites aujourd'hui", value: '0', detail: 'Ouvrir Agenda', tone: 'teal', icon: 'history', actionScreen: 'agenda' },
+    { label: 'Relances a faire', value: String(latestWorkItems.length), detail: 'Demandes et priorites', tone: 'teal', icon: 'priority' },
+    { label: 'Demandes a Pauline', value: String(props.commercialRequestStats.sent || openRequests.length), detail: `${props.commercialRequestStats.waitingCorrection || correctionRequests.length} corrections`, tone: 'magenta', icon: 'actions' },
+    { label: 'Biens actifs', value: String(activeMandats.length), detail: 'Portefeuille visible', tone: 'teal', icon: 'summary' },
+  ]
+
+  const paulineKpis: HomeDashboardKpi[] = [
+    { label: 'Demandes a traiter', value: String(props.suiviRequestStats.pendingOrInProgress || openRequests.length), detail: `${latestRequests.length} visibles`, tone: 'magenta', icon: 'actions' },
+    { label: 'Corrections en attente', value: String(props.suiviRequestStats.refused || correctionRequests.length), detail: 'Retours commerciaux', tone: 'magenta', icon: 'alert' },
+    { label: 'Mandats valides', value: String(props.mandatStats.mandatValide || acceptedRequests.length), detail: 'Validation diffusion', tone: 'teal', icon: 'mandate' },
+    { label: 'Diffusions activees', value: String(props.mandatStats.mandatDiffuse || activeMandats.filter((item) => isDiffusableValue(item.diffusable)).length), detail: 'Portails actifs', tone: 'teal', icon: 'diffusion' },
+  ]
+
+  const kpis = props.variant === 'admin' ? adminKpis : props.variant === 'pauline' ? paulineKpis : commercialKpis
+
+  return (
+    <section className={`home-dashboard home-dashboard-${props.variant}`}>
+      <div className="home-topbar">
+        <div>
+          <p className="eyebrow">GTI Immobilier</p>
+          <h2>{pageTitle}</h2>
+        </div>
+        <label className="home-search-box">
+          <span>Recherche</span>
+          <input readOnly value="" placeholder="Rechercher un bien, un contact, un mandat..." />
+        </label>
+        <div className="home-top-actions">
+          {props.onCreateAnnonce ? <button className="home-primary-action" type="button" onClick={props.onCreateAnnonce}>+ Nouveau</button> : null}
+          {props.onCreateContact ? <button className="home-secondary-action" type="button" onClick={props.onCreateContact}>Contact</button> : null}
+          <span className="home-user-chip">{userInitials(userLabel, props.profile?.email ?? null)}</span>
+        </div>
+      </div>
+
+      <div className="home-kpi-grid">
+        {kpis.map((item) => {
+          const kpiContent = (
+            <>
+              <span className="home-kpi-icon" aria-hidden="true"><DetailIcon type={item.icon} /></span>
+              <div>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </div>
+            </>
+          )
+          return item.actionScreen ? (
+            <button key={item.label} className={`home-kpi-card home-tone-${item.tone}`} type="button" onClick={() => props.onOpenScreen(item.actionScreen!)}>
+              {kpiContent}
+            </button>
+          ) : (
+            <article key={item.label} className={`home-kpi-card home-tone-${item.tone}`}>
+              {kpiContent}
+            </article>
+          )
+        })}
+      </div>
+
+      {props.variant === 'pauline' ? (
+        <div className="home-main-grid home-main-grid-pauline">
+          <section className="home-panel home-panel-wide">
+            <div className="home-panel-head">
+              <h3>File Pauline</h3>
+              <button type="button" onClick={() => props.onOpenScreen('suivi')}>Voir toutes</button>
+            </div>
+            <div className="home-segment-row">
+              <span className="is-active">A traiter <strong>{openRequests.length}</strong></span>
+              <span>Corrections <strong>{correctionRequests.length}</strong></span>
+              <span>Valides <strong>{acceptedRequests.length}</strong></span>
+              <span>Refuses <strong>{props.requests.filter((request) => request.request_status === 'refused').length}</strong></span>
+            </div>
+            <div className="home-table">
+              {latestRequests.slice(0, 5).map((request) => (
+                <button key={request.id} type="button" className="home-table-row" onClick={() => props.onOpenRequestModal(request.app_dossier_id, 'pauline', normalizeRequestType(request.request_type))}>
+                  <span><strong>{requestTypeLabel(request.request_type)}</strong><small>{request.titre_bien}</small></span>
+                  <span>{request.commercial_nom || request.requested_by_name || '-'}</span>
+                  <span>{formatDate(request.requested_at)}</span>
+                  <em className={`home-status-pill home-status-${homeRequestTone(request)}`}>{homeRequestShortStatus(request)}</em>
+                </button>
+              ))}
+              {latestRequests.length === 0 ? <p className="home-empty">Aucune demande ouverte dans la file visible.</p> : null}
+            </div>
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Priorites du jour</h3></div>
+            <HomePriority label="Corrections en retard" value={correctionRequests.length} detail="En attente de retour" tone="magenta" icon="alert" />
+            <HomePriority label="Mandats non diffuses" value={nonDiffuse.length} detail="A diffuser rapidement" tone="magenta" icon="diffusion" />
+            <HomePriority label="Baisse de prix a controler" value={priceDropRequests.length} detail="A verifier et valider" tone="teal" icon="commercial" />
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Flux commerciaux</h3></div>
+            <div className="home-mini-table">
+              {commercialRows.map((row) => (
+                <div key={row.label}><strong>{row.label}</strong><span>{row.mandats} mandats</span><span>{row.demandes} demandes</span></div>
+              ))}
+            </div>
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Alertes portefeuille</h3></div>
+            <HomePriority label="Mandats expirant sous 30 jours" value={expiringMandats.length} detail="A anticiper" tone="magenta" icon="history" />
+            <HomePriority label="Annonces sans photo principale" value={withoutPhoto.length} detail="A completer" tone="magenta" icon="photo" />
+            <HomePriority label="Mandats en attente de signature" value={withoutMandat.length} detail="A suivre" tone="teal" icon="mandate" />
+          </section>
+        </div>
+      ) : props.variant === 'admin' ? (
+        <div className="home-main-grid home-main-grid-admin">
+          <section className="home-panel">
+            <div className="home-panel-head">
+              <h3>Pilotage agence</h3>
+              <button type="button" onClick={() => props.onOpenScreen('mandats')}>Detail</button>
+            </div>
+            <div className="home-mini-table">
+              {commercialRows.map((row) => (
+                <div key={row.label}><strong>{row.label}</strong><span>{row.mandats} mandats</span><span>{row.demandes} demandes</span></div>
+              ))}
+            </div>
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Alertes critiques</h3></div>
+            <HomePriority label="Synchronisations en erreur" value={props.mandatStats.withErrors || 0} detail="A corriger" tone="magenta" icon="alert" />
+            <HomePriority label="Mandats expirants" value={expiringMandats.length} detail="Sous 30 jours" tone="magenta" icon="history" />
+            <HomePriority label="Diffusions bloquees" value={nonDiffuse.length} detail="Non diffusees" tone="teal" icon="diffusion" />
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Actions rapides</h3></div>
+            <div className="home-action-list">
+              <button type="button" onClick={() => props.onOpenScreen('suivi')}>Ouvrir le suivi Pauline</button>
+              <button type="button" onClick={() => props.onOpenScreen('registre')}>Registre des mandats</button>
+              <button type="button" onClick={() => props.onOpenScreen('contacts')}>Controle contacts</button>
+            </div>
+          </section>
+          <section className="home-panel home-panel-wide">
+            <div className="home-panel-head"><h3>Flux validations</h3></div>
+            <div className="home-table">
+              {latestRequests.slice(0, 4).map((request) => (
+                <button key={request.id} type="button" className="home-table-row" onClick={() => props.onOpenRequestModal(request.app_dossier_id, 'pauline', normalizeRequestType(request.request_type))}>
+                  <span><strong>{requestTypeLabel(request.request_type)}</strong><small>{request.titre_bien}</small></span>
+                  <span>{request.commercial_nom || '-'}</span>
+                  <span>{formatDate(request.requested_at)}</span>
+                  <em className={`home-status-pill home-status-${homeRequestTone(request)}`}>{homeRequestShortStatus(request)}</em>
+                </button>
+              ))}
+              {latestRequests.length === 0 ? <p className="home-empty">Aucune validation ouverte.</p> : null}
+            </div>
+          </section>
+          <section className="home-panel">
+            <HomeConstructionPanel
+              title="Reporting agence"
+              detail="Chiffre d'affaires, objectifs, resultats commerciaux et synthese d'activite seront affiches ici quand le module reporting sera disponible."
+            />
+          </section>
+        </div>
+      ) : (
+        <div className="home-main-grid home-main-grid-commercial">
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Ma journee</h3></div>
+            <div className="home-timeline">
+              {latestWorkItems.slice(0, 4).map((item) => (
+                <button key={`${item.app_dossier_id}-${item.type_demande_label}-${item.date_entree_file ?? 'na'}`} type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                  <span>{formatDate(item.date_entree_file)}</span>
+                  <strong>{item.type_demande_label || 'Action'}</strong>
+                  <small>{item.titre_bien}</small>
+                </button>
+              ))}
+              {latestWorkItems.length === 0 ? <p className="home-empty">Aucune action urgente visible.</p> : null}
+            </div>
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head">
+              <h3>Mes demandes a Pauline</h3>
+              <button type="button" onClick={() => props.onOpenScreen('suivi')}>Voir tout</button>
+            </div>
+            <div className="home-segment-row">
+              <span>A envoyer <strong>{props.commercialRequestStats.sent}</strong></span>
+              <span className="is-active">A traiter <strong>{openRequests.length}</strong></span>
+              <span>Correction <strong>{correctionRequests.length}</strong></span>
+              <span>Valide <strong>{acceptedRequests.length}</strong></span>
+            </div>
+            <div className="home-request-list">
+              {latestRequests.slice(0, 4).map((request) => (
+                <button key={request.id} type="button" onClick={() => props.onOpenRequestModal(request.app_dossier_id, requestRole, normalizeRequestType(request.request_type))}>
+                  <span className={`home-list-icon home-status-${homeRequestTone(request)}`} aria-hidden="true"><DetailIcon type="actions" /></span>
+                  <span><strong>{requestTypeLabel(request.request_type)}</strong><small>{request.titre_bien}</small></span>
+                  <em>{homeRequestShortStatus(request)}</em>
+                </button>
+              ))}
+              {latestRequests.length === 0 ? <p className="home-empty">Aucune demande ouverte.</p> : null}
+            </div>
+          </section>
+          <section className="home-panel">
+            <div className="home-panel-head"><h3>Mes priorites</h3></div>
+            <HomePriority label="Annonces sans photo" value={withoutPhoto.length} detail="A completer" tone="magenta" icon="photo" />
+            <HomePriority label="Mandats a completer" value={withoutMandat.length} detail="En attente" tone="teal" icon="mandate" />
+            <HomePriority label="Acquereurs actifs" value={props.contactStats.activeSearchContacts} detail="A contacter" tone="teal" icon="contact" />
+          </section>
+          <section className="home-panel home-panel-wide">
+            <div className="home-panel-head"><h3>Biens a suivre</h3><button type="button" onClick={() => props.onOpenScreen('mandats')}>Voir tout</button></div>
+            <div className="home-property-list">
+              {followedMandats.map((item) => (
+                <button key={item.app_dossier_id} type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                  <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
+                  <span><strong>{item.numero_dossier || item.titre_bien}</strong><small>{item.ville || '-'}</small></span>
+                  <strong>{formatPrice(item.prix)}</strong>
+                  <em>{item.statut_annonce || '-'}</em>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="home-panel">
+            <HomeConstructionPanel
+              title="Reporting d'activite"
+              detail="Chiffre d'affaires, objectifs et resultats seront affiches ici quand le module reporting sera connecte."
+            />
+          </section>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function HomeConstructionPanel({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="home-construction-panel">
+      <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+      <strong>{title}</strong>
+      <p>{detail}</p>
+      <em>En construction</em>
+    </div>
+  )
+}
+
+function HomePriority({ label, value, detail, tone, icon = 'priority' }: { label: string; value: number | string; detail: string; tone: HomeDashboardTone; icon?: DetailIconKey }) {
+  return (
+    <button className={`home-priority home-tone-${tone}`} type="button">
+      <span className="home-priority-icon" aria-hidden="true"><DetailIcon type={icon} /></span>
+      <span><strong>{label}</strong><small>{detail}</small></span>
+      <em>{value}</em>
+    </button>
   )
 }
 
@@ -14771,18 +15222,18 @@ function MandatsScreen(props: {
           <div className={`search-scope-row ${props.searchScopeExtended ? 'is-extended' : ''}`}>
             <span className="search-scope-icon" aria-hidden="true" />
             <div className="search-scope-copy">
-              <span>{props.searchScopeExtended ? 'Recherche étendue' : props.canExtendSearch ? 'Recherche limitée au contexte' : 'Recherche selon les filtres'}</span>
+              <span>{props.searchScopeExtended ? 'Recherche Ã©tendue' : props.canExtendSearch ? 'Recherche limitÃ©e au contexte' : 'Recherche selon les filtres'}</span>
               <strong>{props.searchScopeSummary}</strong>
             </div>
             {props.searchScopeExtended ? (
               <button className="search-scope-action is-secondary" type="button" onClick={props.onResetSearchScope}>
-                <span aria-hidden="true">↩</span>
+                <span aria-hidden="true">â†©</span>
                 <span>Revenir au contexte</span>
               </button>
             ) : props.canExtendSearch && props.onExtendSearch ? (
               <button className="search-scope-action" type="button" onClick={props.onExtendSearch}>
                 <span aria-hidden="true">+</span>
-                <span>{props.extendSearchLabel ?? 'Étendre la recherche'}</span>
+                <span>{props.extendSearchLabel ?? 'Ã‰tendre la recherche'}</span>
               </button>
             ) : null}
           </div>
@@ -14948,7 +15399,7 @@ function MandatRegisterScreen(props: {
           <table className="register-table">
             <thead>
               <tr>
-                <th className="register-col-mandat">N° de mandat</th>
+                <th className="register-col-mandat">NÂ° de mandat</th>
                 <th className="register-col-status">Statut</th>
                 <th className="register-col-flag">Valide</th>
                 <th className="register-col-flag">Diffusable</th>
@@ -15006,7 +15457,7 @@ function MandatRegisterScreen(props: {
                             setExpandedMandants((current) => ({ ...current, [expandKey]: !current[expandKey] }))
                           }}
                         >
-                          {isMandantsExpanded ? '−' : '+'}
+                          {isMandantsExpanded ? 'âˆ’' : '+'}
                         </button>
                       ) : null}
                     </td>
@@ -15025,8 +15476,8 @@ function MandatRegisterScreen(props: {
             <div className="panel-head">
               <div>
                 <p className="eyebrow">Fiche mandat</p>
-                <h3>{selectedDetail.numero_mandat ?? '-'} · {selectedDetail.titre_bien}</h3>
-                <p className="mandate-register-subtitle">{selectedDetail.register_source_kind === 'historique' ? 'Mandat historique' : 'Mandat actif'} · {selectedDetail.numero_dossier ?? '-'}</p>
+                <h3>{selectedDetail.numero_mandat ?? '-'} Â· {selectedDetail.titre_bien}</h3>
+                <p className="mandate-register-subtitle">{selectedDetail.register_source_kind === 'historique' ? 'Mandat historique' : 'Mandat actif'} Â· {selectedDetail.numero_dossier ?? '-'}</p>
               </div>
               <div className="row-actions">
                 <button className="ghost-button button-subtle" type="button" onClick={() => setDetailOpen(false)}>Fermer</button>
@@ -15161,7 +15612,7 @@ function MandatRegisterScreen(props: {
                   <PriceChangeHistoryCard
                     source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
                     title="Historique des prix"
-                    emptyLabel="Aucun changement de prix historisé pour ce mandat."
+                    emptyLabel="Aucun changement de prix historisÃ© pour ce mandat."
                   />
                 </article>
                 <article className="detail-card mandate-sheet-section">
@@ -15171,8 +15622,8 @@ function MandatRegisterScreen(props: {
                       {selectedHistory.map((entry, index) => (
                         <article key={String(entry.history_id ?? index)} className="timeline-card">
                           <strong>{String(entry.label ?? `Version ${index + 1}`)}</strong>
-                          <span>{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} → {formatDate(String(entry.date_fin ?? ''))}</span>
-                          <p>{formatPrice(String(entry.montant ?? ''))} · {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}</p>
+                          <span>{String(entry.type ?? entry.type_source ?? '-')} Â· {formatDate(String(entry.date_debut ?? ''))} â†’ {formatDate(String(entry.date_fin ?? ''))}</span>
+                          <p>{formatPrice(String(entry.montant ?? ''))} Â· {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}</p>
                           {safeText(entry.note) ? <small>{String(entry.note)}</small> : null}
                         </article>
                       ))}
@@ -15257,22 +15708,22 @@ function SuiviMandatsScreen(props: {
           <article className="suivi-command-card tone-progress">
             <span className="suivi-command-kicker">En cours</span>
             <strong>{inProgress}</strong>
-            <p>Dossiers déjà pris en main avec suivi de traitement.</p>
+            <p>Dossiers dÃ©jÃ  pris en main avec suivi de traitement.</p>
           </article>
           <article className="suivi-command-card tone-warning">
             <span className="suivi-command-kicker">Corrections</span>
             <strong>{correctionRequests.length}</strong>
-            <p>Retours négociateur ou demandes refusées à reprendre.</p>
+            <p>Retours nÃ©gociateur ou demandes refusÃ©es Ã  reprendre.</p>
           </article>
           <article className="suivi-command-card tone-danger">
             <span className="suivi-command-kicker">Anomalies</span>
             <strong>{attentionMandats.length}</strong>
-            <p>Mandats sans diffusion, sans numéro ou avec incohérence de passerelle.</p>
+            <p>Mandats sans diffusion, sans numÃ©ro ou avec incohÃ©rence de passerelle.</p>
           </article>
           <article className="suivi-command-card tone-success">
-            <span className="suivi-command-kicker">Diffusés</span>
+            <span className="suivi-command-kicker">DiffusÃ©s</span>
             <strong>{props.stats.mandatDiffuse}</strong>
-            <p>Mandats actuellement visibles et conformes côté diffusion.</p>
+            <p>Mandats actuellement visibles et conformes cÃ´tÃ© diffusion.</p>
           </article>
         </div>
       </section>
@@ -15282,7 +15733,7 @@ function SuiviMandatsScreen(props: {
           <div className="panel-head">
             <div>
               <p className="eyebrow">Actions Pauline</p>
-              <h3>Demandes à traiter maintenant</h3>
+              <h3>Demandes Ã  traiter maintenant</h3>
             </div>
           </div>
           <div className="suivi-lanes">
@@ -15364,7 +15815,7 @@ function SuiviMandatsScreen(props: {
                   </div>
                 </article>
               )
-            }) : <p className="empty-state">Aucune anomalie sur la sélection courante.</p>}
+            }) : <p className="empty-state">Aucune anomalie sur la sÃ©lection courante.</p>}
           </div>
         </section>
       </section>
@@ -15376,7 +15827,7 @@ function SuiviMandatsScreen(props: {
             <h3>Vue portefeuille</h3>
           </div>
           <div className="suivi-portfolio-kpis">
-            <span>{props.stats.mandatNonDiffuse} non diffusés</span>
+            <span>{props.stats.mandatNonDiffuse} non diffusÃ©s</span>
             <span>{withErrors} avec erreur</span>
           </div>
         </div>
@@ -15471,7 +15922,7 @@ function SuiviMandatsScreenV2Legacy(props: {
                   {visibleRequests.map((item) => {
                     return (
                       <tr key={item.id} className={item.id === selectedRequest?.id ? 'is-selected' : ''} onClick={() => { setSelectedRequestId(item.id); setSelectedMandatId(item.app_dossier_id) }}>
-                        <td><strong>{requestTypeLabel(item.request_type)}</strong><span>N° demande {requestNumberLabel(item)}</span><span>{item.numero_mandat ?? item.numero_dossier ?? '-'}</span><span>{formatDate(item.requested_at)}</span></td>
+                        <td><strong>{requestTypeLabel(item.request_type)}</strong><span>NÂ° demande {requestNumberLabel(item)}</span><span>{item.numero_mandat ?? item.numero_dossier ?? '-'}</span><span>{formatDate(item.requested_at)}</span></td>
                         <td>{item.requested_by_name ?? item.requested_by_label ?? item.commercial_nom ?? '-'}</td>
                         <td><strong>{item.titre_bien}</strong><span>{item.numero_dossier ?? '-'}</span></td>
                         <td><small>{requestStatusLabel(item.request_status)}</small><small>{item.processed_by_name ?? item.processed_by_label ?? '-'}</small></td>
@@ -15675,28 +16126,28 @@ function SuiviMandatsScreenV2(props: {
     value: number
     tone: string
   }> = [
-    { key: 'pending_or_in_progress', label: 'À traiter', value: pendingRows.length, tone: 'demandes' },
-    { key: 'accepted_history', label: 'Acceptées', value: acceptedRows.length, tone: 'affaires' },
-    { key: 'refused', label: 'Refusées', value: refusedRows.length, tone: 'warning' },
+    { key: 'pending_or_in_progress', label: 'Ã€ traiter', value: pendingRows.length, tone: 'demandes' },
+    { key: 'accepted_history', label: 'AcceptÃ©es', value: acceptedRows.length, tone: 'affaires' },
+    { key: 'refused', label: 'RefusÃ©es', value: refusedRows.length, tone: 'warning' },
     { key: 'anomalies', label: 'Anomalies', value: anomalyRows.length, tone: 'warning' },
     { key: 'price_alert', label: 'Alerte prix', value: priceAlertRows.length, tone: 'demandes' },
     { key: 'portfolio', label: 'Portefeuille', value: portfolioRows.length, tone: 'neutral' },
   ]
-  const primarySuiviKpis = suiviKpis.filter((item) => ['À traiter', 'Anomalies', 'Alerte prix'].includes(item.label))
-  const secondarySuiviKpis = suiviKpis.filter((item) => ['Acceptées', 'Refusées', 'Portefeuille'].includes(item.label))
+  const primarySuiviKpis = suiviKpis.filter((item) => ['Ã€ traiter', 'Anomalies', 'Alerte prix'].includes(item.label))
+  const secondarySuiviKpis = suiviKpis.filter((item) => ['AcceptÃ©es', 'RefusÃ©es', 'Portefeuille'].includes(item.label))
   const suiviPriorities = [
-    { key: 'pending_or_in_progress' as const, label: 'À traiter', value: pendingRows.length, detail: 'Demandes de diffusion, baisse ou annulation à décider', tone: 'demandes' },
-    { key: 'anomalies' as const, label: 'Anomalies', value: anomalyRows.length, detail: 'Mandats ou diffusions à corriger', tone: 'warning' },
-    { key: 'price_alert' as const, label: 'Alerte prix', value: priceAlertRows.length, detail: 'Baisses à contrôler dans Hektor', tone: 'diffusion' },
+    { key: 'pending_or_in_progress' as const, label: 'Ã€ traiter', value: pendingRows.length, detail: 'Demandes de diffusion, baisse ou annulation Ã  dÃ©cider', tone: 'demandes' },
+    { key: 'anomalies' as const, label: 'Anomalies', value: anomalyRows.length, detail: 'Mandats ou diffusions Ã  corriger', tone: 'warning' },
+    { key: 'price_alert' as const, label: 'Alerte prix', value: priceAlertRows.length, detail: 'Baisses Ã  contrÃ´ler dans Hektor', tone: 'diffusion' },
   ]
 
   const listingTitle =
     activeSuiviFilter === 'pending_or_in_progress'
-      ? 'Demandes à traiter'
+      ? 'Demandes Ã  traiter'
       : activeSuiviFilter === 'accepted_history'
-        ? 'Demandes acceptées'
+        ? 'Demandes acceptÃ©es'
         : activeSuiviFilter === 'refused'
-          ? 'Demandes refusées'
+          ? 'Demandes refusÃ©es'
           : activeSuiviFilter === 'anomalies'
             ? 'Anomalies diffusion et mandat'
             : activeSuiviFilter === 'price_alert'
@@ -15750,12 +16201,12 @@ function SuiviMandatsScreenV2(props: {
             onClick={() => setPriorityPanelOpen((value) => !value)}
           >
             <span className="control-icon control-icon-priority" aria-hidden="true" />
-            <span>Priorités</span>
+            <span>PrioritÃ©s</span>
             <strong>{suiviPriorities.length}</strong>
           </button>
         </div>
         {priorityPanelOpen ? (
-          <div className="priority-dropdown" role="region" aria-label="Priorités du suivi">
+          <div className="priority-dropdown" role="region" aria-label="PrioritÃ©s du suivi">
             {suiviPriorities.map((item) => (
               <button
                 key={item.key}
@@ -15854,14 +16305,14 @@ function SuiviMandatsScreenV2(props: {
             </table>
           ) : activeSuiviFilter === 'price_alert' ? (
             <table className="suivi-portfolio-table">
-              <thead><tr><th>Mandat</th><th>Negociateur</th><th>Prix</th><th>Contrôle</th><th>Dernière date</th></tr></thead>
+              <thead><tr><th>Mandat</th><th>Negociateur</th><th>Prix</th><th>ContrÃ´le</th><th>DerniÃ¨re date</th></tr></thead>
               <tbody>
                 {priceAlertRows.length > 0 ? priceAlertRows.map(({ mandat: item, request }) => (
                   <tr key={`price-alert-${item.app_dossier_id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                     <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                     <td>{commercialDisplay(item)}</td>
                     <td><small>{formatPrice(item.price_change_last_old_value ?? item.prix)}</small><small>{formatPrice(item.price_change_last_new_value ?? item.prix)}</small></td>
-                    <td><small>{request ? 'Validation prix sans changement constaté' : 'Prix changé sans baisse validée'}</small></td>
+                    <td><small>{request ? 'Validation prix sans changement constatÃ©' : 'Prix changÃ© sans baisse validÃ©e'}</small></td>
                     <td><small>{formatDate(item.price_change_last_detected_at)}</small><small>{request ? `Validation ${formatDate(requestTimelineDate(request))}` : 'Aucune validation'}</small></td>
                   </tr>
                 )) : <tr><td colSpan={5}><p className="empty-state">Aucune alerte prix dans cette vue.</p></td></tr>}
@@ -15888,7 +16339,7 @@ function SuiviMandatsScreenV2(props: {
               <tbody>
                 {suiviRequestRows.length > 0 ? suiviRequestRows.map(({ mandat: item, request: activeRequest }) => (
                   <tr key={`${item.app_dossier_id}-${activeRequest.id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
-                    <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>N° demande {requestNumberLabel(activeRequest)}</span><span>{formatDate(activeRequest.requested_at)}</span></td>
+                    <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>NÂ° demande {requestNumberLabel(activeRequest)}</span><span>{formatDate(activeRequest.requested_at)}</span></td>
                     <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                     <td>{commercialDisplay(item)}</td>
                     <td><small>{requestStatusLabel(activeRequest.request_status)}</small><StatusPill value={item.statut_annonce} /></td>
@@ -16317,7 +16768,7 @@ function DossierDetailLayout(props: {
                   <PriceChangeHistoryCard
                     source={props.detail.price_change_events_json ? props.detail : dossier}
                     title="Historique des prix"
-                    emptyLabel="Aucun changement de prix historisé pour cette annonce."
+                    emptyLabel="Aucun changement de prix historisÃ© pour cette annonce."
                   />
                 </article>
                 ) : null}
@@ -18962,8 +19413,8 @@ function AppointmentAnnonceSection(props: {
             <div className="timeline-list">
               {requests.map((item, index) => (
                 <article key={String(item.id ?? index)} className="timeline-card">
-                  <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
-                  <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` → ${formatDate(item.requested_end_at)}` : ''}</span>
+                  <strong>{item.client_nom ?? 'Client sans nom'} Â· {appointmentStatusLabel(item.status)}</strong>
+                  <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` â†’ ${formatDate(item.requested_end_at)}` : ''}</span>
                   <span>{item.client_telephone ?? item.client_email ?? '-'}</span>
                   <p>{item.message ?? 'Sans message client.'}</p>
                 </article>
@@ -19140,7 +19591,7 @@ function MobileDossierDetail(props: {
     setMobileHektorEditOpen(false)
   }, [dossier?.app_dossier_id])
 
-  if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
+  if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sÃ©lectionnÃ©.</section>
 
   const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
   const activePortals = uniquePortalKeys([...(dossier.portails_resume ?? '').split(','), ...(props.pendingPortalKeys ?? [])])
@@ -19150,8 +19601,8 @@ function MobileDossierDetail(props: {
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
   const isArchivedLightweightDetail = isArchivedAnnonceRecord(dossier)
   const lightweightReadOnlyLabel = isArchivedLightweightDetail
-    ? 'Cette fiche archivée est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes après désarchivage.'
-    : 'Cette fiche vendue ou close est consultable depuis un index léger. Les modifications restent bloquées tant que la fiche n’est pas revenue dans le périmètre principal.'
+    ? 'Cette fiche archivÃ©e est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes aprÃ¨s dÃ©sarchivage.'
+    : 'Cette fiche vendue ou close est consultable depuis un index lÃ©ger. Les modifications restent bloquÃ©es tant que la fiche nâ€™est pas revenue dans le pÃ©rimÃ¨tre principal.'
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
@@ -19161,10 +19612,10 @@ function MobileDossierDetail(props: {
   const detailFacts = [
     ['Prix', formatPrice(dossier.prix)],
     ['Surface', props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'],
-    ['Pièces', props.detail.nb_pieces ?? '-'],
+    ['PiÃ¨ces', props.detail.nb_pieces ?? '-'],
     ['Chambres', props.detail.nb_chambres ?? '-'],
     ['Type', propertyTypeLabel(dossier.type_bien)],
-    ['Référence', dossier.numero_dossier ?? '-'],
+    ['RÃ©fÃ©rence', dossier.numero_dossier ?? '-'],
   ]
   const featureFacts = [
     ['Type', propertyTypeLabel(dossier.type_bien)],
@@ -19214,7 +19665,7 @@ function MobileDossierDetail(props: {
           </button>
         ) : <div className="mobile-detail-photo is-empty">Photo</div>}
         <div className="mobile-detail-title-card">
-          <span>{props.detailVariant === 'mandat' ? 'Fiche mandat' : props.detailVariant === 'suivi' ? 'Suivi mandat' : 'Détail annonce'}</span>
+          <span>{props.detailVariant === 'mandat' ? 'Fiche mandat' : props.detailVariant === 'suivi' ? 'Suivi mandat' : 'DÃ©tail annonce'}</span>
           <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce ${dossier.hektor_annonce_id}`}</h2>
           {props.address ? <p>{props.address}</p> : null}
           <div className="mobile-status-row">
@@ -19226,7 +19677,7 @@ function MobileDossierDetail(props: {
       </header>
 
       {!isLightweightDetail ? <section className="mobile-detail-actionbar" aria-label="Actions du dossier">
-        <button className="mobile-primary-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_diffusion')}>Action métier</button>
+        <button className="mobile-primary-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_diffusion')}>Action mÃ©tier</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_baisse_prix')}>Baisse prix</button>
         <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, actionRole, 'demande_annulation_mandat')}>Annulation</button>
         {canShowDiffusion ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}>Diffusion</button> : null}
@@ -19238,7 +19689,7 @@ function MobileDossierDetail(props: {
           <ReadOnlyDetailNotice label={lightweightReadOnlyLabel} />
           {isArchivedLightweightDetail && props.onRestoreAnnonce ? (
             <button className="mobile-primary-button" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
-              Demander le désarchivage
+              Demander le dÃ©sarchivage
             </button>
           ) : null}
           {!isArchivedLightweightDetail && props.onChangeAnnonceStatus ? (
@@ -19249,11 +19700,11 @@ function MobileDossierDetail(props: {
         </section>
       )}
 
-      {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
+      {props.detailLoading ? <section className="mobile-detail-loading">Chargement du dÃ©tail...</section> : null}
 
       <section className="mobile-detail-section">
         <div className="mobile-detail-section-head">
-          <span>Synthèse</span>
+          <span>SynthÃ¨se</span>
           <strong>{dossier.commercial_nom ?? '-'}</strong>
           {props.onMissingNegotiator ? (
             <button className="mobile-reassign-button" type="button" onClick={() => props.onMissingNegotiator?.(dossier)}>
@@ -19287,11 +19738,11 @@ function MobileDossierDetail(props: {
         <section className="mobile-detail-section mobile-detail-pilot">
           <div className="mobile-detail-section-head">
             <span>Pilotage Hektor</span>
-            <strong>{props.markValidationPending || props.markDiffusablePending ? 'Synchronisation...' : 'Contrôle'}</strong>
+            <strong>{props.markValidationPending || props.markDiffusablePending ? 'Synchronisation...' : 'ContrÃ´le'}</strong>
           </div>
           {props.allowMarkValidation ? (
             <label className="mobile-toggle-row">
-              <span>Mandat validé</span>
+              <span>Mandat validÃ©</span>
               <input type="checkbox" checked={isValidationApproved(adminValidationState)} onChange={(event) => props.onSetValidation?.(event.target.checked)} disabled={props.markValidationPending} />
             </label>
           ) : null}
@@ -19364,7 +19815,7 @@ function MobileDossierDetail(props: {
 
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Mandat et contacts</summary>
-        {isLightweightDetail ? <ReadOnlyDetailNotice label="Mandat et contacts sont consultables, mais les ajouts et modifications sont bloqués depuis une fiche d'index léger." /> : (
+        {isLightweightDetail ? <ReadOnlyDetailNotice label="Mandat et contacts sont consultables, mais les ajouts et modifications sont bloquÃ©s depuis une fiche d'index lÃ©ger." /> : (
           <>
             <HektorMandantContactForm dossier={dossier} compact initialOpen={props.contacts.length === 0} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
             <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
@@ -19404,7 +19855,7 @@ function MobileDossierDetail(props: {
         {!isLightweightDetail ? <button className="mobile-hektor-field-edit-button mobile-hektor-content-edit-button" type="button" onClick={() => setMobileHektorEditOpen((value) => !value)}>
           <span aria-hidden="true">M</span>
           Modifier l'annonce
-        </button> : <ReadOnlyDetailNotice label="Le contenu de l'annonce est en lecture seule depuis cette fiche d'index léger." />}
+        </button> : <ReadOnlyDetailNotice label="Le contenu de l'annonce est en lecture seule depuis cette fiche d'index lÃ©ger." />}
         {mobileHektorEditOpen && !isLightweightDetail ? (
           <div className="mobile-detail-embedded">
             <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} compact fieldPanel onCancel={() => setMobileHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
@@ -19493,12 +19944,12 @@ function MobileDossierDetail(props: {
 
       {props.linkedWorkItems.length > 0 ? (
         <details className="mobile-detail-section mobile-detail-disclosure">
-          <summary>Demandes liées</summary>
+          <summary>Demandes liÃ©es</summary>
           {props.linkedWorkItems.map((item) => (
             <div key={`mobile-work-${item.app_dossier_id}-${item.type_demande_label}-${item.date_entree_file ?? 'na'}`} className="mobile-timeline-item">
               <span>{formatDate(item.date_entree_file)}</span>
               <strong>{item.type_demande_label ?? '-'}</strong>
-              <p>{item.work_status ?? '-'} · {item.internal_status ?? '-'}</p>
+              <p>{item.work_status ?? '-'} Â· {item.internal_status ?? '-'}</p>
             </div>
           ))}
         </details>
@@ -19539,12 +19990,12 @@ function MobileMandatCards(props: {
         const primaryLabel = props.mode === 'estimation'
           ? 'Voir estimation'
           : isArchive
-            ? 'Désarchiver'
+            ? 'DÃ©sarchiver'
             : hasExportedDetail
               ? 'Ouvrir'
               : isLightweight
-                ? 'Charger détail'
-                : 'Voir le détail'
+                ? 'Charger dÃ©tail'
+                : 'Voir le dÃ©tail'
         const cardKey = [
           props.mode,
           item.app_dossier_id,
@@ -19560,23 +20011,23 @@ function MobileMandatCards(props: {
               <div className="mobile-list-card-main">
                 <span className="mobile-card-meta">{item.numero_mandat ? `Mandat ${item.numero_mandat}` : item.numero_dossier ?? '-'}</span>
                 <strong>{item.titre_bien}</strong>
-                <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} · {item.ville ?? item.agence_nom ?? '-'}</span>
+                <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} Â· {item.ville ?? item.agence_nom ?? '-'}</span>
               </div>
             </div>
             <div className="mobile-card-grid">
               <div><span className="mobile-mini-label">Prix</span><strong>{formatPrice(item.prix)}</strong></div>
-              <div><span className="mobile-mini-label">Négociateur</span><strong>{commercialDisplay(item)}</strong></div>
+              <div><span className="mobile-mini-label">NÃ©gociateur</span><strong>{commercialDisplay(item)}</strong></div>
             </div>
             <div className="mobile-status-row">
               <StatusPill value={props.mode === 'estimation' ? listingProgressLabel(item) : item.statut_annonce} />
-              {props.mode === 'active' ? <StatusPill value={item.archive === '1' ? 'Archivé' : 'Actif'} /> : null}
-              {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'Détail prêt' : 'Détail à charger'}</span> : null}
+              {props.mode === 'active' ? <StatusPill value={item.archive === '1' ? 'ArchivÃ©' : 'Actif'} /> : null}
+              {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'DÃ©tail prÃªt' : 'DÃ©tail Ã  charger'}</span> : null}
               <span className="mobile-portal-chip">LBC <PortalStatusMark enabled={hasLeboncoin} /></span>
               <span className="mobile-portal-chip">BI <PortalStatusMark enabled={hasBienici} /></span>
               <span className="mobile-portal-chip">GTI <PortalStatusMark enabled={hasSiteGti} /></span>
             </div>
             <div className="mobile-card-actions">
-              {props.mode === 'active' && !isLightweight ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal(item.app_dossier_id, 'nego')}>Action métier</button> : null}
+              {props.mode === 'active' && !isLightweight ? <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenRequestModal(item.app_dossier_id, 'nego')}>Action mÃ©tier</button> : null}
               <button className={isLightweight ? 'mobile-primary-button mobile-lightweight-button' : 'mobile-primary-button'} type="button" onClick={() => isLightweight ? props.onOpenLightweightDetail(item) : props.onOpenDetailPage(item.app_dossier_id)}>{primaryLabel}</button>
             </div>
           </article>
@@ -19666,12 +20117,12 @@ function MobileDossierCards(props: {
             <div className="mobile-list-card-main">
               <span className="mobile-card-meta">{item.numero_dossier ?? '-'}</span>
               <strong>{item.titre_bien}</strong>
-              <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} · {item.ville ?? '-'}</span>
+              <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} Â· {item.ville ?? '-'}</span>
             </div>
           </div>
           <div className="mobile-card-grid">
             <div><span className="mobile-mini-label">Prix</span><strong>{formatPrice(item.prix)}</strong></div>
-            <div><span className="mobile-mini-label">Négociateur</span><strong>{commercialDisplay(item)}</strong></div>
+            <div><span className="mobile-mini-label">NÃ©gociateur</span><strong>{commercialDisplay(item)}</strong></div>
           </div>
           <div className="mobile-status-row">
             <StatusPill value={item.statut_annonce} />
@@ -19686,7 +20137,7 @@ function MobileDossierCards(props: {
                 props.onOpenDetail()
               }}
             >
-              Voir le détail
+              Voir le dÃ©tail
             </button>
           </div>
         </article>
@@ -19911,8 +20362,8 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
 }
 
 const hektorContactKindOptions = [
-  { value: 'proprietaire', label: 'Propriétaire', detail: 'Contact vendeur/propriétaire' },
-  { value: 'acquereur', label: 'Acquéreur', detail: 'Contact recherche/acquisition' },
+  { value: 'proprietaire', label: 'PropriÃ©taire', detail: 'Contact vendeur/propriÃ©taire' },
+  { value: 'acquereur', label: 'AcquÃ©reur', detail: 'Contact recherche/acquisition' },
   { value: 'locataire', label: 'Locataire', detail: 'Contact location' },
   { value: 'partenaire', label: 'Partenaire', detail: 'Notaire, agent immobilier, autre tiers' },
 ]
@@ -19991,20 +20442,20 @@ function hektorPersonTypeOptionsForKind(kind: string) {
 }
 
 const hektorContactSourceOptions = [
-  { value: '', label: 'Non défini' },
+  { value: '', label: 'Non dÃ©fini' },
   { value: '1', label: 'Mon site' },
   { value: '2', label: 'Portails internet' },
   { value: '3', label: 'Presse papier' },
   { value: '4', label: 'Vitrine / Agence / Passage' },
-  { value: '5', label: 'Recommandations / Bouche à oreille' },
+  { value: '5', label: 'Recommandations / Bouche Ã  oreille' },
   { value: '6', label: 'Autre' },
-  { value: '7', label: 'Récupération de données' },
-  { value: '15', label: 'Réseaux sociaux' },
+  { value: '7', label: 'RÃ©cupÃ©ration de donnÃ©es' },
+  { value: '15', label: 'RÃ©seaux sociaux' },
   { value: '16', label: 'Panneaux' },
 ]
 
 const hektorContactCategoryOptions = [
-  { value: '', label: 'Non défini' },
+  { value: '', label: 'Non dÃ©fini' },
   { value: '2', label: 'Agent immobilier' },
   { value: '1', label: 'Notaire' },
   { value: '5', label: 'Autre' },
@@ -22753,7 +23204,7 @@ function PriceChangeHistoryCard({
           {events.map((entry, index) => (
             <article key={`price-history-${index}-${entry.detected_at ?? 'na'}`} className="timeline-card price-history-card">
               <div className="price-history-head">
-                <strong>{formatPrice(entry.old_value)} → {formatPrice(entry.new_value)}</strong>
+                <strong>{formatPrice(entry.old_value)} â†’ {formatPrice(entry.new_value)}</strong>
                 <span>{priceChangeSourceLabel(entry.source_kind)}</span>
               </div>
               <div className="price-history-meta">

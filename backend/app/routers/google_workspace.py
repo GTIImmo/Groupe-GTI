@@ -298,13 +298,29 @@ def check_google_calendar_availability(
 ):
     user = get_authenticated_user(settings, authorization)
     admin_service.assert_calendar_subject_allowed(user, str(payload.subjectEmail))
-    return service.check_calendar_availability(
-        subject_email=str(payload.subjectEmail),
-        start_at=payload.startAt,
-        end_at=payload.endAt,
-        requested_by=user.id,
-        requested_by_email=user.email,
-    )
+    try:
+        return service.check_calendar_availability(
+            subject_email=str(payload.subjectEmail),
+            start_at=payload.startAt,
+            end_at=payload.endAt,
+            requested_by=user.id,
+            requested_by_email=user.email,
+        )
+    except Exception as exc:
+        return {
+            "ok": False,
+            "subjectEmail": str(payload.subjectEmail).lower(),
+            "timeMin": payload.startAt,
+            "timeMax": payload.endAt,
+            "isAvailable": False,
+            "busyCount": 0,
+            "busy": [],
+            "statusCode": 502,
+            "error": {
+                "message": "Compte Google Agenda non disponible ou non autorise pour cet utilisateur.",
+                "providerMessage": str(exc)[:500],
+            },
+        }
 
 
 @router.post("/calendar/events")
