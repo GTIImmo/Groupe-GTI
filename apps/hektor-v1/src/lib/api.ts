@@ -4736,6 +4736,7 @@ export async function searchOwnerAnnonceOptions(input: {
   search?: string
   scope?: DataScope | null
   limit?: number
+  activeListingsOnly?: boolean
 }): Promise<OwnerAnnonceSearchOption[]> {
   const search = normalizeSearchTerm(input.search ?? '').replace(/\s+/g, ' ').trim()
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 30)
@@ -4744,6 +4745,7 @@ export async function searchOwnerAnnonceOptions(input: {
   if (!hasSupabaseEnv || !supabase) {
     return filterByNegotiatorEmail(mockDossiers, input.scope)
       .filter((item) => (item.archive ?? '0') !== '1')
+      .filter((item) => !input.activeListingsOnly || ['Actif', 'Sous offre', 'Sous compromis'].includes(String(item.statut_annonce ?? '')))
       .filter((item) => matchesOwnerAnnonceSearch(item, search))
       .slice(0, limit)
       .map(normalizeOwnerAnnonceOption)
@@ -4758,6 +4760,9 @@ export async function searchOwnerAnnonceOptions(input: {
       .limit(limit),
     input.scope,
   )
+  if (input.activeListingsOnly) {
+    query = query.in('statut_annonce', ['Actif', 'Sous offre', 'Sous compromis'])
+  }
 
   if (search) {
     const ilike = `%${search}%`
