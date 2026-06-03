@@ -17181,9 +17181,22 @@ type GoogleAgendaWindow = {
   end: string
 }
 
+type GoogleAgendaViewMode = 'day' | 'week'
+
 function dateInputFromDateTimeLocal(value: string | null | undefined) {
   const date = new Date(value ?? '')
   if (Number.isNaN(date.getTime())) return toDateTimeLocalValue(new Date()).slice(0, 10)
+  return toDateTimeLocalValue(date).slice(0, 10)
+}
+
+function dateInputToLocalDate(dayValue: string) {
+  const date = new Date(`${dayValue || toDateTimeLocalValue(new Date()).slice(0, 10)}T12:00:00`)
+  return Number.isNaN(date.getTime()) ? new Date() : date
+}
+
+function addDaysToDateInput(dayValue: string, days: number) {
+  const date = dateInputToLocalDate(dayValue)
+  date.setDate(date.getDate() + days)
   return toDateTimeLocalValue(date).slice(0, 10)
 }
 
@@ -17193,6 +17206,61 @@ function googleAgendaDayRange(dayValue: string) {
     startAt: `${cleanDay}T08:00`,
     endAt: `${cleanDay}T19:00`,
   }
+}
+
+function googleAgendaWeekDays(dayValue: string) {
+  const date = dateInputToLocalDate(dayValue)
+  const mondayOffset = (date.getDay() + 6) % 7
+  date.setDate(date.getDate() - mondayOffset)
+  const start = toDateTimeLocalValue(date).slice(0, 10)
+  return Array.from({ length: 7 }, (_, index) => addDaysToDateInput(start, index))
+}
+
+function googleAgendaPeriodDays(dayValue: string, mode: GoogleAgendaViewMode) {
+  return mode === 'week' ? googleAgendaWeekDays(dayValue) : [dayValue || toDateTimeLocalValue(new Date()).slice(0, 10)]
+}
+
+function googleAgendaPeriodRange(dayValue: string, mode: GoogleAgendaViewMode) {
+  const days = googleAgendaPeriodDays(dayValue, mode)
+  const first = days[0] ?? dayValue
+  const last = days[days.length - 1] ?? first
+  return {
+    startAt: `${first}T08:00`,
+    endAt: `${last}T19:00`,
+  }
+}
+
+function googleAgendaDayLabel(dayValue: string) {
+  return new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(dateInputToLocalDate(dayValue))
+}
+
+function googleAgendaRangeLabel(dayValue: string, mode: GoogleAgendaViewMode) {
+  const days = googleAgendaPeriodDays(dayValue, mode)
+  if (mode === 'day') return googleAgendaDayLabel(days[0] ?? dayValue)
+  return `${googleAgendaDayLabel(days[0] ?? dayValue)} - ${googleAgendaDayLabel(days[days.length - 1] ?? dayValue)}`
+}
+
+function googleAgendaEventOverlapsDay(event: GoogleCalendarEventLink, dayValue: string) {
+  const range = googleAgendaDayRange(dayValue)
+  const start = new Date(event.starts_at).getTime()
+  const end = new Date(event.ends_at).getTime()
+  const dayStart = new Date(range.startAt).getTime()
+  const dayEnd = new Date(range.endAt).getTime()
+  return Number.isFinite(start) && Number.isFinite(end) && end > dayStart && start < dayEnd
+}
+
+function googleAgendaEventsForDay(events: GoogleCalendarEventLink[], dayValue: string) {
+  return events
+    .filter((event) => event.status !== 'deleted' && googleAgendaEventOverlapsDay(event, dayValue))
+    .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())
+}
+
+function mergeGoogleCalendarEventLinks(events: GoogleCalendarEventLink[]) {
+  const byId = new Map<string, GoogleCalendarEventLink>()
+  for (const event of events) {
+    byId.set(event.id, event)
+  }
+  return Array.from(byId.values())
 }
 
 function minutesBetweenWindow(window: GoogleAgendaWindow) {
@@ -17291,8 +17359,10 @@ function GoogleAgendaAnnonceSection(props: {
   const [events, setEvents] = useState<GoogleCalendarEventLink[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [agendaDate, setAgendaDate] = useState(dateInputFromDateTimeLocal(defaultGoogleAgendaStartValue()))
+  const [agendaMode, setAgendaMode] = useState<GoogleAgendaViewMode>('day')
   const [dayAvailabilityPending, setDayAvailabilityPending] = useState(false)
   const [dayAvailability, setDayAvailability] = useState<GoogleCalendarAvailability | null>(null)
+  const [periodLinkedEvents, setPeriodLinkedEvents] = useState<GoogleCalendarEventLink[]>([])
   const [contactSearch, setContactSearch] = useState('')
   const [contactOptions, setContactOptions] = useState<MandantContactSearchOption[]>([])
   const [contactSearchLoading, setContactSearchLoading] = useState(false)
@@ -17349,9 +17419,26 @@ function GoogleAgendaAnnonceSection(props: {
   }, [startAt])
 
   useEffect(() => {
+    setDayAvailability(null)
+    setPeriodLinkedEvents([])
+  }, [agendaMode, calendarEmail])
+
+  useEffect(() => {
     if (!modalOpen) return
     const search = contactSearch.trim()
-    if (search.length < 2) {
+    const scopedCalendarEmail = calendarEmail.trim().toLowerCase()
+    const hektorContactSearchOwner = findContactHektorOption(props.hektorNegotiators ?? [], {
+      idUser: dossier?.commercial_id,
+      email: dossier?.negociateur_email || scopedCalendarEmail,
+    })
+    const contactSearchNegotiatorEmail = normalizeEmail(hektorContactSearchOwner?.email)
+      || normalizeEmail(dossier?.negociateur_email)
+      || scopedCalendarEmail
+    const contactScope = contactSearchNegotiatorEmail.endsWith(`@${googleWorkspaceDomain}`)
+      ? { negotiatorEmail: contactSearchNegotiatorEmail }
+      : null
+    const minSearchLength = /^\d+$/.test(search) ? 1 : 3
+    if (search.length < minSearchLength) {
       setContactOptions([])
       setContactSearchLoading(false)
       setContactSearchError(null)
@@ -17362,7 +17449,7 @@ function GoogleAgendaAnnonceSection(props: {
     setContactSearchError(null)
     const handle = window.setTimeout(async () => {
       try {
-        const rows = await searchMandantContactOptions({ search, limit: 10 })
+        const rows = await searchMandantContactOptions({ search, scope: contactScope, limit: 8 })
         if (cancelled) return
         setContactOptions(rows)
       } catch (searchError) {
@@ -17377,7 +17464,7 @@ function GoogleAgendaAnnonceSection(props: {
       cancelled = true
       window.clearTimeout(handle)
     }
-  }, [contactSearch, modalOpen])
+  }, [calendarEmail, contactSearch, dossier?.commercial_id, dossier?.negociateur_email, modalOpen, props.hektorNegotiators])
 
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const activeEvents = events.filter((item) => item.status !== 'deleted')
@@ -17388,9 +17475,16 @@ function GoogleAgendaAnnonceSection(props: {
   const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
   const availabilityBusy = availability?.busy ?? []
   const canCheckAvailability = canUseCalendarEmail && Boolean(startAt) && Boolean(durationMinutes)
-  const dayWindows = buildGoogleAgendaDayWindows(agendaDate, dayAvailability)
+  const agendaPeriodDays = googleAgendaPeriodDays(agendaDate, agendaMode)
+  const periodEvents = mergeGoogleCalendarEventLinks([...periodLinkedEvents, ...activeEvents])
+  const agendaDayPlans = agendaPeriodDays.map((day) => ({
+    day,
+    label: googleAgendaDayLabel(day),
+    events: googleAgendaEventsForDay(periodEvents, day),
+    ...buildGoogleAgendaDayWindows(day, dayAvailability),
+  }))
   const requestedDurationMinutes = Number(durationMinutes)
-  const suggestedWindows = buildGoogleAgendaSuggestedWindows(dayWindows.free, requestedDurationMinutes, 5)
+  const suggestedWindows = buildGoogleAgendaSuggestedWindows(agendaDayPlans.flatMap((day) => day.free), requestedDurationMinutes, 5)
   const nextLinkedEvent = activeEvents
     .filter((item) => new Date(item.starts_at).getTime() >= Date.now())
     .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())[0]
@@ -17470,13 +17564,14 @@ function GoogleAgendaAnnonceSection(props: {
     }
   }
 
-  async function handleLoadGoogleAgendaDay(dayValue = agendaDate) {
+  async function handleLoadGoogleAgendaPeriod(dayValue = agendaDate, mode = agendaMode) {
     setDayAvailabilityPending(true)
     setDayAvailability(null)
+    setPeriodLinkedEvents([])
     setError(null)
     try {
       if (!canUseCalendarEmail) throw new Error('Agenda Google Workspace requis')
-      const range = googleAgendaDayRange(dayValue)
+      const range = googleAgendaPeriodRange(dayValue, mode)
       const result = await checkGoogleCalendarAvailability({
         subjectEmail: calendarEmail,
         startAt: range.startAt,
@@ -17484,6 +17579,15 @@ function GoogleAgendaAnnonceSection(props: {
       })
       if (!result.ok) throw new Error('Chargement occupation agenda impossible')
       setDayAvailability(result)
+      try {
+        const rows = await loadGoogleCalendarEventLinks({
+          calendarEmail,
+          limit: 100,
+        })
+        setPeriodLinkedEvents(rows)
+      } catch {
+        setPeriodLinkedEvents([])
+      }
     } catch (eventError) {
       setError(eventError instanceof Error ? eventError.message : 'Chargement occupation agenda impossible')
     } finally {
@@ -17497,7 +17601,7 @@ function GoogleAgendaAnnonceSection(props: {
     setModalOpen(true)
     void reloadEvents()
     if (canUseCalendarEmail) {
-      void handleLoadGoogleAgendaDay(nextDate)
+      void handleLoadGoogleAgendaPeriod(nextDate, agendaMode)
     }
   }
 
@@ -17765,6 +17869,7 @@ function GoogleAgendaAnnonceSection(props: {
                         </div>
                         {contactSearchLoading ? <p className="empty-state">Recherche contacts...</p> : null}
                         {contactSearchError ? <p className="google-agenda-error">{contactSearchError}</p> : null}
+                        {contactSearch.trim().length > 0 && contactSearch.trim().length < (/^\d+$/.test(contactSearch.trim()) ? 1 : 3) ? <p className="empty-state">Saisis au moins 3 caracteres pour lancer la recherche.</p> : null}
                         {contactOptions.length > 0 ? (
                           <div className="google-agenda-contact-list">
                             {contactOptions.map((option) => {
@@ -17779,7 +17884,7 @@ function GoogleAgendaAnnonceSection(props: {
                               )
                             })}
                           </div>
-                        ) : contactSearch.trim().length >= 2 && !contactSearchLoading ? <p className="empty-state">Aucun contact trouve.</p> : null}
+                        ) : contactSearch.trim().length >= (/^\d+$/.test(contactSearch.trim()) ? 1 : 3) && !contactSearchLoading ? <p className="empty-state">Aucun contact trouve pour ce negociateur.</p> : null}
                       </div>
                     </div>
                   </div>
@@ -17817,11 +17922,20 @@ function GoogleAgendaAnnonceSection(props: {
                 <div className="google-agenda-panel-head google-agenda-day-head">
                   <div>
                     <span>Agenda negociateur</span>
-                    <strong>Occupation journee</strong>
+                    <strong>{agendaMode === 'week' ? 'Occupation semaine' : 'Occupation journee'}</strong>
+                    <small>{googleAgendaRangeLabel(agendaDate, agendaMode)}</small>
                   </div>
                   <div className="google-agenda-day-actions">
-                    <input value={agendaDate} onChange={(inputEvent) => { setAgendaDate(inputEvent.target.value); setDayAvailability(null) }} type="date" />
-                    <button className="ghost-button button-subtle" type="button" onClick={() => void handleLoadGoogleAgendaDay()} disabled={dayAvailabilityPending || !canUseCalendarEmail}>
+                    <div className="google-agenda-view-toggle" role="group" aria-label="Vue agenda">
+                      <button className={agendaMode === 'day' ? 'is-active' : ''} type="button" onClick={() => { setAgendaMode('day'); setDayAvailability(null); setPeriodLinkedEvents([]) }}>
+                        Jour
+                      </button>
+                      <button className={agendaMode === 'week' ? 'is-active' : ''} type="button" onClick={() => { setAgendaMode('week'); setDayAvailability(null); setPeriodLinkedEvents([]) }}>
+                        Semaine
+                      </button>
+                    </div>
+                    <input value={agendaDate} onChange={(inputEvent) => { setAgendaDate(inputEvent.target.value); setDayAvailability(null); setPeriodLinkedEvents([]) }} type="date" />
+                    <button className="ghost-button button-subtle" type="button" onClick={() => void handleLoadGoogleAgendaPeriod()} disabled={dayAvailabilityPending || !canUseCalendarEmail}>
                       {dayAvailabilityPending ? 'Chargement...' : 'Actualiser'}
                     </button>
                   </div>
@@ -17829,7 +17943,7 @@ function GoogleAgendaAnnonceSection(props: {
                 {dayAvailability ? (
                   <>
                     <div className="google-agenda-suggestions">
-                      <span className="detail-label">Creneaux proposes</span>
+                      <span className="detail-label">{agendaMode === 'week' ? 'Creneaux proposes sur la semaine' : 'Creneaux proposes'}</span>
                       {suggestedWindows.length > 0 ? (
                         <div className="google-agenda-suggestion-list">
                           {suggestedWindows.map((slot, index) => (
@@ -17841,37 +17955,58 @@ function GoogleAgendaAnnonceSection(props: {
                         </div>
                       ) : <p className="empty-state">Aucun creneau assez long pour la duree choisie.</p>}
                     </div>
-                    <div className="google-agenda-day-grid">
-                      <div>
-                        <span className="detail-label">Occupes</span>
-                        <div className="google-agenda-day-slots">
-                          {dayWindows.busy.length > 0 ? dayWindows.busy.map((slot) => (
-                            <article key={`busy-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
-                              <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
-                              <span>Occupe</span>
-                            </article>
-                          )) : <p className="empty-state">Aucun creneau occupe sur cette journee.</p>}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="detail-label">Libres</span>
-                        <div className="google-agenda-day-slots">
-                          {dayWindows.free.length > 0 ? dayWindows.free.map((slot) => (
-                            <article key={`free-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
-                              <div>
-                                <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
-                                <span>{minutesBetweenWindow(slot)} min libres</span>
+                    <div className={`google-agenda-period-grid is-${agendaMode}`}>
+                      {agendaDayPlans.map((plan) => (
+                        <article key={`agenda-period-${plan.day}`} className="google-agenda-period-day">
+                          <div className="google-agenda-period-day-head">
+                            <strong>{plan.label}</strong>
+                            <span>{plan.events.length} RDV GTI - {plan.busy.length} occupe</span>
+                          </div>
+                          <div className="google-agenda-period-section">
+                            <span className="detail-label">RDV GTI</span>
+                            {plan.events.length > 0 ? (
+                              <div className="google-agenda-period-items">
+                                {plan.events.map((item) => (
+                                  <button key={`period-gti-${plan.day}-${item.id}`} className="google-agenda-period-event" type="button" onClick={() => handleEditGoogleAgendaEvent(item)}>
+                                    <strong>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</strong>
+                                    <span>{item.summary}</span>
+                                  </button>
+                                ))}
                               </div>
-                              <button className="ghost-button button-subtle" type="button" onClick={() => handleUseGoogleAgendaWindow(slot)}>
-                                Utiliser
-                              </button>
-                            </article>
-                          )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
-                        </div>
-                      </div>
+                            ) : <p className="empty-state">Aucun RDV GTI lie.</p>}
+                          </div>
+                          <div className="google-agenda-period-section">
+                            <span className="detail-label">Google occupe</span>
+                            <div className="google-agenda-day-slots">
+                              {plan.busy.length > 0 ? plan.busy.map((slot) => (
+                                <article key={`busy-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
+                                  <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                                  <span>Occupe Google</span>
+                                </article>
+                              )) : <p className="empty-state">Aucun creneau occupe.</p>}
+                            </div>
+                          </div>
+                          <div className="google-agenda-period-section">
+                            <span className="detail-label">Libres</span>
+                            <div className="google-agenda-day-slots">
+                              {plan.free.length > 0 ? plan.free.map((slot) => (
+                                <article key={`free-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
+                                  <div>
+                                    <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                                    <span>{minutesBetweenWindow(slot)} min libres</span>
+                                  </div>
+                                  <button className="ghost-button button-subtle" type="button" onClick={() => handleUseGoogleAgendaWindow(slot)}>
+                                    Utiliser
+                                  </button>
+                                </article>
+                              )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
                     </div>
                   </>
-                ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement de la journee...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
+                ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
               </section>
               <section className="google-agenda-panel google-agenda-links-panel">
                 <div className="google-agenda-panel-head">
