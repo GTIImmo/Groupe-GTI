@@ -18140,7 +18140,7 @@ function GoogleAgendaGlobalScreen(props: {
               {agendaDayPlans.map((plan) => {
                 const dayFreeMinutes = plan.free.reduce((sum, slot) => sum + minutesBetweenWindow(slot), 0)
                 return (
-                  <div key={`global-agenda-head-${plan.day}`} className="google-agenda-timeline-day-head">
+                  <div key={`global-agenda-head-${plan.day}`} className={`google-agenda-timeline-day-head${plan.day === agendaDate ? ' is-selected-day' : ''}`}>
                     <strong>{plan.label}</strong>
                     <span>{Math.round(dayFreeMinutes / 60)} h libres</span>
                     <small>{plan.events.length} GTI - {plan.busy.length} occupe</small>
@@ -18158,7 +18158,7 @@ function GoogleAgendaGlobalScreen(props: {
                 ))}
               </div>
               {agendaDayPlans.map((plan) => (
-                <div key={`global-agenda-track-${plan.day}`} className="google-agenda-timeline-track">
+                <div key={`global-agenda-track-${plan.day}`} className={`google-agenda-timeline-track${plan.day === agendaDate ? ' is-selected-day' : ''}`}>
                   {plan.free.map((slot) => (
                     <button
                       key={`global-free-${plan.day}-${slot.start}-${slot.end}`}
