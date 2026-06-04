@@ -18097,7 +18097,7 @@ function GoogleAgendaGlobalScreen(props: {
       </section>
 
       <div className="google-agenda-modal-meta google-agenda-global-meta">
-        <span className="google-agenda-kpi is-calendar"><strong>Agenda</strong>{calendarEmail || '-'}</span>
+        <span className="google-agenda-kpi is-calendar" title={calendarEmail || undefined}><strong>Agenda</strong>{calendarDisplayName}</span>
         <span className="google-agenda-kpi is-period"><strong>Periode</strong>{googleAgendaRangeLabel(agendaDate, agendaMode)}</span>
         <span className="google-agenda-kpi is-gti"><strong>RDV GTI</strong>{visibleEventCount}</span>
         <span className="google-agenda-kpi is-busy"><strong>Google occupe</strong>{busyCount} creneau{busyCount > 1 ? 'x' : ''}</span>
