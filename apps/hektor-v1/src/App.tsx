@@ -17888,6 +17888,19 @@ function googleAgendaCalendarOptionLabel(option: HektorNegotiatorOption) {
   return option.label || option.email || option.commercialId || 'Negociateur'
 }
 
+function googleAgendaDisplayNameFromEmail(email: string | null | undefined) {
+  const normalized = normalizeEmail(email)
+  if (!normalized) return ''
+  const localPart = normalized.split('@')[0] ?? ''
+  const words = localPart
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  if (words.length === 0) return normalized
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+}
+
 function googleAgendaCalendarOptions(input: {
   defaultEmail?: string | null
   hektorNegotiators?: HektorNegotiatorOption[]
@@ -17919,6 +17932,32 @@ function eventTypeLabel(value: GoogleCalendarEventLink['event_type'] | string | 
 
 function googleAgendaPeriodFreeMinutes(days: Array<{ free: GoogleAgendaWindow[] }>) {
   return days.reduce((sum, day) => sum + day.free.reduce((daySum, slot) => daySum + minutesBetweenWindow(slot), 0), 0)
+}
+
+const googleAgendaTimelineStartHour = 8
+const googleAgendaTimelineEndHour = 19
+const googleAgendaTimelineTotalMinutes = (googleAgendaTimelineEndHour - googleAgendaTimelineStartHour) * 60
+const googleAgendaTimelineHours = Array.from(
+  { length: googleAgendaTimelineEndHour - googleAgendaTimelineStartHour + 1 },
+  (_, index) => googleAgendaTimelineStartHour + index,
+)
+
+function googleAgendaTimelineBlockStyle(dayValue: string, startValue: string | null | undefined, endValue: string | null | undefined) {
+  const range = googleAgendaDayRange(dayValue)
+  const dayStart = new Date(range.startAt).getTime()
+  const dayEnd = new Date(range.endAt).getTime()
+  const start = new Date(startValue ?? '').getTime()
+  const end = new Date(endValue ?? '').getTime()
+  const cleanStart = Number.isFinite(start) ? Math.max(dayStart, Math.min(start, dayEnd)) : dayStart
+  const cleanEnd = Number.isFinite(end) ? Math.max(dayStart, Math.min(end, dayEnd)) : cleanStart + 30 * 60000
+  const topMinutes = Math.max(0, Math.round((cleanStart - dayStart) / 60000))
+  const durationMinutes = Math.max(18, Math.round((Math.max(cleanEnd, cleanStart + 18 * 60000) - cleanStart) / 60000))
+  const top = Math.min(100, Math.max(0, (topMinutes / googleAgendaTimelineTotalMinutes) * 100))
+  const height = Math.min(100 - top, Math.max(3.4, (durationMinutes / googleAgendaTimelineTotalMinutes) * 100))
+  return {
+    top: `${top}%`,
+    height: `${height}%`,
+  }
 }
 
 function GoogleAgendaGlobalScreen(props: {
@@ -17978,6 +18017,8 @@ function GoogleAgendaGlobalScreen(props: {
   const freeMinutes = googleAgendaPeriodFreeMinutes(agendaDayPlans)
   const suggestedWindows = buildGoogleAgendaSuggestedWindows(agendaDayPlans.flatMap((day) => day.free), 60, 6)
   const selectedCalendar = calendarOptions.find((option) => option.email === normalizeEmail(calendarEmail))
+  const calendarDisplayName = selectedCalendar?.label || googleAgendaDisplayNameFromEmail(calendarEmail) || 'Agenda Google'
+  const calendarDisplayMeta = selectedCalendar?.meta || normalizeEmail(calendarEmail) || googleAgendaRangeLabel(agendaDate, agendaMode)
 
   async function handleLoadGlobalAgenda() {
     setLoading(true)
@@ -18028,7 +18069,7 @@ function GoogleAgendaGlobalScreen(props: {
       <section className="google-agenda-panel google-agenda-global-toolbar">
         <div className="google-agenda-panel-head">
           <span>Agenda global</span>
-          <strong>{selectedCalendar?.label || calendarEmail || 'Agenda Google'}</strong>
+          <strong>{calendarDisplayName}</strong>
           <small>{googleAgendaRangeLabel(agendaDate, agendaMode)}</small>
         </div>
         <div className="google-agenda-global-controls">
@@ -18068,7 +18109,7 @@ function GoogleAgendaGlobalScreen(props: {
           <div>
             <span>Planning</span>
             <strong>{agendaMode === 'week' ? 'Semaine' : 'Journee'}</strong>
-            <small>{selectedCalendar?.meta || calendarEmail}</small>
+            <small>{calendarDisplayMeta}</small>
           </div>
         </div>
         {availability ? (
@@ -18089,93 +18130,85 @@ function GoogleAgendaGlobalScreen(props: {
                 </div>
               ) : <p className="empty-state">Aucun creneau libre assez long sur la periode chargee.</p>}
             </div>
-            <div className={`google-agenda-period-grid google-agenda-global-calendar is-${agendaMode}`}>
-            {agendaDayPlans.map((plan) => {
-              const dayFreeMinutes = plan.free.reduce((sum, slot) => sum + minutesBetweenWindow(slot), 0)
-              return (
-              <article key={`global-agenda-${plan.day}`} className={`google-agenda-period-day google-agenda-global-day${plan.events.length ? ' has-gti-events' : ''}${plan.busy.length ? ' has-busy-slots' : ''}${plan.free.length ? ' has-free-slots' : ''}`}>
-                <div className="google-agenda-period-day-head">
-                  <strong>{plan.label}</strong>
-                  <span>{Math.round(dayFreeMinutes / 60)} h libres</span>
-                </div>
-                <div className="google-agenda-global-day-stats">
-                  <span className={`google-agenda-day-stat is-gti${plan.events.length ? ' is-gti-active' : ''}`}>{plan.events.length} RDV GTI</span>
-                  <span className={`google-agenda-day-stat is-busy${plan.busy.length ? ' is-busy-active' : ''}`}>{plan.busy.length} occupe</span>
-                  <span className={`google-agenda-day-stat is-free${plan.free.length ? ' is-free-active' : ''}`}>{plan.free.length} libre</span>
-                </div>
-                <div className="google-agenda-period-section google-agenda-period-section-gti">
-                  <span className="detail-label">RDV GTI</span>
-                  {plan.events.length > 0 ? (
-                    <div className="google-agenda-period-items">
-                      {plan.events.map((item) => (
-                        <article key={`global-event-${plan.day}-${item.id}`} className="google-agenda-event-card google-agenda-global-event-card" onClick={() => setEditingEvent(item)}>
-                          <div>
-                            <strong>{item.summary}</strong>
-                            <span>{formatTimeOnly(item.starts_at)} - {formatTimeOnly(item.ends_at)}</span>
-                            <span>{eventTypeLabel(item.event_type)} - {item.related_entity_type}</span>
-                            {item.location ? <span>{item.location}</span> : null}
-                            {Array.isArray(item.attendees_json) && item.attendees_json.length > 0 ? <span>Invites : {item.attendees_json.join(', ')}</span> : null}
-                          </div>
-                          <div className="google-agenda-event-actions">
-                            {item.app_dossier_id && props.onOpenDossier ? (
-                              <button className="ghost-button button-subtle" type="button" onClick={(clickEvent) => {
-                                clickEvent.stopPropagation()
-                                props.onOpenDossier?.(Number(item.app_dossier_id))
-                              }}>Fiche GTI</button>
-                            ) : null}
-                            {item.hektor_contact_id && props.onOpenContact ? (
-                              <button className="ghost-button button-subtle" type="button" onClick={(clickEvent) => {
-                                clickEvent.stopPropagation()
-                                props.onOpenContact?.(String(item.hektor_contact_id))
-                              }}>Contact</button>
-                            ) : null}
-                            {item.google_html_link ? <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer" onClick={(clickEvent) => clickEvent.stopPropagation()}>Google</a> : null}
-                            <button className="ghost-button button-subtle" type="button" onClick={(clickEvent) => {
-                              clickEvent.stopPropagation()
-                              setEditingEvent(item)
-                            }} disabled={deletingId === item.id}>Modifier</button>
-                            <button className="ghost-button button-subtle" type="button" onClick={(clickEvent) => {
-                              clickEvent.stopPropagation()
-                              void handleDeleteGlobalAgendaEvent(item)
-                            }} disabled={deletingId === item.id}>
-                              {deletingId === item.id ? 'Suppression...' : 'Supprimer'}
-                            </button>
-                          </div>
-                        </article>
-                      ))}
+            <div
+              className={`google-agenda-global-calendar google-agenda-timeline is-${agendaMode}`}
+              style={{ gridTemplateColumns: `74px repeat(${agendaDayPlans.length}, minmax(${agendaMode === 'week' ? '168px' : '420px'}, 1fr))` }}
+            >
+              <div className="google-agenda-timeline-corner">
+                <strong>08-19</strong>
+              </div>
+              {agendaDayPlans.map((plan) => {
+                const dayFreeMinutes = plan.free.reduce((sum, slot) => sum + minutesBetweenWindow(slot), 0)
+                return (
+                  <div key={`global-agenda-head-${plan.day}`} className="google-agenda-timeline-day-head">
+                    <strong>{plan.label}</strong>
+                    <span>{Math.round(dayFreeMinutes / 60)} h libres</span>
+                    <small>{plan.events.length} GTI - {plan.busy.length} occupe</small>
+                  </div>
+                )
+              })}
+              <div className="google-agenda-timeline-hours" aria-hidden="true">
+                {googleAgendaTimelineHours.map((hour) => (
+                  <span
+                    key={`global-agenda-hour-${hour}`}
+                    style={{ top: `${((hour - googleAgendaTimelineStartHour) / (googleAgendaTimelineEndHour - googleAgendaTimelineStartHour)) * 100}%` }}
+                  >
+                    {String(hour).padStart(2, '0')}:00
+                  </span>
+                ))}
+              </div>
+              {agendaDayPlans.map((plan) => (
+                <div key={`global-agenda-track-${plan.day}`} className="google-agenda-timeline-track">
+                  {plan.free.map((slot) => (
+                    <button
+                      key={`global-free-${plan.day}-${slot.start}-${slot.end}`}
+                      className="google-agenda-timeline-block google-agenda-timeline-free"
+                      type="button"
+                      style={googleAgendaTimelineBlockStyle(plan.day, slot.start, slot.end)}
+                      onClick={() => setCreateSlot(slot)}
+                      disabled={!canUseCalendarEmail}
+                    >
+                      <strong>{formatTimeOnly(slot.start)} - {formatTimeOnly(slot.end)}</strong>
+                      <span>{minutesBetweenWindow(slot)} min libres</span>
+                    </button>
+                  ))}
+                  {plan.busy.map((slot) => (
+                    <div
+                      key={`global-busy-${plan.day}-${slot.start}-${slot.end}`}
+                      className="google-agenda-timeline-block google-agenda-timeline-busy"
+                      style={googleAgendaTimelineBlockStyle(plan.day, slot.start, slot.end)}
+                    >
+                      <strong>{formatTimeOnly(slot.start)} - {formatTimeOnly(slot.end)}</strong>
+                      <span>Occupe Google</span>
                     </div>
-                  ) : <p className="empty-state">Aucun RDV GTI lie.</p>}
-                </div>
-                <div className="google-agenda-period-section google-agenda-period-section-busy">
-                  <span className="detail-label">Google occupe</span>
-                  <div className="google-agenda-day-slots">
-                    {plan.busy.length > 0 ? plan.busy.map((slot) => (
-                      <article key={`global-busy-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
-                        <strong>{formatTimeOnly(slot.start)} - {formatTimeOnly(slot.end)}</strong>
-                        <span>Occupe Google</span>
-                      </article>
-                    )) : <p className="empty-state">Aucun creneau occupe.</p>}
-                  </div>
-                </div>
-                <div className="google-agenda-period-section google-agenda-period-section-free">
-                  <span className="detail-label">Libres</span>
-                  <div className="google-agenda-day-slots">
-                    {plan.free.length > 0 ? plan.free.map((slot) => (
-                      <article key={`global-free-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
-                        <div>
-                          <strong>{formatTimeOnly(slot.start)} - {formatTimeOnly(slot.end)}</strong>
-                          <span>{minutesBetweenWindow(slot)} min libres</span>
-                        </div>
-                        <button className="ghost-button button-subtle" type="button" onClick={() => setCreateSlot(slot)} disabled={!canUseCalendarEmail}>
-                          Creer RDV
+                  ))}
+                  {plan.events.map((item) => (
+                    <article
+                      key={`global-event-${plan.day}-${item.id}`}
+                      className="google-agenda-timeline-block google-agenda-timeline-event"
+                      style={googleAgendaTimelineBlockStyle(plan.day, item.starts_at, item.ends_at)}
+                    >
+                      <button className="google-agenda-timeline-event-main" type="button" onClick={() => setEditingEvent(item)}>
+                        <strong>{formatTimeOnly(item.starts_at)} - {formatTimeOnly(item.ends_at)}</strong>
+                        <span>{item.summary}</span>
+                        <small>{eventTypeLabel(item.event_type)}{item.location ? ` - ${item.location}` : ''}</small>
+                      </button>
+                      <div className="google-agenda-timeline-event-actions">
+                        {item.app_dossier_id && props.onOpenDossier ? (
+                          <button className="ghost-button button-subtle" type="button" onClick={() => props.onOpenDossier?.(Number(item.app_dossier_id))}>Fiche</button>
+                        ) : null}
+                        {item.hektor_contact_id && props.onOpenContact ? (
+                          <button className="ghost-button button-subtle" type="button" onClick={() => props.onOpenContact?.(String(item.hektor_contact_id))}>Contact</button>
+                        ) : null}
+                        {item.google_html_link ? <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Google</a> : null}
+                        <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGlobalAgendaEvent(item)} disabled={deletingId === item.id}>
+                          {deletingId === item.id ? '...' : 'Suppr.'}
                         </button>
-                      </article>
-                    )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
-                  </div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              </article>
-              )
-            })}
+              ))}
             </div>
           </>
         ) : <p className="empty-state">{loading ? 'Chargement agenda...' : 'Agenda non charge.'}</p>}

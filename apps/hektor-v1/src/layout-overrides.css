@@ -1482,7 +1482,10 @@
 }
 
 .app-shell-modern .google-agenda-global-toolbar .google-agenda-panel-head strong {
-  font-size: clamp(30px, 2.4vw, 44px);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(28px, 2vw, 38px);
+  line-height: 1.04;
   letter-spacing: 0;
 }
 
@@ -1673,7 +1676,7 @@
 }
 
 .app-shell-modern .google-agenda-global-suggestions {
-  grid-template-columns: minmax(190px, 0.22fr) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 0.24fr) minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   padding: 16px;
@@ -1701,11 +1704,11 @@
 }
 
 .app-shell-modern .google-agenda-global-suggestions strong {
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .app-shell-modern .google-agenda-global-suggestion-list {
-  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  grid-template-columns: repeat(6, minmax(132px, 1fr));
   gap: 10px;
 }
 
@@ -1972,6 +1975,269 @@
   background:
     linear-gradient(90deg, rgba(227, 164, 47, 0.14), transparent 5%),
     #fffaf0;
+}
+
+.app-shell-modern .google-agenda-timeline {
+  display: grid;
+  gap: 0;
+  min-width: 940px;
+  overflow: hidden;
+  border: 1px solid rgba(32, 37, 38, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 34px rgba(32, 37, 38, 0.06);
+}
+
+.app-shell-modern .google-agenda-global-board {
+  overflow-x: auto;
+}
+
+.app-shell-modern .google-agenda-timeline-corner,
+.app-shell-modern .google-agenda-timeline-day-head {
+  min-height: 76px;
+  border-bottom: 1px solid rgba(32, 37, 38, 0.1);
+  background: #f8fafb;
+}
+
+.app-shell-modern .google-agenda-timeline-corner {
+  display: grid;
+  place-items: end center;
+  padding: 0 10px 14px;
+  border-right: 1px solid rgba(32, 37, 38, 0.1);
+  color: #778081;
+  font-size: 12px;
+}
+
+.app-shell-modern .google-agenda-timeline-day-head {
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  min-width: 0;
+  padding: 12px 14px;
+  border-right: 1px solid rgba(32, 37, 38, 0.08);
+}
+
+.app-shell-modern .google-agenda-timeline-day-head strong,
+.app-shell-modern .google-agenda-timeline-day-head span,
+.app-shell-modern .google-agenda-timeline-day-head small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell-modern .google-agenda-timeline-day-head strong {
+  color: #202526;
+  font-size: 17px;
+}
+
+.app-shell-modern .google-agenda-timeline-day-head span {
+  color: #258452;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.app-shell-modern .google-agenda-timeline-day-head small {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.app-shell-modern .google-agenda-timeline-hours,
+.app-shell-modern .google-agenda-timeline-track {
+  position: relative;
+  height: 704px;
+}
+
+.app-shell-modern .google-agenda-timeline-hours {
+  border-right: 1px solid rgba(32, 37, 38, 0.1);
+  background: #ffffff;
+}
+
+.app-shell-modern .google-agenda-timeline-hours span {
+  position: absolute;
+  right: 11px;
+  color: #737d7e;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.app-shell-modern .google-agenda-timeline-track {
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid rgba(32, 37, 38, 0.08);
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #ffffff 0,
+      #ffffff calc((100% / 11) - 1px),
+      rgba(32, 37, 38, 0.105) calc((100% / 11) - 1px),
+      rgba(32, 37, 38, 0.105) calc(100% / 11)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc((100% / 22) - 1px),
+      rgba(32, 37, 38, 0.035) calc((100% / 22) - 1px),
+      rgba(32, 37, 38, 0.035) calc(100% / 22)
+    );
+}
+
+.app-shell-modern .google-agenda-timeline-block {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  display: grid;
+  min-height: 34px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.app-shell-modern .google-agenda-timeline-block strong,
+.app-shell-modern .google-agenda-timeline-block span,
+.app-shell-modern .google-agenda-timeline-block small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell-modern .google-agenda-timeline-free {
+  z-index: 1;
+  align-content: start;
+  gap: 3px;
+  padding: 10px 98px 10px 12px;
+  border-color: rgba(37, 132, 82, 0.13);
+  background: rgba(37, 132, 82, 0.026);
+  color: #1f6d45;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.app-shell-modern .google-agenda-timeline-free::after {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 6px 9px;
+  border: 1px solid rgba(37, 132, 82, 0.18);
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1f6d45;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  content: "Creer RDV";
+}
+
+.app-shell-modern .google-agenda-timeline-free:hover {
+  z-index: 4;
+  border-color: rgba(37, 132, 82, 0.34);
+  background: rgba(37, 132, 82, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(37, 132, 82, 0.06);
+}
+
+.app-shell-modern .google-agenda-timeline-free strong {
+  color: #1f6d45;
+  font-size: 13px;
+}
+
+.app-shell-modern .google-agenda-timeline-free span {
+  color: #39785a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.app-shell-modern .google-agenda-timeline-busy {
+  z-index: 3;
+  align-content: start;
+  gap: 3px;
+  padding: 9px 11px;
+  border-color: rgba(227, 164, 47, 0.26);
+  background: rgba(227, 164, 47, 0.17);
+  color: #7a570e;
+}
+
+.app-shell-modern .google-agenda-timeline-busy strong,
+.app-shell-modern .google-agenda-timeline-busy span {
+  font-size: 12px;
+}
+
+.app-shell-modern .google-agenda-timeline-event {
+  z-index: 5;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border-color: rgba(197, 0, 95, 0.3);
+  background: #c5005f;
+  box-shadow: 0 12px 24px rgba(197, 0, 95, 0.18);
+}
+
+.app-shell-modern .google-agenda-timeline-event-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 9px 11px;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-shell-modern .google-agenda-timeline-event-main strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+}
+
+.app-shell-modern .google-agenda-timeline-event-main span {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.app-shell-modern .google-agenda-timeline-event-main small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.app-shell-modern .google-agenda-timeline-event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 0 7px 7px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.app-shell-modern .google-agenda-timeline-event:hover .google-agenda-timeline-event-actions,
+.app-shell-modern .google-agenda-timeline-event:focus-within .google-agenda-timeline-event-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.app-shell-modern .google-agenda-timeline-event-actions .ghost-button,
+.app-shell-modern .google-agenda-timeline-event-actions a.ghost-button {
+  min-height: 24px;
+  border-color: rgba(255, 255, 255, 0.42);
+  border-radius: 6px;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.app-shell-modern .google-agenda-timeline-event-actions .ghost-button:hover,
+.app-shell-modern .google-agenda-timeline-event-actions a.ghost-button:hover {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #c5005f;
 }
 
 .google-agenda-modal-overlay {
