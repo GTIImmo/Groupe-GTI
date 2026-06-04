@@ -127,6 +127,35 @@ def get_calendar_link_service(settings: Settings = Depends(get_settings)) -> Goo
     return GoogleCalendarEventLinkService(settings)
 
 
+def _clean_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _metadata_hektor_contact_id(metadata: dict[str, object] | None) -> str | None:
+    if not isinstance(metadata, dict):
+        return None
+    direct_contact_id = _clean_optional_text(metadata.get("contact_id")) or _clean_optional_text(metadata.get("hektor_contact_id"))
+    if direct_contact_id:
+        return direct_contact_id
+    attendee_contacts = metadata.get("attendee_contacts")
+    if not isinstance(attendee_contacts, list):
+        return None
+    for item in attendee_contacts:
+        if not isinstance(item, dict):
+            continue
+        contact_id = (
+            _clean_optional_text(item.get("hektor_contact_id"))
+            or _clean_optional_text(item.get("hektorContactId"))
+            or _clean_optional_text(item.get("contact_id"))
+        )
+        if contact_id:
+            return contact_id
+    return None
+
+
 @router.get("/status")
 def get_google_workspace_status(
     authorization: str | None = Depends(require_request_user),
@@ -360,13 +389,19 @@ def create_google_calendar_event(
     event_payload = result.get("event") if isinstance(result.get("event"), dict) else {}
     start_payload = event_payload.get("start") if isinstance(event_payload.get("start"), dict) else {}
     end_payload = event_payload.get("end") if isinstance(event_payload.get("end"), dict) else {}
+    metadata_json = {
+        **payload.metadata,
+        "send_updates": payload.sendUpdates,
+        "has_description": bool(payload.description),
+    }
+    hektor_contact_id = _clean_optional_text(payload.hektorContactId) or _metadata_hektor_contact_id(metadata_json)
     link = link_service.create_link(
         event_type=payload.eventType,
         related_entity_type=payload.relatedEntityType,
         related_entity_id=payload.relatedEntityId,
         app_dossier_id=payload.appDossierId,
         hektor_annonce_id=payload.hektorAnnonceId,
-        hektor_contact_id=payload.hektorContactId,
+        hektor_contact_id=hektor_contact_id,
         calendar_email=str(payload.subjectEmail).lower(),
         google_event_id=str(result.get("eventId") or ""),
         google_html_link=result.get("htmlLink"),
@@ -375,11 +410,7 @@ def create_google_calendar_event(
         starts_at=str(start_payload.get("dateTime") or payload.startAt),
         ends_at=str(end_payload.get("dateTime") or payload.endAt),
         attendees=attendees,
-        metadata_json={
-            **payload.metadata,
-            "send_updates": payload.sendUpdates,
-            "has_description": bool(payload.description),
-        },
+        metadata_json=metadata_json,
         created_by=user.id,
         created_by_email=user.email,
     )
@@ -422,6 +453,12 @@ def update_google_calendar_event(
     event_payload = result.get("event") if isinstance(result.get("event"), dict) else {}
     start_payload = event_payload.get("start") if isinstance(event_payload.get("start"), dict) else {}
     end_payload = event_payload.get("end") if isinstance(event_payload.get("end"), dict) else {}
+    metadata_patch = {
+        **(link.get("metadata_json") if isinstance(link.get("metadata_json"), dict) else {}),
+        **(payload.metadata or {}),
+        "last_send_updates": payload.sendUpdates,
+    }
+    hektor_contact_id = _clean_optional_text(payload.hektorContactId) or _metadata_hektor_contact_id(metadata_patch)
     next_link = link_service.update_link(
         link_id=link_id,
         updated_by=user.id,
@@ -431,18 +468,14 @@ def update_google_calendar_event(
         related_entity_id=payload.relatedEntityId,
         app_dossier_id=payload.appDossierId,
         hektor_annonce_id=payload.hektorAnnonceId,
-        hektor_contact_id=payload.hektorContactId,
+        hektor_contact_id=hektor_contact_id,
         summary=payload.summary,
         location=payload.location,
         starts_at=str(start_payload.get("dateTime") or payload.startAt) if payload.startAt else None,
         ends_at=str(end_payload.get("dateTime") or payload.endAt) if payload.endAt else None,
         attendees=attendees,
         google_html_link=result.get("htmlLink"),
-        metadata_patch={
-            **(link.get("metadata_json") if isinstance(link.get("metadata_json"), dict) else {}),
-            **(payload.metadata or {}),
-            "last_send_updates": payload.sendUpdates,
-        },
+        metadata_patch=metadata_patch,
     )
     return {**result, "linkSaved": True, "link": next_link}
 

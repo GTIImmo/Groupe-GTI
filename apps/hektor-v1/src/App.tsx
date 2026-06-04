@@ -19438,6 +19438,9 @@ function GoogleAgendaAnnonceSection(props: {
       if (!endAt) throw new Error('Horaire RDV invalide')
       const attendees = attendeeEmails
       const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
+      const primaryHektorContactId = attendeeContacts
+        .map((item) => safeText(item.hektor_contact_id))
+        .find(Boolean) ?? null
       if (isVisit && attendees.length === 0) throw new Error('Ajoute au moins un contact invite pour preparer le bon de visite.')
       const bonVisiteReady = isVisit && attendees.length > 0
       if (editingEventId) {
@@ -19448,6 +19451,7 @@ function GoogleAgendaAnnonceSection(props: {
           description: description.trim() ? description : undefined,
           location,
           attendees,
+          hektorContactId: primaryHektorContactId,
           metadata: {
             source: 'fiche_annonce',
             hektor_annonce_id: dossier.hektor_annonce_id,
@@ -19472,6 +19476,7 @@ function GoogleAgendaAnnonceSection(props: {
           relatedEntityId: String(dossier.app_dossier_id),
           appDossierId: dossier.app_dossier_id,
           hektorAnnonceId: dossier.hektor_annonce_id,
+          hektorContactId: primaryHektorContactId,
           summary,
           startAt,
           endAt,
