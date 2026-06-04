@@ -13902,6 +13902,49 @@ button.metric-card.is-active {
   border-radius: 8px;
   background: rgba(37, 132, 82, 0.06);
 }
+.google-agenda-global-invitees {
+  padding: 10px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #f8f9f9;
+}
+.google-agenda-visit-property-picker {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(197, 0, 95, 0.18);
+  border-radius: 8px;
+  background: rgba(197, 0, 95, 0.06);
+}
+.google-agenda-visit-property-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+.google-agenda-visit-property-head strong,
+.google-agenda-visit-property-head small {
+  display: block;
+}
+.google-agenda-visit-property-head strong {
+  margin-top: 2px;
+  color: var(--gti-final-ink);
+  font-size: 15px;
+  line-height: 1.25;
+}
+.google-agenda-visit-property-head small {
+  color: rgba(34, 35, 35, 0.62);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+.google-agenda-search-hint {
+  display: block;
+  color: rgba(34, 35, 35, 0.58);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
 .google-agenda-global-summary {
   margin-top: 14px;
 }
@@ -28592,7 +28635,8 @@ body {
 
 .contact-owner-result-list small,
 .contact-owner-result-list em,
-.contact-owner-selected span {
+.contact-owner-selected span,
+.contact-owner-selected small {
   color: rgba(34, 35, 35, 0.62);
   font-size: 0.74rem;
   font-style: normal;

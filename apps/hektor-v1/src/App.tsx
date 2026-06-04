@@ -18289,6 +18289,7 @@ function GoogleAgendaGlobalEventModal(props: {
   const isVisit = eventType === 'visite'
   const hasCustomDuration = durationMinutes && !googleAgendaDurationOptions.includes(durationMinutes)
   const availabilityBusy = availability?.busy ?? []
+  const attendeeEmails = splitEmailList(attendeesText)
   const selectedContactEmail = selectedContact ? contactOptionAgendaEmail(selectedContact) : ''
   const selectedContactLabel = selectedContact ? mandantContactOptionTitle(selectedContact) : ''
   const activeContactEmail = selectedContactEmail || createdContactLink?.email || ''
@@ -18335,6 +18336,16 @@ function GoogleAgendaGlobalEventModal(props: {
     if (agencyName) return { agencyName, negotiatorEmail: negotiatorEmail || null }
     return negotiatorEmail.endsWith(`@${googleWorkspaceDomain}`) ? { negotiatorEmail } : null
   }, [agendaOwner?.agenceNom, agendaOwner?.email, modalCalendarEmail, selectedAnnonce?.agence_nom])
+  const annonceScopeLabel = annonceScope?.agencyName
+    ? `Biens actifs de l'agence ${annonceScope.agencyName}`
+    : annonceScope?.negotiatorEmail
+      ? `Biens actifs de ${annonceScope.negotiatorEmail}`
+      : 'Biens actifs accessibles'
+  const contactScopeLabel = contactScope?.agencyName
+    ? `Contacts de l'agence ${contactScope.agencyName}`
+    : contactScope?.negotiatorEmail
+      ? `Contacts de ${contactScope.negotiatorEmail}`
+      : 'Contacts accessibles'
 
   useEffect(() => {
     if (isEditingGoogleGlobalEvent) return
@@ -18490,9 +18501,46 @@ function GoogleAgendaGlobalEventModal(props: {
     }
   }
 
+  function handleChangeSelectedContact() {
+    const emailToRemove = activeContactEmail
+    setSelectedContact(null)
+    setCreatedContactLink(null)
+    setContactSearch('')
+    setContactOptions([])
+    setContactSearchError(null)
+    setContactSearchLoading(false)
+    if (emailToRemove) {
+      const nextAttendees = attendeeEmails.filter((email) => email !== emailToRemove)
+      setAttendeesText(joinEmailList(nextAttendees))
+      setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, [], nextAttendees))
+    }
+  }
+
+  function handleChangeSelectedAnnonce() {
+    setSelectedAnnonce(null)
+    setAnnonceSearch('')
+    setAnnonceOptions([])
+    setAnnonceError(null)
+    setAnnonceLoading(false)
+    setLinkedRelationContactOptions([])
+    setLinkedRelationContactsError(null)
+  }
+
   function handleAttendeesTextChange(value: string) {
     setAttendeesText(value)
     setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, activeContactLink ? [activeContactLink] : [], splitEmailList(value)))
+  }
+
+  function handleRemoveGlobalAgendaInvitee(email: string) {
+    const cleanEmail = normalizeEmail(email)
+    const nextAttendees = attendeeEmails.filter((item) => item !== cleanEmail)
+    setAttendeesText(joinEmailList(nextAttendees))
+    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, [], nextAttendees))
+    if (cleanEmail && cleanEmail === activeContactEmail) {
+      setSelectedContact(null)
+      setCreatedContactLink(null)
+      setContactSearch('')
+    }
   }
 
   function handleGlobalAgendaContactJobCreated(contact: HektorContactIdentityInput) {
@@ -18552,8 +18600,9 @@ function GoogleAgendaGlobalEventModal(props: {
       const minutes = Number(durationMinutes)
       const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
       if (!endAt) throw new Error('Horaire RDV invalide')
-      const attendees = splitEmailList(attendeesText)
-      const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
+      const attendees = splitEmailList(joinEmailList(activeContactEmail ? [...attendeeEmails, activeContactEmail] : attendeeEmails))
+      const normalizedContactLinks = mergeGoogleAgendaInviteeContactLinks(attendeeContactLinks, activeContactLink ? [activeContactLink] : [], attendees)
+      const attendeeContacts = googleAgendaInviteeContactMetadata(normalizedContactLinks, attendees)
       const relatedEntityType: GoogleCalendarEventLink['related_entity_type'] = selectedAnnonce ? 'annonce' : activeContactEmail ? 'contact' : 'other'
       const relationId = selectedAnnonce ? String(selectedAnnonce.app_dossier_id) : ((selectedContact?.hektor_contact_id ?? activeContactLink?.hektorContactId ?? activeContactEmail) || 'agenda_global')
       const nextMetadata = {
@@ -18658,6 +18707,49 @@ function GoogleAgendaGlobalEventModal(props: {
                   ))}
                 </select>
               </label>
+              {isVisit ? (
+                <div className="google-agenda-field-wide google-agenda-visit-property-picker">
+                  <div className="google-agenda-visit-property-head">
+                    <div>
+                      <span className="detail-label">Bien a visiter</span>
+                      <strong>{selectedAnnonce ? selectedAnnonceTitle : 'Selectionner le bien de la visite'}</strong>
+                      <small>{annonceScopeLabel}</small>
+                    </div>
+                    {selectedAnnonce ? (
+                      <button className="ghost-button button-subtle" type="button" onClick={handleChangeSelectedAnnonce}>
+                        Changer
+                      </button>
+                    ) : null}
+                  </div>
+                  {selectedAnnonce ? (
+                    <div className="contact-owner-selected">
+                      <strong>{selectedAnnonceTitle}</strong>
+                      <span>{ownerAnnonceOptionSubtitle(selectedAnnonce) || `Annonce ${selectedAnnonce.hektor_annonce_id}`}</span>
+                      <small>Ce bien servira au bon de visite.</small>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="google-agenda-contact-search">
+                        <input value={annonceSearch} onChange={(inputEvent) => setAnnonceSearch(inputEvent.target.value)} placeholder="Adresse, ville, dossier, mandat..." />
+                      </div>
+                      <small className="google-agenda-search-hint">Recherche par adresse, ville, dossier ou mandat. Saisis 3 caracteres minimum, ou un ID.</small>
+                      {annonceLoading ? <p className="empty-state">Recherche biens...</p> : null}
+                      {annonceError ? <p className="google-agenda-error">{annonceError}</p> : null}
+                      {annonceOptions.length > 0 ? (
+                        <div className="google-agenda-contact-list">
+                          {annonceOptions.map((option) => (
+                            <button key={`global-visit-annonce-${option.hektor_annonce_id}`} className="google-agenda-contact-button" type="button" onClick={() => handleSelectAnnonce(option)}>
+                              <strong>{ownerAnnonceOptionTitle(option)}</strong>
+                              <span>{ownerAnnonceOptionSubtitle(option) || `Annonce ${option.hektor_annonce_id}`}</span>
+                              <small>{ownerAnnonceOptionMeta(option)}</small>
+                            </button>
+                          ))}
+                        </div>
+                      ) : annonceSearch.trim().length >= (/^\d+$/.test(annonceSearch.trim()) ? 1 : 3) && !annonceLoading ? <p className="empty-state">Aucun bien actif trouve dans le perimetre agence/negociateur.</p> : null}
+                    </>
+                  )}
+                </div>
+              ) : null}
               <label className="filter-field google-agenda-field-wide">
                 <span>Titre</span>
                 <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
@@ -18685,6 +18777,23 @@ function GoogleAgendaGlobalEventModal(props: {
                 <span>Invites</span>
                 <input value={attendeesText} onChange={(inputEvent) => handleAttendeesTextChange(inputEvent.target.value)} placeholder="client@email.fr" />
               </label>
+              <div className="google-agenda-field-wide google-agenda-invitee-selected google-agenda-global-invitees">
+                <span className="detail-label">Invites Google</span>
+                {attendeeEmails.length > 0 ? (
+                  <div className="google-agenda-invitee-chip-row">
+                    {attendeeEmails.map((email) => {
+                      const contactLink = attendeeContactLinks.find((item) => item.email === email) ?? (activeContactLink?.email === email ? activeContactLink : null)
+                      return (
+                        <button key={`global-invitee-${email}`} className={`google-agenda-invitee-chip${contactLink?.hektorContactId ? ' is-linked' : ''}`} type="button" onClick={() => handleRemoveGlobalAgendaInvitee(email)}>
+                          <strong>{contactLink?.label || email}</strong>
+                          <small>{contactLink?.hektorContactId ? `Contact ${contactLink.hektorContactId}` : email}</small>
+                          <span aria-hidden="true">x</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : <p className="empty-state">Aucun invite ajoute.</p>}
+              </div>
               <label className="filter-field google-agenda-field-wide">
                 <span>Description</span>
                 <textarea className="inline-textarea" value={description} onChange={(inputEvent) => setDescription(inputEvent.target.value)} placeholder={isEditingGoogleGlobalEvent ? 'Vide = description Google conservee' : undefined} />
@@ -18722,12 +18831,9 @@ function GoogleAgendaGlobalEventModal(props: {
                   <div className="contact-owner-selected">
                     <strong>{activeContactLabel || activeContactEmail}</strong>
                     <span>{activeContactEmail || selectedContact?.phone_primary || selectedContact?.phone_secondary || 'Email absent'}</span>
+                    {activeContactEmail ? <small>Invite Google ajoute automatiquement.</small> : <small>Email requis pour inviter le client.</small>}
                     {createdContactLink?.source === 'contact_create_pending' ? <small>Contact en creation Hektor</small> : null}
-                    <button className="ghost-button button-subtle" type="button" onClick={() => {
-                      setSelectedContact(null)
-                      setCreatedContactLink(null)
-                      setContactSearch('')
-                    }}>Changer</button>
+                    <button className="ghost-button button-subtle" type="button" onClick={handleChangeSelectedContact}>Changer</button>
                   </div>
                 ) : (
                   <>
@@ -18760,6 +18866,7 @@ function GoogleAgendaGlobalEventModal(props: {
                         </button>
                       ) : null}
                     </div>
+                    <small className="google-agenda-search-hint">{contactScopeLabel}. Saisis 3 caracteres minimum, ou un ID contact.</small>
                     {contactSearchLoading ? <p className="empty-state">Recherche contacts...</p> : null}
                     {contactSearchError ? <p className="google-agenda-error">{contactSearchError}</p> : null}
                     {contactOptions.length > 0 ? (
@@ -18780,21 +18887,23 @@ function GoogleAgendaGlobalEventModal(props: {
                 )}
               </div>
               <div>
-                <span className="detail-label">Bien</span>
+                <span className="detail-label">{isVisit ? 'Bien a visiter' : 'Bien lie facultatif'}</span>
                 {selectedAnnonce ? (
                   <div className="contact-owner-selected">
                     <strong>{selectedAnnonceTitle}</strong>
                     <span>{ownerAnnonceOptionSubtitle(selectedAnnonce) || `Annonce ${selectedAnnonce.hektor_annonce_id}`}</span>
-                    <button className="ghost-button button-subtle" type="button" onClick={() => {
-                      setSelectedAnnonce(null)
-                      setAnnonceSearch('')
-                    }}>Changer</button>
+                    {isVisit ? <small>Ce bien servira au bon de visite.</small> : <small>RDV lie a cette annonce.</small>}
+                    <button className="ghost-button button-subtle" type="button" onClick={handleChangeSelectedAnnonce}>Changer</button>
                   </div>
                 ) : (
+                  isVisit ? (
+                    <p className="empty-state">Choisis le bien dans le bloc visible du formulaire de creation. Le bouton de creation restera bloque tant que le bien n'est pas selectionne.</p>
+                  ) : (
                   <>
                     <div className="google-agenda-contact-search">
                       <input value={annonceSearch} onChange={(inputEvent) => setAnnonceSearch(inputEvent.target.value)} placeholder="Adresse, ville, dossier, mandat..." />
                     </div>
+                    <small className="google-agenda-search-hint">{annonceScopeLabel}. Recherche par adresse, ville, dossier ou mandat.</small>
                     {annonceLoading ? <p className="empty-state">Recherche biens...</p> : null}
                     {annonceError ? <p className="google-agenda-error">{annonceError}</p> : null}
                     {annonceOptions.length > 0 ? (
@@ -18809,6 +18918,7 @@ function GoogleAgendaGlobalEventModal(props: {
                       </div>
                     ) : annonceSearch.trim().length >= (/^\d+$/.test(annonceSearch.trim()) ? 1 : 3) && !annonceLoading ? <p className="empty-state">Aucun bien actif trouve.</p> : null}
                   </>
+                  )
                 )}
               </div>
             </div>
