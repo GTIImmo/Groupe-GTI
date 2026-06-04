@@ -18141,6 +18141,9 @@ function GoogleAgendaGlobalEventModal(props: {
   const [contactSearchError, setContactSearchError] = useState<string | null>(null)
   const [contactCreateOpen, setContactCreateOpen] = useState(false)
   const [createdContactLink, setCreatedContactLink] = useState<GoogleAgendaInviteeContactLink | null>(null)
+  const [linkedRelationContactOptions, setLinkedRelationContactOptions] = useState<AnnonceContactInviteeOption[]>([])
+  const [linkedRelationContactsLoading, setLinkedRelationContactsLoading] = useState(false)
+  const [linkedRelationContactsError, setLinkedRelationContactsError] = useState<string | null>(null)
   const [summary, setSummary] = useState('')
   const [startAt, setStartAt] = useState(defaultStartAt)
   const [durationMinutes, setDurationMinutes] = useState(defaultDuration)
@@ -18171,6 +18174,25 @@ function GoogleAgendaGlobalEventModal(props: {
   const canSubmit = canUseCalendarEmail
     && Boolean(summary.trim())
     && (!isVisit || (Boolean(selectedAnnonce) && Boolean(activeContactEmail)))
+
+  const linkedAgendaContacts = useMemo(() => {
+    const contactsByKey = new Map<string, GoogleAgendaLinkedInviteeOption>()
+    linkedRelationContactOptions.forEach((option) => {
+      const email = contactOptionAgendaEmail(option)
+      const relationLabel = googleAgendaRelationRoleLabel(option.role_contact)
+      const hektorContactId = safeText(option.hektor_contact_id)
+      const key = hektorContactId ? `contact-${hektorContactId}` : email ? `email-${email}` : `label-${option.display_name}-${contactsByKey.size}`
+      contactsByKey.set(key, {
+        key,
+        label: mandantContactOptionTitle(option),
+        email,
+        meta: `${relationLabel} - ${email || option.phone_primary || option.phone_secondary || 'Email absent'}`,
+        hektorContactId: hektorContactId || null,
+        link: contactOptionAgendaLink(option, email),
+      })
+    })
+    return Array.from(contactsByKey.values())
+  }, [linkedRelationContactOptions])
 
   const annonceScope = useMemo<DataScope | null>(() => {
     const negotiatorEmail = normalizeEmail(agendaOwner?.email) || normalizeEmail(props.calendarEmail)
@@ -18221,6 +18243,37 @@ function GoogleAgendaGlobalEventModal(props: {
         selectedAnnonce.code_postal,
         selectedAnnonce.ville,
       ].filter(Boolean).join(' '))
+    }
+  }, [selectedAnnonce])
+
+  useEffect(() => {
+    if (!selectedAnnonce) {
+      setLinkedRelationContactOptions([])
+      setLinkedRelationContactsLoading(false)
+      setLinkedRelationContactsError(null)
+      return
+    }
+    let cancelled = false
+    setLinkedRelationContactsLoading(true)
+    setLinkedRelationContactsError(null)
+    void loadAnnonceContactInvitees({
+      appDossierId: selectedAnnonce.app_dossier_id,
+      hektorAnnonceId: selectedAnnonce.hektor_annonce_id,
+      limit: 24,
+    })
+      .then((rows) => {
+        if (!cancelled) setLinkedRelationContactOptions(rows)
+      })
+      .catch((relationError) => {
+        if (cancelled) return
+        setLinkedRelationContactOptions([])
+        setLinkedRelationContactsError(relationError instanceof Error ? relationError.message : 'Contacts lies impossibles a charger.')
+      })
+      .finally(() => {
+        if (!cancelled) setLinkedRelationContactsLoading(false)
+      })
+    return () => {
+      cancelled = true
     }
   }, [selectedAnnonce])
 
@@ -18523,6 +18576,27 @@ function GoogleAgendaGlobalEventModal(props: {
                   </div>
                 ) : (
                   <>
+                    {selectedAnnonce ? (
+                      <div className="google-agenda-linked-contact-panel">
+                        <span className="detail-label">Contacts du bien selectionne</span>
+                        {linkedRelationContactsLoading ? <p className="empty-state">Chargement contacts lies...</p> : null}
+                        {linkedRelationContactsError ? <p className="google-agenda-error">{linkedRelationContactsError}</p> : null}
+                        {linkedAgendaContacts.length > 0 ? (
+                          <div className="google-agenda-contact-list">
+                            {linkedAgendaContacts.map((option) => {
+                              const linkedOption = linkedRelationContactOptions.find((item) => String(item.hektor_contact_id) === String(option.hektorContactId))
+                              return (
+                                <button key={`global-linked-contact-${option.key}`} className="google-agenda-contact-button" type="button" onClick={() => linkedOption && handleSelectContact(linkedOption)} disabled={!option.link || !linkedOption}>
+                                  <strong>{option.label}</strong>
+                                  <span>{option.meta}</span>
+                                  {option.hektorContactId ? <small>Contact {option.hektorContactId}</small> : <small>{option.email ? 'Email direct' : 'Email absent'}</small>}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : !linkedRelationContactsLoading ? <p className="empty-state">Aucun contact lie au bien. Utilise la recherche ou cree un contact.</p> : null}
+                      </div>
+                    ) : null}
                     <div className="google-agenda-contact-search">
                       <input value={contactSearch} onChange={(inputEvent) => setContactSearch(inputEvent.target.value)} placeholder="Nom, email, telephone..." />
                       {props.canManageContacts ? (

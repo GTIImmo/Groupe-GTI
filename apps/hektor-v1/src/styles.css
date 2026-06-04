@@ -13829,6 +13829,15 @@ button.metric-card.is-active {
   gap: 8px;
   min-width: 0;
 }
+.google-agenda-linked-contact-panel {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(37, 132, 82, 0.16);
+  border-radius: 8px;
+  background: rgba(37, 132, 82, 0.06);
+}
 .google-agenda-global-summary {
   margin-top: 14px;
 }
