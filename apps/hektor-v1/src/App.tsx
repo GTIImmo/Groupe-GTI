@@ -19167,7 +19167,10 @@ function GoogleAgendaAnnonceSection(props: {
   }, [appDossierId, hektorAnnonceId, modalOpen])
 
   const canUseCalendarEmail = calendarEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
+  const isVisit = eventType === 'visite'
   const activeEvents = events.filter((item) => item.status !== 'deleted')
+  const attendeeEmails = splitEmailList(attendeesText)
+  const canSubmitGoogleAgendaEvent = Boolean(summary.trim()) && (!isVisit || attendeeEmails.length > 0)
   const linkedAgendaContacts = useMemo(() => {
     const contactsByKey = new Map<string, GoogleAgendaLinkedInviteeOption>()
     const addContact = (item: Omit<GoogleAgendaLinkedInviteeOption, 'key'>) => {
@@ -19409,8 +19412,10 @@ function GoogleAgendaAnnonceSection(props: {
       const minutes = Number(durationMinutes)
       const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
       if (!endAt) throw new Error('Horaire RDV invalide')
-      const attendees = splitEmailList(attendeesText)
+      const attendees = attendeeEmails
       const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
+      if (isVisit && attendees.length === 0) throw new Error('Ajoute au moins un contact invite pour preparer le bon de visite.')
+      const bonVisiteReady = isVisit && attendees.length > 0
       if (editingEventId) {
         await updateGoogleCalendarEvent(editingEventId, {
           summary,
@@ -19427,6 +19432,7 @@ function GoogleAgendaAnnonceSection(props: {
             numero_dossier: dossier.numero_dossier,
             numero_mandat: dossier.numero_mandat,
             ...googleAgendaAnnoncePhotoMetadata(dossier),
+            bon_visite_ready: bonVisiteReady,
             attendee_contacts: attendeeContacts,
             attendee_contact_count: attendeeContacts.length,
           },
@@ -19457,6 +19463,7 @@ function GoogleAgendaAnnonceSection(props: {
             numero_dossier: dossier.numero_dossier,
             numero_mandat: dossier.numero_mandat,
             ...googleAgendaAnnoncePhotoMetadata(dossier),
+            bon_visite_ready: bonVisiteReady,
             attendee_contacts: attendeeContacts,
             attendee_contact_count: attendeeContacts.length,
           },
@@ -19595,12 +19602,15 @@ function GoogleAgendaAnnonceSection(props: {
                     <span>Invites</span>
                     <input value={attendeesText} onChange={(inputEvent) => handleAttendeesTextChange(inputEvent.target.value)} placeholder="client@email.fr" />
                   </label>
+                  {isVisit && attendeeEmails.length === 0 ? (
+                    <p className="google-agenda-warning">Pour une visite, ajoute au moins un contact invite afin de preparer le bon de visite.</p>
+                  ) : null}
                   <div className="google-agenda-field-wide google-agenda-invitees">
                     <div className="google-agenda-invitee-selected">
                       <span className="detail-label">Invites selectionnes</span>
-                      {splitEmailList(attendeesText).length > 0 ? (
+                      {attendeeEmails.length > 0 ? (
                         <div className="google-agenda-invitee-chip-row">
-                          {splitEmailList(attendeesText).map((email) => {
+                          {attendeeEmails.map((email) => {
                             const contactLink = attendeeContactLinks.find((item) => item.email === email)
                             return (
                               <button key={`invitee-${email}`} className={`google-agenda-invitee-chip${contactLink?.hektorContactId ? ' is-linked' : ''}`} type="button" onClick={() => handleRemoveAgendaInvitee(email)}>
@@ -19687,7 +19697,7 @@ function GoogleAgendaAnnonceSection(props: {
                     <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckGoogleAgendaAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
                       {availabilityPending ? 'Verification...' : 'Verifier dispo'}
                     </button>
-                    <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !summary.trim()}>
+                    <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !canSubmitGoogleAgendaEvent}>
                       {pending ? (isEditingGoogleAgendaEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleAgendaEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
                     </button>
                   </div>
@@ -22584,7 +22594,7 @@ function canPrintVisitVoucher(event: GoogleCalendarEventLink) {
   const type = safeText(event.event_type).toLowerCase()
   if (type === 'visite') return true
   if (event.metadata_json?.bon_visite_ready === true) return true
-  return Boolean(event.app_dossier_id || event.hektor_annonce_id || event.metadata_json?.app_dossier_id || event.metadata_json?.hektor_annonce_id)
+  return false
 }
 
 function GoogleAgendaContactModal(props: {
@@ -22892,15 +22902,17 @@ function GoogleAgendaContactModal(props: {
           attendees,
           sendUpdates: 'all',
           metadata: {
+            source: 'fiche_contact',
             contact_id: props.contact.hektor_contact_id,
             contact_label: contactLabel,
             contact_email: contactEmail || null,
-            hektor_annonce_id: selectedAnnonce?.hektor_annonce_id ?? null,
-            app_dossier_id: selectedAnnonce?.app_dossier_id ?? null,
-            titre_bien: selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : null,
-            numero_dossier: selectedAnnonce?.numero_dossier ?? null,
-            numero_mandat: selectedAnnonce?.numero_mandat ?? null,
-            ...googleAgendaAnnoncePhotoMetadata(selectedAnnonce),
+            hektor_annonce_id: visitAnnonce?.hektor_annonce_id ?? null,
+            app_dossier_id: visitAnnonce?.app_dossier_id ?? null,
+            titre_bien: visitAnnonce ? ownerAnnonceOptionTitle(visitAnnonce) : null,
+            numero_dossier: visitAnnonce?.numero_dossier ?? null,
+            numero_mandat: visitAnnonce?.numero_mandat ?? null,
+            ...googleAgendaAnnoncePhotoMetadata(visitAnnonce),
+            bon_visite_ready: isVisit && Boolean(visitAnnonce),
             attendee_contacts: attendeeContacts,
             attendee_contact_count: attendeeContacts.length,
           },
