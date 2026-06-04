@@ -18056,11 +18056,11 @@ function GoogleAgendaGlobalScreen(props: {
       </section>
 
       <div className="google-agenda-modal-meta google-agenda-global-meta">
-        <span><strong>Agenda</strong>{calendarEmail || '-'}</span>
-        <span><strong>Periode</strong>{googleAgendaRangeLabel(agendaDate, agendaMode)}</span>
-        <span><strong>RDV GTI</strong>{visibleEventCount}</span>
-        <span><strong>Google occupe</strong>{busyCount} creneau{busyCount > 1 ? 'x' : ''}</span>
-        <span><strong>Libre</strong>{availability ? `${Math.round(freeMinutes / 60)} h` : '-'}</span>
+        <span className="google-agenda-kpi is-calendar"><strong>Agenda</strong>{calendarEmail || '-'}</span>
+        <span className="google-agenda-kpi is-period"><strong>Periode</strong>{googleAgendaRangeLabel(agendaDate, agendaMode)}</span>
+        <span className="google-agenda-kpi is-gti"><strong>RDV GTI</strong>{visibleEventCount}</span>
+        <span className="google-agenda-kpi is-busy"><strong>Google occupe</strong>{busyCount} creneau{busyCount > 1 ? 'x' : ''}</span>
+        <span className="google-agenda-kpi is-free"><strong>Libre</strong>{availability ? `${Math.round(freeMinutes / 60)} h` : '-'}</span>
       </div>
 
       <section className="google-agenda-panel google-agenda-global-board">
@@ -18081,7 +18081,7 @@ function GoogleAgendaGlobalScreen(props: {
               {suggestedWindows.length > 0 ? (
                 <div className="google-agenda-global-suggestion-list">
                   {suggestedWindows.map((slot, index) => (
-                    <button key={`global-suggestion-${slot.start}-${slot.end}`} className="google-agenda-suggestion" type="button" onClick={() => setCreateSlot(slot)}>
+                    <button key={`global-suggestion-${slot.start}-${slot.end}`} className={`google-agenda-suggestion${index === 0 ? ' is-best' : ''}`} type="button" onClick={() => setCreateSlot(slot)}>
                       <strong>{index === 0 ? 'Meilleur creneau' : `Option ${index + 1}`}</strong>
                       <span>{formatDateTime(slot.start)} - {formatTimeOnly(slot.end)}</span>
                     </button>
@@ -18093,17 +18093,17 @@ function GoogleAgendaGlobalScreen(props: {
             {agendaDayPlans.map((plan) => {
               const dayFreeMinutes = plan.free.reduce((sum, slot) => sum + minutesBetweenWindow(slot), 0)
               return (
-              <article key={`global-agenda-${plan.day}`} className="google-agenda-period-day google-agenda-global-day">
+              <article key={`global-agenda-${plan.day}`} className={`google-agenda-period-day google-agenda-global-day${plan.events.length ? ' has-gti-events' : ''}${plan.busy.length ? ' has-busy-slots' : ''}${plan.free.length ? ' has-free-slots' : ''}`}>
                 <div className="google-agenda-period-day-head">
                   <strong>{plan.label}</strong>
                   <span>{Math.round(dayFreeMinutes / 60)} h libres</span>
                 </div>
                 <div className="google-agenda-global-day-stats">
-                  <span className={plan.events.length ? 'is-gti-active' : ''}>{plan.events.length} RDV GTI</span>
-                  <span className={plan.busy.length ? 'is-busy-active' : ''}>{plan.busy.length} occupe</span>
-                  <span className={plan.free.length ? 'is-free-active' : ''}>{plan.free.length} libre</span>
+                  <span className={`google-agenda-day-stat is-gti${plan.events.length ? ' is-gti-active' : ''}`}>{plan.events.length} RDV GTI</span>
+                  <span className={`google-agenda-day-stat is-busy${plan.busy.length ? ' is-busy-active' : ''}`}>{plan.busy.length} occupe</span>
+                  <span className={`google-agenda-day-stat is-free${plan.free.length ? ' is-free-active' : ''}`}>{plan.free.length} libre</span>
                 </div>
-                <div className="google-agenda-period-section">
+                <div className="google-agenda-period-section google-agenda-period-section-gti">
                   <span className="detail-label">RDV GTI</span>
                   {plan.events.length > 0 ? (
                     <div className="google-agenda-period-items">
@@ -18146,7 +18146,7 @@ function GoogleAgendaGlobalScreen(props: {
                     </div>
                   ) : <p className="empty-state">Aucun RDV GTI lie.</p>}
                 </div>
-                <div className="google-agenda-period-section">
+                <div className="google-agenda-period-section google-agenda-period-section-busy">
                   <span className="detail-label">Google occupe</span>
                   <div className="google-agenda-day-slots">
                     {plan.busy.length > 0 ? plan.busy.map((slot) => (
@@ -18157,7 +18157,7 @@ function GoogleAgendaGlobalScreen(props: {
                     )) : <p className="empty-state">Aucun creneau occupe.</p>}
                   </div>
                 </div>
-                <div className="google-agenda-period-section">
+                <div className="google-agenda-period-section google-agenda-period-section-free">
                   <span className="detail-label">Libres</span>
                   <div className="google-agenda-day-slots">
                     {plan.free.length > 0 ? plan.free.map((slot) => (
