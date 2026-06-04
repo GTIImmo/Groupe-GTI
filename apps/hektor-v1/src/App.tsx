@@ -86,6 +86,7 @@ import {
   loadConsoleJobsByIds,
   loadContactRelations,
   loadContactSearches,
+  loadContactById,
   loadContactsPage,
   loadContactStats,
   findContactDuplicateCandidates,
@@ -7908,6 +7909,24 @@ function activeFilterEntries(filters: AppFilters) {
   ].filter(Boolean) as Array<[string, string]>
 }
 
+function singleContactStats(contact: AppContact | null): ContactStats {
+  if (!contact) return { total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 }
+  const archived = contact.archive === true || contact.archive === 1 || contact.archive === '1'
+  const duplicateCount = Number(contact.duplicate_group_count ?? 0)
+  const severity = String(contact.duplicate_max_severity ?? '').toLowerCase()
+  return {
+    total: 1,
+    active: archived ? 0 : 1,
+    archived: archived ? 1 : 0,
+    duplicates: duplicateCount > 0 ? 1 : 0,
+    highRiskDuplicates: severity === 'high' || severity === 'critical' ? 1 : 0,
+    linked: Number(contact.linked_annonce_count ?? 0) > 0 ? 1 : 0,
+    searchContacts: Number(contact.total_search_count ?? 0) > 0 ? 1 : 0,
+    activeSearchContacts: Number(contact.active_search_count ?? 0) > 0 ? 1 : 0,
+    eligible: contact.supabase_sync_eligible === true || contact.supabase_sync_eligible === 1 || contact.supabase_sync_eligible === '1' ? 1 : 0,
+  }
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('accueil')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
@@ -7942,6 +7961,7 @@ export default function App() {
   const [contactsLoading, setContactsLoading] = useState(false)
   const [contactCreateOpen, setContactCreateOpen] = useState(false)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
+  const [contactDirectLookupId, setContactDirectLookupId] = useState<string | null>(null)
   const [selectedContactRelations, setSelectedContactRelations] = useState<AppContactRelation[]>([])
   const [selectedContactSearches, setSelectedContactSearches] = useState<AppContactSearch[]>([])
   const [contactStats, setContactStats] = useState<ContactStats>({ total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 })
@@ -8753,12 +8773,24 @@ export default function App() {
     if (screen !== 'contacts') return
     let cancelled = false
     setContactsLoading(true)
-    loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: dataScope })
+    const directContactId = String(contactDirectLookupId ?? '').trim()
+    const useDirectContactLookup = Boolean(directContactId && dataFilters.query.trim() === directContactId)
+    const contactsPromise = useDirectContactLookup
+      ? loadContactById(directContactId).then((contact) => ({
+          rows: contact ? [contact] : [],
+          total: contact ? 1 : 0,
+          page: 1,
+          pageSize: contactPageSize,
+        }))
+      : loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: dataScope })
+    contactsPromise
       .then((contactsPage) => {
         if (cancelled) return
         setContactsDirectory(contactsPage.rows)
         setContactsTotal(contactsPage.total)
+        if (useDirectContactLookup) setContactStats(singleContactStats(contactsPage.rows[0] ?? null))
         setSelectedContactId((current) => {
+          if (useDirectContactLookup) return contactsPage.rows[0]?.hektor_contact_id ?? directContactId
           if (current && contactsPage.rows.some((item) => item.hektor_contact_id === current)) return current
           return contactsPage.rows[0]?.hektor_contact_id ?? null
         })
@@ -8769,17 +8801,19 @@ export default function App() {
       .finally(() => {
         if (!cancelled) setContactsLoading(false)
       })
-    loadContactStats(dataFilters)
-      .then((stats) => {
-        if (!cancelled) setContactStats(stats)
-      })
-      .catch((error) => {
-        console.warn('Contact stats unavailable', error)
-      })
+    if (!useDirectContactLookup) {
+      loadContactStats(dataFilters)
+        .then((stats) => {
+          if (!cancelled) setContactStats(stats)
+        })
+        .catch((error) => {
+          console.warn('Contact stats unavailable', error)
+        })
+    }
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen, contactPage, dataReloadKey])
+  }, [session, dataFilters, dataScope, screen, contactPage, contactDirectLookupId, dataReloadKey])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -8862,6 +8896,7 @@ export default function App() {
         setDossiersTotal(nextDossiersPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, [], [])))
         setSelectedDossierId((current) => {
+          if (current && detailOpen) return current
           if (current && nextDossiersPage.rows.some((item) => item.app_dossier_id === current)) return current
           return nextDossiersPage.rows[0]?.app_dossier_id ?? null
         })
@@ -9056,6 +9091,7 @@ export default function App() {
   function updateFilter<K extends keyof AppFilters>(key: K, value: AppFilters[K]) {
     if (screen === 'mandats') setActiveMandatKpiAction(null)
     if (key !== 'query') setAnnonceSearchScope('current')
+    if (screen === 'contacts') setContactDirectLookupId(null)
     setFilters((current) => {
       const next = { ...current, [key]: value }
       const lightweightContext = screen === 'mandats' && usesLightweightAnnonceIndex(next)
@@ -9083,6 +9119,7 @@ export default function App() {
 
   function resetFilters() {
     setAnnonceSearchScope('current')
+    setContactDirectLookupId(null)
     setFilters(defaultFiltersForScreen(screen))
     setMandatDrilldownLabel(null)
     setActiveMandatKpiAction(null)
@@ -9103,6 +9140,7 @@ export default function App() {
     setScreen('contacts')
     setDetailOpen(false)
     setSelectedContactId(normalizedId)
+    setContactDirectLookupId(normalizedId)
     setContactPage(1)
     setSearchDraft(normalizedId)
     setFilters({
@@ -9223,6 +9261,7 @@ export default function App() {
 
   function openScreen(nextScreen: Screen) {
     setAnnonceSearchScope('current')
+    setContactDirectLookupId(null)
     setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
     setMobileMenuOpen(false)
     setMandatDrilldownLabel(null)
@@ -14315,6 +14354,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedContact={selectedContact}
             selectedRelations={selectedContactRelations}
             selectedSearches={selectedContactSearches}
+            openContactId={contactDirectLookupId}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
             createOpen={contactCreateOpen}
@@ -17888,6 +17928,36 @@ function googleAgendaCalendarOptionLabel(option: HektorNegotiatorOption) {
   return option.label || option.email || option.commercialId || 'Negociateur'
 }
 
+function resolveGoogleWorkspaceCalendarEmail(input: {
+  emails?: Array<string | null | undefined>
+  commercialId?: string | number | null
+  label?: string | null
+  hektorNegotiators?: HektorNegotiatorOption[]
+}) {
+  const workspaceEmail = (input.emails ?? [])
+    .map((email) => normalizeEmail(email))
+    .find((email) => isGoogleWorkspaceEmail(email))
+  if (workspaceEmail) return workspaceEmail
+
+  const commercialId = safeText(input.commercialId)
+  const label = safeText(input.label).toLowerCase()
+  const match = (input.hektorNegotiators ?? []).find((option) => {
+    const optionEmail = normalizeEmail(option.email)
+    if (!isGoogleWorkspaceEmail(optionEmail)) return false
+    if (commercialId && [option.idUser, option.commercialId, option.hektorNegociateurId].map(safeText).includes(commercialId)) return true
+    return Boolean(label && safeText(option.label).toLowerCase() === label)
+  })
+  const matchedEmail = normalizeEmail(match?.email)
+  if (matchedEmail) return matchedEmail
+
+  const fallbackEmail = normalizeEmail((input.emails ?? []).find(Boolean))
+  const fallbackLocalPart = fallbackEmail.split('@')[0] ?? ''
+  if (fallbackLocalPart && /[._-]/.test(fallbackLocalPart)) {
+    return `${fallbackLocalPart.replace(/[-_]+/g, '.')}@${googleWorkspaceDomain}`
+  }
+  return fallbackEmail
+}
+
 function googleAgendaDisplayNameFromEmail(email: string | null | undefined) {
   const normalized = normalizeEmail(email)
   if (!normalized) return ''
@@ -19031,7 +19101,12 @@ function GoogleAgendaAnnonceSection(props: {
   const dossier = props.dossier
   const appDossierId = dossier?.app_dossier_id ?? null
   const hektorAnnonceId = dossier?.hektor_annonce_id ?? null
-  const defaultCalendarEmail = safeText(props.detail.appointment_negociateur_email) || safeText(dossier?.negociateur_email)
+  const defaultCalendarEmail = resolveGoogleWorkspaceCalendarEmail({
+    emails: [props.detail.appointment_negociateur_email, dossier?.negociateur_email],
+    commercialId: props.detail.appointment_negociateur_id ?? dossier?.commercial_id,
+    label: dossier?.commercial_nom,
+    hektorNegotiators: props.hektorNegotiators,
+  })
   const defaultLocation = [
     safeText(props.detail.adresse_privee_listing) || safeText(props.detail.adresse_detail),
     safeText(props.detail.code_postal_public_listing) || safeText(props.detail.code_postal_detail) || safeText(dossier?.code_postal),
@@ -19822,10 +19897,11 @@ function GoogleAgendaAnnonceSection(props: {
                   </>
                 ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
               </section>
+              {activeEvents.length > 0 || loading ? (
               <section className="google-agenda-panel google-agenda-links-panel">
                 <div className="google-agenda-panel-head">
                   <span>Annonce GTI</span>
-                  <strong>RDV lies</strong>
+                  <strong>Rendez-vous deja lies</strong>
                 </div>
                 {activeEvents.length > 0 ? (
                   <div className="google-agenda-event-list">
@@ -19873,8 +19949,9 @@ function GoogleAgendaAnnonceSection(props: {
                       )
                     })}
                   </div>
-                ) : <p className="empty-state">{loading ? 'Chargement des RDV Google...' : 'Aucun RDV Google lie a cette annonce.'}</p>}
+                ) : <p className="empty-state">Chargement des RDV Google...</p>}
               </section>
+              ) : null}
             </div>
             {contactCreateOpen && props.canManageContacts ? (
               <ContactWorkflowModal
@@ -22684,7 +22761,11 @@ function GoogleAgendaContactModal(props: {
   const contactEmail = appContactAgendaEmail(props.contact)
   const contactLabel = appContactAgendaLabel(props.contact)
   const contactInvitee = appContactAgendaLink(props.contact)
-  const defaultCalendarEmail = normalizeEmail(editingEvent?.google_calendar_email) || normalizeEmail(props.contact.negociateur_email) || normalizeEmail(props.sessionEmail)
+  const defaultCalendarEmail = normalizeEmail(editingEvent?.google_calendar_email) || resolveGoogleWorkspaceCalendarEmail({
+    emails: [props.contact.negociateur_email, props.sessionEmail],
+    label: props.contact.commercial_nom,
+    hektorNegotiators: props.hektorNegotiators,
+  })
   const linkedAnnonceOptions = useMemo(() => {
     const byId = new Map<number, OwnerAnnonceSearchOption>()
     props.relations.forEach((relation) => {
@@ -23585,6 +23666,7 @@ function ContactDetailPopup(props: {
                   const eventInvitees = Array.isArray(event.attendees_json) ? event.attendees_json : []
                   const inviteeContacts = googleAgendaEventInviteeContacts(event)
                   const contactInvitee = inviteeContacts.find((item) => item.hektorContactId === props.contact.hektor_contact_id)
+                  const eventAppDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
                   return (
                     <article key={`contact-google-event-${event.id}`} className="contact-google-agenda-item">
                       <div className="contact-google-agenda-item-head">
@@ -23599,10 +23681,10 @@ function ContactDetailPopup(props: {
                         {eventInvitees.length > 0 ? <span>{eventInvitees.length} invite(s)</span> : null}
                       </div>
                       <div className="contact-google-agenda-actions">
-                        {event.app_dossier_id ? (
+                        {Number.isFinite(eventAppDossierId) ? (
                           <button className="ghost-button button-subtle" type="button" onClick={() => {
                             props.onClose()
-                            props.onOpenDossier(event.app_dossier_id as number)
+                            props.onOpenDossier(eventAppDossierId)
                           }}>
                             Ouvrir dossier
                           </button>
@@ -23685,12 +23767,13 @@ function ContactDetailPopup(props: {
               <div className="contact-relation-list">
                 {props.relations.map((relation) => {
                   const relationLabel = contactDirectoryRoleLabel(relation.role_contact)
+                  const relationAppDossierId = Number(relation.app_dossier_id)
                   return (
                     <button key={`${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => {
-                      if (!relation.app_dossier_id) return
+                      if (!Number.isFinite(relationAppDossierId)) return
                       props.onClose()
-                      props.onOpenDossier(relation.app_dossier_id)
-                    }} disabled={!relation.app_dossier_id}>
+                      props.onOpenDossier(relationAppDossierId)
+                    }} disabled={!Number.isFinite(relationAppDossierId)}>
                       <span className="contact-relation-button-head">
                         <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
                         <span className={contactRoleChipClass(relation.role_contact)}>{relationLabel}</span>
@@ -23777,6 +23860,7 @@ function ContactsScreen(props: {
   selectedContact: AppContact | null
   selectedRelations: AppContactRelation[]
   selectedSearches: AppContactSearch[]
+  openContactId?: string | null
   loading: boolean
   hasActiveFilters: boolean
   createOpen: boolean
@@ -23800,6 +23884,11 @@ function ContactsScreen(props: {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
   const [detailOpen, setDetailOpen] = useState(false)
+  useEffect(() => {
+    if (props.openContactId && props.selectedContact?.hektor_contact_id === props.openContactId) {
+      setDetailOpen(true)
+    }
+  }, [props.openContactId, props.selectedContact?.hektor_contact_id])
   const openContactDetail = (contactId: string) => {
     props.onSelectContact(contactId)
     setDetailOpen(true)

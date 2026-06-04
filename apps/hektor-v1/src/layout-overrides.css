@@ -4022,7 +4022,7 @@
   border: 0;
   background: transparent;
   box-shadow: none;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .app-shell-modern .google-agenda-timeline-event:hover .google-agenda-timeline-event-actions,
@@ -4032,6 +4032,8 @@
 
 .app-shell-modern .google-agenda-timeline-event-actions .ghost-button,
 .app-shell-modern .google-agenda-timeline-event-actions a.ghost-button {
+  position: relative;
+  z-index: 35;
   min-height: 18px;
   justify-content: center;
   border-color: rgba(255, 255, 255, 0.86);

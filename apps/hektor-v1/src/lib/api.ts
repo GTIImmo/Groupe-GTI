@@ -1788,6 +1788,19 @@ export async function loadContactsPage({
   }
 }
 
+export async function loadContactById(contactId: string): Promise<AppContact | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const cleanId = contactId.trim()
+  if (!cleanId) return null
+  const { data, error } = await supabase
+    .from(contactsCurrentView)
+    .select(contactsListingSelect)
+    .eq('hektor_contact_id', cleanId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return data ? normalizeContactRow(data as unknown as AppContact) : null
+}
+
 async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
   if (!hasSupabaseEnv || !supabase) return 0
   let query = applyContactFiltersToQuery(
