@@ -3108,6 +3108,7 @@
   align-items: end;
   gap: 16px;
   padding: 16px 18px;
+  overflow: clip;
   border-color: rgba(15, 104, 116, 0.12);
   background:
     linear-gradient(90deg, rgba(15, 104, 116, 0.06), transparent 38%),
