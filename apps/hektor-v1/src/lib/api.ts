@@ -4726,6 +4726,8 @@ export type OwnerAnnonceSearchOption = Pick<
   | 'agence_nom'
   | 'statut_annonce'
   | 'archive'
+  | 'photo_url_listing'
+  | 'images_preview_json'
 > & {
   adresse_privee_listing?: string | null
   adresse_detail?: string | null
@@ -4766,7 +4768,7 @@ export async function searchOwnerAnnonceOptions(input: {
 }): Promise<OwnerAnnonceSearchOption[]> {
   const search = normalizeSearchTerm(input.search ?? '').replace(/\s+/g, ' ').trim()
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 30)
-  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,adresse_privee_listing,adresse_detail,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive'
+  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,adresse_privee_listing,adresse_detail,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive,photo_url_listing,images_preview_json'
 
   if (!hasSupabaseEnv || !supabase) {
     return filterByNegotiatorEmail(mockDossiers, input.scope)

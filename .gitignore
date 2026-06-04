@@ -25,6 +25,11 @@ apps/hektor-v1/*.log
 data/*.sqlite
 phase2/*.sqlite
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+run_contact_details_backfill.ps1
+run_full_pipeline.ps1
 
 Ecrans Android/
 exports_hektor_phase1/

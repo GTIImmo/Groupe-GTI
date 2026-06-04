@@ -13370,8 +13370,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
             hektorNegotiators={hektorNegotiators}
             profileRole={profile?.role ?? null}
+            canManageContacts={canManageContacts}
+            hektorUserEmail={contactHektorUserEmail}
+            hektorUserId={contactHektorUserId}
+            sessionEmail={sessionEmail}
             onOpenDossier={openDossierDetailPage}
             onOpenContact={openContactDirectory}
+            onHektorActionJobCreated={rememberHektorActionJob}
           />
         ) : screen === 'annonces' ? (
           <MobileDossierCards
@@ -14191,8 +14196,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
             hektorNegotiators={hektorNegotiators}
             profileRole={profile?.role ?? null}
+            canManageContacts={canManageContacts}
+            hektorUserEmail={contactHektorUserEmail}
+            hektorUserId={contactHektorUserId}
+            sessionEmail={sessionEmail}
             onOpenDossier={openDossierDetailPage}
             onOpenContact={openContactDirectory}
+            onHektorActionJobCreated={rememberHektorActionJob}
           />
         ) : screen === 'annonces' && detailOpen ? (
           <AnnonceScreen selectedDossier={selectedDossier} detail={detail} address={address} images={images} texts={texts} notes={notes} contacts={contacts} mandats={mandatDetails} linkedWorkItems={linkedWorkItems} requestHistory={buildRequestHistory(selectedDossierRequest, selectedDossierRequestEvents)} requestMessages={selectedDossierRequestEvents
@@ -17884,8 +17894,13 @@ function GoogleAgendaGlobalScreen(props: {
   userLabel?: string | null
   hektorNegotiators?: HektorNegotiatorOption[]
   profileRole?: UserProfile['role'] | null
+  canManageContacts?: boolean
+  hektorUserEmail?: string | null
+  hektorUserId?: string | null
+  sessionEmail?: string | null
   onOpenDossier?: (appDossierId: number) => void
   onOpenContact?: (contactId: string) => void
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
 }) {
   const canSelectTeam = props.profileRole === 'admin' || props.profileRole === 'manager'
   const defaultEmail = normalizeEmail(props.defaultCalendarEmail)
@@ -18079,6 +18094,12 @@ function GoogleAgendaGlobalScreen(props: {
           calendarEmail={calendarEmail}
           slot={createSlot}
           hektorNegotiators={props.hektorNegotiators}
+          canManageContacts={props.canManageContacts}
+          hektorUserEmail={props.hektorUserEmail}
+          hektorUserId={props.hektorUserId}
+          profileRole={props.profileRole}
+          sessionEmail={props.sessionEmail}
+          onHektorActionJobCreated={props.onHektorActionJobCreated}
           onClose={() => setCreateSlot(null)}
           onCreated={() => {
             setCreateSlot(null)
@@ -18094,8 +18115,14 @@ function GoogleAgendaGlobalEventModal(props: {
   calendarEmail: string
   slot: GoogleAgendaWindow
   hektorNegotiators?: HektorNegotiatorOption[]
+  canManageContacts?: boolean
+  hektorUserEmail?: string | null
+  hektorUserId?: string | null
+  profileRole?: UserProfile['role'] | null
+  sessionEmail?: string | null
   onClose: () => void
   onCreated?: (event: GoogleCalendarEventLink | null) => void
+  onHektorActionJobCreated?: (job: ConsoleJob) => void
 }) {
   const defaultStartAt = toExistingDateTimeLocalValue(props.slot.start, defaultGoogleAgendaStartValue())
   const slotMinutes = minutesBetweenWindow(props.slot)
@@ -18112,6 +18139,8 @@ function GoogleAgendaGlobalEventModal(props: {
   const [contactOptions, setContactOptions] = useState<MandantContactSearchOption[]>([])
   const [contactSearchLoading, setContactSearchLoading] = useState(false)
   const [contactSearchError, setContactSearchError] = useState<string | null>(null)
+  const [contactCreateOpen, setContactCreateOpen] = useState(false)
+  const [createdContactLink, setCreatedContactLink] = useState<GoogleAgendaInviteeContactLink | null>(null)
   const [summary, setSummary] = useState('')
   const [startAt, setStartAt] = useState(defaultStartAt)
   const [durationMinutes, setDurationMinutes] = useState(defaultDuration)
@@ -18131,10 +18160,17 @@ function GoogleAgendaGlobalEventModal(props: {
   const availabilityBusy = availability?.busy ?? []
   const selectedContactEmail = selectedContact ? contactOptionAgendaEmail(selectedContact) : ''
   const selectedContactLabel = selectedContact ? mandantContactOptionTitle(selectedContact) : ''
+  const activeContactEmail = selectedContactEmail || createdContactLink?.email || ''
+  const activeContactLabel = selectedContactLabel || createdContactLink?.label || ''
   const selectedAnnonceTitle = selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : ''
+  const activeContactLink = selectedContact
+    ? contactOptionAgendaLink(selectedContact, selectedContactEmail)
+    : createdContactLink
+  const defaultContactHektorUserEmail = normalizeEmail(agendaOwner?.email) || normalizeEmail(props.calendarEmail) || normalizeEmail(props.hektorUserEmail)
+  const defaultContactHektorUserId = agendaOwner?.idUser || props.hektorUserId || null
   const canSubmit = canUseCalendarEmail
     && Boolean(summary.trim())
-    && (!isVisit || (Boolean(selectedAnnonce) && Boolean(selectedContact)))
+    && (!isVisit || (Boolean(selectedAnnonce) && Boolean(activeContactEmail)))
 
   const annonceScope = useMemo<DataScope | null>(() => {
     const negotiatorEmail = normalizeEmail(agendaOwner?.email) || normalizeEmail(props.calendarEmail)
@@ -18155,24 +18191,24 @@ function GoogleAgendaGlobalEventModal(props: {
     const parts = [
       `${label} GTI`,
       selectedAnnonceTitle,
-      selectedContactLabel,
+      activeContactLabel,
     ].filter(Boolean)
     setSummary(parts.join(' - '))
-  }, [eventType, selectedAnnonceTitle, selectedContactLabel])
+  }, [activeContactLabel, eventType, selectedAnnonceTitle])
 
   useEffect(() => {
     setDescription([
       'RDV cree depuis Agenda global GTI.',
-      selectedContact ? `Contact : ${selectedContactLabel}` : '',
+      activeContactLabel ? `Contact : ${activeContactLabel}` : '',
       selectedContact?.hektor_contact_id ? `Contact Hektor : ${selectedContact.hektor_contact_id}` : '',
-      selectedContactEmail ? `Email contact : ${selectedContactEmail}` : '',
+      activeContactEmail ? `Email contact : ${activeContactEmail}` : '',
       selectedAnnonce ? `Bien : ${selectedAnnonceTitle}` : '',
       selectedAnnonce?.hektor_annonce_id ? `Annonce Hektor : ${selectedAnnonce.hektor_annonce_id}` : '',
       selectedAnnonce?.numero_dossier ? `Dossier : ${selectedAnnonce.numero_dossier}` : '',
       selectedAnnonce?.numero_mandat ? `Mandat : ${selectedAnnonce.numero_mandat}` : '',
       isVisit ? 'Preparation bon de visite : contact et bien lies au RDV.' : '',
     ].filter(Boolean).join('\n'))
-  }, [isVisit, selectedAnnonce, selectedAnnonceTitle, selectedContact, selectedContactEmail, selectedContactLabel])
+  }, [activeContactEmail, activeContactLabel, isVisit, selectedAnnonce, selectedAnnonceTitle, selectedContact])
 
   useEffect(() => {
     setAvailability(null)
@@ -18257,6 +18293,7 @@ function GoogleAgendaGlobalEventModal(props: {
 
   function handleSelectContact(option: MandantContactSearchOption) {
     setSelectedContact(option)
+    setCreatedContactLink(null)
     setContactSearch(mandantContactOptionTitle(option))
     setContactOptions([])
     setContactSearchError(null)
@@ -18271,7 +18308,30 @@ function GoogleAgendaGlobalEventModal(props: {
 
   function handleAttendeesTextChange(value: string) {
     setAttendeesText(value)
-    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, selectedContact ? [contactOptionAgendaLink(selectedContact)].filter(Boolean) as GoogleAgendaInviteeContactLink[] : [], splitEmailList(value)))
+    setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, activeContactLink ? [activeContactLink] : [], splitEmailList(value)))
+  }
+
+  function handleGlobalAgendaContactJobCreated(contact: HektorContactIdentityInput) {
+    const createdEmail = hektorContactInputAgendaEmail(contact)
+    const createdLabel = contactInputAgendaLabel(contact)
+    if (createdEmail) {
+      const link: GoogleAgendaInviteeContactLink = {
+        email: createdEmail,
+        label: createdLabel,
+        source: 'contact_create_pending',
+      }
+      const nextAttendees = splitEmailList(joinEmailList([...splitEmailList(attendeesText), createdEmail]))
+      setSelectedContact(null)
+      setCreatedContactLink(link)
+      setContactSearch(createdLabel || createdEmail)
+      setContactOptions([])
+      setAttendeesText(joinEmailList(nextAttendees))
+      setAttendeeContactLinks((current) => mergeGoogleAgendaInviteeContactLinks(current, [link], nextAttendees))
+      setMessage('Contact envoye au worker et ajoute aux invites.')
+    } else {
+      setMessage('Contact envoye au worker. Ajoute un email pour pouvoir inviter le client au RDV.')
+    }
+    setContactCreateOpen(false)
   }
 
   async function handleCheckAvailability() {
@@ -18304,21 +18364,21 @@ function GoogleAgendaGlobalEventModal(props: {
     setError(null)
     try {
       if (isVisit && !selectedAnnonce) throw new Error('Selectionne le bien a visiter.')
-      if (isVisit && !selectedContact) throw new Error('Selectionne le contact acquereur.')
+      if (isVisit && !activeContactEmail) throw new Error('Selectionne le contact acquereur ou cree un contact avec email.')
       const minutes = Number(durationMinutes)
       const endAt = addMinutesToDateTimeLocal(startAt, Number.isFinite(minutes) ? minutes : 60)
       if (!endAt) throw new Error('Horaire RDV invalide')
       const attendees = splitEmailList(attendeesText)
       const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
-      const relatedEntityType: GoogleCalendarEventLink['related_entity_type'] = selectedAnnonce ? 'annonce' : selectedContact ? 'contact' : 'other'
+      const relatedEntityType: GoogleCalendarEventLink['related_entity_type'] = selectedAnnonce ? 'annonce' : activeContactEmail ? 'contact' : 'other'
       const created = await createGoogleCalendarEvent({
         subjectEmail: props.calendarEmail,
         eventType,
         relatedEntityType,
-        relatedEntityId: selectedAnnonce ? String(selectedAnnonce.app_dossier_id) : selectedContact?.hektor_contact_id ?? 'agenda_global',
+        relatedEntityId: selectedAnnonce ? String(selectedAnnonce.app_dossier_id) : ((selectedContact?.hektor_contact_id ?? activeContactEmail) || 'agenda_global'),
         appDossierId: selectedAnnonce?.app_dossier_id ?? null,
         hektorAnnonceId: selectedAnnonce?.hektor_annonce_id ?? null,
-        hektorContactId: selectedContact?.hektor_contact_id ?? null,
+        hektorContactId: selectedContact?.hektor_contact_id ?? activeContactLink?.hektorContactId ?? null,
         summary,
         startAt,
         endAt,
@@ -18328,15 +18388,16 @@ function GoogleAgendaGlobalEventModal(props: {
         sendUpdates: 'all',
         metadata: {
           source: 'agenda_global',
-          contact_id: selectedContact?.hektor_contact_id ?? null,
-          contact_label: selectedContactLabel || null,
-          contact_email: selectedContactEmail || null,
+          contact_id: selectedContact?.hektor_contact_id ?? activeContactLink?.hektorContactId ?? null,
+          contact_label: activeContactLabel || null,
+          contact_email: activeContactEmail || null,
           hektor_annonce_id: selectedAnnonce?.hektor_annonce_id ?? null,
           app_dossier_id: selectedAnnonce?.app_dossier_id ?? null,
           titre_bien: selectedAnnonceTitle || null,
           numero_dossier: selectedAnnonce?.numero_dossier ?? null,
           numero_mandat: selectedAnnonce?.numero_mandat ?? null,
-          bon_visite_ready: isVisit && Boolean(selectedAnnonce) && Boolean(selectedContact),
+          ...googleAgendaAnnoncePhotoMetadata(selectedAnnonce),
+          bon_visite_ready: isVisit && Boolean(selectedAnnonce) && Boolean(activeContactEmail),
           attendee_contacts: attendeeContacts,
           attendee_contact_count: attendeeContacts.length,
         },
@@ -18449,12 +18510,14 @@ function GoogleAgendaGlobalEventModal(props: {
             <div className="google-agenda-global-link-grid">
               <div>
                 <span className="detail-label">Contact</span>
-                {selectedContact ? (
+                {selectedContact || createdContactLink ? (
                   <div className="contact-owner-selected">
-                    <strong>{selectedContactLabel}</strong>
-                    <span>{selectedContactEmail || selectedContact.phone_primary || selectedContact.phone_secondary || 'Email absent'}</span>
+                    <strong>{activeContactLabel || activeContactEmail}</strong>
+                    <span>{activeContactEmail || selectedContact?.phone_primary || selectedContact?.phone_secondary || 'Email absent'}</span>
+                    {createdContactLink ? <small>Contact en creation Hektor</small> : null}
                     <button className="ghost-button button-subtle" type="button" onClick={() => {
                       setSelectedContact(null)
+                      setCreatedContactLink(null)
                       setContactSearch('')
                     }}>Changer</button>
                   </div>
@@ -18462,6 +18525,11 @@ function GoogleAgendaGlobalEventModal(props: {
                   <>
                     <div className="google-agenda-contact-search">
                       <input value={contactSearch} onChange={(inputEvent) => setContactSearch(inputEvent.target.value)} placeholder="Nom, email, telephone..." />
+                      {props.canManageContacts ? (
+                        <button className="ghost-button button-subtle" type="button" onClick={() => setContactCreateOpen(true)}>
+                          Nouveau contact
+                        </button>
+                      ) : null}
                     </div>
                     {contactSearchLoading ? <p className="empty-state">Recherche contacts...</p> : null}
                     {contactSearchError ? <p className="google-agenda-error">{contactSearchError}</p> : null}
@@ -18516,14 +18584,35 @@ function GoogleAgendaGlobalEventModal(props: {
               </div>
             </div>
             <div className="info-grid google-agenda-global-summary">
-              <InfoCard label="Contact" value={selectedContactLabel || '-'} />
+              <InfoCard label="Contact" value={activeContactLabel || '-'} />
               <InfoCard label="Bien" value={selectedAnnonceTitle || '-'} />
               <InfoCard label="Mandat" value={selectedAnnonce?.numero_mandat || '-'} />
               <InfoCard label="Dossier" value={selectedAnnonce?.numero_dossier || '-'} />
             </div>
-            {isVisit && (!selectedAnnonce || !selectedContact) ? <p className="google-agenda-warning">Pour une visite, le contact et le bien sont obligatoires.</p> : null}
+            {isVisit && (!selectedAnnonce || !activeContactEmail) ? <p className="google-agenda-warning">Pour une visite, le contact avec email et le bien sont obligatoires.</p> : null}
           </section>
         </div>
+        {contactCreateOpen && props.canManageContacts ? (
+          <ContactWorkflowModal
+            title="Nouveau contact"
+            eyebrow="Creation Hektor"
+            summary="Creation via le workflow contact existant, puis ajout aux invites si un email est renseigne."
+            tone="create"
+            onClose={() => setContactCreateOpen(false)}
+          >
+            <HektorContactIdentityForm
+              mode="create"
+              hektorUserEmail={defaultContactHektorUserEmail}
+              hektorUserId={defaultContactHektorUserId}
+              hektorNegotiators={props.hektorNegotiators}
+              profileRole={props.profileRole}
+              sessionEmail={props.sessionEmail}
+              onCancel={() => setContactCreateOpen(false)}
+              onJobCreated={props.onHektorActionJobCreated}
+              onContactInputCreated={handleGlobalAgendaContactJobCreated}
+            />
+          </ContactWorkflowModal>
+        ) : null}
       </section>
     </div>,
     document.body,
@@ -18862,6 +18951,8 @@ function GoogleAgendaAnnonceSection(props: {
       try {
         const rows = await loadGoogleCalendarEventLinks({
           calendarEmail,
+          startAt: range.startAt,
+          endAt: range.endAt,
           limit: 100,
         })
         setPeriodLinkedEvents(rows)
@@ -18957,6 +19048,13 @@ function GoogleAgendaAnnonceSection(props: {
           location,
           attendees,
           metadata: {
+            source: 'fiche_annonce',
+            hektor_annonce_id: dossier.hektor_annonce_id,
+            app_dossier_id: dossier.app_dossier_id,
+            titre_bien: dossier.titre_bien,
+            numero_dossier: dossier.numero_dossier,
+            numero_mandat: dossier.numero_mandat,
+            ...googleAgendaAnnoncePhotoMetadata(dossier),
             attendee_contacts: attendeeContacts,
             attendee_contact_count: attendeeContacts.length,
           },
@@ -18981,8 +19079,12 @@ function GoogleAgendaAnnonceSection(props: {
           sendUpdates: 'all',
           metadata: {
             source: 'fiche_annonce',
+            hektor_annonce_id: dossier.hektor_annonce_id,
+            app_dossier_id: dossier.app_dossier_id,
+            titre_bien: dossier.titre_bien,
             numero_dossier: dossier.numero_dossier,
             numero_mandat: dossier.numero_mandat,
+            ...googleAgendaAnnoncePhotoMetadata(dossier),
             attendee_contacts: attendeeContacts,
             attendee_contact_count: attendeeContacts.length,
           },
@@ -21856,6 +21958,13 @@ function visitVoucherPropertyId(event: GoogleCalendarEventLink, relation: AppCon
   return safeText(relation?.hektor_annonce_id) || safeText(event.hektor_annonce_id) || safeText(event.metadata_json?.hektor_annonce_id)
 }
 
+function googleAgendaAnnoncePhotoMetadata(item?: { photo_url_listing?: string | null; images_preview_json?: string | null } | null) {
+  const photoUrl = safeVisitVoucherPhotoUrl(item?.photo_url_listing) || visitVoucherPreviewJsonPhotoUrl(item?.images_preview_json)
+  return {
+    photo_url_listing: photoUrl,
+  }
+}
+
 function visitVoucherAppDossierId(event: GoogleCalendarEventLink, relation: AppContactRelation | null) {
   const candidates = [event.app_dossier_id, event.metadata_json?.app_dossier_id, relation?.app_dossier_id]
   for (const candidate of candidates) {
@@ -21880,6 +21989,26 @@ function safeVisitVoucherPhotoUrl(value: string | null | undefined) {
   return null
 }
 
+function visitVoucherPreviewJsonPhotoUrl(rawPreview: unknown) {
+  const previews = Array.isArray(rawPreview)
+    ? rawPreview
+    : typeof rawPreview === 'string'
+      ? parseJson<Array<Record<string, unknown>>>(rawPreview, [])
+      : []
+  for (const item of previews) {
+    const url = safeVisitVoucherPhotoUrl(safeText((item as Record<string, unknown>).url))
+      || safeVisitVoucherPhotoUrl(safeText((item as Record<string, unknown>).url_hd))
+      || safeVisitVoucherPhotoUrl(safeText((item as Record<string, unknown>).url_preview))
+    if (url) return url
+  }
+  return null
+}
+
+function visitVoucherMetadataPhotoUrl(metadata: Record<string, unknown> | null | undefined) {
+  return safeVisitVoucherPhotoUrl(safeText(metadata?.photo_url_listing))
+    || visitVoucherPreviewJsonPhotoUrl(metadata?.images_preview_json)
+}
+
 function primaryVisitVoucherPhotoUrl(photos: ConsolePhoto[]) {
   const photo = photos.find((item) => item.visible && safeVisitVoucherPhotoUrl(item.url_hd || item.url_preview))
     ?? photos.find((item) => item.visible && safeVisitVoucherPhotoUrl(item.url_preview || item.url_hd))
@@ -21887,6 +22016,8 @@ function primaryVisitVoucherPhotoUrl(photos: ConsolePhoto[]) {
 }
 
 async function loadVisitVoucherPhotoUrl(event: GoogleCalendarEventLink, relations: AppContactRelation[]) {
+  const metadataPhotoUrl = visitVoucherMetadataPhotoUrl(event.metadata_json)
+  if (metadataPhotoUrl) return metadataPhotoUrl
   const relation = googleAgendaVisitRelation(event, relations)
   const appDossierId = visitVoucherAppDossierId(event, relation)
   if (!appDossierId) return null
@@ -22286,6 +22417,12 @@ function GoogleAgendaContactModal(props: {
             contact_id: props.contact.hektor_contact_id,
             contact_label: contactLabel,
             contact_email: contactEmail || null,
+            hektor_annonce_id: selectedAnnonce?.hektor_annonce_id ?? null,
+            app_dossier_id: selectedAnnonce?.app_dossier_id ?? null,
+            titre_bien: selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : null,
+            numero_dossier: selectedAnnonce?.numero_dossier ?? null,
+            numero_mandat: selectedAnnonce?.numero_mandat ?? null,
+            ...googleAgendaAnnoncePhotoMetadata(selectedAnnonce),
             attendee_contacts: attendeeContacts,
             attendee_contact_count: attendeeContacts.length,
           },
@@ -22320,6 +22457,7 @@ function GoogleAgendaContactModal(props: {
           titre_bien: visitAnnonce ? ownerAnnonceOptionTitle(visitAnnonce) : null,
           numero_dossier: visitAnnonce?.numero_dossier ?? null,
           numero_mandat: visitAnnonce?.numero_mandat ?? null,
+          ...googleAgendaAnnoncePhotoMetadata(visitAnnonce),
           bon_visite_ready: isVisit && Boolean(visitAnnonce),
           attendee_contacts: attendeeContacts,
           attendee_contact_count: attendeeContacts.length,
