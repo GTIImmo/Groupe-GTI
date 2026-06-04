@@ -18695,7 +18695,7 @@ function GoogleAgendaGlobalEventModal(props: {
               <strong>{isEditingGoogleGlobalEvent ? 'Ajuster le RDV' : 'Planifier depuis l agenda'}</strong>
             </div>
             <form className="google-agenda-form" onSubmit={handleSubmit}>
-              <label className="filter-field">
+              <label className="filter-field google-agenda-field-wide">
                 <span>Agenda</span>
                 <input value={modalCalendarEmail} type="email" disabled />
               </label>
@@ -19523,7 +19523,7 @@ function GoogleAgendaAnnonceSection(props: {
                   <strong>{isEditingGoogleAgendaEvent ? 'Modifier le RDV' : 'Planifier un RDV'}</strong>
                 </div>
                 <form className="google-agenda-form" onSubmit={handleSubmitGoogleAgendaEvent}>
-                  <label className="filter-field">
+                  <label className="filter-field google-agenda-field-wide">
                     <span>Agenda</span>
                     <input value={calendarEmail} onChange={(inputEvent) => setCalendarEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required disabled={isEditingGoogleAgendaEvent} />
                   </label>
@@ -22944,7 +22944,7 @@ function GoogleAgendaContactModal(props: {
               <strong>{isEditingGoogleContactEvent ? 'Modifier le RDV' : 'Planifier un RDV contact'}</strong>
             </div>
             <form className="google-agenda-form" onSubmit={handleSubmit}>
-              <label className="filter-field">
+              <label className="filter-field google-agenda-field-wide">
                 <span>Agenda</span>
                 <input value={calendarEmail} onChange={(inputEvent) => setCalendarEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required disabled={isEditingGoogleContactEvent} />
               </label>

@@ -1406,42 +1406,176 @@
 
 .google-agenda-modal-overlay {
   z-index: 210;
-  padding: 18px;
+  padding: 16px;
   overflow: auto;
 }
 
 .google-agenda-modal {
   display: grid;
-  gap: 14px;
-  width: min(760px, calc(100vw - 36px));
-  max-height: calc(100dvh - 36px);
-  padding: 18px;
-  overflow: auto;
-  border: 1px solid rgba(34, 35, 35, 0.14);
-  border-radius: 8px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 0;
+  width: min(1680px, calc(100vw - 32px));
+  height: min(920px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 14px;
   background: #ffffff;
+  box-shadow:
+    0 34px 70px rgba(12, 19, 28, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.88) inset;
 }
 
 .google-agenda-modal-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 18px;
   align-items: start;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(34, 35, 35, 0.1);
+  min-width: 0;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fafbfb 100%);
+}
+
+.google-agenda-modal-head > div {
+  min-width: 0;
+}
+
+.google-agenda-modal .eyebrow,
+.google-agenda-modal .detail-label,
+.google-agenda-modal .filter-field > span,
+.google-agenda-modal-meta strong,
+.google-agenda-panel-head span {
+  letter-spacing: 0;
 }
 
 .google-agenda-modal-head h3 {
-  margin: 3px 0 0;
+  margin: 4px 0 4px;
   color: #222323;
-  font-size: 24px;
-  line-height: 1.08;
+  font-size: clamp(24px, 2vw, 34px);
+  line-height: 1.05;
+}
+
+.google-agenda-modal-head p {
+  margin: 0;
+  color: #687070;
+  font-size: 14px;
+  font-weight: 780;
+  overflow-wrap: anywhere;
+}
+
+.google-agenda-modal-head .request-modal-close {
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.google-agenda-modal-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(34, 35, 35, 0.08);
+  background: #ffffff;
+}
+
+.google-agenda-modal-meta span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 35, 35, 0.09);
+  border-radius: 8px;
+  background: #f8fafa;
+  color: #222323;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.google-agenda-modal-meta strong {
+  color: #687070;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.google-agenda-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(430px, 0.92fr) minmax(520px, 1.08fr) minmax(360px, 0.78fr);
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px 24px 24px;
+  overflow: auto;
+  background: #f5f7f7;
+}
+
+.google-agenda-contact-modal .google-agenda-modal-layout {
+  grid-template-columns: minmax(460px, 0.9fr) minmax(620px, 1.1fr);
+}
+
+.google-agenda-global-create-modal .google-agenda-modal-layout {
+  grid-template-columns: minmax(520px, 0.96fr) minmax(560px, 1.04fr);
+}
+
+.google-agenda-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(34, 35, 35, 0.055);
+}
+
+.google-agenda-planner-panel {
+  align-content: start;
+}
+
+.google-agenda-panel-head {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+}
+
+.google-agenda-panel-head span {
+  color: #c5005f;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.google-agenda-panel-head strong {
+  color: #222323;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.12;
+}
+
+.google-agenda-panel-head small {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 760;
 }
 
 .google-agenda-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
+  min-width: 0;
 }
 
 .google-agenda-field-wide,
@@ -1452,13 +1586,272 @@
   grid-column: 1 / -1;
 }
 
+.google-agenda-modal .filter-field {
+  min-width: 0;
+  gap: 7px;
+}
+
+.google-agenda-modal .filter-field > span,
+.google-agenda-modal .detail-label {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.app-shell-modern .google-agenda-form input,
+.app-shell-modern .google-agenda-form select,
+.app-shell-modern .google-agenda-form textarea,
+.google-agenda-modal .filter-field input,
+.google-agenda-modal .filter-field select,
+.google-agenda-modal .filter-field textarea,
+.google-agenda-modal .inline-textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  border: 1px solid rgba(34, 35, 35, 0.14) !important;
+  border-radius: 8px !important;
+  padding: 10px 12px;
+  background: #ffffff !important;
+  color: #222323 !important;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.35;
+  box-shadow: none !important;
+}
+
+.google-agenda-modal .filter-field input:disabled,
+.google-agenda-modal .filter-field select:disabled {
+  background: #f1f4f4 !important;
+  color: #465050 !important;
+  opacity: 1;
+  -webkit-text-fill-color: #465050;
+}
+
 .google-agenda-form .inline-textarea {
-  min-height: 112px;
+  min-height: 118px;
+  resize: vertical;
+}
+
+.google-agenda-visit-property-picker,
+.google-agenda-invitees,
+.google-agenda-global-invitees {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: #fbfcfc;
+}
+
+.google-agenda-visit-property-picker {
+  border: 1px solid rgba(197, 0, 95, 0.2);
+  background:
+    linear-gradient(135deg, rgba(197, 0, 95, 0.06), #ffffff 74%);
+}
+
+.google-agenda-invitees,
+.google-agenda-global-invitees {
+  border: 1px solid rgba(15, 104, 116, 0.15);
+}
+
+.google-agenda-visit-property-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.google-agenda-visit-property-head > div,
+.google-agenda-visit-property-head strong,
+.google-agenda-visit-property-head small {
+  min-width: 0;
+}
+
+.google-agenda-visit-property-head strong {
+  display: block;
+  margin-top: 3px;
+  color: #222323;
+  font-size: 17px;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+
+.google-agenda-visit-property-head small,
+.google-agenda-search-hint {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.google-agenda-contact-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  min-width: 0;
+}
+
+.google-agenda-contact-search .ghost-button {
+  min-height: 46px;
+  border-radius: 8px;
+  white-space: normal;
+}
+
+.google-agenda-global-link-grid,
+.google-agenda-invitee-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.google-agenda-global-link-grid > div,
+.google-agenda-invitee-tools > div,
+.google-agenda-invitee-selected {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.google-agenda-contact-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.google-agenda-contact-button,
+.contact-owner-selected,
+.google-agenda-linked-contact-panel {
+  min-width: 0;
+  border-radius: 8px;
+}
+
+.google-agenda-contact-button {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  background: #ffffff;
+  text-align: left;
+}
+
+.google-agenda-contact-button strong,
+.google-agenda-contact-button span,
+.google-agenda-contact-button small,
+.contact-owner-selected strong,
+.contact-owner-selected span,
+.contact-owner-selected small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.google-agenda-contact-button strong,
+.contact-owner-selected strong {
+  color: #222323;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.22;
+}
+
+.google-agenda-contact-button span,
+.google-agenda-contact-button small,
+.contact-owner-selected span,
+.contact-owner-selected small {
+  color: #687070;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.contact-owner-selected {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(15, 104, 116, 0.16);
+  background: rgba(15, 104, 116, 0.06);
+}
+
+.contact-owner-selected .ghost-button {
+  justify-self: start;
+  min-height: 34px;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.google-agenda-day-panel {
+  align-content: start;
+}
+
+.google-agenda-day-head {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.google-agenda-day-actions,
+.google-agenda-day-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.google-agenda-day-actions input,
+.google-agenda-day-controls input {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.google-agenda-view-toggle {
+  border-radius: 8px;
+}
+
+.google-agenda-period-grid.is-week {
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+}
+
+.google-agenda-event-card {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.google-agenda-event-actions {
+  justify-content: flex-start;
 }
 
 .google-agenda-actions {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-end;
-  margin-top: 0;
+  margin: 6px 0 0;
+  padding: 0;
+  border-top: 0;
+  background: transparent;
+}
+
+.google-agenda-actions .ghost-button {
+  min-height: 46px;
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+@media (max-width: 1460px) {
+  .google-agenda-modal-layout,
+  .google-agenda-contact-modal .google-agenda-modal-layout,
+  .google-agenda-global-create-modal .google-agenda-modal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .google-agenda-panel {
+    overflow: visible;
+  }
+
+  .google-agenda-period-grid.is-week {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
 }
 
 @media (max-width: 1260px) {
@@ -1527,7 +1920,7 @@
     color: #0f6874;
     font-size: 10px;
     font-weight: 950;
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
     text-transform: uppercase;
   }
 
@@ -1575,7 +1968,7 @@
   .mobile-app-shell .google-agenda-modal-meta {
     display: grid;
     gap: 8px;
-    padding: 0;
+    padding: 12px;
   }
 
   .mobile-app-shell .google-agenda-modal-meta span {
@@ -1597,7 +1990,7 @@
     color: #687070;
     font-size: 10px;
     font-weight: 950;
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
     text-transform: uppercase;
   }
 
@@ -1755,8 +2148,36 @@
 
   .google-agenda-modal {
     width: calc(100vw - 20px);
+    height: calc(100dvh - 20px);
     max-height: calc(100dvh - 20px);
-    padding: 14px;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .google-agenda-modal-head {
+    padding: 16px;
+  }
+
+  .google-agenda-modal-meta {
+    padding: 12px;
+  }
+
+  .google-agenda-modal-layout {
+    padding: 12px;
+  }
+
+  .google-agenda-global-link-grid,
+  .google-agenda-invitee-tools,
+  .google-agenda-contact-search {
+    grid-template-columns: 1fr;
+  }
+
+  .google-agenda-actions {
+    position: static;
+    margin: 4px 0 0;
+    padding: 0;
+    border-top: 0;
+    background: transparent;
   }
 }
 
