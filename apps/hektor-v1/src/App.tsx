@@ -18221,7 +18221,7 @@ function GoogleAgendaGlobalScreen(props: {
                         ) : null}
                         {canPrintVisitVoucher(item) ? (
                           <button className="ghost-button button-subtle" type="button" onClick={() => void handlePrintGlobalAgendaVisitVoucher(item)} disabled={deletingId === item.id || printingId === item.id}>
-                            {printingId === item.id ? '...' : 'Bon'}
+                            {printingId === item.id ? '...' : 'Bon de visite'}
                           </button>
                         ) : null}
                         {item.google_html_link ? <a className="ghost-button button-subtle" href={item.google_html_link} target="_blank" rel="noreferrer">Google</a> : null}

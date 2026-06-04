@@ -4005,18 +4005,42 @@
   display: none;
 }
 
+.app-shell-modern .google-agenda-timeline-event {
+  overflow: visible;
+}
+
 .app-shell-modern .google-agenda-timeline-event-actions {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
-  left: 6px;
+  z-index: 30;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
   padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   pointer-events: none;
 }
 
 .app-shell-modern .google-agenda-timeline-event:hover .google-agenda-timeline-event-actions,
 .app-shell-modern .google-agenda-timeline-event:focus-within .google-agenda-timeline-event-actions {
   pointer-events: auto;
+}
+
+.app-shell-modern .google-agenda-timeline-event-actions .ghost-button,
+.app-shell-modern .google-agenda-timeline-event-actions a.ghost-button {
+  min-height: 18px;
+  justify-content: center;
+  border-color: rgba(255, 255, 255, 0.86);
+  background: #ffffff;
+  color: #8a0042;
+  padding: 2px 4px;
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 @media (max-width: 1260px) {
