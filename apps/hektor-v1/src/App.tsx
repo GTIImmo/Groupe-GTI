@@ -20905,6 +20905,21 @@ function optionalBooleanFromSelect(value: string) {
   return null
 }
 
+function normalizePersonMatchText(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function emailLocalNameTokens(email: string) {
+  const local = normalizePersonMatchText(email.split('@')[0] ?? '')
+  return local.split(' ').filter((token) => token.length >= 2)
+}
+
 function findContactHektorOption(
   options: HektorNegotiatorOption[],
   params: { idUser?: string | null; email?: string | null },
@@ -20915,7 +20930,17 @@ function findContactHektorOption(
     if (byId) return byId
   }
   const email = normalizeEmail(params.email)
-  if (email) return options.find((item) => normalizeEmail(item.email) === email) ?? null
+  if (email) {
+    const byEmail = options.find((item) => normalizeEmail(item.email) === email)
+    if (byEmail) return byEmail
+    const tokens = emailLocalNameTokens(email)
+    if (tokens.length >= 2) {
+      return options.find((item) => {
+        const label = normalizePersonMatchText(item.label)
+        return tokens.every((token) => label.includes(token))
+      }) ?? null
+    }
+  }
   return null
 }
 
