@@ -171,6 +171,7 @@ const heavyListingFilterKeys = new Set<keyof AppFilters>([
 ])
 type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
+type SuiviRequestFilter = 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio'
 type LightweightDetailTarget = Dossier | MandatRecord
 type HomeDashboardVariant = 'admin' | 'commercial' | 'pauline'
 
@@ -7958,7 +7959,7 @@ export default function App() {
   const [activeMandatKpiAction, setActiveMandatKpiAction] = useState<HeaderMetricItem['action']>(null)
   const [mandatDrilldownLabel, setMandatDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
   const [suiviDrilldownLabel, setSuiviDrilldownLabel] = useState<{ eyebrow: string; title: string } | null>(null)
-  const [suiviRequestFilter, setSuiviRequestFilter] = useState<'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null>('pending_or_in_progress')
+  const [suiviRequestFilter, setSuiviRequestFilter] = useState<SuiviRequestFilter | null>('pending_or_in_progress')
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestPending, setRequestPending] = useState(false)
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
@@ -13432,6 +13433,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={handleOptimisticContactDeleted}
           />
+        ) : screen === 'suivi' ? (
+          <MobileSuiviCards
+            mandats={screenMandats}
+            requests={visibleSuiviRequests}
+            loading={requestLoading || mandatLoading}
+            requestFilter={suiviRequestFilter}
+            onSetRequestFilter={setSuiviRequestFilter}
+            onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={(id, requestType) => openRequestModal(id, 'pauline', requestType)}
+          />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
             mandats={screenMandats}
@@ -16023,8 +16034,8 @@ function SuiviMandatsScreenV2(props: {
   detailLoading: boolean
   eyebrow?: string
   title?: string
-  requestFilter?: 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null
-  onSetRequestFilter: (value: 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio' | null) => void
+  requestFilter?: SuiviRequestFilter | null
+  onSetRequestFilter: (value: SuiviRequestFilter | null) => void
 }) {
   if (!props.isAdmin) {
     return <section className="panel"><p className="empty-state">Cette vue est reservee aux administrateurs.</p></section>
@@ -19958,6 +19969,154 @@ function MobileDossierDetail(props: {
         </details>
       ) : null}
     </article>
+  )
+}
+
+function MobileSuiviCards(props: {
+  mandats: MandatRecord[]
+  requests: DiffusionRequest[]
+  loading: boolean
+  requestFilter: SuiviRequestFilter | null
+  onSetRequestFilter: (value: SuiviRequestFilter | null) => void
+  onOpenDetailPage: (id: number) => void
+  onOpenRequestModal: (id: number, requestType: BusinessRequestType) => void
+}) {
+  const activeSuiviFilter = props.requestFilter ?? 'pending_or_in_progress'
+  const requestRowsSource = activeSuiviFilter === 'accepted_history'
+    ? props.mandats
+        .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
+        .flatMap((item) => {
+          const diffusionRequest = props.requests
+            .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_diffusion' && request.request_status === 'accepted')
+            .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
+          const priceDropRequest = props.requests
+            .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_baisse_prix' && request.request_status === 'accepted')
+            .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
+          const cancellationRequest = props.requests
+            .filter((request) => request.app_dossier_id === item.app_dossier_id && normalizeRequestType(request.request_type) === 'demande_annulation_mandat' && request.request_status === 'accepted')
+            .sort((a, b) => new Date(requestTimelineDate(b)).getTime() - new Date(requestTimelineDate(a)).getTime())[0]
+          return [diffusionRequest, priceDropRequest, cancellationRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+        })
+    : props.mandats
+        .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
+        .flatMap((item) => {
+          const diffusionRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
+          const priceDropRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_baisse_prix')
+          const cancellationRequest = latestDiffusionRequest(props.requests, item.app_dossier_id, 'demande_annulation_mandat')
+          return [diffusionRequest, priceDropRequest, cancellationRequest].filter(Boolean).map((request) => ({ mandat: item, request: request as DiffusionRequest }))
+        })
+
+  const pendingRows = requestRowsSource.filter((row) => row.request.request_status === 'pending' || row.request.request_status === 'in_progress')
+  const acceptedRows = requestRowsSource.filter((row) => row.request.request_status === 'accepted')
+  const refusedRows = requestRowsSource.filter((row) => row.request.request_status === 'refused')
+  const visibleRows = requestRowsSource
+    .filter((row) => {
+      if (activeSuiviFilter === 'accepted_history') return row.request.request_status === 'accepted'
+      if (activeSuiviFilter === 'refused') return row.request.request_status === 'refused'
+      if (activeSuiviFilter === 'waiting_correction') return row.request.request_status === 'waiting_commercial' || row.request.request_status === 'refused'
+      return row.request.request_status === 'pending' || row.request.request_status === 'in_progress'
+    })
+    .slice()
+    .sort((a, b) => {
+      const dateA = new Date(requestTimelineDate(a.request) ?? 0).getTime()
+      const dateB = new Date(requestTimelineDate(b.request) ?? 0).getTime()
+      if (dateA !== dateB) return dateB - dateA
+      return String(a.mandat.numero_mandat ?? '').localeCompare(String(b.mandat.numero_mandat ?? ''), 'fr')
+    })
+
+  const filterOptions: Array<{ key: SuiviRequestFilter; label: string; count: number }> = [
+    { key: 'pending_or_in_progress', label: 'A traiter', count: pendingRows.length },
+    { key: 'accepted_history', label: 'Acceptees', count: acceptedRows.length },
+    { key: 'refused', label: 'Refusees', count: refusedRows.length },
+  ]
+  const title =
+    activeSuiviFilter === 'accepted_history'
+      ? 'Demandes acceptees'
+      : activeSuiviFilter === 'refused'
+        ? 'Demandes refusees'
+        : 'Demandes a traiter'
+
+  if (visibleRows.length === 0) {
+    return (
+      <section className="mobile-card-list mobile-suivi-list" aria-label="Suivi des demandes">
+        <div className="mobile-list-head">
+          <div>
+            <span className="mobile-section-kicker">Suivi Pauline</span>
+            <h2>{title}</h2>
+          </div>
+          <span>0</span>
+        </div>
+        <div className="mobile-suivi-filter-row">
+          {filterOptions.map((option) => (
+            <button
+              key={option.key}
+              className={`mobile-suivi-filter ${activeSuiviFilter === option.key ? 'is-active' : ''}`}
+              type="button"
+              onClick={() => props.onSetRequestFilter(option.key)}
+            >
+              <span>{option.label}</span>
+              <strong>{option.count}</strong>
+            </button>
+          ))}
+        </div>
+        <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucune demande dans cette vue.'}</section>
+      </section>
+    )
+  }
+
+  return (
+    <section className="mobile-card-list mobile-suivi-list" aria-label="Suivi des demandes">
+      <div className="mobile-list-head">
+        <div>
+          <span className="mobile-section-kicker">Suivi Pauline</span>
+          <h2>{title}</h2>
+        </div>
+        <span>{visibleRows.length}</span>
+      </div>
+      <div className="mobile-suivi-filter-row">
+        {filterOptions.map((option) => (
+          <button
+            key={option.key}
+            className={`mobile-suivi-filter ${activeSuiviFilter === option.key ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => props.onSetRequestFilter(option.key)}
+          >
+            <span>{option.label}</span>
+            <strong>{option.count}</strong>
+          </button>
+        ))}
+      </div>
+      {visibleRows.map(({ mandat: item, request: activeRequest }) => {
+        const requestType = normalizeRequestType(activeRequest.request_type)
+        const actionLabel = activeRequest.request_status === 'pending' || activeRequest.request_status === 'in_progress' ? 'Traiter' : 'Ouvrir'
+        return (
+          <article key={`mobile-suivi-${item.app_dossier_id}-${activeRequest.id}`} className="mobile-list-card mobile-suivi-card">
+            <div className="mobile-card-top">
+              <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
+              <div className="mobile-list-card-main">
+                <span className="mobile-card-meta">{requestTypeLabel(activeRequest.request_type)} - demande {requestNumberLabel(activeRequest)}</span>
+                <strong>{item.numero_mandat ? `Mandat ${item.numero_mandat}` : item.numero_dossier ?? '-'}</strong>
+                <span className="mobile-card-subline">{item.titre_bien || '-'}</span>
+              </div>
+            </div>
+            <div className="mobile-card-grid">
+              <div><span className="mobile-mini-label">Statut demande</span><strong>{requestStatusLabel(activeRequest.request_status)}</strong></div>
+              <div><span className="mobile-mini-label">Negociateur</span><strong>{commercialDisplay(item)}</strong></div>
+              <div><span className="mobile-mini-label">Date</span><strong>{formatDate(requestTimelineDate(activeRequest))}</strong></div>
+              <div><span className="mobile-mini-label">Motif</span><strong>{activeRequest.request_reason || activeRequest.request_comment || 'Sans motif'}</strong></div>
+            </div>
+            <div className="mobile-status-row">
+              <StatusPill value={requestStatusLabel(activeRequest.request_status)} />
+              <StatusPill value={item.statut_annonce} />
+            </div>
+            <div className="mobile-card-actions">
+              <button className="mobile-primary-button" type="button" onClick={() => props.onOpenRequestModal(item.app_dossier_id, requestType)}>{actionLabel}</button>
+              <button className="mobile-ghost-button" type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>Detail</button>
+            </div>
+          </article>
+        )
+      })}
+    </section>
   )
 }
 
