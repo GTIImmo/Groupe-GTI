@@ -4606,6 +4606,13 @@ function formatDateTime(value: string | null | undefined) {
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
 
+function formatTimeOnly(value: string | null | undefined) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(date)
+}
+
 function toDateTimeLocalValue(date: Date) {
   const pad = (value: number) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
@@ -17969,6 +17976,7 @@ function GoogleAgendaGlobalScreen(props: {
   const visibleEventCount = agendaDayPlans.reduce((sum, day) => sum + day.events.length, 0)
   const busyCount = agendaDayPlans.reduce((sum, day) => sum + day.busy.length, 0)
   const freeMinutes = googleAgendaPeriodFreeMinutes(agendaDayPlans)
+  const suggestedWindows = buildGoogleAgendaSuggestedWindows(agendaDayPlans.flatMap((day) => day.free), 60, 6)
   const selectedCalendar = calendarOptions.find((option) => option.email === normalizeEmail(calendarEmail))
 
   async function handleLoadGlobalAgenda() {
@@ -18064,12 +18072,36 @@ function GoogleAgendaGlobalScreen(props: {
           </div>
         </div>
         {availability ? (
-          <div className={`google-agenda-period-grid is-${agendaMode}`}>
-            {agendaDayPlans.map((plan) => (
-              <article key={`global-agenda-${plan.day}`} className="google-agenda-period-day">
+          <>
+            <div className="google-agenda-global-suggestions">
+              <div>
+                <span className="detail-label">Creneaux rapides</span>
+                <strong>{suggestedWindows.length ? 'Disponibilites de 1 h' : 'Aucune disponibilite de 1 h'}</strong>
+              </div>
+              {suggestedWindows.length > 0 ? (
+                <div className="google-agenda-global-suggestion-list">
+                  {suggestedWindows.map((slot, index) => (
+                    <button key={`global-suggestion-${slot.start}-${slot.end}`} className="google-agenda-suggestion" type="button" onClick={() => setCreateSlot(slot)}>
+                      <strong>{index === 0 ? 'Meilleur creneau' : `Option ${index + 1}`}</strong>
+                      <span>{formatDateTime(slot.start)} - {formatTimeOnly(slot.end)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : <p className="empty-state">Aucun creneau libre assez long sur la periode chargee.</p>}
+            </div>
+            <div className={`google-agenda-period-grid google-agenda-global-calendar is-${agendaMode}`}>
+            {agendaDayPlans.map((plan) => {
+              const dayFreeMinutes = plan.free.reduce((sum, slot) => sum + minutesBetweenWindow(slot), 0)
+              return (
+              <article key={`global-agenda-${plan.day}`} className="google-agenda-period-day google-agenda-global-day">
                 <div className="google-agenda-period-day-head">
                   <strong>{plan.label}</strong>
-                  <span>{plan.events.length} RDV GTI - {plan.busy.length} occupe</span>
+                  <span>{Math.round(dayFreeMinutes / 60)} h libres</span>
+                </div>
+                <div className="google-agenda-global-day-stats">
+                  <span className={plan.events.length ? 'is-gti-active' : ''}>{plan.events.length} RDV GTI</span>
+                  <span className={plan.busy.length ? 'is-busy-active' : ''}>{plan.busy.length} occupe</span>
+                  <span className={plan.free.length ? 'is-free-active' : ''}>{plan.free.length} libre</span>
                 </div>
                 <div className="google-agenda-period-section">
                   <span className="detail-label">RDV GTI</span>
@@ -18079,7 +18111,7 @@ function GoogleAgendaGlobalScreen(props: {
                         <article key={`global-event-${plan.day}-${item.id}`} className="google-agenda-event-card google-agenda-global-event-card" onClick={() => setEditingEvent(item)}>
                           <div>
                             <strong>{item.summary}</strong>
-                            <span>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</span>
+                            <span>{formatTimeOnly(item.starts_at)} - {formatTimeOnly(item.ends_at)}</span>
                             <span>{eventTypeLabel(item.event_type)} - {item.related_entity_type}</span>
                             {item.location ? <span>{item.location}</span> : null}
                             {Array.isArray(item.attendees_json) && item.attendees_json.length > 0 ? <span>Invites : {item.attendees_json.join(', ')}</span> : null}
@@ -18119,7 +18151,7 @@ function GoogleAgendaGlobalScreen(props: {
                   <div className="google-agenda-day-slots">
                     {plan.busy.length > 0 ? plan.busy.map((slot) => (
                       <article key={`global-busy-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
-                        <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                        <strong>{formatTimeOnly(slot.start)} - {formatTimeOnly(slot.end)}</strong>
                         <span>Occupe Google</span>
                       </article>
                     )) : <p className="empty-state">Aucun creneau occupe.</p>}
@@ -18131,7 +18163,7 @@ function GoogleAgendaGlobalScreen(props: {
                     {plan.free.length > 0 ? plan.free.map((slot) => (
                       <article key={`global-free-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
                         <div>
-                          <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                          <strong>{formatTimeOnly(slot.start)} - {formatTimeOnly(slot.end)}</strong>
                           <span>{minutesBetweenWindow(slot)} min libres</span>
                         </div>
                         <button className="ghost-button button-subtle" type="button" onClick={() => setCreateSlot(slot)} disabled={!canUseCalendarEmail}>
@@ -18142,8 +18174,10 @@ function GoogleAgendaGlobalScreen(props: {
                   </div>
                 </div>
               </article>
-            ))}
-          </div>
+              )
+            })}
+            </div>
+          </>
         ) : <p className="empty-state">{loading ? 'Chargement agenda...' : 'Agenda non charge.'}</p>}
       </section>
       {createSlot ? (

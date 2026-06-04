@@ -13807,16 +13807,80 @@ button.metric-card.is-active {
 }
 .google-agenda-global-board {
   border-left: 5px solid rgba(197, 0, 95, 0.72);
+  overflow-x: auto;
+}
+.google-agenda-global-suggestions {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(37, 132, 82, 0.14);
+  border-radius: 8px;
+  background: rgba(37, 132, 82, 0.045);
+}
+.google-agenda-global-suggestions > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+.google-agenda-global-suggestions strong {
+  color: var(--gti-final-ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+.google-agenda-global-suggestion-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 8px;
+}
+.google-agenda-global-calendar {
+  min-width: min(100%, 980px);
 }
 .google-agenda-global-board .google-agenda-period-grid.is-week {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(172px, 1fr));
+  align-items: start;
 }
 .google-agenda-global-event-card {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  cursor: pointer;
 }
 .google-agenda-global-event-card .google-agenda-event-actions {
   justify-content: flex-start;
+}
+.google-agenda-global-day {
+  min-height: 360px;
+}
+.google-agenda-global-day-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.google-agenda-global-day-stats span {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid rgba(34, 35, 35, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  color: rgba(34, 35, 35, 0.6);
+  font-size: 10px;
+  font-weight: 900;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.google-agenda-global-day-stats .is-gti-active {
+  border-color: rgba(197, 0, 95, 0.18);
+  background: rgba(197, 0, 95, 0.07);
+  color: #8a0042;
+}
+.google-agenda-global-day-stats .is-busy-active {
+  border-color: rgba(199, 127, 24, 0.2);
+  background: rgba(199, 127, 24, 0.08);
+  color: #7a4708;
+}
+.google-agenda-global-day-stats .is-free-active {
+  border-color: rgba(37, 132, 82, 0.18);
+  background: rgba(37, 132, 82, 0.08);
+  color: #1f6c44;
 }
 .google-agenda-global-link-grid {
   display: grid;
@@ -13850,7 +13914,10 @@ button.metric-card.is-active {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .google-agenda-global-board .google-agenda-period-grid.is-week {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(170px, 1fr));
+  }
+  .google-agenda-global-suggestion-list {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
   }
   .google-agenda-global-link-grid {
     grid-template-columns: 1fr;

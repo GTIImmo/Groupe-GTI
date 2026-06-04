@@ -1164,7 +1164,26 @@
   display: grid;
   gap: 14px;
   padding: 18px;
-  overflow: hidden;
+  overflow: auto;
+}
+
+.app-shell-modern .google-agenda-global-suggestions,
+.mobile-app-shell .google-agenda-global-suggestions {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(15, 104, 116, 0.14);
+  border-radius: 8px;
+  background: rgba(15, 104, 116, 0.05);
+}
+
+.app-shell-modern .google-agenda-global-suggestion-list,
+.mobile-app-shell .google-agenda-global-suggestion-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 8px;
+  min-width: 0;
 }
 
 .app-shell-modern .google-agenda-day-head {
@@ -1190,7 +1209,11 @@
 }
 
 .app-shell-modern .google-agenda-period-grid.is-week {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(174px, 1fr));
+}
+
+.app-shell-modern .google-agenda-global-calendar {
+  min-width: min(100%, 1180px);
 }
 
 .app-shell-modern .google-agenda-period-day {
@@ -1202,6 +1225,53 @@
   border: 1px solid rgba(34, 35, 35, 0.1);
   border-radius: 8px;
   background: #fbfcfc;
+}
+
+.app-shell-modern .google-agenda-global-day,
+.mobile-app-shell .google-agenda-global-day {
+  min-height: 360px;
+}
+
+.app-shell-modern .google-agenda-global-day-stats,
+.mobile-app-shell .google-agenda-global-day-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.app-shell-modern .google-agenda-global-day-stats span,
+.mobile-app-shell .google-agenda-global-day-stats span {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid rgba(34, 35, 35, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #687070;
+  font-size: 10px;
+  font-weight: 900;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.app-shell-modern .google-agenda-global-day-stats .is-gti-active,
+.mobile-app-shell .google-agenda-global-day-stats .is-gti-active {
+  border-color: rgba(197, 0, 95, 0.18);
+  background: rgba(197, 0, 95, 0.07);
+  color: #8a0042;
+}
+
+.app-shell-modern .google-agenda-global-day-stats .is-busy-active,
+.mobile-app-shell .google-agenda-global-day-stats .is-busy-active {
+  border-color: rgba(199, 127, 24, 0.2);
+  background: rgba(199, 127, 24, 0.08);
+  color: #7a4708;
+}
+
+.app-shell-modern .google-agenda-global-day-stats .is-free-active,
+.mobile-app-shell .google-agenda-global-day-stats .is-free-active {
+  border-color: rgba(15, 104, 116, 0.2);
+  background: rgba(15, 104, 116, 0.08);
+  color: #0f6874;
 }
 
 .app-shell-modern .google-agenda-period-day-head {
@@ -1399,7 +1469,12 @@
   }
 
   .app-shell-modern .google-agenda-period-grid.is-week {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(170px, 1fr));
+  }
+
+  .app-shell-modern .google-agenda-global-suggestion-list,
+  .mobile-app-shell .google-agenda-global-suggestion-list {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
   }
 
   .app-shell-modern .google-agenda-global-meta,
@@ -1660,6 +1735,11 @@
   .google-agenda-modal-meta,
   .app-shell-modern .google-agenda-period-grid.is-week,
   .mobile-app-shell .google-agenda-period-grid.is-week {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell-modern .google-agenda-global-suggestion-list,
+  .mobile-app-shell .google-agenda-global-suggestion-list {
     grid-template-columns: 1fr;
   }
 
