@@ -22465,6 +22465,11 @@ function GoogleAgendaContactModal(props: {
       ? mergeGoogleAgendaInviteeContactLinks(googleAgendaEventInviteeContacts(editingEvent), contactInvitee ? [contactInvitee] : [], splitEmailList(initialAttendeesText))
       : contactInvitee ? [contactInvitee] : []
   ))
+  const [agendaDate, setAgendaDate] = useState(dateInputFromDateTimeLocal(startAt))
+  const [agendaMode, setAgendaMode] = useState<GoogleAgendaViewMode>('day')
+  const [dayAvailabilityPending, setDayAvailabilityPending] = useState(false)
+  const [dayAvailability, setDayAvailability] = useState<GoogleCalendarAvailability | null>(null)
+  const [periodLinkedEvents, setPeriodLinkedEvents] = useState<GoogleCalendarEventLink[]>([])
   const [description, setDescription] = useState('')
   const [pending, setPending] = useState(false)
   const [availabilityPending, setAvailabilityPending] = useState(false)
@@ -22478,6 +22483,16 @@ function GoogleAgendaContactModal(props: {
   const availabilityBusy = availability?.busy ?? []
   const canCheckAvailability = canUseCalendarEmail && Boolean(startAt) && Boolean(durationMinutes)
   const canSubmit = canUseCalendarEmail && Boolean(summary.trim()) && (!isVisit || isEditingGoogleContactEvent || Boolean(selectedAnnonce))
+  const agendaPeriodDays = googleAgendaPeriodDays(agendaDate, agendaMode)
+  const periodEvents = mergeGoogleCalendarEventLinks([...periodLinkedEvents, ...(editingEvent ? [editingEvent] : [])])
+  const agendaDayPlans = agendaPeriodDays.map((day) => ({
+    day,
+    label: googleAgendaDayLabel(day),
+    events: googleAgendaEventsForDay(periodEvents, day),
+    ...buildGoogleAgendaDayWindows(day, dayAvailability),
+  }))
+  const requestedDurationMinutes = Number(durationMinutes)
+  const suggestedWindows = buildGoogleAgendaSuggestedWindows(agendaDayPlans.flatMap((day) => day.free), requestedDurationMinutes, 5)
 
   useEffect(() => {
     if (isEditingGoogleContactEvent) return
@@ -22514,6 +22529,21 @@ function GoogleAgendaContactModal(props: {
   useEffect(() => {
     setAvailability(null)
   }, [calendarEmail, durationMinutes, startAt])
+
+  useEffect(() => {
+    setAgendaDate(dateInputFromDateTimeLocal(startAt))
+  }, [startAt])
+
+  useEffect(() => {
+    setDayAvailability(null)
+    setPeriodLinkedEvents([])
+  }, [agendaMode, calendarEmail])
+
+  useEffect(() => {
+    if (!canUseCalendarEmail) return
+    void handleLoadContactAgendaPeriod()
+  // Chargement initial volontaire: la popup contact doit montrer l'agenda sans action supplementaire.
+  }, [])
 
   useEffect(() => {
     if (isEditingGoogleContactEvent) return
@@ -22611,6 +22641,49 @@ function GoogleAgendaContactModal(props: {
     }
   }
 
+  async function handleLoadContactAgendaPeriod(dayValue = agendaDate, mode = agendaMode) {
+    setDayAvailabilityPending(true)
+    setDayAvailability(null)
+    setPeriodLinkedEvents([])
+    setError(null)
+    try {
+      if (!canUseCalendarEmail) throw new Error('Agenda Google Workspace requis')
+      const range = googleAgendaPeriodRange(dayValue, mode)
+      const result = await checkGoogleCalendarAvailability({
+        subjectEmail: calendarEmail,
+        startAt: range.startAt,
+        endAt: range.endAt,
+      })
+      if (!result.ok) throw new Error('Chargement occupation agenda impossible')
+      setDayAvailability(result)
+      try {
+        const rows = await loadGoogleCalendarEventLinks({
+          calendarEmail,
+          startAt: range.startAt,
+          endAt: range.endAt,
+          limit: 100,
+        })
+        setPeriodLinkedEvents(rows)
+      } catch {
+        setPeriodLinkedEvents([])
+      }
+    } catch (eventError) {
+      setError(eventError instanceof Error ? eventError.message : 'Chargement occupation agenda impossible')
+    } finally {
+      setDayAvailabilityPending(false)
+    }
+  }
+
+  function handleUseContactAgendaWindow(window: GoogleAgendaWindow) {
+    const windowMinutes = minutesBetweenWindow(window)
+    const requestedMinutes = Number(durationMinutes)
+    setStartAt(toDateTimeLocalValue(new Date(window.start)))
+    if (Number.isFinite(requestedMinutes) && requestedMinutes > windowMinutes) {
+      setDurationMinutes(String(windowMinutes))
+    }
+    setAvailability(null)
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
@@ -22624,8 +22697,16 @@ function GoogleAgendaContactModal(props: {
       if (!endAt) throw new Error('Horaire RDV invalide')
       const attendees = splitEmailList(attendeesText)
       const attendeeContacts = googleAgendaInviteeContactMetadata(attendeeContactLinks, attendees)
+      const relatedEntityType: GoogleCalendarEventLink['related_entity_type'] = visitAnnonce ? 'annonce' : 'contact'
+      const relatedEntityId = visitAnnonce ? String(visitAnnonce.app_dossier_id) : props.contact.hektor_contact_id
       if (editingEvent) {
         const updated = await updateGoogleCalendarEvent(editingEvent.id, {
+          eventType,
+          relatedEntityType,
+          relatedEntityId,
+          appDossierId: visitAnnonce?.app_dossier_id ?? null,
+          hektorAnnonceId: visitAnnonce?.hektor_annonce_id ?? null,
+          hektorContactId: props.contact.hektor_contact_id,
           summary,
           startAt,
           endAt,
@@ -22655,8 +22736,8 @@ function GoogleAgendaContactModal(props: {
       const created = await createGoogleCalendarEvent({
         subjectEmail: calendarEmail,
         eventType,
-        relatedEntityType: visitAnnonce ? 'annonce' : 'contact',
-        relatedEntityId: visitAnnonce ? String(visitAnnonce.app_dossier_id) : props.contact.hektor_contact_id,
+        relatedEntityType,
+        relatedEntityId,
         appDossierId: visitAnnonce?.app_dossier_id ?? null,
         hektorAnnonceId: visitAnnonce?.hektor_annonce_id ?? null,
         hektorContactId: props.contact.hektor_contact_id,
@@ -22835,15 +22916,95 @@ function GoogleAgendaContactModal(props: {
               </div>
             </form>
           </section>
-          <section className="google-agenda-panel google-agenda-links-panel">
-            <div className="google-agenda-panel-head">
-              <span>Preparation metier</span>
-              <strong>{isVisit ? 'Visite avec bien' : 'RDV contact'}</strong>
+          <section className="google-agenda-panel google-agenda-day-panel">
+            <div className="google-agenda-panel-head google-agenda-day-head">
+              <div>
+                <span>Agenda du negociateur</span>
+                <strong>{agendaMode === 'week' ? 'Semaine' : 'Journee'}</strong>
+              </div>
+              <div className="google-agenda-day-controls">
+                <div className="google-agenda-view-toggle" role="group" aria-label="Vue agenda contact">
+                  <button className={agendaMode === 'day' ? 'is-active' : ''} type="button" onClick={() => { setAgendaMode('day'); setDayAvailability(null); setPeriodLinkedEvents([]) }}>
+                    Jour
+                  </button>
+                  <button className={agendaMode === 'week' ? 'is-active' : ''} type="button" onClick={() => { setAgendaMode('week'); setDayAvailability(null); setPeriodLinkedEvents([]) }}>
+                    Semaine
+                  </button>
+                </div>
+                <input value={agendaDate} onChange={(inputEvent) => { setAgendaDate(inputEvent.target.value); setDayAvailability(null); setPeriodLinkedEvents([]) }} type="date" />
+                <button className="ghost-button button-subtle" type="button" onClick={() => void handleLoadContactAgendaPeriod()} disabled={dayAvailabilityPending || !canUseCalendarEmail}>
+                  {dayAvailabilityPending ? 'Chargement...' : 'Actualiser'}
+                </button>
+              </div>
             </div>
-            <div className="detail-rich-copy">
-              <p>{isVisit ? 'Le RDV sera relie au contact et au bien selectionne. Cette liaison servira ensuite pour preparer le bon de visite.' : 'Le RDV sera relie au contact dans GTI.'}</p>
-            </div>
-            <div className="info-grid">
+            {dayAvailability ? (
+              <>
+                <div className="google-agenda-suggestions">
+                  <span className="detail-label">{agendaMode === 'week' ? 'Creneaux proposes sur la semaine' : 'Creneaux proposes'}</span>
+                  {suggestedWindows.length > 0 ? (
+                    <div className="google-agenda-suggestion-list">
+                      {suggestedWindows.map((slot, index) => (
+                        <button key={`contact-suggestion-${slot.start}-${slot.end}`} className="google-agenda-suggestion" type="button" onClick={() => handleUseContactAgendaWindow(slot)}>
+                          <strong>{index === 0 ? 'Meilleur creneau' : `Option ${index + 1}`}</strong>
+                          <span>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <p className="empty-state">Aucun creneau assez long pour la duree choisie.</p>}
+                </div>
+                <div className={`google-agenda-period-grid is-${agendaMode}`}>
+                  {agendaDayPlans.map((plan) => (
+                    <article key={`contact-agenda-period-${plan.day}`} className="google-agenda-period-day">
+                      <div className="google-agenda-period-day-head">
+                        <strong>{plan.label}</strong>
+                        <span>{plan.events.length} RDV GTI - {plan.busy.length} occupe</span>
+                      </div>
+                      <div className="google-agenda-period-section">
+                        <span className="detail-label">RDV GTI</span>
+                        {plan.events.length > 0 ? (
+                          <div className="google-agenda-period-items">
+                            {plan.events.map((item) => (
+                              <article key={`contact-period-gti-${plan.day}-${item.id}`} className="google-agenda-period-event">
+                                <strong>{formatDateTime(item.starts_at)} - {formatDateTime(item.ends_at)}</strong>
+                                <span>{item.summary}</span>
+                              </article>
+                            ))}
+                          </div>
+                        ) : <p className="empty-state">Aucun RDV GTI lie.</p>}
+                      </div>
+                      <div className="google-agenda-period-section">
+                        <span className="detail-label">Google occupe</span>
+                        <div className="google-agenda-day-slots">
+                          {plan.busy.length > 0 ? plan.busy.map((slot) => (
+                            <article key={`contact-busy-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-busy">
+                              <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                              <span>Occupe Google</span>
+                            </article>
+                          )) : <p className="empty-state">Aucun creneau occupe.</p>}
+                        </div>
+                      </div>
+                      <div className="google-agenda-period-section">
+                        <span className="detail-label">Libres</span>
+                        <div className="google-agenda-day-slots">
+                          {plan.free.length > 0 ? plan.free.map((slot) => (
+                            <article key={`contact-free-${plan.day}-${slot.start}-${slot.end}`} className="google-agenda-day-slot is-free">
+                              <div>
+                                <strong>{formatDateTime(slot.start)} - {formatDateTime(slot.end)}</strong>
+                                <span>{minutesBetweenWindow(slot)} min libres</span>
+                              </div>
+                              <button className="ghost-button button-subtle" type="button" onClick={() => handleUseContactAgendaWindow(slot)}>
+                                Utiliser
+                              </button>
+                            </article>
+                          )) : <p className="empty-state">Aucun creneau libre entre 08:00 et 19:00.</p>}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
+            <div className="info-grid google-agenda-global-summary">
               <InfoCard label="Contact" value={contactLabel} />
               <InfoCard label="Bien" value={selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : '-'} />
               <InfoCard label="Mandat" value={selectedAnnonce?.numero_mandat || '-'} />
