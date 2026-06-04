@@ -536,6 +536,12 @@ export async function createGoogleCalendarEvent(input: {
 }
 
 export async function updateGoogleCalendarEvent(linkId: string, input: {
+  eventType?: GoogleCalendarEventLink['event_type'] | null
+  relatedEntityType?: GoogleCalendarEventLink['related_entity_type'] | null
+  relatedEntityId?: string | null
+  appDossierId?: number | null
+  hektorAnnonceId?: number | null
+  hektorContactId?: string | null
   summary?: string | null
   startAt?: string | null
   endAt?: string | null

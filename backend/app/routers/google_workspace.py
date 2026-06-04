@@ -94,6 +94,12 @@ class GoogleCalendarAvailabilityPayload(BaseModel):
 
 
 class GoogleCalendarEventBusinessUpdatePayload(BaseModel):
+    eventType: Literal["visite", "estimation", "mandat", "compromis", "relance", "agence", "autre"] | None = None
+    relatedEntityType: Literal["annonce", "contact", "affaire", "visite", "relance", "other"] | None = None
+    relatedEntityId: str | None = Field(default=None, max_length=120)
+    appDossierId: int | None = Field(default=None, gt=0)
+    hektorAnnonceId: int | None = Field(default=None, gt=0)
+    hektorContactId: str | None = Field(default=None, max_length=80)
     summary: str | None = Field(default=None, min_length=1, max_length=240)
     startAt: str | None = None
     endAt: str | None = None
@@ -420,6 +426,12 @@ def update_google_calendar_event(
         link_id=link_id,
         updated_by=user.id,
         updated_by_email=user.email,
+        event_type=payload.eventType,
+        related_entity_type=payload.relatedEntityType,
+        related_entity_id=payload.relatedEntityId,
+        app_dossier_id=payload.appDossierId,
+        hektor_annonce_id=payload.hektorAnnonceId,
+        hektor_contact_id=payload.hektorContactId,
         summary=payload.summary,
         location=payload.location,
         starts_at=str(start_payload.get("dateTime") or payload.startAt) if payload.startAt else None,

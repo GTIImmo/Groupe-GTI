@@ -177,6 +177,12 @@ class GoogleCalendarEventLinkService:
         link_id: str,
         updated_by: str,
         updated_by_email: str | None,
+        event_type: str | None = None,
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
+        app_dossier_id: int | None = None,
+        hektor_annonce_id: int | None = None,
+        hektor_contact_id: str | None = None,
         summary: str | None = None,
         location: str | None = None,
         starts_at: str | None = None,
@@ -204,6 +210,18 @@ class GoogleCalendarEventLinkService:
             payload["google_html_link"] = google_html_link
         if metadata_patch is not None:
             payload["metadata_json"] = metadata_patch
+        if event_type is not None:
+            payload["event_type"] = event_type
+        if related_entity_type is not None:
+            payload["related_entity_type"] = related_entity_type
+        if related_entity_id is not None:
+            payload["related_entity_id"] = related_entity_id
+        if app_dossier_id is not None:
+            payload["app_dossier_id"] = app_dossier_id
+        if hektor_annonce_id is not None:
+            payload["hektor_annonce_id"] = hektor_annonce_id
+        if hektor_contact_id is not None:
+            payload["hektor_contact_id"] = hektor_contact_id
         return self._rest_patch(link_id, payload)
 
     def mark_deleted(self, *, link_id: str, updated_by: str, updated_by_email: str | None) -> dict[str, Any]:
