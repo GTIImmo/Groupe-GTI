@@ -22611,7 +22611,13 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
   const propertyPhotoBlock = safePhotoUrl ? `
     <section class="property-photo">
       <img src="${escapeHtml(safePhotoUrl)}" alt="${escapeHtml(propertyTitle)}" />
-    </section>` : ''
+    </section>` : `
+    <section class="property-photo is-empty">
+      <div>
+        <strong>Photo non disponible</strong>
+        <span>Aucune photo locale exploitable dans l'app pour ce bon de visite.</span>
+      </div>
+    </section>`
   const propertyLines = [
     propertyTitle,
     event.location ? `Adresse / lieu : ${event.location}` : '',
@@ -22648,6 +22654,9 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
     .notice{padding:12px;background:#fff6fa;border:1px solid #f0d4e2;border-left:4px solid #c2185b;border-radius:10px;margin-bottom:10px;text-align:justify}
     .property-photo{height:56mm;margin-bottom:10px;border:1px solid #e4e4e8;border-radius:10px;background:#f7f7f9;overflow:hidden}
     .property-photo img{width:100%;height:100%;object-fit:cover;display:block}
+    .property-photo.is-empty{display:grid;place-items:center;border-style:dashed;background:linear-gradient(135deg,#f8fafc,#f3f4f6);color:#646b76;text-align:center}
+    .property-photo.is-empty strong{display:block;color:#2b2b2b;font-size:15px;margin-bottom:5px}
+    .property-photo.is-empty span{display:block;font-size:11px}
     .property-table{width:100%;border-collapse:collapse;border:1px solid #23232a;margin-bottom:10px}
     .property-table th{width:28%;background:#2c2c2c;color:#fff;text-align:left;padding:10px;font-size:11px;text-transform:uppercase}
     .property-table td{padding:10px;background:#fff}

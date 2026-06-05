@@ -9589,3 +9589,31 @@
     max-width: none !important;
   }
 }
+
+/* Detail views use the viewport directly; keep the app scale normal. */
+@media (min-width: 981px) {
+  .modal-panel-detail:not(.mandate-register-modal),
+  .contact-detail-modern-modal {
+    width: calc(100vw - 24px) !important;
+    max-width: none !important;
+    height: calc(100vh - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    overflow: auto !important;
+  }
+
+  .modal-panel-detail:not(.mandate-register-modal) {
+    padding: 0 !important;
+  }
+
+  .modal-panel-detail:not(.mandate-register-modal) .detail-screen,
+  .modal-panel-detail:not(.mandate-register-modal) .detail-cockpit-panel,
+  .contact-detail-modern-modal .contact-modern-shell {
+    min-height: 100% !important;
+  }
+
+  .contact-detail-overlay {
+    padding: 12px !important;
+  }
+}

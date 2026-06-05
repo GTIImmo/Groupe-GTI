@@ -790,16 +790,6 @@
 
 * { box-sizing: border-box; }
 
-:root {
-  --gti-app-zoom: 0.8;
-}
-
-@media (min-width: 768px) {
-  body {
-    zoom: var(--gti-app-zoom);
-  }
-}
-
 body {
   margin: 0;
   font-family: "Segoe UI", "Helvetica Neue", sans-serif;
