@@ -23389,6 +23389,8 @@ function ContactDetailPopup(props: {
   const [googleContactEvents, setGoogleContactEvents] = useState<GoogleCalendarEventLink[]>([])
   const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
   const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
+  const [contactActionsOpen, setContactActionsOpen] = useState(false)
+  const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'history' | 'notes' | 'sync'>('summary')
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
@@ -23399,6 +23401,19 @@ function ContactDetailPopup(props: {
     .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())[0] ?? null
   const duplicateCount = props.contact.duplicate_group_count ?? 0
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
+  const contactFullName = `${props.contact.civilite ? `${props.contact.civilite} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
+  const contactLocation = [props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'
+  const contactTabs = [
+    { key: 'summary', label: 'Synthese' },
+    { key: 'rdv', label: 'RDV' },
+    { key: 'history', label: 'Historique' },
+    { key: 'notes', label: 'Notes' },
+    { key: 'sync', label: 'Synchronisation' },
+  ] as const
+  const primaryRelation = props.relations[0] ?? null
+  const nextGoogleEventLabel = nextGoogleContactEvent ? formatDateTime(nextGoogleContactEvent.starts_at) : null
+  const contactEmail = (props.contact.email ?? '').trim()
+  const contactPhone = (props.contact.phone_primary ?? '').trim()
 
   useEffect(() => {
     setEditing(false)
@@ -23411,6 +23426,8 @@ function ContactDetailPopup(props: {
     setGoogleContactAgendaEditingEvent(null)
     setGoogleContactAgendaDeletingId(null)
     setGoogleContactAgendaPrintingId(null)
+    setContactActionsOpen(false)
+    setContactDetailTab('summary')
   }, [props.contact.hektor_contact_id])
 
   const reloadGoogleContactEvents = useCallback(async () => {
@@ -23528,9 +23545,378 @@ function ContactDetailPopup(props: {
     }
   }
 
+  const renderGoogleContactEvents = () => {
+    if (googleContactEventsLoading && activeGoogleContactEvents.length === 0) {
+      return <p className="contact-modern-empty">Chargement des rendez-vous Google...</p>
+    }
+    if (activeGoogleContactEvents.length === 0) {
+      return <p className="contact-modern-empty">Aucun RDV Google lie a ce contact pour le moment.</p>
+    }
+    return (
+      <div className="contact-modern-rdv-list">
+        {[...activeGoogleContactEvents]
+          .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())
+          .map((event) => {
+            const eventInvitees = Array.isArray(event.attendees_json) ? event.attendees_json : []
+            const inviteeContacts = googleAgendaEventInviteeContacts(event)
+            const contactInvitee = inviteeContacts.find((item) => item.hektorContactId === props.contact.hektor_contact_id)
+            const eventAppDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
+            return (
+              <article key={`contact-google-event-${event.id}`} className="contact-modern-rdv-card">
+                <div className="contact-modern-rdv-main">
+                  <span className="contact-modern-rdv-type">{googleAgendaEventTypeOptions.find((option) => option.value === event.event_type)?.label ?? 'RDV'}</span>
+                  <strong>{event.summary}</strong>
+                  <div className="contact-modern-rdv-facts">
+                    <span>{formatDateTime(event.starts_at)} - {formatDateTime(event.ends_at)}</span>
+                    <span>{event.google_calendar_email}</span>
+                    {event.location ? <span>{event.location}</span> : null}
+                    {contactInvitee?.label ? <span>Invite : {contactInvitee.label}</span> : null}
+                    {eventInvitees.length > 0 ? <span>{eventInvitees.length} invite(s)</span> : null}
+                  </div>
+                </div>
+                <div className="contact-modern-rdv-actions">
+                  {Number.isFinite(eventAppDossierId) ? (
+                    <button className="ghost-button button-subtle" type="button" onClick={() => {
+                      props.onClose()
+                      props.onOpenDossier(eventAppDossierId)
+                    }}>
+                      Ouvrir dossier
+                    </button>
+                  ) : null}
+                  {event.google_html_link ? (
+                    <a className="ghost-button button-subtle" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
+                  ) : null}
+                  {canPrintVisitVoucher(event) ? (
+                    <button className="ghost-button button-primary" type="button" onClick={() => void handleOpenVisitVoucherPrint(event)} disabled={googleContactAgendaDeletingId === event.id || googleContactAgendaPrintingId === event.id}>
+                      {googleContactAgendaPrintingId === event.id ? 'Preparation...' : 'Bon de visite'}
+                    </button>
+                  ) : null}
+                  <button className="ghost-button button-subtle" type="button" onClick={() => handleOpenEditGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>
+                    Modifier
+                  </button>
+                  <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>
+                    {googleContactAgendaDeletingId === event.id ? 'Suppression...' : 'Supprimer'}
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+      </div>
+    )
+  }
+
   return (
     <div className="modal-overlay contact-detail-overlay" onClick={props.onClose}>
-      <section className="modal-panel contact-detail-modal" onClick={(event) => event.stopPropagation()}>
+      <section className="modal-panel contact-detail-modal contact-detail-modern-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="contact-modern-shell">
+          <nav className="contact-modern-breadcrumb" aria-label="Fil d'Ariane">
+            <span>Contacts</span>
+            <span>/</span>
+            <strong>{props.contact.display_name}</strong>
+          </nav>
+
+          <header className="contact-modern-hero">
+            <div className="contact-modern-identity">
+              <div className="contact-modern-avatar" aria-hidden="true">
+                <span>{userInitials(props.contact.display_name, props.contact.email)}</span>
+                <i />
+              </div>
+              <div className="contact-modern-title-block">
+                <p>Fiche contact</p>
+                <h3>{contactFullName}</h3>
+                <div className="contact-modern-badges">
+                  <StatusPill value={contactArchiveLabel(props.contact)} />
+                  {selectedTypologies.slice(0, 3).map((badge) => (
+                    <span key={`hero-${badge}`} className={contactRoleChipClass(badge)}>{contactDirectoryRoleLabel(badge)}</span>
+                  ))}
+                  <span className={`contact-duplicate-pill ${contactDuplicateTone(props.contact.duplicate_max_severity)}`}>{contactSeverityLabel(props.contact.duplicate_max_severity)}</span>
+                </div>
+                <div className="contact-modern-meta">
+                  <span><DetailIcon type="contact" />{contactPhone || '-'}</span>
+                  <span><DetailIcon type="content" />{contactEmail || '-'}</span>
+                  <span><DetailIcon type="location" />{contactLocation}</span>
+                  <span><DetailIcon type="commercial" />Negociateur : {props.contact.commercial_nom || '-'}</span>
+                  <span><DetailIcon type="mandate" />Agence : {props.contact.agence_nom || '-'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="contact-modern-actions" aria-label="Actions contact">
+              {contactPhone ? (
+                <a className="contact-modern-action contact-modern-action-primary" href={`tel:${contactPhone}`}>
+                  <DetailIcon type="contact" />
+                  <span>Appeler</span>
+                </a>
+              ) : null}
+              {contactEmail ? (
+                <a className="contact-modern-action" href={`mailto:${contactEmail}`}>
+                  <DetailIcon type="content" />
+                  <span>Email</span>
+                </a>
+              ) : null}
+              <button className="contact-modern-action contact-modern-action-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                <DetailIcon type="history" />
+                <span>Creer RDV</span>
+              </button>
+              {props.canManageContacts ? (
+                <button className="contact-modern-action" type="button" onClick={() => setEditing(true)}>
+                  <DetailIcon type="commercial" />
+                  <span>Modifier</span>
+                </button>
+              ) : null}
+              <div className="contact-modern-action-menu">
+                <button className="contact-modern-icon-button" type="button" aria-label="Actions supplementaires" aria-expanded={contactActionsOpen} onClick={() => setContactActionsOpen((open) => !open)}>
+                  <DetailIcon type="actions" />
+                </button>
+                {contactActionsOpen ? (
+                  <div className="contact-modern-menu" role="menu">
+                    <button type="button" onClick={() => {
+                      setContactActionsOpen(false)
+                      openHektorContact(props.contact.hektor_contact_id)
+                    }}>
+                      <DetailIcon type="hektor" />
+                      <span>Ouvrir dans Hektor</span>
+                    </button>
+                    {props.canDeleteContacts ? (
+                      <button className="is-danger" type="button" onClick={() => {
+                        setContactActionsOpen(false)
+                        setDeleteOpen(true)
+                      }}>
+                        <DetailIcon type="history" />
+                        <span>Supprimer</span>
+                      </button>
+                    ) : null}
+                    <button type="button" onClick={props.onClose}>
+                      <span aria-hidden="true">x</span>
+                      <span>Fermer</span>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </header>
+
+          <div className="contact-modern-metrics" aria-label="Indicateurs contact">
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-blue"><DetailIcon type="mandate" /></span>
+              <strong>{props.relations.length}</strong>
+              <small>relation annonce liee</small>
+            </div>
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-green"><DetailIcon type="visibility" /></span>
+              <strong>{selectedActiveSearches.length}</strong>
+              <small>recherche active</small>
+            </div>
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-purple"><DetailIcon type="history" /></span>
+              <strong>{activeGoogleContactEvents.filter((event) => new Date(event.starts_at).getTime() >= Date.now()).length}</strong>
+              <small>RDV a venir</small>
+            </div>
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-orange"><DetailIcon type="contact" /></span>
+              <strong>{duplicateCount}</strong>
+              <small>groupes doublon</small>
+            </div>
+          </div>
+
+          <div className="contact-modern-layout">
+            <aside className="contact-modern-left">
+              <article className="contact-modern-card">
+                <div className="contact-modern-card-head">
+                  <span>Identite</span>
+                  <strong>Coordonnees CRM</strong>
+                </div>
+                <div className="contact-modern-info-list">
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-phone"><DetailIcon type="contact" /></span>
+                    <div><small>Telephone</small><strong>{contactPhone || '-'}</strong></div>
+                    {contactPhone ? <a href={`tel:${contactPhone}`} aria-label="Appeler"><DetailIcon type="contact" /></a> : null}
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-email"><DetailIcon type="content" /></span>
+                    <div><small>Email</small><strong>{contactEmail || '-'}</strong></div>
+                    {contactEmail ? <a href={`mailto:${contactEmail}`} aria-label="Envoyer un email"><DetailIcon type="content" /></a> : null}
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-location"><DetailIcon type="location" /></span>
+                    <div><small>Secteur</small><strong>{contactLocation}</strong></div>
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-owner"><DetailIcon type="commercial" /></span>
+                    <div><small>Negociateur</small><strong>{props.contact.commercial_nom || '-'}</strong></div>
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-agency"><DetailIcon type="mandate" /></span>
+                    <div><small>Agence</small><strong>{props.contact.agence_nom || '-'}</strong></div>
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-sync"><DetailIcon type="hektor" /></span>
+                    <div><small>Detail</small><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</strong></div>
+                  </div>
+                </div>
+              </article>
+            </aside>
+
+            <main className="contact-modern-center">
+              <article className="contact-modern-card contact-modern-work-card">
+                <div className="contact-modern-tabs" role="tablist" aria-label="Sections fiche contact">
+                  {contactTabs.map((tab) => (
+                    <button key={tab.key} className={contactDetailTab === tab.key ? 'is-active' : ''} type="button" role="tab" aria-selected={contactDetailTab === tab.key} onClick={() => setContactDetailTab(tab.key)}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {contactDetailTab === 'summary' ? (
+                  <div className="contact-modern-tab-panel">
+                    <section className="contact-modern-next-action">
+                      <div>
+                        <span>Prochaine action conseillee</span>
+                        <strong>{nextGoogleContactEvent ? nextGoogleContactEvent.summary : 'Planifier le prochain contact'}</strong>
+                        <p>{nextGoogleContactEvent ? `${nextGoogleEventLabel} dans Google Agenda.` : 'Creer un RDV Google depuis cette fiche pour garder le suivi CRM a jour.'}</p>
+                      </div>
+                      <button className="ghost-button button-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>Creer RDV Google</button>
+                    </section>
+
+                    <section className="contact-modern-status-card">
+                      <span>Statut du contact</span>
+                      <div>
+                        <StatusPill value={contactArchiveLabel(props.contact)} />
+                        <span className={`contact-duplicate-pill ${contactDuplicateTone(props.contact.duplicate_max_severity)}`}>{contactSeverityLabel(props.contact.duplicate_max_severity)}</span>
+                        {contactBool(props.contact.supabase_sync_eligible) ? <StatusPill value="Eligible app" /> : null}
+                        {selectedRoles.map((role) => <StatusPill key={`role-${role}`} value={contactDirectoryRoleLabel(role)} />)}
+                        {selectedTypologies.map((badge) => <span key={`type-${badge}`} className={contactRoleChipClass(badge)}>{contactDirectoryRoleLabel(badge)}</span>)}
+                      </div>
+                    </section>
+
+                    <section className="contact-modern-sync-summary">
+                      <strong>Derniere synchronisation Hektor</strong>
+                      <div>
+                        <span>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor disponible' : 'Detail Hektor a charger'}</span>
+                        <span>{props.contact.contact_detail_synced_at ? `Detail lu le ${formatDate(props.contact.contact_detail_synced_at)}` : 'Date de lecture non disponible'}</span>
+                        <span>{props.contact.duplicate_primary_candidate_id ? `Candidat principal : ${props.contact.duplicate_primary_candidate_id}` : 'Aucun candidat principal force'}</span>
+                      </div>
+                    </section>
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'rdv' ? (
+                  <div className="contact-modern-tab-panel">
+                    <div className="contact-modern-section-head">
+                      <div>
+                        <span>RDV Google</span>
+                        <strong>{googleContactEventsLoading ? 'Chargement...' : `${activeGoogleContactEvents.length} rendez-vous lie(s)`}</strong>
+                      </div>
+                      <button className="ghost-button button-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>Creer RDV Google</button>
+                    </div>
+                    {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
+                    {renderGoogleContactEvents()}
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'history' ? (
+                  <div className="contact-modern-tab-panel">
+                    <div className="contact-modern-timeline">
+                      <div><span>Relations annonce</span><strong>{props.relations.length}</strong><small>{primaryRelation ? primaryRelation.titre_bien || primaryRelation.numero_dossier || 'Annonce liee' : 'Aucune annonce liee'}</small></div>
+                      <div><span>Recherches connues</span><strong>{props.contact.total_search_count ?? props.searches.length}</strong><small>{selectedActiveSearches.length} active(s), {selectedArchivedSearches.length} archivee(s)</small></div>
+                      <div><span>Controle qualite</span><strong>{duplicateCount}</strong><small>groupe(s) doublon detecte(s)</small></div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'notes' ? (
+                  <div className="contact-modern-tab-panel">
+                    <section className="contact-modern-empty-card">
+                      <DetailIcon type="content" />
+                      <strong>Aucune note contact dans l'app pour le moment.</strong>
+                      <span>La fiche garde les informations Hektor, les RDV Google et les relations annonces.</span>
+                    </section>
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'sync' ? (
+                  <div className="contact-modern-tab-panel">
+                    <section className="contact-modern-sync-grid">
+                      <div><span>Hektor</span><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail lu' : 'Detail non charge'}</strong></div>
+                      <div><span>Supabase</span><strong>{contactBool(props.contact.supabase_sync_eligible) ? 'Eligible app' : 'Hors perimetre'}</strong></div>
+                      <div><span>Doublons</span><strong>{duplicateCount}</strong></div>
+                      <div><span>ID contact</span><strong>{props.contact.hektor_contact_id}</strong></div>
+                    </section>
+                  </div>
+                ) : null}
+              </article>
+            </main>
+
+            <aside className="contact-modern-right">
+              <article className="contact-modern-card">
+                <div className="contact-modern-side-head">
+                  <strong>Annonces liees</strong>
+                  <span>{props.relations.length}</span>
+                </div>
+                {props.relations.length > 0 ? (
+                  <div className="contact-modern-property-list">
+                    {props.relations.map((relation) => {
+                      const relationLabel = contactDirectoryRoleLabel(relation.role_contact)
+                      const relationAppDossierId = Number(relation.app_dossier_id)
+                      return (
+                        <button key={`modern-${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => {
+                          if (!Number.isFinite(relationAppDossierId)) return
+                          props.onClose()
+                          props.onOpenDossier(relationAppDossierId)
+                        }} disabled={!Number.isFinite(relationAppDossierId)}>
+                          <span className="contact-modern-property-thumb"><DetailIcon type="mandate" /></span>
+                          <span>
+                            <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
+                            <small>{relation.titre_bien || relationLabel}</small>
+                            <em>{[contactTransactionLabel(relation), relation.transaction_date ? formatDate(relation.transaction_date) : null].filter(Boolean).join(' - ') || 'Relation annonce'}</em>
+                          </span>
+                          <i className={contactRoleChipClass(relation.role_contact)}>{relationLabel}</i>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : <p className="contact-modern-empty">Aucune annonce liee dans l'index courant.</p>}
+              </article>
+
+              <article className="contact-modern-card">
+                <div className="contact-modern-side-head">
+                  <strong>Recherches acquereurs</strong>
+                  <span>{selectedActiveSearches.length}</span>
+                </div>
+                {props.searches.length > 0 ? (
+                  <div className="contact-modern-search-list">
+                    {props.searches.slice(0, 4).map((search) => {
+                      const cities = contactJsonList(search.villes_json)
+                      const types = contactSearchTypes(search.types_json)
+                      return (
+                        <div key={`modern-search-${search.contact_search_key}`} className={contactBool(search.is_active) ? 'is-active' : ''}>
+                          <strong>{cities.join(', ') || 'Secteur non renseigne'}</strong>
+                          <span>{types.join(', ') || search.offre || 'Type non renseigne'}</span>
+                          <StatusPill value={contactBool(search.is_active) ? 'Active' : 'Archive'} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <section className="contact-modern-empty-card is-compact">
+                    <DetailIcon type="visibility" />
+                    <strong>Aucune recherche active</strong>
+                    <span>{contactBool(props.contact.has_contact_detail) ? 'Aucune recherche active poussee sur Supabase pour ce contact.' : 'Recherche visible apres chargement Hektor.'}</span>
+                  </section>
+                )}
+              </article>
+
+              <article className="contact-modern-card">
+                <div className="contact-modern-side-head">
+                  <strong>Doublons</strong>
+                  <span className={duplicateCount > 0 ? 'is-warning' : ''}>{duplicateCount}</span>
+                </div>
+                <p>{duplicateCount ? `${duplicateCount} groupe(s) doublon detecte(s).` : 'Aucun doublon classe.'}</p>
+                <small>{props.contact.duplicate_primary_candidate_id ? `Candidat principal : ${props.contact.duplicate_primary_candidate_id}` : 'Controle qualite sans candidat principal force.'}</small>
+              </article>
+            </aside>
+          </div>
+        </div>
         <div className="contact-detail-modal-head">
           <div className="contact-detail-heading-main">
             <div className="contact-detail-title">

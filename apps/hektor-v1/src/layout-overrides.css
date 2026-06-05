@@ -8760,3 +8760,832 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Contact detail CRM reference redesign */
+.contact-detail-modern-modal {
+  --crm-ink: #132033;
+  --crm-muted: #647184;
+  --crm-line: #dde6ef;
+  --crm-soft: #f6f9fc;
+  --crm-blue: #1767e8;
+  --crm-magenta: #c21868;
+  --crm-green: #2f8f55;
+  --crm-amber: #d88a18;
+  width: min(1560px, calc(100vw - 42px)) !important;
+  max-height: calc(100vh - 42px) !important;
+  overflow: auto !important;
+  border: 1px solid rgba(19, 32, 51, 0.1) !important;
+  border-radius: 10px !important;
+  background: #f8fafc !important;
+  color: var(--crm-ink) !important;
+  box-shadow: 0 30px 90px rgba(19, 32, 51, 0.18) !important;
+}
+
+.contact-detail-modern-modal > .contact-detail-modal-head,
+.contact-detail-modern-modal > .contact-detail-modal-grid {
+  display: none !important;
+}
+
+.contact-modern-shell {
+  display: grid !important;
+  gap: 16px !important;
+  padding: 18px !important;
+}
+
+.contact-modern-breadcrumb {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  color: var(--crm-muted) !important;
+  font-size: 13px !important;
+  font-weight: 720 !important;
+}
+
+.contact-modern-breadcrumb strong {
+  color: var(--crm-ink) !important;
+  font-weight: 820 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-hero,
+.contact-modern-metrics,
+.contact-modern-card {
+  border: 1px solid var(--crm-line) !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 12px 36px rgba(19, 32, 51, 0.055) !important;
+}
+
+.contact-modern-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 18px !important;
+  align-items: start !important;
+  padding: 22px !important;
+}
+
+.contact-modern-identity {
+  display: grid !important;
+  grid-template-columns: 88px minmax(0, 1fr) !important;
+  gap: 18px !important;
+  min-width: 0 !important;
+  align-items: center !important;
+}
+
+.contact-modern-avatar {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 88px !important;
+  height: 88px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(145deg, #eef4ff, #f8e6f0) !important;
+  color: #5c25c8 !important;
+  font-size: 30px !important;
+  font-weight: 950 !important;
+}
+
+.contact-modern-avatar i {
+  position: absolute !important;
+  right: 6px !important;
+  bottom: 8px !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 3px solid #fff !important;
+  border-radius: 999px !important;
+  background: #57b849 !important;
+}
+
+.contact-modern-title-block {
+  min-width: 0 !important;
+}
+
+.contact-modern-title-block p,
+.contact-modern-card-head span,
+.contact-modern-side-head strong,
+.contact-modern-section-head span,
+.contact-modern-next-action span,
+.contact-modern-status-card > span {
+  margin: 0 !important;
+  color: #1f6574 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+  text-transform: uppercase !important;
+}
+
+.contact-modern-title-block h3 {
+  margin: 5px 0 8px !important;
+  color: var(--crm-ink) !important;
+  font-size: 42px !important;
+  line-height: 1.02 !important;
+  letter-spacing: 0 !important;
+}
+
+.contact-modern-badges,
+.contact-modern-meta,
+.contact-modern-actions,
+.contact-modern-status-card div,
+.contact-modern-rdv-facts,
+.contact-modern-rdv-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+.contact-modern-meta {
+  margin-top: 10px !important;
+  gap: 10px 18px !important;
+}
+
+.contact-modern-meta span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  color: #4d5d70 !important;
+  font-size: 14px !important;
+  font-weight: 690 !important;
+}
+
+.contact-modern-meta svg {
+  width: 16px !important;
+  height: 16px !important;
+  color: #6b7788 !important;
+  flex: 0 0 auto !important;
+}
+
+.contact-modern-actions {
+  justify-content: flex-end !important;
+  max-width: 600px !important;
+}
+
+.contact-modern-action,
+.contact-modern-icon-button,
+.contact-modern-menu button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-height: 38px !important;
+  border: 1px solid var(--crm-line) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--crm-ink) !important;
+  font-size: 14px !important;
+  font-weight: 820 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.contact-modern-action {
+  padding: 0 15px !important;
+}
+
+.contact-modern-action-primary {
+  border-color: rgba(23, 103, 232, 0.55) !important;
+  background: var(--crm-blue) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 24px rgba(23, 103, 232, 0.18) !important;
+}
+
+.contact-modern-action svg,
+.contact-modern-icon-button svg,
+.contact-modern-menu svg {
+  width: 17px !important;
+  height: 17px !important;
+  flex: 0 0 auto !important;
+}
+
+.contact-modern-action-menu {
+  position: relative !important;
+}
+
+.contact-modern-icon-button {
+  width: 40px !important;
+  padding: 0 !important;
+}
+
+.contact-modern-menu {
+  position: absolute !important;
+  z-index: 20 !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  display: grid !important;
+  gap: 4px !important;
+  width: 230px !important;
+  padding: 8px !important;
+  border: 1px solid var(--crm-line) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: 0 22px 55px rgba(19, 32, 51, 0.16) !important;
+}
+
+.contact-modern-menu button {
+  justify-content: flex-start !important;
+  width: 100% !important;
+  border: 0 !important;
+  padding: 8px 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.contact-modern-menu button:hover {
+  background: var(--crm-soft) !important;
+}
+
+.contact-modern-menu .is-danger {
+  color: #d32020 !important;
+}
+
+.contact-modern-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  overflow: hidden !important;
+}
+
+.contact-modern-metric {
+  display: grid !important;
+  grid-template-columns: 48px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  column-gap: 12px !important;
+  align-items: center !important;
+  min-height: 82px !important;
+  padding: 18px !important;
+  border-right: 1px solid var(--crm-line) !important;
+}
+
+.contact-modern-metric:last-child {
+  border-right: 0 !important;
+}
+
+.metric-icon {
+  grid-row: 1 / 3 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 10px !important;
+}
+
+.metric-icon svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.metric-icon.is-blue { color: var(--crm-blue) !important; background: #edf4ff !important; }
+.metric-icon.is-green { color: var(--crm-green) !important; background: #edf8f0 !important; }
+.metric-icon.is-purple { color: #7c3fd6 !important; background: #f3ecff !important; }
+.metric-icon.is-orange { color: #e45e1b !important; background: #fff1e8 !important; }
+
+.contact-modern-metric strong {
+  color: var(--crm-ink) !important;
+  font-size: 26px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.contact-modern-metric small {
+  color: #526071 !important;
+  font-size: 13px !important;
+  font-weight: 720 !important;
+}
+
+.contact-modern-layout {
+  display: grid !important;
+  grid-template-columns: minmax(290px, 0.85fr) minmax(430px, 1.25fr) minmax(330px, 0.95fr) !important;
+  gap: 16px !important;
+  align-items: start !important;
+}
+
+.contact-modern-left,
+.contact-modern-center,
+.contact-modern-right {
+  display: grid !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+}
+
+.contact-modern-card {
+  display: grid !important;
+  gap: 14px !important;
+  padding: 16px !important;
+  min-width: 0 !important;
+}
+
+.contact-modern-card-head,
+.contact-modern-section-head,
+.contact-modern-side-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+.contact-modern-card-head strong,
+.contact-modern-section-head strong {
+  color: var(--crm-ink) !important;
+  font-size: 19px !important;
+  font-weight: 920 !important;
+}
+
+.contact-modern-info-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.contact-modern-info-row {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) 34px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  min-height: 66px !important;
+  padding: 10px !important;
+  border: 1px solid #e6edf4 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+}
+
+.contact-modern-info-row > a {
+  display: grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 8px !important;
+  background: #eef4ff !important;
+  color: var(--crm-blue) !important;
+}
+
+.contact-modern-info-row > a svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.info-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 9px !important;
+}
+
+.info-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.info-icon.is-phone { color: #7b38d8 !important; background: #f4edff !important; }
+.info-icon.is-email { color: var(--crm-magenta) !important; background: #fcebf3 !important; }
+.info-icon.is-location { color: #2f6575 !important; background: #eef6f8 !important; }
+.info-icon.is-owner { color: var(--crm-blue) !important; background: #edf4ff !important; }
+.info-icon.is-agency { color: #586371 !important; background: #f0f3f7 !important; }
+.info-icon.is-sync { color: #6738ce !important; background: #f2ecff !important; }
+
+.contact-modern-info-row small {
+  display: block !important;
+  color: #6b7788 !important;
+  font-size: 11px !important;
+  font-weight: 860 !important;
+  text-transform: uppercase !important;
+}
+
+.contact-modern-info-row strong {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: var(--crm-ink) !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-work-card {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.contact-modern-tabs {
+  display: flex !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  border-bottom: 1px solid var(--crm-line) !important;
+  padding: 0 8px !important;
+  background: #fff !important;
+}
+
+.contact-modern-tabs button {
+  position: relative !important;
+  min-height: 52px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #46566a !important;
+  padding: 0 16px !important;
+  font-size: 14px !important;
+  font-weight: 760 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-tabs button.is-active {
+  color: var(--crm-blue) !important;
+}
+
+.contact-modern-tabs button.is-active::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 0 !important;
+  height: 3px !important;
+  border-radius: 999px 999px 0 0 !important;
+  background: var(--crm-blue) !important;
+}
+
+.contact-modern-tab-panel {
+  display: grid !important;
+  gap: 14px !important;
+  padding: 16px !important;
+}
+
+.contact-modern-next-action,
+.contact-modern-status-card,
+.contact-modern-sync-summary,
+.contact-modern-empty-card,
+.contact-modern-sync-grid > div,
+.contact-modern-timeline > div {
+  border: 1px solid #e1e9f2 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+}
+
+.contact-modern-next-action {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 14px !important;
+  align-items: center !important;
+  padding: 16px !important;
+  background: linear-gradient(135deg, #f7fbff, #fff) !important;
+}
+
+.contact-modern-next-action strong {
+  display: block !important;
+  margin-top: 5px !important;
+  color: var(--crm-ink) !important;
+  font-size: 18px !important;
+  font-weight: 920 !important;
+}
+
+.contact-modern-next-action p,
+.contact-modern-card p,
+.contact-modern-empty,
+.contact-modern-empty-card span,
+.contact-modern-side-head + small,
+.contact-modern-timeline small {
+  margin: 4px 0 0 !important;
+  color: #5d6a7a !important;
+  font-size: 13px !important;
+  font-weight: 620 !important;
+}
+
+.contact-modern-status-card,
+.contact-modern-sync-summary {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 14px !important;
+}
+
+.contact-modern-sync-summary strong {
+  color: var(--crm-ink) !important;
+  font-size: 14px !important;
+  font-weight: 880 !important;
+}
+
+.contact-modern-sync-summary div,
+.contact-modern-sync-grid,
+.contact-modern-timeline {
+  display: grid !important;
+  gap: 9px !important;
+}
+
+.contact-modern-sync-summary div {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.contact-modern-sync-summary span,
+.contact-modern-sync-grid span,
+.contact-modern-timeline span,
+.contact-modern-rdv-facts span {
+  color: #667386 !important;
+  font-size: 12px !important;
+  font-weight: 690 !important;
+}
+
+.contact-modern-sync-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.contact-modern-sync-grid > div,
+.contact-modern-timeline > div {
+  display: grid !important;
+  gap: 4px !important;
+  padding: 14px !important;
+}
+
+.contact-modern-sync-grid strong,
+.contact-modern-timeline strong {
+  color: var(--crm-ink) !important;
+  font-size: 18px !important;
+  font-weight: 920 !important;
+}
+
+.contact-modern-rdv-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.contact-modern-rdv-card {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 13px !important;
+  border: 1px solid #e2eaf3 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+}
+
+.contact-modern-rdv-main {
+  min-width: 0 !important;
+}
+
+.contact-modern-rdv-type {
+  display: inline-flex !important;
+  margin-bottom: 5px !important;
+  color: #1f6574 !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.contact-modern-rdv-card strong {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: var(--crm-ink) !important;
+  font-size: 16px !important;
+  font-weight: 920 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-rdv-facts {
+  margin-top: 8px !important;
+}
+
+.contact-modern-rdv-facts span {
+  padding: 5px 8px !important;
+  border-radius: 999px !important;
+  background: #f1f5f9 !important;
+}
+
+.contact-modern-rdv-actions {
+  justify-content: flex-end !important;
+  max-width: 360px !important;
+}
+
+.contact-modern-rdv-actions .ghost-button {
+  min-height: 31px !important;
+  padding: 5px 9px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+
+.contact-modern-empty-card {
+  display: grid !important;
+  justify-items: center !important;
+  gap: 8px !important;
+  padding: 28px 18px !important;
+  text-align: center !important;
+}
+
+.contact-modern-empty-card.is-compact {
+  padding: 20px 12px !important;
+}
+
+.contact-modern-empty-card svg {
+  width: 34px !important;
+  height: 34px !important;
+  color: var(--crm-blue) !important;
+}
+
+.contact-modern-empty-card strong {
+  color: var(--crm-ink) !important;
+  font-size: 15px !important;
+  font-weight: 880 !important;
+}
+
+.contact-modern-side-head span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 26px !important;
+  height: 26px !important;
+  border-radius: 999px !important;
+  background: #fce6f0 !important;
+  color: var(--crm-magenta) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.contact-modern-side-head span.is-warning {
+  background: #fff0dc !important;
+  color: #c06100 !important;
+}
+
+.contact-modern-property-list,
+.contact-modern-search-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.contact-modern-property-list button {
+  display: grid !important;
+  grid-template-columns: 70px minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 10px !important;
+  border: 1px solid #e2eaf3 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.contact-modern-property-thumb {
+  display: grid !important;
+  place-items: center !important;
+  width: 70px !important;
+  height: 58px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #eef4ff, #f7f9fb) !important;
+  color: var(--crm-blue) !important;
+}
+
+.contact-modern-property-thumb svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.contact-modern-property-list strong,
+.contact-modern-search-list strong {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: var(--crm-ink) !important;
+  font-size: 14px !important;
+  font-weight: 880 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-property-list small,
+.contact-modern-search-list span,
+.contact-modern-property-list em,
+.contact-modern-card > small {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #5f6e80 !important;
+  font-size: 12px !important;
+  font-style: normal !important;
+  font-weight: 650 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-property-list i {
+  max-width: 120px !important;
+  white-space: nowrap !important;
+}
+
+.contact-modern-search-list > div {
+  display: grid !important;
+  gap: 6px !important;
+  padding: 12px !important;
+  border: 1px solid #e2eaf3 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+}
+
+.contact-modern-search-list > div.is-active {
+  border-color: rgba(47, 143, 85, 0.22) !important;
+  background: #fbfffc !important;
+}
+
+@media (max-width: 1320px) {
+  .contact-modern-hero,
+  .contact-modern-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-modern-actions {
+    justify-content: flex-start !important;
+    max-width: none !important;
+  }
+
+  .contact-modern-right {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .contact-detail-modern-modal {
+    width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 16px) !important;
+  }
+
+  .contact-modern-shell {
+    padding: 10px !important;
+  }
+
+  .contact-modern-identity {
+    grid-template-columns: 66px minmax(0, 1fr) !important;
+  }
+
+  .contact-modern-avatar {
+    width: 66px !important;
+    height: 66px !important;
+    font-size: 23px !important;
+  }
+
+  .contact-modern-title-block h3 {
+    font-size: 28px !important;
+  }
+
+  .contact-modern-metrics,
+  .contact-modern-right,
+  .contact-modern-sync-summary div,
+  .contact-modern-sync-grid,
+  .contact-modern-rdv-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-modern-metric {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--crm-line) !important;
+  }
+
+  .contact-modern-metric:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .contact-modern-next-action {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .contact-modern-hero {
+    padding: 14px !important;
+  }
+
+  .contact-modern-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+  }
+
+  .contact-modern-action,
+  .contact-modern-icon-button {
+    width: 100% !important;
+  }
+
+  .contact-modern-action-menu {
+    width: 100% !important;
+  }
+
+  .contact-modern-info-row {
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+  }
+
+  .contact-modern-info-row > a {
+    display: none !important;
+  }
+
+  .contact-modern-property-list button {
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+  }
+
+  .contact-modern-property-list i {
+    grid-column: 1 / -1 !important;
+    max-width: none !important;
+  }
+}
