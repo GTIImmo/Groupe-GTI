@@ -9600,7 +9600,11 @@
     max-height: calc(100vh - 24px) !important;
     margin: 0 !important;
     border-radius: 8px !important;
-    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+    scrollbar-gutter: stable !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(19, 32, 51, 0.34) rgba(226, 232, 240, 0.9) !important;
   }
 
   .modal-panel-detail:not(.mandate-register-modal) {
@@ -9610,10 +9614,31 @@
   .modal-panel-detail:not(.mandate-register-modal) .detail-screen,
   .modal-panel-detail:not(.mandate-register-modal) .detail-cockpit-panel,
   .contact-detail-modern-modal .contact-modern-shell {
+    height: auto !important;
+    max-height: none !important;
     min-height: 100% !important;
+    overflow: visible !important;
   }
 
   .contact-detail-overlay {
     padding: 12px !important;
+  }
+
+  .modal-panel-detail:not(.mandate-register-modal)::-webkit-scrollbar,
+  .contact-detail-modern-modal::-webkit-scrollbar {
+    width: 12px !important;
+  }
+
+  .modal-panel-detail:not(.mandate-register-modal)::-webkit-scrollbar-track,
+  .contact-detail-modern-modal::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.9) !important;
+    border-radius: 999px !important;
+  }
+
+  .modal-panel-detail:not(.mandate-register-modal)::-webkit-scrollbar-thumb,
+  .contact-detail-modern-modal::-webkit-scrollbar-thumb {
+    background: rgba(19, 32, 51, 0.34) !important;
+    border: 3px solid rgba(226, 232, 240, 0.9) !important;
+    border-radius: 999px !important;
   }
 }
