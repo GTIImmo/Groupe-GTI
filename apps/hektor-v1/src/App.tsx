@@ -23394,6 +23394,9 @@ function ContactDetailPopup(props: {
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
   const selectedArchivedSearches = props.searches.filter((search) => !contactBool(search.is_active))
   const activeGoogleContactEvents = googleContactEvents.filter((event) => event.status !== 'deleted')
+  const nextGoogleContactEvent = activeGoogleContactEvents
+    .filter((event) => new Date(event.starts_at).getTime() >= Date.now())
+    .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())[0] ?? null
   const duplicateCount = props.contact.duplicate_group_count ?? 0
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
 
@@ -23551,6 +23554,10 @@ function ContactDetailPopup(props: {
                   <span><strong>Email</strong><small>{props.contact.email}</small></span>
                 </a>
               ) : null}
+              <button className="contact-quick-action is-rdv" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="history" /></span>
+                <span><strong>Creer RDV</strong><small>Agenda Google</small></span>
+              </button>
             </div>
           </div>
           <div className="contact-management-actions" aria-label="Gestion du contact">
@@ -23659,6 +23666,11 @@ function ContactDetailPopup(props: {
                 Creer RDV Google
               </button>
             </div>
+            <div className={`contact-next-step-card ${nextGoogleContactEvent ? 'has-event' : 'is-empty'}`}>
+              <span>{nextGoogleContactEvent ? 'Prochaine action' : 'Action conseillee'}</span>
+              <strong>{nextGoogleContactEvent ? nextGoogleContactEvent.summary : 'Planifier le prochain contact'}</strong>
+              <small>{nextGoogleContactEvent ? formatDateTime(nextGoogleContactEvent.starts_at) : 'Creer un RDV Google depuis cette fiche pour garder le suivi CRM a jour.'}</small>
+            </div>
             {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
             {activeGoogleContactEvents.length > 0 ? (
               <div className="contact-google-agenda-list">
@@ -23725,9 +23737,16 @@ function ContactDetailPopup(props: {
                 onUpdated={handleGoogleContactAgendaUpdated}
               />
             ) : null}
+          </div>
 
+          <div className="contact-detail-property-column">
             <article className="detail-card contact-search-detail">
-            <span className="detail-label">Recherches acquereurs</span>
+            <div className="contact-card-heading">
+              <div>
+                <span className="detail-label">Recherches acquereurs</span>
+                <strong>Projet et criteres</strong>
+              </div>
+            </div>
             <div className="contact-search-overview">
               <div><strong>{selectedActiveSearches.length}</strong><span>actives</span></div>
               <div><strong>{selectedArchivedSearches.length}</strong><span>archivees</span></div>
@@ -23762,7 +23781,12 @@ function ContactDetailPopup(props: {
             </article>
 
             <article className="detail-card contact-detail-relations-card">
-            <span className="detail-label">Annonces liees</span>
+            <div className="contact-card-heading">
+              <div>
+                <span className="detail-label">Annonces liees</span>
+                <strong>Biens et historique</strong>
+              </div>
+            </div>
             {props.relations.length > 0 ? (
               <div className="contact-relation-list">
                 {props.relations.map((relation) => {
