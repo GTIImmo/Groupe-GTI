@@ -101,7 +101,7 @@ class AppointmentService:
         rows = self._rest_get(
             "app_dossier_current",
             params={
-                "select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,ville,prix,type_bien,commercial_id,commercial_nom,negociateur_email,agence_nom,photo_url_listing,adresse_detail,adresse_privee_listing",
+                "select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,ville,prix,type_bien,commercial_id,commercial_nom,negociateur_email,agence_nom,photo_url_listing,adresse_detail,adresse_privee_listing,archive,diffusable,statut_annonce",
                 "hektor_annonce_id": f"eq.{annonce_id}",
                 "limit": "1",
             },
@@ -109,6 +109,12 @@ class AppointmentService:
         if not rows:
             raise HTTPException(status_code=404, detail=f"Annonce {annonce_id} introuvable dans app_dossier_current")
         return rows[0]
+
+    def _is_public_appointment_dossier(self, dossier: dict[str, Any]) -> bool:
+        archive = self._normalize_text(dossier.get("archive"))
+        diffusable = self._normalize_text(dossier.get("diffusable"))
+        statut = self._normalize_text(dossier.get("statut_annonce"))
+        return archive in ("", "0", "false", "non") and diffusable in ("1", "true", "oui") and statut in {"actif", "sous offre", "sous compromis"}
 
     def _read_detail_payload_by_annonce(self, annonce_id: int) -> dict[str, Any]:
         rows = self._rest_get(
@@ -156,10 +162,12 @@ class AppointmentService:
         return rows[0] if rows else None
 
     def _ensure_link_for_annonce(self, annonce_id: int) -> dict[str, Any]:
+        dossier = self._read_dossier_by_annonce(annonce_id)
+        if not self._is_public_appointment_dossier(dossier):
+            raise HTTPException(status_code=404, detail="Lien RDV indisponible pour cette annonce")
         existing = self._read_link_by_annonce(annonce_id)
         if existing:
             return existing
-        dossier = self._read_dossier_by_annonce(annonce_id)
         payload = {
             "link_type": "annonce",
             "token": secrets.token_urlsafe(12),
@@ -345,15 +353,27 @@ class AppointmentService:
 
         return details
 
-    def _maybe_enrich_link_contacts(self, link: dict[str, Any], dossier: dict[str, Any]) -> dict[str, Any]:
+    def _maybe_enrich_link_contacts(self, link: dict[str, Any], dossier: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
+        current = {
+            "negociateur_phone": self._coalesce_text(link.get("negociateur_phone")),
+            "negociateur_mobile": self._coalesce_text(link.get("negociateur_mobile")),
+            "agence_phone": self._coalesce_text(link.get("agence_phone")),
+            "agence_email": self._coalesce_text(link.get("agence_email")),
+        }
+        if all(current.values()) and not force:
+            return link
+
         details = self._load_contact_details(dossier)
         payload = {
-            "negociateur_phone": details.get("negociateurPhone") or self._coalesce_text(link.get("negociateur_phone")),
-            "negociateur_mobile": details.get("negociateurMobile") or self._coalesce_text(link.get("negociateur_mobile")),
-            "agence_phone": details.get("agencePhone") or self._coalesce_text(link.get("agence_phone")),
-            "agence_email": details.get("agenceEmail") or self._coalesce_text(link.get("agence_email")),
-            "updated_at": datetime.now(UTC).isoformat(),
+            "negociateur_phone": details.get("negociateurPhone") or current["negociateur_phone"],
+            "negociateur_mobile": details.get("negociateurMobile") or current["negociateur_mobile"],
+            "agence_phone": details.get("agencePhone") or current["agence_phone"],
+            "agence_email": details.get("agenceEmail") or current["agence_email"],
         }
+        if payload == current:
+            return link
+
+        payload["updated_at"] = datetime.now(UTC).isoformat()
         rows = self._rest_patch(
             "app_appointment_public_link",
             payload=payload,

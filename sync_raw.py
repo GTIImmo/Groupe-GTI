@@ -736,7 +736,8 @@ def sync_annonce_listing_variant(
     endpoint_name = variant["update_endpoint_name"] if use_update_endpoint else variant["base_endpoint_name"]
     changed_ids: set[str] = set()
     seen_ids: set[str] = set()
-    cursor = None if bootstrap else get_meta_value(conn, f"annonce_cursor_{variant['scope']}")
+    cursor = get_meta_value(conn, f"annonce_cursor_{variant['scope']}")
+    stale_cursor = None if bootstrap else cursor
     max_seen_date = cursor
     sort_field = "id" if bootstrap else "datemaj"
     sort_way = "ASC" if bootstrap else "DESC"
@@ -783,7 +784,7 @@ def sync_annonce_listing_variant(
         if not isinstance(data, list) or not data:
             break
 
-        page_is_stale = cursor is not None
+        page_is_stale = stale_cursor is not None
         for item in data:
             if not isinstance(item, dict):
                 continue
@@ -793,20 +794,20 @@ def sync_annonce_listing_variant(
             seen_ids.add(annonce_id)
             date_maj = str(item.get("datemaj") or "").strip()
             previous_date_maj = state_map.get(annonce_id, "")
-            if previous_date_maj != date_maj:
+            if previous_date_maj != date_maj or (cursor and date_maj and date_maj > cursor):
                 changed_ids.add(annonce_id)
             state_map[annonce_id] = date_maj
             upsert_annonce_state(conn, annonce_id=annonce_id, listing_variant=variant["scope"], date_maj=date_maj or None)
             if date_maj and (max_seen_date is None or date_maj > max_seen_date):
                 max_seen_date = date_maj
-            if not cursor or not date_maj or date_maj > cursor:
+            if not stale_cursor or not date_maj or date_maj > stale_cursor:
                 page_is_stale = False
 
         next_page = metadata.get("nextPage") if isinstance(metadata, dict) else None
         conn.commit()
         if max_pages is not None and pages_seen >= max_pages:
             break
-        if not bootstrap and cursor and page_is_stale:
+        if not bootstrap and stale_cursor and page_is_stale:
             break
         if next_page in (None, "", 0, "0"):
             break
@@ -830,7 +831,8 @@ def sync_contact_listing_variant(
 ) -> tuple[set[str], Optional[str]]:
     endpoint_name = variant["update_endpoint_name"] if use_update_endpoint else variant["base_endpoint_name"]
     changed_ids: set[str] = set()
-    cursor = None if bootstrap else get_meta_value(conn, f"contact_cursor_{variant['scope']}")
+    cursor = get_meta_value(conn, f"contact_cursor_{variant['scope']}")
+    stale_cursor = None if bootstrap else cursor
     max_seen_date = cursor
     sort_field = "id" if bootstrap else "dateLastTraitement"
     sort_way = "ASC" if bootstrap else "DESC"
@@ -877,7 +879,7 @@ def sync_contact_listing_variant(
         if not isinstance(data, list) or not data:
             break
 
-        page_is_stale = cursor is not None
+        page_is_stale = stale_cursor is not None
         for item in data:
             if not isinstance(item, dict):
                 continue
@@ -890,7 +892,7 @@ def sync_contact_listing_variant(
             date_last_traitement = str(item.get("dateLastTraitement") or "").strip() or None
             date_maj = str(item.get("datemaj") or "").strip()
             previous_date = state_map.get(contact_id, "")
-            if previous_date != date_maj:
+            if previous_date != date_maj or (cursor and date_maj and date_maj > cursor):
                 changed_ids.add(contact_id)
             state_map[contact_id] = date_maj
             upsert_contact_state(
@@ -902,14 +904,14 @@ def sync_contact_listing_variant(
             )
             if date_maj and (max_seen_date is None or date_maj > max_seen_date):
                 max_seen_date = date_maj
-            if not cursor or not date_maj or date_maj > cursor:
+            if not stale_cursor or not date_maj or date_maj > stale_cursor:
                 page_is_stale = False
 
         next_page = metadata.get("nextPage") if isinstance(metadata, dict) else None
         conn.commit()
         if max_pages is not None and pages_seen >= max_pages:
             break
-        if not bootstrap and cursor and page_is_stale:
+        if not bootstrap and stale_cursor and page_is_stale:
             break
         if next_page in (None, "", 0, "0"):
             break
@@ -1176,7 +1178,7 @@ def main() -> int:
             if args.force_annonce_detail_full:
                 detail_ids = sorted(active_annonce_ids)
             else:
-                detail_ids = sorted(set(changed_annonce_ids) | set(load_annonce_ids_missing_detail_sync(conn)))
+                detail_ids = sorted(changed_annonce_ids)
 
         if "contacts" in args.resources:
             changed_contact_ids: set[str] = set()

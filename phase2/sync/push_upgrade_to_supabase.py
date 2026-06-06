@@ -28,6 +28,8 @@ except ModuleNotFoundError:
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_ENV_FILE = ROOT / ".env"
+APP_ENV_FILE = ROOT / "apps" / "hektor-v1" / ".env"
+DEFAULT_ENV_FILES = (DEFAULT_ENV_FILE, APP_ENV_FILE)
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 DEFAULT_DOSSIER_BATCH_SIZE = 100
@@ -51,6 +53,16 @@ def load_env_file(path: Path) -> None:
         value = value.strip().strip('"').strip("'")
         if key and key not in os.environ:
             os.environ[key] = value
+
+
+def load_env_files(paths: Iterable[Path]) -> None:
+    seen: set[str] = set()
+    for path in paths:
+        path_key = str(path)
+        if path_key in seen:
+            continue
+        seen.add(path_key)
+        load_env_file(path)
 
 
 def chunked(items: list[object], size: int) -> Iterable[list[object]]:
@@ -771,19 +783,40 @@ def grouped_work_hashes(rows: list[dict[str, object]]) -> dict[int, list[str]]:
 
 
 def fetch_local_app_dossier_ids() -> list[int]:
+    return [row["app_dossier_id"] for row in fetch_local_app_dossier_identity()]
+
+
+def fetch_local_app_dossier_identity() -> list[dict[str, int]]:
     con = sqlite3.connect(PHASE2_DB)
     try:
         rows = con.execute(
             f"""
-            SELECT app_dossier_id
+            SELECT app_dossier_id, hektor_annonce_id
             FROM app_view_generale
             WHERE {ANNONCES_SCOPE_WHERE}
             ORDER BY app_dossier_id
             """
         ).fetchall()
-        return [int(row[0]) for row in rows]
+        return [
+            {"app_dossier_id": int(row[0]), "hektor_annonce_id": int(row[1])}
+            for row in rows
+            if row[0] is not None and row[1] is not None
+        ]
     finally:
         con.close()
+
+
+def rewrite_payload_app_dossier_ids(payload: dict[str, list[dict[str, object]]], id_rewrites: dict[int, int]) -> None:
+    if not id_rewrites:
+        return
+    for key in ("dossiers", "dossier_details", "work_items", "mandat_register_rows", "broadcasts"):
+        for row in payload.get(key, []):
+            app_dossier_id = row.get("app_dossier_id")
+            if app_dossier_id is None:
+                continue
+            rewritten = id_rewrites.get(int(app_dossier_id))
+            if rewritten is not None:
+                row["app_dossier_id"] = rewritten
 
 
 def resolve_app_dossier_ids_from_hektor_annonce_ids(hektor_annonce_ids: list[str]) -> list[int]:
@@ -911,6 +944,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rebuild-register-only", action="store_true", help="Rebuild only app_mandat_register_current from the local complete register payload.")
     parser.add_argument("--dossier-id", action="append", default=[], help="Limit push to one app_dossier_id. Can be repeated.")
     parser.add_argument("--hektor-annonce-id", action="append", default=[], help="Resolve and limit push to one Hektor annonce id. Can be repeated.")
+    parser.add_argument("--all-local-current", action="store_true", help="Push the current local export scope as a delta without treating remote-only dossiers as stale.")
+    parser.add_argument("--since-watermark", default=None, help="Force delta detection from this local source watermark, for example '2026-05-20 00:00:00'.")
+    parser.add_argument("--skip-stale-deletes", action="store_true", help="Do not delete remote current rows that are absent from the local current export scope.")
+    parser.add_argument("--allow-stale-deletes", action="store_true", help="Allow deleting stale remote current dossiers. Disabled by default as a safety guard.")
+    parser.add_argument("--max-stale-deletes", type=int, default=500, help="Maximum stale remote dossiers that can be deleted without --allow-stale-deletes.")
     return parser.parse_args()
 
 
@@ -920,7 +958,7 @@ def now_iso() -> str:
 
 def main() -> None:
     args = parse_args()
-    load_env_file(args.env_file)
+    load_env_files((args.env_file, *DEFAULT_ENV_FILES))
 
     supabase_url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
     supabase_service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
@@ -991,6 +1029,10 @@ def main() -> None:
     latest_source_watermark = None
     if isinstance(latest_notes, dict):
         latest_source_watermark = normalize_sqlite_timestamp(latest_notes.get("source_watermark"))
+    forced_since_watermark = normalize_sqlite_timestamp(args.since_watermark)
+    if args.since_watermark and not forced_since_watermark:
+        raise RuntimeError(f"Invalid --since-watermark value: {args.since_watermark}")
+    effective_source_watermark = forced_since_watermark or latest_source_watermark
 
     targeted_dossier_ids = sorted({
         int(value)
@@ -999,29 +1041,61 @@ def main() -> None:
     } | set(resolve_app_dossier_ids_from_hektor_annonce_ids(args.hektor_annonce_id)))
     targeted_push = bool(targeted_dossier_ids)
 
-    local_ids = set(fetch_local_app_dossier_ids())
-    remote_dossiers = client.fetch_all_rows(path="app_dossier_current", select="app_dossier_id", order="app_dossier_id.asc")
+    local_identity = fetch_local_app_dossier_identity()
+    local_ids = {row["app_dossier_id"] for row in local_identity}
+    local_id_by_hektor_id = {
+        row["hektor_annonce_id"]: row["app_dossier_id"]
+        for row in local_identity
+    }
+    remote_dossiers = client.fetch_all_rows(path="app_dossier_current", select="app_dossier_id,hektor_annonce_id", order="app_dossier_id.asc")
     remote_ids = {int(row["app_dossier_id"]) for row in remote_dossiers if row.get("app_dossier_id") is not None}
+    remote_id_by_hektor_id = {
+        int(row["hektor_annonce_id"]): int(row["app_dossier_id"])
+        for row in remote_dossiers
+        if row.get("app_dossier_id") is not None and row.get("hektor_annonce_id") is not None
+    }
+    id_rewrites = {
+        local_id: remote_id
+        for hektor_id, local_id in local_id_by_hektor_id.items()
+        if (remote_id := remote_id_by_hektor_id.get(hektor_id)) is not None and remote_id != local_id
+    }
+    effective_local_ids = {id_rewrites.get(local_id, local_id) for local_id in local_ids}
     remote_has_rows = bool(remote_ids)
     stale_ids: list[int] = []
     baseline_adopted = False
 
+    def stale_remote_ids() -> list[int]:
+        if args.skip_stale_deletes:
+            return []
+        return sorted(remote_ids - effective_local_ids)
+
     if targeted_push:
         candidate_ids = [value for value in targeted_dossier_ids if value in local_ids]
         stale_ids = []
+    elif args.all_local_current:
+        candidate_ids = sorted(local_ids)
+        stale_ids = stale_remote_ids()
     elif args.full_rebuild:
         candidate_ids = sorted(local_ids)
-        stale_ids = sorted(remote_ids - local_ids)
+        stale_ids = stale_remote_ids()
+    elif effective_source_watermark:
+        candidate_ids = detect_candidate_dossier_ids(since=effective_source_watermark)
+        stale_ids = stale_remote_ids()
     elif latest_source_watermark is None and remote_has_rows:
         candidate_ids = []
-        stale_ids = sorted(remote_ids - local_ids)
+        stale_ids = stale_remote_ids()
         baseline_adopted = True
-    elif latest_source_watermark:
-        candidate_ids = detect_candidate_dossier_ids(since=latest_source_watermark)
-        stale_ids = sorted(remote_ids - local_ids)
     else:
         candidate_ids = sorted(local_ids)
-        stale_ids = sorted(remote_ids - local_ids)
+        stale_ids = stale_remote_ids()
+
+    if stale_ids and not args.allow_stale_deletes and (baseline_adopted or len(stale_ids) > args.max_stale_deletes):
+        raise RuntimeError(
+            "Safety stop: refusing to delete "
+            f"{len(stale_ids)} stale remote dossiers "
+            f"(baseline_adopted={baseline_adopted}, max_stale_deletes={args.max_stale_deletes}). "
+            "Re-run with --allow-stale-deletes only after a manual audit."
+        )
 
     should_build_delta_payload = args.full_rebuild or targeted_push or bool(candidate_ids) or bool(stale_ids)
     should_build_global_payload = args.full_rebuild or (not targeted_push and not candidate_ids and bool(stale_ids))
@@ -1031,6 +1105,9 @@ def main() -> None:
         if should_build_delta_payload
         else {"dossiers": [], "dossier_details": [], "work_items": [], "mandat_register_rows": [], "broadcasts": []}
     )
+    rewrite_payload_app_dossier_ids(payload, id_rewrites)
+    candidate_ids = sorted({id_rewrites.get(value, value) for value in candidate_ids})
+    targeted_dossier_ids = sorted({id_rewrites.get(value, value) for value in targeted_dossier_ids})
     if should_build_global_payload or targeted_push or candidate_ids:
         register_payload = payload
     else:
@@ -1073,7 +1150,12 @@ def main() -> None:
             "baseline_adopted": baseline_adopted,
             "source_watermark": source_watermark,
             "previous_source_watermark": latest_source_watermark,
+            "forced_since_watermark": forced_since_watermark,
+            "effective_source_watermark": effective_source_watermark,
+            "skip_stale_deletes": args.skip_stale_deletes,
             "candidate_count": len(candidate_ids),
+            "all_local_current": args.all_local_current,
+            "remote_id_rewrites": len(id_rewrites),
             "targeted_push": targeted_push,
             "targeted_dossier_ids": targeted_dossier_ids,
             "targeted_hektor_annonce_ids": args.hektor_annonce_id,
@@ -1196,6 +1278,9 @@ def main() -> None:
                 if remote_historical_hashes.get(hektor_annonce_id) != source_hash
             )
             historical_delete_ids = sorted(set(remote_historical_hashes) - set(local_historical_hashes))
+        if args.skip_stale_deletes:
+            archive_delete_ids = []
+            historical_delete_ids = []
 
         if stale_ids:
             client.delete_rows_by_ids(path="app_dossier_current", column="app_dossier_id", ids=stale_ids)

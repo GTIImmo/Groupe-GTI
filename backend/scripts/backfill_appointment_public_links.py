@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
-
-from app.services.appointment_service import AppointmentService
-from app.settings import get_settings
 
 
 ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = ROOT / "backend"
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.services.appointment_service import AppointmentService
+from app.settings import get_settings
 
 
 def load_env_file(path: Path) -> None:
@@ -29,6 +33,7 @@ def iter_annonce_ids(service: AppointmentService, limit: int | None) -> list[int
     params = {
         "select": "hektor_annonce_id",
         "hektor_annonce_id": "not.is.null",
+        "diffusable": "eq.1",
         "order": "hektor_annonce_id.asc",
     }
     if limit is not None:
@@ -49,15 +54,58 @@ def iter_annonce_ids(service: AppointmentService, limit: int | None) -> list[int
     return annonce_ids
 
 
+def deactivate_out_of_scope_links(service: AppointmentService, active_annonce_ids: list[int]) -> int:
+    active_ids = {str(value) for value in active_annonce_ids}
+    link_ids_to_deactivate: list[str] = []
+    offset = 0
+    while True:
+        rows = service._rest_get(
+            "app_appointment_public_link",
+            params={
+                "select": "id,hektor_annonce_id",
+                "is_active": "eq.true",
+                "order": "id.asc",
+                "limit": "1000",
+                "offset": str(offset),
+            },
+        )
+        if not rows:
+            break
+        for row in rows:
+            annonce_id = str(row.get("hektor_annonce_id") or "").strip()
+            link_id = str(row.get("id") or "").strip()
+            if not link_id or annonce_id in active_ids:
+                continue
+            link_ids_to_deactivate.append(link_id)
+        if len(rows) < 1000:
+            break
+        offset += len(rows)
+
+    deactivated = 0
+    for link_id in link_ids_to_deactivate:
+        service._rest_patch(
+            "app_appointment_public_link",
+            payload={"is_active": False},
+            params={"id": f"eq.{link_id}"},
+        )
+        deactivated += 1
+    return deactivated
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Cree et enrichit les liens publics RDV avec les contacts nego/agence.")
     parser.add_argument("--annonce-id", action="append", dest="annonce_ids", help="Annonce Hektor a traiter. Peut etre repete.")
     parser.add_argument("--limit", type=int, default=None, help="Limite le nombre d'annonces lues depuis app_dossier_current.")
+    parser.add_argument("--skip-archive", action="store_true", help="Ne desactive pas les liens RDV sortis du perimetre vitrine.")
     parser.add_argument("--quiet", action="store_true", help="N'affiche que le resume final et les erreurs.")
     args = parser.parse_args()
 
     load_env_file(ROOT / ".env")
     load_env_file(ROOT / "apps" / "hektor-v1" / ".env")
+    if not os.environ.get("SUPABASE_URL") and os.environ.get("VITE_SUPABASE_URL"):
+        os.environ["SUPABASE_URL"] = os.environ["VITE_SUPABASE_URL"]
+    if not os.environ.get("SUPABASE_ANON_KEY") and os.environ.get("VITE_SUPABASE_ANON_KEY"):
+        os.environ["SUPABASE_ANON_KEY"] = os.environ["VITE_SUPABASE_ANON_KEY"]
 
     settings = get_settings()
     service = AppointmentService(settings)
@@ -70,13 +118,14 @@ def main() -> None:
     enriched = 0
     skipped = 0
     errors = 0
+    archived = 0
 
     def log(message: str, *, force: bool = False) -> None:
         if args.quiet and not force:
             return
         print(message, flush=True)
 
-    log(f"backfill:start annonces={len(annonce_ids)} limit={args.limit if args.limit is not None else 'all'}")
+    log(f"backfill:start annonces={len(annonce_ids)} scope=vitrine limit={args.limit if args.limit is not None else 'all'}")
 
     for index, annonce_id in enumerate(annonce_ids, start=1):
         try:
@@ -88,7 +137,7 @@ def main() -> None:
                 "agence_phone": str(link.get("agence_phone") or "").strip(),
                 "agence_email": str(link.get("agence_email") or "").strip(),
             }
-            updated = service._maybe_enrich_link_contacts(link, dossier)
+            updated = service._maybe_enrich_link_contacts(link, dossier, force=True)
             after = {
                 "negociateur_phone": str(updated.get("negociateur_phone") or "").strip(),
                 "negociateur_mobile": str(updated.get("negociateur_mobile") or "").strip(),
@@ -105,7 +154,7 @@ def main() -> None:
                 skipped += 1
                 status = "skipped"
             log(
-                f"[{index}/{len(annonce_ids)}] annonce={annonce_id} token={updated.get('token')} status={status} "
+                f"[{index}/{len(annonce_ids)}] annonce={annonce_id} status={status} "
                 f"nego_phone={after['negociateur_phone'] or '-'} nego_mobile={after['negociateur_mobile'] or '-'} "
                 f"agence_phone={after['agence_phone'] or '-'} agence_email={after['agence_email'] or '-'}"
             )
@@ -113,8 +162,15 @@ def main() -> None:
             errors += 1
             print(f"[{index}/{len(annonce_ids)}] annonce={annonce_id} status=error error={exc}", flush=True)
 
+    if not args.annonce_ids and not args.skip_archive:
+        try:
+            archived = deactivate_out_of_scope_links(service, annonce_ids)
+        except Exception as exc:
+            errors += 1
+            print(f"archive_links status=error error={exc}", flush=True)
+
     print(
-        f"backfill:done processed={processed} updated={enriched} skipped={skipped} errors={errors}",
+        f"backfill:done processed={processed} updated={enriched} skipped={skipped} archived={archived} errors={errors}",
         flush=True,
     )
 

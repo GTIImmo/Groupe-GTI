@@ -6,6 +6,12 @@ ROOT = Path(__file__).resolve().parent.parent
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 SCHEMA_SQL = ROOT / "phase2" / "schema_phase2.sql"
+SQLITE_IN_BATCH_SIZE = 500
+
+
+def batched(values: list[int], size: int = SQLITE_IN_BATCH_SIZE):
+    for index in range(0, len(values), size):
+        yield values[index : index + size]
 
 
 def ensure_schema(con: sqlite3.Connection) -> None:
@@ -32,18 +38,11 @@ def reconcile_app_dossier(con: sqlite3.Connection) -> None:
         if not orphan_ids:
             return
 
-        placeholders = ", ".join("?" for _ in orphan_ids)
-        for table in (
-            "app_broadcast_action",
-            "app_blocker",
-            "app_followup",
-            "app_internal_status",
-            "app_note",
-            "app_work_item",
-        ):
-            con.execute(f"DELETE FROM {table} WHERE app_dossier_id IN ({placeholders})", orphan_ids)
-        con.execute(f"DELETE FROM app_dossier WHERE id IN ({placeholders})", orphan_ids)
-        con.commit()
+        print(
+            "WARNING bootstrap skipped orphan app_dossier cleanup: "
+            f"{len(orphan_ids)} row(s) would have been removed"
+        )
+        return
     finally:
         con.execute("DETACH DATABASE hektor")
 

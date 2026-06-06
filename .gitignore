@@ -28,10 +28,14 @@ phase2/*.sqlite
 *.sqlite-shm
 *.sqlite-wal
 
-run_contact_details_backfill.ps1
-run_full_pipeline.ps1
-
-Ecrans Android/
+Ecrans Android/CAPTURE/
+Ecrans Android/assets/
+Ecrans Android/data/
+Ecrans Android/exports/
+Ecrans Android/vitrine-main/data/
+Ecrans Android/vitrine-main/exports/
+Ecrans Android/github_token.txt
+Ecrans Android/*.png
 exports_hektor_phase1/
 phase2/app_metier_detail_data/
 phase2/app_metier.html

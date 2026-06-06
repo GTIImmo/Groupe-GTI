@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sqlite3
+import ssl
 import sys
 import time
 import urllib.error
@@ -19,10 +20,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import certifi
+
 
 ROOT = Path(__file__).resolve().parents[2]
 MATTERPORT_ENV_FILE = ROOT / "matterport" / ".env"
 DEFAULT_ENV_FILE = ROOT / ".env"
+APP_ENV_FILE = ROOT / "apps" / "hektor-v1" / ".env"
+DEFAULT_ENV_FILES = (DEFAULT_ENV_FILE, APP_ENV_FILE)
 DEFAULT_OUTPUT = ROOT / "matterport" / "matterport_sync_preview.csv"
 DEFAULT_JSON_OUTPUT = ROOT / "matterport" / "matterport_sync_preview.json"
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
@@ -41,6 +46,7 @@ FOLDER_PAGE_SIZE = 100
 MODEL_PAGE_SIZE = 100
 HTTP_TIMEOUT_SECONDS = 60
 NUMBER_RE = re.compile(r"\d+")
+MATTERPORT_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def load_env_file(path: Path) -> None:
@@ -55,6 +61,16 @@ def load_env_file(path: Path) -> None:
         value = value.strip().strip('"').strip("'")
         if key and key not in os.environ:
             os.environ[key] = value
+
+
+def load_env_files(paths: tuple[Path, ...]) -> None:
+    seen: set[str] = set()
+    for path in paths:
+        path_key = str(path)
+        if path_key in seen:
+            continue
+        seen.add(path_key)
+        load_env_file(path)
 
 
 def utc_now_iso() -> str:
@@ -111,7 +127,7 @@ class MatterportClient:
         payload = json.dumps({"query": query, "variables": variables or {}}, ensure_ascii=True).encode("utf-8")
         request = urllib.request.Request(MATTERPORT_GRAPHQL_URL, data=payload, headers=self.headers, method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS, context=MATTERPORT_SSL_CONTEXT) as response:
                 body = response.read().decode("utf-8")
         except urllib.error.HTTPError as error:
             body = error.read().decode("utf-8", errors="replace")
@@ -758,7 +774,7 @@ def upsert_supabase(
     state_db: Path = PHASE2_DB,
     reset_state: bool = False,
 ) -> dict[str, Any]:
-    load_env_file(DEFAULT_ENV_FILE)
+    load_env_files(DEFAULT_ENV_FILES)
     selected_groups = groups[:limit_groups] if limit_groups is not None else groups
     selected_group_ids = {group["id"] for group in selected_groups}
     group_rows, model_rows = build_supabase_rows(rows, selected_groups)
@@ -803,10 +819,13 @@ def upsert_supabase(
         result["dry_run"] = True
         return result
 
-    url = os.getenv("SUPABASE_URL", "").strip()
+    url = (os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL") or "").strip()
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not url or not key:
-        raise RuntimeError(f"Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in {DEFAULT_ENV_FILE}")
+        raise RuntimeError(
+            "Missing SUPABASE_URL/VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY "
+            f"in {DEFAULT_ENV_FILE} / {APP_ENV_FILE}"
+        )
 
     supabase_request(url, key, MATTERPORT_GROUP_TABLE, groups_to_upsert, "id")
     supabase_delete_by_ids(url, key, MATTERPORT_MODEL_TABLE, "group_id", group_ids_to_replace)
