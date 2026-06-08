@@ -88,8 +88,27 @@ export type DossierDetailPayload = {
   pieces_json?: string | null
   images_json?: string | null
   textes_json?: string | null
+  ag_interieur_json?: string | null
+  ag_exterieur_json?: string | null
+  equipements_json?: string | null
+  diagnostiques_json?: string | null
   terrain_json?: string | null
   copropriete_json?: string | null
+  mandat_infofi_json?: string | null
+  mandat_mandatdispo_json?: string | null
+  organiser_visite_json?: string | null
+  console_missing_fields_json?: string | null
+  console_missing_fields_extracted_at?: string | null
+  console_missing_fields_status?: string | null
+  secteur_console_json?: string | null
+  chauffage_console_json?: string | null
+  diagnostics_contacts_console_json?: string | null
+  honoraires_detail_console_json?: string | null
+  location_rendement_console_json?: string | null
+  pieces_detail_console_json?: string | null
+  dpe_image_url?: string | null
+  ges_image_url?: string | null
+  dpe_image_urls_json?: string | null
   detail_raw_json?: string | null
   annonce_list_raw_json?: string | null
   code_postal_detail?: string | null
