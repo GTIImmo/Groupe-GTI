@@ -1107,6 +1107,34 @@
   overflow-wrap: anywhere;
 }
 
+.mobile-detail-section .detail-dpe-vignettes {
+  margin-top: 10px;
+}
+
+.mobile-detail-section .detail-dpe-vignettes.is-compact .detail-dpe-vignette-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-detail-section .detail-dpe-vignette-list img {
+  max-height: 104px;
+  min-height: 78px;
+}
+
+.mobile-detail-embedded .console-detail-block {
+  margin-top: 10px;
+  padding: 10px;
+  box-shadow: none;
+}
+
+.mobile-detail-embedded .console-detail-grid,
+.mobile-detail-embedded .console-heating-list {
+  grid-template-columns: 1fr;
+}
+
+.mobile-detail-embedded .console-detail-block-head {
+  align-items: flex-start;
+}
+
 .mobile-detail-portals {
   display: flex;
   flex-wrap: wrap;

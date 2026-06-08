@@ -6943,6 +6943,176 @@ function DetailSectionTitle({ icon, title }: { icon: DetailIconKey; title: strin
   )
 }
 
+const consoleFieldLabelOverrides: Record<string, string> = {
+  TRANSPORT: 'Transport',
+  PROXIMITE: 'Proximite',
+  ENVIRONNEMENT: 'Environnement',
+  diagnostiqueur: 'Diagnostiqueur',
+  syndic: 'Syndic',
+  _selecterHonoraires2: 'Honoraires acquereur',
+  _tauxHonoraire2: 'Montant honoraires acquereur',
+  _pourcentHonoraire2: 'Taux honoraires acquereur',
+  _detailHonoraire2: 'Detail honoraires acquereur',
+  _selecterHonoraires3: 'Honoraires vendeur',
+  _tauxHonoraire3: 'Montant honoraires vendeur',
+  _pourcentHonoraire3: 'Taux honoraires vendeur',
+  _detailHonoraire3: 'Detail honoraires vendeur',
+  found: 'Composition detaillee',
+  note: 'Note',
+}
+
+type ConsoleDetailLine = {
+  key: string
+  label: string
+  value: string
+}
+
+function consoleFriendlyLabel(key: string) {
+  return consoleFieldLabelOverrides[key] ?? key
+    .replace(/^_+/, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function consolePrimitiveText(value: unknown) {
+  if (value == null) return ''
+  if (typeof value === 'boolean') return value ? 'Oui' : 'Non'
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'string') return value.trim()
+  return ''
+}
+
+function consoleDisplayText(value: unknown): string {
+  const primitive = consolePrimitiveText(value)
+  if (primitive) return primitive
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => consoleDisplayText(item))
+      .filter((item) => item && item !== '-')
+      .join(' - ') || '-'
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const selected = consolePrimitiveText(record.selected_label)
+    if (selected) return selected
+    const rawValue = consolePrimitiveText(record.value)
+    const label = consolePrimitiveText(record.label)
+    if (rawValue) {
+      if (label && ['OUI', 'NON'].includes(rawValue.toUpperCase())) return label
+      return rawValue
+    }
+    if (record.checked === true && label) return label
+    const nested = Object.entries(record)
+      .filter(([key]) => !['id', 'tag', 'type', 'checked'].includes(key))
+      .map(([key, nestedValue]) => {
+        const text = consoleDisplayText(nestedValue)
+        return text && text !== '-' ? `${consoleFriendlyLabel(key)}: ${text}` : ''
+      })
+      .filter(Boolean)
+    return nested.join(' - ') || '-'
+  }
+  return '-'
+}
+
+function parseConsoleDetailJson(value: string | null | undefined): unknown {
+  return parseJson<unknown>(value ?? '', null)
+}
+
+function consoleDetailLines(value: string | null | undefined): ConsoleDetailLine[] {
+  const parsed = parseConsoleDetailJson(value)
+  if (!parsed) return []
+  if (Array.isArray(parsed)) {
+    return parsed.map((item, index) => ({
+      key: `item-${index}`,
+      label: `Element ${index + 1}`,
+      value: consoleDisplayText(item),
+    }))
+  }
+  if (typeof parsed !== 'object') {
+    const text = consoleDisplayText(parsed)
+    return text ? [{ key: 'value', label: 'Valeur', value: text }] : []
+  }
+  return Object.entries(parsed as Record<string, unknown>).map(([key, value]) => ({
+    key,
+    label: consoleFriendlyLabel(key),
+    value: consoleDisplayText(value),
+  }))
+}
+
+function ConsoleDetailBlock({ title, source, emptyLabel }: { title: string; source: string | null | undefined; emptyLabel?: string }) {
+  const rows = consoleDetailLines(source)
+  if (!rows.length) return null
+  return (
+    <article className="console-detail-block">
+      <div className="console-detail-block-head">
+        <strong>{title}</strong>
+        <span>{rows.length} champ{rows.length > 1 ? 's' : ''}</span>
+      </div>
+      <div className="console-detail-grid">
+        {rows.map((row) => (
+          <div key={`${title}-${row.key}`} className={row.value && row.value !== '-' ? 'is-filled' : 'is-empty'}>
+            <span>{row.label}</span>
+            <strong>{row.value && row.value !== '-' ? row.value : emptyLabel || '-'}</strong>
+          </div>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+function ConsoleHeatingBlock({ source }: { source: string | null | undefined }) {
+  const parsed = parseConsoleDetailJson(source)
+  const rows = Array.isArray(parsed) ? parsed.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object')) : []
+  if (!rows.length) return null
+  return (
+    <article className="console-detail-block console-heating-block">
+      <div className="console-detail-block-head">
+        <strong>Chauffages console</strong>
+        <span>{rows.length} ligne{rows.length > 1 ? 's' : ''}</span>
+      </div>
+      <div className="console-heating-list">
+        {rows.map((item, index) => (
+          <div key={`console-heating-${String(item.id ?? index)}`}>
+            <span>Chauffage {index + 1}</span>
+            <strong>{[
+              consoleDisplayText(item.format),
+              consoleDisplayText(item.type),
+              consoleDisplayText(item.energie),
+            ].filter((value) => value && value !== '-').join(' - ') || '-'}</strong>
+          </div>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+function hasDpeGesVignettes(detail: DossierDetailPayload) {
+  return Boolean(safeText(detail.dpe_image_url) || safeText(detail.ges_image_url))
+}
+
+function DpeGesVignettes({ detail, compact = false }: { detail: DossierDetailPayload; compact?: boolean }) {
+  const images = [
+    { label: 'DPE', url: safeText(detail.dpe_image_url) },
+    { label: 'GES', url: safeText(detail.ges_image_url) },
+  ].filter((item) => item.url)
+  if (!images.length) return null
+  return (
+    <div className={`detail-dpe-vignettes ${compact ? 'is-compact' : ''}`}>
+      <div className="detail-dpe-vignette-list">
+        {images.map((item) => (
+          <a key={item.label} href={item.url} target="_blank" rel="noreferrer">
+            <span>{item.label}</span>
+            <img src={item.url} alt={`Vignette ${item.label}`} loading="lazy" />
+          </a>
+        ))}
+      </div>
+      {detail.console_missing_fields_extracted_at ? (
+        <small>Console : {formatDate(detail.console_missing_fields_extracted_at)}</small>
+      ) : null}
+    </div>
+  )
+}
+
 function consoleDocumentStatusLabel(status: ConsoleDocument['storage_status']) {
   switch (status) {
     case 'cloud_available':
@@ -16525,6 +16695,7 @@ function DossierDetailLayout(props: {
   const portalSyncPending = (props.pendingPortalKeys ?? []).some((portal) => !observedPortals.includes(portal))
   const previewImages = props.images.slice(0, 5)
   const primaryImage = previewImages[0]?.url ?? dossier.photo_url_listing ?? null
+  const hasDiagnosticVignettes = hasDpeGesVignettes(props.detail)
   const showDiffusionHistory = historyView === 'all' || historyView === 'diffusion'
   const showPriceDropHistory = historyView === 'all' || historyView === 'price_drop'
   const showCancellationHistory = historyView === 'all' || historyView === 'cancellation'
@@ -16750,6 +16921,15 @@ function DossierDetailLayout(props: {
                         {hiddenSummaryPortalCount > 0 ? <span className="detail-mini-portal is-overflow">+{hiddenSummaryPortalCount}</span> : null}
                       </div>
                     </article>
+                    {hasDiagnosticVignettes ? (
+                      <article className="detail-summary-card is-diagnostics">
+                        <div className="detail-summary-card-head">
+                          <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="hektor" /></span>
+                          <h5>Diagnostics</h5>
+                        </div>
+                        <DpeGesVignettes detail={props.detail} />
+                      </article>
+                    ) : null}
                     {props.contacts.length > 0 ? (
                       <article className="detail-summary-card is-contact">
                         <div className="detail-summary-card-head">
@@ -16985,6 +17165,7 @@ function DossierDetailLayout(props: {
                       {isLightweightDetail ? <ReadOnlyDetailNotice label="Aucun mandant detaille n'est disponible dans cette fiche importee." /> : <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
                     </div>
                   )}
+                  <ConsoleDetailBlock title="Contacts diagnostics console" source={props.detail.diagnostics_contacts_console_json} emptyLabel="Non renseigne" />
                 </article>
                 ) : null}
               </section>
@@ -17103,6 +17284,9 @@ function DossierDetailLayout(props: {
                   <InfoCard label="Garage / box" value={props.detail.garage_box_detail ?? '-'} />
                   <InfoCard label="Ascenseur" value={props.detail.ascenseur_detail ?? '-'} />
                 </div>
+                <ConsoleDetailBlock title="Secteur console" source={props.detail.secteur_console_json} emptyLabel="Non renseigne" />
+                <ConsoleHeatingBlock source={props.detail.chauffage_console_json} />
+                <ConsoleDetailBlock title="Composition des pieces console" source={props.detail.pieces_detail_console_json} emptyLabel="Non renseigne" />
               </section>
               ) : null}
 
@@ -17222,6 +17406,14 @@ function DossierDetailLayout(props: {
                     ) : null}
                   </article>
                 </div>
+              </section>
+              ) : null}
+
+              {activeDetailTab === 'commercial' ? (
+              <section className="detail-section detail-console-commercial-section">
+                <div className="section-header"><DetailSectionTitle icon="commercial" title="Donnees console commerciales" /></div>
+                <ConsoleDetailBlock title="Honoraires console" source={props.detail.honoraires_detail_console_json} emptyLabel="Non renseigne" />
+                <ConsoleDetailBlock title="Location / rendement console" source={props.detail.location_rendement_console_json} emptyLabel="Non renseigne" />
               </section>
               ) : null}
 
@@ -20198,6 +20390,7 @@ function MobileDossierDetail(props: {
   if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sÃ©lectionnÃ©.</section>
 
   const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
+  const hasDiagnosticVignettes = hasDpeGesVignettes(props.detail)
   const activePortals = uniquePortalKeys([...(dossier.portails_resume ?? '').split(','), ...(props.pendingPortalKeys ?? [])])
   const matterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
@@ -20324,6 +20517,7 @@ function MobileDossierDetail(props: {
             </div>
           ))}
         </div>
+        {hasDiagnosticVignettes ? <DpeGesVignettes detail={props.detail} compact /> : null}
         <div className="mobile-detail-portals">
           {[
             ['LBC', ['leboncoin', 'le bon coin', 'lbc']],
@@ -20401,6 +20595,10 @@ function MobileDossierDetail(props: {
           </article>
         </div>
         <div className="mobile-detail-embedded">
+          <ConsoleDetailBlock title="Honoraires console" source={props.detail.honoraires_detail_console_json} emptyLabel="Non renseigne" />
+          <ConsoleDetailBlock title="Location / rendement console" source={props.detail.location_rendement_console_json} emptyLabel="Non renseigne" />
+        </div>
+        <div className="mobile-detail-embedded">
           <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
         </div>
       </details>
@@ -20414,6 +20612,11 @@ function MobileDossierDetail(props: {
               <strong>{value}</strong>
             </div>
           ))}
+        </div>
+        <div className="mobile-detail-embedded">
+          <ConsoleDetailBlock title="Secteur console" source={props.detail.secteur_console_json} emptyLabel="Non renseigne" />
+          <ConsoleHeatingBlock source={props.detail.chauffage_console_json} />
+          <ConsoleDetailBlock title="Composition des pieces console" source={props.detail.pieces_detail_console_json} emptyLabel="Non renseigne" />
         </div>
       </details>
 
@@ -20452,6 +20655,9 @@ function MobileDossierDetail(props: {
             ))}
           </div>
         ) : <p className="mobile-detail-muted">Aucun contact detaille.</p>}
+        <div className="mobile-detail-embedded">
+          <ConsoleDetailBlock title="Contacts diagnostics console" source={props.detail.diagnostics_contacts_console_json} emptyLabel="Non renseigne" />
+        </div>
       </details>
 
       <details className="mobile-detail-section mobile-detail-disclosure">

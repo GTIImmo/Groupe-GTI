@@ -6343,6 +6343,16 @@ tbody tr.is-refreshing-row td {
   border-color: rgba(0, 116, 129, 0.44);
 }
 .detail-summary-card.is-visibility::before { background: #007481; }
+.detail-summary-card.is-diagnostics {
+  background:
+    linear-gradient(135deg, rgba(232, 244, 236, 0.98) 0%, rgba(255,255,255,0.98) 66%);
+  border-color: rgba(76, 128, 96, 0.42);
+}
+.detail-summary-card.is-diagnostics::before { background: #4c8060; }
+.detail-summary-card.is-diagnostics .detail-summary-card-icon {
+  background: #4c8060;
+  color: #fff;
+}
 .detail-summary-alerts {
   background:
     linear-gradient(135deg, rgba(255, 232, 220, 0.98) 0%, rgba(255,255,255,0.98) 66%);
@@ -6377,6 +6387,113 @@ tbody tr.is-refreshing-row td {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+}
+
+.detail-dpe-vignettes {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-dpe-vignette-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.detail-dpe-vignette-list a {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: #15202b;
+  text-decoration: none;
+}
+
+.detail-dpe-vignette-list span {
+  color: #536875;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.detail-dpe-vignette-list img {
+  width: 100%;
+  max-height: 116px;
+  min-height: 88px;
+  object-fit: contain;
+  border: 1px solid rgba(200, 213, 220, 0.96);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.detail-dpe-vignettes small {
+  color: #6a7c88;
+  font-size: 11px;
+}
+
+.console-detail-block {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(211, 222, 228, 0.96);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.console-detail-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.console-detail-block-head strong {
+  color: #15202b;
+  font-size: 13px;
+}
+
+.console-detail-block-head span {
+  color: #657782;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.console-detail-grid,
+.console-heating-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.console-detail-grid > div,
+.console-heating-list > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  border: 1px solid rgba(226, 233, 237, 0.95);
+  border-radius: 7px;
+  background: #f8fafb;
+}
+
+.console-detail-grid > div.is-empty {
+  background: #fbfcfd;
+}
+
+.console-detail-grid span,
+.console-heating-list span {
+  color: #657782;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.console-detail-grid strong,
+.console-heating-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #17232d;
+  font-size: 12px;
+  line-height: 1.35;
 }
 .detail-status-list span {
   color: #536875;
