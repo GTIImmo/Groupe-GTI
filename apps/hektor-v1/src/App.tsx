@@ -6995,6 +6995,8 @@ function consoleDisplayText(value: unknown): string {
     const record = value as Record<string, unknown>
     const selected = consolePrimitiveText(record.selected_label)
     if (selected) return selected
+    const optionLabel = consolePrimitiveText(record.label)
+    if (optionLabel && Object.keys(record).every((key) => ['value', 'label'].includes(key))) return optionLabel
     const rawValue = consolePrimitiveText(record.value)
     const label = consolePrimitiveText(record.label)
     if (rawValue) {
@@ -7039,50 +7041,56 @@ function consoleDetailLines(value: string | null | undefined): ConsoleDetailLine
   }))
 }
 
-function ConsoleDetailBlock({ title, source, emptyLabel }: { title: string; source: string | null | undefined; emptyLabel?: string }) {
-  const rows = consoleDetailLines(source)
-  if (!rows.length) return null
-  return (
-    <article className="console-detail-block">
-      <div className="console-detail-block-head">
-        <strong>{title}</strong>
-        <span>{rows.length} champ{rows.length > 1 ? 's' : ''}</span>
-      </div>
-      <div className="console-detail-grid">
-        {rows.map((row) => (
-          <div key={`${title}-${row.key}`} className={row.value && row.value !== '-' ? 'is-filled' : 'is-empty'}>
-            <span>{row.label}</span>
-            <strong>{row.value && row.value !== '-' ? row.value : emptyLabel || '-'}</strong>
-          </div>
-        ))}
-      </div>
-    </article>
-  )
+function consoleDetailFacts(value: string | null | undefined): ConsoleDetailLine[] {
+  return consoleDetailLines(value).filter((row) => row.value && row.value !== '-')
 }
 
-function ConsoleHeatingBlock({ source }: { source: string | null | undefined }) {
+function hektorSelectOptionLabel(options: HektorSelectOption[], value: unknown) {
+  const normalized = safeText(value)
+  if (!normalized) return ''
+  return options.find((option) => safeText(option.value) === normalized)?.label ?? normalized
+}
+
+function consoleSelectChoiceText(value: unknown, options: HektorSelectOption[]) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>
+    const explicitLabel = safeText(record.selected_label) || safeText(record.label)
+    if (explicitLabel) return explicitLabel
+    const rawValue = safeText(record.value)
+    if (rawValue) return hektorSelectOptionLabel(options, rawValue)
+  }
+  const text = consoleDisplayText(value)
+  if (!text || text === '-') return ''
+  return hektorSelectOptionLabel(options, text)
+}
+
+function consoleHeatingFacts(source: string | null | undefined): ConsoleDetailLine[] {
   const parsed = parseConsoleDetailJson(source)
   const rows = Array.isArray(parsed) ? parsed.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object')) : []
-  if (!rows.length) return null
+  return rows
+    .map((item, index) => {
+      const value = [
+        consoleSelectChoiceText(item.format, hektorHeatingFormatOptions),
+        consoleSelectChoiceText(item.type, hektorHeatingTypeOptions),
+        consoleSelectChoiceText(item.energie, hektorHeatingEnergyOptions),
+      ].filter(Boolean).join(' - ')
+      return {
+        key: `heating-${String(item.id ?? index)}`,
+        label: `Chauffage ${index + 1}`,
+        value,
+      }
+    })
+    .filter((row) => row.value)
+}
+
+function ConsoleInfoCards({ items }: { items: ConsoleDetailLine[] }) {
+  if (!items.length) return null
   return (
-    <article className="console-detail-block console-heating-block">
-      <div className="console-detail-block-head">
-        <strong>Chauffages console</strong>
-        <span>{rows.length} ligne{rows.length > 1 ? 's' : ''}</span>
-      </div>
-      <div className="console-heating-list">
-        {rows.map((item, index) => (
-          <div key={`console-heating-${String(item.id ?? index)}`}>
-            <span>Chauffage {index + 1}</span>
-            <strong>{[
-              consoleDisplayText(item.format),
-              consoleDisplayText(item.type),
-              consoleDisplayText(item.energie),
-            ].filter((value) => value && value !== '-').join(' - ') || '-'}</strong>
-          </div>
-        ))}
-      </div>
-    </article>
+    <>
+      {items.map((item) => (
+        <InfoCard key={item.key} label={item.label} value={item.value} />
+      ))}
+    </>
   )
 }
 
@@ -7107,7 +7115,7 @@ function DpeGesVignettes({ detail, compact = false }: { detail: DossierDetailPay
         ))}
       </div>
       {detail.console_missing_fields_extracted_at ? (
-        <small>Console : {formatDate(detail.console_missing_fields_extracted_at)}</small>
+        <small>Diagnostics lus le {formatDate(detail.console_missing_fields_extracted_at)}</small>
       ) : null}
     </div>
   )
@@ -16708,6 +16716,14 @@ function DossierDetailLayout(props: {
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
   const contactSummaryLabel = props.detail.mandants_texte || props.contacts.map((contact) => contact.name).filter(Boolean).join(' | ')
+  const secteurFacts = consoleDetailFacts(props.detail.secteur_console_json)
+  const chauffageFacts = consoleHeatingFacts(props.detail.chauffage_console_json)
+  const compositionFacts = consoleDetailFacts(props.detail.pieces_detail_console_json)
+  const diagnosticContactFacts = consoleDetailFacts(props.detail.diagnostics_contacts_console_json)
+  const commercialFacts = [
+    ...consoleDetailFacts(props.detail.honoraires_detail_console_json),
+    ...consoleDetailFacts(props.detail.location_rendement_console_json),
+  ]
 
   useEffect(() => {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
@@ -17021,6 +17037,14 @@ function DossierDetailLayout(props: {
                     title="Historique des prix"
                     emptyLabel="Aucun changement de prix historisÃ© pour cette annonce."
                   />
+                  {commercialFacts.length > 0 ? (
+                    <>
+                      <span className="detail-label">Honoraires et rendement</span>
+                      <div className="info-grid">
+                        <ConsoleInfoCards items={commercialFacts} />
+                      </div>
+                    </>
+                  ) : null}
                 </article>
                 ) : null}
                 {activeDetailTab === 'mandate' ? (
@@ -17165,7 +17189,14 @@ function DossierDetailLayout(props: {
                       {isLightweightDetail ? <ReadOnlyDetailNotice label="Aucun mandant detaille n'est disponible dans cette fiche importee." /> : <HektorMandantContactForm dossier={dossier} initialOpen onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
                     </div>
                   )}
-                  <ConsoleDetailBlock title="Contacts diagnostics console" source={props.detail.diagnostics_contacts_console_json} emptyLabel="Non renseigne" />
+                  {diagnosticContactFacts.length > 0 ? (
+                    <div className="detail-contact-diagnostics">
+                      <span className="detail-label">Diagnostics et syndic</span>
+                      <div className="info-grid">
+                        <ConsoleInfoCards items={diagnosticContactFacts} />
+                      </div>
+                    </div>
+                  ) : null}
                 </article>
                 ) : null}
               </section>
@@ -17283,10 +17314,10 @@ function DossierDetailLayout(props: {
                   <InfoCard label="Terrasse" value={props.detail.terrasse_detail ?? '-'} />
                   <InfoCard label="Garage / box" value={props.detail.garage_box_detail ?? '-'} />
                   <InfoCard label="Ascenseur" value={props.detail.ascenseur_detail ?? '-'} />
+                  <ConsoleInfoCards items={secteurFacts} />
+                  <ConsoleInfoCards items={chauffageFacts} />
+                  <ConsoleInfoCards items={compositionFacts} />
                 </div>
-                <ConsoleDetailBlock title="Secteur console" source={props.detail.secteur_console_json} emptyLabel="Non renseigne" />
-                <ConsoleHeatingBlock source={props.detail.chauffage_console_json} />
-                <ConsoleDetailBlock title="Composition des pieces console" source={props.detail.pieces_detail_console_json} emptyLabel="Non renseigne" />
               </section>
               ) : null}
 
@@ -17406,14 +17437,6 @@ function DossierDetailLayout(props: {
                     ) : null}
                   </article>
                 </div>
-              </section>
-              ) : null}
-
-              {activeDetailTab === 'commercial' ? (
-              <section className="detail-section detail-console-commercial-section">
-                <div className="section-header"><DetailSectionTitle icon="commercial" title="Donnees console commerciales" /></div>
-                <ConsoleDetailBlock title="Honoraires console" source={props.detail.honoraires_detail_console_json} emptyLabel="Non renseigne" />
-                <ConsoleDetailBlock title="Location / rendement console" source={props.detail.location_rendement_console_json} emptyLabel="Non renseigne" />
               </section>
               ) : null}
 
@@ -20449,6 +20472,20 @@ function MobileDossierDetail(props: {
     ['Commission agence', formatPrice(props.detail.vente_commission_agence)],
     ['Notaires', props.detail.vente_notaires_resume ?? '-'],
   ]
+  const secteurFacts = consoleDetailFacts(props.detail.secteur_console_json)
+  const chauffageFacts = consoleHeatingFacts(props.detail.chauffage_console_json)
+  const compositionFacts = consoleDetailFacts(props.detail.pieces_detail_console_json)
+  const diagnosticContactFacts = consoleDetailFacts(props.detail.diagnostics_contacts_console_json)
+  const commercialFacts = [
+    ...consoleDetailFacts(props.detail.honoraires_detail_console_json),
+    ...consoleDetailFacts(props.detail.location_rendement_console_json),
+  ]
+  const mobileFeatureFacts = [
+    ...featureFacts,
+    ...secteurFacts.map((item) => [item.label, item.value]),
+    ...chauffageFacts.map((item) => [item.label, item.value]),
+    ...compositionFacts.map((item) => [item.label, item.value]),
+  ]
   const adminValidationState = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
   const adminDiffusableState = props.diffusableDraft ?? isDiffusableValue(dossier.diffusable)
 
@@ -20594,10 +20631,12 @@ function MobileDossierDetail(props: {
             </div>
           </article>
         </div>
-        <div className="mobile-detail-embedded">
-          <ConsoleDetailBlock title="Honoraires console" source={props.detail.honoraires_detail_console_json} emptyLabel="Non renseigne" />
-          <ConsoleDetailBlock title="Location / rendement console" source={props.detail.location_rendement_console_json} emptyLabel="Non renseigne" />
-        </div>
+        {commercialFacts.length > 0 ? (
+          <div className="mobile-detail-lines">
+            <strong>Honoraires et rendement</strong>
+            {commercialFacts.map((item) => <div key={`mobile-commercial-${item.key}`}><span>{item.label}</span><b>{item.value || '-'}</b></div>)}
+          </div>
+        ) : null}
         <div className="mobile-detail-embedded">
           <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
         </div>
@@ -20606,17 +20645,12 @@ function MobileDossierDetail(props: {
       <details className="mobile-detail-section mobile-detail-disclosure">
         <summary>Caracteristiques</summary>
         <div className="mobile-detail-facts">
-          {featureFacts.map(([label, value]) => (
+          {mobileFeatureFacts.map(([label, value]) => (
             <div key={`mobile-feature-${label}`}>
               <span>{label}</span>
               <strong>{value}</strong>
             </div>
           ))}
-        </div>
-        <div className="mobile-detail-embedded">
-          <ConsoleDetailBlock title="Secteur console" source={props.detail.secteur_console_json} emptyLabel="Non renseigne" />
-          <ConsoleHeatingBlock source={props.detail.chauffage_console_json} />
-          <ConsoleDetailBlock title="Composition des pieces console" source={props.detail.pieces_detail_console_json} emptyLabel="Non renseigne" />
         </div>
       </details>
 
@@ -20655,9 +20689,12 @@ function MobileDossierDetail(props: {
             ))}
           </div>
         ) : <p className="mobile-detail-muted">Aucun contact detaille.</p>}
-        <div className="mobile-detail-embedded">
-          <ConsoleDetailBlock title="Contacts diagnostics console" source={props.detail.diagnostics_contacts_console_json} emptyLabel="Non renseigne" />
-        </div>
+        {diagnosticContactFacts.length > 0 ? (
+          <div className="mobile-detail-lines">
+            <strong>Diagnostics et syndic</strong>
+            {diagnosticContactFacts.map((item) => <div key={`mobile-diagnostic-${item.key}`}><span>{item.label}</span><b>{item.value || '-'}</b></div>)}
+          </div>
+        ) : null}
       </details>
 
       <details className="mobile-detail-section mobile-detail-disclosure">

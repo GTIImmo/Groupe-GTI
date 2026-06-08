@@ -1120,21 +1120,6 @@
   min-height: 78px;
 }
 
-.mobile-detail-embedded .console-detail-block {
-  margin-top: 10px;
-  padding: 10px;
-  box-shadow: none;
-}
-
-.mobile-detail-embedded .console-detail-grid,
-.mobile-detail-embedded .console-heating-list {
-  grid-template-columns: 1fr;
-}
-
-.mobile-detail-embedded .console-detail-block-head {
-  align-items: flex-start;
-}
-
 .mobile-detail-portals {
   display: flex;
   flex-wrap: wrap;
