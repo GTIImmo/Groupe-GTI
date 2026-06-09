@@ -102,6 +102,8 @@ export type DossierDetailPayload = {
   console_missing_fields_status?: string | null
   secteur_console_json?: string | null
   chauffage_console_json?: string | null
+  chauffage_console_status?: string | null
+  chauffage_console_extracted_at?: string | null
   diagnostics_contacts_console_json?: string | null
   honoraires_detail_console_json?: string | null
   location_rendement_console_json?: string | null

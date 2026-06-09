@@ -56,6 +56,7 @@ def cleanup_hektor_db(hektor_annonce_id: str) -> dict[str, int]:
             "hektor_annonce_broadcast_state",
             "hektor_annonce_broadcast_target",
             "hektor_annonce_contact_link",
+            "hektor_annonce_chauffage_detail",
             "hektor_annonce_console_detail",
             "sync_annonce_contact_link",
             "sync_annonce_state",

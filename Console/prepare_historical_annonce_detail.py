@@ -157,6 +157,32 @@ def load_console_missing_fields(conn: sqlite3.Connection, annonce_id: str) -> di
     return {key: value for key, value in fields.items() if value is not None}
 
 
+def load_chauffage_missing_fields(conn: sqlite3.Connection, annonce_id: str) -> dict[str, Any]:
+    try:
+        row = conn.execute(
+            """
+            select status, chauffage_json, extracted_at
+            from hektor.hektor_annonce_chauffage_detail
+            where hektor_annonce_id = ?
+            """,
+            (annonce_id,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if "hektor_annonce_chauffage_detail" not in str(exc):
+            raise
+        return {}
+    if not row:
+        return {}
+    status = str(row["status"] or "").strip() or None
+    fields: dict[str, Any] = {
+        "chauffage_console_status": status,
+        "chauffage_console_extracted_at": row["extracted_at"],
+    }
+    if status == "done":
+        fields["chauffage_console_json"] = compact_json(row["chauffage_json"])
+    return {key: value for key, value in fields.items() if value is not None}
+
+
 def build_enriched_detail(detail: dict[str, Any], index_row: dict[str, Any], annonce: dict[str, Any]) -> dict[str, Any]:
     raw_detail = parse_json(detail.get("raw_json"), {})
     textes = parse_json(detail.get("textes_json"), [])
@@ -240,6 +266,7 @@ def build_detail_payload(
         app_historical_id = int(index_row.get("app_dossier_id") or annonce_id)
         enriched_detail = build_enriched_detail(detail, index_row, annonce)
         enriched_detail.update(load_console_missing_fields(conn, annonce_id))
+        enriched_detail.update(load_chauffage_missing_fields(conn, annonce_id))
         payload = {
             "hektor_annonce_id": annonce_id,
             "app_historical_id": app_historical_id,

@@ -15,6 +15,18 @@ param(
     [int]$ContactDetailMaxConsecutive404Errors = 0,
     [int]$ContactDetailClientMaxRetries = 1,
     [switch]$FailOnContactDetailsError,
+    [switch]$SkipHektorChauffage,
+    [ValidateSet("all", "current")]
+    [string]$HektorChauffageScope = "current",
+    [int]$HektorChauffageLimit = 50,
+    [int]$HektorChauffageStaleDays = 30,
+    [double]$HektorChauffageDelaySeconds = 0.5,
+    [int]$HektorChauffageBatchSize = 50,
+    [int]$HektorChauffageBatchPauseSeconds = 30,
+    [string]$HektorChauffageStorageState = "",
+    [switch]$HektorChauffageForce,
+    [switch]$HektorChauffageSkipJobCheck,
+    [bool]$HektorChauffageRefreshSession = $true,
     [switch]$RunConsoleMissingFields,
     [switch]$SkipConsoleMissingFields,
     [ValidateSet("all", "current")]
@@ -139,7 +151,7 @@ Set-Location $projectRoot
 
 Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"
-Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SupabaseSinceWatermark=$SupabaseSinceWatermark AllowStaleSupabaseDeletes=$AllowStaleSupabaseDeletes SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError RunConsoleMissingFields=$RunConsoleMissingFields SkipConsoleMissingFields=$SkipConsoleMissingFields ConsoleMissingFieldsAnnonceScope=$ConsoleMissingFieldsAnnonceScope ConsoleMissingFieldsLimit=$ConsoleMissingFieldsLimit ConsoleMissingFieldsStaleDays=$ConsoleMissingFieldsStaleDays ConsoleMissingFieldsDelaySeconds=$ConsoleMissingFieldsDelaySeconds ConsoleMissingFieldsBatchSize=$ConsoleMissingFieldsBatchSize ConsoleMissingFieldsBatchPauseSeconds=$ConsoleMissingFieldsBatchPauseSeconds ConsoleMissingFieldsForce=$ConsoleMissingFieldsForce ConsoleMissingFieldsSkipJobCheck=$ConsoleMissingFieldsSkipJobCheck PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly MatterportPushMode=$MatterportPushMode"
+Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SupabaseSinceWatermark=$SupabaseSinceWatermark AllowStaleSupabaseDeletes=$AllowStaleSupabaseDeletes SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError SkipHektorChauffage=$SkipHektorChauffage HektorChauffageScope=$HektorChauffageScope HektorChauffageLimit=$HektorChauffageLimit HektorChauffageStaleDays=$HektorChauffageStaleDays HektorChauffageDelaySeconds=$HektorChauffageDelaySeconds HektorChauffageBatchSize=$HektorChauffageBatchSize HektorChauffageBatchPauseSeconds=$HektorChauffageBatchPauseSeconds HektorChauffageForce=$HektorChauffageForce HektorChauffageSkipJobCheck=$HektorChauffageSkipJobCheck RunConsoleMissingFields=$RunConsoleMissingFields SkipConsoleMissingFields=$SkipConsoleMissingFields ConsoleMissingFieldsAnnonceScope=$ConsoleMissingFieldsAnnonceScope ConsoleMissingFieldsLimit=$ConsoleMissingFieldsLimit ConsoleMissingFieldsStaleDays=$ConsoleMissingFieldsStaleDays ConsoleMissingFieldsDelaySeconds=$ConsoleMissingFieldsDelaySeconds ConsoleMissingFieldsBatchSize=$ConsoleMissingFieldsBatchSize ConsoleMissingFieldsBatchPauseSeconds=$ConsoleMissingFieldsBatchPauseSeconds ConsoleMissingFieldsForce=$ConsoleMissingFieldsForce ConsoleMissingFieldsSkipJobCheck=$ConsoleMissingFieldsSkipJobCheck PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly MatterportPushMode=$MatterportPushMode"
 
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
@@ -209,6 +221,35 @@ Invoke-Step -Label "phase2 quality checks" -Arguments @(
 Invoke-Step -Label "phase2 contact sync status" -Arguments @(
     "phase2\checks\contact_sync_status.py"
 )
+
+if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0) {
+    $hektorChauffageDelayArg = $HektorChauffageDelaySeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)
+    $hektorChauffageArgs = @(
+        "phase2\sync\sync_hektor_chauffages.py",
+        "--scope", $HektorChauffageScope,
+        "--limit", [string]$HektorChauffageLimit,
+        "--stale-days", [string]$HektorChauffageStaleDays,
+        "--delay-seconds", $hektorChauffageDelayArg,
+        "--batch-size", [string]$HektorChauffageBatchSize,
+        "--batch-pause-seconds", [string]$HektorChauffageBatchPauseSeconds
+    )
+    if ($HektorChauffageStorageState) {
+        $hektorChauffageArgs += @("--storage-state", $HektorChauffageStorageState)
+    }
+    if ($HektorChauffageForce) {
+        $hektorChauffageArgs += "--force"
+    }
+    if ($HektorChauffageSkipJobCheck) {
+        $hektorChauffageArgs += "--skip-job-check"
+    }
+    if ($HektorChauffageRefreshSession) {
+        $hektorChauffageArgs += "--refresh-session-on-expired"
+    }
+    Invoke-Step -Label "hektor chauffage delta" -Arguments $hektorChauffageArgs
+}
+else {
+    Write-RunLog "SKIP hektor chauffage delta"
+}
 
 if ($RunConsoleMissingFields -and -not $SkipConsoleMissingFields -and $ConsoleMissingFieldsLimit -gt 0) {
     $consoleMissingDelayArg = $ConsoleMissingFieldsDelaySeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)

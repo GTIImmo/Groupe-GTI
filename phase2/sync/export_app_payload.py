@@ -33,8 +33,10 @@ CONSOLE_DETAIL_PAYLOAD_FIELDS = {
     "console_missing_fields_json",
     "console_missing_fields_extracted_at",
     "console_missing_fields_status",
+    "chauffage_console_extracted_at",
     "secteur_console_json",
     "chauffage_console_json",
+    "chauffage_console_status",
     "diagnostics_contacts_console_json",
     "honoraires_detail_console_json",
     "location_rendement_console_json",
@@ -377,8 +379,10 @@ DETAIL_PAYLOAD_FIELDS = {
     "console_missing_fields_json",
     "console_missing_fields_extracted_at",
     "console_missing_fields_status",
+    "chauffage_console_extracted_at",
     "secteur_console_json",
     "chauffage_console_json",
+    "chauffage_console_status",
     "diagnostics_contacts_console_json",
     "honoraires_detail_console_json",
     "location_rendement_console_json",
@@ -776,8 +780,50 @@ def build_console_detail_by_annonce(
     return output
 
 
+def build_chauffage_detail_by_annonce(
+    con: sqlite3.Connection,
+    annonce_ids: list[object],
+) -> dict[str, dict[str, object]]:
+    cleaned_ids = sorted({str(value or "").strip() for value in annonce_ids if str(value or "").strip()})
+    if not cleaned_ids:
+        return {}
+    output: dict[str, dict[str, object]] = {}
+    for start in range(0, len(cleaned_ids), SQLITE_IN_MAX):
+        batch = cleaned_ids[start : start + SQLITE_IN_MAX]
+        placeholders = ",".join("?" for _ in batch)
+        try:
+            rows = con.execute(
+                f"""
+                SELECT
+                    hektor_annonce_id,
+                    status,
+                    chauffage_json,
+                    extracted_at
+                FROM hektor.hektor_annonce_chauffage_detail
+                WHERE hektor_annonce_id IN ({placeholders})
+                """,
+                batch,
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                return {}
+            raise
+        for hektor_annonce_id, status, chauffage_json, extracted_at in rows:
+            annonce_id = str(hektor_annonce_id or "").strip()
+            if not annonce_id:
+                continue
+            chauffage = safe_json_loads(chauffage_json, None)
+            output[annonce_id] = {
+                "status": status,
+                "chauffage": chauffage,
+                "extracted_at": extracted_at,
+            }
+    return output
+
+
 def attach_console_missing_fields(con: sqlite3.Connection, rows: list[dict[str, object]]) -> list[dict[str, object]]:
     console_by_annonce = build_console_detail_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
+    chauffage_by_annonce = build_chauffage_detail_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
     enriched: list[dict[str, object]] = []
     json_keys = {
         "secteur_console_json": "secteur_console_json",
@@ -804,6 +850,13 @@ def attach_console_missing_fields(con: sqlite3.Connection, rows: list[dict[str, 
                 next_row["ges_image_url"] = payload.get("ges_image_url")
                 for target_key, payload_key in json_keys.items():
                     next_row[target_key] = compact_json_field(payload.get(payload_key))
+        chauffage_detail = chauffage_by_annonce.get(str(row.get("hektor_annonce_id") or "").strip())
+        if chauffage_detail:
+            chauffage_status = str(chauffage_detail.get("status") or "").strip() or None
+            next_row["chauffage_console_status"] = chauffage_status
+            next_row["chauffage_console_extracted_at"] = chauffage_detail.get("extracted_at")
+            if chauffage_status == "done":
+                next_row["chauffage_console_json"] = compact_json_field(chauffage_detail.get("chauffage"))
         enriched.append(next_row)
     return enriched
 
