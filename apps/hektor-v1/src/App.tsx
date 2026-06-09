@@ -24728,11 +24728,12 @@ function ContactDetailPopup(props: {
                 ) : null}
 
                 {contactDetailTab === 'emails' ? (
-                  <div className="contact-modern-tab-panel">
+                  <div className="contact-modern-tab-panel contact-email-tab-panel">
                     <div className="contact-modern-section-head">
                       <div>
                         <span>Gmail</span>
                         <strong>{contactEmailMessagesLoading ? 'Chargement...' : `${contactEmailMessages.length} email(s) lie(s)`}</strong>
+                        <small className="contact-email-account-line">{isGoogleWorkspaceEmail(contactGmailSubjectEmail) ? contactGmailSubjectEmail : 'Compte Gmail non reconnu'}</small>
                       </div>
                       <div className="contact-email-tab-actions">
                         {contactEmail ? <button className="ghost-button button-subtle" type="button" onClick={() => setContactEmailComposerOpen(true)}>Ecrire</button> : null}
