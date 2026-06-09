@@ -4,12 +4,12 @@ Controles automatises de coherence sur `phase2.sqlite`.
 
 ## Metriques
 
-- `vue_generale_total` : 21853 | attente : doit rester stable entre deux runs hors variation source
-- `demandes_total` : 21429 | attente : doit rester stable entre deux runs hors variation source
+- `vue_generale_total` : 56473 | attente : doit rester stable entre deux runs hors variation source
+- `demandes_total` : 21738 | attente : doit rester stable entre deux runs hors variation source
 - `missing_titles` : 0 | attente : 0
 - `view_generale_without_dossier` : 0 | attente : 0
 - `demandes_without_view_generale` : 0 | attente : 0
-- `mandat_numero_id_collision` : 3020 | attente : surveiller, indicateur borne a 5000 pour detecter les cas type 59449/44506
+- `mandat_numero_id_collision` : 5000 | attente : surveiller, indicateur borne a 5000 pour detecter les cas type 59449/44506
 
 ## Echantillons
 
@@ -18,139 +18,139 @@ Controles automatises de coherence sur `phase2.sqlite`.
 ```json
 [
   {
-    "hektor_annonce_id": "10043",
-    "no_dossier": "VM19360",
-    "no_mandat": "3955",
-    "mandat_id": "3733",
-    "hektor_mandat_id": "3955",
-    "numero": "3065",
-    "mandat_annonce_id": "10434"
+    "hektor_annonce_id": "10",
+    "no_dossier": "VA1958",
+    "no_mandat": "16707",
+    "mandat_id": "5",
+    "hektor_mandat_id": "16707",
+    "numero": "17131",
+    "mandat_annonce_id": "41349"
   },
   {
-    "hektor_annonce_id": "1005",
-    "no_dossier": "VA22364",
-    "no_mandat": "4758",
-    "mandat_id": "208",
-    "hektor_mandat_id": "4758",
-    "numero": "1772",
-    "mandat_annonce_id": "11424"
+    "hektor_annonce_id": "1000",
+    "no_dossier": "VA22182",
+    "no_mandat": "4992",
+    "mandat_id": "202",
+    "hektor_mandat_id": "4992",
+    "numero": "3701",
+    "mandat_annonce_id": "11933"
   },
   {
-    "hektor_annonce_id": "10057",
-    "no_dossier": "VM19522",
-    "no_mandat": "3818",
-    "mandat_id": "3737",
-    "hektor_mandat_id": "3818",
-    "numero": "3616",
-    "mandat_annonce_id": "10252"
+    "hektor_annonce_id": "10000",
+    "no_dossier": "VM18570",
+    "no_mandat": "3910",
+    "mandat_id": "3714",
+    "hektor_mandat_id": "3910",
+    "numero": "3214",
+    "mandat_annonce_id": "10378"
   },
   {
-    "hektor_annonce_id": "10058",
-    "no_dossier": "VM19542",
-    "no_mandat": "3814",
-    "mandat_id": "3738",
-    "hektor_mandat_id": "3814",
-    "numero": "3637",
-    "mandat_annonce_id": "10245"
+    "hektor_annonce_id": "10003",
+    "no_dossier": "EM18604",
+    "no_mandat": "3914",
+    "mandat_id": null,
+    "hektor_mandat_id": "3914",
+    "numero": "3181",
+    "mandat_annonce_id": "10383"
   },
   {
-    "hektor_annonce_id": "10059",
-    "no_dossier": "VM19562",
-    "no_mandat": "3813",
-    "mandat_id": "3739",
-    "hektor_mandat_id": "3813",
-    "numero": "13775",
-    "mandat_annonce_id": null
+    "hektor_annonce_id": "10006",
+    "no_dossier": "VM18708",
+    "no_mandat": "3901",
+    "mandat_id": "10085",
+    "hektor_mandat_id": "3901",
+    "numero": "3257",
+    "mandat_annonce_id": "10367"
   },
   {
-    "hektor_annonce_id": "10075",
-    "no_dossier": "VM19938",
-    "no_mandat": "3784",
-    "mandat_id": "3745",
-    "hektor_mandat_id": "3784",
-    "numero": "3685",
-    "mandat_annonce_id": "10163"
+    "hektor_annonce_id": "1001",
+    "no_dossier": "VA22208",
+    "no_mandat": "4956",
+    "mandat_id": "203",
+    "hektor_mandat_id": "4956",
+    "numero": "3525",
+    "mandat_annonce_id": "11876"
   },
   {
-    "hektor_annonce_id": "10081",
-    "no_dossier": "VM20066",
-    "no_mandat": "3774",
-    "mandat_id": "3746",
-    "hektor_mandat_id": "3774",
-    "numero": "3786",
-    "mandat_annonce_id": "10149"
+    "hektor_annonce_id": "10017",
+    "no_dossier": "VM19068",
+    "no_mandat": "3873",
+    "mandat_id": "3722",
+    "hektor_mandat_id": "3873",
+    "numero": "3430",
+    "mandat_annonce_id": "10330"
   },
   {
-    "hektor_annonce_id": "10084",
-    "no_dossier": "VM20100",
-    "no_mandat": "3770",
-    "mandat_id": "3748",
-    "hektor_mandat_id": "3770",
-    "numero": "3950",
-    "mandat_annonce_id": null
+    "hektor_annonce_id": "10019",
+    "no_dossier": "VM19050",
+    "no_mandat": "3875",
+    "mandat_id": "3720",
+    "hektor_mandat_id": "3875",
+    "numero": "3425",
+    "mandat_annonce_id": "10332"
   },
   {
-    "hektor_annonce_id": "10108",
-    "no_dossier": "VM20432",
-    "no_mandat": "3733",
-    "mandat_id": "3759",
-    "hektor_mandat_id": "3733",
-    "numero": "3955",
-    "mandat_annonce_id": "10043"
+    "hektor_annonce_id": "1002",
+    "no_dossier": "VA22238",
+    "no_mandat": "4924",
+    "mandat_id": "204",
+    "hektor_mandat_id": "4924",
+    "numero": "17770",
+    "mandat_annonce_id": "11810"
   },
   {
-    "hektor_annonce_id": "1011",
-    "no_dossier": "VA22486",
-    "no_mandat": "5509",
-    "mandat_id": "212",
-    "hektor_mandat_id": "5509",
-    "numero": "2920",
-    "mandat_annonce_id": "13583"
+    "hektor_annonce_id": "10025",
+    "no_dossier": "VM19106",
+    "no_mandat": "3860",
+    "mandat_id": "3723",
+    "hektor_mandat_id": "3860",
+    "numero": "3478",
+    "mandat_annonce_id": "10303"
   },
   {
-    "hektor_annonce_id": "10113",
-    "no_dossier": "VM20516",
-    "no_mandat": "3739",
-    "mandat_id": "3762",
-    "hektor_mandat_id": "3739",
-    "numero": "3813",
-    "mandat_annonce_id": "10059"
+    "hektor_annonce_id": "10028",
+    "no_dossier": "VM19158",
+    "no_mandat": "3855",
+    "mandat_id": "3724",
+    "hektor_mandat_id": "3855",
+    "numero": "3473",
+    "mandat_annonce_id": "10297"
   },
   {
-    "hektor_annonce_id": "10115",
-    "no_dossier": "VM20536",
-    "no_mandat": "3767",
-    "mandat_id": "3764",
-    "hektor_mandat_id": "3767",
-    "numero": "3723",
-    "mandat_annonce_id": "10120"
+    "hektor_annonce_id": "10029",
+    "no_dossier": "VM19160",
+    "no_mandat": "3854",
+    "mandat_id": "3725",
+    "hektor_mandat_id": "3854",
+    "numero": "3477",
+    "mandat_annonce_id": "10296"
   },
   {
-    "hektor_annonce_id": "10129",
-    "no_dossier": "VM20604",
-    "no_mandat": "3720",
-    "mandat_id": "3769",
-    "hektor_mandat_id": "3720",
-    "numero": "3875",
-    "mandat_annonce_id": "10019"
+    "hektor_annonce_id": "1003",
+    "no_dossier": "VA22278",
+    "no_mandat": "4996",
+    "mandat_id": "205",
+    "hektor_mandat_id": "4996",
+    "numero": "3621",
+    "mandat_annonce_id": "11944"
   },
   {
-    "hektor_annonce_id": "10149",
-    "no_dossier": "VM20878",
-    "no_mandat": "3786",
-    "mandat_id": "3774",
-    "hektor_mandat_id": "3786",
-    "numero": "3681",
-    "mandat_annonce_id": "10165"
+    "hektor_annonce_id": "10033",
+    "no_dossier": "VM19250",
+    "no_mandat": "3848",
+    "mandat_id": "3727",
+    "hektor_mandat_id": "3848",
+    "numero": "3506",
+    "mandat_annonce_id": "10287"
   },
   {
-    "hektor_annonce_id": "10153",
-    "no_dossier": "VM20918",
-    "no_mandat": "3695",
-    "mandat_id": "3777",
-    "hektor_mandat_id": "3695",
-    "numero": "3964",
-    "mandat_annonce_id": "9961"
+    "hektor_annonce_id": "10034",
+    "no_dossier": "VM19260",
+    "no_mandat": "3847",
+    "mandat_id": "3728",
+    "hektor_mandat_id": "3847",
+    "numero": "3513",
+    "mandat_annonce_id": "10285"
   }
 ]
 ```
