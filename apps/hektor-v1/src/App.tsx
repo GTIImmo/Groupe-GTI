@@ -8149,6 +8149,7 @@ export default function App() {
   const [contactStats, setContactStats] = useState<ContactStats>({ total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 })
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
+  const selectedDossierRef = useRef<DetailedDossier | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [googleWorkspaceIdentity, setGoogleWorkspaceIdentity] = useState<GoogleWorkspaceIdentity | null>(null)
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
@@ -9117,10 +9118,15 @@ export default function App() {
   }, [selectedDossierId, dossiers, mandats])
 
   useEffect(() => {
+    selectedDossierRef.current = selectedDossier
+  }, [selectedDossier])
+
+  useEffect(() => {
     if (selectedDossierId == null || (hasSupabaseEnv && !session)) return
     const quickMandat = mandats.find((item) => item.app_dossier_id === selectedDossierId)
     const quickBase = dossiers.find((item) => item.app_dossier_id === selectedDossierId) ?? quickMandat ?? null
-    if (!quickBase && selectedDossier?.app_dossier_id === selectedDossierId && isLightweightAnnonceRecord(selectedDossier)) {
+    const currentSelectedDossier = selectedDossierRef.current
+    if (!quickBase && currentSelectedDossier?.app_dossier_id === selectedDossierId && isLightweightAnnonceRecord(currentSelectedDossier)) {
       setDetailLoading(false)
       return
     }
@@ -9143,7 +9149,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDossierId, session, dataReloadKey, dossiers, mandats, selectedDossier])
+  }, [selectedDossierId, session, dataReloadKey, dossiers, mandats])
 
   useEffect(() => {
     if (deepLinkHandled || bootLoading || (hasSupabaseEnv && !session)) return
@@ -20677,22 +20683,30 @@ function MobileDossierDetail(props: {
         )) : <p className="mobile-detail-muted">Aucun mandat detaille disponible.</p>}
         {props.contacts.length > 0 ? (
           <div className="mobile-contact-stack">
-            {props.contacts.map((contact) => (
-              <div key={`mobile-contact-${contact.id}`} className="mobile-contact-card">
-                <span>{contact.role || 'Contact'}</span>
-                <strong>{contact.name || '-'}</strong>
-                {contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
-                {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
-                {[contact.address, contact.postalCode, contact.city].filter(Boolean).length ? <p>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')}</p> : null}
-                {contact.comment ? <p>{contact.comment}</p> : null}
-                {detailContactDirectoryId(contact) && props.onOpenContact ? (
-                  <button className="mobile-contact-directory-button" type="button" onClick={() => props.onOpenContact?.(detailContactDirectoryId(contact) as string)}>
-                    Fiche contact
-                  </button>
-                ) : null}
-                {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
-              </div>
-            ))}
+            {props.contacts.map((contact) => {
+              const contactDirectoryId = detailContactDirectoryId(contact)
+              const emailSubject = `Annonce ${dossier.numero_dossier ?? dossier.hektor_annonce_id ?? ''}`.trim()
+              return (
+                <div key={`mobile-contact-${contact.id}`} className="mobile-contact-card">
+                  <span>{contact.role || 'Contact'}</span>
+                  <strong>{contact.name || '-'}</strong>
+                  {contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
+                  {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
+                  {[contact.address, contact.postalCode, contact.city].filter(Boolean).length ? <p>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ')}</p> : null}
+                  {contact.comment ? <p>{contact.comment}</p> : null}
+                  <div className="mobile-contact-actions">
+                    {contact.phone ? <a href={`tel:${contact.phone}`}>Appeler</a> : null}
+                    {contact.email ? <a className="is-email" href={`mailto:${contact.email}?subject=${encodeURIComponent(emailSubject)}`}>Email</a> : null}
+                    {contactDirectoryId && props.onOpenContact ? (
+                      <button className="mobile-contact-directory-button" type="button" onClick={() => props.onOpenContact?.(contactDirectoryId)}>
+                        Fiche contact
+                      </button>
+                    ) : null}
+                  </div>
+                  {!isLightweightDetail ? <HektorMandantContactEditForm dossier={dossier} contact={contact} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
+                </div>
+              )
+            })}
           </div>
         ) : <p className="mobile-detail-muted">Aucun contact detaille.</p>}
         {diagnosticContactFacts.length > 0 ? (

@@ -737,6 +737,7 @@
 }
 
 .mobile-contact-actions a,
+.mobile-contact-actions button,
 .mobile-contact-pager button,
 .mobile-contact-relations button,
 .mobile-contact-directory-button {
@@ -753,10 +754,23 @@
   text-decoration: none;
 }
 
-.mobile-contact-actions a {
+.mobile-contact-actions a,
+.mobile-contact-actions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.mobile-contact-actions a.is-email {
+  border-color: rgba(197, 0, 95, 0.24);
+  background: rgba(197, 0, 95, 0.09);
+  color: var(--mobile-magenta);
+}
+
+.mobile-contact-actions .mobile-contact-directory-button {
+  margin-top: 0;
 }
 
 .mobile-contact-insights {
