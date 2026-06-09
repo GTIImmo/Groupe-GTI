@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import base64
 import json
+import mimetypes
+import re
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
 from typing import Any
+from urllib.parse import unquote, urlparse
 from zoneinfo import ZoneInfo
 
 import requests
@@ -62,6 +65,9 @@ CALENDAR_FREEBUSY_SCOPE = "https://www.googleapis.com/auth/calendar.freebusy"
 CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 DEFAULT_CALENDAR_TIMEZONE = "Europe/Paris"
+MAX_GMAIL_ATTACHMENT_COUNT = 10
+MAX_GMAIL_ATTACHMENT_BYTES = 18 * 1024 * 1024
+MAX_GMAIL_ATTACHMENT_FILE_BYTES = 8 * 1024 * 1024
 
 
 class GoogleWorkspaceService:
@@ -268,6 +274,7 @@ class GoogleWorkspaceService:
         reply_to: str | None = None,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
         dry_run: bool = True,
         requested_by: str | None = None,
         requested_by_email: str | None = None,
@@ -299,6 +306,15 @@ class GoogleWorkspaceService:
         message.set_content(clean_body_text)
         if clean_body_html:
             message.add_alternative(clean_body_html, subtype="html")
+        clean_attachments = self._download_gmail_attachments(attachments or [])
+        for attachment in clean_attachments:
+            maintype, subtype = attachment["mime_type"].split("/", 1)
+            message.add_attachment(
+                attachment["content"],
+                maintype=maintype,
+                subtype=subtype,
+                filename=attachment["filename"],
+            )
 
         metadata = {
             "to_count": len(clean_to),
@@ -306,6 +322,9 @@ class GoogleWorkspaceService:
             "bcc_count": len(clean_bcc),
             "has_reply_to": bool(clean_reply_to),
             "has_html": bool(clean_body_html),
+            "attachment_count": len(clean_attachments),
+            "attachment_total_bytes": sum(int(item["size"]) for item in clean_attachments),
+            "attachment_filenames": [item["filename"] for item in clean_attachments],
             "subject_length": len(clean_subject),
             "body_text_length": len(clean_body_text),
         }
@@ -331,6 +350,7 @@ class GoogleWorkspaceService:
                 "ccCount": len(clean_cc),
                 "bccCount": len(clean_bcc),
                 "hasHtml": bool(clean_body_html),
+                "attachmentCount": len(clean_attachments),
             }
 
         if clean_bcc:
@@ -396,7 +416,105 @@ class GoogleWorkspaceService:
             "subjectEmail": clean_subject_email,
             "messageId": payload.get("id"),
             "threadId": payload.get("threadId"),
+            "attachmentCount": len(clean_attachments),
         }
+
+    def _download_gmail_attachments(self, attachments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not attachments:
+            return []
+        if len(attachments) > MAX_GMAIL_ATTACHMENT_COUNT:
+            raise ValueError(f"{MAX_GMAIL_ATTACHMENT_COUNT} pieces jointes maximum")
+
+        downloaded: list[dict[str, Any]] = []
+        total_size = 0
+        for index, raw_attachment in enumerate(attachments, start=1):
+            if not isinstance(raw_attachment, dict):
+                raise ValueError("Piece jointe invalide")
+            raw_url = str(raw_attachment.get("url") or "").strip()
+            if not raw_url:
+                raise ValueError("URL piece jointe requise")
+            parsed_url = urlparse(raw_url)
+            if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+                raise ValueError("URL piece jointe invalide")
+
+            filename = self._safe_attachment_filename(
+                raw_attachment.get("filename"),
+                fallback=self._filename_from_url(raw_url) or f"piece-jointe-{index}",
+            )
+            requested_mime_type = str(raw_attachment.get("mimeType") or raw_attachment.get("mime_type") or "").strip()
+            declared_size = raw_attachment.get("fileSize") or raw_attachment.get("file_size")
+            if declared_size is not None:
+                try:
+                    declared_size_int = int(declared_size)
+                except (TypeError, ValueError):
+                    declared_size_int = 0
+                if declared_size_int > MAX_GMAIL_ATTACHMENT_FILE_BYTES:
+                    raise ValueError(f"Piece jointe trop lourde : {filename}")
+
+            try:
+                response = requests.get(raw_url, timeout=30, stream=True)
+            except requests.RequestException as exc:
+                raise ValueError(f"Piece jointe inaccessible : {filename}") from exc
+            try:
+                if response.status_code >= 400:
+                    raise ValueError(f"Piece jointe indisponible : {filename}")
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    try:
+                        content_length_int = int(content_length)
+                    except (TypeError, ValueError):
+                        content_length_int = 0
+                    if content_length_int > MAX_GMAIL_ATTACHMENT_FILE_BYTES:
+                        raise ValueError(f"Piece jointe trop lourde : {filename}")
+                chunks: list[bytes] = []
+                file_size = 0
+                for chunk in response.iter_content(chunk_size=65536):
+                    if not chunk:
+                        continue
+                    file_size += len(chunk)
+                    total_size += len(chunk)
+                    if file_size > MAX_GMAIL_ATTACHMENT_FILE_BYTES:
+                        raise ValueError(f"Piece jointe trop lourde : {filename}")
+                    if total_size > MAX_GMAIL_ATTACHMENT_BYTES:
+                        raise ValueError("Taille totale des pieces jointes trop elevee")
+                    chunks.append(chunk)
+                content = b"".join(chunks)
+                if not content:
+                    raise ValueError(f"Piece jointe vide : {filename}")
+                mime_type = self._safe_attachment_mime_type(
+                    requested_mime_type
+                    or response.headers.get("Content-Type", "").split(";", 1)[0]
+                    or mimetypes.guess_type(filename)[0]
+                )
+                downloaded.append({
+                    "filename": filename,
+                    "mime_type": mime_type,
+                    "content": content,
+                    "size": len(content),
+                })
+            finally:
+                response.close()
+        return downloaded
+
+    def _filename_from_url(self, url: str) -> str:
+        path = unquote(urlparse(url).path or "")
+        name = path.rsplit("/", 1)[-1]
+        return name.split("?", 1)[0]
+
+    def _safe_attachment_filename(self, value: object, *, fallback: str) -> str:
+        raw = str(value or fallback or "piece-jointe").strip()
+        cleaned = re.sub(r"[\r\n\\/]+", "-", raw)
+        cleaned = re.sub(r"[^A-Za-z0-9._() -]+", "_", cleaned).strip(" ._-")
+        return (cleaned or "piece-jointe")[:140]
+
+    def _safe_attachment_mime_type(self, value: object) -> str:
+        text = str(value or "").strip().lower()
+        if "/" not in text:
+            return "application/octet-stream"
+        maintype, subtype = text.split("/", 1)
+        if not re.fullmatch(r"[a-z0-9.+-]+", maintype) or not re.fullmatch(r"[a-z0-9.+-]+", subtype):
+            return "application/octet-stream"
+        return f"{maintype}/{subtype}"
 
     def create_calendar_event(
         self,

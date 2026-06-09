@@ -49,6 +49,13 @@ class GoogleGmailSendTestPayload(BaseModel):
     relatedEntityId: str | None = Field(default=None, max_length=120)
 
 
+class GoogleGmailAttachmentPayload(BaseModel):
+    url: str = Field(min_length=8, max_length=4000)
+    filename: str = Field(min_length=1, max_length=180)
+    mimeType: str | None = Field(default=None, max_length=120)
+    fileSize: int | None = Field(default=None, ge=0)
+
+
 class GoogleGmailSendPayload(BaseModel):
     subjectEmail: EmailStr
     to: list[EmailStr] = Field(default_factory=list)
@@ -59,6 +66,7 @@ class GoogleGmailSendPayload(BaseModel):
     replyTo: EmailStr | None = None
     cc: list[EmailStr] = Field(default_factory=list)
     bcc: list[EmailStr] = Field(default_factory=list)
+    attachments: list[GoogleGmailAttachmentPayload] = Field(default_factory=list, max_length=10)
     dryRun: bool = False
     relatedEntityType: str | None = Field(default=None, max_length=80)
     relatedEntityId: str | None = Field(default=None, max_length=120)
@@ -252,6 +260,7 @@ def send_google_gmail_message(
             reply_to=str(payload.replyTo) if payload.replyTo else None,
             cc=[str(email) for email in payload.cc],
             bcc=[str(email) for email in payload.bcc],
+            attachments=[item.model_dump() for item in payload.attachments],
             dry_run=payload.dryRun,
             requested_by=user.id,
             requested_by_email=user.email,

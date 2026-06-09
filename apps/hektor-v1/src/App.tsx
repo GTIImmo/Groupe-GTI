@@ -97,6 +97,7 @@ import {
   type DraftAnnonceSheetScanPayload,
   type GoogleCalendarAvailability,
   type GoogleCalendarEventLink,
+  type GoogleWorkspaceEmailAttachmentInput,
   type HektorContactIdentityInput,
   type HektorCompositionPieceInput,
   type MandantContactSearchOption,
@@ -22583,6 +22584,8 @@ type ContactEmailTemplate = {
   body: string
 }
 
+const contactEmailMaxAttachments = 10
+
 function contactEmailSignature(contact: AppContact) {
   return [
     safeText(contact.commercial_nom),
@@ -22598,6 +22601,36 @@ function contactEmailRelationLabel(relation: AppContactRelation | null | undefin
     relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : '',
     relation.numero_dossier ? `Dossier ${relation.numero_dossier}` : '',
   ].filter(Boolean).join(' - ')
+}
+
+function contactEmailAttachmentRelations(relations: AppContactRelation[]) {
+  const byDossierId = new Map<number, AppContactRelation>()
+  relations.forEach((relation) => {
+    const appDossierId = Number(relation.app_dossier_id)
+    if (!Number.isFinite(appDossierId) || appDossierId <= 0) return
+    if (!byDossierId.has(appDossierId)) byDossierId.set(appDossierId, relation)
+  })
+  return Array.from(byDossierId.values()).sort((left, right) => {
+    const leftActive = contactBool(left.is_active_annonce) ? 0 : 1
+    const rightActive = contactBool(right.is_active_annonce) ? 0 : 1
+    if (leftActive !== rightActive) return leftActive - rightActive
+    return contactEmailRelationLabel(left).localeCompare(contactEmailRelationLabel(right), 'fr')
+  })
+}
+
+function contactEmailPhotoAttachmentFilename(photo: ConsolePhoto, index: number) {
+  const urlExtensionMatch = safeText(photo.url_hd || photo.url_preview).match(/\.(jpe?g|png|webp|gif)(?:[?#]|$)/i)
+  const extension = urlExtensionMatch?.[1] ? `.${urlExtensionMatch[1].toLowerCase().replace('jpeg', 'jpg')}` : '.jpg'
+  const base = safeText(photo.filename) || safeText(photo.legend) || `photo-annonce-${index + 1}`
+  return /\.[a-z0-9]{2,5}$/i.test(base) ? base : `${base}${extension}`
+}
+
+function contactEmailPhotoMimeType(photo: ConsolePhoto) {
+  const text = `${photo.filename ?? ''} ${photo.url_hd ?? ''} ${photo.url_preview ?? ''}`.toLowerCase()
+  if (text.includes('.png')) return 'image/png'
+  if (text.includes('.webp')) return 'image/webp'
+  if (text.includes('.gif')) return 'image/gif'
+  return 'image/jpeg'
 }
 
 function contactEmailTemplates(contact: AppContact, relations: AppContactRelation[] = [], searches: AppContactSearch[] = []): ContactEmailTemplate[] {
@@ -22701,12 +22734,21 @@ function ContactEmailComposerModal(props: {
   const contactLabel = appContactAgendaLabel(props.contact)
   const emailTemplates = useMemo(() => contactEmailTemplates(props.contact, props.relations, props.searches), [props.contact, props.relations, props.searches])
   const firstTemplate = emailTemplates[0]
+  const attachmentRelations = useMemo(() => contactEmailAttachmentRelations(props.relations), [props.relations])
+  const firstAttachmentDossierId = Number(attachmentRelations[0]?.app_dossier_id)
   const defaultSubjectEmail = resolveGoogleWorkspaceCalendarEmail({
     emails: [props.contact.negociateur_email, props.sessionEmail],
     label: props.contact.commercial_nom,
     hektorNegotiators: props.hektorNegotiators,
   })
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<ContactEmailTemplateKey>(firstTemplate.key)
+  const [attachmentDossierId, setAttachmentDossierId] = useState(Number.isFinite(firstAttachmentDossierId) ? String(firstAttachmentDossierId) : '')
+  const [attachmentDocuments, setAttachmentDocuments] = useState<ConsoleDocument[]>([])
+  const [attachmentPhotos, setAttachmentPhotos] = useState<ConsolePhoto[]>([])
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(() => new Set())
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(() => new Set())
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+  const [attachmentsError, setAttachmentsError] = useState<string | null>(null)
   const [fromEmail, setFromEmail] = useState(defaultSubjectEmail)
   const [fromName, setFromName] = useState(props.contact.commercial_nom ? `${props.contact.commercial_nom} - GTI Immobilier` : 'GTI Immobilier')
   const [toText, setToText] = useState(contactEmail)
@@ -22718,8 +22760,39 @@ function ContactEmailComposerModal(props: {
   const [error, setError] = useState<string | null>(null)
   const toEmails = splitEmailList(toText)
   const ccEmails = splitEmailList(ccText)
+  const selectedAttachmentCount = selectedDocumentIds.size + selectedPhotoIds.size
+  const selectedAttachmentRelation = attachmentRelations.find((relation) => String(relation.app_dossier_id) === attachmentDossierId) ?? null
+  const availableAttachmentDocuments = attachmentDocuments.filter((document) => document.storage_status === 'cloud_available' && document.storage_path)
+  const availableAttachmentPhotos = attachmentPhotos.filter((photo) => Boolean(photo.url_hd || photo.url_preview))
   const canUseFromEmail = fromEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const canSubmit = canUseFromEmail && toEmails.length > 0 && Boolean(subject.trim()) && Boolean(bodyText.trim()) && !pending
+
+  useEffect(() => {
+    setSelectedDocumentIds(new Set())
+    setSelectedPhotoIds(new Set())
+    setAttachmentDocuments([])
+    setAttachmentPhotos([])
+    setAttachmentsError(null)
+    const appDossierId = Number(attachmentDossierId)
+    if (!Number.isFinite(appDossierId) || appDossierId <= 0) return
+    let cancelled = false
+    setAttachmentsLoading(true)
+    Promise.all([loadConsoleDocuments(appDossierId), loadConsolePhotos(appDossierId)])
+      .then(([documents, photos]) => {
+        if (cancelled) return
+        setAttachmentDocuments(documents)
+        setAttachmentPhotos(photos)
+      })
+      .catch((loadError) => {
+        if (!cancelled) setAttachmentsError(loadError instanceof Error ? loadError.message : 'Chargement pieces jointes impossible.')
+      })
+      .finally(() => {
+        if (!cancelled) setAttachmentsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [attachmentDossierId])
 
   function applyEmailTemplate(template: ContactEmailTemplate) {
     setSelectedTemplateKey(template.key)
@@ -22729,6 +22802,54 @@ function ContactEmailComposerModal(props: {
     setError(null)
   }
 
+  function toggleDocumentAttachment(documentId: string) {
+    const alreadySelected = selectedDocumentIds.has(documentId)
+    if (!alreadySelected && selectedAttachmentCount >= contactEmailMaxAttachments) {
+      setAttachmentsError(`${contactEmailMaxAttachments} pieces jointes maximum.`)
+      return
+    }
+    setSelectedDocumentIds((current) => {
+      const next = new Set(current)
+      if (next.has(documentId)) next.delete(documentId)
+      else next.add(documentId)
+      return next
+    })
+    setAttachmentsError(null)
+  }
+
+  function togglePhotoAttachment(photoId: string) {
+    const alreadySelected = selectedPhotoIds.has(photoId)
+    if (!alreadySelected && selectedAttachmentCount >= contactEmailMaxAttachments) {
+      setAttachmentsError(`${contactEmailMaxAttachments} pieces jointes maximum.`)
+      return
+    }
+    setSelectedPhotoIds((current) => {
+      const next = new Set(current)
+      if (next.has(photoId)) next.delete(photoId)
+      else next.add(photoId)
+      return next
+    })
+    setAttachmentsError(null)
+  }
+
+  async function buildEmailAttachments(): Promise<GoogleWorkspaceEmailAttachmentInput[]> {
+    const selectedDocuments = availableAttachmentDocuments.filter((document) => selectedDocumentIds.has(document.id))
+    const selectedPhotos = availableAttachmentPhotos.filter((photo) => selectedPhotoIds.has(photo.id))
+    const documentAttachments = await Promise.all(selectedDocuments.map(async (document) => ({
+      url: await createConsoleDocumentSignedUrl(document, 900),
+      filename: document.document_name,
+      mimeType: document.mime_type || undefined,
+      fileSize: document.file_size ?? undefined,
+    })))
+    const photoAttachments = selectedPhotos.map((photo, index) => ({
+      url: photo.url_hd || photo.url_preview || '',
+      filename: contactEmailPhotoAttachmentFilename(photo, index),
+      mimeType: contactEmailPhotoMimeType(photo),
+      fileSize: null,
+    })).filter((attachment) => attachment.url)
+    return [...documentAttachments, ...photoAttachments]
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSubmit) return
@@ -22736,6 +22857,7 @@ function ContactEmailComposerModal(props: {
     setMessage(null)
     setError(null)
     try {
+      const attachments = selectedAttachmentCount > 0 ? await buildEmailAttachments() : []
       const result = await sendGoogleWorkspaceCrmEmail({
         subjectEmail: fromEmail.trim(),
         to: toEmails,
@@ -22744,6 +22866,7 @@ function ContactEmailComposerModal(props: {
         bodyText: bodyText.trim(),
         fromName: fromName.trim() || 'GTI Immobilier',
         replyTo: fromEmail.trim(),
+        attachments,
         relatedEntityType: 'contact',
         relatedEntityId: props.contact.hektor_contact_id,
       })
@@ -22843,6 +22966,73 @@ function ContactEmailComposerModal(props: {
               <InfoCard label="Telephone" value={props.contact.phone_primary || '-'} />
               <InfoCard label="Ville" value={[props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'} />
               <InfoCard label="Negociateur" value={props.contact.commercial_nom || '-'} />
+            </div>
+            <div className="contact-email-attachments">
+              <div className="contact-email-attachments-head">
+                <span>Pieces jointes</span>
+                <strong>{selectedAttachmentCount} / {contactEmailMaxAttachments}</strong>
+              </div>
+              {attachmentRelations.length > 0 ? (
+                <label className="filter-field">
+                  <span>Annonce</span>
+                  <select value={attachmentDossierId} onChange={(inputEvent) => setAttachmentDossierId(inputEvent.target.value)}>
+                    {attachmentRelations.map((relation) => (
+                      <option key={`email-attachment-relation-${relation.app_dossier_id}`} value={String(relation.app_dossier_id)}>
+                        {contactEmailRelationLabel(relation) || `Dossier ${relation.app_dossier_id}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : <p className="empty-state">Aucune annonce liee pour joindre des pieces.</p>}
+              {selectedAttachmentRelation ? <small>{contactEmailRelationLabel(selectedAttachmentRelation) || `Dossier ${selectedAttachmentRelation.app_dossier_id}`}</small> : null}
+              {attachmentsLoading ? <p className="empty-state">Chargement documents et photos...</p> : null}
+              {attachmentsError ? <p className="google-agenda-error">{attachmentsError}</p> : null}
+              {!attachmentsLoading && attachmentDossierId ? (
+                <div className="contact-email-attachment-groups">
+                  <section className="contact-email-attachment-group">
+                    <div className="contact-email-attachment-group-head">
+                      <strong>Documents</strong>
+                      <span>{availableAttachmentDocuments.length}</span>
+                    </div>
+                    {availableAttachmentDocuments.length > 0 ? (
+                      <div className="contact-email-attachment-list">
+                        {availableAttachmentDocuments.slice(0, 12).map((document) => (
+                          <label key={`email-doc-${document.id}`} className={`contact-email-attachment-row ${selectedDocumentIds.has(document.id) ? 'is-selected' : ''}`}>
+                            <input type="checkbox" checked={selectedDocumentIds.has(document.id)} onChange={() => toggleDocumentAttachment(document.id)} />
+                            <span className="contact-email-attachment-icon" aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
+                            <span className="contact-email-attachment-copy">
+                              <strong>{document.document_name}</strong>
+                              <small>{[document.document_type, formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document'}</small>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : <p className="empty-state">Aucun document cloud disponible.</p>}
+                  </section>
+                  <section className="contact-email-attachment-group">
+                    <div className="contact-email-attachment-group-head">
+                      <strong>Photos</strong>
+                      <span>{availableAttachmentPhotos.length}</span>
+                    </div>
+                    {availableAttachmentPhotos.length > 0 ? (
+                      <div className="contact-email-attachment-list">
+                        {availableAttachmentPhotos.slice(0, 12).map((photo, index) => (
+                          <label key={`email-photo-${photo.id}`} className={`contact-email-attachment-row ${selectedPhotoIds.has(photo.id) ? 'is-selected' : ''}`}>
+                            <input type="checkbox" checked={selectedPhotoIds.has(photo.id)} onChange={() => togglePhotoAttachment(photo.id)} />
+                            <span className="contact-email-attachment-thumb" aria-hidden="true">
+                              {photo.url_preview || photo.url_hd ? <img src={photo.url_preview || photo.url_hd || ''} alt="" /> : <DetailIcon type="photo" />}
+                            </span>
+                            <span className="contact-email-attachment-copy">
+                              <strong>{photo.legend || contactEmailPhotoAttachmentFilename(photo, index)}</strong>
+                              <small>{photo.visible ? 'Visible' : 'Non visible'}</small>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : <p className="empty-state">Aucune photo disponible.</p>}
+                  </section>
+                </div>
+              ) : null}
             </div>
           </section>
         </div>

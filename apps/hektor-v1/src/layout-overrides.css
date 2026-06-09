@@ -3774,6 +3774,142 @@
   grid-template-columns: 1fr !important;
 }
 
+.contact-email-attachments {
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  padding-top: 4px !important;
+}
+
+.contact-email-attachments-head,
+.contact-email-attachment-group-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.contact-email-attachments-head span,
+.contact-email-attachment-group-head strong {
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 12px !important;
+  font-weight: 950 !important;
+}
+
+.contact-email-attachments-head strong,
+.contact-email-attachment-group-head span {
+  padding: 3px 7px !important;
+  border-radius: 999px !important;
+  background: rgba(197, 0, 95, 0.08) !important;
+  color: var(--gti-final-magenta, #c5005f) !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+}
+
+.contact-email-attachments > small {
+  color: rgba(34, 35, 35, 0.58) !important;
+  font-size: 11px !important;
+  font-weight: 760 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.contact-email-attachment-groups,
+.contact-email-attachment-group,
+.contact-email-attachment-list {
+  display: grid !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.contact-email-attachment-group {
+  padding: 9px !important;
+  border: 1px solid rgba(34, 35, 35, 0.1) !important;
+  border-radius: 8px !important;
+  background: #fbfcfc !important;
+}
+
+.contact-email-attachment-list {
+  max-height: 236px !important;
+  overflow: auto !important;
+}
+
+.contact-email-attachment-row {
+  display: grid !important;
+  grid-template-columns: 18px 34px minmax(0, 1fr) !important;
+  gap: 8px !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  padding: 7px !important;
+  border: 1px solid rgba(34, 35, 35, 0.08) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  cursor: pointer !important;
+}
+
+.contact-email-attachment-row.is-selected {
+  border-color: rgba(197, 0, 95, 0.32) !important;
+  background: rgba(197, 0, 95, 0.055) !important;
+}
+
+.contact-email-attachment-row input {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  accent-color: var(--gti-final-magenta, #c5005f) !important;
+}
+
+.contact-email-attachment-icon,
+.contact-email-attachment-thumb {
+  display: grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  overflow: hidden !important;
+  border-radius: 8px !important;
+  background: rgba(47, 102, 115, 0.09) !important;
+  color: var(--contact-purpose-info, #2f6673) !important;
+}
+
+.contact-email-attachment-icon svg,
+.contact-email-attachment-thumb svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.contact-email-attachment-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.contact-email-attachment-copy {
+  display: grid !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+
+.contact-email-attachment-copy strong,
+.contact-email-attachment-copy small {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-email-attachment-copy strong {
+  color: var(--gti-final-ink, #222323) !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+
+.contact-email-attachment-copy small {
+  color: rgba(34, 35, 35, 0.58) !important;
+  font-size: 10px !important;
+  font-weight: 760 !important;
+}
+
 @media (max-width: 1460px) and (min-width: 1181px) {
   .google-agenda-modal-layout {
     grid-template-columns: minmax(360px, 0.86fr) minmax(500px, 1.14fr);

@@ -581,8 +581,16 @@ export type GoogleWorkspaceEmailSendResult = {
   ccCount?: number
   bccCount?: number
   hasHtml?: boolean
+  attachmentCount?: number
   statusCode?: number
   error?: unknown
+}
+
+export type GoogleWorkspaceEmailAttachmentInput = {
+  url: string
+  filename: string
+  mimeType?: string | null
+  fileSize?: number | null
 }
 
 export async function sendGoogleWorkspaceCrmEmail(input: {
@@ -595,6 +603,7 @@ export async function sendGoogleWorkspaceCrmEmail(input: {
   replyTo?: string | null
   cc?: string[]
   bcc?: string[]
+  attachments?: GoogleWorkspaceEmailAttachmentInput[]
   dryRun?: boolean
   relatedEntityType?: string | null
   relatedEntityId?: string | null
@@ -606,6 +615,7 @@ export async function sendGoogleWorkspaceCrmEmail(input: {
       fromName: input.fromName || 'GTI Immobilier',
       cc: input.cc ?? [],
       bcc: input.bcc ?? [],
+      attachments: input.attachments ?? [],
       dryRun: Boolean(input.dryRun),
     },
   })
