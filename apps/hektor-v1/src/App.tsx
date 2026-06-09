@@ -22573,46 +22573,146 @@ function contactEmailGreeting(contact: AppContact) {
   return label ? `Bonjour ${label},` : 'Bonjour,'
 }
 
-function contactEmailDefaultSubject(contact: AppContact) {
-  const label = appContactAgendaLabel(contact)
-  return label ? `Suite a votre contact GTI - ${label}` : 'Suite a votre contact GTI'
+type ContactEmailTemplateKey = 'suivi' | 'visite' | 'relance' | 'estimation' | 'documents'
+
+type ContactEmailTemplate = {
+  key: ContactEmailTemplateKey
+  label: string
+  meta: string
+  subject: string
+  body: string
 }
 
-function contactEmailDefaultBody(contact: AppContact) {
-  const signature = [
+function contactEmailSignature(contact: AppContact) {
+  return [
     safeText(contact.commercial_nom),
     safeText(contact.agence_nom),
     'GTI Immobilier',
   ].filter(Boolean).join('\n')
+}
+
+function contactEmailRelationLabel(relation: AppContactRelation | null | undefined) {
+  if (!relation) return ''
   return [
-    contactEmailGreeting(contact),
-    '',
-    'Je fais suite a notre echange.',
-    '',
-    'Cordialement,',
-    signature,
-  ].join('\n')
+    safeText(relation.titre_bien),
+    relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : '',
+    relation.numero_dossier ? `Dossier ${relation.numero_dossier}` : '',
+  ].filter(Boolean).join(' - ')
+}
+
+function contactEmailTemplates(contact: AppContact, relations: AppContactRelation[] = [], searches: AppContactSearch[] = []): ContactEmailTemplate[] {
+  const greeting = contactEmailGreeting(contact)
+  const signature = contactEmailSignature(contact)
+  const relationLabel = contactEmailRelationLabel(relations.find((relation) => contactBool(relation.is_active_annonce)) ?? relations[0])
+  const activeSearchCount = searches.filter((search) => contactBool(search.is_active)).length
+  const projectLine = activeSearchCount > 0
+    ? `Je vois ${activeSearchCount} recherche(s) active(s) dans votre dossier.`
+    : 'Je reste a votre disposition pour avancer sur votre projet immobilier.'
+  const relationLine = relationLabel ? `Bien : ${relationLabel}` : 'Bien : a confirmer ensemble'
+  const close = ['Cordialement,', signature].filter(Boolean).join('\n')
+  return [
+    {
+      key: 'suivi',
+      label: 'Suivi',
+      meta: 'Apres un echange',
+      subject: 'Suite a notre echange - GTI Immobilier',
+      body: [
+        greeting,
+        '',
+        'Je fais suite a notre echange.',
+        projectLine,
+        '',
+        close,
+      ].join('\n'),
+    },
+    {
+      key: 'visite',
+      label: 'Visite',
+      meta: 'Proposer ou confirmer',
+      subject: relationLabel ? `Visite - ${relationLabel}` : 'Proposition de visite - GTI Immobilier',
+      body: [
+        greeting,
+        '',
+        "Je vous contacte au sujet d'une visite.",
+        relationLine,
+        '',
+        'Creneau propose :',
+        'Lieu de rendez-vous :',
+        '',
+        close,
+      ].join('\n'),
+    },
+    {
+      key: 'relance',
+      label: 'Relance',
+      meta: 'Reprendre contact',
+      subject: 'Relance GTI - votre projet immobilier',
+      body: [
+        greeting,
+        '',
+        'Je me permets de revenir vers vous afin de faire le point sur votre projet immobilier.',
+        "Souhaitez-vous que nous convenions d'un prochain echange ?",
+        '',
+        close,
+      ].join('\n'),
+    },
+    {
+      key: 'estimation',
+      label: 'Estimation',
+      meta: 'Projet vendeur',
+      subject: 'Estimation de votre bien - GTI Immobilier',
+      body: [
+        greeting,
+        '',
+        'Je vous contacte concernant l estimation de votre bien.',
+        'Nous pouvons organiser un rendez-vous afin de faire le point sur ses caracteristiques et sur le marche actuel.',
+        '',
+        close,
+      ].join('\n'),
+    },
+    {
+      key: 'documents',
+      label: 'Documents',
+      meta: 'Pieces a preparer',
+      subject: 'Documents a preparer - GTI Immobilier',
+      body: [
+        greeting,
+        '',
+        'Pour avancer sur votre dossier, pouvez-vous preparer ou me transmettre les documents utiles ?',
+        '',
+        'Documents attendus :',
+        '-',
+        '',
+        close,
+      ].join('\n'),
+    },
+  ]
 }
 
 function ContactEmailComposerModal(props: {
   contact: AppContact
+  relations: AppContactRelation[]
+  searches: AppContactSearch[]
   hektorNegotiators?: HektorNegotiatorOption[]
   sessionEmail?: string | null
   onClose: () => void
 }) {
   const contactEmail = appContactAgendaEmail(props.contact)
   const contactLabel = appContactAgendaLabel(props.contact)
+  const emailTemplates = useMemo(() => contactEmailTemplates(props.contact, props.relations, props.searches), [props.contact, props.relations, props.searches])
+  const firstTemplate = emailTemplates[0]
   const defaultSubjectEmail = resolveGoogleWorkspaceCalendarEmail({
     emails: [props.contact.negociateur_email, props.sessionEmail],
     label: props.contact.commercial_nom,
     hektorNegotiators: props.hektorNegotiators,
   })
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<ContactEmailTemplateKey>(firstTemplate.key)
   const [fromEmail, setFromEmail] = useState(defaultSubjectEmail)
   const [fromName, setFromName] = useState(props.contact.commercial_nom ? `${props.contact.commercial_nom} - GTI Immobilier` : 'GTI Immobilier')
   const [toText, setToText] = useState(contactEmail)
   const [ccText, setCcText] = useState('')
-  const [subject, setSubject] = useState(contactEmailDefaultSubject(props.contact))
-  const [bodyText, setBodyText] = useState(contactEmailDefaultBody(props.contact))
+  const [subject, setSubject] = useState(firstTemplate.subject)
+  const [bodyText, setBodyText] = useState(firstTemplate.body)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -22620,6 +22720,14 @@ function ContactEmailComposerModal(props: {
   const ccEmails = splitEmailList(ccText)
   const canUseFromEmail = fromEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
   const canSubmit = canUseFromEmail && toEmails.length > 0 && Boolean(subject.trim()) && Boolean(bodyText.trim()) && !pending
+
+  function applyEmailTemplate(template: ContactEmailTemplate) {
+    setSelectedTemplateKey(template.key)
+    setSubject(template.subject)
+    setBodyText(template.body)
+    setMessage(null)
+    setError(null)
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -22672,6 +22780,22 @@ function ContactEmailComposerModal(props: {
             <div className="google-agenda-panel-head">
               <span>Message</span>
               <strong>Rediger l'email</strong>
+            </div>
+            <div className="contact-email-template-section">
+              <span className="detail-label">Type d'email</span>
+              <div className="contact-email-template-list" role="list">
+                {emailTemplates.map((template) => (
+                  <button
+                    key={template.key}
+                    className={`contact-email-template ${selectedTemplateKey === template.key ? 'is-active' : ''}`}
+                    type="button"
+                    onClick={() => applyEmailTemplate(template)}
+                  >
+                    <strong>{template.label}</strong>
+                    <span>{template.meta}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <form className="google-agenda-form contact-email-form" onSubmit={handleSubmit}>
               <label className="filter-field google-agenda-field-wide">
@@ -24724,6 +24848,8 @@ function ContactDetailPopup(props: {
       {contactEmailComposerOpen ? (
         <ContactEmailComposerModal
           contact={props.contact}
+          relations={props.relations}
+          searches={props.searches}
           hektorNegotiators={props.hektorNegotiators}
           sessionEmail={props.sessionEmail}
           onClose={() => setContactEmailComposerOpen(false)}
