@@ -7425,6 +7425,40 @@ tbody tr.is-refreshing-row td {
 .detail-contact-lines {
   gap: 12px;
 }
+.detail-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.detail-contact-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(15, 104, 116, 0.22);
+  border-radius: 8px;
+  background: #eaf5f6;
+  color: #0f6874;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+}
+.detail-contact-action:hover {
+  border-color: rgba(15, 104, 116, 0.36);
+  background: #dff0f2;
+}
+.detail-contact-action.is-email {
+  border-color: rgba(197, 0, 95, 0.22);
+  background: #fff0f7;
+  color: #c5005f;
+}
+.detail-contact-action.is-email:hover {
+  border-color: rgba(197, 0, 95, 0.34);
+  background: #fde6f1;
+}
 .detail-contact-link {
   color: #0f5870;
   text-decoration: none;

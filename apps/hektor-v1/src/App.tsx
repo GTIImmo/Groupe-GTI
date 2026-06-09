@@ -16726,6 +16726,7 @@ function DossierDetailLayout(props: {
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
   const contactSummaryLabel = props.detail.mandants_texte || props.contacts.map((contact) => contact.name).filter(Boolean).join(' | ')
+  const detailContactEmailSubject = `Annonce ${dossier.numero_dossier ?? dossier.hektor_annonce_id ?? ''}`.trim()
   const secteurFacts = consoleDetailFacts(props.detail.secteur_console_json)
   const chauffageFacts = consoleHeatingFacts(props.detail.chauffage_console_json)
   const compositionFacts = consoleDetailFacts(props.detail.pieces_detail_console_json)
@@ -17102,6 +17103,11 @@ function DossierDetailLayout(props: {
                             <span>{primaryContact.role || 'Contact principal'}</span>
                           </div>
                         </div>
+                        {primaryContact.email ? (
+                          <div className="detail-contact-actions">
+                            <a className="detail-contact-action is-email" href={`mailto:${primaryContact.email}?subject=${encodeURIComponent(detailContactEmailSubject)}`}>Email</a>
+                          </div>
+                        ) : null}
                         <div className="detail-entity-lines detail-contact-lines">
                           <div className="detail-entity-line">
                             <span>Role</span>
@@ -17156,6 +17162,11 @@ function DossierDetailLayout(props: {
                                   <span>{contact.role || 'Mandant'}</span>
                                 </div>
                               </div>
+                              {contact.email ? (
+                                <div className="detail-contact-actions">
+                                  <a className="detail-contact-action is-email" href={`mailto:${contact.email}?subject=${encodeURIComponent(detailContactEmailSubject)}`}>Email</a>
+                                </div>
+                              ) : null}
                               <div className="detail-entity-lines detail-contact-lines">
                                 <div className="detail-entity-line">
                                   <span>Role</span>
