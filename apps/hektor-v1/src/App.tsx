@@ -20123,6 +20123,7 @@ function GoogleAgendaAnnonceSection(props: {
                     {activeEvents.map((item) => {
                       const eventInvitees = Array.isArray(item.attendees_json) ? item.attendees_json : []
                       const eventInviteeContacts = googleAgendaEventInviteeContacts(item)
+                      const visitVoucherIssue = visitVoucherMissingReason(item)
                       return (
                         <article key={item.id} className="google-agenda-event-card">
                           <div>
@@ -20143,6 +20144,7 @@ function GoogleAgendaAnnonceSection(props: {
                                 ))}
                               </div>
                             ) : null}
+                            {visitVoucherIssue ? <span>{visitVoucherIssue}</span> : null}
                           </div>
                           <div className="google-agenda-event-actions">
                             {item.google_html_link ? (
@@ -22842,10 +22844,18 @@ function writeVisitVoucherWindow(targetWindow: Window | null | undefined, html: 
   return true
 }
 
+function visitVoucherEditableHtml(value: string | null | undefined, fallback = 'A completer', syncKey?: string) {
+  const cleanValue = safeText(value) || fallback
+  const syncAttribute = syncKey ? ` data-sync="${escapeHtml(syncKey)}"` : ''
+  return `<span class="editable-field" data-editable="true"${syncAttribute} contenteditable="false" spellcheck="false">${escapeHtml(cleanValue)}</span>`
+}
+
 function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null) {
   const relation = googleAgendaVisitRelation(event, relations)
   const contactName = appContactAgendaLabel(contact)
   const contactAddress = [contact.code_postal, contact.ville].filter(Boolean).join(' ')
+  const contactPhone = safeText(contact.phone_primary) || safeText(contact.phone_secondary)
+  const contactEmail = safeText(contact.email)
   const propertyTitle = visitVoucherPropertyTitle(event, relation)
   const propertyMandate = visitVoucherPropertyMandate(event, relation)
   const propertyDossier = visitVoucherPropertyDossier(event, relation)
@@ -22910,16 +22920,46 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
     .signature{margin-top:8px;padding:20px;border:2px solid #e7d2dc;border-radius:14px;text-align:center}
     .signature-chip{display:inline-block;margin-bottom:8px;padding:6px 14px;border:1px solid #f0c7d9;border-radius:20px;background:#fff0f6;color:#c2185b;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
     .signature-area{height:95px;border:2px dashed #d8b8c6;border-radius:10px;margin:10px 20px;background:#fff}
+    .editable-field{display:inline;min-width:24px;border-radius:4px}
+    .property-table .editable-field{display:block;min-height:17px}
+    body.is-editing .editable-field{outline:1px dashed #c2185b;background:#fff5fa;padding:1px 3px}
+    body.is-editing .sheet{box-shadow:0 18px 60px rgba(194,24,91,.2)}
+    .print-actions .edit-toggle{background:#2c2c2c;border-color:#2c2c2c}
+    .print-actions .close-print{background:#fff;color:#2c2c2c;border-color:#d8dde6}
     @page{size:A4;margin:10mm}
     @media print{
       html,body{background:#fff}
       .print-actions{display:none}
       .sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+      .editable-field{outline:0!important;background:transparent!important;padding:0!important}
     }
   </style>
+  <script>
+    function toggleVisitVoucherEdition() {
+      var editing = !document.body.classList.contains('is-editing');
+      document.body.classList.toggle('is-editing', editing);
+      document.querySelectorAll('[data-editable="true"]').forEach(function (node) {
+        node.setAttribute('contenteditable', editing ? 'true' : 'false');
+      });
+      var button = document.getElementById('visit-voucher-edit-toggle');
+      if (button) button.textContent = editing ? 'Verrouiller edition' : 'Modifier avant impression';
+    }
+    document.addEventListener('input', function (event) {
+      var target = event.target;
+      if (!target || !target.dataset || !target.dataset.sync) return;
+      var syncKey = target.dataset.sync;
+      document.querySelectorAll('[data-sync="' + syncKey + '"]').forEach(function (node) {
+        if (node !== target) node.textContent = target.textContent || '';
+      });
+    });
+  </script>
 </head>
 <body>
-  <div class="print-actions"><button type="button" onclick="window.print()">Imprimer le bon de visite</button></div>
+  <div class="print-actions">
+    <button id="visit-voucher-edit-toggle" class="edit-toggle" type="button" onclick="toggleVisitVoucherEdition()">Modifier avant impression</button>
+    <button type="button" onclick="window.print()">Imprimer le bon de visite</button>
+    <button class="close-print" type="button" onclick="window.close()">Fermer</button>
+  </div>
   <main class="sheet">
     <section class="head">
       <div class="title-box">
@@ -22935,20 +22975,20 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
     <section class="identity-grid">
       <article class="card">
         <span class="label">Acquereur</span>
-        <div class="name">${escapeHtml(contactName)}</div>
-        <div><strong>Adresse :</strong> ${escapeHtml(contactAddress || '..................................................')}</div>
-        <div><strong>Telephone :</strong> ${escapeHtml(contact.phone_primary || contact.phone_secondary || '')}</div>
-        <div><strong>Email :</strong> ${escapeHtml(contact.email || '')}</div>
+        <div class="name">${visitVoucherEditableHtml(contactName, 'Acquereur a completer', 'contact-name')}</div>
+        <div><strong>Adresse :</strong> ${visitVoucherEditableHtml(contactAddress, '..................................................')}</div>
+        <div><strong>Telephone :</strong> ${visitVoucherEditableHtml(contactPhone, '..................................................')}</div>
+        <div><strong>Email :</strong> ${visitVoucherEditableHtml(contactEmail, '..................................................')}</div>
       </article>
       <article class="card is-agency">
         <span class="label">Agence</span>
-        <div class="name">${escapeHtml(agencyName)}</div>
-        <div><strong>Represente par :</strong> ${escapeHtml(negotiatorName)}</div>
-        <div><strong>Mandat :</strong> ${escapeHtml(propertyMandate || '')}</div>
+        <div class="name">${visitVoucherEditableHtml(agencyName, 'Groupe GTI', 'agency-name')}</div>
+        <div><strong>Represente par :</strong> ${visitVoucherEditableHtml(negotiatorName, 'A completer')}</div>
+        <div><strong>Mandat :</strong> ${visitVoucherEditableHtml(propertyMandate, '..................................................')}</div>
       </article>
     </section>
 
-    <div class="notice">Je soussigne(e) <strong>${escapeHtml(contactName)}</strong>, reconnais que le bien ci-dessous m'a ete presente par l'agence <strong>${escapeHtml(agencyName)}</strong>.</div>
+    <div class="notice">Je soussigne(e) <strong>${visitVoucherEditableHtml(contactName, 'Acquereur a completer', 'contact-name')}</strong>, reconnais que le bien ci-dessous m'a ete presente par l'agence <strong>${visitVoucherEditableHtml(agencyName, 'Groupe GTI', 'agency-name')}</strong>.</div>
 
     ${propertyPhotoBlock}
 
@@ -22956,7 +22996,7 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
       <tbody>
         <tr>
           <th>Bien presente</th>
-          <td>${propertyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')}</td>
+          <td>${propertyLines.map((line) => `<p>${visitVoucherEditableHtml(line, 'A completer')}</p>`).join('')}</td>
         </tr>
       </tbody>
     </table>
@@ -22967,7 +23007,7 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
     </div>
 
     <section class="formalisation">
-      <div><strong>Formalisation</strong><br />Fait a .................................................. &nbsp;&nbsp; Le ${escapeHtml(formatDate(event.starts_at))}</div>
+      <div><strong>Formalisation</strong><br />Fait a ${visitVoucherEditableHtml('', '..................................................')} &nbsp;&nbsp; Le ${visitVoucherEditableHtml(formatDate(event.starts_at), '........................')}</div>
       <div style="color:#666;text-align:right;font-size:11px;">Bon pour reconnaissance de visite</div>
     </section>
 
@@ -22991,11 +23031,53 @@ function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLi
   window.setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
+function visitVoucherHasLinkedProperty(event: GoogleCalendarEventLink) {
+  const appDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
+  const hektorAnnonceId = Number(event.hektor_annonce_id ?? event.metadata_json?.hektor_annonce_id)
+  return (
+    (Number.isFinite(appDossierId) && appDossierId > 0)
+    || (Number.isFinite(hektorAnnonceId) && hektorAnnonceId > 0)
+    || Boolean(safeText(event.metadata_json?.numero_mandat))
+  )
+}
+
+function visitVoucherHasLinkedContact(event: GoogleCalendarEventLink) {
+  const attendeeContacts = event.metadata_json?.attendee_contacts
+  const hasAttendeeContact = Array.isArray(attendeeContacts) && attendeeContacts.some((item) => {
+    if (!item || typeof item !== 'object') return false
+    const record = item as Record<string, unknown>
+    return Boolean(
+      safeText(record.email)
+      || safeText(record.hektor_contact_id)
+      || safeText(record.hektorContactId),
+    )
+  })
+  const hasAttendeeEmail = Array.isArray(event.attendees_json) && event.attendees_json.some((email) => Boolean(safeText(email)))
+  return Boolean(
+    safeText(event.hektor_contact_id)
+    || safeText(event.metadata_json?.contact_id)
+    || safeText(event.metadata_json?.contact_email)
+    || hasAttendeeContact
+    || hasAttendeeEmail
+  )
+}
+
 function canPrintVisitVoucher(event: GoogleCalendarEventLink) {
   const type = safeText(event.event_type).toLowerCase()
-  if (type === 'visite') return true
   if (event.metadata_json?.bon_visite_ready === true) return true
-  return false
+  if (type !== 'visite' || event.status === 'deleted') return false
+  return visitVoucherHasLinkedProperty(event) && visitVoucherHasLinkedContact(event)
+}
+
+function visitVoucherMissingReason(event: GoogleCalendarEventLink) {
+  const type = safeText(event.event_type).toLowerCase()
+  if (type !== 'visite' || canPrintVisitVoucher(event)) return null
+  const missingProperty = !visitVoucherHasLinkedProperty(event)
+  const missingContact = !visitVoucherHasLinkedContact(event)
+  if (missingProperty && missingContact) return 'Bon de visite a completer : bien et contact manquants'
+  if (missingProperty) return 'Bon de visite a completer : bien manquant'
+  if (missingContact) return 'Bon de visite a completer : contact manquant'
+  return null
 }
 
 function GoogleAgendaContactModal(props: {
@@ -23813,6 +23895,7 @@ function ContactDetailPopup(props: {
             const inviteeContacts = googleAgendaEventInviteeContacts(event)
             const contactInvitee = inviteeContacts.find((item) => item.hektorContactId === props.contact.hektor_contact_id)
             const eventAppDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
+            const visitVoucherIssue = visitVoucherMissingReason(event)
             return (
               <article key={`contact-google-event-${event.id}`} className="contact-modern-rdv-card">
                 <div className="contact-modern-rdv-main">
@@ -23824,6 +23907,7 @@ function ContactDetailPopup(props: {
                     {event.location ? <span>{event.location}</span> : null}
                     {contactInvitee?.label ? <span>Invite : {contactInvitee.label}</span> : null}
                     {eventInvitees.length > 0 ? <span>{eventInvitees.length} invite(s)</span> : null}
+                    {visitVoucherIssue ? <span>{visitVoucherIssue}</span> : null}
                   </div>
                 </div>
                 <div className="contact-modern-rdv-actions">
