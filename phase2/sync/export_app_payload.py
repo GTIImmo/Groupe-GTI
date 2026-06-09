@@ -18,12 +18,47 @@ MAX_EXPORTED_IMAGES = 5
 CURRENT_MANDATE_SERIES_START = "2024-01-01"
 CURRENT_MANDATE_SERIES_MAX_NUM = 199999
 DPE_IMAGE_BASE_URL = "https://groupe-gti-immobilier.staticlbi.com/wa/images/DPEImages/"
+API_DETAIL_GROUP_PAYLOAD_FIELDS = {
+    "ag_interieur": "ag_interieur_json",
+    "ag_exterieur": "ag_exterieur_json",
+    "equipements": "equipements_json",
+    "diagnostiques": "diagnostiques_json",
+    "terrain": "terrain_json",
+    "copropriete": "copropriete_json",
+    "mandat_infofi": "mandat_infofi_json",
+    "mandat_mandatdispo": "mandat_mandatdispo_json",
+    "organiser_visite": "organiser_visite_json",
+}
+CONSOLE_DETAIL_PAYLOAD_FIELDS = {
+    "console_missing_fields_json",
+    "console_missing_fields_extracted_at",
+    "console_missing_fields_status",
+    "secteur_console_json",
+    "chauffage_console_json",
+    "diagnostics_contacts_console_json",
+    "honoraires_detail_console_json",
+    "location_rendement_console_json",
+    "pieces_detail_console_json",
+    "dpe_image_url",
+    "ges_image_url",
+    "dpe_image_urls_json",
+}
 ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
     "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis', 'Estimation')"
 )
 REGISTRE_SCOPE_STATUTS = ("Actif", "Sous offre", "Sous compromis", "Vendu", "Clos")
 REGISTRE_SCOPE_SQL = ",".join(f"'{value}'" for value in REGISTRE_SCOPE_STATUTS)
+
+
+def sqlite_read_connection(path: Path) -> sqlite3.Connection:
+    uri = f"file:{path.resolve().as_posix()}?mode=ro&immutable=1"
+    return sqlite3.connect(uri, uri=True)
+
+
+def attach_hektor_read(con: sqlite3.Connection) -> None:
+    uri = f"file:{HEKTOR_DB.resolve().as_posix()}?mode=ro&immutable=1"
+    con.execute("ATTACH DATABASE ? AS hektor", (uri,))
 
 
 SQL_SUMMARY = """
@@ -330,8 +365,24 @@ DETAIL_PAYLOAD_FIELDS = {
     "pieces_json",
     "images_json",
     "textes_json",
+    "ag_interieur_json",
+    "ag_exterieur_json",
+    "equipements_json",
+    "diagnostiques_json",
     "terrain_json",
     "copropriete_json",
+    "mandat_infofi_json",
+    "mandat_mandatdispo_json",
+    "organiser_visite_json",
+    "console_missing_fields_json",
+    "console_missing_fields_extracted_at",
+    "console_missing_fields_status",
+    "secteur_console_json",
+    "chauffage_console_json",
+    "diagnostics_contacts_console_json",
+    "honoraires_detail_console_json",
+    "location_rendement_console_json",
+    "pieces_detail_console_json",
     "dpe_image_url",
     "ges_image_url",
     "dpe_image_urls_json",
@@ -657,6 +708,106 @@ def trim_json_array_field(value: object, *, limit: int) -> str | None:
     return json.dumps(parsed[:limit], ensure_ascii=True, separators=(",", ":"))
 
 
+def compact_json_field(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw or raw == "null":
+            return None
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return raw
+        return json.dumps(parsed, ensure_ascii=True, separators=(",", ":")) if parsed is not None else None
+    return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+
+
+def extract_api_detail_groups(detail_raw_json: object) -> dict[str, str | None]:
+    raw_detail = safe_json_loads(detail_raw_json, {})
+    if not isinstance(raw_detail, dict):
+        return {field: None for field in API_DETAIL_GROUP_PAYLOAD_FIELDS.values()}
+    return {
+        payload_field: compact_json_field(raw_detail.get(group_name))
+        for group_name, payload_field in API_DETAIL_GROUP_PAYLOAD_FIELDS.items()
+    }
+
+
+def build_console_detail_by_annonce(
+    con: sqlite3.Connection,
+    annonce_ids: list[object],
+) -> dict[str, dict[str, object]]:
+    cleaned_ids = sorted({str(value or "").strip() for value in annonce_ids if str(value or "").strip()})
+    if not cleaned_ids:
+        return {}
+    output: dict[str, dict[str, object]] = {}
+    for start in range(0, len(cleaned_ids), SQLITE_IN_MAX):
+        batch = cleaned_ids[start : start + SQLITE_IN_MAX]
+        placeholders = ",".join("?" for _ in batch)
+        try:
+            rows = con.execute(
+                f"""
+                SELECT
+                    hektor_annonce_id,
+                    status,
+                    console_payload_json,
+                    extracted_at
+                FROM hektor.hektor_annonce_console_detail
+                WHERE hektor_annonce_id IN ({placeholders})
+                """,
+                batch,
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                return {}
+            raise
+        for hektor_annonce_id, status, payload_json, extracted_at in rows:
+            annonce_id = str(hektor_annonce_id or "").strip()
+            if not annonce_id:
+                continue
+            payload = safe_json_loads(payload_json, {})
+            if not isinstance(payload, dict):
+                payload = {}
+            output[annonce_id] = {
+                "status": status,
+                "payload": payload,
+                "extracted_at": extracted_at,
+            }
+    return output
+
+
+def attach_console_missing_fields(con: sqlite3.Connection, rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    console_by_annonce = build_console_detail_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
+    enriched: list[dict[str, object]] = []
+    json_keys = {
+        "secteur_console_json": "secteur_console_json",
+        "chauffage_console_json": "chauffage_console_json",
+        "diagnostics_contacts_console_json": "diagnostics_contacts_console_json",
+        "honoraires_detail_console_json": "honoraires_detail_console_json",
+        "location_rendement_console_json": "location_rendement_console_json",
+        "pieces_detail_console_json": "pieces_detail_console_json",
+        "dpe_image_urls_json": "dpe_image_urls",
+    }
+    for row in rows:
+        next_row = dict(row)
+        for field in CONSOLE_DETAIL_PAYLOAD_FIELDS:
+            next_row.setdefault(field, None)
+        console_detail = console_by_annonce.get(str(row.get("hektor_annonce_id") or "").strip())
+        if console_detail:
+            payload = console_detail.get("payload") if isinstance(console_detail.get("payload"), dict) else {}
+            status = str(console_detail.get("status") or payload.get("status") or "").strip() or None
+            next_row["console_missing_fields_status"] = status
+            next_row["console_missing_fields_extracted_at"] = console_detail.get("extracted_at") or payload.get("extracted_at")
+            if status == "done":
+                next_row["console_missing_fields_json"] = compact_json_field(payload)
+                next_row["dpe_image_url"] = payload.get("dpe_image_url")
+                next_row["ges_image_url"] = payload.get("ges_image_url")
+                for target_key, payload_key in json_keys.items():
+                    next_row[target_key] = compact_json_field(payload.get(payload_key))
+        enriched.append(next_row)
+    return enriched
+
+
 def normalize_offer_proposition_type(value: object) -> str | None:
     text = str(value or "").strip().lower()
     return text or None
@@ -775,7 +926,7 @@ def build_dpe_image_urls_from_api_detail(detail_raw_json: object) -> dict[str, s
     return {
         "dpe_image_url": dpe_url,
         "ges_image_url": ges_url,
-        "dpe_image_urls_json": json.dumps([dpe_url, ges_url], ensure_ascii=True, separators=(",", ":")),
+        "dpe_image_urls_json": compact_json_field([dpe_url, ges_url]),
     }
 
 
@@ -1235,6 +1386,9 @@ def enrich_offer_transaction_fields(con: sqlite3.Connection, rows: list[dict[str
 
 def build_trimmed_detail_payload(row: dict[str, object]) -> dict[str, object]:
     detail_payload = {field: row.get(field, None) for field in DETAIL_PAYLOAD_FIELD_ORDER}
+    for field, value in extract_api_detail_groups(detail_payload.get("detail_raw_json")).items():
+        if compact_json_field(detail_payload.get(field)) is None:
+            detail_payload[field] = value
     for field, value in build_dpe_image_urls_from_api_detail(detail_payload.get("detail_raw_json")).items():
         if value:
             detail_payload[field] = value
@@ -1429,15 +1583,16 @@ def build_payload(
     include_filter_catalog: bool = True,
     connection: sqlite3.Connection | None = None,
 ) -> dict[str, object]:
-    con = connection or sqlite3.connect(PHASE2_DB)
+    con = connection or sqlite_read_connection(PHASE2_DB)
     owns_connection = connection is None
     attached_hektor = False
     try:
         if owns_connection:
-            con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
+            attach_hektor_read(con)
             attached_hektor = True
-        summary_row = con.execute(SQL_SUMMARY).fetchone()
-        summary_cols = [col[0] for col in con.execute(SQL_SUMMARY).description]
+        summary_cursor = con.execute(SQL_SUMMARY)
+        summary_row = summary_cursor.fetchone()
+        summary_cols = [col[0] for col in summary_cursor.description]
         dossier_rows = fetch_rows_by_ids(
             con,
             base_sql=SQL_DOSSIERS_BASE,
@@ -1447,6 +1602,7 @@ def build_payload(
         )
         dossier_rows = enrich_offer_transaction_fields(con, dossier_rows)
         dossier_rows = attach_price_change_summary(con, dossier_rows)
+        dossier_rows = attach_console_missing_fields(con, dossier_rows)
         dossiers = attach_detail_payload(dossier_rows)
         dossier_details = build_dossier_details(dossier_rows)
         work_items = fetch_rows_by_ids(
@@ -1497,7 +1653,7 @@ def build_archive_annonce_index(
     limit: int | None = None,
     connection: sqlite3.Connection | None = None,
 ) -> list[dict[str, object]]:
-    con = connection or sqlite3.connect(PHASE2_DB)
+    con = connection or sqlite_read_connection(PHASE2_DB)
     owns_connection = connection is None
     try:
         return fetch_rows(con, build_limited_sql(SQL_ARCHIVE_ANNONCE_INDEX_BASE, limit))
@@ -1511,7 +1667,7 @@ def build_historical_annonce_index(
     limit: int | None = None,
     connection: sqlite3.Connection | None = None,
 ) -> list[dict[str, object]]:
-    con = connection or sqlite3.connect(PHASE2_DB)
+    con = connection or sqlite_read_connection(PHASE2_DB)
     owns_connection = connection is None
     try:
         return fetch_rows(con, build_limited_sql(SQL_HISTORICAL_ANNONCE_INDEX_BASE, limit))

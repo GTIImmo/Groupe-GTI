@@ -16,14 +16,28 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_historical_annonce_index, build_payload
+    from phase2.sync.export_app_payload import (
+        ANNONCES_SCOPE_WHERE,
+        attach_hektor_read,
+        build_archive_annonce_index,
+        build_historical_annonce_index,
+        build_payload,
+        sqlite_read_connection,
+    )
 except ModuleNotFoundError:
     import sys
 
     ROOT_DIR = Path(__file__).resolve().parents[2]
     if str(ROOT_DIR) not in sys.path:
         sys.path.insert(0, str(ROOT_DIR))
-    from phase2.sync.export_app_payload import ANNONCES_SCOPE_WHERE, build_archive_annonce_index, build_historical_annonce_index, build_payload
+    from phase2.sync.export_app_payload import (
+        ANNONCES_SCOPE_WHERE,
+        attach_hektor_read,
+        build_archive_annonce_index,
+        build_historical_annonce_index,
+        build_payload,
+        sqlite_read_connection,
+    )
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -787,8 +801,9 @@ def fetch_local_app_dossier_ids() -> list[int]:
 
 
 def fetch_local_app_dossier_identity() -> list[dict[str, int]]:
-    con = sqlite3.connect(PHASE2_DB)
+    con = sqlite_read_connection(PHASE2_DB)
     try:
+        attach_hektor_read(con)
         rows = con.execute(
             f"""
             SELECT app_dossier_id, hektor_annonce_id
@@ -824,7 +839,7 @@ def resolve_app_dossier_ids_from_hektor_annonce_ids(hektor_annonce_ids: list[str
     if not cleaned:
         return []
     placeholders = ",".join("?" for _ in cleaned)
-    con = sqlite3.connect(PHASE2_DB)
+    con = sqlite_read_connection(PHASE2_DB)
     try:
         rows = con.execute(
             f"""
@@ -841,9 +856,9 @@ def resolve_app_dossier_ids_from_hektor_annonce_ids(hektor_annonce_ids: list[str
 
 
 def fetch_source_watermark() -> str | None:
-    con = sqlite3.connect(PHASE2_DB)
+    con = sqlite_read_connection(PHASE2_DB)
     try:
-        con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
+        attach_hektor_read(con)
         queries = [
             "SELECT MAX(REPLACE(SUBSTR(COALESCE(date_maj, synced_at), 1, 19), 'T', ' ')) FROM hektor.hektor_annonce",
             "SELECT MAX(REPLACE(SUBSTR(synced_at, 1, 19), 'T', ' ')) FROM hektor.hektor_annonce_detail",
@@ -864,9 +879,9 @@ def fetch_source_watermark() -> str | None:
 
 
 def detect_candidate_dossier_ids(*, since: str) -> list[int]:
-    con = sqlite3.connect(PHASE2_DB)
+    con = sqlite_read_connection(PHASE2_DB)
     try:
-        con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
+        attach_hektor_read(con)
         sql = """
         WITH changed_annonce_ids AS (
             SELECT DISTINCT CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id

@@ -17,6 +17,15 @@ DEFAULT_PHASE2_DB_PATH = PROJECT_ROOT / "phase2" / "phase2.sqlite"
 DEFAULT_HEKTOR_DB_PATH = PROJECT_ROOT / "data" / "hektor.sqlite"
 
 
+def sqlite_read_connection(path: Path) -> sqlite3.Connection:
+    uri = f"file:{path.resolve().as_posix()}?mode=ro&immutable=1"
+    return sqlite3.connect(uri, uri=True)
+
+
+def sqlite_read_uri(path: Path) -> str:
+    return f"file:{path.resolve().as_posix()}?mode=ro&immutable=1"
+
+
 def load_env(path: Path) -> None:
     if not path.exists():
         return
@@ -91,6 +100,63 @@ def first_text_block(textes: Any) -> dict[str, Any]:
     return {}
 
 
+def compact_json(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return text
+        return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def load_console_missing_fields(conn: sqlite3.Connection, annonce_id: str) -> dict[str, Any]:
+    try:
+        row = conn.execute(
+            """
+            select status, console_payload_json, extracted_at
+            from hektor.hektor_annonce_console_detail
+            where hektor_annonce_id = ?
+            """,
+            (annonce_id,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if "hektor_annonce_console_detail" not in str(exc):
+            raise
+        return {}
+    if not row:
+        return {}
+    status = str(row["status"] or "").strip() or None
+    payload = parse_json(row["console_payload_json"], {})
+    if not isinstance(payload, dict):
+        payload = {}
+    fields: dict[str, Any] = {
+        "console_missing_fields_status": status or payload.get("status"),
+        "console_missing_fields_extracted_at": row["extracted_at"] or payload.get("extracted_at"),
+    }
+    if fields["console_missing_fields_status"] == "done":
+        fields.update(
+            {
+                "console_missing_fields_json": compact_json(payload),
+                "secteur_console_json": compact_json(payload.get("secteur_console_json")),
+                "chauffage_console_json": compact_json(payload.get("chauffage_console_json")),
+                "diagnostics_contacts_console_json": compact_json(payload.get("diagnostics_contacts_console_json")),
+                "honoraires_detail_console_json": compact_json(payload.get("honoraires_detail_console_json")),
+                "location_rendement_console_json": compact_json(payload.get("location_rendement_console_json")),
+                "pieces_detail_console_json": compact_json(payload.get("pieces_detail_console_json")),
+                "dpe_image_url": payload.get("dpe_image_url"),
+                "ges_image_url": payload.get("ges_image_url"),
+                "dpe_image_urls_json": compact_json(payload.get("dpe_image_urls")),
+            }
+        )
+    return {key: value for key, value in fields.items() if value is not None}
+
+
 def build_enriched_detail(detail: dict[str, Any], index_row: dict[str, Any], annonce: dict[str, Any]) -> dict[str, Any]:
     raw_detail = parse_json(detail.get("raw_json"), {})
     textes = parse_json(detail.get("textes_json"), [])
@@ -131,7 +197,7 @@ def build_detail_payload(
     annonce_id: str,
     hektor_db_path: Path,
 ) -> tuple[int, dict[str, Any]]:
-    conn.execute("ATTACH DATABASE ? AS hektor", (str(hektor_db_path),))
+    conn.execute("ATTACH DATABASE ? AS hektor", (sqlite_read_uri(hektor_db_path),))
     try:
         index_row = row_dict(conn.execute(
             """
@@ -172,12 +238,14 @@ def build_detail_payload(
             )
 
         app_historical_id = int(index_row.get("app_dossier_id") or annonce_id)
+        enriched_detail = build_enriched_detail(detail, index_row, annonce)
+        enriched_detail.update(load_console_missing_fields(conn, annonce_id))
         payload = {
             "hektor_annonce_id": annonce_id,
             "app_historical_id": app_historical_id,
             "listing": annonce,
             "index": index_row,
-            "detail": build_enriched_detail(detail, index_row, annonce),
+            "detail": enriched_detail,
             "prepared_locally_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
         return app_historical_id, payload
@@ -222,7 +290,7 @@ def main() -> None:
     if not annonce_id.isdigit():
         raise RuntimeError("hektor_annonce_id numerique requis")
 
-    conn = sqlite3.connect(args.phase2_db_path)
+    conn = sqlite_read_connection(Path(args.phase2_db_path))
     conn.row_factory = sqlite3.Row
     try:
         app_historical_id, payload = build_detail_payload(conn, annonce_id, Path(args.hektor_db_path))
