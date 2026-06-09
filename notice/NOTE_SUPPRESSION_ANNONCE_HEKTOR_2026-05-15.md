@@ -45,3 +45,11 @@ Le worker reverifie aussi la confirmation dans `payload_json.confirm_text`.
 ## Important
 
 Le nettoyage Supabase/local est lance seulement apres l'appel de suppression Hektor. Si Hektor refuse la suppression ou si la session admin n'est pas active, les donnees locales ne sont pas nettoyees.
+
+## Correctif 2026-06-08
+
+Le nettoyage local doit aussi retirer les tables materialisees et caches qui alimentent les extractions delta, notamment `phase2.app_view_generale`, `phase2.app_view_demandes_mandat_diffusion` et `phase2.app_contact_relation_current`.
+
+Meme si `app_view_generale` est reconstruite par le run complet via `phase2/refresh_views.py`, une suppression worker ne relance pas forcement ce run immediatement. Le script `phase2/sync/delete_local_annonce.py` nettoie donc ces lignes directement par `hektor_annonce_id` et/ou `app_dossier_id`.
+
+Cote Supabase, le worker nettoie aussi `app_contact_relation_current` pour eviter qu'une annonce supprimee reste visible dans les vues contacts.

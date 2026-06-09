@@ -7,6 +7,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
+ANNONCE_RAW_OBJECT_TYPES = (
+    "annonce_detail",
+    "mandat_by_annonce",
+    "annonce_active",
+    "annonce_archived",
+)
 
 
 def table_columns(con: sqlite3.Connection, table: str) -> set[str]:
@@ -48,11 +54,59 @@ def cleanup_hektor_db(hektor_annonce_id: str) -> dict[str, int]:
             "hektor_compromis",
             "hektor_vente",
             "hektor_annonce_broadcast_state",
+            "hektor_annonce_broadcast_target",
             "hektor_annonce_contact_link",
+            "hektor_annonce_console_detail",
+            "sync_annonce_contact_link",
+            "sync_annonce_state",
         ]:
             count = delete_where(con, table, "hektor_annonce_id", hektor_annonce_id)
             if count:
                 removed[table] = count
+
+        raw_columns = table_columns(con, "raw_api_response") if table_exists(con, "raw_api_response") else set()
+        if {"object_type", "object_id"}.issubset(raw_columns):
+            before = con.total_changes
+            placeholders = ",".join("?" for _ in ANNONCE_RAW_OBJECT_TYPES)
+            if "object_id_key" in raw_columns:
+                con.execute(
+                    f"""
+                    DELETE FROM raw_api_response
+                    WHERE (
+                        CAST(object_id AS TEXT) = ?
+                        OR CAST(object_id_key AS TEXT) = ?
+                    )
+                      AND object_type IN ({placeholders})
+                    """,
+                    (hektor_annonce_id, hektor_annonce_id, *ANNONCE_RAW_OBJECT_TYPES),
+                )
+            else:
+                con.execute(
+                    f"""
+                    DELETE FROM raw_api_response
+                    WHERE CAST(object_id AS TEXT) = ?
+                      AND object_type IN ({placeholders})
+                    """,
+                    (hektor_annonce_id, *ANNONCE_RAW_OBJECT_TYPES),
+                )
+            count = con.total_changes - before
+            if count:
+                removed["raw_api_response"] = count
+
+        if table_exists(con, "sync_error") and {"object_id", "object_type"}.issubset(table_columns(con, "sync_error")):
+            before = con.total_changes
+            placeholders = ",".join("?" for _ in ANNONCE_RAW_OBJECT_TYPES)
+            con.execute(
+                f"""
+                DELETE FROM sync_error
+                WHERE CAST(object_id AS TEXT) = ?
+                  AND object_type IN ({placeholders})
+                """,
+                (hektor_annonce_id, *ANNONCE_RAW_OBJECT_TYPES),
+            )
+            count = con.total_changes - before
+            if count:
+                removed["sync_error"] = count
         con.commit()
         return removed
     finally:
@@ -68,22 +122,35 @@ def cleanup_phase2_db(hektor_annonce_id: str, app_dossier_id: str | None) -> dic
         for table in [
             "app_broadcast_action",
             "app_blocker",
+            "app_contact_relation_current",
+            "app_diffusion_target",
+            "app_dossier",
+            "app_dossier_current",
+            "app_dossier_detail_current",
             "app_followup",
             "app_internal_status",
+            "app_mandat_broadcast_current",
+            "app_mandat_register_current",
             "app_note",
+            "app_view_demandes_mandat_diffusion",
+            "app_view_generale",
             "app_work_item",
-            "app_dossier",
+            "app_work_item_current",
         ]:
             count = delete_where(con, table, "app_dossier_id", app_dossier_id)
             if count:
                 removed[table] = removed.get(table, 0) + count
         for table in [
+            "app_contact_relation_current",
+            "app_diffusion_target",
             "app_dossier",
             "app_dossier_current",
             "app_dossier_detail_current",
-            "app_work_item_current",
             "app_mandat_broadcast_current",
             "app_mandat_register_current",
+            "app_view_demandes_mandat_diffusion",
+            "app_view_generale",
+            "app_work_item_current",
         ]:
             count = delete_where(con, table, "hektor_annonce_id", hektor_annonce_id)
             if count:
