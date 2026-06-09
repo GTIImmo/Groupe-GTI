@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field
 
 from ..auth import get_authenticated_user, require_request_user
@@ -45,6 +45,21 @@ class GoogleGmailSendTestPayload(BaseModel):
     cc: list[EmailStr] = Field(default_factory=list)
     bcc: list[EmailStr] = Field(default_factory=list)
     dryRun: bool = True
+    relatedEntityType: str | None = Field(default=None, max_length=80)
+    relatedEntityId: str | None = Field(default=None, max_length=120)
+
+
+class GoogleGmailSendPayload(BaseModel):
+    subjectEmail: EmailStr
+    to: list[EmailStr] = Field(default_factory=list)
+    subject: str = Field(min_length=1, max_length=240)
+    bodyText: str = Field(min_length=1, max_length=8000)
+    bodyHtml: str | None = Field(default=None, max_length=30000)
+    fromName: str = Field(default="GTI Immobilier", min_length=1, max_length=120)
+    replyTo: EmailStr | None = None
+    cc: list[EmailStr] = Field(default_factory=list)
+    bcc: list[EmailStr] = Field(default_factory=list)
+    dryRun: bool = False
     relatedEntityType: str | None = Field(default=None, max_length=80)
     relatedEntityId: str | None = Field(default=None, max_length=120)
 
@@ -214,6 +229,37 @@ def test_google_gmail_send(
         related_entity_type=payload.relatedEntityType,
         related_entity_id=payload.relatedEntityId,
     )
+
+
+@router.post("/gmail/send")
+def send_google_gmail_message(
+    payload: GoogleGmailSendPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: GoogleWorkspaceService = Depends(get_google_workspace_service),
+):
+    user = get_authenticated_user(settings, authorization)
+    admin_service.assert_gmail_subject_allowed(user, str(payload.subjectEmail))
+    try:
+        return service.send_gmail_message(
+            subject_email=str(payload.subjectEmail),
+            to=[str(email) for email in payload.to],
+            subject=payload.subject,
+            body_text=payload.bodyText,
+            body_html=payload.bodyHtml,
+            from_name=payload.fromName,
+            reply_to=str(payload.replyTo) if payload.replyTo else None,
+            cc=[str(email) for email in payload.cc],
+            bcc=[str(email) for email in payload.bcc],
+            dry_run=payload.dryRun,
+            requested_by=user.id,
+            requested_by_email=user.email,
+            related_entity_type=payload.relatedEntityType,
+            related_entity_id=payload.relatedEntityId,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/calendar/event-test")

@@ -231,17 +231,25 @@ class SupabaseAdminService:
             raise HTTPException(status_code=403, detail="Compte utilisateur inactif")
         return profile
 
-    def assert_calendar_subject_allowed(self, user: AuthenticatedUser, subject_email: str) -> dict[str, Any]:
+    def _assert_workspace_subject_allowed(
+        self,
+        user: AuthenticatedUser,
+        subject_email: str,
+        *,
+        account_label: str,
+        action_label: str,
+        forbidden_label: str,
+    ) -> dict[str, Any]:
         profile = self.assert_active_profile(user)
         normalized_subject = self._normalize_email(subject_email)
         if not self._is_workspace_email(normalized_subject):
-            raise HTTPException(status_code=400, detail=f"Compte Agenda hors domaine {self.settings.google_workspace_domain}")
+            raise HTTPException(status_code=400, detail=f"Compte {account_label} hors domaine {self.settings.google_workspace_domain}")
 
         role = str(profile.get("role") or "")
         if role in {"admin", "manager"}:
             return profile
         if role != "commercial":
-            raise HTTPException(status_code=403, detail="Role non autorise pour modifier Google Agenda")
+            raise HTTPException(status_code=403, detail=f"Role non autorise pour {action_label}")
 
         identity_rows = self._rest_rows(
             "app_google_workspace_identity",
@@ -262,8 +270,26 @@ class SupabaseAdminService:
         }
         allowed_emails.discard("")
         if normalized_subject not in allowed_emails or identity.get("link_status") != "linked":
-            raise HTTPException(status_code=403, detail="Agenda Google non autorise pour cet utilisateur")
+            raise HTTPException(status_code=403, detail=forbidden_label)
         return profile
+
+    def assert_calendar_subject_allowed(self, user: AuthenticatedUser, subject_email: str) -> dict[str, Any]:
+        return self._assert_workspace_subject_allowed(
+            user,
+            subject_email,
+            account_label="Agenda",
+            action_label="modifier Google Agenda",
+            forbidden_label="Agenda Google non autorise pour cet utilisateur",
+        )
+
+    def assert_gmail_subject_allowed(self, user: AuthenticatedUser, subject_email: str) -> dict[str, Any]:
+        return self._assert_workspace_subject_allowed(
+            user,
+            subject_email,
+            account_label="Gmail",
+            action_label="envoyer un email",
+            forbidden_label="Gmail non autorise pour cet utilisateur",
+        )
 
     def list_users(self) -> list[dict[str, Any]]:
         response = requests.get(

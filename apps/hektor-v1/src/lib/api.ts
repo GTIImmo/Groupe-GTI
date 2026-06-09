@@ -571,6 +571,46 @@ export async function deleteGoogleCalendarEvent(linkId: string, input: { sendUpd
   })
 }
 
+export type GoogleWorkspaceEmailSendResult = {
+  ok: boolean
+  dryRun?: boolean
+  subjectEmail?: string
+  messageId?: string | null
+  threadId?: string | null
+  toCount?: number
+  ccCount?: number
+  bccCount?: number
+  hasHtml?: boolean
+  statusCode?: number
+  error?: unknown
+}
+
+export async function sendGoogleWorkspaceCrmEmail(input: {
+  subjectEmail: string
+  to: string[]
+  subject: string
+  bodyText: string
+  bodyHtml?: string | null
+  fromName?: string | null
+  replyTo?: string | null
+  cc?: string[]
+  bcc?: string[]
+  dryRun?: boolean
+  relatedEntityType?: string | null
+  relatedEntityId?: string | null
+}) {
+  return invokeBackendApi<GoogleWorkspaceEmailSendResult>('/google-workspace/gmail/send', {
+    method: 'POST',
+    body: {
+      ...input,
+      fromName: input.fromName || 'GTI Immobilier',
+      cc: input.cc ?? [],
+      bcc: input.bcc ?? [],
+      dryRun: Boolean(input.dryRun),
+    },
+  })
+}
+
 export type DraftAnnonceSheetScanFieldKey =
   | 'title'
   | 'propertyType'

@@ -48,6 +48,7 @@ import {
   createGoogleCalendarEvent,
   updateGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
+  sendGoogleWorkspaceCrmEmail,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -22565,6 +22566,168 @@ function appContactAgendaLink(contact: AppContact): GoogleAgendaInviteeContactLi
   }
 }
 
+function contactEmailGreeting(contact: AppContact) {
+  const firstName = safeText(contact.prenom)
+  if (firstName) return `Bonjour ${firstName},`
+  const label = appContactAgendaLabel(contact)
+  return label ? `Bonjour ${label},` : 'Bonjour,'
+}
+
+function contactEmailDefaultSubject(contact: AppContact) {
+  const label = appContactAgendaLabel(contact)
+  return label ? `Suite a votre contact GTI - ${label}` : 'Suite a votre contact GTI'
+}
+
+function contactEmailDefaultBody(contact: AppContact) {
+  const signature = [
+    safeText(contact.commercial_nom),
+    safeText(contact.agence_nom),
+    'GTI Immobilier',
+  ].filter(Boolean).join('\n')
+  return [
+    contactEmailGreeting(contact),
+    '',
+    'Je fais suite a notre echange.',
+    '',
+    'Cordialement,',
+    signature,
+  ].join('\n')
+}
+
+function ContactEmailComposerModal(props: {
+  contact: AppContact
+  hektorNegotiators?: HektorNegotiatorOption[]
+  sessionEmail?: string | null
+  onClose: () => void
+}) {
+  const contactEmail = appContactAgendaEmail(props.contact)
+  const contactLabel = appContactAgendaLabel(props.contact)
+  const defaultSubjectEmail = resolveGoogleWorkspaceCalendarEmail({
+    emails: [props.contact.negociateur_email, props.sessionEmail],
+    label: props.contact.commercial_nom,
+    hektorNegotiators: props.hektorNegotiators,
+  })
+  const [fromEmail, setFromEmail] = useState(defaultSubjectEmail)
+  const [fromName, setFromName] = useState(props.contact.commercial_nom ? `${props.contact.commercial_nom} - GTI Immobilier` : 'GTI Immobilier')
+  const [toText, setToText] = useState(contactEmail)
+  const [ccText, setCcText] = useState('')
+  const [subject, setSubject] = useState(contactEmailDefaultSubject(props.contact))
+  const [bodyText, setBodyText] = useState(contactEmailDefaultBody(props.contact))
+  const [pending, setPending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const toEmails = splitEmailList(toText)
+  const ccEmails = splitEmailList(ccText)
+  const canUseFromEmail = fromEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
+  const canSubmit = canUseFromEmail && toEmails.length > 0 && Boolean(subject.trim()) && Boolean(bodyText.trim()) && !pending
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canSubmit) return
+    setPending(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const result = await sendGoogleWorkspaceCrmEmail({
+        subjectEmail: fromEmail.trim(),
+        to: toEmails,
+        cc: ccEmails,
+        subject: subject.trim(),
+        bodyText: bodyText.trim(),
+        fromName: fromName.trim() || 'GTI Immobilier',
+        replyTo: fromEmail.trim(),
+        relatedEntityType: 'contact',
+        relatedEntityId: props.contact.hektor_contact_id,
+      })
+      if (!result.ok) throw new Error('Envoi email impossible')
+      setMessage('Email envoye.')
+    } catch (sendError) {
+      setError(sendError instanceof Error ? sendError.message : 'Envoi email impossible')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="modal-overlay google-agenda-modal-overlay contact-email-modal-overlay" onClick={props.onClose}>
+      <section className="modal-panel google-agenda-modal google-agenda-contact-modal contact-email-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="google-agenda-modal-head">
+          <div>
+            <span className="eyebrow">Gmail</span>
+            <h3>Envoyer un email</h3>
+            <p>{contactLabel}</p>
+          </div>
+          <button className="request-modal-close" type="button" onClick={props.onClose}>Fermer</button>
+        </div>
+        <div className="google-agenda-modal-meta">
+          <span><strong>Contact</strong>{contactLabel}</span>
+          <span><strong>Email</strong>{contactEmail || '-'}</span>
+          <span><strong>Expediteur</strong>{fromEmail || '-'}</span>
+          <span><strong>Agence</strong>{props.contact.agence_nom || '-'}</span>
+        </div>
+        <div className="google-agenda-modal-layout contact-email-modal-layout">
+          <section className="google-agenda-panel contact-email-compose-panel">
+            <div className="google-agenda-panel-head">
+              <span>Message</span>
+              <strong>Rediger l'email</strong>
+            </div>
+            <form className="google-agenda-form contact-email-form" onSubmit={handleSubmit}>
+              <label className="filter-field google-agenda-field-wide">
+                <span>De</span>
+                <input value={fromEmail} onChange={(inputEvent) => setFromEmail(inputEvent.target.value)} type="email" placeholder={`nego@${googleWorkspaceDomain}`} required />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Nom expediteur</span>
+                <input value={fromName} onChange={(inputEvent) => setFromName(inputEvent.target.value)} required />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>A</span>
+                <input value={toText} onChange={(inputEvent) => setToText(inputEvent.target.value)} placeholder="client@email.fr" required />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Copie</span>
+                <input value={ccText} onChange={(inputEvent) => setCcText(inputEvent.target.value)} placeholder="copie@email.fr" />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Objet</span>
+                <input value={subject} onChange={(inputEvent) => setSubject(inputEvent.target.value)} required />
+              </label>
+              <label className="filter-field google-agenda-field-wide">
+                <span>Message</span>
+                <textarea className="inline-textarea contact-email-body-textarea" value={bodyText} onChange={(inputEvent) => setBodyText(inputEvent.target.value)} required />
+              </label>
+              {!canUseFromEmail ? <p className="google-agenda-error">Adresse Google Workspace requise.</p> : null}
+              {message ? <p className="google-agenda-success">{message}</p> : null}
+              {error ? <p className="google-agenda-error">{error}</p> : null}
+              <div className="modal-actions google-agenda-actions">
+                <button className="ghost-button button-subtle" type="button" onClick={props.onClose} disabled={pending}>Annuler</button>
+                <button className="ghost-button button-primary" type="submit" disabled={!canSubmit}>
+                  {pending ? 'Envoi...' : 'Envoyer'}
+                </button>
+              </div>
+            </form>
+          </section>
+          <section className="google-agenda-panel contact-email-context-panel">
+            <div className="google-agenda-panel-head">
+              <span>Contact</span>
+              <strong>Fiche liee</strong>
+            </div>
+            <div className="info-grid">
+              <InfoCard label="Nom" value={contactLabel} />
+              <InfoCard label="Telephone" value={props.contact.phone_primary || '-'} />
+              <InfoCard label="Ville" value={[props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'} />
+              <InfoCard label="Negociateur" value={props.contact.commercial_nom || '-'} />
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>,
+    document.body,
+  )
+}
+
 function relationToOwnerAnnonceOption(relation: AppContactRelation): OwnerAnnonceSearchOption | null {
   if (!relation.app_dossier_id) return null
   const hektorAnnonceId = Number(relation.hektor_annonce_id)
@@ -23723,6 +23886,7 @@ function ContactDetailPopup(props: {
   const [googleContactEvents, setGoogleContactEvents] = useState<GoogleCalendarEventLink[]>([])
   const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
   const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
+  const [contactEmailComposerOpen, setContactEmailComposerOpen] = useState(false)
   const [contactActionsOpen, setContactActionsOpen] = useState(false)
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'history' | 'notes' | 'sync'>('summary')
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
@@ -23760,6 +23924,7 @@ function ContactDetailPopup(props: {
     setGoogleContactAgendaEditingEvent(null)
     setGoogleContactAgendaDeletingId(null)
     setGoogleContactAgendaPrintingId(null)
+    setContactEmailComposerOpen(false)
     setContactActionsOpen(false)
     setContactDetailTab('summary')
   }, [props.contact.hektor_contact_id])
@@ -23985,10 +24150,10 @@ function ContactDetailPopup(props: {
                 </a>
               ) : null}
               {contactEmail ? (
-                <a className="contact-modern-action" href={`mailto:${contactEmail}`}>
+                <button className="contact-modern-action" type="button" onClick={() => setContactEmailComposerOpen(true)}>
                   <DetailIcon type="content" />
                   <span>Email</span>
-                </a>
+                </button>
               ) : null}
               <button className="contact-modern-action contact-modern-action-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
                 <DetailIcon type="history" />
@@ -24071,7 +24236,7 @@ function ContactDetailPopup(props: {
                   <div className="contact-modern-info-row">
                     <span className="info-icon is-email"><DetailIcon type="content" /></span>
                     <div><small>Email</small><strong>{contactEmail || '-'}</strong></div>
-                    {contactEmail ? <a href={`mailto:${contactEmail}`} aria-label="Envoyer un email"><DetailIcon type="content" /></a> : null}
+                    {contactEmail ? <button type="button" aria-label="Envoyer un email" onClick={() => setContactEmailComposerOpen(true)}><DetailIcon type="content" /></button> : null}
                   </div>
                   <div className="contact-modern-info-row">
                     <span className="info-icon is-location"><DetailIcon type="location" /></span>
@@ -24271,10 +24436,10 @@ function ContactDetailPopup(props: {
                 </a>
               ) : null}
               {props.contact.email ? (
-                <a className="contact-quick-action is-email" href={`mailto:${props.contact.email}`}>
+                <button className="contact-quick-action is-email" type="button" onClick={() => setContactEmailComposerOpen(true)}>
                   <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="content" /></span>
                   <span><strong>Email</strong><small>{props.contact.email}</small></span>
-                </a>
+                </button>
               ) : null}
               <button className="contact-quick-action is-rdv" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
                 <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="history" /></span>
@@ -24555,6 +24720,14 @@ function ContactDetailPopup(props: {
             onJobCreated={props.onJobCreated}
           />
         </ContactWorkflowModal>
+      ) : null}
+      {contactEmailComposerOpen ? (
+        <ContactEmailComposerModal
+          contact={props.contact}
+          hektorNegotiators={props.hektorNegotiators}
+          sessionEmail={props.sessionEmail}
+          onClose={() => setContactEmailComposerOpen(false)}
+        />
       ) : null}
       {deleteOpen && props.canDeleteContacts ? (
         <ContactWorkflowModal

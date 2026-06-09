@@ -3681,6 +3681,41 @@
   font-size: 13px;
 }
 
+.contact-email-modal {
+  width: min(1040px, calc(100vw - 36px)) !important;
+}
+
+.contact-email-modal-layout {
+  grid-template-columns: minmax(420px, 1fr) minmax(300px, 0.56fr) !important;
+}
+
+.contact-email-form {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.contact-email-form .google-agenda-field-wide,
+.contact-email-form .google-agenda-actions {
+  grid-column: 1 / -1 !important;
+}
+
+.contact-email-body-textarea {
+  min-height: 230px !important;
+  resize: vertical !important;
+}
+
+.contact-quick-action {
+  border: 1px solid rgba(47, 102, 115, 0.18) !important;
+  font-family: inherit !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.contact-email-context-panel .info-grid {
+  grid-template-columns: 1fr !important;
+}
+
 @media (max-width: 1460px) and (min-width: 1181px) {
   .google-agenda-modal-layout {
     grid-template-columns: minmax(360px, 0.86fr) minmax(500px, 1.14fr);
@@ -9111,17 +9146,22 @@
   background: #fff !important;
 }
 
-.contact-modern-info-row > a {
+.contact-modern-info-row > a,
+.contact-modern-info-row > button {
   display: grid !important;
   place-items: center !important;
   width: 34px !important;
   height: 34px !important;
+  border: 0 !important;
   border-radius: 8px !important;
   background: #eef4ff !important;
   color: var(--crm-blue) !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
 }
 
-.contact-modern-info-row > a svg {
+.contact-modern-info-row > a svg,
+.contact-modern-info-row > button svg {
   width: 17px !important;
   height: 17px !important;
 }
@@ -9576,7 +9616,8 @@
     grid-template-columns: 38px minmax(0, 1fr) !important;
   }
 
-  .contact-modern-info-row > a {
+  .contact-modern-info-row > a,
+  .contact-modern-info-row > button {
     display: none !important;
   }
 
