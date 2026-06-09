@@ -17,6 +17,7 @@ SQLITE_IN_MAX = 900
 MAX_EXPORTED_IMAGES = 5
 CURRENT_MANDATE_SERIES_START = "2024-01-01"
 CURRENT_MANDATE_SERIES_MAX_NUM = 199999
+DPE_IMAGE_BASE_URL = "https://groupe-gti-immobilier.staticlbi.com/wa/images/DPEImages/"
 ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
     "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis', 'Estimation')"
@@ -331,6 +332,9 @@ DETAIL_PAYLOAD_FIELDS = {
     "textes_json",
     "terrain_json",
     "copropriete_json",
+    "dpe_image_url",
+    "ges_image_url",
+    "dpe_image_urls_json",
     "detail_raw_json",
     "annonce_list_raw_json",
     "code_postal_detail",
@@ -708,6 +712,71 @@ def safe_json_loads(value: object, fallback: object):
 
 def normalize_text(value: object) -> str:
     return str(value or "").strip()
+
+
+def api_prop_value(props: dict[str, object], key: str) -> str:
+    item = props.get(key)
+    if isinstance(item, dict):
+        return normalize_text(item.get("value"))
+    return normalize_text(item)
+
+
+def normalize_dpe_image_value(value: object) -> str:
+    text = normalize_text(value)
+    for suffix in (".00", ".0"):
+        if text.endswith(suffix):
+            return text[: -len(suffix)]
+    return text
+
+
+def is_recent_dpe_date(value: object) -> bool:
+    text = normalize_text(value)
+    return bool(text and text not in {"0000-00-00", "1970-01-01"} and text >= "2021-07-01")
+
+
+def build_dpe_image_urls_from_api_detail(detail_raw_json: object) -> dict[str, str | None]:
+    raw_detail = safe_json_loads(detail_raw_json, {})
+    if not isinstance(raw_detail, dict):
+        return {}
+    diagnostiques = raw_detail.get("diagnostiques")
+    props = diagnostiques.get("props") if isinstance(diagnostiques, dict) else None
+    if not isinstance(props, dict):
+        return {}
+
+    dpe_cons = normalize_dpe_image_value(api_prop_value(props, "dpe_cons"))
+    dpe_ges = normalize_dpe_image_value(api_prop_value(props, "dpe_ges"))
+    energie_finale = normalize_dpe_image_value(api_prop_value(props, "valeurEnergieFinale"))
+    dpe_date = api_prop_value(props, "dpe_date")
+    dpe_vierge = api_prop_value(props, "dpe_vierge") == "1"
+    dpe_non_concerne = api_prop_value(props, "dpe_non_concerne") == "1"
+    dpe_altitude = api_prop_value(props, "isDpeAltitude") == "1"
+
+    if dpe_vierge:
+        dpe_url = f"{DPE_IMAGE_BASE_URL}dpe_cons_FR_vierge_fr_web_V6.jpg"
+        ges_url = f"{DPE_IMAGE_BASE_URL}dpe_ges_FR_vierge_fr_web_V6.jpg"
+    elif dpe_non_concerne:
+        dpe_url = f"{DPE_IMAGE_BASE_URL}dpe_cons_FR_nonconcerne_fr_web_V6.jpg"
+        ges_url = f"{DPE_IMAGE_BASE_URL}dpe_ges_FR_nonconcerne_fr_web_V6.jpg"
+    elif not dpe_cons or not dpe_ges:
+        dpe_url = f"{DPE_IMAGE_BASE_URL}dpe_FR_cons_nonEffectue_fr_web_V6.jpg"
+        ges_url = f"{DPE_IMAGE_BASE_URL}dpe_FR_ges_nonEffectue_fr_web_V6.jpg"
+    elif dpe_cons == "0" and dpe_ges == "0":
+        dpe_url = f"{DPE_IMAGE_BASE_URL}dpe_FR_cons_0_fr_web_V6.jpg"
+        ges_url = f"{DPE_IMAGE_BASE_URL}dpe_FR_ges_0_fr_web_V6.jpg"
+    elif is_recent_dpe_date(dpe_date):
+        energy_suffix = f"_{energie_finale}" if energie_finale and energie_finale not in {"0", "0.0"} else ""
+        altitude_suffix = "_altitude" if dpe_altitude else ""
+        dpe_url = f"{DPE_IMAGE_BASE_URL}dpeg_web{dpe_cons}_{dpe_ges}{energy_suffix}_v3{altitude_suffix}.png"
+        ges_url = f"{DPE_IMAGE_BASE_URL}ges_{dpe_ges}{energy_suffix}_v3{altitude_suffix}.png"
+    else:
+        dpe_url = f"{DPE_IMAGE_BASE_URL}dpe_FR_cons_{dpe_cons}_fr_web_V6.jpg"
+        ges_url = f"{DPE_IMAGE_BASE_URL}dpe_FR_ges_{dpe_ges}_fr_web_V6.jpg"
+
+    return {
+        "dpe_image_url": dpe_url,
+        "ges_image_url": ges_url,
+        "dpe_image_urls_json": json.dumps([dpe_url, ges_url], ensure_ascii=True, separators=(",", ":")),
+    }
 
 
 def normalize_register_mandat_type(value: object) -> str | None:
@@ -1166,6 +1235,9 @@ def enrich_offer_transaction_fields(con: sqlite3.Connection, rows: list[dict[str
 
 def build_trimmed_detail_payload(row: dict[str, object]) -> dict[str, object]:
     detail_payload = {field: row.get(field, None) for field in DETAIL_PAYLOAD_FIELD_ORDER}
+    for field, value in build_dpe_image_urls_from_api_detail(detail_payload.get("detail_raw_json")).items():
+        if value:
+            detail_payload[field] = value
     detail_payload["images_json"] = trim_json_array_field(detail_payload.get("images_json"), limit=MAX_EXPORTED_IMAGES)
     detail_payload["images_preview_json"] = trim_json_array_field(
         detail_payload.get("images_preview_json"),
