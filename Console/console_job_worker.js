@@ -14,6 +14,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const HEKTOR_BASE_URL = process.env.HEKTOR_BASE_URL || "https://groupe-gti-immobilier.la-boite-immo.com";
 const ADMIN_URL = `${HEKTOR_BASE_URL.replace(/\/+$/, "")}/admin/`;
 const XMLRPC_URL = `${ADMIN_URL}xmlrpc.php`;
+const HEKTOR_ROOT_ADMIN_USER_ID = String(process.env.CONSOLE_HEKTOR_ROOT_ADMIN_USER_ID || process.env.HEKTOR_ROOT_ADMIN_USER_ID || "4").trim();
 const RAW_WORKER_KIND = String(process.env.CONSOLE_WORKER_KIND || process.env.CONSOLE_WORKER_MODE || "actions").toLowerCase();
 const WORKER_KINDS = new Set(["actions", "documents", "admin", "matterport", "sync_light", "sync_full", "sync", "all"]);
 const WORKER_KIND = WORKER_KINDS.has(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actions";
@@ -169,7 +170,7 @@ function isHektorSessionError(error) {
 
 function isHektorForbiddenError(error) {
   const message = error && error.message ? error.message : String(error || "");
-  return message.includes("Hektor 403");
+  return message.includes("Hektor 403") || message.includes("HEKTOR_403") || message.includes("stopped_on_403");
 }
 
 function runNodeScript(scriptPath, args = [], options = {}) {
@@ -421,6 +422,27 @@ function currentHektorSessionIdentity() {
   } catch (_) {
     return null;
   }
+}
+
+function parseJsonOutput(value, fallback = {}) {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  try {
+    return JSON.parse(text);
+  } catch {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return safeJsonParse(text.slice(start, end + 1), fallback);
+    }
+    return fallback;
+  }
+}
+
+function isHektorRootAdminIdentity(identity) {
+  if (!identity || identity.role !== "ADMIN") return false;
+  if (HEKTOR_ROOT_ADMIN_USER_ID && String(identity.userId || "") !== HEKTOR_ROOT_ADMIN_USER_ID) return false;
+  return !identity.impersonateUserId;
 }
 
 function cookieJarFromStorageState(state) {
@@ -1504,7 +1526,12 @@ async function hektorHtmlRequestWithJar(jar, url) {
 }
 
 function isHektorSessionExpiredError(error) {
-  return Boolean(error && (error.code === "HEKTOR_SESSION_EXPIRED" || String(error.message || "").includes("Session Hektor expiree")));
+  const message = String(error && error.message ? error.message : "");
+  return Boolean(error && (
+    error.code === "HEKTOR_SESSION_EXPIRED"
+    || message.includes("Session Hektor expiree")
+    || message.includes("Session console introuvable")
+  ));
 }
 
 async function switchHektorUserContextOnce(targetId) {
@@ -1601,6 +1628,7 @@ async function returnHektorDefaultContext() {
   } catch (error) {
     if (!isHektorSessionExpiredError(error)) throw error;
     await refreshHektorSession("return_default_expired_session");
+    return returnHektorDefaultContextOnce();
   }
 }
 
@@ -1617,7 +1645,7 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
     return null;
   }
 
-  const forceRemoteSwitch = Boolean(options.forceRemoteSwitch);
+  const forceRemoteSwitch = options.forceRemoteSwitch !== false;
   let current = currentHektorSessionIdentity();
   if (current && current.userId === String(target.idUser) && !forceRemoteSwitch) {
     await logJob(job.id, "hektor_context", "done", "Contexte Hektor negociateur deja actif", {
@@ -1657,16 +1685,7 @@ async function ensureHektorExecutionContext(job, dossier, payload, options = {})
       visible_user_id: after && after.userId ? after.userId : null,
       visible_role: after && after.role ? after.role : null,
     });
-    await refreshHektorSession("context_switch_retry_unconfirmed");
-    current = currentHektorSessionIdentity();
-    if (!current || current.role !== "ADMIN") {
-      await logJob(job.id, "hektor_context", "error", "Session admin non confirmee apres relance avant changement de negociateur", {
-        target_id_user: target.idUser,
-        visible_user_id: current && current.userId ? current.userId : null,
-        visible_role: current && current.role ? current.role : null,
-      });
-      throw new Error(`Session Hektor admin non confirmee avant deuxieme bascule negociateur ${target.idUser}`);
-    }
+    current = await ensureAdminHektorWriteSession(job, "context_switch_retry_admin_login");
     switchConfirmed = await switchHektorUserContext(target.idUser);
     after = currentHektorSessionIdentity();
   }
@@ -1999,37 +2018,44 @@ async function fetchHektorAnnonceDetailKeyDataBestEffort(job, hektorAnnonceId, s
 }
 
 async function ensureAdminHektorSession(job, reason, options = {}) {
+  const requireRootAdmin = options.requireRootAdmin !== false;
+  const isExpectedAdmin = (identity) => requireRootAdmin
+    ? isHektorRootAdminIdentity(identity)
+    : Boolean(identity && identity.role === "ADMIN");
   let current = currentHektorSessionIdentity();
-  if (options.forceReturn || !current || current.role !== "ADMIN") {
+  if (options.forceReturn || !isExpectedAdmin(current)) {
     await logJob(job.id, "hektor_context", "running", "Retour session administrateur Hektor", {
       reason,
       current_user_id: current && current.userId ? current.userId : null,
       current_role: current && current.role ? current.role : null,
+      expected_admin_user_id: requireRootAdmin ? HEKTOR_ROOT_ADMIN_USER_ID : null,
     });
     if (options.forceReturn || (current && current.role)) {
       try {
         await returnHektorDefaultContext();
       } catch (error) {
         if (isHektorForbiddenError(error)) throw error;
-        await logJob(job.id, "hektor_context", "running", "Retour admin direct impossible, relance Playwright", {
+        await logJob(job.id, "hektor_context", "error", "Retour admin DEFAULT impossible, commande arretee", {
           reason,
           error: error && error.message ? error.message : String(error),
         });
+        throw error;
       }
     }
     current = currentHektorSessionIdentity();
-    if (!current || current.role !== "ADMIN") {
+    if (!isExpectedAdmin(current)) {
       await refreshHektorSession(reason || "admin_required");
     }
     current = currentHektorSessionIdentity();
   }
-  if (!current || current.role !== "ADMIN") {
-    throw new Error(`Session Hektor administrateur requise, session actuelle: ${current && current.role ? current.role : "inconnue"}`);
+  if (!isExpectedAdmin(current)) {
+    throw new Error(`Session Hektor administrateur racine requise, session actuelle: ${current && current.role ? current.role : "inconnue"} user_id=${current && current.userId ? current.userId : "inconnu"}`);
   }
   await logJob(job.id, "hektor_context", "done", "Session Hektor administrateur active", {
     user_id: current.userId || null,
     role: current.role || null,
     alias: current.alias || null,
+    expected_admin_user_id: requireRootAdmin ? HEKTOR_ROOT_ADMIN_USER_ID : null,
   });
   return current;
 }
@@ -2058,13 +2084,12 @@ async function ensureHektorAgencySession(job, agencyContext, reason) {
 
   let current = currentHektorSessionIdentity();
   if (current && current.userId === targetId && current.role === "AGENCE") {
-    await logJob(job.id, "hektor_context", "done", "Contexte Hektor agence deja actif", {
+    await logJob(job.id, "hektor_context", "running", "Retour admin force avant reprise du contexte Hektor agence", {
       id_user: targetId,
       role: current.role,
       alias: current.alias || null,
       reason,
     });
-    return current;
   }
 
   current = await ensureAdminHektorWriteSession(job, `${reason}_admin_login`);
@@ -2356,40 +2381,98 @@ function annonceCreationScore(property, beforeIds, startedAtMs) {
   return score;
 }
 
+async function runImmediateAnnonceSyncStep(job, hektorAnnonceId, step) {
+  await logJob(job.id, "hektor_annonce_sync", "running", `Sync immediate: ${step.label}`, {
+    hektor_annonce_id: hektorAnnonceId,
+    args: step.args,
+  });
+  const output = await runProjectPythonScript(step.args, { timeoutMs: step.timeoutMs, previewSize: step.previewSize || 1800 });
+  await logJob(job.id, "hektor_annonce_sync", "done", `Sync immediate terminee: ${step.label}`, {
+    hektor_annonce_id: hektorAnnonceId,
+    stdout: output.stdout || null,
+    stderr: output.stderr || null,
+  });
+  return { step: step.label, stdout: output.stdout || null, stderr: output.stderr || null };
+}
+
+async function runTargetedConsoleMissingFields(job, hektorAnnonceId, reason) {
+  const id = String(hektorAnnonceId || "").trim();
+  if (!id) return { status: "skipped", reason: "missing_hektor_annonce_id" };
+  const args = [
+    "phase2/sync/sync_console_missing_fields.py",
+    "--hektor-annonce-id",
+    id,
+    "--annonce-scope",
+    "all",
+    "--limit",
+    "1",
+    "--delay-seconds",
+    "0",
+    "--batch-size",
+    "1",
+    "--batch-pause-seconds",
+    "0",
+    "--skip-job-check",
+    "--refresh-session-on-expired",
+  ];
+  await logJob(job.id, "console_missing_fields", "running", "Extraction console ciblee avant reconstruction du detail", {
+    hektor_annonce_id: id,
+    reason,
+    args,
+  });
+  try {
+    const output = await runProjectPythonScript(args, { timeoutMs: 240000, previewSize: 8000 });
+    const summary = parseJsonOutput(output.stdout, { raw_stdout: output.stdout || null });
+    if (summary && summary.stopped_on_403) {
+      throw new Error(`Hektor 403 pendant extraction console ciblee ${id}: ${JSON.stringify(summary.stopped_on_403)}`);
+    }
+    await logJob(job.id, "console_missing_fields", "done", "Extraction console ciblee terminee", {
+      hektor_annonce_id: id,
+      reason,
+      selected: summary && summary.selected != null ? summary.selected : null,
+      extracted: summary && Array.isArray(summary.extracted) ? summary.extracted : [],
+      errors: summary && Array.isArray(summary.errors) ? summary.errors : [],
+      skipped: summary && summary.skipped != null ? summary.skipped : null,
+    });
+    return summary;
+  } catch (error) {
+    if (isHektorForbiddenError(error)) {
+      await logJob(job.id, "console_missing_fields", "error", "Hektor 403 pendant extraction console ciblee, arret immediat", {
+        hektor_annonce_id: id,
+        reason,
+        error: error && error.message ? error.message : String(error),
+      });
+      throw new Error(`Hektor 403 pendant extraction console ciblee ${id}: ${error && error.message ? error.message : String(error)}`);
+    }
+    await logJob(job.id, "console_missing_fields", "error", "Extraction console ciblee impossible", {
+      hektor_annonce_id: id,
+      reason,
+      error: error && error.message ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
 async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
   const id = String(hektorAnnonceId || "").trim();
   if (!id) return { status: "skipped", reason: "missing_hektor_annonce_id" };
 
-  const steps = [
-    {
-      label: "refresh_single_annonce",
-      args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
-      timeoutMs: 120000,
-    },
-    {
-      label: "phase2_push_single_annonce_direct",
-      args: [
-        "phase2/sync/push_single_annonce_to_supabase.py",
-        "--hektor-annonce-id", id,
-      ],
-      timeoutMs: 90000,
-    },
-  ];
-
   const completed = [];
-  for (const step of steps) {
-    await logJob(job.id, "hektor_annonce_sync", "running", `Sync immediate: ${step.label}`, {
-      hektor_annonce_id: id,
-      args: step.args,
-    });
-    const output = await runProjectPythonScript(step.args, { timeoutMs: step.timeoutMs });
-    completed.push({ step: step.label, stdout: output.stdout || null, stderr: output.stderr || null });
-    await logJob(job.id, "hektor_annonce_sync", "done", `Sync immediate terminee: ${step.label}`, {
-      hektor_annonce_id: id,
-      stdout: output.stdout || null,
-      stderr: output.stderr || null,
-    });
-  }
+  completed.push(await runImmediateAnnonceSyncStep(job, id, {
+    label: "refresh_single_annonce",
+    args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
+    timeoutMs: 120000,
+  }));
+  const consoleSummary = await runTargetedConsoleMissingFields(job, id, "refresh_console_data");
+  completed.push({ step: "console_missing_fields_targeted", summary: consoleSummary });
+  completed.push(await runImmediateAnnonceSyncStep(job, id, {
+    label: "phase2_push_single_annonce_direct",
+    args: [
+      "phase2/sync/push_single_annonce_to_supabase.py",
+      "--hektor-annonce-id", id,
+    ],
+    timeoutMs: 90000,
+  }));
 
   return {
     status: "done",
@@ -2438,6 +2521,7 @@ async function rebuildDetailCacheFromLocal(job, hektorAnnonceId, cacheKind, cach
     hektor_annonce_id: String(hektorAnnonceId),
     cache_kind: cacheKind,
   });
+  await runTargetedConsoleMissingFields(job, hektorAnnonceId, `${cacheKind}_detail_cache_refresh`);
   const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
   const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
   const result = safeJsonParse(lastLine);
@@ -2620,6 +2704,7 @@ async function handlePrepareArchivedAnnonceDetail(job) {
   if (job.requested_by) {
     args.push("--requested-by", String(job.requested_by));
   }
+  await runTargetedConsoleMissingFields(job, hektorAnnonceId, "prepare_archived_annonce_detail");
   const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
   const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
   const result = safeJsonParse(lastLine);
@@ -2652,6 +2737,7 @@ async function handlePrepareHistoricalAnnonceDetail(job) {
   if (job.requested_by) {
     args.push("--requested-by", String(job.requested_by));
   }
+  await runTargetedConsoleMissingFields(job, hektorAnnonceId, "prepare_historical_annonce_detail");
   const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
   const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
   const result = safeJsonParse(lastLine);
@@ -3594,6 +3680,29 @@ function exactHektorWizardFields(payload) {
   return source && typeof source === "object" && !Array.isArray(source) ? source : {};
 }
 
+function textFromObjectKeys(source, keys) {
+  if (!source || typeof source !== "object") return "";
+  for (const key of keys) {
+    const value = source[key];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function hektorPayloadMergedFields(payload) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  const fieldsJson = source.fields_json && typeof source.fields_json === "object" ? source.fields_json : {};
+  const fields = source.fields && typeof source.fields === "object" ? source.fields : {};
+  return {
+    ...source,
+    ...fieldsJson,
+    ...fields,
+    ...exactHektorWizardFields(payload),
+  };
+}
+
 const HEKTOR_PROFILE_ALIASES = new Set(["apartment", "house", "land", "garage", "building", "other"]);
 
 function normalizeProfileText(value) {
@@ -3646,7 +3755,7 @@ const HEKTOR_WIZARD_COMMON_FIELDS = new Set([
   "_selecterHonoraires3", "_tauxHonoraire3", "_pourcentHonoraire3", "_detailHonoraire3",
   "masque", "ESTIMATION_MONTANT", "ESTIMATION_DATE", "TRAVAUX", "DEPOT_GARANTIE",
   "TAXE_FONCIERE", "TAXE_HABITATION", "CHARGES", "CHARGES_DETAIL", "Loc_EstimationLoyer",
-  "Loc_ChargeLocative", "Loc_Occupation",
+  "Loc_ChargeLocative", "Loc_RendementBrut", "Loc_Occupation",
 ]);
 
 const HEKTOR_COMPOSITION_LEGACY_FIELD_KEYS = new Set([
@@ -3659,6 +3768,8 @@ const HEKTOR_COMPOSITION_LEGACY_FIELD_KEYS = new Set([
   "noteInterAgence",
 ]);
 
+const HEKTOR_CHAUFFAGE_FIELD_KEYS = new Set(["formatChauff", "typeChauff", "energieChauff"]);
+
 const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
   apartment: new Set([
     "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "GARAGE_BOX", "EXPOSITION", "vuee",
@@ -3666,47 +3777,55 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
     "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "floorState", "ETAGE", "DERNIER_ETAGE",
     "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON",
     "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
-    "NB_PARK_EXT", "RESIDENCE", "TYPE_RESIDENCE", "ASCENSEUR", "ACCES_HANDI",
-    "climatisation", "double_vitrage", "interphone", "visiophone", "alarme", "digicode",
+    "NB_PARK_EXT", "RESIDENCE", "TYPE_RESIDENCE", "formatChauff", "typeChauff",
+    "energieChauff", "ASCENSEUR", "ACCES_HANDI", "climatisation", "climatisationspec",
+    "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ENERGIE_EAU", "cheminee",
+    "volets_elctriques", "gardien", "double_vitrage", "triple_vitrage", "cable",
+    "porte_blindee", "interphone", "visiophone", "alarme", "digicode",
     "detecteur_fumee", "ANNEE_CONS", "etat_exterieur", "etat_interieur", "dpe_date",
     "dpe_non_concerne", "dpe_vierge", "isDpeAltitude", "dpe_cons", "dpe_ges",
     "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference",
-    "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante",
+    "diagnostiqueur", "syndic", "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante",
     "diag_amiante_date", "diag_amiante_commentaire", "diag_electrique", "diag_electrique_date",
     "diag_electrique_commentaire", "diag_loi_carrez", "diag_loi_carrez_date",
     "diag_loi_carrez_commentaire", "diag_risques_nat_tech", "diag_risques_nat_tech_date",
     "diag_risques_nat_tech_commentaire", "diag_plomb", "diag_plomb_date",
     "diag_plomb_commentaire", "diag_gaz", "diag_gaz_date", "diag_gaz_commentaire",
-    "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire",
+    "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire", "clearing",
     "copropriete", "copropriete_lot", "copropriete_nb_lot", "copropriete_quote_part",
     "montant_fonds_travaux", "copropriete_plan_sauvegarde", "copropriete_statut_syndicat",
     "DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite",
   ]),
   house: new Set([
-    "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "surfterrain", "JARDIN-",
-    "PISCINE-", "GARAGE_BOX", "EXPOSITION", "vuee",
+    "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "surfterrain", "JARDIN",
+    "JARDIN-", "SURFACE_JARDIN", "PISCINE", "PISCINE-", "GARAGE_BOX", "EXPOSITION", "vuee",
     "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE",
     "CUISINE_EQUIPEMENT", "MURS_MITOYENS", "NB_ETAGES", "CAVE", "SURFACE_CAVE",
     "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
-    "NB_PARK_EXT", "ACCES_HANDI", "climatisation", "EAU", "ASSAINISSEMENT",
-    "DISTRIBUTION_EAU", "ENERGIE_EAU", "cheminee", "volets_elctriques", "double_vitrage",
-    "triple_vitrage", "porte_blindee", "interphone", "visiophone", "alarme", "digicode",
+    "NB_PARK_EXT", "formatChauff", "typeChauff", "energieChauff", "ACCES_HANDI",
+    "climatisation", "climatisationspec", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU",
+    "ENERGIE_EAU", "cheminee", "volets_elctriques", "gardien", "double_vitrage",
+    "triple_vitrage", "cable", "porte_blindee", "interphone", "visiophone", "alarme", "digicode",
     "detecteur_fumee", "ANNEE_CONS", "etat_exterieur", "etat_interieur", "dpe_date",
     "dpe_non_concerne", "dpe_vierge", "isDpeAltitude", "dpe_cons", "dpe_ges",
     "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference",
-    "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante",
+    "diagnostiqueur", "syndic", "diag_termites", "diag_termites_date", "diag_termites_commentaire", "diag_amiante",
     "diag_amiante_date", "diag_amiante_commentaire", "diag_electrique", "diag_electrique_date",
     "diag_electrique_commentaire", "diag_risques_nat_tech", "diag_risques_nat_tech_date",
     "diag_risques_nat_tech_commentaire", "diag_plomb", "diag_plomb_date",
     "diag_plomb_commentaire", "diag_gaz", "diag_gaz_date", "diag_gaz_commentaire",
-    "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire",
+    "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire", "clearing",
     "DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite",
   ]),
   land: new Set([
-    "surfterrain", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "diag_termites",
+    "surfterrain", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "terrain_constructible",
+    "terrain_surface_constructible", "terrain_viabilise", "terrain_raccordement_eau",
+    "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone",
+    "diag_termites",
     "diag_termites_date", "diag_termites_commentaire", "diag_risques_nat_tech",
     "diag_risques_nat_tech_date", "diag_risques_nat_tech_commentaire", "diag_assainissement",
-    "diag_assainissement_date", "diag_assainissement_commentaire", "CLES", "moyens_visite",
+    "diag_assainissement_date", "diag_assainissement_commentaire", "DISPO", "DATE_LIBER",
+    "DATE_DISPO", "CLES", "moyens_visite",
   ]),
   garage: new Set([
     "SURFACE_GARAGE", "CAVE", "SURFACE_CAVE", "GARAGE_BOX", "NB_PARK_INT", "NB_PARK_EXT",
@@ -3731,6 +3850,7 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
 };
 
 function isHektorWizardFieldAllowedForPayload(payload, key) {
+  if (HEKTOR_CHAUFFAGE_FIELD_KEYS.has(key)) return false;
   if (HEKTOR_COMPOSITION_LEGACY_FIELD_KEYS.has(key)) return false;
   const profile = resolveHektorPropertyProfile(payload);
   if (!profile.explicit) return true;
@@ -3747,7 +3867,7 @@ const HEKTOR_UPDATE_COMMON_FIELDS = new Set([
 
 const HEKTOR_UPDATE_FIELDS_BY_PROFILE = {
   apartment: new Set([
-    "surface", "carrez_surface", "room_count", "bedroom_count", "level_count",
+    "surface", "carrez_surface", "room_count", "bedroom_count", "level_count", "floor",
     "bathroom_count", "shower_room_count", "wc_count", "kitchen", "exposure", "view",
     "interior_state", "exterior_state", "garden_surface", "terrace_count", "garage_count",
     "garage_surface", "parking_inside_count", "parking_outside_count", "dpe_value",
@@ -3759,7 +3879,7 @@ const HEKTOR_UPDATE_FIELDS_BY_PROFILE = {
     "bathroom_count", "shower_room_count", "wc_count", "kitchen", "exposure", "view",
     "interior_state", "exterior_state", "land_surface", "garden_surface", "terrace_count",
     "garage_count", "garage_surface", "parking_inside_count", "parking_outside_count",
-    "pool", "dpe_value", "ges_value", "construction_year", "diagnostic_risk_comment",
+    "garden", "pool", "dpe_value", "ges_value", "construction_year", "diagnostic_risk_comment",
   ]),
   land: new Set([
     "land_surface", "exterior_state", "diagnostic_risk_comment",
@@ -3795,7 +3915,7 @@ function filterHektorAnnonceUpdateFieldsForProfile(payload, clean) {
 const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "secteur",
-    mode: "ihmChargeGroupe",
+    mode: "ihmChargeGroupe_Secteur",
     fields: new Set(["codepublique", "villepublique", "idCodepublique", "idVillepublique", "idLocalitePrivee", "ADRESSE_COMPL", "adresse", "immeuble", "TRANSPORT", "PROXIMITE", "ENVIRONNEMENT", "latitude", "longitude"]),
   },
   {
@@ -3811,12 +3931,12 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "terrain",
     mode: "ihmChargeGroupe",
-    fields: new Set(["surfterrain"]),
+    fields: new Set(["surfterrain", "terrain_constructible", "terrain_surface_constructible", "terrain_viabilise", "terrain_raccordement_eau", "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone"]),
   },
   {
     group: "equipements",
     mode: "ihmChargeGroupe",
-    fields: new Set(["formatChauff", "typeChauff", "energieChauff", "ASCENSEUR", "ACCES_HANDI", "climatisation", "climatisationspec", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ENERGIE_EAU", "cheminee", "volets_elctriques", "gardien", "double_vitrage", "triple_vitrage", "cable", "porte_blindee", "interphone", "visiophone", "alarme", "digicode", "detecteur_fumee"]),
+    fields: new Set(["ASCENSEUR", "ACCES_HANDI", "climatisation", "climatisationspec", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ENERGIE_EAU", "cheminee", "volets_elctriques", "gardien", "double_vitrage", "triple_vitrage", "cable", "porte_blindee", "interphone", "visiophone", "alarme", "digicode", "detecteur_fumee"]),
   },
   {
     group: "diagnostiques",
@@ -3831,7 +3951,7 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "organiser_visite",
     mode: "ihmChargeGroupe",
-    fields: new Set(["DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite"]),
+    fields: new Set(["CLES", "moyens_visite"]),
   },
   {
     group: "mandat_infofi",
@@ -3841,7 +3961,7 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "mandat_mandatdispo",
     mode: "ihmChargeGroupe",
-    fields: new Set(["NO_DOSSIER", "dateenr"]),
+    fields: new Set(["NO_DOSSIER", "dateenr", "DISPO", "DATE_LIBER", "DATE_DISPO"]),
   },
 ];
 
@@ -3852,7 +3972,80 @@ function exactWizardCandidateKeys(key) {
   return candidates;
 }
 
-function buildExactWizardGroupUpdates(payload) {
+const HEKTOR_EXACT_SKIP_WHEN_FINANCIAL_LOCKED = new Set([
+  "prix", "PRIXNETVENDEUR",
+  "_selecterHonoraires2", "_tauxHonoraire2", "_pourcentHonoraire2", "_detailHonoraire2",
+  "_selecterHonoraires3", "_tauxHonoraire3", "_pourcentHonoraire3", "_detailHonoraire3",
+]);
+
+const HEKTOR_OUI_NON_EXACT_FIELDS = new Set([
+  "ASCENSEUR", "ACCES_HANDI", "climatisation", "cheminee", "volets_elctriques", "gardien",
+  "double_vitrage", "triple_vitrage", "cable", "porte_blindee", "interphone", "visiophone",
+  "alarme", "digicode", "detecteur_fumee", "DERNIER_ETAGE", "CAVE", "BALCON", "TERRASSE",
+  "JARDIN", "JARDIN-", "PISCINE", "PISCINE-",
+  "copropriete", "copropriete_plan_sauvegarde", "diag_termites", "diag_amiante",
+  "diag_electrique", "diag_loi_carrez", "diag_risques_nat_tech", "clearing", "diag_plomb",
+  "diag_gaz", "diag_assainissement", "terrain_constructible", "terrain_viabilise",
+  "terrain_raccordement_eau", "terrain_raccordement_gaz", "terrain_raccordement_electricite",
+  "terrain_raccordement_telephone",
+]);
+
+const HEKTOR_DATE_EXACT_FIELDS = new Set([
+  "dpe_date",
+  "diag_termites_date",
+  "diag_amiante_date",
+  "diag_electrique_date",
+  "diag_loi_carrez_date",
+  "diag_risques_nat_tech_date",
+  "diag_plomb_date",
+  "diag_gaz_date",
+  "diag_assainissement_date",
+  "ESTIMATION_DATE",
+  "DATE_LIBER",
+  "DATE_DISPO",
+]);
+
+function normalizeHektorFrenchDateValue(key, rawValue) {
+  const text = String(rawValue == null ? "" : rawValue).trim();
+  if (!text) return "";
+  if (text === "00-00-0000") return text;
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+  const fr = text.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+  if (fr) return `${fr[1]}-${fr[2]}-${fr[3]}`;
+  throw new Error(`Date Hektor invalide pour ${key}: format attendu jj-mm-aaaa`);
+}
+
+function normalizeHektorOuiNonValue(rawValue) {
+  const value = String(rawValue == null ? "" : rawValue).trim();
+  if (!value) return "";
+  const normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  if (["OUI", "YES", "TRUE", "1", "ON"].includes(normalized)) return "OUI";
+  if (["NON", "NO", "FALSE", "0", "OFF"].includes(normalized)) return "NON";
+  return value;
+}
+
+function normalizeHektorExactWizardUpdateValue(key, rawValue) {
+  const value = String(rawValue == null ? "" : rawValue).trim();
+  if (!value) return "";
+  if (HEKTOR_DATE_EXACT_FIELDS.has(key)) return normalizeHektorFrenchDateValue(key, value);
+  if (HEKTOR_OUI_NON_EXACT_FIELDS.has(key)) return normalizeHektorOuiNonValue(value);
+  if (key !== "DISPO") return value;
+  const normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  if (["OUI", "YES", "TRUE", "1", "IMMEDIAT", "IMMEDIATE", "LIBRE", "LIB"].includes(normalized)) return "OUI";
+  if (["NON", "NO", "FALSE", "0", "DIFFERE", "DIFFEREE", "DATE", "OCCUPE", "OCCUPEE", "LOUE", "LOUEE"].includes(normalized)) return "NON";
+  return value;
+}
+
+function inferHektorFloorStateValue(value) {
+  const text = String(value == null ? "" : value).replace(",", ".").trim();
+  if (!text) return "";
+  const numeric = Number(text);
+  if (Number.isFinite(numeric) && numeric === 0) return "GROUND_FLOOR";
+  return "OTHER_FLOOR";
+}
+
+function buildExactWizardGroupUpdates(payload, options = {}) {
   const exact = exactHektorWizardFields(payload);
   const protectedKeys = new Set(["mode", "step", "idann", "offredem", "programme_neuf", "isInterkabActive", "enabled", "content_pdf", "mdn_id", "diffusable", "titre", "corps"]);
   const grouped = new Map();
@@ -3860,10 +4053,11 @@ function buildExactWizardGroupUpdates(payload) {
   for (const [rawKey, rawValue] of Object.entries(exact)) {
     const key = String(rawKey || "").trim();
     if (!key || protectedKeys.has(key)) continue;
+    if (options.skipFinancial && HEKTOR_EXACT_SKIP_WHEN_FINANCIAL_LOCKED.has(key)) continue;
     if (!/^[A-Za-z0-9_[\]-]+$/.test(key)) continue;
     if (!isHektorWizardFieldAllowedForPayload(payload, key)) continue;
     if (rawValue === undefined || rawValue === null) continue;
-    const value = String(rawValue).trim();
+    const value = normalizeHektorExactWizardUpdateValue(key, rawValue);
     if (!value) continue;
     const candidates = exactWizardCandidateKeys(key);
     const config = HEKTOR_WIZARD_UPDATE_GROUPS.find((item) => candidates.some((candidate) => item.fields.has(candidate)));
@@ -3873,10 +4067,52 @@ function buildExactWizardGroupUpdates(payload) {
     grouped.set(config.group, current);
   }
 
+  if (!Object.prototype.hasOwnProperty.call(exact, "floorState") && Object.prototype.hasOwnProperty.call(exact, "ETAGE")) {
+    const floorState = inferHektorFloorStateValue(normalizeHektorExactWizardUpdateValue("ETAGE", exact.ETAGE));
+    if (floorState && isHektorWizardFieldAllowedForPayload(payload, "floorState")) {
+      const config = HEKTOR_WIZARD_UPDATE_GROUPS.find((item) => item.group === "ag_exterieur");
+      if (config) {
+        const current = grouped.get(config.group) || { mode: config.mode, fields: {} };
+        current.fields.floorState = fieldSpec(floorState, ["floorState"]);
+        grouped.set(config.group, current);
+      }
+    }
+  }
+
+  const profile = resolveHektorPropertyProfile(payload);
+  if (profile.kind === "land") {
+    const config = HEKTOR_WIZARD_UPDATE_GROUPS.find((item) => item.group === "terrain");
+    if (config) {
+      const current = grouped.get(config.group) || { mode: config.mode, fields: {} };
+      const addTerrainField = (target, rawValue) => {
+        if (current.fields[target]) return;
+        const value = normalizeHektorOuiNonValue(rawValue);
+        if (!value || !isHektorWizardFieldAllowedForPayload(payload, target)) return;
+        current.fields[target] = fieldSpec(value, [target]);
+      };
+      if (!Object.prototype.hasOwnProperty.call(exact, "terrain_raccordement_eau") && Object.prototype.hasOwnProperty.call(exact, "EAU")) {
+        addTerrainField("terrain_raccordement_eau", String(exact.EAU || "").toUpperCase() === "SANS" ? "NON" : "OUI");
+      }
+      if (!Object.prototype.hasOwnProperty.call(exact, "terrain_viabilise") && (
+        Object.prototype.hasOwnProperty.call(exact, "EAU")
+        || Object.prototype.hasOwnProperty.call(exact, "ASSAINISSEMENT")
+        || Object.prototype.hasOwnProperty.call(exact, "DISTRIBUTION_EAU")
+      )) {
+        addTerrainField("terrain_viabilise", "OUI");
+      }
+      if (Object.keys(current.fields).length) grouped.set(config.group, current);
+    }
+  }
+
   return Array.from(grouped.entries()).map(([group, config]) => ({ group, mode: config.mode, fields: config.fields }));
 }
 
+function stripHektorSpecialWizardFields(body) {
+  for (const key of HEKTOR_CHAUFFAGE_FIELD_KEYS) body.delete(key);
+}
+
 function applyExactHektorWizardFields(body, payload, step) {
+  stripHektorSpecialWizardFields(body);
   const exact = exactHektorWizardFields(payload);
   if (!Object.keys(exact).length) return [];
   const applied = [];
@@ -3899,6 +4135,7 @@ function applyExactHektorWizardFields(body, payload, step) {
     body.set(key, value);
     applied.push(key);
   }
+  stripHektorSpecialWizardFields(body);
   return applied;
 }
 
@@ -3938,8 +4175,8 @@ function buildWizardStep2Body(idannWizard, meta, html, payload) {
   setWizardNumberIfPresent(body, "NB_CHAMBRES", payload, ["bedroom_count", "bedroomCount", "NB_CHAMBRES", "chambres"]);
   setWizardNumberIfPresent(body, "NB_NIVEAUX", payload, ["level_count", "levelCount", "NB_NIVEAUX", "niveaux"]);
   setWizardNumberIfPresent(body, "GARAGE_BOX", payload, ["garage_count", "garageCount", "GARAGE_BOX"]);
-  setWizardTextIfPresent(body, "JARDIN-", payload, ["garden", "jardin", "JARDIN-"]);
-  setWizardTextIfPresent(body, "PISCINE-", payload, ["pool", "piscine", "PISCINE-"]);
+  setWizardTextIfPresent(body, "JARDIN-", payload, ["garden", "jardin", "JARDIN", "JARDIN-"]);
+  setWizardTextIfPresent(body, "PISCINE-", payload, ["pool", "piscine", "PISCINE", "PISCINE-"]);
   setWizardTextIfPresent(body, "EXPOSITION", payload, ["exposure", "exposition", "EXPOSITION"]);
   setWizardTextIfPresent(body, "vuee", payload, ["view", "vue", "vuee"]);
   setWizardText(body, "NO_DOSSIER", payload, ["folder_number", "folderNumber", "no_dossier", "NO_DOSSIER"]);
@@ -4206,6 +4443,7 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     },
   });
   const values = extractHektorFormValues(html.text, groupName);
+  if (groupName === "equipements") stripHektorSpecialWizardFields(values);
   const applied = [];
   const skipped = [];
   for (const [key, rawSpec] of Object.entries(overrides)) {
@@ -4315,6 +4553,151 @@ async function postHektorPrincipalTextUpdate(job, annonceId, fields) {
   };
 }
 
+function hektorChauffageFromPayload(payload) {
+  const fields = hektorPayloadMergedFields(payload);
+  const chauffage = {
+    formatChauff: textFromObjectKeys(fields, ["formatChauff", "format_chauff", "heating_format", "heatingFormat"]),
+    typeChauff: textFromObjectKeys(fields, ["typeChauff", "type_chauff", "heating_type", "heatingType"]),
+    energieChauff: textFromObjectKeys(fields, ["energieChauff", "energie_chauff", "heating_energy", "heatingEnergy"]),
+  };
+  return Object.values(chauffage).some((value) => value) ? chauffage : null;
+}
+
+function selectedOptionValue(selectHtml) {
+  const options = Array.from(String(selectHtml || "").matchAll(/<option\b[^>]*>[\s\S]*?<\/option>/gi)).map((match) => match[0]);
+  const selected = options.find((option) => /\bselected\b/i.test(option)) || options[0];
+  return selected ? attrValue(selected, "value") || "" : "";
+}
+
+function extractHektorExistingChauffages(html) {
+  const source = String(html || "");
+  const rowStarts = [];
+  const rowRegex = /<table\b[^>]*id\s*=\s*["']chauffageExist(\d+)["'][^>]*>/gi;
+  let match;
+  while ((match = rowRegex.exec(source))) {
+    rowStarts.push({ id: match[1], index: match.index });
+  }
+  return rowStarts.map((row, index) => {
+    const next = rowStarts[index + 1] ? rowStarts[index + 1].index : source.length;
+    const block = source.slice(row.index, next);
+    const values = {};
+    const selectRegex = /<select\b[^>]*>[\s\S]*?<\/select>/gi;
+    let selectMatch;
+    while ((selectMatch = selectRegex.exec(block))) {
+      const onchange = attrValue(selectMatch[0], "onchange") || "";
+      const typeMatch = onchange.match(/updateValueChauffage\(["']\d+["']\s*,\s*["'](format|type|energie)["']\s*,\s*this\.value\)/i);
+      if (typeMatch) values[typeMatch[1]] = selectedOptionValue(selectMatch[0]);
+    }
+    return {
+      id: row.id,
+      format: values.format || "",
+      type: values.type || "",
+      energie: values.energie || "",
+    };
+  });
+}
+
+async function postHektorChauffageController(job, annonceId, body, action) {
+  const id = encodeURIComponent(String(annonceId));
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  let parsed = null;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = null;
+  }
+  if (parsed && Object.prototype.hasOwnProperty.call(parsed, "result") && String(parsed.result) !== "1") {
+    throw new Error(`Hektor chauffage ${action} refuse: ${response.text.slice(0, 500)}`);
+  }
+  if (!parsed && /Credential Error|Forbidden|403/i.test(response.text)) {
+    throw new Error(`Hektor chauffage ${action} refuse: ${response.text.slice(0, 500)}`);
+  }
+  return parsed || response.text.slice(0, 300);
+}
+
+async function applyHektorChauffage(job, annonceId, payload) {
+  const chauffage = hektorChauffageFromPayload(payload);
+  if (!chauffage) return null;
+
+  const id = encodeURIComponent(String(annonceId));
+  const html = await hektorFetch(`${XMLRPC_URL}?mode=ihmChargeGroupe&idAnnonce=${id}&group=equipements&consultMode=editer&ajax=ajax`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  const existing = extractHektorExistingChauffages(html.text);
+  await logJob(job.id, "hektor_annonce_chauffage", "running", "Application chauffage via controleur dedie", {
+    hektor_annonce_id: String(annonceId),
+    requested: chauffage,
+    existing_count: existing.length,
+    existing_ids: existing.map((item) => item.id),
+  });
+
+  const defaulted = {
+    formatChauff: chauffage.formatChauff || "4",
+    typeChauff: chauffage.typeChauff || "9",
+    energieChauff: chauffage.energieChauff || "14",
+  };
+  const responses = [];
+  let action = "add";
+
+  if (existing.length) {
+    action = "update";
+    const target = existing[0];
+    const updateMap = [
+      ["format", defaulted.formatChauff, target.format],
+      ["type", defaulted.typeChauff, target.type],
+      ["energie", defaulted.energieChauff, target.energie],
+    ];
+    for (const [type, value, current] of updateMap) {
+      if (!value || value === current) continue;
+      const body = new URLSearchParams({
+        mode: "annonce-equipements-controllerChauffages",
+        updateExistingElement: "updateElement",
+        idChauffage: target.id,
+        type,
+        valeur: value,
+      });
+      responses.push(await postHektorChauffageController(job, annonceId, body, `update:${type}`));
+    }
+  } else {
+    const body = new URLSearchParams({
+      mode: "annonce-equipements-controllerChauffages",
+      getNewElement: "newElement",
+      idAnnonce: String(annonceId),
+      formatChauff: defaulted.formatChauff,
+      typeChauff: defaulted.typeChauff,
+      energieChauff: defaulted.energieChauff,
+    });
+    responses.push(await postHektorChauffageController(job, annonceId, body, "add"));
+  }
+
+  await logJob(job.id, "hektor_annonce_chauffage", "done", "Chauffage sauvegarde dans Hektor", {
+    hektor_annonce_id: String(annonceId),
+    action,
+    requested: defaulted,
+    existing_count_before: existing.length,
+    duplicate_existing_count: Math.max(0, existing.length - 1),
+  });
+
+  return {
+    group: "chauffage",
+    action,
+    fields: Object.keys(defaulted),
+    requested: defaulted,
+    existing_count_before: existing.length,
+    duplicate_existing_count: Math.max(0, existing.length - 1),
+    response: responses.length ? responses : "already_current",
+  };
+}
+
 function hektorCompositionPayloadCandidates(payload) {
   const source = payload && typeof payload === "object" ? payload : {};
   const fieldsJson = source.fields_json && typeof source.fields_json === "object" ? source.fields_json : {};
@@ -4350,6 +4733,141 @@ function textFromCompositionPiece(piece, keys) {
   return "";
 }
 
+const HEKTOR_COMPOSITION_PIECE_TYPE_OPTIONS = [
+  { id: "1", label: "Chambre" },
+  { id: "13", label: "Cuisine" },
+  { id: "2", label: "Salon/sejour" },
+  { id: "9", label: "Salle de bains" },
+  { id: "15", label: "Bureau" },
+  { id: "16", label: "WC" },
+  { id: "26", label: "Entree" },
+  { id: "14", label: "Piece a vivre" },
+  { id: "21", label: "Dressing" },
+  { id: "11", label: "Buanderie" },
+  { id: "12", label: "Cave" },
+  { id: "5", label: "Garage" },
+  { id: "8", label: "Parking" },
+  { id: "18", label: "Balcon" },
+  { id: "17", label: "Terrasse" },
+  { id: "4", label: "Jardin" },
+  { id: "32", label: "Piscine" },
+  { id: "20", label: "Veranda" },
+  { id: "25", label: "Accueil" },
+  { id: "6", label: "Annexe" },
+  { id: "59", label: "Chambre de bonne" },
+  { id: "60", label: "Chambre de service" },
+  { id: "27", label: "Chambre froide" },
+  { id: "28", label: "Depot" },
+  { id: "29", label: "Entrepot" },
+  { id: "30", label: "Espace bien-etre" },
+  { id: "31", label: "Mezzanine" },
+  { id: "24", label: "Reserve" },
+  { id: "23", label: "Salle" },
+  { id: "33", label: "Suite" },
+  { id: "3", label: "Terrain" },
+  { id: "34", label: "Vestiaire" },
+];
+
+const HEKTOR_COMPOSITION_PIECE_TYPE_BY_ID = new Map(
+  HEKTOR_COMPOSITION_PIECE_TYPE_OPTIONS.map((option) => [option.id, option])
+);
+
+function normalizeHektorCompositionTypeLabel(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const HEKTOR_COMPOSITION_PIECE_TYPE_ALIASES = new Map();
+for (const option of HEKTOR_COMPOSITION_PIECE_TYPE_OPTIONS) {
+  HEKTOR_COMPOSITION_PIECE_TYPE_ALIASES.set(normalizeHektorCompositionTypeLabel(option.label), option);
+}
+for (const [alias, id] of [
+  ["sejour", "2"],
+  ["salon", "2"],
+  ["salon sejour", "2"],
+  ["salle de bain", "9"],
+  ["salle de bains", "9"],
+  ["sdb", "9"],
+  ["toilette", "16"],
+  ["toilettes", "16"],
+  ["bureau", "15"],
+  ["entree", "26"],
+  ["piece a vivre", "14"],
+  ["depot", "28"],
+  ["veranda", "20"],
+  ["reserve", "24"],
+]) {
+  const option = HEKTOR_COMPOSITION_PIECE_TYPE_BY_ID.get(id);
+  if (option) HEKTOR_COMPOSITION_PIECE_TYPE_ALIASES.set(normalizeHektorCompositionTypeLabel(alias), option);
+}
+
+function hektorCompositionTypeOptionFromLabel(label) {
+  const normalized = normalizeHektorCompositionTypeLabel(label);
+  return normalized ? HEKTOR_COMPOSITION_PIECE_TYPE_ALIASES.get(normalized) || null : null;
+}
+
+function inferHektorCompositionTypeOptionFromText(text) {
+  const normalized = normalizeHektorCompositionTypeLabel(text);
+  if (!normalized) return null;
+  const aliases = Array.from(HEKTOR_COMPOSITION_PIECE_TYPE_ALIASES.entries())
+    .filter(([label]) => label)
+    .sort((a, b) => b[0].length - a[0].length);
+  for (const [label, option] of aliases) {
+    const pattern = new RegExp(`(^| )${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}( |$)`);
+    if (pattern.test(normalized)) return option;
+  }
+  return null;
+}
+
+function resolveHektorCompositionPieceType(piece, rawIdTypePiece) {
+  const rawId = String(rawIdTypePiece || "").trim();
+  const explicitLabel = textFromCompositionPiece(piece, [
+    "typeLabel",
+    "type_label",
+    "typePieceLabel",
+    "labelTypePiece",
+    "libelleTypePiece",
+    "libelle",
+    "label",
+    "type",
+  ]);
+  const explicitOption = hektorCompositionTypeOptionFromLabel(explicitLabel);
+  const inferredOption = explicitOption
+    || inferHektorCompositionTypeOptionFromText(textFromCompositionPiece(piece, ["namePiece", "name_piece", "name", "customName"]))
+    || inferHektorCompositionTypeOptionFromText(textFromCompositionPiece(piece, ["detailPiece", "detail_piece", "detail", "description"]));
+  const knownOption = rawId ? HEKTOR_COMPOSITION_PIECE_TYPE_BY_ID.get(rawId) || null : null;
+
+  if (!rawId && inferredOption) {
+    return {
+      idTypePiece: inferredOption.id,
+      typeLabel: explicitLabel || inferredOption.label,
+      originalIdTypePiece: null,
+      corrected: false,
+    };
+  }
+
+  if (rawId && knownOption && inferredOption && knownOption.id !== inferredOption.id) {
+    return {
+      idTypePiece: inferredOption.id,
+      typeLabel: explicitLabel || inferredOption.label,
+      originalIdTypePiece: rawId,
+      originalTypeLabel: knownOption.label,
+      corrected: true,
+    };
+  }
+
+  return {
+    idTypePiece: rawId || "1",
+    typeLabel: explicitLabel || (knownOption ? knownOption.label : "") || (inferredOption ? inferredOption.label : ""),
+    originalIdTypePiece: null,
+    corrected: false,
+  };
+}
+
 function normalizeHektorCompositionPiece(piece, index) {
   const actionRaw = textFromCompositionPiece(piece, ["action", "_action", "mode"]).toLowerCase();
   const action = actionRaw === "delete" || actionRaw === "remove" || actionRaw === "deleted"
@@ -4358,7 +4876,9 @@ function normalizeHektorCompositionPiece(piece, index) {
       ? "update"
       : "add";
   const idPiece = textFromCompositionPiece(piece, ["idPiece", "id_piece", "id", "ID", "idpiece"]);
-  const idTypePiece = textFromCompositionPiece(piece, ["idTypePiece", "id_type_piece", "typePiece", "type_piece", "typePieceId", "idType"]) || "1";
+  const rawIdTypePiece = textFromCompositionPiece(piece, ["idTypePiece", "id_type_piece", "typePiece", "type_piece", "typePieceId", "idType"]);
+  const typeResolution = resolveHektorCompositionPieceType(piece, rawIdTypePiece);
+  const idTypePiece = typeResolution.idTypePiece || "1";
   const detailPiece = textFromCompositionPiece(piece, ["detailPiece", "detail_piece", "detail", "description"]);
   const namePiece = textFromCompositionPiece(piece, ["namePiece", "name_piece", "name", "customName"]);
   const surfacePiece = textFromCompositionPiece(piece, ["surfacePiece", "surface_piece", "surface"]).replace(",", ".");
@@ -4374,13 +4894,17 @@ function normalizeHektorCompositionPiece(piece, index) {
   if (surfacePiece && !/^-?\d+(\.\d+)?$/.test(surfacePiece)) {
     throw new Error(`Piece ${index + 1}: surfacePiece invalide`);
   }
-  const hasContent = [idTypePiece, detailPiece, namePiece, surfacePiece, etagePiece, notePublique, notePrivee, noteInterAgence, photosPiece]
+  const hasContent = [rawIdTypePiece, typeResolution.typeLabel, detailPiece, namePiece, surfacePiece, etagePiece, notePublique, notePrivee, noteInterAgence, photosPiece]
     .some((value) => String(value || "").trim());
   if (!hasContent && action !== "delete") return null;
   return {
     action,
     idPiece,
     idTypePiece,
+    typeLabel: typeResolution.typeLabel || null,
+    originalIdTypePiece: typeResolution.originalIdTypePiece || null,
+    originalTypeLabel: typeResolution.originalTypeLabel || null,
+    idTypePieceCorrected: typeResolution.corrected === true,
     detailPiece,
     namePiece,
     surfacePiece,
@@ -4429,6 +4953,10 @@ async function postHektorCompositionPieceMutation(job, annonceId, piece, index) 
     action,
     idPiece: piece.idPiece || null,
     idTypePiece: piece.idTypePiece || null,
+    typeLabel: piece.typeLabel || null,
+    originalIdTypePiece: piece.originalIdTypePiece || null,
+    originalTypeLabel: piece.originalTypeLabel || null,
+    idTypePieceCorrected: piece.idTypePieceCorrected === true,
     detailPiece: piece.detailPiece || null,
   });
 
@@ -4458,6 +4986,10 @@ async function postHektorCompositionPieceMutation(job, annonceId, piece, index) 
     action,
     idPiece: piece.idPiece || null,
     idTypePiece: piece.idTypePiece || null,
+    typeLabel: piece.typeLabel || null,
+    originalIdTypePiece: piece.originalIdTypePiece || null,
+    originalTypeLabel: piece.originalTypeLabel || null,
+    idTypePieceCorrected: piece.idTypePieceCorrected === true,
     response: parsed || response.text.slice(0, 300),
   };
 }
@@ -4505,6 +5037,8 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["kitchen", ["kitchen", "cuisine", "CUISINE"]],
     ["exposure", ["exposure", "exposition", "EXPOSITION"]],
     ["view", ["view", "vue", "vuee"]],
+    ["garden", ["garden", "jardin", "JARDIN", "JARDIN-"]],
+    ["pool", ["pool", "piscine", "PISCINE", "PISCINE-"]],
     ["interior_state", ["interior_state", "interiorState", "etat_interieur", "ETAT_INTERIEUR"]],
     ["exterior_state", ["exterior_state", "exteriorState", "etat_exterieur", "ETAT_EXTERIEUR"]],
     ["dpe_value", ["dpe_value", "dpeValue", "DPE", "dpe_cons"]],
@@ -4522,6 +5056,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["carrez_surface", ["carrez_surface", "carrezSurface", "SURF_CARREZ"]],
     ["room_count", ["room_count", "roomCount", "nbpieces"]],
     ["bedroom_count", ["bedroom_count", "bedroomCount", "NB_CHAMBRES"]],
+    ["floor", ["floor", "etage", "ETAGE"]],
     ["level_count", ["level_count", "levelCount", "NB_NIVEAUX"]],
     ["bathroom_count", ["bathroom_count", "bathroomCount", "NB_SDB", "SDB"]],
     ["shower_room_count", ["shower_room_count", "showerRoomCount", "NB_SE", "SE", "SDE"]],
@@ -4533,7 +5068,6 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["garage_surface", ["garage_surface", "garageSurface", "SURFACE_GARAGE"]],
     ["parking_inside_count", ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]],
     ["parking_outside_count", ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]],
-    ["pool", ["pool", "PISCINE"]],
     ["construction_year", ["construction_year", "constructionYear", "ANNEE_CONS", "ANNEE_CONSTRUCTION"]],
     ["copro_lots", ["copro_lots", "coproLots", "copropriete_nb_lot"]],
     ["copro_charges", ["copro_charges", "coproCharges", "CHARGES"]],
@@ -4548,7 +5082,9 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     if (skippedFinancial.has(key)) continue;
     const raw = firstDefined(fields || {}, aliases);
     if (raw == null) continue;
-    const value = String(raw).trim();
+    const value = key === "garden" || key === "pool"
+      ? normalizeHektorOuiNonValue(raw)
+      : String(raw).trim();
     if (value) clean[key] = value;
   }
   for (const [key, aliases] of numberKeys) {
@@ -4556,7 +5092,10 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     const raw = firstDefined(fields || {}, aliases);
     if (raw == null) continue;
     const value = String(raw).replace(",", ".").trim();
-    if (value && !/^-?\d+(\.\d+)?$/.test(value)) throw new Error(`Champ numerique invalide: ${key}`);
+    if (value && !/^-?\d+(\.\d+)?$/.test(value)) {
+      if (options.skipInvalidNumbers) continue;
+      throw new Error(`Champ numerique invalide: ${key}`);
+    }
     if (value) clean[key] = value;
   }
   return filterHektorAnnonceUpdateFieldsForProfile(profilePayload, clean);
@@ -4566,27 +5105,70 @@ function fieldSpec(value, candidates) {
   return { value, candidates };
 }
 
-async function pushHektorGroupUpdate(results, job, annonceId, groupName, readMode, fields) {
+async function pushHektorGroupUpdate(results, job, annonceId, groupName, readMode, fields, options = {}) {
   if (!Object.keys(fields).length) return;
-  const result = await postHektorMefUpdate(job, annonceId, groupName, readMode, fields);
-  if (result) results.push(result);
+  try {
+    const result = await postHektorMefUpdate(job, annonceId, groupName, readMode, fields);
+    if (result) results.push(result);
+  } catch (error) {
+    if (!options.continueOnGroupError) throw error;
+    const message = error && error.message ? error.message : String(error);
+    await logJob(job.id, "hektor_annonce_update", "error", `Sauvegarde groupe ${groupName} echouee`, {
+      hektor_annonce_id: String(annonceId),
+      group: groupName,
+      fields: Object.keys(fields || {}),
+      error: message,
+    });
+    results.push({
+      group: groupName,
+      status: "error",
+      fields: Object.keys(fields || {}),
+      error: message,
+    });
+  }
 }
 
-async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
-  const cleanFields = normalizeHektorAnnonceUpdatePayload(fields);
+async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = {}) {
+  const cleanFields = normalizeHektorAnnonceUpdatePayload(fields, options);
   const results = [];
 
-  const textResult = await postHektorPrincipalTextUpdate(job, annonceId, {
-    title: cleanFields.title,
-    description: cleanFields.description,
-  });
-  if (textResult) results.push(textResult);
+  try {
+    const textResult = await postHektorPrincipalTextUpdate(job, annonceId, {
+      title: cleanFields.title,
+      description: cleanFields.description,
+    });
+    if (textResult) results.push(textResult);
+  } catch (error) {
+    if (!options.continueOnGroupError) throw error;
+    const message = error && error.message ? error.message : String(error);
+    await logJob(job.id, "hektor_annonce_update", "error", "Sauvegarde texte principal echouee", {
+      hektor_annonce_id: String(annonceId),
+      fields: ["title", "description"].filter((key) => cleanFields[key] != null),
+      error: message,
+    });
+    results.push({ group: "principal_text", status: "error", fields: ["title", "description"], error: message });
+  }
 
-  const compositionResults = await applyHektorCompositionPieces(job, annonceId, fields);
-  results.push(...compositionResults);
+  if (!options.skipComposition) {
+    const compositionResults = await applyHektorCompositionPieces(job, annonceId, fields);
+    results.push(...compositionResults);
+  }
 
-  for (const update of buildExactWizardGroupUpdates(fields)) {
-    await pushHektorGroupUpdate(results, job, annonceId, update.group, update.mode, update.fields);
+  try {
+    const chauffageResult = await applyHektorChauffage(job, annonceId, fields);
+    if (chauffageResult) results.push(chauffageResult);
+  } catch (error) {
+    if (!options.continueOnGroupError) throw error;
+    const message = error && error.message ? error.message : String(error);
+    await logJob(job.id, "hektor_annonce_chauffage", "error", "Sauvegarde chauffage echouee", {
+      hektor_annonce_id: String(annonceId),
+      error: message,
+    });
+    results.push({ group: "chauffage", status: "error", fields: Array.from(HEKTOR_CHAUFFAGE_FIELD_KEYS), error: message });
+  }
+
+  for (const update of buildExactWizardGroupUpdates(fields, options)) {
+    await pushHektorGroupUpdate(results, job, annonceId, update.group, update.mode, update.fields, options);
   }
 
   const secteur = {};
@@ -4606,7 +5188,7 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
     if (locality && locality.latitude && cleanFields.latitude == null) secteur.latitude = fieldSpec(locality.latitude, ["latitude"]);
     if (locality && locality.longitude && cleanFields.longitude == null) secteur.longitude = fieldSpec(locality.longitude, ["longitude"]);
   }
-  await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe", secteur);
+  await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe_Secteur", secteur, options);
 
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
@@ -4620,21 +5202,27 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   if (cleanFields.kitchen != null) agInterieur.kitchen = fieldSpec(cleanFields.kitchen, ["CUISINE", "cuisine"]);
   if (cleanFields.exposure != null) agInterieur.exposure = fieldSpec(cleanFields.exposure, ["EXPOSITION", "exposition"]);
   if (cleanFields.view != null) agInterieur.view = fieldSpec(cleanFields.view, ["vuee", "VUE", "vue"]);
-  await pushHektorGroupUpdate(results, job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur);
+  await pushHektorGroupUpdate(results, job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur, options);
 
   const agExterieur = {};
+  if (cleanFields.floor != null) {
+    const floorState = inferHektorFloorStateValue(cleanFields.floor);
+    if (floorState) agExterieur.floor_state = fieldSpec(floorState, ["floorState"]);
+    agExterieur.floor = fieldSpec(cleanFields.floor, ["ETAGE"]);
+  }
+  if (cleanFields.garden != null) agExterieur.garden = fieldSpec(cleanFields.garden, ["JARDIN", "JARDIN-"]);
   if (cleanFields.garden_surface != null) agExterieur.garden_surface = fieldSpec(cleanFields.garden_surface, ["SURFACE_JARDIN"]);
   if (cleanFields.terrace_count != null) agExterieur.terrace_count = fieldSpec(cleanFields.terrace_count, ["NB_TERRASSE", "TERRASSE"]);
   if (cleanFields.garage_count != null) agExterieur.garage_count = fieldSpec(cleanFields.garage_count, ["GARAGE_BOX"]);
   if (cleanFields.garage_surface != null) agExterieur.garage_surface = fieldSpec(cleanFields.garage_surface, ["SURFACE_GARAGE"]);
   if (cleanFields.parking_inside_count != null) agExterieur.parking_inside_count = fieldSpec(cleanFields.parking_inside_count, ["NB_PARK_INT"]);
   if (cleanFields.parking_outside_count != null) agExterieur.parking_outside_count = fieldSpec(cleanFields.parking_outside_count, ["NB_PARK_EXT"]);
-  if (cleanFields.pool != null) agExterieur.pool = fieldSpec(cleanFields.pool, ["PISCINE"]);
-  await pushHektorGroupUpdate(results, job, annonceId, "ag_exterieur", "ihmChargeGroupe", agExterieur);
+  if (cleanFields.pool != null) agExterieur.pool = fieldSpec(cleanFields.pool, ["PISCINE", "PISCINE-"]);
+  await pushHektorGroupUpdate(results, job, annonceId, "ag_exterieur", "ihmChargeGroupe", agExterieur, options);
 
   const terrain = {};
   if (cleanFields.land_surface != null) terrain.land_surface = fieldSpec(cleanFields.land_surface, ["surfterrain"]);
-  await pushHektorGroupUpdate(results, job, annonceId, "terrain", "ihmChargeGroupe", terrain);
+  await pushHektorGroupUpdate(results, job, annonceId, "terrain", "ihmChargeGroupe", terrain, options);
 
   const diagnostics = {};
   if (cleanFields.interior_state != null) diagnostics.interior_state = fieldSpec(cleanFields.interior_state, ["etat_interieur", "ETAT_INTERIEUR"]);
@@ -4643,43 +5231,67 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields) {
   if (cleanFields.ges_value != null) diagnostics.ges_value = fieldSpec(cleanFields.ges_value, ["dpe_ges", "GES", "ges", "classe_ges"]);
   if (cleanFields.construction_year != null) diagnostics.construction_year = fieldSpec(cleanFields.construction_year, ["ANNEE_CONS", "ANNEE_CONSTRUCTION", "annee_construction", "construction_year"]);
   if (cleanFields.diagnostic_risk_comment != null) diagnostics.diagnostic_risk_comment = fieldSpec(cleanFields.diagnostic_risk_comment, ["diag_risques_nat_tech_commentaire"]);
-  await pushHektorGroupUpdate(results, job, annonceId, "diagnostiques", "ihmChargeGroupe", diagnostics);
+  await pushHektorGroupUpdate(results, job, annonceId, "diagnostiques", "ihmChargeGroupe", diagnostics, options);
 
   const copropriete = {};
   if (cleanFields.copro_lots != null) copropriete.copro_lots = fieldSpec(cleanFields.copro_lots, ["copropriete_nb_lot"]);
   if (cleanFields.copro_quote_part != null) copropriete.copro_quote_part = fieldSpec(cleanFields.copro_quote_part, ["copropriete_quote_part"]);
   if (cleanFields.copro_works_fund != null) copropriete.copro_works_fund = fieldSpec(cleanFields.copro_works_fund, ["montant_fonds_travaux"]);
-  await pushHektorGroupUpdate(results, job, annonceId, "copropriete", "ihmChargeGroupe", copropriete);
+  await pushHektorGroupUpdate(results, job, annonceId, "copropriete", "ihmChargeGroupe", copropriete, options);
 
   const mandatInfo = {};
   if (cleanFields.price != null) mandatInfo.price = fieldSpec(cleanFields.price, ["prix"]);
   if (cleanFields.net_seller_price != null) mandatInfo.net_seller_price = fieldSpec(cleanFields.net_seller_price, ["PRIXNETVENDEUR"]);
   if (cleanFields.copro_charges != null) mandatInfo.copro_charges = fieldSpec(cleanFields.copro_charges, ["CHARGES"]);
   if (cleanFields.fees != null) mandatInfo.fees = fieldSpec(cleanFields.fees, ["HONORAIRES", "honoraires", "HONORAIRES_ACQUEREUR"]);
-  await pushHektorGroupUpdate(results, job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo);
+  await pushHektorGroupUpdate(results, job, annonceId, "mandat_infofi", "ihmChargeGroupe_MandatPrix", mandatInfo, options);
 
   return results;
 }
 
 async function applyCreatedAnnonceInitialFields(job, annonceId, payload, options = {}) {
-  const fields = normalizeHektorAnnonceUpdatePayload(payload, options);
-  if (!Object.keys(fields).length) {
+  const updateOptions = {
+    ...options,
+    skipInvalidNumbers: true,
+    continueOnGroupError: true,
+  };
+  const cleanFields = normalizeHektorAnnonceUpdatePayload(payload, updateOptions);
+  const exactUpdates = buildExactWizardGroupUpdates(payload, updateOptions);
+  const chauffage = hektorChauffageFromPayload(payload);
+  const chauffageFields = chauffage ? Object.keys(chauffage).filter((key) => chauffage[key]) : [];
+  if (!Object.keys(cleanFields).length && !exactUpdates.length && !chauffageFields.length) {
     return { status: "skipped", reason: "no_initial_fields" };
   }
+  const requestedFields = Array.from(new Set([
+    ...Object.keys(cleanFields),
+    ...exactUpdates.flatMap((update) => Object.keys(update.fields || {})),
+    ...chauffageFields,
+  ]));
 
   await logJob(job.id, "hektor_annonce_initial_fields", "running", "Application des champs saisis apres creation Hektor", {
     hektor_annonce_id: String(annonceId),
-    fields: Object.keys(fields),
+    fields: requestedFields,
   });
-  const results = await applyHektorAnnonceFieldUpdates(job, annonceId, fields);
-  if (!results.length) {
-    return { status: "skipped", reason: "no_supported_initial_fields", fields: Object.keys(fields) };
+  const results = await applyHektorAnnonceFieldUpdates(job, annonceId, payload, {
+    ...updateOptions,
+    skipComposition: true,
+  });
+  const successfulResults = results.filter((item) => item && item.status !== "error");
+  const errorResults = results.filter((item) => item && item.status === "error");
+  if (!successfulResults.length) {
+    if (errorResults.length) return { status: "error", fields: requestedFields, errors: errorResults };
+    return { status: "skipped", reason: "no_supported_initial_fields", fields: requestedFields };
   }
   await logJob(job.id, "hektor_annonce_initial_fields", "done", "Champs initiaux sauvegardes dans Hektor", {
     hektor_annonce_id: String(annonceId),
-    updated_groups: results.map((item) => item.group),
+    updated_groups: successfulResults.map((item) => item.group),
+    error_groups: errorResults.map((item) => item.group),
   });
-  return { status: "updated", updated_groups: results };
+  return {
+    status: errorResults.length ? "partial" : "updated",
+    updated_groups: successfulResults,
+    errors: errorResults,
+  };
 }
 
 async function handleUpdateHektorAnnonceFields(job) {
@@ -6798,6 +7410,7 @@ async function cleanupSupabaseAnnonceRows(appDossierId, hektorAnnonceId) {
     ["hektor_annonce_id", hektorAnnonceId],
   ];
   const tables = [
+    "app_contact_relation_current",
     "app_work_item_current",
     "app_dossier_detail_current",
     "app_mandat_broadcast_current",
