@@ -70,23 +70,31 @@ Les memes cles sont aussi injectees dans les details temporaires sur demande :
 
 ## Run quotidien
 
-`run_full_pipeline.ps1` lance maintenant une etape limitee avant le push Supabase :
+`run_full_pipeline.ps1` garde l'extraction console complete disponible, mais ne la lance plus par defaut dans le quotidien.
+
+L'objectif est de conserver ce travail comme outil de controle/rattrapage sans ralentir le run courant et sans multiplier les lectures console Hektor.
+
+Pour l'activer volontairement dans le pipeline, utiliser :
+
+`-RunConsoleMissingFields`
+
+Le script appele reste :
 
 `phase2/sync/sync_console_missing_fields.py`
 
-Par defaut :
+Quand l'etape est activee :
 
-- maximum 25 annonces ;
+- maximum 25 annonces par defaut ;
 - scope extraction console `all` : toutes les annonces locales de `phase2.app_view_generale` peuvent etre mises en cache console ;
 - cache rejoue si absent, en erreur, modifie cote API, ou plus vieux que 30 jours ;
 - verification des jobs console `pending/running` avant d'appeler Hektor ;
 - stop immediat si Hektor renvoie un vrai 403 ;
-- une erreur non-403 est stockee en cache et ne bloque pas le run quotidien ;
+- une erreur non-403 est stockee en cache et ne bloque pas le pipeline ;
 - les erreurs recentes ne sont pas rejouees avant expiration du cache, sauf `--force` ;
 - pas d'appel documents.
 - session Playwright par defaut : `Console/sessions/storage_state_admin.json`.
 
-Parametre pour desactiver l'etape :
+Parametre de securite conserve pour forcer la desactivation meme si `-RunConsoleMissingFields` est donne :
 
 `-SkipConsoleMissingFields`
 
