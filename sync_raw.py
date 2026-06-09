@@ -921,7 +921,14 @@ def sync_contact_listing_variant(
     return changed_ids, max_seen_date
 
 
-def sync_annonce_details(conn, run_id: int, client: HektorClient, settings: Settings, detail_ids: list[str]) -> None:
+def sync_annonce_details(
+    conn,
+    run_id: int,
+    client: HektorClient,
+    settings: Settings,
+    detail_ids: list[str],
+    delay_seconds: float = 0.1,
+) -> None:
     detail_cfg = DETAIL_CONFIG["annonces"]
     total_objects = len(detail_ids)
     update_sync_run_progress(
@@ -978,10 +985,17 @@ def sync_annonce_details(conn, run_id: int, client: HektorClient, settings: Sett
             progress_unit="objects",
         )
         conn.commit()
-        sleep_brief()
+        sleep_brief(delay_seconds)
 
 
-def sync_mandats_by_annonce(conn, run_id: int, client: HektorClient, settings: Settings, annonce_ids: list[str]) -> None:
+def sync_mandats_by_annonce(
+    conn,
+    run_id: int,
+    client: HektorClient,
+    settings: Settings,
+    annonce_ids: list[str],
+    delay_seconds: float = 0.1,
+) -> None:
     total_objects = len(annonce_ids)
     update_sync_run_progress(
         conn,
@@ -1034,7 +1048,7 @@ def sync_mandats_by_annonce(conn, run_id: int, client: HektorClient, settings: S
             progress_total=total_objects,
             progress_unit="objects",
         )
-        sleep_brief()
+        sleep_brief(delay_seconds)
 
 
 def configure_generic_resources(args: argparse.Namespace, bootstrap: bool) -> Dict[str, Dict[str, Any]]:
