@@ -22,7 +22,7 @@ param(
     [int]$HektorChauffageStaleDays = 30,
     [double]$HektorChauffageDelaySeconds = 0.5,
     [int]$HektorChauffageBatchSize = 50,
-    [int]$HektorChauffageBatchPauseSeconds = 30,
+    [int]$HektorChauffageBatchPauseSeconds = 0,
     [string]$HektorChauffageStorageState = "",
     [switch]$HektorChauffageForce,
     [switch]$HektorChauffageSkipJobCheck,
@@ -148,6 +148,14 @@ function Invoke-OptionalStepWithRetry {
 }
 
 Set-Location $projectRoot
+
+$hektorChauffageDailyMax = 50
+if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt $hektorChauffageDailyMax) {
+    throw "Safety stop: le run quotidien chauffage est limite a $hektorChauffageDailyMax annonces. Utiliser phase2\sync\sync_hektor_chauffages.py directement pour un rattrapage."
+}
+if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0 -and $HektorChauffageBatchSize -lt $HektorChauffageLimit) {
+    throw "Safety stop: le run quotidien chauffage doit rester sur un seul lot. HektorChauffageBatchSize doit etre superieur ou egal a HektorChauffageLimit."
+}
 
 Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"

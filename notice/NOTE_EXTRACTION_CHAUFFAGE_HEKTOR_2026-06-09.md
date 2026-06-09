@@ -59,9 +59,11 @@ Parametres par defaut :
 - limite : `50`
 - pause entre annonces dans un lot : `0.5` seconde
 - taille de lot : `50`
-- pause entre lots : `30` secondes
+- pause entre lots : `0` seconde, car le quotidien est volontairement limite a un seul lot
 - session : `Console/sessions/storage_state_admin.json`
 - rafraichissement session si expiree : active par defaut
+
+Le run quotidien refuse un `HektorChauffageLimit` superieur a `50` et refuse aussi une taille de lot inferieure a la limite, afin de garantir un seul lot maximum par run. Les volumes plus importants doivent passer par la commande de rattrapage.
 
 Pour desactiver l'etape :
 
