@@ -621,6 +621,48 @@ export async function sendGoogleWorkspaceCrmEmail(input: {
   })
 }
 
+export type GoogleWorkspaceContactEmailMessage = {
+  id: string
+  threadId?: string | null
+  labelIds?: string[]
+  snippet?: string | null
+  from?: string | null
+  to?: string | null
+  cc?: string | null
+  subject?: string | null
+  date?: string | null
+  dateHeader?: string | null
+  internalDate?: string | null
+  direction?: 'received' | 'sent' | 'unknown'
+  gmailUrl?: string | null
+}
+
+export async function loadGoogleWorkspaceContactEmailMessages(input: {
+  subjectEmail: string
+  contactEmail: string
+  maxResults?: number
+  hektorContactId?: string | null
+}) {
+  const params = new URLSearchParams()
+  params.set('subjectEmail', input.subjectEmail)
+  params.set('contactEmail', input.contactEmail)
+  params.set('maxResults', String(input.maxResults ?? 20))
+  if (input.hektorContactId?.trim()) params.set('hektorContactId', input.hektorContactId.trim())
+  const payload = await invokeBackendApi<{
+    ok: boolean
+    subjectEmail?: string
+    contactEmail?: string
+    messages?: GoogleWorkspaceContactEmailMessage[]
+    resultSizeEstimate?: number | null
+    statusCode?: number
+    error?: unknown
+  }>(`/google-workspace/gmail/contact-messages?${params.toString()}`, {
+    method: 'GET',
+  })
+  if (!payload.ok) throw new Error('Chargement emails Gmail impossible')
+  return payload.messages ?? []
+}
+
 export type DraftAnnonceSheetScanFieldKey =
   | 'title'
   | 'propertyType'

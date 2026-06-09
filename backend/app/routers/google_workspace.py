@@ -271,6 +271,35 @@ def send_google_gmail_message(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.get("/gmail/contact-messages")
+def list_google_gmail_contact_messages(
+    subjectEmail: EmailStr = Query(),
+    contactEmail: EmailStr = Query(),
+    maxResults: int = Query(default=20, ge=1, le=25),
+    hektorContactId: str | None = Query(default=None, max_length=80),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: GoogleWorkspaceService = Depends(get_google_workspace_service),
+):
+    user = get_authenticated_user(settings, authorization)
+    admin_service.assert_gmail_subject_allowed(user, str(subjectEmail))
+    try:
+        return service.list_gmail_contact_messages(
+            subject_email=str(subjectEmail),
+            contact_email=str(contactEmail),
+            max_results=maxResults,
+            requested_by=user.id,
+            requested_by_email=user.email,
+            related_entity_type="contact",
+            related_entity_id=hektorContactId,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.post("/calendar/event-test")
 def test_google_calendar_event(
     payload: GoogleCalendarEventTestPayload,

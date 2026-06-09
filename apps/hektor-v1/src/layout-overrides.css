@@ -9613,6 +9613,117 @@
   font-size: 12px !important;
 }
 
+.contact-email-tab-actions,
+.contact-email-thread-actions {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+}
+
+.contact-email-tab-actions .ghost-button,
+.contact-email-thread-actions .ghost-button {
+  min-height: 32px !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+
+.contact-email-thread-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.contact-email-thread-card {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 13px !important;
+  border: 1px solid #e2eaf3 !important;
+  border-left: 4px solid #8aa0b7 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+}
+
+.contact-email-thread-card.is-received {
+  border-left-color: #1f8a70 !important;
+}
+
+.contact-email-thread-card.is-sent {
+  border-left-color: #3267d6 !important;
+}
+
+.contact-email-thread-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+  align-items: start !important;
+}
+
+.contact-email-thread-head > div {
+  min-width: 0 !important;
+}
+
+.contact-email-thread-subject {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: var(--crm-ink) !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-email-thread-head strong {
+  display: block !important;
+  margin-top: 3px !important;
+  color: #667386 !important;
+  font-size: 12px !important;
+  font-weight: 720 !important;
+}
+
+.contact-email-direction-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 70px !important;
+  padding: 5px 8px !important;
+  border-radius: 999px !important;
+  background: #eef3f8 !important;
+  color: #405066 !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.contact-email-thread-meta {
+  display: flex !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.contact-email-thread-meta span {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  padding: 5px 8px !important;
+  border-radius: 999px !important;
+  background: #f5f7fa !important;
+  color: #5f6f82 !important;
+  font-size: 12px !important;
+  font-weight: 690 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.contact-email-thread-snippet {
+  margin: 0 !important;
+  color: #344458 !important;
+  font-size: 13px !important;
+  font-weight: 620 !important;
+  line-height: 1.45 !important;
+}
+
 .contact-modern-empty-card {
   display: grid !important;
   justify-items: center !important;
@@ -9783,6 +9894,15 @@
   .contact-modern-sync-grid,
   .contact-modern-rdv-card {
     grid-template-columns: 1fr !important;
+  }
+
+  .contact-email-thread-head {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-email-tab-actions,
+  .contact-email-thread-actions {
+    justify-content: flex-start !important;
   }
 
   .contact-modern-metric {

@@ -49,6 +49,7 @@ import {
   updateGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
   sendGoogleWorkspaceCrmEmail,
+  loadGoogleWorkspaceContactEmailMessages,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -97,6 +98,7 @@ import {
   type DraftAnnonceSheetScanPayload,
   type GoogleCalendarAvailability,
   type GoogleCalendarEventLink,
+  type GoogleWorkspaceContactEmailMessage,
   type GoogleWorkspaceEmailAttachmentInput,
   type HektorContactIdentityInput,
   type HektorCompositionPieceInput,
@@ -24201,8 +24203,12 @@ function ContactDetailPopup(props: {
   const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
   const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
   const [contactEmailComposerOpen, setContactEmailComposerOpen] = useState(false)
+  const [contactEmailMessages, setContactEmailMessages] = useState<GoogleWorkspaceContactEmailMessage[]>([])
+  const [contactEmailMessagesLoading, setContactEmailMessagesLoading] = useState(false)
+  const [contactEmailMessagesError, setContactEmailMessagesError] = useState<string | null>(null)
+  const [contactEmailMessagesLoaded, setContactEmailMessagesLoaded] = useState(false)
   const [contactActionsOpen, setContactActionsOpen] = useState(false)
-  const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'history' | 'notes' | 'sync'>('summary')
+  const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
@@ -24218,6 +24224,7 @@ function ContactDetailPopup(props: {
   const contactTabs = [
     { key: 'summary', label: 'Synthese' },
     { key: 'rdv', label: 'RDV' },
+    { key: 'emails', label: 'Emails' },
     { key: 'history', label: 'Historique' },
     { key: 'notes', label: 'Notes' },
     { key: 'sync', label: 'Synchronisation' },
@@ -24225,6 +24232,12 @@ function ContactDetailPopup(props: {
   const primaryRelation = props.relations[0] ?? null
   const nextGoogleEventLabel = nextGoogleContactEvent ? formatDateTime(nextGoogleContactEvent.starts_at) : null
   const contactEmail = (props.contact.email ?? '').trim()
+  const contactGmailSubjectEmail = resolveGoogleWorkspaceCalendarEmail({
+    emails: [props.contact.negociateur_email, props.sessionEmail],
+    commercialId: props.contact.hektor_negociateur_id,
+    label: props.contact.commercial_nom,
+    hektorNegotiators: props.hektorNegotiators,
+  })
   const contactPhone = (props.contact.phone_primary ?? '').trim()
 
   useEffect(() => {
@@ -24239,6 +24252,10 @@ function ContactDetailPopup(props: {
     setGoogleContactAgendaDeletingId(null)
     setGoogleContactAgendaPrintingId(null)
     setContactEmailComposerOpen(false)
+    setContactEmailMessages([])
+    setContactEmailMessagesError(null)
+    setContactEmailMessagesLoading(false)
+    setContactEmailMessagesLoaded(false)
     setContactActionsOpen(false)
     setContactDetailTab('summary')
   }, [props.contact.hektor_contact_id])
@@ -24259,6 +24276,37 @@ function ContactDetailPopup(props: {
       setGoogleContactEventsLoading(false)
     }
   }, [props.contact.hektor_contact_id])
+
+  const reloadContactEmailMessages = useCallback(async () => {
+    setContactEmailMessagesError(null)
+    if (!contactEmail) {
+      setContactEmailMessages([])
+      setContactEmailMessagesLoaded(true)
+      setContactEmailMessagesError('Email contact manquant.')
+      return
+    }
+    if (!isGoogleWorkspaceEmail(contactGmailSubjectEmail)) {
+      setContactEmailMessages([])
+      setContactEmailMessagesLoaded(true)
+      setContactEmailMessagesError('Compte Gmail Workspace requis pour lire les echanges.')
+      return
+    }
+    setContactEmailMessagesLoading(true)
+    try {
+      const rows = await loadGoogleWorkspaceContactEmailMessages({
+        subjectEmail: contactGmailSubjectEmail,
+        contactEmail,
+        maxResults: 20,
+        hektorContactId: props.contact.hektor_contact_id,
+      })
+      setContactEmailMessages(rows)
+    } catch (error) {
+      setContactEmailMessagesError(error instanceof Error ? error.message : 'Chargement emails Gmail impossible.')
+    } finally {
+      setContactEmailMessagesLoaded(true)
+      setContactEmailMessagesLoading(false)
+    }
+  }, [contactEmail, contactGmailSubjectEmail, props.contact.hektor_contact_id])
 
   useEffect(() => {
     let cancelled = false
@@ -24282,6 +24330,11 @@ function ContactDetailPopup(props: {
       cancelled = true
     }
   }, [props.contact.hektor_contact_id])
+
+  useEffect(() => {
+    if (contactDetailTab !== 'emails' || contactEmailMessagesLoaded || contactEmailMessagesLoading) return
+    void reloadContactEmailMessages()
+  }, [contactDetailTab, contactEmailMessagesLoaded, contactEmailMessagesLoading, reloadContactEmailMessages])
 
   function handleGoogleContactAgendaCreated() {
     void reloadGoogleContactEvents()
@@ -24416,6 +24469,51 @@ function ContactDetailPopup(props: {
               </article>
             )
           })}
+      </div>
+    )
+  }
+
+  const renderContactEmailMessages = () => {
+    if (contactEmailMessagesLoading && contactEmailMessages.length === 0) {
+      return <p className="contact-modern-empty">Chargement des emails Gmail...</p>
+    }
+    if (!contactEmail) {
+      return <p className="contact-modern-empty">Email contact manquant.</p>
+    }
+    if (contactEmailMessagesLoaded && contactEmailMessages.length === 0) {
+      return <p className="contact-modern-empty">Aucun email Gmail trouve pour ce contact.</p>
+    }
+    return (
+      <div className="contact-email-thread-list">
+        {contactEmailMessages.map((message) => {
+          const internalDateMillis = Number(message.internalDate)
+          const internalDateIso = Number.isFinite(internalDateMillis) && internalDateMillis > 0 ? new Date(internalDateMillis).toISOString() : null
+          const direction = message.direction ?? 'unknown'
+          const directionLabel = direction === 'received' ? 'Recu' : direction === 'sent' ? 'Envoye' : 'Email'
+          const displayDate = formatDateTime(message.date || internalDateIso)
+          return (
+            <article key={`contact-email-${message.id}`} className={`contact-email-thread-card is-${direction}`}>
+              <div className="contact-email-thread-head">
+                <div>
+                  <span className="contact-email-thread-subject">{message.subject || '(sans objet)'}</span>
+                  <strong>{displayDate}</strong>
+                </div>
+                <span className="contact-email-direction-pill">{directionLabel}</span>
+              </div>
+              <div className="contact-email-thread-meta">
+                {message.from ? <span>De : {message.from}</span> : null}
+                {message.to ? <span>A : {message.to}</span> : null}
+                {message.cc ? <span>Cc : {message.cc}</span> : null}
+              </div>
+              {message.snippet ? <p className="contact-email-thread-snippet">{message.snippet}</p> : null}
+              {message.gmailUrl ? (
+                <div className="contact-email-thread-actions">
+                  <a className="ghost-button button-subtle" href={message.gmailUrl} target="_blank" rel="noreferrer">Ouvrir Gmail</a>
+                </div>
+              ) : null}
+            </article>
+          )
+        })}
       </div>
     )
   }
@@ -24626,6 +24724,25 @@ function ContactDetailPopup(props: {
                     </div>
                     {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
                     {renderGoogleContactEvents()}
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'emails' ? (
+                  <div className="contact-modern-tab-panel">
+                    <div className="contact-modern-section-head">
+                      <div>
+                        <span>Gmail</span>
+                        <strong>{contactEmailMessagesLoading ? 'Chargement...' : `${contactEmailMessages.length} email(s) lie(s)`}</strong>
+                      </div>
+                      <div className="contact-email-tab-actions">
+                        {contactEmail ? <button className="ghost-button button-subtle" type="button" onClick={() => setContactEmailComposerOpen(true)}>Ecrire</button> : null}
+                        <button className="ghost-button button-primary" type="button" onClick={() => void reloadContactEmailMessages()} disabled={contactEmailMessagesLoading || !contactEmail}>
+                          {contactEmailMessagesLoading ? 'Actualisation...' : 'Actualiser'}
+                        </button>
+                      </div>
+                    </div>
+                    {contactEmailMessagesError ? <p className="form-error">{contactEmailMessagesError}</p> : null}
+                    {renderContactEmailMessages()}
                   </div>
                 ) : null}
 

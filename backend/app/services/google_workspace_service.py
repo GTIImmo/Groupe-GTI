@@ -6,7 +6,7 @@ import mimetypes
 import re
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-from email.utils import formataddr
+from email.utils import formataddr, parsedate_to_datetime
 from typing import Any
 from urllib.parse import unquote, urlparse
 from zoneinfo import ZoneInfo
@@ -51,7 +51,7 @@ GOOGLE_WORKSPACE_SCOPES: tuple[dict[str, str], ...] = (
         "key": "gmail_readonly",
         "scope": "https://www.googleapis.com/auth/gmail.readonly",
         "phase": "crm_email_ia",
-        "purpose": "Lire les emails pour affichage CRM et futurs agents IA, a activer plus tard.",
+        "purpose": "Lire les emails pour affichage CRM et futurs agents IA.",
     },
 )
 
@@ -59,11 +59,13 @@ INITIAL_GOOGLE_WORKSPACE_SCOPES = (
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/calendar.freebusy",
     "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/gmail.readonly",
 )
 
 CALENDAR_FREEBUSY_SCOPE = "https://www.googleapis.com/auth/calendar.freebusy"
 CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
+GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 DEFAULT_CALENDAR_TIMEZONE = "Europe/Paris"
 MAX_GMAIL_ATTACHMENT_COUNT = 10
 MAX_GMAIL_ATTACHMENT_BYTES = 18 * 1024 * 1024
@@ -515,6 +517,191 @@ class GoogleWorkspaceService:
         if not re.fullmatch(r"[a-z0-9.+-]+", maintype) or not re.fullmatch(r"[a-z0-9.+-]+", subtype):
             return "application/octet-stream"
         return f"{maintype}/{subtype}"
+
+    def list_gmail_contact_messages(
+        self,
+        *,
+        subject_email: str,
+        contact_email: str,
+        max_results: int = 20,
+        requested_by: str | None = None,
+        requested_by_email: str | None = None,
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
+    ) -> dict[str, Any]:
+        clean_subject = self._validate_workspace_email(subject_email)
+        clean_contact = self._validate_email(contact_email)
+        clean_max_results = max(1, min(int(max_results or 20), 25))
+        search_query = f"from:{clean_contact} OR to:{clean_contact} OR cc:{clean_contact}"
+        metadata = {
+            "query_kind": "contact_email",
+            "max_results": clean_max_results,
+        }
+
+        access_token = self._delegated_access_token(
+            subject_email=clean_subject,
+            scopes=[GMAIL_READONLY_SCOPE],
+        )
+        list_response = requests.get(
+            f"https://gmail.googleapis.com/gmail/v1/users/{clean_subject}/messages",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "q": search_query,
+                "maxResults": clean_max_results,
+                "includeSpamTrash": "false",
+            },
+            timeout=30,
+        )
+        try:
+            list_payload = list_response.json()
+        except ValueError:
+            list_payload = {"raw": list_response.text[:500]}
+        if list_response.status_code >= 400:
+            self._log_action(
+                action_type="gmail.metadata.search",
+                subject_email=clean_subject,
+                target_email=clean_contact,
+                requested_by=requested_by,
+                requested_by_email=requested_by_email,
+                related_entity_type=related_entity_type,
+                related_entity_id=related_entity_id,
+                status="error",
+                provider_status_code=list_response.status_code,
+                error_message=self._safe_error_message(list_payload),
+                metadata_json=metadata,
+            )
+            return {
+                "ok": False,
+                "statusCode": list_response.status_code,
+                "subjectEmail": clean_subject,
+                "contactEmail": clean_contact,
+                "error": list_payload,
+            }
+
+        message_refs = [item for item in list_payload.get("messages") or [] if isinstance(item, dict) and item.get("id")]
+        messages: list[dict[str, Any]] = []
+        for ref in message_refs[:clean_max_results]:
+            item = self._get_gmail_message_metadata(
+                subject_email=clean_subject,
+                access_token=access_token,
+                message_id=str(ref["id"]),
+                contact_email=clean_contact,
+            )
+            if item:
+                messages.append(item)
+        messages.sort(key=lambda item: int(item.get("internalDate") or 0), reverse=True)
+
+        self._log_action(
+            action_type="gmail.metadata.search",
+            subject_email=clean_subject,
+            target_email=clean_contact,
+            requested_by=requested_by,
+            requested_by_email=requested_by_email,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            status="done",
+            metadata_json={
+                **metadata,
+                "result_count": len(messages),
+            },
+        )
+        return {
+            "ok": True,
+            "subjectEmail": clean_subject,
+            "contactEmail": clean_contact,
+            "messages": messages,
+            "resultSizeEstimate": list_payload.get("resultSizeEstimate"),
+        }
+
+    def _get_gmail_message_metadata(
+        self,
+        *,
+        subject_email: str,
+        access_token: str,
+        message_id: str,
+        contact_email: str,
+    ) -> dict[str, Any] | None:
+        response = requests.get(
+            f"https://gmail.googleapis.com/gmail/v1/users/{subject_email}/messages/{message_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "format": "metadata",
+                "metadataHeaders": ["From", "To", "Cc", "Bcc", "Subject", "Date"],
+            },
+            timeout=30,
+        )
+        if response.status_code >= 400:
+            return None
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        headers = self._gmail_header_map(payload)
+        from_header = headers.get("from", "")
+        to_header = headers.get("to", "")
+        cc_header = headers.get("cc", "")
+        bcc_header = headers.get("bcc", "")
+        subject = headers.get("subject", "")
+        date_header = headers.get("date", "")
+        internal_date = str(payload.get("internalDate") or "")
+        direction = self._gmail_message_direction(
+            subject_email=subject_email,
+            contact_email=contact_email,
+            from_header=from_header,
+            to_header=f"{to_header} {cc_header} {bcc_header}",
+        )
+        return {
+            "id": payload.get("id"),
+            "threadId": payload.get("threadId"),
+            "labelIds": payload.get("labelIds") or [],
+            "snippet": payload.get("snippet") or "",
+            "from": from_header,
+            "to": to_header,
+            "cc": cc_header,
+            "subject": subject or "(sans objet)",
+            "date": self._gmail_header_date_iso(date_header, internal_date),
+            "dateHeader": date_header,
+            "internalDate": internal_date,
+            "direction": direction,
+            "gmailUrl": f"https://mail.google.com/mail/u/0/#all/{payload.get('threadId') or payload.get('id')}",
+        }
+
+    def _gmail_header_map(self, payload: dict[str, Any]) -> dict[str, str]:
+        payload_body = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+        headers = payload_body.get("headers") if isinstance(payload_body.get("headers"), list) else []
+        result: dict[str, str] = {}
+        for header in headers:
+            if not isinstance(header, dict):
+                continue
+            name = str(header.get("name") or "").strip().lower()
+            value = str(header.get("value") or "").strip()
+            if name and value and name not in result:
+                result[name] = value
+        return result
+
+    def _gmail_message_direction(self, *, subject_email: str, contact_email: str, from_header: str, to_header: str) -> str:
+        from_text = from_header.lower()
+        to_text = to_header.lower()
+        if contact_email in from_text:
+            return "received"
+        if subject_email in from_text or contact_email in to_text:
+            return "sent"
+        return "unknown"
+
+    def _gmail_header_date_iso(self, date_header: str, internal_date: str) -> str | None:
+        if date_header:
+            try:
+                parsed = parsedate_to_datetime(date_header)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                return parsed.astimezone(timezone.utc).isoformat()
+            except (TypeError, ValueError, IndexError, OverflowError):
+                pass
+        try:
+            millis = int(internal_date)
+            return datetime.fromtimestamp(millis / 1000, tz=timezone.utc).isoformat()
+        except (TypeError, ValueError, OSError, OverflowError):
+            return None
 
     def create_calendar_event(
         self,
