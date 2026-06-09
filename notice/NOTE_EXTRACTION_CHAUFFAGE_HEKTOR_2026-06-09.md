@@ -6,6 +6,8 @@ Recuperer rapidement les lignes chauffage absentes de l'API Hektor `AnnonceById`
 
 La source principale reste l'API Hektor. Ce correctif ajoute seulement une lecture console ciblee du groupe `equipements`.
 
+Important : cet extracteur ne remplace pas l'extracteur console global `phase2/sync/sync_console_missing_fields.py`. L'extracteur global reste disponible pour les autres champs manquants ou incomplets : secteur, diagnostiqueur/syndic, honoraires detailles, location/rendement, composition fine des pieces. Le nouvel extracteur chauffage est volontairement specialise pour le quotidien et les gros rattrapages chauffage.
+
 Endpoint lu par annonce :
 
 `/admin/xmlrpc.php?mode=ihmChargeGroupe&idAnnonce=<ID>&group=equipements&consultMode=editer&ajax=ajax`
@@ -90,6 +92,33 @@ Rattrapage prudent :
 ```
 
 Avec ces valeurs, le quotidien traite 50 annonces courantes en environ 1 minute selon le temps de reponse Hektor. Le rattrapage reste volontairement plus large : 500 annonces par vague, avec des lots de 100 et des pauses de 60 secondes.
+
+## Rattrapage 50 000 annonces
+
+Pour un parc tres large, ne pas utiliser `run_full_pipeline.ps1` : le quotidien est volontairement limite a 50 annonces et un seul lot.
+
+Commande de rattrapage recommandee par vagues de 2 000 annonces, sans `--force` pour profiter du cache et reprendre naturellement :
+
+```powershell
+for ($i = 1; $i -le 25; $i++) {
+  Write-Host "Rattrapage chauffage vague $i/25"
+  .\.venv\Scripts\python.exe phase2\sync\sync_hektor_chauffages.py --scope all --limit 2000 --delay-seconds 0.5 --batch-size 100 --batch-pause-seconds 60 --refresh-session-on-expired
+  if ($LASTEXITCODE -ne 0) { throw "Rattrapage chauffage stoppe a la vague $i avec le code $LASTEXITCODE" }
+  Start-Sleep -Seconds 300
+}
+```
+
+Regles de cette commande :
+
+- 2 000 annonces maximum par vague ;
+- 100 annonces par lot ;
+- 0,5 seconde entre deux annonces ;
+- 60 secondes de pause entre deux lots ;
+- 300 secondes de pause entre deux vagues ;
+- arret immediat si le script rencontre un vrai 403 Hektor ;
+- pas de `--force`, donc les annonces deja en cache `done` ne sont pas relues sauf changement de source API ou cache stale.
+
+Estimation indicative : environ 24 heures pour 50 000 annonces, selon les temps de reponse Hektor et les pauses effectives.
 
 Push Supabase apres extraction :
 

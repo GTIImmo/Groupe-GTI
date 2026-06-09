@@ -15,6 +15,8 @@ La console Hektor est utilisee uniquement pour les champs confirmes absents ou i
 
 Les vignettes DPE/GES ne sont plus considerees comme un champ manquant console : elles sont maintenant reconstruites depuis les donnees diagnostics renvoyees par l'API Hektor `AnnonceById` dans `phase2/sync/export_app_payload.py`. La lecture console peut encore servir de controle/fallback, mais la source normale du payload app est l'API.
 
+Pour le chauffage detaille, un extracteur plus leger existe maintenant : `phase2/sync/sync_hektor_chauffages.py`. Il lit uniquement le groupe Hektor `equipements` et alimente `chauffage_console_json`. Il doit etre privilegie pour le quotidien et les gros rattrapages chauffage. Le present extracteur console global reste reserve aux controles complets et aux autres champs manquants.
+
 Les endpoints documents ne sont pas appeles.
 
 ## Stockage local
