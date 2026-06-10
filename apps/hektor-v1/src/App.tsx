@@ -16967,14 +16967,24 @@ function DossierDetailLayout(props: {
                 const reportAppointments = parseAppointmentRequests(props.detail)
                 const ownerContact = props.contacts.find((contact) => /mandant|propri|owner|vendeur/i.test(contact.role || '')) ?? props.contacts[0] ?? null
                 const ownerEmail = ownerContact?.email || ''
+                const ownerDirId = ownerContact ? detailContactDirectoryId(ownerContact) : null
                 const reportSubject = `Compte-rendu d'activite - ${dossier.titre_bien || dossier.numero_dossier || 'votre bien'}`
+                const reportDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
                 return (
                 <section className="detail-section detail-reporting-section">
+                  <div className="detail-reporting-print-head" aria-hidden="true">
+                    <strong>GTI Immobilier</strong>
+                    <span>Compte-rendu d&apos;activité · {dossier.titre_bien || dossier.numero_dossier} · {reportDate}</span>
+                  </div>
                   <div className="section-header">
                     <DetailSectionTitle icon="commercial" title="Reporting propriétaire" />
                     <div className="detail-reporting-actions">
                       <button className="ds-btn-ink" type="button" onClick={() => window.print()}>Aperçu / PDF</button>
-                      <a className={`ds-btn-cta ${ownerEmail ? '' : 'is-disabled'}`} href={ownerEmail ? `mailto:${ownerEmail}?subject=${encodeURIComponent(reportSubject)}` : undefined}>Envoyer au propriétaire</a>
+                      {ownerDirId && props.onOpenContact ? (
+                        <button className="ds-btn-cta" type="button" onClick={() => props.onOpenContact?.(ownerDirId)}>Envoyer au propriétaire</button>
+                      ) : (
+                        <a className={`ds-btn-cta ${ownerEmail ? '' : 'is-disabled'}`} href={ownerEmail ? `mailto:${ownerEmail}?subject=${encodeURIComponent(reportSubject)}` : undefined}>Envoyer au propriétaire</a>
+                      )}
                     </div>
                   </div>
                   <div className="detail-reporting-kpis info-grid">

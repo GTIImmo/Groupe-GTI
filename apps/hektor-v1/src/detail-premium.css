@@ -76,17 +76,56 @@
   transition: color var(--ds-transition-fast), background var(--ds-transition-fast);
 }
 
-/* --- (3) En-tête allégé : slate raffiné + voile magenta (texte blanc conservé,
-   donc aucune perte de lisibilité). Allège le « presque-noir » jugé trop lourd. --- */
+/* --- (2) En-tête CLAIR : re-thème complet (fond clair + textes/boutons/pills foncés).
+   Couverture exhaustive des textes pour éviter tout blanc-sur-blanc. --- */
 .detail-screen .detail-overview {
   background:
-    radial-gradient(120% 150% at 100% 0%, rgba(197, 0, 95, 0.20), transparent 44%),
-    linear-gradient(135deg, #2e3439 0%, #3b4248 55%, #485058 100%) !important;
+    radial-gradient(120% 150% at 100% 0%, rgba(197, 0, 95, 0.07), transparent 46%),
+    linear-gradient(135deg, #ffffff 0%, var(--ds-neutral-25) 60%, var(--ds-neutral-50) 100%) !important;
   box-shadow: var(--ds-shadow-md) !important;
-  border: 1px solid rgba(34, 35, 35, 0.10) !important;
+  border: 1px solid var(--ds-border) !important;
+  color: var(--ds-ink) !important;
 }
+/* Textes principaux en foncé */
+.detail-screen .detail-overview h2,
+.detail-screen .detail-overview .detail-keyfact-main strong,
+.detail-screen .detail-overview .detail-owner-copy strong { color: var(--ds-ink) !important; }
+/* Textes secondaires en gris */
+.detail-screen .detail-overview .detail-summary-address,
+.detail-screen .detail-overview .detail-keyfact-item span,
+.detail-screen .detail-overview .detail-keyfact-item strong,
+.detail-screen .detail-overview .detail-keyfact-main span,
+.detail-screen .detail-overview .detail-owner-copy span,
+.detail-screen .detail-overview .detail-owner-copy small,
+.detail-screen .detail-overview .ds-cmdbar-label { color: var(--ds-text-muted) !important; }
+/* Sur-titre « Détail annonce » en magenta */
+.detail-screen .detail-overview .detail-property-title > span { color: var(--ds-brand-700) !important; }
+/* Carte responsable claire */
+.detail-screen .detail-overview .detail-owner-card {
+  background: var(--ds-surface-2) !important;
+  border-color: var(--ds-border) !important;
+}
+/* Boutons de gestion en version claire */
+.detail-screen .detail-overview .ds-btn-soft { background: var(--ds-brand-50) !important; color: var(--ds-brand-700) !important; border-color: var(--ds-brand-100) !important; }
+.detail-screen .detail-overview .ds-btn-outline,
+.detail-screen .detail-overview .ds-btn-icon { background: var(--ds-surface) !important; color: var(--ds-ink-soft) !important; border-color: var(--ds-border-strong) !important; }
+.detail-screen .detail-overview .detail-overview-close { color: var(--ds-ink-soft) !important; }
+/* Pills d'état : couleurs claires lisibles sur fond clair */
+.detail-screen .detail-overview .status-pill { background: var(--ds-surface-2) !important; border-color: var(--ds-border) !important; color: var(--ds-text) !important; }
+.detail-screen .detail-overview .status-pill.status-pill-state-active { background: var(--ds-success-soft) !important; border-color: rgba(31,138,91,.3) !important; color: var(--ds-success) !important; }
+.detail-screen .detail-overview .status-pill.status-pill-state-offer { background: var(--ds-info-soft) !important; border-color: rgba(47,111,138,.3) !important; color: var(--ds-info) !important; }
+.detail-screen .detail-overview .status-pill.status-pill-state-compromis { background: #efe7ff !important; border-color: rgba(102,67,167,.3) !important; color: #6643a7 !important; }
+.detail-screen .detail-overview .status-pill.status-pill-state-sold { background: var(--ds-warning-soft) !important; border-color: rgba(180,83,9,.3) !important; color: var(--ds-warning) !important; }
+.detail-screen .detail-overview .status-pill.status-pill-state-closed,
+.detail-screen .detail-overview .status-pill.status-pill-state-archived,
+.detail-screen .detail-overview .status-pill.status-pill-state-history { background: var(--ds-neutral-100) !important; border-color: var(--ds-border) !important; color: var(--ds-text-muted) !important; }
+/* Rangée d'actions : séparateur foncé sur fond clair */
+.detail-overview .detail-actions-strip.detail-action-console-list { border-top-color: var(--ds-border) !important; }
 
-/* --- (2) Impression : « Aperçu / PDF » du reporting → page propre --- */
+/* --- (2) Reporting : bandeau de marque GTI (visible seulement à l'impression) --- */
+.detail-reporting-print-head { display: none; }
+
+/* --- (2) Impression : « Aperçu / PDF » du reporting → page propre + en-tête GTI --- */
 @media print {
   body * { visibility: hidden !important; }
   .detail-reporting-section, .detail-reporting-section * { visibility: visible !important; }
@@ -95,6 +134,23 @@
     left: 0; top: 0; width: 100%;
     box-shadow: none !important;
     border: 0 !important;
+    padding: 0 !important;
   }
   .detail-reporting-actions { display: none !important; }
+  .detail-reporting-print-head {
+    display: block !important;
+    border-bottom: 2px solid var(--ds-brand);
+    padding-bottom: 10px;
+    margin-bottom: 18px;
+  }
+  .detail-reporting-print-head strong {
+    display: block;
+    font-size: 18px;
+    color: var(--ds-brand);
+    letter-spacing: 0.02em;
+  }
+  .detail-reporting-print-head span {
+    font-size: 12px;
+    color: var(--ds-ink-soft);
+  }
 }
