@@ -286,6 +286,8 @@ def run_login_refresh(node_exe: str, storage_state: Path, timeout_seconds: int) 
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout_seconds,
     )
     if completed.returncode != 0:
@@ -331,6 +333,50 @@ def run_node_batch(
         error = payload.get("error") or completed.stderr or completed.stdout or "Extraction chauffage en erreur"
         raise RuntimeError(str(error).strip())
     return payload
+
+
+def run_node_batch_with_recovery(
+    *,
+    args: argparse.Namespace,
+    ids: list[str],
+    storage_state: Path,
+) -> dict[str, Any]:
+    """Lance un lot node en recuperant UNE fois d'une session expiree.
+
+    Hektor signale une session admin expiree de deux facons :
+    - une page de login en HTTP 200 -> RuntimeError("Session Hektor expiree") ;
+    - un HTTP 403 nu sur l'endpoint ajax -> PermissionError (stopped_on_403).
+
+    Si --refresh-session-on-expired est actif, on rafraichit la session et on
+    rejoue le lot UNE seule fois pour l'un ou l'autre des signaux. Un second 403
+    est traite comme un vrai blocage Hektor et propage, donc l'arret dur de
+    securite s'applique toujours.
+    """
+    refreshed = False
+    while True:
+        try:
+            return run_node_batch(
+                node_exe=args.node_exe,
+                script=args.node_script,
+                annonce_ids=ids,
+                storage_state=storage_state,
+                timeout_seconds=args.timeout_seconds,
+                delay_seconds=args.delay_seconds,
+            )
+        except RuntimeError as exc:
+            if args.refresh_session_on_expired and not refreshed and "Session Hektor expiree" in str(exc):
+                print("[recovery] session expiree (page login) -> refresh + retry une fois", file=sys.stderr)
+                run_login_refresh(args.node_exe, storage_state, args.timeout_seconds)
+                refreshed = True
+                continue
+            raise
+        except PermissionError:
+            if args.refresh_session_on_expired and not refreshed:
+                print("[recovery] 403 Hektor -> tentative refresh session + retry une fois", file=sys.stderr)
+                run_login_refresh(args.node_exe, storage_state, args.timeout_seconds)
+                refreshed = True
+                continue
+            raise
 
 
 def store_result(con: sqlite3.Connection, row: dict[str, Any], result: dict[str, Any], storage_state: Path) -> None:
@@ -463,28 +509,11 @@ def main() -> None:
         for batch_index, batch in enumerate(batches, start=1):
             ids = [row["hektor_annonce_id"] for row in batch]
             try:
-                try:
-                    payload = run_node_batch(
-                        node_exe=args.node_exe,
-                        script=args.node_script,
-                        annonce_ids=ids,
-                        storage_state=storage_state,
-                        timeout_seconds=args.timeout_seconds,
-                        delay_seconds=args.delay_seconds,
-                    )
-                except RuntimeError as exc:
-                    if args.refresh_session_on_expired and "Session Hektor expiree" in str(exc):
-                        run_login_refresh(args.node_exe, storage_state, args.timeout_seconds)
-                        payload = run_node_batch(
-                            node_exe=args.node_exe,
-                            script=args.node_script,
-                            annonce_ids=ids,
-                            storage_state=storage_state,
-                            timeout_seconds=args.timeout_seconds,
-                            delay_seconds=args.delay_seconds,
-                        )
-                    else:
-                        raise
+                payload = run_node_batch_with_recovery(
+                    args=args,
+                    ids=ids,
+                    storage_state=storage_state,
+                )
                 for result in payload.get("results") or []:
                     annonce_id = normalize_id(result.get("hektor_annonce_id"))
                     row = by_id.get(annonce_id)
