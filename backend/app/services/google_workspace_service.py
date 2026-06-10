@@ -666,6 +666,150 @@ class GoogleWorkspaceService:
             "gmailUrl": f"https://mail.google.com/mail/u/0/#all/{payload.get('threadId') or payload.get('id')}",
         }
 
+    def get_gmail_message_full(
+        self,
+        *,
+        subject_email: str,
+        message_id: str,
+        contact_email: str | None = None,
+        requested_by: str | None = None,
+        requested_by_email: str | None = None,
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
+    ) -> dict[str, Any]:
+        clean_subject = self._validate_workspace_email(subject_email)
+        clean_message_id = (message_id or "").strip()
+        if not clean_message_id:
+            raise ValueError("Identifiant du message requis")
+        clean_contact = self._validate_email(contact_email) if contact_email else ""
+        metadata = {"query_kind": "message_body", "message_id": clean_message_id}
+
+        access_token = self._delegated_access_token(
+            subject_email=clean_subject,
+            scopes=[GMAIL_READONLY_SCOPE],
+        )
+        response = requests.get(
+            f"https://gmail.googleapis.com/gmail/v1/users/{clean_subject}/messages/{clean_message_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"format": "full"},
+            timeout=30,
+        )
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"raw": response.text[:500]}
+        if response.status_code >= 400:
+            self._log_action(
+                action_type="gmail.readonly.read_body",
+                subject_email=clean_subject,
+                target_email=clean_contact or None,
+                requested_by=requested_by,
+                requested_by_email=requested_by_email,
+                related_entity_type=related_entity_type,
+                related_entity_id=related_entity_id,
+                status="error",
+                provider_status_code=response.status_code,
+                error_message=self._safe_error_message(payload),
+                metadata_json=metadata,
+            )
+            return {
+                "ok": False,
+                "statusCode": response.status_code,
+                "subjectEmail": clean_subject,
+                "messageId": clean_message_id,
+                "error": payload,
+            }
+
+        headers = self._gmail_header_map(payload)
+        from_header = headers.get("from", "")
+        to_header = headers.get("to", "")
+        cc_header = headers.get("cc", "")
+        subject = headers.get("subject", "") or "(sans objet)"
+        date_header = headers.get("date", "")
+        internal_date = str(payload.get("internalDate") or "")
+        html_body, text_body, attachments = self._extract_gmail_body(payload.get("payload") or {})
+        direction = (
+            self._gmail_message_direction(
+                subject_email=clean_subject,
+                contact_email=clean_contact,
+                from_header=from_header,
+                to_header=f"{to_header} {cc_header}",
+            )
+            if clean_contact
+            else "unknown"
+        )
+
+        self._log_action(
+            action_type="gmail.readonly.read_body",
+            subject_email=clean_subject,
+            target_email=clean_contact or None,
+            requested_by=requested_by,
+            requested_by_email=requested_by_email,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            status="done",
+            metadata_json={
+                **metadata,
+                "has_html": bool(html_body),
+                "attachment_count": len(attachments),
+            },
+        )
+        return {
+            "ok": True,
+            "subjectEmail": clean_subject,
+            "messageId": clean_message_id,
+            "threadId": payload.get("threadId"),
+            "subject": subject,
+            "from": from_header,
+            "to": to_header,
+            "cc": cc_header,
+            "date": self._gmail_header_date_iso(date_header, internal_date),
+            "direction": direction,
+            "html": html_body,
+            "text": text_body,
+            "attachments": attachments,
+        }
+
+    def _extract_gmail_body(self, payload: dict[str, Any]) -> tuple[str, str, list[dict[str, Any]]]:
+        html_parts: list[str] = []
+        text_parts: list[str] = []
+        attachments: list[dict[str, Any]] = []
+
+        def walk(part: dict[str, Any]) -> None:
+            if not isinstance(part, dict):
+                return
+            mime = str(part.get("mimeType") or "").lower()
+            filename = str(part.get("filename") or "").strip()
+            body = part.get("body") if isinstance(part.get("body"), dict) else {}
+            child_parts = part.get("parts") if isinstance(part.get("parts"), list) else []
+            if filename and (body.get("attachmentId") or body.get("size")):
+                attachments.append(
+                    {
+                        "filename": filename,
+                        "mimeType": part.get("mimeType"),
+                        "attachmentId": body.get("attachmentId"),
+                        "size": body.get("size"),
+                    }
+                )
+            elif mime == "text/html" and body.get("data"):
+                html_parts.append(self._decode_base64url(body.get("data")))
+            elif mime == "text/plain" and body.get("data"):
+                text_parts.append(self._decode_base64url(body.get("data")))
+            for child in child_parts:
+                walk(child)
+
+        walk(payload)
+        return ("".join(html_parts), "".join(text_parts), attachments)
+
+    def _decode_base64url(self, data: str | None) -> str:
+        if not data:
+            return ""
+        try:
+            padded = data + "=" * (-len(data) % 4)
+            return base64.urlsafe_b64decode(padded).decode("utf-8", errors="replace")
+        except (ValueError, TypeError):
+            return ""
+
     def _gmail_header_map(self, payload: dict[str, Any]) -> dict[str, str]:
         payload_body = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
         headers = payload_body.get("headers") if isinstance(payload_body.get("headers"), list) else []

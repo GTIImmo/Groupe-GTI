@@ -9745,6 +9745,62 @@
   line-height: 1.45 !important;
 }
 
+.contact-email-thread-body {
+  margin-top: 10px !important;
+  padding-top: 10px !important;
+  border-top: 1px solid #e3e8ef !important;
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.contact-email-html {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #1f2a37 !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
+}
+
+.contact-email-html img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.contact-email-text {
+  margin: 0 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #1f2a37 !important;
+}
+
+.contact-email-thread-error {
+  margin: 0 !important;
+  color: #b42318 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.contact-email-attachments {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.contact-email-attachment-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  background: #eef2f7 !important;
+  color: #344458 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
 .contact-modern-empty-card {
   display: grid !important;
   justify-items: center !important;

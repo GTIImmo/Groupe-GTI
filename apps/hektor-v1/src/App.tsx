@@ -50,6 +50,7 @@ import {
   deleteGoogleCalendarEvent,
   sendGoogleWorkspaceCrmEmail,
   loadGoogleWorkspaceContactEmailMessages,
+  loadGoogleWorkspaceContactEmailBody,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -99,6 +100,8 @@ import {
   type GoogleCalendarAvailability,
   type GoogleCalendarEventLink,
   type GoogleWorkspaceContactEmailMessage,
+  type GoogleWorkspaceEmailBody,
+  type GoogleWorkspaceEmailAttachment,
   type GoogleWorkspaceEmailAttachmentInput,
   type HektorContactIdentityInput,
   type HektorCompositionPieceInput,
@@ -107,6 +110,7 @@ import {
 } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import DOMPurify from 'dompurify'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
@@ -18164,6 +18168,154 @@ function googleAgendaCalendarOptionLabel(option: HektorNegotiatorOption) {
   return option.label || option.email || option.commercialId || 'Negociateur'
 }
 
+function sanitizeEmailHtml(html: string, allowRemoteImages: boolean): { clean: string; hadRemoteImages: boolean } {
+  let hadRemoteImages = false
+  const purified = DOMPurify.sanitize(html, {
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'link', 'meta', 'base'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'srcset'],
+    ALLOW_DATA_ATTR: false,
+  })
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return { clean: purified, hadRemoteImages }
+  }
+  const doc = new DOMParser().parseFromString(purified, 'text/html')
+  doc.querySelectorAll('img').forEach((img) => {
+    const src = img.getAttribute('src') || ''
+    if (/^https?:/i.test(src)) {
+      hadRemoteImages = true
+      if (!allowRemoteImages) {
+        img.removeAttribute('src')
+        img.setAttribute('data-blocked-src', src)
+        img.setAttribute('alt', 'image distante bloquee')
+      }
+    }
+  })
+  doc.querySelectorAll('a').forEach((a) => {
+    a.setAttribute('target', '_blank')
+    a.setAttribute('rel', 'noreferrer noopener')
+  })
+  return { clean: doc.body.innerHTML, hadRemoteImages }
+}
+
+function formatAttachmentSize(size?: number | null) {
+  if (!size || size <= 0) return ''
+  if (size < 1024) return ` (${size} o)`
+  if (size < 1024 * 1024) return ` (${Math.round(size / 1024)} Ko)`
+  return ` (${(size / (1024 * 1024)).toFixed(1)} Mo)`
+}
+
+function ContactEmailThreadCard(props: {
+  message: GoogleWorkspaceContactEmailMessage
+  subjectEmail: string
+  contactEmail: string
+  hektorContactId?: string | null
+}) {
+  const { message } = props
+  const [expanded, setExpanded] = useState(false)
+  const [body, setBody] = useState<GoogleWorkspaceEmailBody | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showImages, setShowImages] = useState(false)
+
+  const internalDateMillis = Number(message.internalDate)
+  const internalDateIso =
+    Number.isFinite(internalDateMillis) && internalDateMillis > 0 ? new Date(internalDateMillis).toISOString() : null
+  const direction = message.direction ?? 'unknown'
+  const directionLabel = direction === 'received' ? 'Recu' : direction === 'sent' ? 'Envoye' : 'Email'
+  const displayDate = formatDateTime(message.date || internalDateIso)
+
+  const loadBody = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await loadGoogleWorkspaceContactEmailBody({
+        subjectEmail: props.subjectEmail,
+        messageId: message.id,
+        contactEmail: props.contactEmail,
+        hektorContactId: props.hektorContactId,
+      })
+      setBody(result)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Chargement du contenu impossible.')
+    } finally {
+      setLoading(false)
+    }
+  }, [message.id, props.subjectEmail, props.contactEmail, props.hektorContactId])
+
+  const handleToggle = () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && !body && !loading) void loadBody()
+  }
+
+  const sanitized = useMemo(() => {
+    if (!body?.html) return null
+    return sanitizeEmailHtml(body.html, showImages)
+  }, [body?.html, showImages])
+
+  const attachments: GoogleWorkspaceEmailAttachment[] = body?.attachments ?? []
+
+  return (
+    <article className={`contact-email-thread-card is-${direction}`}>
+      <div className="contact-email-thread-head">
+        <div>
+          <span className="contact-email-thread-subject">{message.subject || '(sans objet)'}</span>
+          <strong>{displayDate}</strong>
+        </div>
+        <span className="contact-email-direction-pill">{directionLabel}</span>
+      </div>
+      <div className="contact-email-thread-meta">
+        {message.from ? <span>De : {message.from}</span> : null}
+        {message.to ? <span>A : {message.to}</span> : null}
+        {message.cc ? <span>Cc : {message.cc}</span> : null}
+      </div>
+      {!expanded && message.snippet ? <p className="contact-email-thread-snippet">{message.snippet}</p> : null}
+
+      {expanded ? (
+        <div className="contact-email-thread-body">
+          {loading ? <p className="contact-modern-empty">Chargement du message...</p> : null}
+          {error ? <p className="contact-email-thread-error">{error}</p> : null}
+          {!loading && !error && body ? (
+            <>
+              {sanitized && sanitized.hadRemoteImages && !showImages ? (
+                <button type="button" className="ghost-button button-subtle" onClick={() => setShowImages(true)}>
+                  Afficher les images
+                </button>
+              ) : null}
+              {sanitized ? (
+                <div className="contact-email-html" dangerouslySetInnerHTML={{ __html: sanitized.clean }} />
+              ) : (
+                <pre className="contact-email-text">{body.text || message.snippet || '(message vide)'}</pre>
+              )}
+              {attachments.length > 0 ? (
+                <div className="contact-email-attachments">
+                  {attachments.map((att, index) => (
+                    <span key={`att-${index}`} className="contact-email-attachment-pill">
+                      📎 {att.filename || 'piece-jointe'}
+                      {formatAttachmentSize(att.size)}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="contact-email-thread-actions">
+        <button type="button" className="ghost-button button-subtle" onClick={handleToggle}>
+          {expanded ? 'Reduire' : 'Voir le message'}
+        </button>
+        {message.gmailUrl ? (
+          <a className="ghost-button button-subtle" href={message.gmailUrl} target="_blank" rel="noreferrer">
+            Ouvrir Gmail
+          </a>
+        ) : null}
+      </div>
+    </article>
+  )
+}
+
 function resolveGoogleWorkspaceCalendarEmail(input: {
   emails?: Array<string | null | undefined>
   commercialId?: string | number | null
@@ -24510,35 +24662,15 @@ function ContactDetailPopup(props: {
     }
     return (
       <div className="contact-email-thread-list">
-        {contactEmailMessages.map((message) => {
-          const internalDateMillis = Number(message.internalDate)
-          const internalDateIso = Number.isFinite(internalDateMillis) && internalDateMillis > 0 ? new Date(internalDateMillis).toISOString() : null
-          const direction = message.direction ?? 'unknown'
-          const directionLabel = direction === 'received' ? 'Recu' : direction === 'sent' ? 'Envoye' : 'Email'
-          const displayDate = formatDateTime(message.date || internalDateIso)
-          return (
-            <article key={`contact-email-${message.id}`} className={`contact-email-thread-card is-${direction}`}>
-              <div className="contact-email-thread-head">
-                <div>
-                  <span className="contact-email-thread-subject">{message.subject || '(sans objet)'}</span>
-                  <strong>{displayDate}</strong>
-                </div>
-                <span className="contact-email-direction-pill">{directionLabel}</span>
-              </div>
-              <div className="contact-email-thread-meta">
-                {message.from ? <span>De : {message.from}</span> : null}
-                {message.to ? <span>A : {message.to}</span> : null}
-                {message.cc ? <span>Cc : {message.cc}</span> : null}
-              </div>
-              {message.snippet ? <p className="contact-email-thread-snippet">{message.snippet}</p> : null}
-              {message.gmailUrl ? (
-                <div className="contact-email-thread-actions">
-                  <a className="ghost-button button-subtle" href={message.gmailUrl} target="_blank" rel="noreferrer">Ouvrir Gmail</a>
-                </div>
-              ) : null}
-            </article>
-          )
-        })}
+        {contactEmailMessages.map((message) => (
+          <ContactEmailThreadCard
+            key={`contact-email-${message.id}`}
+            message={message}
+            subjectEmail={contactGmailSubjectEmail}
+            contactEmail={contactEmail}
+            hektorContactId={props.contact.hektor_contact_id}
+          />
+        ))}
       </div>
     )
   }

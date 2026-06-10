@@ -663,6 +663,46 @@ export async function loadGoogleWorkspaceContactEmailMessages(input: {
   return payload.messages ?? []
 }
 
+export type GoogleWorkspaceEmailAttachment = {
+  filename?: string | null
+  mimeType?: string | null
+  attachmentId?: string | null
+  size?: number | null
+}
+
+export type GoogleWorkspaceEmailBody = {
+  ok: boolean
+  messageId?: string
+  subject?: string | null
+  from?: string | null
+  to?: string | null
+  cc?: string | null
+  date?: string | null
+  direction?: 'received' | 'sent' | 'unknown'
+  html?: string | null
+  text?: string | null
+  attachments?: GoogleWorkspaceEmailAttachment[]
+}
+
+export async function loadGoogleWorkspaceContactEmailBody(input: {
+  subjectEmail: string
+  messageId: string
+  contactEmail?: string | null
+  hektorContactId?: string | null
+}) {
+  const params = new URLSearchParams()
+  params.set('subjectEmail', input.subjectEmail)
+  params.set('messageId', input.messageId)
+  if (input.contactEmail?.trim()) params.set('contactEmail', input.contactEmail.trim())
+  if (input.hektorContactId?.trim()) params.set('hektorContactId', input.hektorContactId.trim())
+  const payload = await invokeBackendApi<GoogleWorkspaceEmailBody>(
+    `/google-workspace/gmail/message?${params.toString()}`,
+    { method: 'GET' },
+  )
+  if (!payload.ok) throw new Error('Chargement du contenu Gmail impossible')
+  return payload
+}
+
 export type DraftAnnonceSheetScanFieldKey =
   | 'title'
   | 'propertyType'
