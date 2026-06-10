@@ -1,0 +1,100 @@
+/* =============================================================================
+   GTI · Couche premium — contenu interne de la fiche annonce
+   Importée EN DERNIER (après styles/layout/mobile) pour gagner la cascade.
+   N'altère AUCUNE logique ni structure : uniquement surface, espacement,
+   rayons, ombres, typographie — via les tokens du système de design.
+   Scopé à .detail-screen pour ne toucher que la fiche.
+   ============================================================================= */
+
+/* --- Sections & cartes : surface premium homogène --- */
+.detail-screen .detail-section {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--ds-radius-lg) !important;
+  background: var(--ds-surface) !important;
+  box-shadow: var(--ds-shadow-sm) !important;
+  padding: var(--ds-space-5) !important;
+}
+.detail-screen .detail-card {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--ds-radius-md) !important;
+  background: var(--ds-surface-2) !important;
+  box-shadow: none !important;
+  padding: var(--ds-space-4) !important;
+}
+
+/* --- En-têtes de section : titre net + sur-titre raffiné --- */
+.detail-screen .section-header {
+  margin-bottom: var(--ds-space-4);
+}
+.detail-screen .detail-label {
+  font-size: var(--ds-text-xs) !important;
+  letter-spacing: var(--ds-tracking-wide) !important;
+  text-transform: uppercase !important;
+  color: var(--ds-text-muted) !important;
+  font-weight: var(--ds-weight-bold) !important;
+}
+
+/* --- Cartes d'information (info-grid) : plus douces, alignées --- */
+.detail-screen .info-grid .info-card {
+  min-height: 0 !important;
+  border-radius: var(--ds-radius-md) !important;
+  border: 1px solid var(--ds-border) !important;
+  background: var(--ds-surface-2) !important;
+  padding: var(--ds-space-3) var(--ds-space-4) !important;
+}
+.detail-screen .info-grid .info-card strong {
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+/* --- Timeline (demandes, RDV, historique) : cartes premium douces --- */
+.detail-screen .timeline-card {
+  border-radius: var(--ds-radius-md) !important;
+  border: 1px solid var(--ds-border) !important;
+  background: var(--ds-surface) !important;
+  box-shadow: var(--ds-shadow-xs) !important;
+}
+
+/* --- Badges portails : pastilles nettes --- */
+.detail-screen .detail-portal-badge {
+  border-radius: var(--ds-radius-md) !important;
+  border: 1px solid var(--ds-border) !important;
+  box-shadow: var(--ds-shadow-xs) !important;
+}
+
+/* --- États vides : discrets et lisibles --- */
+.detail-screen .empty-state {
+  color: var(--ds-text-subtle) !important;
+  background: var(--ds-surface-2) !important;
+  border: 1px dashed var(--ds-border-strong) !important;
+  border-radius: var(--ds-radius-md) !important;
+  padding: var(--ds-space-4) !important;
+}
+
+/* --- Onglets : transition douce + lisibilité (sans changer la logique) --- */
+.detail-screen .detail-tab-button {
+  transition: color var(--ds-transition-fast), background var(--ds-transition-fast);
+}
+
+/* --- (3) En-tête allégé : slate raffiné + voile magenta (texte blanc conservé,
+   donc aucune perte de lisibilité). Allège le « presque-noir » jugé trop lourd. --- */
+.detail-screen .detail-overview {
+  background:
+    radial-gradient(120% 150% at 100% 0%, rgba(197, 0, 95, 0.20), transparent 44%),
+    linear-gradient(135deg, #2e3439 0%, #3b4248 55%, #485058 100%) !important;
+  box-shadow: var(--ds-shadow-md) !important;
+  border: 1px solid rgba(34, 35, 35, 0.10) !important;
+}
+
+/* --- (2) Impression : « Aperçu / PDF » du reporting → page propre --- */
+@media print {
+  body * { visibility: hidden !important; }
+  .detail-reporting-section, .detail-reporting-section * { visibility: visible !important; }
+  .detail-reporting-section {
+    position: absolute !important;
+    left: 0; top: 0; width: 100%;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+  .detail-reporting-actions { display: none !important; }
+}

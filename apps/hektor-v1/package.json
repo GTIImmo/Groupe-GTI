@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "@supabase/supabase-js": "^2.57.4",
     "dompurify": "^3.4.8",
     "nodemailer": "^8.0.4",

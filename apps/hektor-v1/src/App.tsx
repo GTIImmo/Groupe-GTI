@@ -6814,7 +6814,7 @@ function sortSummaryPortals(values: string[]) {
   })
 }
 
-type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history'
+type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'reporting'
 type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor'
 
 const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
@@ -6824,6 +6824,7 @@ const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon:
   { key: 'diffusion', label: 'Diffusion', short: '04', icon: 'diffusion' },
   { key: 'content', label: 'Contenu annonce', short: '05', icon: 'content' },
   { key: 'history', label: 'Historique', short: '06', icon: 'history' },
+  { key: 'reporting', label: 'Reporting', short: '07', icon: 'commercial' },
 ]
 
 function DetailIcon({ type }: { type: DetailIconKey }) {
@@ -7811,6 +7812,7 @@ function DetailDossierActionPanel(props: {
   onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
   renderExtraActions?: () => ReturnType<typeof DetailAdminPilotPanel>
+  hideActionList?: boolean
 }) {
   const [extraActionsOpen, setExtraActionsOpen] = useState(false)
   const actionModel = buildMandatActionModel({
@@ -7842,7 +7844,7 @@ function DetailDossierActionPanel(props: {
       </div>
       {!actionModel.hasMandat ? (
         <p className="empty-state">Sans mandat : aucune action de validation, diffusion ou baisse de prix disponible.</p>
-      ) : (
+      ) : props.hideActionList ? null : (
         <>
           <div className="action-menu-dialog-list detail-action-console-list">
             {actionModel.items.map((item) => (
@@ -16728,6 +16730,7 @@ function DossierDetailLayout(props: {
   const [hektorEditModalOpen, setHektorEditModalOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
+  const [headerMenu, setHeaderMenu] = useState<null | 'modify' | 'more'>(null)
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
   const contactSummaryLabel = props.detail.mandants_texte || props.contacts.map((contact) => contact.name).filter(Boolean).join(' | ')
@@ -16746,6 +16749,7 @@ function DossierDetailLayout(props: {
     setMandatSectionOpen(true)
     setContactSectionOpen(false)
     setHektorEditModalOpen(false)
+    setHeaderMenu(null)
   }, [dossier.app_dossier_id, detailVariant])
 
   const buildRequestGroups = (
@@ -16845,24 +16849,49 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     ) : null}
-                    {props.onDeleteAnnonce && !isLightweightDetail ? (
-                      <button className="detail-delete-annonce-button" type="button" onClick={() => props.onDeleteAnnonce?.(dossier)}>
-                        <span aria-hidden="true"><DetailIcon type="alert" /></span>
-                        <strong>Supprimer</strong>
-                      </button>
+                    {!isLightweightDetail ? (
+                      <div className="ds-cmdbar">
+                        <span className="ds-cmdbar-label">Gestion</span>
+                        {props.onChangeAnnonceStatus ? (
+                          <button className="ds-btn ds-btn-soft" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
+                            <span aria-hidden="true"><DetailIcon type="actions" /></span>
+                            <strong>Statut</strong>
+                          </button>
+                        ) : null}
+                        <div className="ds-menuwrap">
+                          <button className="ds-btn ds-btn-outline" type="button" aria-expanded={headerMenu === 'modify'} onClick={() => setHeaderMenu(headerMenu === 'modify' ? null : 'modify')}>
+                            <strong>Modifier</strong>
+                            <span className="ds-caret" aria-hidden="true">▾</span>
+                          </button>
+                          {headerMenu === 'modify' ? (
+                            <div className="ds-menu">
+                              <button className="ds-mi" type="button" onClick={() => { setHektorEditModalOpen(true); setHeaderMenu(null) }}>L&apos;annonce</button>
+                              <button className="ds-mi" type="button" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true); setHeaderMenu(null) }}>Les contacts</button>
+                              {hektorActionItem ? (
+                                <button className="ds-mi" type="button" onClick={() => { hektorActionItem.onClick({ stopPropagation() {} }); setHeaderMenu(null) }}>Dans Hektor ↗</button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="ds-menuwrap">
+                          <button className="ds-btn ds-btn-icon" type="button" aria-label="Plus d'actions" aria-expanded={headerMenu === 'more'} onClick={() => setHeaderMenu(headerMenu === 'more' ? null : 'more')}>⋯</button>
+                          {headerMenu === 'more' ? (
+                            <div className="ds-menu ds-menu-right">
+                              {props.onArchiveAnnonce && dossier.archive !== '1' ? (
+                                <button className="ds-mi" type="button" onClick={() => { props.onArchiveAnnonce?.(dossier); setHeaderMenu(null) }}>Archiver</button>
+                              ) : null}
+                              {hektorActionItem ? (
+                                <button className="ds-mi" type="button" onClick={() => { hektorActionItem.onClick({ stopPropagation() {} }); setHeaderMenu(null) }}>Ouvrir dans Hektor ↗</button>
+                              ) : null}
+                              {props.onDeleteAnnonce ? (
+                                <button className="ds-mi ds-mi-danger" type="button" onClick={() => { props.onDeleteAnnonce?.(dossier); setHeaderMenu(null) }}>Supprimer</button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
                     ) : null}
-                    {props.onArchiveAnnonce && !isLightweightDetail && dossier.archive !== '1' ? (
-                      <button className="detail-archive-annonce-button" type="button" onClick={() => props.onArchiveAnnonce?.(dossier)}>
-                        <span aria-hidden="true"><DetailIcon type="history" /></span>
-                        <strong>Archiver</strong>
-                      </button>
-                    ) : null}
-                    {props.onChangeAnnonceStatus && !isLightweightDetail ? (
-                      <button className="detail-status-annonce-button" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
-                        <span aria-hidden="true"><DetailIcon type="actions" /></span>
-                        <strong>Statut</strong>
-                      </button>
-                    ) : null}
+                    {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                   </div>
                   <div className="detail-keyfacts" aria-label="Carte d'identite du bien">
                     <div className="detail-keyfact-grid">
@@ -16885,6 +16914,22 @@ function DossierDetailLayout(props: {
                     </div>
                   </div>
                 </div>
+                {!isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
+                  <div className="detail-actions-strip detail-action-console-list">
+                    {hektorActionModel.items.filter((item) => item.typeTone !== 'hektor').map((item) => (
+                      <ActionButton
+                        key={item.key}
+                        type="button"
+                        typeLabel={item.typeLabel}
+                        stateLabel={item.stateLabel}
+                        typeTone={item.typeTone}
+                        stateTone={item.stateTone}
+                        helperText={actionMenuHelperText(item.typeLabel, item.stateLabel)}
+                        onClick={item.onClick}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </section>
 
               {isLightweightDetail ? (
@@ -16902,7 +16947,7 @@ function DossierDetailLayout(props: {
                 </section>
               ) : null}
 
-              <nav className="detail-tabbar" aria-label="Navigation detail annonce">
+              <nav className="detail-tabbar" aria-label="Navigation detail annonce" style={{ gridTemplateColumns: `repeat(${detailTabs.length}, minmax(0, 1fr))` }}>
                 {detailTabs.map((tab) => (
                   <button
                     key={tab.key}
@@ -16918,6 +16963,109 @@ function DossierDetailLayout(props: {
               </nav>
 
               <div className="detail-column-main">
+              {activeDetailTab === 'reporting' ? (() => {
+                const reportAppointments = parseAppointmentRequests(props.detail)
+                const ownerContact = props.contacts.find((contact) => /mandant|propri|owner|vendeur/i.test(contact.role || '')) ?? props.contacts[0] ?? null
+                const ownerEmail = ownerContact?.email || ''
+                const reportSubject = `Compte-rendu d'activite - ${dossier.titre_bien || dossier.numero_dossier || 'votre bien'}`
+                return (
+                <section className="detail-section detail-reporting-section">
+                  <div className="section-header">
+                    <DetailSectionTitle icon="commercial" title="Reporting propriétaire" />
+                    <div className="detail-reporting-actions">
+                      <button className="ds-btn-ink" type="button" onClick={() => window.print()}>Aperçu / PDF</button>
+                      <a className={`ds-btn-cta ${ownerEmail ? '' : 'is-disabled'}`} href={ownerEmail ? `mailto:${ownerEmail}?subject=${encodeURIComponent(reportSubject)}` : undefined}>Envoyer au propriétaire</a>
+                    </div>
+                  </div>
+                  <div className="detail-reporting-kpis info-grid">
+                    <InfoCard label="Visites / demandes" value={reportAppointments.length} />
+                    <InfoCard label="Portails actifs" value={activePortalTotal} />
+                    <InfoCard label="Contacts liés" value={props.contacts.length} />
+                    <InfoCard label="Prix actuel" value={formatPrice(dossier.prix)} />
+                  </div>
+                  <article className="detail-card">
+                    <span className="detail-label">Visites & retours</span>
+                    {reportAppointments.length > 0 ? (
+                      <div className="timeline-list">
+                        {reportAppointments.map((item, index) => (
+                          <article key={String(item.id ?? index)} className="timeline-card">
+                            <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
+                            <span>{formatDate(item.requested_start_at)}</span>
+                            {item.message ? <p>{item.message}</p> : null}
+                          </article>
+                        ))}
+                      </div>
+                    ) : <p className="empty-state">Aucune visite enregistrée pour le moment.</p>}
+                  </article>
+                  <article className="detail-card">
+                    <span className="detail-label">Diffusion</span>
+                    {activePortals.length > 0 ? (
+                      <div className="detail-portal-badges">
+                        {activePortals.map((portal) => (
+                          <article key={portal} className={`detail-portal-badge ${portalBrandClass(portal)}`}>
+                            <strong>{portalBrandLabel(portal)}</strong>
+                            <span>{observedPortals.includes(portal) ? 'Actif' : 'En attente'}</span>
+                          </article>
+                        ))}
+                      </div>
+                    ) : <p className="empty-state">Aucune passerelle active.</p>}
+                  </article>
+                  <PriceChangeHistoryCard source={props.detail} title="Historique de prix" />
+                </section>
+                )
+              })() : null}
+              {activeDetailTab === 'summary' ? (() => {
+                const summaryAppointments = parseAppointmentRequests(props.detail)
+                return (
+                <section className="detail-section detail-activity-section detail-activity-visits">
+                  <div className="section-header">
+                    <DetailSectionTitle icon="contact" title="Visites & RDV" />
+                    <span>{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span>
+                  </div>
+                  {summaryAppointments.length > 0 ? (
+                    <div className="timeline-list">
+                      {summaryAppointments.slice(0, 3).map((item, index) => (
+                        <article key={String(item.id ?? index)} className="timeline-card">
+                          <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
+                          <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` → ${formatDate(item.requested_end_at)}` : ''}</span>
+                        </article>
+                      ))}
+                    </div>
+                  ) : <p className="empty-state">Aucune demande de visite stockée pour cette annonce.</p>}
+                  <button className="detail-activity-seeall" type="button" onClick={() => setActiveDetailTab('commercial')}>Voir le suivi des RDV →</button>
+                </section>
+                )
+              })() : null}
+              {activeDetailTab === 'summary' ? (() => {
+                const summaryEmailContacts = props.contacts.filter((contact) => contact.email)
+                return (
+                <section className="detail-section detail-activity-section detail-activity-emails">
+                  <div className="section-header">
+                    <DetailSectionTitle icon="contact" title="Emails" />
+                    <span>{summaryEmailContacts.length} contact{summaryEmailContacts.length > 1 ? 's' : ''}</span>
+                  </div>
+                  {summaryEmailContacts.length > 0 ? (
+                    <div className="timeline-list">
+                      {summaryEmailContacts.map((contact) => {
+                        const dirId = detailContactDirectoryId(contact)
+                        return (
+                          <article key={contact.id} className="timeline-card detail-activity-email-row">
+                            <strong>{contact.name || `${contact.firstName} ${contact.lastName}`.trim() || 'Contact'}</strong>
+                            <span>{contact.email}</span>
+                            <div className="detail-activity-email-actions">
+                              <a className="detail-activity-seeall" href={`mailto:${contact.email}`}>Écrire un email</a>
+                              {dirId && props.onOpenContact ? (
+                                <button className="detail-activity-seeall" type="button" onClick={() => props.onOpenContact?.(dirId)}>Voir les emails →</button>
+                              ) : null}
+                            </div>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  ) : <p className="empty-state">Aucun contact avec email pour cette annonce.</p>}
+                </section>
+                )
+              })() : null}
               {activeDetailTab === 'summary' ? (
                 <section className="detail-section detail-summary-cockpit">
                   <div className="detail-summary-board">
@@ -17513,6 +17661,7 @@ function DossierDetailLayout(props: {
                   nextActionDetail={props.detail.next_action || props.detail.motif_blocage || "Le mandat n'est pas encore qualifie avec une prochaine action."}
                   onOpenRequestModal={openRequestFromDetail}
                   onOpenDiffusionModal={openDiffusionFromDetail}
+                  hideActionList
                   renderExtraActions={(showMandatePilot && props.allowMarkValidation) || (showDiffusionPilot && props.allowMarkDiffusable) ? () => (
                     <DetailAdminPilotPanel
                       allowValidation={showMandatePilot && props.allowMarkValidation}
