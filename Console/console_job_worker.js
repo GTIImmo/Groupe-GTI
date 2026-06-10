@@ -7198,6 +7198,10 @@ async function handleCreateHektorMandantContact(job) {
     reason: "create_hektor_mandant_contact",
     priority: 80,
   });
+  const contactSyncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, created.contactId, {
+    reason: "create_hektor_mandant_contact",
+    priority: 82,
+  });
 
   return {
     status: "created_and_linked",
@@ -7209,6 +7213,7 @@ async function handleCreateHektorMandantContact(job) {
       email: created.email,
     },
     sync_job: syncJob,
+    contact_sync_job: contactSyncJob,
   };
 }
 
@@ -7342,11 +7347,16 @@ async function handleUpdateHektorMandantContact(job) {
     reason: "update_hektor_mandant_contact",
     priority: 80,
   });
+  const contactSyncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
+    reason: "update_hektor_mandant_contact",
+    priority: 82,
+  });
 
   return {
     status: "updated",
     ...updated,
     sync_job: syncJob,
+    contact_sync_job: contactSyncJob,
   };
 }
 
