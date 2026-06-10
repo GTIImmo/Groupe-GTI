@@ -703,6 +703,27 @@ export async function loadGoogleWorkspaceContactEmailBody(input: {
   return payload
 }
 
+export async function loadGoogleWorkspaceContactEmailAttachment(input: {
+  subjectEmail: string
+  messageId: string
+  attachmentId: string
+  contactEmail?: string | null
+  hektorContactId?: string | null
+}) {
+  const params = new URLSearchParams()
+  params.set('subjectEmail', input.subjectEmail)
+  params.set('messageId', input.messageId)
+  params.set('attachmentId', input.attachmentId)
+  if (input.contactEmail?.trim()) params.set('contactEmail', input.contactEmail.trim())
+  if (input.hektorContactId?.trim()) params.set('hektorContactId', input.hektorContactId.trim())
+  const payload = await invokeBackendApi<{ ok: boolean; contentBase64?: string; size?: number }>(
+    `/google-workspace/gmail/attachment?${params.toString()}`,
+    { method: 'GET' },
+  )
+  if (!payload.ok || !payload.contentBase64) throw new Error('Telechargement de la piece jointe impossible')
+  return payload.contentBase64
+}
+
 export type DraftAnnonceSheetScanFieldKey =
   | 'title'
   | 'propertyType'

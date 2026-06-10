@@ -770,6 +770,83 @@ class GoogleWorkspaceService:
             "attachments": attachments,
         }
 
+    def get_gmail_attachment(
+        self,
+        *,
+        subject_email: str,
+        message_id: str,
+        attachment_id: str,
+        contact_email: str | None = None,
+        requested_by: str | None = None,
+        requested_by_email: str | None = None,
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
+    ) -> dict[str, Any]:
+        clean_subject = self._validate_workspace_email(subject_email)
+        clean_message_id = (message_id or "").strip()
+        clean_attachment_id = (attachment_id or "").strip()
+        if not clean_message_id or not clean_attachment_id:
+            raise ValueError("Identifiants du message et de la piece jointe requis")
+        clean_contact = self._validate_email(contact_email) if contact_email else None
+        metadata = {"query_kind": "attachment", "message_id": clean_message_id}
+
+        access_token = self._delegated_access_token(
+            subject_email=clean_subject,
+            scopes=[GMAIL_READONLY_SCOPE],
+        )
+        response = requests.get(
+            f"https://gmail.googleapis.com/gmail/v1/users/{clean_subject}/messages/{clean_message_id}/attachments/{clean_attachment_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=60,
+        )
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"raw": response.text[:500]}
+        if response.status_code >= 400:
+            self._log_action(
+                action_type="gmail.readonly.read_attachment",
+                subject_email=clean_subject,
+                target_email=clean_contact,
+                requested_by=requested_by,
+                requested_by_email=requested_by_email,
+                related_entity_type=related_entity_type,
+                related_entity_id=related_entity_id,
+                status="error",
+                provider_status_code=response.status_code,
+                error_message=self._safe_error_message(payload),
+                metadata_json=metadata,
+            )
+            return {
+                "ok": False,
+                "statusCode": response.status_code,
+                "error": payload,
+            }
+
+        data = payload.get("data") or ""
+        try:
+            raw = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+            content_b64 = base64.b64encode(raw).decode("ascii")
+        except (ValueError, TypeError):
+            content_b64 = ""
+
+        self._log_action(
+            action_type="gmail.readonly.read_attachment",
+            subject_email=clean_subject,
+            target_email=clean_contact,
+            requested_by=requested_by,
+            requested_by_email=requested_by_email,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            status="done",
+            metadata_json={**metadata, "size": payload.get("size")},
+        )
+        return {
+            "ok": True,
+            "contentBase64": content_b64,
+            "size": payload.get("size"),
+        }
+
     def _extract_gmail_body(self, payload: dict[str, Any]) -> tuple[str, str, list[dict[str, Any]]]:
         html_parts: list[str] = []
         text_parts: list[str] = []

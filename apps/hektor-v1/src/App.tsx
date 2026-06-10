@@ -51,6 +51,7 @@ import {
   sendGoogleWorkspaceCrmEmail,
   loadGoogleWorkspaceContactEmailMessages,
   loadGoogleWorkspaceContactEmailBody,
+  loadGoogleWorkspaceContactEmailAttachment,
   loadWorkItemsPage,
   sendPasswordResetEmail,
   submitDiffusionCorrection,
@@ -18204,6 +18205,21 @@ function formatAttachmentSize(size?: number | null) {
   return ` (${(size / (1024 * 1024)).toFixed(1)} Mo)`
 }
 
+function downloadBase64File(contentBase64: string, filename: string, mimeType: string) {
+  const byteChars = atob(contentBase64)
+  const bytes = new Uint8Array(byteChars.length)
+  for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i)
+  const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename || 'piece-jointe'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 function ContactEmailThreadCard(props: {
   message: GoogleWorkspaceContactEmailMessage
   subjectEmail: string
@@ -18216,6 +18232,8 @@ function ContactEmailThreadCard(props: {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showImages, setShowImages] = useState(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [attachmentError, setAttachmentError] = useState<string | null>(null)
 
   const internalDateMillis = Number(message.internalDate)
   const internalDateIso =
@@ -18246,6 +18264,26 @@ function ContactEmailThreadCard(props: {
     const next = !expanded
     setExpanded(next)
     if (next && !body && !loading) void loadBody()
+  }
+
+  const handleDownloadAttachment = async (att: GoogleWorkspaceEmailAttachment) => {
+    if (!att.attachmentId) return
+    setDownloadingId(att.attachmentId)
+    setAttachmentError(null)
+    try {
+      const contentBase64 = await loadGoogleWorkspaceContactEmailAttachment({
+        subjectEmail: props.subjectEmail,
+        messageId: message.id,
+        attachmentId: att.attachmentId,
+        contactEmail: props.contactEmail,
+        hektorContactId: props.hektorContactId,
+      })
+      downloadBase64File(contentBase64, att.filename || 'piece-jointe', att.mimeType || '')
+    } catch (e) {
+      setAttachmentError(e instanceof Error ? e.message : 'Telechargement impossible.')
+    } finally {
+      setDownloadingId(null)
+    }
   }
 
   const sanitized = useMemo(() => {
@@ -18290,11 +18328,22 @@ function ContactEmailThreadCard(props: {
               {attachments.length > 0 ? (
                 <div className="contact-email-attachments">
                   {attachments.map((att, index) => (
-                    <span key={`att-${index}`} className="contact-email-attachment-pill">
+                    <button
+                      key={`att-${index}`}
+                      type="button"
+                      className="contact-email-attachment-pill"
+                      onClick={() => void handleDownloadAttachment(att)}
+                      disabled={!att.attachmentId || downloadingId === att.attachmentId}
+                      title="Telecharger la piece jointe"
+                    >
                       📎 {att.filename || 'piece-jointe'}
                       {formatAttachmentSize(att.size)}
-                    </span>
+                      {downloadingId === att.attachmentId ? ' …' : ''}
+                    </button>
                   ))}
+                  {attachmentError ? (
+                    <span className="contact-email-thread-error">{attachmentError}</span>
+                  ) : null}
                 </div>
               ) : null}
             </>
