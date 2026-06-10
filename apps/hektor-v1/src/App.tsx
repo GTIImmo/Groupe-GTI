@@ -7837,8 +7837,8 @@ function DetailDossierActionPanel(props: {
             aria-expanded={extraActionsOpen}
             onClick={() => setExtraActionsOpen((value) => !value)}
           >
-            <span>Plus d&apos;actions</span>
-            <span aria-hidden="true">â‹®</span>
+            <span>Pilotage avancé</span>
+            <span aria-hidden="true">⋮</span>
           </button>
         ) : null}
       </div>

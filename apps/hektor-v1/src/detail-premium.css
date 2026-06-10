@@ -122,6 +122,28 @@
 /* Rangée d'actions : séparateur foncé sur fond clair */
 .detail-overview .detail-actions-strip.detail-action-console-list { border-top-color: var(--ds-border) !important; }
 
+/* (1) Croix de fermeture : lisible sur l'en-tête clair (les traits étaient
+   dessinés en background #ffffff → invisibles). Bouton clair + traits foncés. */
+.detail-screen .detail-overview-close {
+  background: var(--ds-surface) !important;
+  border: 1px solid var(--ds-border) !important;
+  box-shadow: var(--ds-shadow-xs) !important;
+}
+.detail-screen .detail-overview-close:hover { background: var(--ds-surface-3) !important; }
+.detail-screen .detail-overview-close::before,
+.detail-screen .detail-overview-close::after { background: var(--ds-ink-soft) !important; }
+
+/* (3) Carte « Points clés » remise à la charte (fin du vert hors-charte). */
+.detail-screen .detail-summary-card.is-status {
+  background: var(--ds-surface) !important;
+  border-color: var(--ds-border) !important;
+}
+.detail-screen .detail-summary-card.is-status::before { background: var(--ds-brand) !important; }
+.detail-screen .detail-summary-card.is-status .detail-summary-card-icon {
+  background: var(--ds-brand-50) !important;
+  color: var(--ds-brand-700) !important;
+}
+
 /* --- (2) Reporting : bandeau de marque GTI (visible seulement à l'impression) --- */
 .detail-reporting-print-head { display: none; }
 
