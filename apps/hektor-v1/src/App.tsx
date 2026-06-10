@@ -18175,6 +18175,7 @@ function sanitizeEmailHtml(html: string, allowRemoteImages: boolean): { clean: s
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'link', 'meta', 'base'],
     FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'srcset'],
     ALLOW_DATA_ATTR: false,
+    ADD_DATA_URI_TAGS: ['img'],
   })
   if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
     return { clean: purified, hadRemoteImages }

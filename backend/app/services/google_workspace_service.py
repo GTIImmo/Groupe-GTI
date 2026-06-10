@@ -727,7 +727,15 @@ class GoogleWorkspaceService:
         subject = headers.get("subject", "") or "(sans objet)"
         date_header = headers.get("date", "")
         internal_date = str(payload.get("internalDate") or "")
-        html_body, text_body, attachments = self._extract_gmail_body(payload.get("payload") or {})
+        html_body, text_body, attachments, inline_images = self._extract_gmail_body(payload.get("payload") or {})
+        if html_body and inline_images:
+            html_body = self._embed_inline_images(
+                html_body,
+                inline_images,
+                subject_email=clean_subject,
+                message_id=clean_message_id,
+                access_token=access_token,
+            )
         direction = (
             self._gmail_message_direction(
                 subject_email=clean_subject,
@@ -752,6 +760,7 @@ class GoogleWorkspaceService:
                 **metadata,
                 "has_html": bool(html_body),
                 "attachment_count": len(attachments),
+                "inline_image_count": len(inline_images),
             },
         )
         return {
@@ -847,10 +856,20 @@ class GoogleWorkspaceService:
             "size": payload.get("size"),
         }
 
-    def _extract_gmail_body(self, payload: dict[str, Any]) -> tuple[str, str, list[dict[str, Any]]]:
+    def _extract_gmail_body(
+        self, payload: dict[str, Any]
+    ) -> tuple[str, str, list[dict[str, Any]], list[dict[str, Any]]]:
         html_parts: list[str] = []
         text_parts: list[str] = []
         attachments: list[dict[str, Any]] = []
+        inline_images: list[dict[str, Any]] = []
+
+        def header_value(headers: list[Any], name: str) -> str:
+            target = name.lower()
+            for h in headers:
+                if isinstance(h, dict) and str(h.get("name") or "").lower() == target:
+                    return str(h.get("value") or "")
+            return ""
 
         def walk(part: dict[str, Any]) -> None:
             if not isinstance(part, dict):
@@ -858,8 +877,20 @@ class GoogleWorkspaceService:
             mime = str(part.get("mimeType") or "").lower()
             filename = str(part.get("filename") or "").strip()
             body = part.get("body") if isinstance(part.get("body"), dict) else {}
+            headers = part.get("headers") if isinstance(part.get("headers"), list) else []
             child_parts = part.get("parts") if isinstance(part.get("parts"), list) else []
-            if filename and (body.get("attachmentId") or body.get("size")):
+            content_id = header_value(headers, "content-id").strip().strip("<>").strip()
+            is_image = mime.startswith("image/")
+            if is_image and content_id and (body.get("attachmentId") or body.get("data")):
+                inline_images.append(
+                    {
+                        "contentId": content_id,
+                        "mimeType": part.get("mimeType"),
+                        "attachmentId": body.get("attachmentId"),
+                        "data": body.get("data"),
+                    }
+                )
+            elif filename and (body.get("attachmentId") or body.get("size")):
                 attachments.append(
                     {
                         "filename": filename,
@@ -876,16 +907,76 @@ class GoogleWorkspaceService:
                 walk(child)
 
         walk(payload)
-        return ("".join(html_parts), "".join(text_parts), attachments)
+        return ("".join(html_parts), "".join(text_parts), attachments, inline_images)
+
+    def _embed_inline_images(
+        self,
+        html: str,
+        inline_images: list[dict[str, Any]],
+        *,
+        subject_email: str,
+        message_id: str,
+        access_token: str,
+    ) -> str:
+        if not html or not inline_images:
+            return html
+        max_one = 3 * 1024 * 1024
+        max_total = 12 * 1024 * 1024
+        total = 0
+        for img in inline_images:
+            cid = str(img.get("contentId") or "").strip()
+            if not cid:
+                continue
+            raw: bytes | None = None
+            if img.get("data"):
+                raw = self._decode_base64url_bytes(img.get("data"))
+            elif img.get("attachmentId"):
+                raw = self._fetch_gmail_attachment_bytes(
+                    subject_email=subject_email,
+                    message_id=message_id,
+                    attachment_id=str(img.get("attachmentId")),
+                    access_token=access_token,
+                )
+            if not raw or len(raw) > max_one:
+                continue
+            if total + len(raw) > max_total:
+                break
+            total += len(raw)
+            mime = str(img.get("mimeType") or "image/png")
+            data_uri = f"data:{mime};base64,{base64.b64encode(raw).decode('ascii')}"
+            html = re.sub(r"cid:" + re.escape(cid), data_uri, html, flags=re.IGNORECASE)
+        return html
+
+    def _fetch_gmail_attachment_bytes(
+        self, *, subject_email: str, message_id: str, attachment_id: str, access_token: str
+    ) -> bytes | None:
+        try:
+            response = requests.get(
+                f"https://gmail.googleapis.com/gmail/v1/users/{subject_email}/messages/{message_id}/attachments/{attachment_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=60,
+            )
+            if response.status_code >= 400:
+                return None
+            data = (response.json() or {}).get("data") or ""
+            return self._decode_base64url_bytes(data)
+        except (ValueError, requests.RequestException):
+            return None
 
     def _decode_base64url(self, data: str | None) -> str:
-        if not data:
+        raw = self._decode_base64url_bytes(data)
+        if raw is None:
             return ""
+        return raw.decode("utf-8", errors="replace")
+
+    def _decode_base64url_bytes(self, data: str | None) -> bytes | None:
+        if not data:
+            return None
         try:
             padded = data + "=" * (-len(data) % 4)
-            return base64.urlsafe_b64decode(padded).decode("utf-8", errors="replace")
+            return base64.urlsafe_b64decode(padded)
         except (ValueError, TypeError):
-            return ""
+            return None
 
     def _gmail_header_map(self, payload: dict[str, Any]) -> dict[str, str]:
         payload_body = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
