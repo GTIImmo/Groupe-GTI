@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maquette — Fiche bien (premium) GTI</title>
+<style>
+  :root{
+    --brand:#c5005f; --brand-600:#ab0053; --brand-700:#8c0044; --brand-50:#fdf0f6; --brand-100:#fbdcec;
+    --ink:#1c1d1d; --ink-soft:#3b4143; --muted:#5c6163; --subtle:#7c8082;
+    --n0:#fff; --n25:#fbfbfc; --n50:#f6f7f8; --n100:#eef0f1; --n200:#e4e7e8; --n300:#cfd3d4; --n400:#a1a4a4;
+    --ok:#1f8a5b; --oks:#e8f6ef; --warn:#bb6b14; --warns:#fff2dd; --danger:#c0413e; --dangers:#fcebea; --info:#2f6f8a; --infos:#e8f2f7;
+    --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+    --sh-sm:0 1px 2px rgba(20,20,20,.05),0 2px 8px rgba(20,20,20,.05);
+    --sh-md:0 4px 10px rgba(20,20,20,.06),0 12px 28px rgba(20,20,20,.07);
+    --sh-lg:0 18px 48px rgba(20,20,20,.12);
+    --sh-brand:0 8px 22px rgba(197,0,95,.30);
+    --font:"Inter Variable",Inter,"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);-webkit-font-smoothing:antialiased;color:var(--ink);line-height:1.45;
+    background:radial-gradient(1200px 520px at 100% -8%,rgba(197,0,95,.06),transparent 55%),linear-gradient(180deg,#fff,var(--n50));
+    padding:22px;min-height:100vh}
+  .wrap{max-width:1240px;margin:0 auto}
+  .lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle)}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* COMMAND BAR */
+  .cmd{position:sticky;top:14px;z-index:20;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.88);
+    backdrop-filter:blur(10px);border:1px solid var(--n200);border-radius:var(--r-lg);padding:10px 12px;box-shadow:var(--sh-md)}
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap}
+  .crumb .back{width:30px;height:30px;border-radius:var(--r-pill);border:1px solid var(--n200);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+  .crumb b{color:var(--ink)}
+  .gsep{width:1px;height:34px;background:var(--n200)}
+  .grp{display:flex;align-items:center;gap:8px}
+  .glabel{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--n400)}
+  .spacer{flex:1}
+  .btn{font:inherit;font-size:13px;font-weight:600;border-radius:var(--r-md);padding:9px 13px;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:.15s}
+  .btn .i{font-size:14px;line-height:1}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-600));color:#fff;box-shadow:var(--sh-brand)}
+  .btn-soft{background:var(--brand-50);color:var(--brand-700);border-color:var(--brand-100)}
+  .btn-outline{background:#fff;color:var(--ink-soft);border-color:var(--n300)}
+  .btn-outline:hover{border-color:var(--brand);color:var(--brand-700)}
+  .btn-ghost{background:transparent;color:var(--muted);border-color:transparent;padding:9px 10px}
+  .btn-sm{font-size:12px;padding:7px 11px}
+  .iconbtn{width:38px;height:38px;border-radius:var(--r-md);border:1px solid var(--n200);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:16px;color:var(--ink-soft)}
+  .caret{font-size:9px;opacity:.6}
+  .menuwrap{position:relative}
+  .menu{position:absolute;top:46px;right:0;min-width:208px;background:#fff;border:1px solid var(--n200);border-radius:var(--r-md);box-shadow:var(--sh-lg);padding:6px;z-index:30}
+  .menu .mi{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:13px;color:var(--ink-soft);cursor:pointer}
+  .menu .mi:hover{background:var(--n50)} .menu .mi .i{width:18px;text-align:center}
+
+  /* HERO */
+  .hero{display:grid;grid-template-columns:200px 1fr auto;gap:20px;background:#fff;border:1px solid var(--n200);
+    border-radius:var(--r-xl);padding:18px;margin-top:14px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--brand),var(--brand-700))}
+  .hero .photo{width:200px;height:140px;border-radius:var(--r-lg);background:linear-gradient(135deg,#3b4143,#6b7173 55%,#a1a4a4);position:relative;overflow:hidden}
+  .hero .photo .tag{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.45);color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;padding:3px 8px;border-radius:var(--r-pill);text-transform:uppercase}
+  .hero .photo .cnt{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.5);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:var(--r-pill)}
+  .hero .photo::after{content:"🏠";position:absolute;inset:0;display:grid;place-items:center;font-size:40px;opacity:.45}
+  .hmid{min-width:0;display:flex;flex-direction:column;gap:8px}
+  .pills{display:flex;gap:7px;flex-wrap:wrap}
+  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill);border:1px solid}
+  .pill.active{background:var(--oks);border-color:rgba(31,138,91,.3);color:var(--ok)}
+  .pill.diff{background:var(--infos);border-color:rgba(47,111,138,.3);color:var(--info)}
+  .pill.warn{background:var(--warns);border-color:rgba(187,107,20,.3);color:var(--warn)}
+  .hmid h1{font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .hmid .addr{color:var(--muted);font-size:14px}
+  .stats{display:flex;gap:22px;margin-top:4px;flex-wrap:wrap}
+  .stat .v{font-size:17px;font-weight:700}.stat .v.price{font-size:22px;color:var(--brand);font-weight:800}
+  .hright{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:12px}
+  .owner{display:flex;align-items:center;gap:10px;background:var(--n50);border:1px solid var(--n100);padding:7px 12px 7px 7px;border-radius:var(--r-pill)}
+  .owner .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-700));display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px}
+  .owner .who{line-height:1.2}.owner .who b{font-size:13px}.owner .who .reassign{font-size:11px;color:var(--brand);font-weight:700;cursor:pointer}
+  .complete{text-align:right}
+  .bar{width:150px;height:7px;border-radius:var(--r-pill);background:var(--n100);overflow:hidden;margin-top:5px}
+  .bar>i{display:block;height:100%;width:78%;background:linear-gradient(90deg,var(--ok),#36b37e);border-radius:var(--r-pill)}
+
+  .next{display:flex;align-items:center;gap:14px;margin-top:12px;background:linear-gradient(135deg,#fff,var(--brand-50));
+    border:1px solid var(--brand-100);border-radius:var(--r-lg);padding:13px 16px;box-shadow:var(--sh-sm)}
+  .next .dot{width:38px;height:38px;border-radius:var(--r-md);background:var(--brand);color:#fff;display:grid;place-items:center;font-size:17px;box-shadow:var(--sh-brand)}
+  .next .txt b{font-size:14px}.next .txt span{display:block;font-size:12px;color:var(--muted)}
+
+  .tabs{display:flex;gap:2px;margin-top:16px;border-bottom:1px solid var(--n200);flex-wrap:wrap}
+  .tab{font-size:13px;font-weight:600;color:var(--muted);padding:11px 14px;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+  .tab .n{color:var(--n400);font-weight:700;margin-right:5px;font-size:11px}
+  .tab.on{color:var(--brand);border-color:var(--brand)}.tab.on .n{color:var(--brand)}
+  .tab.new{color:var(--brand-700)}
+  .tab.new::after{content:"NOUVEAU";font-size:8px;font-weight:800;background:var(--brand);color:#fff;padding:1px 5px;border-radius:var(--r-pill);margin-left:6px;vertical-align:middle}
+
+  /* CONTENT */
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-top:16px}
+  .card{background:#fff;border:1px solid var(--n200);border-radius:var(--r-lg);padding:18px;box-shadow:var(--sh-sm)}
+  .card h3{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .card h3 .ico{width:4px;height:15px;border-radius:var(--r-pill);background:var(--brand)}
+  .card h3 .spacer{flex:1}
+  .kf{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+  .kf .c{background:var(--n50);border:1px solid var(--n100);border-radius:var(--r-md);padding:12px 13px}
+  .kf .c.price{background:linear-gradient(135deg,var(--brand-50),#fff);border-color:var(--brand-100)}
+  .kf .c .v{font-size:19px;font-weight:800;margin-top:4px}.kf .c.price .v{color:var(--brand)}
+  .portals{display:flex;flex-direction:column;gap:9px}
+  .pr{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1px solid var(--n100);border-radius:var(--r-md);background:var(--n25)}
+  .pr .nm{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+  .pr .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
+  .pr .st{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .pr .st i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .st.on{color:var(--ok)} .st.on i{background:var(--ok)}
+  .st.wait{color:var(--warn)} .st.wait i{background:var(--warn)}
+  .st.off{color:var(--subtle)} .st.off i{background:var(--n300)}
+
+  /* ACTIVITÉ : Visites & Emails (2 blocs séparés) */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .feed{display:flex;flex-direction:column;gap:10px}
+  .ev{display:grid;grid-template-columns:34px 1fr auto;gap:11px;align-items:start;padding:11px;border:1px solid var(--n100);border-radius:var(--r-md);background:var(--n25)}
+  .ev .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px}
+  .ev .ic.visit{background:var(--infos);color:var(--info)}
+  .ev .ic.visitok{background:var(--oks);color:var(--ok)}
+  .ev .ic.mailin{background:var(--brand-50);color:var(--brand-700)}
+  .ev .ic.mailout{background:var(--n100);color:var(--ink-soft)}
+  .ev .main b{font-size:13.5px}.ev .main span{display:block;font-size:12px;color:var(--muted)}
+  .ev .when{font-size:11px;color:var(--subtle);white-space:nowrap;font-weight:600}
+  .chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);border:1px solid}
+  .chip.soon{background:var(--infos);border-color:rgba(47,111,138,.3);color:var(--info)}
+  .chip.done{background:var(--oks);border-color:rgba(31,138,91,.3);color:var(--ok)}
+  .seeall{margin-top:12px;font-size:12px;font-weight:700;color:var(--brand);cursor:pointer}
+
+  /* REPORTING PROPRIÉTAIRE (onglet 07) */
+  .sectionsep{margin:36px 0 8px;display:flex;align-items:center;gap:12px}
+  .sectionsep .line{flex:1;height:1px;background:var(--n200)}
+  .sectionsep b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-700);background:var(--brand-50);border:1px solid var(--brand-100);padding:5px 12px;border-radius:var(--r-pill)}
+  .report{background:#fff;border:1px solid var(--n200);border-radius:var(--r-xl);box-shadow:var(--sh-md);overflow:hidden}
+  .report .rhead{display:flex;align-items:center;gap:14px;padding:18px 20px;border-bottom:1px solid var(--n100);background:linear-gradient(135deg,#fff,var(--brand-50))}
+  .report .rhead .t b{font-size:16px}.report .rhead .t span{display:block;font-size:12.5px;color:var(--muted)}
+  .rkpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px 20px;border-bottom:1px solid var(--n100)}
+  .rkpi{background:var(--n50);border:1px solid var(--n100);border-radius:var(--r-md);padding:14px}
+  .rkpi .v{font-size:24px;font-weight:800;margin-top:3px}.rkpi .v.brand{color:var(--brand)}
+  .rbody{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:20px}
+  .rblock h4{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+  .rblock h4::before{content:"";width:4px;height:14px;border-radius:var(--r-pill);background:var(--brand)}
+  .rline{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--n100);font-size:13px}
+  .rline:last-child{border:0} .rline span{color:var(--muted)} .rline b{font-weight:600}
+  .price-tl{display:flex;flex-direction:column;gap:8px}
+  .price-tl .p{display:flex;align-items:center;gap:10px;font-size:13px}
+  .price-tl .p .d{font-size:11px;color:var(--subtle);width:90px}
+  .price-tl .p .amt{font-weight:700} .price-tl .p.drop .amt{color:var(--danger)}
+
+  .footnote{margin-top:22px;color:var(--subtle);font-size:12px;text-align:center;line-height:1.7}
+  .ribbon{position:fixed;top:6px;left:6px;background:var(--ink);color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:var(--r-pill);box-shadow:var(--sh-md);z-index:99}
+</style>
+</head>
+<body>
+<div class="ribbon">MAQUETTE — proposition premium</div>
+<div class="wrap">
+
+  <!-- COMMAND BAR -->
+  <div class="cmd">
+    <div class="crumb"><span class="back">‹</span> Annonces / <b>Mandat 17125</b></div>
+    <div class="gsep"></div>
+    <div class="grp">
+      <span class="glabel">Actions</span>
+      <button class="btn btn-primary"><span class="i">📡</span> Diffuser</button>
+      <button class="btn btn-outline"><span class="i">📉</span> Baisse de prix</button>
+      <button class="btn btn-outline">✓ Validation</button>
+      <button class="btn btn-ghost">⊘ Annulation</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="gsep"></div>
+    <div class="grp">
+      <span class="glabel">Gestion</span>
+      <button class="btn btn-soft"><span class="i">◷</span> Statut</button>
+      <div class="menuwrap">
+        <button class="btn btn-outline">✎ Modifier <span class="caret">▾</span></button>
+        <div class="menu">
+          <div class="mi"><span class="i">🏠</span> L'annonce</div>
+          <div class="mi"><span class="i">👤</span> Les contacts</div>
+          <div class="mi"><span class="i">↗</span> Dans Hektor</div>
+        </div>
+      </div>
+      <button class="iconbtn" title="Plus (Archiver · Supprimer · Ouvrir Hektor)">⋯</button>
+      <button class="iconbtn" title="Fermer">✕</button>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="photo"><span class="tag">Détail annonce</span><span class="cnt">📷 12</span></div>
+    <div class="hmid">
+      <div class="pills"><span class="pill active">● Actif</span><span class="pill diff">Diffusable</span><span class="pill warn">Sous offre</span></div>
+      <h1>Grand T3 secteur Bellevue avec Garage</h1>
+      <div class="addr">Appartement · Saint-Étienne (42000) · Réf. 17125</div>
+      <div class="stats">
+        <div class="stat"><div class="lbl">Prix</div><div class="v price num">78 000 €</div></div>
+        <div class="stat"><div class="lbl">Surface</div><div class="v num">62 m²</div></div>
+        <div class="stat"><div class="lbl">Pièces</div><div class="v num">3</div></div>
+        <div class="stat"><div class="lbl">DPE</div><div class="v">D</div></div>
+      </div>
+    </div>
+    <div class="hright">
+      <div class="owner"><span class="av">ML</span><span class="who"><b>Mélanie Legrand</b><br><span class="reassign">↻ Réaffecter</span></span></div>
+      <div class="complete"><div class="lbl">Complétude fiche</div><div class="bar"><i></i></div></div>
+    </div>
+  </div>
+
+  <!-- PROCHAINE ACTION -->
+  <div class="next">
+    <span class="dot">⏱</span>
+    <div class="txt"><b>Prochaine action — relancer la diffusion LeBonCoin</b><span>Dernière diffusion il y a 6 jours · le mandat reste actif</span></div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary">Lancer</button>
+  </div>
+
+  <!-- ONGLETS (7) -->
+  <div class="tabs">
+    <span class="tab on"><span class="n">01</span>Synthèse</span>
+    <span class="tab"><span class="n">02</span>Commercialisation</span>
+    <span class="tab"><span class="n">03</span>Mandat &amp; contacts</span>
+    <span class="tab"><span class="n">04</span>Diffusion</span>
+    <span class="tab"><span class="n">05</span>Contenu annonce</span>
+    <span class="tab"><span class="n">06</span>Historique</span>
+    <span class="tab new"><span class="n">07</span>Reporting propriétaire</span>
+  </div>
+
+  <!-- CONTENU SYNTHÈSE -->
+  <div class="grid">
+    <div class="card">
+      <h3><span class="ico"></span> Points clés du bien</h3>
+      <div class="kf">
+        <div class="c price"><div class="lbl">Prix de vente</div><div class="v num">78 000 €</div></div>
+        <div class="c"><div class="lbl">Honoraires</div><div class="v num">5 000 €</div></div>
+        <div class="c"><div class="lbl">Surface Carrez</div><div class="v num">62 m²</div></div>
+        <div class="c"><div class="lbl">Pièces / Chambres</div><div class="v num">3 / 2</div></div>
+        <div class="c"><div class="lbl">Étage</div><div class="v num">2 / 4</div></div>
+        <div class="c"><div class="lbl">DPE / GES</div><div class="v">D / B</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="ico"></span> Diffusion en cours</h3>
+      <div class="portals">
+        <div class="pr"><span class="nm"><span class="logo" style="background:#ff6e14">LBC</span> LeBonCoin</span><span class="st on"><i></i> Actif</span></div>
+        <div class="pr"><span class="nm"><span class="logo" style="background:#e2001a">SL</span> SeLoger</span><span class="st wait"><i></i> En attente</span></div>
+        <div class="pr"><span class="nm"><span class="logo" style="background:#0aa">Bi</span> Bien'ici</span><span class="st off"><i></i> Inactif</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITÉ : 2 blocs séparés Visites / Emails -->
+  <div class="two">
+    <div class="card">
+      <h3><span class="ico"></span> Visites &amp; RDV <span class="spacer"></span><button class="btn btn-soft btn-sm">+ Créer une visite</button></h3>
+      <div class="feed">
+        <div class="ev"><span class="ic visit">📅</span><span class="main"><b>Visite — M. Durand</b><span>Avec Mélanie Legrand · 14h30</span></span><span class="when"><span class="chip soon">À VENIR</span><br>sam. 14 juin</span></div>
+        <div class="ev"><span class="ic visitok">✓</span><span class="main"><b>Visite — Mme Petit</b><span>Réalisée · avis : « intéressée, revient avec son conjoint »</span></span><span class="when"><span class="chip done">FAITE</span><br>3 juin</span></div>
+        <div class="ev"><span class="ic visitok">✓</span><span class="main"><b>Visite — M. &amp; Mme Roux</b><span>Réalisée · avis : « trop sombre à leur goût »</span></span><span class="when">28 mai</span></div>
+      </div>
+      <div class="seeall">Voir toutes les visites →</div>
+    </div>
+    <div class="card">
+      <h3><span class="ico"></span> Emails <span class="spacer"></span><button class="btn btn-soft btn-sm">+ Envoyer un email</button></h3>
+      <div class="feed">
+        <div class="ev"><span class="ic mailout">↗</span><span class="main"><b>Confirmation de visite</b><span>Envoyé à M. Durand</span></span><span class="when">il y a 2 j</span></div>
+        <div class="ev"><span class="ic mailin">↘</span><span class="main"><b>Demande d'informations</b><span>Reçu de Mme Petit</span></span><span class="when">il y a 5 j</span></div>
+        <div class="ev"><span class="ic mailout">↗</span><span class="main"><b>Compte-rendu propriétaire</b><span>Envoyé au vendeur (M. Bernard)</span></span><span class="when">8 juin</span></div>
+      </div>
+      <div class="seeall">Voir tous les emails →</div>
+    </div>
+  </div>
+
+  <!-- ===== ONGLET 07 — REPORTING PROPRIÉTAIRE (aperçu) ===== -->
+  <div class="sectionsep"><span class="line"></span><b>Aperçu de l'onglet 07 — Reporting propriétaire</b><span class="line"></span></div>
+  <div class="report">
+    <div class="rhead">
+      <span class="dot" style="width:42px;height:42px;border-radius:12px;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:18px;box-shadow:var(--sh-brand)">📊</span>
+      <div class="t"><b>Compte-rendu d'activité — Grand T3 Bellevue</b><span>Destinataire : M. Bernard (propriétaire) · dernier envoi le 8 juin</span></div>
+      <div class="spacer"></div>
+      <button class="btn btn-outline">👁 Aperçu PDF</button>
+      <button class="btn btn-primary"><span class="i">✉</span> Envoyer au propriétaire</button>
+    </div>
+    <div class="rkpis">
+      <div class="rkpi"><div class="lbl">Visites réalisées</div><div class="v num">3</div></div>
+      <div class="rkpi"><div class="lbl">Demandes reçues</div><div class="v num">11</div></div>
+      <div class="rkpi"><div class="lbl">Jours en diffusion</div><div class="v num">42</div></div>
+      <div class="rkpi"><div class="lbl">Prix actuel</div><div class="v num brand">78 000 €</div></div>
+    </div>
+    <div class="rbody">
+      <div class="rblock">
+        <h4>Visites réalisées &amp; retours</h4>
+        <div class="rline"><span>3 juin — Mme Petit</span><b>Intéressée</b></div>
+        <div class="rline"><span>28 mai — M. &amp; Mme Roux</span><b>Trop sombre</b></div>
+        <div class="rline"><span>15 mai — M. Lopez</span><b>Budget insuffisant</b></div>
+      </div>
+      <div class="rblock">
+        <h4>Diffusion &amp; statistiques</h4>
+        <div class="rline"><span>LeBonCoin</span><b>Actif · 1 240 vues · 7 contacts</b></div>
+        <div class="rline"><span>SeLoger</span><b>En attente</b></div>
+        <div class="rline"><span>Bien'ici</span><b>Inactif</b></div>
+      </div>
+      <div class="rblock">
+        <h4>Historique de prix</h4>
+        <div class="price-tl">
+          <div class="p"><span class="d">29 avr.</span><span class="amt num">85 000 €</span><span style="color:var(--subtle)">prix initial</span></div>
+          <div class="p drop"><span class="d">22 mai</span><span class="amt num">81 000 €</span><span style="color:var(--danger)">▼ −4 000 €</span></div>
+          <div class="p drop"><span class="d">8 juin</span><span class="amt num">78 000 €</span><span style="color:var(--danger)">▼ −3 000 €</span></div>
+        </div>
+      </div>
+      <div class="rblock">
+        <h4>Contacts / demandes reçues</h4>
+        <div class="rline"><span>Demandes en ligne</span><b>11</b></div>
+        <div class="rline"><span>Appels entrants</span><b>4</b></div>
+        <div class="rline"><span>Emails échangés</span><b>9</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    Maquette statique — toutes les fonctions de la fiche sont conservées (voir PLAN_ERGONOMIQUE).<br>
+    Synthèse : 2 blocs séparés Visites/RDV + Emails liés au bien · Onglet 07 : reporting propriétaire (vue interne + envoi). Menu « ⋯ » = Archiver · Supprimer · Ouvrir dans Hektor.
+  </div>
+</div>
+</body>
+</html>

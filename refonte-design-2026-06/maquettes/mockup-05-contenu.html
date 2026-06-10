@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maquette — Onglet 05 Contenu annonce</title>
+<style>
+  :root{
+    --brand:#c5005f; --brand-600:#ab0053; --brand-700:#8c0044; --brand-50:#fdf0f6; --brand-100:#fbdcec;
+    --ink:#1c1d1d; --ink-soft:#3b4143; --muted:#5c6163; --subtle:#7c8082;
+    --n0:#fff; --n25:#fbfbfc; --n50:#f6f7f8; --n100:#eef0f1; --n200:#e4e7e8; --n300:#cfd3d4; --n400:#a1a4a4;
+    --ok:#1f8a5b; --oks:#e8f6ef; --warn:#bb6b14; --warns:#fff2dd; --info:#2f6f8a; --infos:#e8f2f7;
+    --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+    --sh-sm:0 1px 2px rgba(20,20,20,.05),0 2px 8px rgba(20,20,20,.05);
+    --sh-md:0 4px 10px rgba(20,20,20,.06),0 12px 28px rgba(20,20,20,.07);
+    --sh-brand:0 8px 22px rgba(197,0,95,.30);
+    --font:"Inter Variable",Inter,"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);-webkit-font-smoothing:antialiased;color:var(--ink);line-height:1.45;
+    background:radial-gradient(1200px 520px at 100% -8%,rgba(197,0,95,.06),transparent 55%),linear-gradient(180deg,#fff,var(--n50));padding:22px;min-height:100vh}
+  .wrap{max-width:1240px;margin:0 auto}
+  .lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle)}
+  .btn{font:inherit;font-size:13px;font-weight:600;border-radius:var(--r-md);padding:9px 13px;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-600));color:#fff;box-shadow:var(--sh-brand)}
+  .btn-soft{background:var(--brand-50);color:var(--brand-700);border-color:var(--brand-100)}
+  .btn-outline{background:#fff;color:var(--ink-soft);border-color:var(--n300)}
+  .btn-sm{font-size:12px;padding:7px 11px}
+
+  /* mini-onglets pour le contexte */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--n200);flex-wrap:wrap;margin-bottom:4px}
+  .tab{font-size:13px;font-weight:600;color:var(--muted);padding:11px 13px;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+  .tab .n{color:var(--n400);font-weight:700;margin-right:5px;font-size:11px}
+  .tab.on{color:var(--brand);border-color:var(--brand)}.tab.on .n{color:var(--brand)}
+
+  .tabhead{display:flex;align-items:center;gap:14px;margin:16px 0}
+  .tabhead h2{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .tabhead .sub{font-size:12.5px;color:var(--muted)}
+  .spacer{flex:1}
+
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+  .col{display:flex;flex-direction:column;gap:16px}
+  .card{background:#fff;border:1px solid var(--n200);border-radius:var(--r-lg);padding:18px;box-shadow:var(--sh-sm)}
+  .card h3{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .card h3 .ico{width:4px;height:15px;border-radius:var(--r-pill);background:var(--brand)}
+  .card h3 .spacer{flex:1}
+  .count{font-size:11px;font-weight:700;color:var(--subtle)}
+
+  /* MÉDIAS : galerie photos */
+  .gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .gallery .ph{aspect-ratio:4/3;border-radius:var(--r-md);background:linear-gradient(135deg,#cfd3d4,#a1a4a4);position:relative;overflow:hidden}
+  .gallery .ph::after{content:"🏠";position:absolute;inset:0;display:grid;place-items:center;font-size:22px;opacity:.4}
+  .gallery .ph.cover::before{content:"COUVERTURE";position:absolute;left:6px;top:6px;font-size:8px;font-weight:800;background:var(--brand);color:#fff;padding:2px 6px;border-radius:var(--r-pill)}
+  .gallery .more{display:grid;place-items:center;background:var(--n50);border:1px dashed var(--n300);color:var(--muted);font-weight:700;font-size:13px;border-radius:var(--r-md);aspect-ratio:4/3}
+  .matter{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px;border:1px solid var(--n100);border-radius:var(--r-md);background:var(--n25)}
+  .matter .mi{width:40px;height:40px;border-radius:10px;background:var(--infos);color:var(--info);display:grid;place-items:center;font-size:18px}
+  .matter .mt b{font-size:13.5px}.matter .mt span{display:block;font-size:12px;color:var(--muted)}
+  .pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);border:1px solid;background:var(--oks);border-color:rgba(31,138,91,.3);color:var(--ok)}
+
+  /* DESCRIPTIF */
+  .desc h4{font-size:15px;font-weight:700;margin-bottom:6px}
+  .desc p{font-size:13.5px;color:var(--ink-soft);line-height:1.6}
+
+  /* CARACTÉRISTIQUES */
+  .specs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--n100);border:1px solid var(--n100);border-radius:var(--r-md);overflow:hidden}
+  .specs .s{background:#fff;padding:10px 12px}
+  .specs .s .k{font-size:11px;color:var(--muted)}.specs .s .v{font-size:14px;font-weight:600;margin-top:2px}
+  .subhead{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-700);margin:14px 0 8px}
+
+  /* DOCUMENTS */
+  .doc{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--n100);border-radius:var(--r-md);background:var(--n25);margin-bottom:8px}
+  .doc .fi{width:34px;height:34px;border-radius:9px;background:var(--brand-50);color:var(--brand-700);display:grid;place-items:center;font-size:14px;font-weight:800}
+  .doc .dm{flex:1}.doc .dm b{font-size:13px}.doc .dm span{display:block;font-size:11px;color:var(--subtle)}
+  .doc .dl{font-size:16px;color:var(--muted);cursor:pointer}
+
+  .ribbon{position:fixed;top:6px;left:6px;background:var(--ink);color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:var(--r-pill);box-shadow:var(--sh-md);z-index:99}
+  .foot{margin-top:22px;color:var(--subtle);font-size:12px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="ribbon">MAQUETTE — Onglet 05 Contenu annonce (réorganisé)</div>
+<div class="wrap">
+
+  <div class="tabs">
+    <span class="tab"><span class="n">01</span>Synthèse</span>
+    <span class="tab"><span class="n">02</span>Commercialisation</span>
+    <span class="tab"><span class="n">03</span>Mandat &amp; contacts</span>
+    <span class="tab"><span class="n">04</span>Diffusion</span>
+    <span class="tab on"><span class="n">05</span>Contenu annonce</span>
+    <span class="tab"><span class="n">06</span>Historique</span>
+    <span class="tab"><span class="n">07</span>Reporting</span>
+  </div>
+
+  <div class="tabhead">
+    <div><h2>Contenu de l'annonce</h2><div class="sub">Titre, descriptif, médias, caractéristiques et documents — synchronisés avec Hektor</div></div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary">✎ Modifier l'annonce</button>
+  </div>
+
+  <div class="grid">
+    <!-- COLONNE PRINCIPALE -->
+    <div class="col">
+      <div class="card">
+        <h3><span class="ico"></span> Médias <span class="spacer"></span><span class="count">12 photos · 1 visite virtuelle</span></h3>
+        <div class="gallery">
+          <div class="ph cover"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div>
+          <div class="ph"></div><div class="ph"></div><div class="ph"></div>
+          <div class="more">+5</div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-soft btn-sm">📷 Gérer les photos</button><button class="btn btn-outline btn-sm">↕ Réordonner</button></div>
+        <div class="matter">
+          <span class="mi">🎥</span>
+          <div class="mt"><b>Visite virtuelle Matterport</b><span>Mandat 17125 · 1 modèle lié</span></div>
+          <span class="spacer"></span><span class="pill">● Publiée</span>
+          <button class="btn btn-outline btn-sm">Gérer</button>
+        </div>
+      </div>
+
+      <div class="card desc">
+        <h3><span class="ico"></span> Descriptif</h3>
+        <h4>Grand T3 secteur Bellevue avec Garage</h4>
+        <p>Bel appartement de type 3 de 62 m² situé dans le secteur recherché de Bellevue. Composé d'un séjour lumineux, d'une cuisine équipée, de deux chambres, d'une salle de bains et d'un garage en sous-sol. Proche commerces, écoles et transports. Idéal premier achat ou investissement locatif.</p>
+      </div>
+    </div>
+
+    <!-- COLONNE LATÉRALE -->
+    <div class="col">
+      <div class="card">
+        <h3><span class="ico"></span> Caractéristiques</h3>
+        <div class="specs">
+          <div class="s"><div class="k">Type</div><div class="v">Appartement</div></div>
+          <div class="s"><div class="k">Surface habitable</div><div class="v">62 m²</div></div>
+          <div class="s"><div class="k">Pièces</div><div class="v">3</div></div>
+          <div class="s"><div class="k">Chambres</div><div class="v">2</div></div>
+          <div class="s"><div class="k">Étage</div><div class="v">2 / 4</div></div>
+          <div class="s"><div class="k">Ascenseur</div><div class="v">Oui</div></div>
+          <div class="s"><div class="k">Garage / box</div><div class="v">1</div></div>
+          <div class="s"><div class="k">Terrasse</div><div class="v">Non</div></div>
+        </div>
+        <div class="subhead">Confort &amp; énergie</div>
+        <div class="specs">
+          <div class="s"><div class="k">Chauffage</div><div class="v">Gaz collectif</div></div>
+          <div class="s"><div class="k">Exposition</div><div class="v">Sud-Ouest</div></div>
+          <div class="s"><div class="k">DPE</div><div class="v">D</div></div>
+          <div class="s"><div class="k">GES</div><div class="v">B</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="ico"></span> Documents <span class="spacer"></span><button class="btn btn-soft btn-sm">+ Ajouter</button></h3>
+        <div class="doc"><span class="fi">PDF</span><div class="dm"><b>Mandat 17125 signé</b><span>Ajouté le 29 avr. · 248 Ko</span></div><span class="dl">⤓</span></div>
+        <div class="doc"><span class="fi">PDF</span><div class="dm"><b>Diagnostic DPE</b><span>Ajouté le 2 mai · 1,1 Mo</span></div><span class="dl">⤓</span></div>
+        <div class="doc"><span class="fi">JPG</span><div class="dm"><b>Plan cadastral</b><span>Ajouté le 2 mai · 380 Ko</span></div><span class="dl">⤓</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">Onglet 05 réorganisé en 4 blocs : <b>Médias</b> (photos + visite virtuelle) · <b>Descriptif</b> · <b>Caractéristiques</b> · <b>Documents</b>.<br>Toutes les fonctions d'origine sont conservées (gestion photos, documents, Matterport, modification annonce). En index léger : passage automatique en lecture seule.</div>
+</div>
+</body>
+</html>
