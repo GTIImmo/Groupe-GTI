@@ -16725,6 +16725,9 @@ function DossierDetailLayout(props: {
   const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop' | 'cancellation'>('all')
   const dossier = props.selectedDossier
   const detailVariant = props.detailVariant ?? 'annonce'
+  // État ESTIMATION : annonce non encore sous mandat (statut « Estimation »).
+  // Réoriente la fiche vers la transformation du lead (cf. maquette « Fiche estimation »).
+  const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
@@ -16940,11 +16943,11 @@ function DossierDetailLayout(props: {
                     {primaryImage ? (
                       <button className="ds-hero-photo" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
                         <img src={primaryImage} alt={dossier.titre_bien || 'Bien'} />
-                        {dossier.statut_annonce ? <span className="ds-hero-statusbadge"><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}
+                        {dossier.statut_annonce ? <span className={`ds-hero-statusbadge ${isEstimation ? 'fe-status-est' : ''}`}><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}
                         {dossier.numero_dossier ? <span className="ds-hero-refbadge">Réf. {dossier.numero_dossier}</span> : null}
                       </button>
                     ) : (
-                      <div className="ds-hero-photo ds-hero-photo-empty" aria-hidden="true"><DetailIcon type="photo" />{dossier.statut_annonce ? <span className="ds-hero-statusbadge"><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}{dossier.numero_dossier ? <span className="ds-hero-refbadge">Réf. {dossier.numero_dossier}</span> : null}</div>
+                      <div className="ds-hero-photo ds-hero-photo-empty" aria-hidden="true"><DetailIcon type="photo" />{dossier.statut_annonce ? <span className={`ds-hero-statusbadge ${isEstimation ? 'fe-status-est' : ''}`}><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}{dossier.numero_dossier ? <span className="ds-hero-refbadge">Réf. {dossier.numero_dossier}</span> : null}</div>
                     )}
                     <div className="ds-hero-main">
                       <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
@@ -16955,6 +16958,13 @@ function DossierDetailLayout(props: {
                         <StatusPill value={diffusableLabel(dossier.diffusable)} />
                         <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
                       </div>
+                      {isEstimation ? (
+                        <div className="fe-est-value">
+                          <div className="fe-ev-head"><span className="fa-rlabel">Avis de valeur</span><span className="fe-ev-tag">À confirmer</span></div>
+                          <div className="fe-ev-main">{dossier.prix ? formatPrice(dossier.prix) : <span style={{ fontSize: '17px', color: 'var(--fa-faint)', fontStyle: 'italic' }}>À renseigner</span>}</div>
+                          <div className="fe-ev-foot">Fourchette d&apos;estimation · <em>En construction</em></div>
+                        </div>
+                      ) : (
                       <div className="ds-hero-stats">
                         <div className="ds-stat ds-stat-price">
                           <span>Prix annonce</span>
@@ -16970,6 +16980,7 @@ function DossierDetailLayout(props: {
                           </strong>
                         </div>
                       </div>
+                      )}
                     </div>
                     {/* Blocs rail v4(3) : Diagnostics · Diffusion · Responsable · Mandants */}
                     <div className="fa-rblock fa-rb-diag">
@@ -16980,7 +16991,20 @@ function DossierDetailLayout(props: {
                         <p className="fa-rail-empty">Diagnostics en cours.</p>
                       )}
                     </div>
-                    {activePortals.length > 0 ? (
+                    {isEstimation ? (
+                      <div className="fa-rblock">
+                        <div className="fa-rblock-h"><span className="fa-rlabel">Suivi du lead</span><span className="fa-diag-date">Estimation</span></div>
+                        <div className="fe-lead-score">
+                          <div className="fe-ls-head"><span className="fe-ls-k">Probabilité de signature</span><span className="fe-ls-v" style={{ color: 'var(--fa-faint)', fontSize: '11px' }}>En construction</span></div>
+                          <div className="fe-ls-bar"><i style={{ width: '0%' }} /></div>
+                        </div>
+                        <div className="fe-lead-next">
+                          <span className="fe-ln-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></svg></span>
+                          <div><div className="fe-ln-t">Prochaine action</div><div className="fe-ln-s" style={{ color: 'var(--fa-faint)', fontStyle: 'italic' }}>En construction</div></div>
+                        </div>
+                      </div>
+                    ) : null}
+                    {!isEstimation && activePortals.length > 0 ? (
                       <div className="fa-rblock fa-rb-diff">
                         <div className="fa-rblock-h"><span className="fa-rlabel">Diffusion · {activePortals.length} actifs</span><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('diffusion')}>Gérer →</button></div>
                         <div className="fa-rail-portals">
@@ -17011,7 +17035,7 @@ function DossierDetailLayout(props: {
                       if (!mandants.length) return null
                       return (
                         <div className="fa-rblock fa-rb-mand">
-                          <div className="fa-rblock-h"><span className="fa-rlabel">Mandants · {mandants.length}</span><button type="button" className="fa-linkmini" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}>Voir →</button></div>
+                          <div className="fa-rblock-h"><span className="fa-rlabel">{isEstimation ? 'Proprietaires' : 'Mandants'} · {mandants.length}</span><button type="button" className="fa-linkmini" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}>Voir →</button></div>
                           {mandants.map((contact) => {
                             const nm = contact.name || `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim() || 'Mandant'
                             return <div key={contact.id} className="fa-mand"><span className="fa-mini-av">{userInitials(nm, null)}</span>{nm}</div>

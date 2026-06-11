@@ -1,0 +1,94 @@
+/* =========================================================================
+   Fiche détail — état ESTIMATION (variante de la fiche annonce refondue)
+   Porté fidèlement depuis la maquette « Fiche estimation.html » (handoff GTI).
+   Tout est scopé sous .fa-v5 + préfixe .fe- pour éviter toute collision avec
+   styles.css (31k lignes) et la fiche annonce.
+   ========================================================================= */
+
+/* --- Rail : badge statut Estimation (or, pas vert) + titre [Sans titre] --- */
+.fa-v5 .fe-status-est{background:rgba(168,129,74,.92) !important;color:#fff !important}
+.fa-v5 .fe-status-est .ds-hero-statusdot,
+.fa-v5 .fe-status-est::before{background:#fff !important}
+.fa-v5 .fe-untitled{color:var(--fa-faint);font-style:italic;font-weight:500}
+
+/* --- Avis de valeur (remplace le prix dans le rail) --- */
+.fa-v5 .fe-est-value{margin-top:14px;padding:13px 14px;border:1px solid var(--fa-line);border-radius:14px;background:linear-gradient(180deg,#fff,var(--fa-card-2));box-shadow:var(--fa-shadow-card)}
+.fa-v5 .fe-ev-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.fa-v5 .fe-ev-tag{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--fa-gold);background:#f7f0e3;border:1px solid #ecdfc7;padding:3px 8px;border-radius:99px}
+.fa-v5 .fe-ev-main{font-family:'Spectral',Georgia,serif;font-weight:600;font-size:31px;line-height:1;color:var(--fa-brand);letter-spacing:-.015em;font-variant-numeric:tabular-nums}
+.fa-v5 .fe-ev-range{display:flex;align-items:center;gap:9px;margin-top:13px}
+.fa-v5 .fe-evr-b,.fa-v5 .fe-evr-h{font-size:11.5px;font-weight:700;color:var(--fa-ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
+.fa-v5 .fe-evr-track{position:relative;flex:1;height:5px;border-radius:99px;background:linear-gradient(90deg,#e9ddc8,#e6c79a,#d8a25f)}
+.fa-v5 .fe-evr-track i{position:absolute;top:50%;left:42%;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid var(--fa-brand);transform:translate(-50%,-50%);box-shadow:0 2px 5px -1px rgba(0,0,0,.3)}
+.fa-v5 .fe-ev-foot{font-size:11px;color:var(--fa-muted);margin-top:10px;font-weight:500}
+
+/* --- Suivi du lead : jauge probabilité + prochaine action / relance --- */
+.fa-v5 .fe-lead-score{margin-bottom:12px}
+.fa-v5 .fe-ls-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.fa-v5 .fe-ls-k{font-size:12px;color:var(--fa-muted);font-weight:600}
+.fa-v5 .fe-ls-v{font-size:14px;font-weight:800;color:var(--fa-green);font-variant-numeric:tabular-nums}
+.fa-v5 .fe-ls-bar{height:6px;border-radius:99px;background:var(--fa-line);overflow:hidden}
+.fa-v5 .fe-ls-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#e0aa4b,var(--fa-green))}
+.fa-v5 .fe-lead-next{display:flex;align-items:center;gap:10px;padding:9px 0}
+.fa-v5 .fe-lead-next+.fe-lead-next{border-top:1px solid var(--fa-line-soft)}
+.fa-v5 .fe-ln-ic{width:30px;height:30px;border-radius:8px;background:var(--fa-card-2);border:1px solid var(--fa-line);display:flex;align-items:center;justify-content:center;color:var(--fa-brand);flex-shrink:0}
+.fa-v5 .fe-ln-ic svg{width:15px;height:15px}
+.fa-v5 .fe-ln-t{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fa-faint)}
+.fa-v5 .fe-ln-s{font-size:13px;font-weight:700;color:var(--fa-ink);margin-top:2px}
+
+/* --- Avatar responsable « À affecter » (hachuré) --- */
+.fa-v5 .fe-avatar-unassigned{background:repeating-linear-gradient(45deg,#efe7dd,#efe7dd 4px,#e7ddd0 4px,#e7ddd0 8px) !important;color:var(--fa-faint) !important;border:1px dashed var(--fa-line-strong) !important;box-shadow:none !important}
+
+/* --- Bandeau « Transformation du lead » (convbar) : pipeline + CTA --- */
+.fa-v5 .fe-pipe{display:flex;align-items:stretch;gap:0;border:1px solid var(--fa-line);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--fa-shadow-card)}
+.fa-v5 .fe-pipe-step{flex:1;display:flex;flex-direction:column;gap:3px;padding:13px 16px;position:relative}
+.fa-v5 .fe-pipe-step+.fe-pipe-step{border-left:1px solid var(--fa-line-soft)}
+.fa-v5 .fe-ps-k{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fa-faint)}
+.fa-v5 .fe-ps-v{font-size:14px;font-weight:700;color:var(--fa-ink)}
+.fa-v5 .fe-pipe-step.is-done{background:var(--fa-green-soft)}
+.fa-v5 .fe-pipe-step.is-done .fe-ps-k{color:#1f6e44}
+.fa-v5 .fe-pipe-step.is-current{background:linear-gradient(180deg,#fff,var(--fa-brand-soft))}
+.fa-v5 .fe-pipe-step.is-current::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--fa-brand),var(--fa-gold))}
+.fa-v5 .fe-pipe-step.is-current .fe-ps-k{color:var(--fa-brand)}
+.fa-v5 .fe-ps-ic{position:absolute;top:13px;right:14px;width:18px;height:18px}
+.fa-v5 .fe-pipe-step.is-done .fe-ps-ic{color:var(--fa-green)}
+.fa-v5 .fe-pipe-step.is-todo{opacity:.6}
+.fa-v5 .fe-pipe-step.is-goal{background:repeating-linear-gradient(45deg,#fff,#fff 7px,var(--fa-brand-soft) 7px,var(--fa-brand-soft) 14px);border-left:1px dashed var(--fa-brand) !important}
+.fa-v5 .fe-pipe-step.is-goal .fe-ps-k,.fa-v5 .fe-pipe-step.is-goal .fe-ps-ic{color:var(--fa-brand)}
+.fa-v5 .fe-pipe-step.is-goal .fe-ps-v{color:var(--fa-brand-ink)}
+.fa-v5 .fe-conv{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:center}
+.fa-v5 .fe-conv-cta{display:flex;flex-direction:column;gap:11px}
+.fa-v5 .fe-conv-actions{display:flex;gap:9px;flex-wrap:wrap}
+.fa-v5 .fe-conv-t{font-size:14.5px;font-weight:700;color:var(--fa-ink)}
+.fa-v5 .fe-conv-p{font-size:13px;color:var(--fa-muted);line-height:1.5;margin:0}
+.fa-v5 .fe-dstat-pair{display:flex;flex-direction:column;gap:9px}
+.fa-v5 .fe-dstat{display:flex;align-items:center;gap:11px}
+.fa-v5 .fe-dstat-ic{width:34px;height:34px;border-radius:9px;background:var(--fa-card-2);border:1px solid var(--fa-line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--fa-ink-soft);flex-shrink:0}
+.fa-v5 .fe-dk{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fa-faint)}
+.fa-v5 .fe-dv{font-size:13px;font-weight:700;color:var(--fa-ink);margin-top:1px}
+
+/* --- Biens comparables (onglet Estimation) --- */
+.fa-v5 .fe-comp{display:flex;align-items:center;gap:13px;padding:11px 13px;border:1px solid var(--fa-line);border-radius:12px;background:#fff}
+.fa-v5 .fe-comp+.fe-comp{margin-top:9px}
+.fa-v5 .fe-comp-ic{width:36px;height:36px;border-radius:9px;background:var(--fa-card-2);border:1px solid var(--fa-line);display:flex;align-items:center;justify-content:center;color:var(--fa-muted);flex-shrink:0}
+.fa-v5 .fe-comp-main{flex:1;min-width:0}
+.fa-v5 .fe-comp-t{font-size:13.5px;font-weight:700;color:var(--fa-ink)}
+.fa-v5 .fe-comp-s{font-size:12px;color:var(--fa-muted);margin-top:1px}
+.fa-v5 .fe-comp-v{text-align:right;flex-shrink:0}
+.fa-v5 .fe-cv-p{font-size:14px;font-weight:700;color:var(--fa-ink);font-variant-numeric:tabular-nums}
+.fa-v5 .fe-cv-m{font-size:11.5px;color:var(--fa-brand-ink);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* --- État « En construction » / verrouillé (placeholder onglets non câblés) --- */
+.fa-v5 .fe-locked{display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;padding:46px 24px}
+.fa-v5 .fe-locked .fe-tl-ic{width:54px;height:54px;border-radius:15px;background:var(--fa-card-2);border:1px solid var(--fa-line);display:flex;align-items:center;justify-content:center;color:var(--fa-faint)}
+.fa-v5 .fe-locked .fe-tl-ic svg{width:26px;height:26px}
+.fa-v5 .fe-locked .fe-tl-t{font-family:'Spectral',Georgia,serif;font-size:19px;font-weight:600;color:var(--fa-ink)}
+.fa-v5 .fe-locked .fe-tl-s{font-size:13.5px;color:var(--fa-muted);max-width:44ch;line-height:1.55}
+.fa-v5 .fe-locked .fe-tl-badge{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fa-gold);background:#f7f0e3;border:1px solid #ecdfc7;padding:4px 11px;border-radius:99px}
+
+/* Responsive : sous 1000px, conv en 1 colonne (comme la maquette) */
+@media (max-width:1000px){
+  .fa-v5 .fe-conv{grid-template-columns:1fr}
+  .fa-v5 .fe-pipe{flex-direction:column}
+  .fa-v5 .fe-pipe-step+.fe-pipe-step{border-left:none;border-top:1px solid var(--fa-line-soft)}
+}
