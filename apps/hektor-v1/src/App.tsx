@@ -6789,6 +6789,35 @@ function portalBrandLabel(value: string | null | undefined) {
   return safeText(value) || 'Passerelle'
 }
 
+// Couleur de marque (dégradé) par portail — pastille monogramme. Les couleurs sont
+// les teintes de marque connues; ce ne sont PAS les logos officiels (cf. portalLogoSrc).
+function portalBrandColor(value: string | null | undefined): string {
+  const n = normalizePortalToken(value)
+  if (n.includes('leboncoin') || n.includes('lbc')) return 'linear-gradient(160deg,#ff8a4c,#ec5a13)'
+  if (n.includes('bienici') || n.includes("bien'ici")) return 'linear-gradient(160deg,#ef6a4f,#d6402a)'
+  if (n.includes('seloger')) return 'linear-gradient(160deg,#e2455c,#c00d27)'
+  if (n.includes('logic')) return 'linear-gradient(160deg,#f29a3e,#d9711d)'
+  if (n.includes('paru')) return 'linear-gradient(160deg,#4f8fd0,#2a5e96)'
+  if (n.includes('gti') || n.includes('site')) return 'linear-gradient(160deg,#d63a86,#9d0f4e)'
+  let h = 0
+  const s = value || 'x'
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
+  return `linear-gradient(160deg,hsl(${h} 55% 58%),hsl(${h} 60% 42%))`
+}
+
+// Emplacement d'un logo officiel (déposé par l'agence dans /public/portal-logos/<clé>.svg|png).
+// Si le fichier n'existe pas, l'<img> se masque (onError) et le monogramme coloré reste affiché.
+function portalLogoSrc(value: string | null | undefined): string | null {
+  const n = normalizePortalToken(value)
+  const key = (n.includes('leboncoin') || n.includes('lbc')) ? 'leboncoin'
+    : n.includes('bienici') ? 'bienici'
+    : n.includes('seloger') ? 'seloger'
+    : n.includes('logic') ? 'logic-immo'
+    : n.includes('paru') ? 'paruvendu'
+    : null
+  return key ? `/portal-logos/${key}.svg` : null
+}
+
 function portalBrandClass(value: string | null | undefined) {
   const normalized = normalizePortalToken(value)
   if (normalized.includes('leboncoin') || normalized.includes('lbc')) return 'is-leboncoin'
@@ -16974,7 +17003,11 @@ function DossierDetailLayout(props: {
                         <div className="fa-rail-portals">
                           {activePortals.slice(0, 8).map((portal) => (
                             <span key={portal} className="fa-rp" title={portalBrandLabel(portal)}>
-                              <span className="fa-rlogo">{portalBrandLabel(portal).slice(0, 1).toUpperCase()}<span className={`fa-badge ${observedPortals.includes(portal) ? '' : 'fa-wait'}`}></span></span>
+                              <span className="fa-rlogo" style={{ background: portalBrandColor(portal) }}>
+                                {portalBrandLabel(portal).slice(0, 1).toUpperCase()}
+                                {portalLogoSrc(portal) ? <img src={portalLogoSrc(portal)!} alt="" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} /> : null}
+                                <span className={`fa-badge ${observedPortals.includes(portal) ? '' : 'fa-wait'}`}></span>
+                              </span>
                               <span className="fa-rpn">{portalBrandLabel(portal)}</span>
                             </span>
                           ))}
