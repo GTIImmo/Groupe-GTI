@@ -16962,14 +16962,16 @@ function DossierDetailLayout(props: {
                       <div className="ds-hero-photo ds-hero-photo-empty" aria-hidden="true"><DetailIcon type="photo" />{dossier.statut_annonce ? <span className={`ds-hero-statusbadge ${isEstimation ? 'fe-status-est' : ''}`}><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}{dossier.numero_dossier ? <span className="ds-hero-refbadge">Réf. {dossier.numero_dossier}</span> : null}</div>
                     )}
                     <div className="ds-hero-main">
-                      <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
-                      <h2 className="ds-hero-title">{propertyTypeLabel(dossier.type_bien) || dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                      {!isEstimation ? <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span> : null}
+                      <h2 className={`ds-hero-title ${isEstimation && !dossier.titre_bien ? 'fe-untitled' : ''}`}>{isEstimation && !dossier.titre_bien ? '[Sans titre]' : (propertyTypeLabel(dossier.type_bien) || dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`)}</h2>
                       {props.address ? <p className="ds-hero-address">{props.address}</p> : null}
+                      {!isEstimation ? (
                       <div className="ds-hero-pills">
                         <StatusPill value={dossier.statut_annonce} />
                         <StatusPill value={diffusableLabel(dossier.diffusable)} />
                         <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
                       </div>
+                      ) : null}
                       {isEstimation ? (
                         <div className="fe-est-value">
                           <div className="fe-ev-head"><span className="fa-rlabel">Avis de valeur</span><span className="fe-ev-tag">À confirmer</span></div>
@@ -17307,7 +17309,7 @@ function DossierDetailLayout(props: {
                     <div className="fa-sec-lead"><span className="fa-sl-t">Activité</span><span className="fa-sl-pill"><span className="fa-sl-d" />{isEstimation ? 'Suivi prospection' : 'Suivi quotidien'}</span></div>
                     <div className="fa-duo">
                       <div className="fa-mod fa-primary">
-                        <div className="fa-mod-h"><h2>Visites &amp; RDV</h2><span className="fa-mod-meta">{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span></div>
+                        <div className="fa-mod-h"><h2>{isEstimation ? 'RDV & Prospection' : 'Visites & RDV'}</h2><span className="fa-mod-meta">{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span></div>
                         {summaryAppointments.length > 0 ? (
                           <div className="timeline-list">
                             {summaryAppointments.slice(0, 3).map((item, index) => (
