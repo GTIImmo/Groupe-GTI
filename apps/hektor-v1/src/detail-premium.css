@@ -167,10 +167,10 @@
   .detail-screen .detail-activity-visits,
   .detail-screen .detail-activity-emails {
     float: left !important;
-    width: calc(50% - 9px) !important;
+    width: calc(50% - 14px) !important;
     box-sizing: border-box !important;
   }
-  .detail-screen .detail-activity-emails { margin-left: 18px !important; }
+  .detail-screen .detail-activity-emails { margin-left: 16px !important; }
   .detail-screen .detail-summary-cockpit { clear: both !important; }
 }
 
