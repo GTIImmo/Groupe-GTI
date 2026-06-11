@@ -154,14 +154,9 @@
     max-width: 1280px !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    grid-template-columns: minmax(0, 1fr) 330px !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas: "head" "tabs" "main" !important;
     column-gap: var(--ds-space-6) !important;
-  }
-  /* Rail droit (Prochaine action / Pilotage) collant → suit le scroll, plus orphelin */
-  .detail-screen .detail-column-side {
-    position: sticky !important;
-    top: var(--ds-space-3) !important;
-    align-self: start !important;
   }
   /* Synthèse : Visites & Emails côte à côte (effet dashboard).
      Le parent est une grille 1 colonne → on le passe en 2 colonnes,
@@ -214,6 +209,9 @@
 .detail-screen .ds-hero-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--ds-space-3); }
 .detail-screen .ds-hero-toprow { display: flex; align-items: center; gap: var(--ds-space-2); }
 .detail-screen .ds-hero-toprow .detail-overview-close { position: static !important; }
+/* Pilotage avancé relocalisé dans l'en-tête (avec les actions), rail droit supprimé */
+.detail-screen .detail-overview-pilotage { margin-top: var(--ds-space-4); }
+.detail-screen .detail-overview-pilotage .detail-action-console { box-shadow: none; }
 
 /* Synthèse : le « board » d'infos (Visibilité / Diagnostics / Mandants) passe en
    grille fluide après retrait du photo + « Points clés » redondants (déjà dans le hero).

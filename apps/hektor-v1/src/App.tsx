@@ -7813,6 +7813,7 @@ function DetailDossierActionPanel(props: {
   onOpenDiffusionModal: (id: number) => void
   renderExtraActions?: () => ReturnType<typeof DetailAdminPilotPanel>
   hideActionList?: boolean
+  hideNextAction?: boolean
 }) {
   const [extraActionsOpen, setExtraActionsOpen] = useState(false)
   const actionModel = buildMandatActionModel({
@@ -7862,7 +7863,7 @@ function DetailDossierActionPanel(props: {
           </div>
         </>
       )}
-      {props.nextActionLabel ? (
+      {props.nextActionLabel && !props.hideNextAction ? (
         <div className="detail-action-next">
           <span>Prochaine action</span>
           <strong>{props.nextActionLabel}</strong>
@@ -16937,6 +16938,37 @@ function DossierDetailLayout(props: {
                     ))}
                   </div>
                 ) : null}
+                {!isLightweightDetail && ((showMandatePilot && props.allowMarkValidation) || (showDiffusionPilot && props.allowMarkDiffusable)) ? (
+                  <div className="detail-overview-pilotage">
+                    <DetailDossierActionPanel
+                      mandat={dossier}
+                      role={actionRole}
+                      requests={actionRequests}
+                      currentRequest={props.currentActionRequest}
+                      onOpenRequestModal={openRequestFromDetail}
+                      onOpenDiffusionModal={openDiffusionFromDetail}
+                      hideActionList
+                      hideNextAction
+                      renderExtraActions={() => (
+                        <DetailAdminPilotPanel
+                          allowValidation={showMandatePilot && props.allowMarkValidation}
+                          allowDiffusable={showDiffusionPilot && props.allowMarkDiffusable}
+                          validationActive={isValidated}
+                          validationObserved={isValidationApproved(validationObserved)}
+                          validationPending={Boolean(props.markValidationPending)}
+                          validationSyncPending={validationSyncPending}
+                          diffusableActive={isDraftDiffusable}
+                          diffusableObserved={isObservedDiffusable}
+                          diffusablePending={Boolean(props.markDiffusablePending)}
+                          diffusableSyncPending={hektorSyncPending || portalSyncPending}
+                          onSetValidation={props.onSetValidation}
+                          onSetDiffusable={props.onSetDiffusable}
+                          onOpenHektor={hektorActionItem ? () => hektorActionItem.onClick({ stopPropagation() {} }) : undefined}
+                        />
+                      )}
+                    />
+                  </div>
+                ) : null}
               </section>
 
               {isLightweightDetail ? (
@@ -17641,45 +17673,6 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
               </div>
             </main>
-
-            <aside className="detail-column-side">
-              <section className="detail-section detail-side-quick">
-                {isLightweightDetail ? (
-                  <article className="detail-readonly-side-card">
-                    <span className="detail-readonly-banner-icon" aria-hidden="true"><DetailIcon type="history" /></span>
-                    <strong>Actions bloquees</strong>
-                    <p>Cette fiche est disponible en consultation. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes apres desarchivage.</p>
-                  </article>
-                ) : <DetailDossierActionPanel
-                  mandat={dossier}
-                  role={actionRole}
-                  requests={actionRequests}
-                  currentRequest={props.currentActionRequest}
-                  nextActionLabel={!isValidationApproved(validationDraft) ? 'Valider le mandat' : isDraftDiffusable ? 'Controler la diffusion' : 'Activer la diffusion'}
-                  nextActionDetail={props.detail.next_action || props.detail.motif_blocage || "Le mandat n'est pas encore qualifie avec une prochaine action."}
-                  onOpenRequestModal={openRequestFromDetail}
-                  onOpenDiffusionModal={openDiffusionFromDetail}
-                  hideActionList
-                  renderExtraActions={(showMandatePilot && props.allowMarkValidation) || (showDiffusionPilot && props.allowMarkDiffusable) ? () => (
-                    <DetailAdminPilotPanel
-                      allowValidation={showMandatePilot && props.allowMarkValidation}
-                      allowDiffusable={showDiffusionPilot && props.allowMarkDiffusable}
-                      validationActive={isValidated}
-                      validationObserved={isValidationApproved(validationObserved)}
-                      validationPending={Boolean(props.markValidationPending)}
-                      validationSyncPending={validationSyncPending}
-                      diffusableActive={isDraftDiffusable}
-                      diffusableObserved={isObservedDiffusable}
-                      diffusablePending={Boolean(props.markDiffusablePending)}
-                      diffusableSyncPending={hektorSyncPending || portalSyncPending}
-                      onSetValidation={props.onSetValidation}
-                      onSetDiffusable={props.onSetDiffusable}
-                      onOpenHektor={hektorActionItem ? () => hektorActionItem.onClick({ stopPropagation() {} }) : undefined}
-                    />
-                  ) : undefined}
-                />}
-              </section>
-            </aside>
 
             <div className="detail-column-main">
               {activeDetailTab === 'diffusion' ? (
