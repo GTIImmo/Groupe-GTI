@@ -16731,7 +16731,7 @@ function DossierDetailLayout(props: {
   const [hektorEditModalOpen, setHektorEditModalOpen] = useState(false)
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState({ offer: false, compromis: false, sale: false })
-  const [headerMenu, setHeaderMenu] = useState<null | 'modify' | 'more'>(null)
+  const [headerMenu, setHeaderMenu] = useState<null | 'modify' | 'more' | 'pilotage'>(null)
   const primaryContact = props.contacts[0] ?? null
   const secondaryContacts = props.contacts.slice(1)
   const contactSummaryLabel = props.detail.mandants_texte || props.contacts.map((contact) => contact.name).filter(Boolean).join(' | ')
@@ -16869,6 +16869,33 @@ function DossierDetailLayout(props: {
                               <strong>Statut</strong>
                             </button>
                           ) : null}
+                          {(showMandatePilot && props.allowMarkValidation) || (showDiffusionPilot && props.allowMarkDiffusable) ? (
+                            <div className="ds-menuwrap">
+                              <button className="ds-btn ds-btn-outline" type="button" aria-expanded={headerMenu === 'pilotage'} onClick={() => setHeaderMenu(headerMenu === 'pilotage' ? null : 'pilotage')}>
+                                <strong>Pilotage</strong>
+                                <span className="ds-caret" aria-hidden="true">▾</span>
+                              </button>
+                              {headerMenu === 'pilotage' ? (
+                                <div className="ds-menu ds-pilotage-pop">
+                                  <DetailAdminPilotPanel
+                                    allowValidation={showMandatePilot && props.allowMarkValidation}
+                                    allowDiffusable={showDiffusionPilot && props.allowMarkDiffusable}
+                                    validationActive={isValidated}
+                                    validationObserved={isValidationApproved(validationObserved)}
+                                    validationPending={Boolean(props.markValidationPending)}
+                                    validationSyncPending={validationSyncPending}
+                                    diffusableActive={isDraftDiffusable}
+                                    diffusableObserved={isObservedDiffusable}
+                                    diffusablePending={Boolean(props.markDiffusablePending)}
+                                    diffusableSyncPending={hektorSyncPending || portalSyncPending}
+                                    onSetValidation={props.onSetValidation}
+                                    onSetDiffusable={props.onSetDiffusable}
+                                    onOpenHektor={hektorActionItem ? () => hektorActionItem.onClick({ stopPropagation() {} }) : undefined}
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                           <div className="ds-menuwrap">
                             <button className="ds-btn ds-btn-outline" type="button" aria-expanded={headerMenu === 'modify'} onClick={() => setHeaderMenu(headerMenu === 'modify' ? null : 'modify')}>
                               <strong>Modifier</strong>
@@ -16936,37 +16963,6 @@ function DossierDetailLayout(props: {
                         onClick={item.onClick}
                       />
                     ))}
-                  </div>
-                ) : null}
-                {!isLightweightDetail && ((showMandatePilot && props.allowMarkValidation) || (showDiffusionPilot && props.allowMarkDiffusable)) ? (
-                  <div className="detail-overview-pilotage">
-                    <DetailDossierActionPanel
-                      mandat={dossier}
-                      role={actionRole}
-                      requests={actionRequests}
-                      currentRequest={props.currentActionRequest}
-                      onOpenRequestModal={openRequestFromDetail}
-                      onOpenDiffusionModal={openDiffusionFromDetail}
-                      hideActionList
-                      hideNextAction
-                      renderExtraActions={() => (
-                        <DetailAdminPilotPanel
-                          allowValidation={showMandatePilot && props.allowMarkValidation}
-                          allowDiffusable={showDiffusionPilot && props.allowMarkDiffusable}
-                          validationActive={isValidated}
-                          validationObserved={isValidationApproved(validationObserved)}
-                          validationPending={Boolean(props.markValidationPending)}
-                          validationSyncPending={validationSyncPending}
-                          diffusableActive={isDraftDiffusable}
-                          diffusableObserved={isObservedDiffusable}
-                          diffusablePending={Boolean(props.markDiffusablePending)}
-                          diffusableSyncPending={hektorSyncPending || portalSyncPending}
-                          onSetValidation={props.onSetValidation}
-                          onSetDiffusable={props.onSetDiffusable}
-                          onOpenHektor={hektorActionItem ? () => hektorActionItem.onClick({ stopPropagation() {} }) : undefined}
-                        />
-                      )}
-                    />
                   </div>
                 ) : null}
               </section>
