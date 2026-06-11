@@ -163,6 +163,15 @@
     top: var(--ds-space-3) !important;
     align-self: start !important;
   }
+  /* Synthèse : Visites & Emails côte à côte (effet dashboard, fin de l'empilement étiré) */
+  .detail-screen .detail-activity-visits,
+  .detail-screen .detail-activity-emails {
+    float: left !important;
+    width: calc(50% - 9px) !important;
+    box-sizing: border-box !important;
+  }
+  .detail-screen .detail-activity-emails { margin-left: 18px !important; }
+  .detail-screen .detail-summary-cockpit { clear: both !important; }
 }
 
 /* --- (2) Reporting : bandeau de marque GTI (visible seulement à l'impression) --- */
