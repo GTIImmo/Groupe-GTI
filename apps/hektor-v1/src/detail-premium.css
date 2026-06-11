@@ -144,6 +144,27 @@
   color: var(--ds-brand-700) !important;
 }
 
+/* =============================================================================
+   REFONTE MISE EN PAGE (étape 1) — desktop ≥ 1100px uniquement (mobile intact).
+   Corrige : sur-étirement, modale trop large, colonne droite orpheline.
+   ============================================================================= */
+@media (min-width: 1100px) {
+  /* Largeur maîtrisée + centrée : fini le contenu sur-étiré et la modale géante */
+  .detail-screen .detail-cockpit-body {
+    max-width: 1280px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    grid-template-columns: minmax(0, 1fr) 330px !important;
+    column-gap: var(--ds-space-6) !important;
+  }
+  /* Rail droit (Prochaine action / Pilotage) collant → suit le scroll, plus orphelin */
+  .detail-screen .detail-column-side {
+    position: sticky !important;
+    top: var(--ds-space-3) !important;
+    align-self: start !important;
+  }
+}
+
 /* --- (2) Reporting : bandeau de marque GTI (visible seulement à l'impression) --- */
 .detail-reporting-print-head { display: none; }
 
