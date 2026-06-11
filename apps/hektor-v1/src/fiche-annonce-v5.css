@@ -170,6 +170,14 @@
 .fa-v5 .fa-mod{background:#fff;border:1px solid var(--fa-line);border-radius:18px;padding:15px 18px;box-shadow:var(--fa-shadow-card-lg);display:flex;flex-direction:column;transition:box-shadow .2s ease,transform .2s ease}
 .fa-v5 .fa-mod:hover{box-shadow:0 2px 4px rgba(32,27,24,.05), 0 22px 42px -22px rgba(32,27,24,.2);transform:translateY(-1px)}
 .fa-v5 .fa-mod-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+/* hiérarchie v4(3) : bloc PRIMAIRE (ombre marquée + liseré magenta→or) + en-tête « lead » */
+.fa-v5 .fa-mod.fa-primary{box-shadow:0 3px 7px rgba(32,27,24,.06),0 32px 58px -26px rgba(32,27,24,.30);border-color:#e7ddce;position:relative;overflow:hidden}
+.fa-v5 .fa-mod.fa-primary::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--fa-brand),var(--fa-gold))}
+.fa-v5 .fa-mod.fa-primary:hover{transform:translateY(-2px)}
+.fa-v5 .fa-sec-lead{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.fa-v5 .fa-sec-lead .fa-sl-t{font-family:'Spectral',Georgia,serif;font-size:17px;font-weight:600;color:var(--fa-ink);letter-spacing:-.01em}
+.fa-v5 .fa-sec-lead .fa-sl-pill{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#1f6e44;background:#e9f3ec;border:1px solid var(--fa-green-line);padding:3px 9px;border-radius:99px;display:inline-flex;align-items:center;gap:5px}
+.fa-v5 .fa-sec-lead .fa-sl-pill .fa-sl-d{width:5px;height:5px;border-radius:50%;background:var(--fa-green)}
 .fa-v5 .fa-mod-h h2{font-size:15.5px;font-weight:700;color:var(--fa-ink)}
 .fa-v5 .fa-mod-meta{font-size:12px;font-weight:600;color:var(--fa-muted)}
 

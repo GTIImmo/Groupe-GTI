@@ -17163,8 +17163,9 @@ function DossierDetailLayout(props: {
                     </div>
                   </section>
                   <section className="fa-section">
+                    <div className="fa-sec-lead"><span className="fa-sl-t">Activité</span><span className="fa-sl-pill"><span className="fa-sl-d" />Suivi quotidien</span></div>
                     <div className="fa-duo">
-                      <div className="fa-mod">
+                      <div className="fa-mod fa-primary">
                         <div className="fa-mod-h"><h2>Visites &amp; RDV</h2><span className="fa-mod-meta">{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span></div>
                         {summaryAppointments.length > 0 ? (
                           <div className="timeline-list">
@@ -17178,7 +17179,7 @@ function DossierDetailLayout(props: {
                         ) : <div className="fa-empty"><span className="fa-ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg></span><span className="fa-et">Aucune demande de visite stockée pour cette annonce.</span></div>}
                         <div className="fa-row-actions"><button type="button" className="fa-btn fa-brand-soft fa-sm" onClick={() => setActiveDetailTab('commercial')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} width="14" height="14"><path d="M12 5v14M5 12h14" /></svg>Planifier une visite</button><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('commercial')}>Suivi des RDV →</button></div>
                       </div>
-                      <div className="fa-mod">
+                      <div className="fa-mod fa-primary">
                         <div className="fa-mod-h"><h2>Emails</h2><span className="fa-mod-meta">{summaryEmailContacts.length} contact{summaryEmailContacts.length > 1 ? 's' : ''}</span></div>
                         {summaryEmailContacts.length > 0 ? summaryEmailContacts.map((contact) => {
                           const dirId = detailContactDirectoryId(contact)
