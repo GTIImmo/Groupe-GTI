@@ -17340,6 +17340,26 @@ function DossierDetailLayout(props: {
                       </div>
                     </div>
                   </section>
+                  {isEstimation ? (
+                  <section className="fa-section">
+                    <div className="fa-sec-lead"><span className="fa-sl-t">Qualification</span><span className="fa-sl-pill"><span className="fa-sl-d" />Lead</span></div>
+                    <div className="fa-duo">
+                      <div className="fa-mod">
+                        <div className="fa-mod-h"><h2>Qualification du lead</h2></div>
+                        <div className="fa-mandate-fields" style={{ padding: '0' }}>
+                          <div className="fa-mfield"><span className="fa-mk">Origine du lead</span><span className="fa-mv fe-todo">En construction</span></div>
+                          <div className="fa-mfield"><span className="fa-mk">Motivation</span><span className="fa-mv fe-todo">En construction</span></div>
+                          <div className="fa-mfield"><span className="fa-mk">Échéance projet</span><span className="fa-mv fe-todo">En construction</span></div>
+                          <div className="fa-mfield"><span className="fa-mk">Mandat visé</span><span className="fa-mv fe-todo">En construction</span></div>
+                        </div>
+                      </div>
+                      <div className="fa-mod">
+                        <div className="fa-mod-h"><h2>Concurrence</h2></div>
+                        <div className="fa-empty"><span className="fa-ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg></span><span className="fa-et">Agences consultées, exclusivité et probabilité de signature — <b>En construction</b>.</span></div>
+                      </div>
+                    </div>
+                  </section>
+                  ) : (
                   <section className="fa-section">
                     <div className="fa-sec-head-row"><div className="fa-sec-label">Affaires</div><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('commercial')}>Détail dans Commercialisation →</button></div>
                     <div className="fa-mod fa-pipeline-card">
@@ -17367,6 +17387,7 @@ function DossierDetailLayout(props: {
                       </div>
                     </div>
                   </section>
+                  )}
                 </div>
                 )
               })() : null}
