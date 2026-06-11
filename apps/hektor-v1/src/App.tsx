@@ -16848,7 +16848,7 @@ function DossierDetailLayout(props: {
   })
   const hektorActionItem = hektorActionModel.items.find((item) => item.typeTone === 'hektor')
   return (
-    <section className={`detail-screen detail-screen-${detailVariant}`}>
+    <section className="detail-screen" data-detail-variant={detailVariant}>
       <div className="panel detail-cockpit-panel">
         <div className="full-detail-layout">
           <div className="detail-cockpit-body">
