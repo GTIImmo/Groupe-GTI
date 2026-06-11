@@ -214,6 +214,27 @@
 .detail-screen .ds-hero-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--ds-space-3); }
 .detail-screen .ds-hero-toprow { display: flex; align-items: center; gap: var(--ds-space-2); }
 .detail-screen .ds-hero-toprow .detail-overview-close { position: static !important; }
+
+/* =============================================================================
+   Modale Statut — en-tête clair premium (fini le sombre/bleu-teal hors-charte).
+   Couverture exhaustive des textes pour éviter tout blanc-sur-blanc.
+   ============================================================================= */
+.status-change-modal .panel-head {
+  background: linear-gradient(135deg, #ffffff 0%, var(--ds-brand-50) 100%) !important;
+  border-bottom: 1px solid var(--ds-border) !important;
+  color: var(--ds-ink) !important;
+}
+.status-change-modal .panel-head h3 { color: var(--ds-ink) !important; }
+.status-change-modal .panel-head .eyebrow { color: var(--ds-brand-700) !important; }
+.status-change-modal .panel-head .button-subtle,
+.status-change-modal .panel-head .ghost-button {
+  background: var(--ds-surface) !important;
+  color: var(--ds-ink-soft) !important;
+  border: 1px solid var(--ds-border-strong) !important;
+}
+.status-change-modal .modal-hero-icon-status {
+  background: linear-gradient(135deg, var(--ds-brand) 0%, var(--ds-brand-700) 100%) !important;
+}
 @media (max-width: 1040px) {
   .detail-screen .ds-hero { grid-template-columns: 1fr; }
   .detail-screen .ds-hero-side { align-items: stretch; }
