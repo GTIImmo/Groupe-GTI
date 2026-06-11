@@ -17086,25 +17086,6 @@ function DossierDetailLayout(props: {
               {activeDetailTab === 'summary' ? (
                 <section className="detail-section detail-summary-cockpit">
                   <div className="detail-summary-board">
-                    <article className="detail-summary-visual">
-                      {primaryImage ? (
-                        <button className="detail-summary-main-image" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
-                          <img src={primaryImage} alt={dossier.titre_bien} />
-                        </button>
-                      ) : <div className="detail-photo-placeholder">Aucune photo synchronisee</div>}
-                    </article>
-                    <article className="detail-summary-card is-status">
-                      <div className="detail-summary-card-head">
-                        <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="summary" /></span>
-                        <h5>Points cles</h5>
-                      </div>
-                      <div className="detail-status-list">
-                        <div><span>Statut annonce</span><StatusPill value={dossier.statut_annonce ?? '-'} /></div>
-                        <div><span>Mandat</span><StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} /></div>
-                        <div><span>Diffusable</span><StatusPill value={diffusableLabel(dossier.diffusable)} /></div>
-                        <div><span>Passerelles</span><strong>{activePortalTotal ? `${activePortalTotal} actif${activePortalTotal > 1 ? 's' : ''}` : 'Aucune'}</strong></div>
-                      </div>
-                    </article>
                     <article className="detail-summary-card is-visibility">
                       <div className="detail-summary-card-head">
                         <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="visibility" /></span>

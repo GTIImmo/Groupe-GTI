@@ -215,6 +215,15 @@
 .detail-screen .ds-hero-toprow { display: flex; align-items: center; gap: var(--ds-space-2); }
 .detail-screen .ds-hero-toprow .detail-overview-close { position: static !important; }
 
+/* Synthèse : le « board » d'infos (Visibilité / Diagnostics / Mandants) passe en
+   grille fluide après retrait du photo + « Points clés » redondants (déjà dans le hero).
+   Évite les trous laissés par l'ancienne grille à zones nommées. */
+.detail-screen .detail-summary-board {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  grid-template-areas: none !important;
+}
+.detail-screen .detail-summary-board > article { grid-area: auto !important; }
+
 /* =============================================================================
    Modale Statut — en-tête clair premium (fini le sombre/bleu-teal hors-charte).
    Couverture exhaustive des textes pour éviter tout blanc-sur-blanc.
