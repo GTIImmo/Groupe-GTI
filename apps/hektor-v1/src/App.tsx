@@ -16980,19 +16980,7 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     ) : null}
-                    {(() => {
-                      const mandants = props.contacts.filter((c) => /mandant|propri|owner|vendeur/i.test(c.role || ''))
-                      if (!mandants.length) return null
-                      return (
-                        <div className="fa-rblock fa-rb-mand">
-                          <div className="fa-rblock-h"><span className="fa-rlabel">Mandants · {mandants.length}</span><button type="button" className="fa-linkmini" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}>Voir →</button></div>
-                          {mandants.map((contact) => {
-                            const nm = contact.name || `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim() || 'Mandant'
-                            return <div key={contact.id} className="fa-mand"><span className="fa-mini-av">{userInitials(nm, null)}</span>{nm}</div>
-                          })}
-                        </div>
-                      )
-                    })()}
+                    {/* Mandants : retirés du rail (cf. maquette v4(3)) — disponibles dans l'onglet « Mandat & contacts » */}
                   {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                 </div>
               </section>
