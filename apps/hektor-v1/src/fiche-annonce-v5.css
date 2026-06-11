@@ -341,10 +341,10 @@
    Le rail garde un max-height + overflow de sécurité : sur petit écran il
    défile en interne au lieu d'être coupé ; sur grand écran il tient et ne
    scrolle pas (= comportement maquette). */
-.fa-v5.fa-cockpit{display:grid !important;grid-template-columns:332px minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:20px;align-items:stretch;min-height:100dvh}
+.fa-v5.fa-cockpit{display:grid !important;grid-template-columns:332px minmax(0,1fr);grid-template-rows:auto auto;column-gap:20px;align-items:start}
 .fa-v5.fa-cockpit > .detail-overview{display:contents}
 .fa-v5.fa-cockpit .fa-topbar{grid-column:1 / -1;grid-row:1;margin-bottom:18px}
-.fa-v5.fa-cockpit .ds-hero{grid-column:1;grid-row:2;position:sticky;top:0;align-self:start;display:flex;flex-direction:column;gap:0;
+.fa-v5.fa-cockpit .ds-hero{grid-column:1;grid-row:2;align-self:start;display:flex;flex-direction:column;gap:0;
   background:radial-gradient(circle at 1px 1px, rgba(150,110,80,.045) 1px, transparent 1.6px) 0 0/20px 20px,radial-gradient(135% 52% at 50% 100%, rgba(194,18,95,.05), transparent 72%),linear-gradient(180deg,#fcf4ec 0%,#fffdfb 42%);
   border:0;border-right:1px solid var(--fa-line-soft);border-radius:0;box-shadow:none;padding:16px 18px 22px;margin-right:4px}
 .fa-v5.fa-cockpit .fa-workcol{grid-column:2;grid-row:2;min-width:0;display:flex;flex-direction:column;gap:16px;padding-bottom:8px}

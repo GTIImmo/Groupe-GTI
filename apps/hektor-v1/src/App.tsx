@@ -16971,24 +16971,7 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     </div>
-                    <div className="ds-hero-side">
-                    {dossier.commercial_nom || dossier.agence_nom ? (
-                      <div className="detail-owner-card">
-                        <div className="detail-owner-avatar">{userInitials(dossier.commercial_nom, null)}</div>
-                        <div className="detail-owner-copy">
-                          <span>Responsable</span>
-                          <strong>{dossier.commercial_nom ?? '-'}</strong>
-                          {dossier.agence_nom ? <small>{dossier.agence_nom}</small> : null}
-                          {props.onMissingNegotiator ? (
-                            <button className="detail-owner-reassign" type="button" onClick={() => props.onMissingNegotiator?.(dossier)}>
-                              Reaffecter
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                    ) : null}
-                    </div>
-                    {/* Blocs rail v4 : Diagnostics · Diffusion · Mandants */}
+                    {/* Blocs rail v4(3) : Diagnostics · Diffusion · Responsable · Mandants */}
                     <div className="fa-rblock fa-rb-diag">
                       <div className="fa-rblock-h"><span className="fa-rlabel">Diagnostics</span>{props.detail.console_missing_fields_extracted_at ? <span className="fa-diag-date">Lus le {formatDate(props.detail.console_missing_fields_extracted_at)}</span> : null}</div>
                       {hasDpeGesVignettes(props.detail) ? (
@@ -17014,7 +16997,28 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     ) : null}
-                    {/* Mandants : retirés du rail (cf. maquette v4(3)) — disponibles dans l'onglet « Mandat & contacts » */}
+                    {dossier.commercial_nom || dossier.agence_nom ? (
+                      <div className="fa-rblock fa-rb-resp">
+                        <div className="fa-rblock-h"><span className="fa-rlabel">Responsable</span>{props.onMissingNegotiator ? <button type="button" className="fa-linkmini" onClick={() => props.onMissingNegotiator?.(dossier)}>Reaffecter</button> : null}</div>
+                        <div className="fa-resp">
+                          <span className="fa-avatar">{userInitials(dossier.commercial_nom, null)}</span>
+                          <div><div className="fa-nm">{dossier.commercial_nom ?? '-'}</div>{dossier.agence_nom ? <div className="fa-sb">{dossier.agence_nom}</div> : null}</div>
+                        </div>
+                      </div>
+                    ) : null}
+                    {(() => {
+                      const mandants = props.contacts.filter((c) => /mandant|propri|owner|vendeur/i.test(c.role || ''))
+                      if (!mandants.length) return null
+                      return (
+                        <div className="fa-rblock fa-rb-mand">
+                          <div className="fa-rblock-h"><span className="fa-rlabel">Mandants · {mandants.length}</span><button type="button" className="fa-linkmini" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}>Voir →</button></div>
+                          {mandants.map((contact) => {
+                            const nm = contact.name || `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim() || 'Mandant'
+                            return <div key={contact.id} className="fa-mand"><span className="fa-mini-av">{userInitials(nm, null)}</span>{nm}</div>
+                          })}
+                        </div>
+                      )
+                    })()}
                   {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                 </div>
               </section>
