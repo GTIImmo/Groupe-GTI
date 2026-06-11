@@ -1,0 +1,378 @@
+/* =============================================================================
+   Fiche annonce — refonte v5 (handoff design v4 GTI)
+   -----------------------------------------------------------------------------
+   • TOUT est scopé sous .fa-v5 et préfixé .fa-* → aucun impact sur les écrans
+     existants tant que le JSX ne porte pas la classe racine .fa-v5.
+   • Reprend fidèlement les tokens/specs du dossier « design_handoff_fiche_annonce ».
+   • Démarches = version HYBRIDE : look v4 + état→couleur + libellé + message
+     (préservation du système buildMandatActionModel / action-menu-state-*).
+   • Polices : Hanken Grotesk (UI) + Spectral (titre/prix). À charger via le
+     mécanisme de polices du codebase (ici @fontsource ou <link> Google).
+   ============================================================================= */
+
+.fa-v5{
+  --fa-bg:#f1ece4;            --fa-panel:#fffdfb;
+  --fa-ink:#1c1815;          --fa-ink-soft:#564d47;  --fa-muted:#8a807a;  --fa-faint:#a89e95;
+  --fa-line:#eae1d7;         --fa-line-soft:#f1eae1; --fa-line-strong:#ddd2c6;
+  --fa-brand:#c2125f;        --fa-brand-ink:#9d0f4e; --fa-brand-soft:#f9e7ef;
+  --fa-green:#2f8a5b;        --fa-green-line:#cfe7d8; --fa-gold:#a8814a;
+  /* tons d'état des démarches (mappés sur action-menu-state-*) */
+  --fa-st-ajouter:#7a6f67;   --fa-st-ajouter-bg:#f3eee8;
+  --fa-st-corriger:#9a5b05;  --fa-st-corriger-bg:#fbefd8;
+  --fa-st-envoyee:#1f63b8;   --fa-st-envoyee-bg:#e7eefb;
+  --fa-st-encours:#2f6f8a;   --fa-st-encours-bg:#e6f1f6;
+  --fa-st-diffusion:#1f6e44; --fa-st-diffusion-bg:#e4f3ea;
+  --fa-shadow:0 1px 2px rgba(32,27,24,.05), 0 4px 14px -8px rgba(32,27,24,.10), 0 30px 64px -34px rgba(32,27,24,.30);
+  --fa-shadow-card:0 1px 2px rgba(32,27,24,.05), 0 1px 1px rgba(32,27,24,.03);
+  --fa-shadow-card-lg:0 1px 2px rgba(32,27,24,.05), 0 14px 28px -18px rgba(32,27,24,.16);
+  font-family:'Hanken Grotesk', system-ui, sans-serif;
+  color:var(--fa-ink);
+}
+
+/* ===== panneau ===== */
+.fa-v5 .fa-panel{position:relative;width:100%;max-width:1320px;margin:0 auto;background:var(--fa-panel);border:1px solid var(--fa-line);border-radius:22px;box-shadow:var(--fa-shadow)}
+.fa-v5 .fa-panel::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:22px 22px 0 0;background:linear-gradient(90deg,var(--fa-brand) 0%,#d4548c 44%,var(--fa-gold) 100%)}
+.fa-v5 *:focus-visible{outline:2px solid var(--fa-brand);outline-offset:2px;border-radius:5px}
+
+/* ===== topbar (encre) ===== */
+.fa-v5 .fa-topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;background:linear-gradient(180deg,#241e1a 0%,#1b1613 100%);border-bottom:1px solid #38302a;border-radius:22px 22px 0 0;box-shadow:0 16px 30px -22px rgba(0,0,0,.7);position:relative;z-index:3}
+.fa-v5 .fa-tb-left{display:flex;align-items:center;gap:12px;min-width:0}
+.fa-v5 .fa-tb-badge{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,#d12a73,#9d0f4e);box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 6px 14px -7px rgba(194,18,95,.7)}
+.fa-v5 .fa-tb-badge svg{width:19px;height:19px}
+.fa-v5 .fa-crumb{display:flex;flex-direction:column;line-height:1.15}
+.fa-v5 .fa-crumb .fa-ey{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#a2938a}
+.fa-v5 .fa-crumb .fa-ref{font-size:13.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;margin-top:2px;letter-spacing:.01em}
+.fa-v5 .fa-tb-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+/* boutons topbar sur fond sombre */
+.fa-v5 .fa-topbar .fa-btn{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#ece4db}
+.fa-v5 .fa-topbar .fa-btn:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.30);color:#fff}
+.fa-v5 .fa-topbar .fa-btn .fa-caret{opacity:.65}
+.fa-v5 .fa-topbar .fa-btn.fa-brand{background:linear-gradient(180deg,#d72c76,#bb1059);border-color:#bb1059;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px -9px rgba(194,18,95,.8)}
+.fa-v5 .fa-topbar .fa-btn.fa-brand:hover{background:linear-gradient(180deg,#c61f69,#a50f4e);color:#fff}
+.fa-v5 .fa-topbar .fa-btn-close{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:#c9beb3}
+.fa-v5 .fa-topbar .fa-btn-close:hover{background:#fff;color:#1b1613;border-color:#fff}
+
+/* boutons génériques */
+.fa-v5 .fa-btn{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:9px;padding:8px 12px;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--fa-line-strong);background:transparent;color:var(--fa-ink-soft);transition:.15s;white-space:nowrap;line-height:1}
+.fa-v5 .fa-btn:hover{background:#fff;border-color:#cdbfb0;color:var(--fa-ink)}
+.fa-v5 .fa-btn svg{width:15px;height:15px}
+.fa-v5 .fa-btn .fa-caret{width:10px;height:10px;opacity:.5}
+.fa-v5 .fa-btn.fa-brand{background:linear-gradient(180deg,#cd266f,#bb1059);border-color:#ab0f54;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px -10px rgba(194,18,95,.7)}
+.fa-v5 .fa-btn.fa-icon{padding:0;width:36px;height:36px;justify-content:center}
+.fa-v5 .fa-btn.fa-icon svg{width:16px;height:16px}
+.fa-v5 .fa-btn.fa-sm{font-size:12.5px;padding:7px 12px;border-radius:9px}
+.fa-v5 .fa-btn.fa-brand-soft{background:var(--fa-brand-soft);border-color:transparent;color:var(--fa-brand-ink)}
+.fa-v5 .fa-btn.fa-brand-soft:hover{background:#f4d7e4;color:var(--fa-brand-ink)}
+.fa-v5 .fa-btn-close{width:36px;height:36px;border-radius:50%;border:1px solid var(--fa-line-strong);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fa-muted);transition:.15s}
+
+/* menus déroulants topbar */
+.fa-v5 .fa-menuwrap{position:relative}
+.fa-v5 .fa-menu{position:absolute;right:0;top:calc(100% + 7px);min-width:220px;background:#fff;border:1px solid var(--fa-line);border-radius:13px;box-shadow:var(--fa-shadow-card-lg);padding:6px;z-index:40}
+.fa-v5 .fa-mi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;border:0;background:transparent;border-radius:8px;font:inherit;font-size:13px;font-weight:600;color:var(--fa-ink);cursor:pointer}
+.fa-v5 .fa-mi:hover{background:var(--fa-bg)}
+.fa-v5 .fa-mi-danger{color:var(--fa-brand-ink)}
+.fa-v5 .fa-mi-danger:hover{background:var(--fa-brand-soft)}
+.fa-v5 .fa-menu-backdrop{position:fixed;inset:0;z-index:35;background:transparent}
+
+/* ===== workspace ===== */
+.fa-v5 .fa-workspace{display:grid;grid-template-columns:330px 1fr}
+.fa-v5 .fa-rail{border-right:1px solid var(--fa-line-soft);border-bottom-left-radius:22px;background:radial-gradient(circle at 1px 1px, rgba(150,110,80,.045) 1px, transparent 1.6px) 0 0/20px 20px,radial-gradient(135% 52% at 50% 100%, rgba(194,18,95,.05), transparent 72%),linear-gradient(180deg,#fcf4ec 0%, #fffdfb 42%)}
+.fa-v5 .fa-rail-inner{position:sticky;top:0}
+
+/* hero photo */
+.fa-v5 .fa-hero{position:relative;height:184px;margin:16px 16px 0;border-radius:16px;overflow:hidden;background:#efe7dd;box-shadow:0 1px 2px rgba(32,27,24,.06), 0 18px 32px -18px rgba(32,27,24,.34), inset 0 0 0 1px rgba(0,0,0,.05)}
+.fa-v5 .fa-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fa-v5 .fa-hero-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,14,10,.28) 0%,transparent 32%,transparent 55%,rgba(20,14,10,.55) 100%);pointer-events:none}
+.fa-v5 .fa-hero-status{position:absolute;top:13px;left:14px;display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:#fff;background:rgba(20,14,10,.42);border:1px solid rgba(255,255,255,.28);padding:5px 11px;border-radius:99px;backdrop-filter:blur(6px);pointer-events:none}
+.fa-v5 .fa-hero-status .fa-dot{width:7px;height:7px;border-radius:50%;background:#5fe39b;box-shadow:0 0 0 3px rgba(95,227,155,.3)}
+.fa-v5 .fa-hero-ref{position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.92);font-variant-numeric:tabular-nums;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+
+/* rail body */
+.fa-v5 .fa-rail-body{padding:14px 18px 18px}
+.fa-v5 .fa-r-title{font-family:'Spectral',Georgia,serif;font-weight:600;font-size:23px;line-height:1.2;letter-spacing:-.01em;color:var(--fa-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa-v5 .fa-r-address{margin-top:9px;color:var(--fa-muted);font-size:13px;display:flex;align-items:flex-start;gap:7px;font-weight:500;line-height:1.4}
+.fa-v5 .fa-r-address svg{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+.fa-v5 .fa-price{margin-top:14px;padding-top:13px;border-top:1px solid var(--fa-line);display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.fa-v5 .fa-price .fa-amount{font-family:'Spectral',serif;font-weight:600;font-size:37px;line-height:1;color:var(--fa-brand);letter-spacing:-.015em;font-variant-numeric:tabular-nums}
+.fa-v5 .fa-price .fa-ppm{font-size:12px;font-weight:700;color:var(--fa-gold);background:#f7f0e3;border:1px solid #ecdfc7;padding:4px 9px;border-radius:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fa-v5 .fa-rblock{margin-top:13px;padding-top:13px;border-top:1px solid var(--fa-line)}
+.fa-v5 .fa-rblock-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.fa-v5 .fa-rlabel{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--fa-faint)}
+.fa-v5 .fa-diag-date{font-size:12px;color:var(--fa-faint);font-weight:500}
+.fa-v5 .fa-linkmini{font-size:12px;font-weight:700;color:var(--fa-brand-ink);text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:.15s;background:none;border:0;cursor:pointer}
+.fa-v5 .fa-linkmini:hover{gap:7px}
+.fa-v5 .fa-resp{display:flex;gap:12px;align-items:center}
+.fa-v5 .fa-avatar{width:44px;height:44px;border-radius:13px;flex-shrink:0;background:linear-gradient(145deg,#d23076,#a30f4e);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 8px 16px -8px rgba(194,18,95,.55)}
+.fa-v5 .fa-resp .fa-nm{font-weight:700;font-size:14px;color:var(--fa-ink);line-height:1.15}
+.fa-v5 .fa-resp .fa-sb{font-size:12px;color:var(--fa-muted);margin-top:1px}
+.fa-v5 .fa-mand{display:flex;align-items:center;gap:11px;font-size:13.5px;font-weight:600;color:var(--fa-ink-soft);padding:5px 0}
+.fa-v5 .fa-mand + .fa-mand{border-top:1px solid var(--fa-line-soft)}
+.fa-v5 .fa-mini-av{width:28px;height:28px;border-radius:8px;background:var(--fa-brand-soft);color:var(--fa-brand-ink);font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* diagnostics */
+.fa-v5 .fa-diag-row{display:flex;align-items:center;gap:14px;padding:9px 0}
+.fa-v5 .fa-diag-row + .fa-diag-row{border-top:1px solid var(--fa-line-soft)}
+.fa-v5 .fa-dk{width:34px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--fa-ink-soft);flex-shrink:0}
+.fa-v5 .fa-dpe-strip{flex:1;display:flex;gap:2px;height:10px}
+.fa-v5 .fa-dpe-strip i{flex:1;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)}
+.fa-v5 .fa-dpe-strip.fa-muted i{background:#e7ddd2}
+.fa-v5 .fa-ds{font-size:12px;font-weight:700;color:var(--fa-ink-soft);flex-shrink:0;width:62px;text-align:right}
+
+/* portails rail */
+.fa-v5 .fa-rail-portals{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.fa-v5 .fa-rp{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-decoration:none}
+.fa-v5 .fa-rlogo{position:relative;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 5px 11px -5px rgba(0,0,0,.45);transition:transform .15s;overflow:hidden}
+.fa-v5 .fa-rlogo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.fa-v5 .fa-rp:hover .fa-rlogo{transform:translateY(-2px)}
+.fa-v5 .fa-rp .fa-badge{position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border-radius:50%;background:var(--fa-green);border:2.5px solid #fffefc}
+.fa-v5 .fa-rp .fa-badge.fa-wait{background:var(--fa-st-corriger)}
+.fa-v5 .fa-rp .fa-badge.fa-off{background:var(--fa-faint)}
+.fa-v5 .fa-rpn{font-size:9.5px;font-weight:700;color:var(--fa-ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
+
+/* ===== main / zone de travail ===== */
+.fa-v5 .fa-main{padding:16px 28px 24px;min-width:0}
+.fa-v5 .fa-tabs{display:flex;gap:2px;border-bottom:1px solid var(--fa-line);overflow-x:auto}
+.fa-v5 .fa-tabs::-webkit-scrollbar{height:0}
+.fa-v5 .fa-tab{font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--fa-muted);padding:11px 15px 14px;position:relative;white-space:nowrap;transition:.15s;flex-shrink:0}
+.fa-v5 .fa-tab:hover{color:var(--fa-ink)}
+.fa-v5 .fa-tab.fa-active{color:var(--fa-ink)}
+.fa-v5 .fa-tab.fa-active::after{content:"";position:absolute;left:15px;right:15px;bottom:-1px;height:2.5px;background:linear-gradient(90deg,var(--fa-brand),#df6a9c);border-radius:3px}
+
+/* ===== DÉMARCHES (hybride) ===== */
+.fa-v5 .fa-demarches{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 15px;margin:12px 0 16px;background:linear-gradient(100deg,#fbe8f0 0%,#fdf2f6 40%,#fffdfb 80%);border:1px solid #f1d8e4;border-radius:13px;box-shadow:0 1px 2px rgba(32,27,24,.04)}
+.fa-v5 .fa-dm-label{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--fa-brand-ink);flex-shrink:0;display:inline-flex;align-items:center;gap:8px}
+.fa-v5 .fa-dm-label::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--fa-brand);box-shadow:0 0 0 3px rgba(194,18,95,.14)}
+.fa-v5 .fa-dm-actions{display:flex;gap:9px;flex-wrap:wrap}
+.fa-v5 .fa-dm-empty{font-size:12.5px;color:var(--fa-muted)}
+/* bouton démarche = blanc v4 + liseré & pastille d'état colorés (état conservé) */
+.fa-v5 .fa-dm-btn{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:9px;padding:8px 12px 8px 11px;border-radius:10px;border:1px solid var(--fa-line-strong);border-left:3px solid var(--fa-tone,#ccc);background:#fff;color:var(--fa-ink);transition:.16s;white-space:nowrap;position:relative;box-shadow:0 1px 1px rgba(32,27,24,.03)}
+.fa-v5 .fa-dm-btn:hover{border-color:var(--fa-brand);border-left-color:var(--fa-tone);color:var(--fa-brand-ink);transform:translateY(-1px);box-shadow:0 6px 14px -8px rgba(194,18,95,.4)}
+.fa-v5 .fa-dm-btn .fa-ic{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:var(--fa-tone-bg);color:var(--fa-tone);flex-shrink:0}
+.fa-v5 .fa-dm-btn .fa-ic svg{width:14px;height:14px}
+.fa-v5 .fa-dm-name{display:flex;flex-direction:column;line-height:1.2;text-align:left}
+.fa-v5 .fa-dm-state{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--fa-tone);margin-top:1px}
+.fa-v5 .fa-dm-plus{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;background:var(--fa-brand-soft);color:var(--fa-brand-ink);margin-left:1px}
+.fa-v5 .fa-dm-plus svg{width:11px;height:11px}
+/* tons d'état (mappés sur stateLabel) */
+.fa-v5 .fa-t-ajouter{--fa-tone:var(--fa-st-ajouter);--fa-tone-bg:var(--fa-st-ajouter-bg)}
+.fa-v5 .fa-t-corriger{--fa-tone:var(--fa-st-corriger);--fa-tone-bg:var(--fa-st-corriger-bg)}
+.fa-v5 .fa-t-envoyee{--fa-tone:var(--fa-st-envoyee);--fa-tone-bg:var(--fa-st-envoyee-bg)}
+.fa-v5 .fa-t-encours{--fa-tone:var(--fa-st-encours);--fa-tone-bg:var(--fa-st-encours-bg)}
+.fa-v5 .fa-t-diffusion{--fa-tone:var(--fa-st-diffusion);--fa-tone-bg:var(--fa-st-diffusion-bg)}
+
+/* ===== sections ===== */
+.fa-v5 .fa-section{margin-bottom:13px}
+.fa-v5 .fa-section:last-child{margin-bottom:0}
+.fa-v5 .fa-sec-label{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--fa-faint);margin-bottom:8px}
+.fa-v5 .fa-sec-head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.fa-v5 .fa-sec-head-row .fa-sec-label{margin-bottom:0}
+.fa-v5 .fa-duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch}
+.fa-v5 .fa-mod{background:#fff;border:1px solid var(--fa-line);border-radius:18px;padding:15px 18px;box-shadow:var(--fa-shadow-card-lg);display:flex;flex-direction:column;transition:box-shadow .2s ease,transform .2s ease}
+.fa-v5 .fa-mod:hover{box-shadow:0 2px 4px rgba(32,27,24,.05), 0 22px 42px -22px rgba(32,27,24,.2);transform:translateY(-1px)}
+.fa-v5 .fa-mod-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+.fa-v5 .fa-mod-h h2{font-size:15.5px;font-weight:700;color:var(--fa-ink)}
+.fa-v5 .fa-mod-meta{font-size:12px;font-weight:600;color:var(--fa-muted)}
+
+/* mandat */
+.fa-v5 .fa-mandate{display:flex;flex-direction:column;background:#fff;border:1px solid var(--fa-line);border-radius:18px;box-shadow:var(--fa-shadow-card-lg);overflow:hidden}
+.fa-v5 .fa-mandate-fields{display:flex;flex-wrap:wrap;padding:12px 6px}
+.fa-v5 .fa-mfield{flex:1;min-width:128px;padding:4px 20px;border-left:1px solid var(--fa-line-soft);display:flex;flex-direction:column;gap:5px}
+.fa-v5 .fa-mfield:first-child{border-left:none}
+.fa-v5 .fa-mk{font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--fa-muted)}
+.fa-v5 .fa-mv{font-size:15px;font-weight:700;color:var(--fa-ink);font-variant-numeric:tabular-nums}
+.fa-v5 .fa-mv.fa-ok-v{display:inline-flex;align-items:center;gap:7px;color:#1f6e44}
+.fa-v5 .fa-okdot{width:7px;height:7px;border-radius:50%;background:var(--fa-green)}
+.fa-v5 .fa-mandate-hist{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--fa-line);background:linear-gradient(180deg,#fdf7f1,#fffdfb)}
+.fa-v5 .fa-mh-label{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--fa-faint)}
+.fa-v5 .fa-mh-point{display:inline-flex;align-items:center;gap:8px}
+.fa-v5 .fa-mh-dot{width:8px;height:8px;border-radius:50%;background:var(--fa-brand);box-shadow:0 0 0 3px rgba(194,18,95,.14)}
+.fa-v5 .fa-mh-price{font-size:15px;font-weight:700;color:var(--fa-ink);font-variant-numeric:tabular-nums}
+.fa-v5 .fa-mh-tag{font-size:10.5px;font-weight:700;color:var(--fa-brand-ink);background:var(--fa-brand-soft);padding:2px 8px;border-radius:99px}
+.fa-v5 .fa-mh-empty{font-size:12.5px;color:var(--fa-muted)}
+.fa-v5 .fa-mh-link{margin-left:auto}
+
+/* activité : vide + contacts */
+.fa-v5 .fa-empty{display:flex;align-items:center;gap:13px;border:1px dashed var(--fa-line-strong);border-radius:12px;padding:10px 14px;background:#fdfbf8}
+.fa-v5 .fa-empty .fa-ee{width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid var(--fa-line);display:flex;align-items:center;justify-content:center;color:var(--fa-faint);flex-shrink:0}
+.fa-v5 .fa-empty .fa-ee svg{width:17px;height:17px}
+.fa-v5 .fa-empty .fa-et{font-size:13px;color:var(--fa-muted);line-height:1.35;flex:1}
+.fa-v5 .fa-row-actions{display:flex;gap:10px;margin-top:auto;padding-top:11px;flex-wrap:wrap;align-items:center}
+.fa-v5 .fa-contact{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0}
+.fa-v5 .fa-contact + .fa-contact{border-top:1px solid var(--fa-line-soft)}
+.fa-v5 .fa-cn{font-size:14px;font-weight:700;color:var(--fa-ink)}
+.fa-v5 .fa-ce{font-size:12.5px;color:var(--fa-muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.fa-v5 .fa-ca{display:flex;gap:8px;flex-shrink:0}
+.fa-v5 .fa-icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--fa-line);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fa-ink-soft);transition:.15s}
+.fa-v5 .fa-icon-btn:hover{background:var(--fa-brand-soft);border-color:transparent;color:var(--fa-brand-ink)}
+.fa-v5 .fa-icon-btn svg{width:15px;height:15px}
+
+/* affaires : pipeline */
+.fa-v5 .fa-pipeline-card{padding:14px 22px 14px}
+.fa-v5 .fa-pipeline{display:flex}
+.fa-v5 .fa-step{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;padding:0 8px}
+.fa-v5 .fa-step::before{content:"";position:absolute;top:18px;right:50%;width:100%;height:2.5px;background:var(--fa-line);border-radius:3px;z-index:0}
+.fa-v5 .fa-step:first-child::before{display:none}
+.fa-v5 .fa-step.fa-done::before{background:var(--fa-green)}
+.fa-v5 .fa-step.fa-active::before{background:linear-gradient(90deg,var(--fa-green),var(--fa-brand))}
+.fa-v5 .fa-step-node{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;z-index:1;background:#fff;border:2px solid var(--fa-line);color:var(--fa-faint);font-variant-numeric:tabular-nums}
+.fa-v5 .fa-step-node svg{width:18px;height:18px}
+.fa-v5 .fa-step.fa-done .fa-step-node{background:var(--fa-green);border-color:var(--fa-green);color:#fff}
+.fa-v5 .fa-step.fa-active .fa-step-node{background:linear-gradient(160deg,#d12a73,#9d0f4e);border-color:transparent;color:#fff;box-shadow:0 0 0 5px rgba(194,18,95,.13), 0 9px 18px -8px rgba(194,18,95,.6)}
+.fa-v5 .fa-step-name{margin-top:9px;font-size:15px;font-weight:700;color:var(--fa-ink)}
+.fa-v5 .fa-step.fa-pending .fa-step-name{color:var(--fa-muted)}
+.fa-v5 .fa-step-status{margin-top:5px;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.fa-v5 .fa-step-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.fa-v5 .fa-step-status.fa-ok{color:var(--fa-green)}
+.fa-v5 .fa-step-status.fa-active{color:var(--fa-brand)}
+.fa-v5 .fa-step-status.fa-pending{color:var(--fa-faint)}
+.fa-v5 .fa-step-meta{margin-top:7px;font-size:12px;color:var(--fa-muted);line-height:1.5;font-variant-numeric:tabular-nums}
+.fa-v5 .fa-step-meta b{color:var(--fa-ink);font-weight:700}
+.fa-v5 .fa-step.fa-pending .fa-step-meta{color:var(--fa-faint)}
+
+/* bandeau lecture seule (variante C — index léger) : on garde le style existant
+   .detail-readonly-banner ; ici juste un conteneur neutre si besoin */
+.fa-v5 .fa-readonly{margin:12px 0}
+
+/* responsive < 1000px : 1 colonne, rail perd sticky */
+@media (max-width:1000px){
+  .fa-v5 .fa-workspace{grid-template-columns:1fr}
+  .fa-v5 .fa-rail{border-right:none;border-bottom:1px solid var(--fa-line);border-radius:0}
+  .fa-v5 .fa-rail-inner{position:static}
+  .fa-v5 .fa-duo{grid-template-columns:1fr}
+  .fa-v5 .fa-topbar{flex-wrap:wrap}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .fa-v5 .fa-dm-btn:hover,.fa-v5 .fa-mod:hover{transform:none}
+}
+
+/* =============================================================================
+   RE-SKIN v4 de l'en-tête EXISTANT (ds-hero / ds-cmdbar) — sans toucher au JSX.
+   Scopé .fa-v5 (posé sur .detail-overview) ; importé après detail-premium.css
+   → passe sans !important. Donne le look v4 : carte chaude + photo arrondie +
+   titre Spectral + prix magenta + barre de commandes « encre ».
+   ============================================================================= */
+.fa-v5.detail-overview{background:transparent}
+.fa-v5 .ds-hero{
+  grid-template-columns:224px minmax(0,1fr) auto;
+  gap:18px;align-items:start;
+  background:radial-gradient(135% 60% at 100% 0,rgba(194,18,95,.05),transparent 70%),linear-gradient(180deg,#fcf4ec 0%,#fffdfb 46%);
+  border:1px solid var(--fa-line);border-radius:18px;padding:16px;
+  box-shadow:var(--fa-shadow-card-lg);
+}
+.fa-v5 .ds-hero-photo{width:224px;height:152px;border-radius:16px;border:0;box-shadow:0 1px 2px rgba(32,27,24,.06),0 18px 32px -18px rgba(32,27,24,.34),inset 0 0 0 1px rgba(0,0,0,.05)}
+.fa-v5 .ds-hero-kicker{color:var(--fa-brand-ink);background:var(--fa-brand-soft);border-color:#f1d8e4}
+.fa-v5 .ds-hero-title{font-family:'Spectral',Georgia,serif;font-weight:600;letter-spacing:-.01em;color:var(--fa-ink)}
+.fa-v5 .ds-hero-address{color:var(--fa-muted)}
+.fa-v5 .ds-stat span{color:var(--fa-faint)}
+.fa-v5 .ds-stat strong{color:var(--fa-ink)}
+.fa-v5 .ds-stat-price strong{font-family:'Spectral',serif;color:var(--fa-brand)}
+/* barre de commandes « encre » (les ds-btn-soft sont déjà blancs → contraste OK) */
+.fa-v5 .ds-hero-toprow{
+  background:linear-gradient(180deg,#241e1a 0%,#1b1613 100%);
+  border:1px solid #38302a;border-radius:12px;padding:7px 9px;
+  box-shadow:0 16px 30px -22px rgba(0,0,0,.7);
+}
+.fa-v5 .ds-hero-toprow .detail-overview-close{color:#c9beb3;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);border-radius:9px;padding:7px 11px}
+.fa-v5 .ds-hero-toprow .detail-overview-close:hover{background:#fff;color:#1b1613;border-color:#fff}
+/* détails v4 topbar : chevron retour + Modifier en magenta */
+.fa-v5 .fa-topbar .fa-tb-back{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#ece4db;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:.15s}
+.fa-v5 .fa-topbar .fa-tb-back:hover{background:rgba(255,255,255,.16);color:#fff}
+.fa-v5 .fa-topbar .fa-tb-back svg{width:18px;height:18px}
+.fa-v5 .fa-topbar .ds-btn.fa-tb-modif{background:linear-gradient(180deg,#d72c76,#bb1059) !important;border-color:#bb1059 !important;color:#fff !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 18px -9px rgba(194,18,95,.8)}
+.fa-v5 .fa-topbar .ds-btn.fa-tb-modif:hover{background:linear-gradient(180deg,#c61f69,#a50f4e) !important;color:#fff !important}
+/* pastille de statut sur la photo (haut-gauche), comme v4 */
+.fa-v5 .ds-hero-statusbadge{position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#fff;background:rgba(20,14,10,.5);border:1px solid rgba(255,255,255,.28);padding:4px 10px;border-radius:99px;backdrop-filter:blur(4px);text-transform:capitalize}
+.fa-v5 .ds-hero-statusbadge .fa-led{width:7px;height:7px;border-radius:50%;background:#5fe39b;box-shadow:0 0 0 3px rgba(95,227,155,.3)}
+/* ===== Passe détail v4 (alignements fins) ===== */
+/* prix : pas de libellé « Prix annonce », filet au-dessus */
+.fa-v5.fa-cockpit .ds-hero-stats{border-top:1px solid var(--fa-line);padding-top:13px;margin-top:13px}
+.fa-v5.fa-cockpit .ds-stat-price > span{display:none}
+/* adresse avec épingle */
+.fa-v5.fa-cockpit .ds-hero-address{display:flex;align-items:flex-start;gap:6px;color:var(--fa-muted)}
+.fa-v5.fa-cockpit .ds-hero-address::before{content:"";width:14px;height:14px;flex:none;margin-top:2px;background-repeat:no-repeat;background-size:contain;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a807a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z'/%3E%3Ccircle cx='12' cy='10' r='2.5'/%3E%3C/svg%3E")}
+/* topbar : boutons non-primaires sobres (sombres) comme v4 */
+.fa-v5 .fa-topbar .ds-cmdbar .ds-btn:not(.fa-tb-modif){background:rgba(255,255,255,.05) !important;border-color:rgba(255,255,255,.16) !important;color:#ece4db !important}
+.fa-v5 .fa-topbar .ds-cmdbar .ds-btn:not(.fa-tb-modif):hover{background:rgba(255,255,255,.12) !important;color:#fff !important}
+/* séparation rail/travail par le filet, sans gros gap */
+.fa-v5.fa-cockpit{column-gap:0 !important}
+.fa-v5.fa-cockpit .ds-hero{margin-right:0}
+.fa-v5.fa-cockpit .fa-workcol{padding:2px 6px 0 26px}
+/* copie conforme v4 : pas de bandeau de pills dans le rail (statut sur la photo ;
+   Diffusable → bloc Diffusion ; Mandat valide → carte Mandat). Info non perdue. */
+.fa-v5.fa-cockpit .ds-hero-pills{display:none}
+/* démarches « plates » comme v4 : le texte d'état est masqué (l'état reste porté
+   par la couleur du liseré, le badge « + » et l'infobulle au survol). */
+.fa-v5.fa-cockpit .fa-dm-state{display:none}
+.fa-v5.fa-cockpit .fa-dm-name{flex-direction:row;align-items:center;font-weight:700}
+/* démarches conformes v4 : icônes plates grises (sans boîte) + bordure uniforme */
+.fa-v5.fa-cockpit .fa-dm-btn{border:1px solid var(--fa-line-strong) !important;border-radius:11px}
+.fa-v5.fa-cockpit .fa-dm-btn:hover{border-color:var(--fa-brand) !important;box-shadow:0 6px 14px -8px rgba(194,18,95,.35)}
+.fa-v5.fa-cockpit .fa-dm-btn .fa-ic{background:none !important;color:#7a6f67 !important;width:auto !important;height:auto !important}
+.fa-v5.fa-cockpit .fa-dm-btn .fa-ic svg{width:18px !important;height:18px !important}
+/* diagnostics : la date « Lus le… » passe dans l'en-tête (on masque celle du composant) */
+.fa-v5.fa-cockpit .detail-dpe-vignettes small{display:none}
+/* carte responsable (côté droit) un peu plus chaude */
+.fa-v5 .detail-owner-card{background:#fff;border:1px solid var(--fa-line);border-radius:14px;box-shadow:var(--fa-shadow-card)}
+/* démarches : un peu d'air sous l'en-tête */
+.fa-v5 .fa-demarches{margin-top:16px}
+/* pastille €/m² (décision : Surface/Type retirés, €/m² seul) */
+.fa-v5 .ds-ppm{font-family:'Hanken Grotesk',system-ui,sans-serif;font-style:normal;font-size:13px;font-weight:700;color:var(--fa-gold);background:#f7f0e3;border:1px solid #ecdfc7;padding:4px 9px;border-radius:8px;margin-left:12px;vertical-align:middle;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* badge réf. en haut de la photo (comme v4) */
+.fa-v5 .ds-hero-photo{position:relative}
+.fa-v5 .ds-hero-refbadge{position:absolute;top:8px;right:8px;font-size:11px;font-weight:700;color:#fff;background:rgba(20,14,10,.5);border:1px solid rgba(255,255,255,.25);padding:3px 8px;border-radius:99px;backdrop-filter:blur(4px);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+
+/* =============================================================================
+   DISPOSITION v4 — rail vertical fixe à gauche + zone de travail à droite.
+   On transforme .detail-cockpit-main en grille (332px | 1fr). L'overview passe
+   en display:contents pour que topbar / hero / démarches deviennent des items
+   de la grille, placés via grid-column + order. Aucune fonction supprimée.
+   ============================================================================= */
+.fa-v5.fa-cockpit{display:grid !important;grid-template-columns:332px minmax(0,1fr);grid-template-rows:auto auto;column-gap:20px;align-items:start}
+.fa-v5.fa-cockpit > .detail-overview{display:contents}
+/* topbar pleine largeur (ligne 1) ; rail + colonne-travail (ligne 2) */
+.fa-v5.fa-cockpit .fa-topbar{grid-column:1 / -1;grid-row:1;margin-bottom:18px}
+.fa-v5.fa-cockpit .ds-hero{grid-column:1;grid-row:2;position:sticky;top:12px;align-self:start;display:flex;flex-direction:column;gap:0;
+  background:radial-gradient(circle at 1px 1px, rgba(150,110,80,.045) 1px, transparent 1.6px) 0 0/20px 20px,radial-gradient(135% 52% at 50% 100%, rgba(194,18,95,.05), transparent 72%),linear-gradient(180deg,#fcf4ec 0%,#fffdfb 42%);
+  border:0;border-right:1px solid var(--fa-line-soft);border-radius:0;box-shadow:none;padding:16px 18px 22px;margin-right:4px}
+.fa-v5.fa-cockpit .fa-workcol{grid-column:2;grid-row:2;min-width:0;display:flex;flex-direction:column;gap:16px}
+/* rail : hero en colonne */
+.fa-v5.fa-cockpit .ds-hero-photo{width:100%;height:188px}
+.fa-v5.fa-cockpit .ds-hero-kicker{display:none}            /* doublon : déjà dans la topbar */
+.fa-v5.fa-cockpit .ds-hero-main{margin-top:14px}
+.fa-v5.fa-cockpit .ds-hero-stats{margin-top:8px}
+.fa-v5.fa-cockpit .ds-hero-side{margin-top:14px;align-items:stretch;padding-top:14px;border-top:1px solid var(--fa-line)}
+.fa-v5.fa-cockpit .detail-owner-card{width:100%}
+.fa-v5.fa-cockpit .fa-demarches-slot .fa-demarches{margin-top:0}
+/* ===== Onglets style v4 : texte souligné, sans icône ni boîte ===== */
+.fa-v5.fa-cockpit .detail-tabbar{display:flex !important;gap:2px !important;grid-template-columns:none !important;border:0 !important;border-bottom:1px solid var(--fa-line) !important;background:none !important;box-shadow:none !important;padding:0 !important;overflow-x:auto}
+.fa-v5.fa-cockpit .detail-tab-button{display:inline-flex !important;align-items:center !important;flex:0 0 auto !important;background:none !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;color:var(--fa-muted) !important;font-weight:600 !important;font-size:13.5px !important;letter-spacing:0 !important;padding:11px 15px 14px !important;position:relative;white-space:nowrap}
+.fa-v5.fa-cockpit .detail-tab-button .detail-tab-icon,
+.fa-v5.fa-cockpit .detail-tab-button .detail-tab-index{display:none !important}
+.fa-v5.fa-cockpit .detail-tab-button strong{font-weight:600 !important;font-size:13.5px !important;color:inherit !important}
+.fa-v5.fa-cockpit .detail-tab-button:hover{color:var(--fa-ink) !important;background:none !important;transform:none !important}
+.fa-v5.fa-cockpit .detail-tab-button.is-active{color:var(--fa-ink) !important;background:none !important;box-shadow:none !important}
+.fa-v5.fa-cockpit .detail-tab-button.is-active::after{content:"";position:absolute;left:15px;right:15px;bottom:-1px;height:2.5px;background:linear-gradient(90deg,var(--fa-brand),#df6a9c);border-radius:3px}
+.fa-v5.fa-cockpit .detail-tab-button.is-active .detail-tab-icon{background:none !important}
+/* ===== Ordre du rail v4 : photo → identité → Diagnostics → Diffusion → Responsable → Mandants ===== */
+.fa-v5.fa-cockpit .ds-hero > .ds-hero-photo{order:0}
+.fa-v5.fa-cockpit .ds-hero > .ds-hero-main{order:1}
+.fa-v5.fa-cockpit .ds-hero > .fa-rb-diag{order:2}
+.fa-v5.fa-cockpit .ds-hero > .fa-rb-diff{order:3}
+.fa-v5.fa-cockpit .ds-hero > .ds-hero-side{order:4}
+.fa-v5.fa-cockpit .ds-hero > .fa-rb-mand{order:5}
+/* blocs du rail (Diagnostics / Diffusion / Mandants) */
+.fa-v5.fa-cockpit .ds-hero .fa-rblock{margin-top:13px;padding-top:13px;border-top:1px solid var(--fa-line)}
+.fa-v5.fa-cockpit .fa-rail-empty{font-size:12.5px;color:var(--fa-muted);margin:2px 0}
+/* vignettes DPE/GES officielles, version compacte dans le rail */
+.fa-v5.fa-cockpit .detail-dpe-vignettes{margin:0}
+.fa-v5.fa-cockpit .detail-dpe-vignette-list{display:flex;gap:10px}
+.fa-v5.fa-cockpit .detail-dpe-vignette-list a{display:flex;flex-direction:column;gap:4px;text-decoration:none;flex:1;min-width:0}
+.fa-v5.fa-cockpit .detail-dpe-vignette-list a > span{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--fa-ink-soft)}
+.fa-v5.fa-cockpit .detail-dpe-vignette-list img{width:100%;height:auto;max-height:78px;object-fit:contain;border:1px solid var(--fa-line);border-radius:8px;background:#fff}
+.fa-v5.fa-cockpit .detail-dpe-vignettes small{display:block;margin-top:7px;font-size:11px;color:var(--fa-faint)}
+@media (max-width:1000px){
+  .fa-v5.fa-cockpit{grid-template-columns:1fr}
+  .fa-v5.fa-cockpit .ds-hero{grid-column:1;grid-row:auto;position:static}
+  .fa-v5.fa-cockpit .fa-workcol{grid-column:1;grid-row:auto}
+}

@@ -6818,7 +6818,7 @@ type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'conten
 type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor'
 
 const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
-  { key: 'summary', label: 'Synthese', short: '01', icon: 'summary' },
+  { key: 'summary', label: 'Synthèse', short: '01', icon: 'summary' },
   { key: 'commercial', label: 'Commercialisation', short: '02', icon: 'commercial' },
   { key: 'mandate', label: 'Mandat & contacts', short: '03', icon: 'mandate' },
   { key: 'diffusion', label: 'Diffusion', short: '04', icon: 'diffusion' },
@@ -8836,7 +8836,9 @@ export default function App() {
       }
     }
     void refreshHektorActionJobs()
-    const interval = window.setInterval(refreshHektorActionJobs, 5000)
+    // En mode mock (dev/preview), on coupe le polling continu pour que la page
+    // atteigne l'état « idle » et que les captures automatiques fonctionnent.
+    const interval = import.meta.env.MODE === 'mock' ? 0 : window.setInterval(refreshHektorActionJobs, 5000)
     return () => {
       cancelled = true
       window.clearInterval(interval)
@@ -16821,46 +16823,18 @@ function DossierDetailLayout(props: {
       <div className="panel detail-cockpit-panel">
         <div className="full-detail-layout">
           <div className="detail-cockpit-body">
-            <main className="detail-cockpit-main">
-              <section className="detail-overview">
-                <div className="ds-hero">
-                  {primaryImage ? (
-                    <button className="ds-hero-photo" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
-                      <img src={primaryImage} alt={dossier.titre_bien || 'Bien'} />
-                    </button>
-                  ) : (
-                    <div className="ds-hero-photo ds-hero-photo-empty" aria-hidden="true"><DetailIcon type="photo" /></div>
-                  )}
-                  <div className="ds-hero-main">
-                    <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
-                    <h2 className="ds-hero-title">{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
-                    {props.address ? <p className="ds-hero-address">{props.address}</p> : null}
-                    <div className="ds-hero-pills">
-                      <StatusPill value={dossier.statut_annonce} />
-                      <StatusPill value={diffusableLabel(dossier.diffusable)} />
-                      <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
-                    </div>
-                    <div className="ds-hero-stats">
-                      <div className="ds-stat ds-stat-price">
-                        <span>Prix annonce</span>
-                        <strong>{formatPrice(dossier.prix)}</strong>
-                      </div>
-                      <div className="ds-stat">
-                        <span>Surface habitable</span>
-                        <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
-                      </div>
-                      <div className="ds-stat">
-                        <span>Type de bien</span>
-                        <strong>{propertyTypeLabel(dossier.type_bien)}</strong>
-                      </div>
-                      <div className="ds-stat">
-                        <span>Reference</span>
-                        <strong>{dossier.numero_dossier ?? '-'}</strong>
-                      </div>
+            <main className="detail-cockpit-main fa-v5 fa-cockpit">
+              <section className="detail-overview fa-v5">
+                <header className="fa-topbar">
+                  <div className="fa-tb-left">
+                    <button className="fa-tb-back" type="button" onClick={props.onBack} aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg></button>
+                    <span className="fa-tb-badge" aria-hidden="true"><DetailIcon type="actions" /></span>
+                    <div className="fa-crumb">
+                      <span className="fa-ey">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
+                      <span className="fa-ref">{dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}</span>
                     </div>
                   </div>
-                  <div className="ds-hero-side">
-                    <div className="ds-hero-toprow">
+                  <div className="ds-hero-toprow">
                       {!isLightweightDetail ? (
                         <div className="ds-cmdbar">
                           {props.onChangeAnnonceStatus ? (
@@ -16897,7 +16871,7 @@ function DossierDetailLayout(props: {
                             </div>
                           ) : null}
                           <div className="ds-menuwrap">
-                            <button className="ds-btn ds-btn-outline" type="button" aria-expanded={headerMenu === 'modify'} onClick={() => setHeaderMenu(headerMenu === 'modify' ? null : 'modify')}>
+                            <button className="ds-btn fa-tb-modif" type="button" aria-expanded={headerMenu === 'modify'} onClick={() => setHeaderMenu(headerMenu === 'modify' ? null : 'modify')}>
                               <strong>Modifier</strong>
                               <span className="ds-caret" aria-hidden="true">▾</span>
                             </button>
@@ -16931,6 +16905,43 @@ function DossierDetailLayout(props: {
                       ) : null}
                       <button className="detail-overview-close" type="button" onClick={props.onBack} aria-label="Fermer">{props.backLabel}</button>
                     </div>
+                  </header>
+                  <div className="ds-hero">
+                    {primaryImage ? (
+                      <button className="ds-hero-photo" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
+                        <img src={primaryImage} alt={dossier.titre_bien || 'Bien'} />
+                        {dossier.statut_annonce ? <span className="ds-hero-statusbadge"><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}
+                        {dossier.numero_dossier ? <span className="ds-hero-refbadge">Réf. {dossier.numero_dossier}</span> : null}
+                      </button>
+                    ) : (
+                      <div className="ds-hero-photo ds-hero-photo-empty" aria-hidden="true"><DetailIcon type="photo" />{dossier.statut_annonce ? <span className="ds-hero-statusbadge"><span className="fa-led" />{safeText(dossier.statut_annonce)}</span> : null}{dossier.numero_dossier ? <span className="ds-hero-refbadge">Réf. {dossier.numero_dossier}</span> : null}</div>
+                    )}
+                    <div className="ds-hero-main">
+                      <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
+                      <h2 className="ds-hero-title">{propertyTypeLabel(dossier.type_bien) || dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                      {props.address ? <p className="ds-hero-address">{props.address}</p> : null}
+                      <div className="ds-hero-pills">
+                        <StatusPill value={dossier.statut_annonce} />
+                        <StatusPill value={diffusableLabel(dossier.diffusable)} />
+                        <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
+                      </div>
+                      <div className="ds-hero-stats">
+                        <div className="ds-stat ds-stat-price">
+                          <span>Prix annonce</span>
+                          <strong>
+                            {formatPrice(dossier.prix)}
+                            {(() => {
+                              const toNum = (v: unknown) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^\d.,]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
+                              const prix = toNum(dossier.prix)
+                              const surf = toNum(props.detail.surface_habitable_detail ?? props.detail.surface)
+                              if (prix > 0 && surf > 0) return <em className="ds-ppm">{Math.round(prix / surf).toLocaleString('fr-FR')} €/m²</em>
+                              return null
+                            })()}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="ds-hero-side">
                     {dossier.commercial_nom || dossier.agence_nom ? (
                       <div className="detail-owner-card">
                         <div className="detail-owner-avatar">{userInitials(dossier.commercial_nom, null)}</div>
@@ -16946,26 +16957,47 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     ) : null}
-                  </div>
+                    </div>
+                    {/* Blocs rail v4 : Diagnostics · Diffusion · Mandants */}
+                    <div className="fa-rblock fa-rb-diag">
+                      <div className="fa-rblock-h"><span className="fa-rlabel">Diagnostics</span>{props.detail.console_missing_fields_extracted_at ? <span className="fa-diag-date">Lus le {formatDate(props.detail.console_missing_fields_extracted_at)}</span> : null}</div>
+                      {hasDpeGesVignettes(props.detail) ? (
+                        <DpeGesVignettes detail={props.detail} compact />
+                      ) : (
+                        <p className="fa-rail-empty">Diagnostics en cours.</p>
+                      )}
+                    </div>
+                    {activePortals.length > 0 ? (
+                      <div className="fa-rblock fa-rb-diff">
+                        <div className="fa-rblock-h"><span className="fa-rlabel">Diffusion · {activePortals.length} actifs</span><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('diffusion')}>Gérer →</button></div>
+                        <div className="fa-rail-portals">
+                          {activePortals.slice(0, 8).map((portal) => (
+                            <span key={portal} className="fa-rp" title={portalBrandLabel(portal)}>
+                              <span className="fa-rlogo">{portalBrandLabel(portal).slice(0, 1).toUpperCase()}<span className={`fa-badge ${observedPortals.includes(portal) ? '' : 'fa-wait'}`}></span></span>
+                              <span className="fa-rpn">{portalBrandLabel(portal)}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {(() => {
+                      const mandants = props.contacts.filter((c) => /mandant|propri|owner|vendeur/i.test(c.role || ''))
+                      if (!mandants.length) return null
+                      return (
+                        <div className="fa-rblock fa-rb-mand">
+                          <div className="fa-rblock-h"><span className="fa-rlabel">Mandants · {mandants.length}</span><button type="button" className="fa-linkmini" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}>Voir →</button></div>
+                          {mandants.map((contact) => {
+                            const nm = contact.name || `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim() || 'Mandant'
+                            return <div key={contact.id} className="fa-mand"><span className="fa-mini-av">{userInitials(nm, null)}</span>{nm}</div>
+                          })}
+                        </div>
+                      )
+                    })()}
                   {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                 </div>
-                {!isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
-                  <div className="detail-actions-strip detail-action-console-list">
-                    {hektorActionModel.items.filter((item) => item.typeTone !== 'hektor').map((item) => (
-                      <ActionButton
-                        key={item.key}
-                        type="button"
-                        typeLabel={item.typeLabel}
-                        stateLabel={item.stateLabel}
-                        typeTone={item.typeTone}
-                        stateTone={item.stateTone}
-                        helperText={actionMenuHelperText(item.typeLabel, item.stateLabel)}
-                        onClick={item.onClick}
-                      />
-                    ))}
-                  </div>
-                ) : null}
               </section>
+
+              <div className="fa-workcol">
 
               {isLightweightDetail ? (
                 <section className="detail-readonly-banner">
@@ -16996,6 +17028,43 @@ function DossierDetailLayout(props: {
                   </button>
                 ))}
               </nav>
+
+              {!isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
+                <div className="fa-v5 fa-demarches-slot">
+                  <div className="fa-demarches" role="group" aria-label="Démarches">
+                    <span className="fa-dm-label">Démarches</span>
+                    <div className="fa-dm-actions">
+                      {hektorActionModel.items.filter((item) => item.typeTone !== 'hektor').map((item) => {
+                        const sl = (item.stateLabel || '').toLowerCase()
+                        const toneClass = sl.includes('corriger') ? 'fa-t-corriger'
+                          : sl.includes('envoy') ? 'fa-t-envoyee'
+                          : (sl.includes('cours') || sl.includes('traiter')) ? 'fa-t-encours'
+                          : sl.includes('modifier') ? 'fa-t-diffusion'
+                          : (item.typeTone === 'diffusion' ? 'fa-t-diffusion' : 'fa-t-ajouter')
+                        const isAdd = sl.includes('ajouter')
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            className={`fa-dm-btn ${toneClass}`}
+                            title={actionMenuHelperText(item.typeLabel, item.stateLabel)}
+                            onClick={item.onClick}
+                          >
+                            <span className="fa-ic" aria-hidden="true">{
+                              /Diffusion/i.test(item.typeLabel) ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" /></svg>)
+                              : /Baisse/i.test(item.typeLabel) ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="m3 7 6 6 4-4 8 8" /><path d="M21 17v-6h-6" /></svg>)
+                              : /Annulation/i.test(item.typeLabel) ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5" /></svg>)
+                              : (<DetailIcon type="actions" />)
+                            }</span>
+                            <span className="fa-dm-name">{item.typeLabel}<span className="fa-dm-state">{item.stateLabel}</span></span>
+                            {isAdd ? <span className="fa-dm-plus" aria-hidden="true">+</span> : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="detail-column-main">
               {activeDetailTab === 'reporting' ? (() => {
@@ -17061,97 +17130,102 @@ function DossierDetailLayout(props: {
               })() : null}
               {activeDetailTab === 'summary' ? (() => {
                 const summaryAppointments = parseAppointmentRequests(props.detail)
-                return (
-                <section className="detail-section detail-activity-section detail-activity-visits">
-                  <div className="section-header">
-                    <DetailSectionTitle icon="contact" title="Visites & RDV" />
-                    <span>{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span>
-                  </div>
-                  {summaryAppointments.length > 0 ? (
-                    <div className="timeline-list">
-                      {summaryAppointments.slice(0, 3).map((item, index) => (
-                        <article key={String(item.id ?? index)} className="timeline-card">
-                          <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
-                          <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` → ${formatDate(item.requested_end_at)}` : ''}</span>
-                        </article>
-                      ))}
-                    </div>
-                  ) : <p className="empty-state">Aucune demande de visite stockée pour cette annonce.</p>}
-                  <button className="detail-activity-seeall" type="button" onClick={() => setActiveDetailTab('commercial')}>Voir le suivi des RDV →</button>
-                </section>
-                )
-              })() : null}
-              {activeDetailTab === 'summary' ? (() => {
                 const summaryEmailContacts = props.contacts.filter((contact) => contact.email)
+                const mandatValide = isValidationApproved(validationDraft)
+                const priceChanges = props.detail.price_change_event_count ?? 0
+                const offreState = safeText(props.detail.offre_state)
+                const compromisState = safeText(props.detail.compromis_state)
+                const venteDone = Boolean(props.detail.vente_date)
+                const acteDate = props.detail.date_signature_acte
+                const sequestre = props.detail.compromis_sequestre
+                const offreCls = offreState ? ((compromisState || venteDone) ? 'fa-done' : 'fa-active') : 'fa-pending'
+                const compromisCls = venteDone ? 'fa-done' : (compromisState ? 'fa-active' : 'fa-pending')
+                const venteCls = venteDone ? 'fa-done' : 'fa-pending'
+                const stState = (c: string) => c === 'fa-done' ? 'fa-ok' : c === 'fa-active' ? 'fa-active' : 'fa-pending'
                 return (
-                <section className="detail-section detail-activity-section detail-activity-emails">
-                  <div className="section-header">
-                    <DetailSectionTitle icon="contact" title="Emails" />
-                    <span>{summaryEmailContacts.length} contact{summaryEmailContacts.length > 1 ? 's' : ''}</span>
-                  </div>
-                  {summaryEmailContacts.length > 0 ? (
-                    <div className="timeline-list">
-                      {summaryEmailContacts.map((contact) => {
-                        const dirId = detailContactDirectoryId(contact)
-                        return (
-                          <article key={contact.id} className="timeline-card detail-activity-email-row">
-                            <strong>{contact.name || `${contact.firstName} ${contact.lastName}`.trim() || 'Contact'}</strong>
-                            <span>{contact.email}</span>
-                            <div className="detail-activity-email-actions">
-                              <a className="detail-activity-seeall" href={`mailto:${contact.email}`}>Écrire un email</a>
-                              {dirId && props.onOpenContact ? (
-                                <button className="detail-activity-seeall" type="button" onClick={() => props.onOpenContact?.(dirId)}>Voir les emails →</button>
-                              ) : null}
-                            </div>
-                          </article>
-                        )
-                      })}
+                <div className="fa-v5 fa-synthese">
+                  <section className="fa-section">
+                    <div className="fa-sec-label">Mandat</div>
+                    <div className="fa-mandate">
+                      <div className="fa-mandate-fields">
+                        <div className="fa-mfield"><span className="fa-mk">N° de mandat</span><span className="fa-mv">{safeText(props.detail.mandat_numero_source) || '-'}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Type de mandat</span><span className="fa-mv">{safeText(props.detail.mandat_type) || '-'}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Date de début</span><span className="fa-mv">{props.detail.mandat_date_debut ? formatDate(props.detail.mandat_date_debut) : '-'}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Date de fin</span><span className="fa-mv">{props.detail.mandat_date_fin ? formatDate(props.detail.mandat_date_fin) : '-'}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Statut</span><span className={`fa-mv ${mandatValide ? 'fa-ok-v' : ''}`}>{mandatValide ? <span className="fa-okdot" /> : null}{mandatValide ? 'Valide' : 'À valider'}</span></div>
+                      </div>
+                      <div className="fa-mandate-hist">
+                        <span className="fa-mh-label">Historique des prix</span>
+                        <span className="fa-mh-point"><span className="fa-mh-dot" /><span className="fa-mh-price">{formatPrice(dossier.prix)}</span><span className="fa-mh-tag">Prix actuel</span></span>
+                        <span className="fa-mh-empty">{priceChanges > 0 ? `${priceChanges} changement${priceChanges > 1 ? 's' : ''} de prix historisé${priceChanges > 1 ? 's' : ''}.` : 'Aucun changement de prix historisé.'}</span>
+                        <button type="button" className="fa-linkmini fa-mh-link" onClick={() => setActiveDetailTab('history')}>Voir l&apos;historique →</button>
+                      </div>
                     </div>
-                  ) : <p className="empty-state">Aucun contact avec email pour cette annonce.</p>}
-                </section>
+                  </section>
+                  <section className="fa-section">
+                    <div className="fa-duo">
+                      <div className="fa-mod">
+                        <div className="fa-mod-h"><h2>Visites &amp; RDV</h2><span className="fa-mod-meta">{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span></div>
+                        {summaryAppointments.length > 0 ? (
+                          <div className="timeline-list">
+                            {summaryAppointments.slice(0, 3).map((item, index) => (
+                              <article key={String(item.id ?? index)} className="timeline-card">
+                                <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
+                                <span>{formatDate(item.requested_start_at)}</span>
+                              </article>
+                            ))}
+                          </div>
+                        ) : <div className="fa-empty"><span className="fa-ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg></span><span className="fa-et">Aucune demande de visite stockée pour cette annonce.</span></div>}
+                        <div className="fa-row-actions"><button type="button" className="fa-btn fa-brand-soft fa-sm" onClick={() => setActiveDetailTab('commercial')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} width="14" height="14"><path d="M12 5v14M5 12h14" /></svg>Planifier une visite</button><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('commercial')}>Suivi des RDV →</button></div>
+                      </div>
+                      <div className="fa-mod">
+                        <div className="fa-mod-h"><h2>Emails</h2><span className="fa-mod-meta">{summaryEmailContacts.length} contact{summaryEmailContacts.length > 1 ? 's' : ''}</span></div>
+                        {summaryEmailContacts.length > 0 ? summaryEmailContacts.map((contact) => {
+                          const dirId = detailContactDirectoryId(contact)
+                          const nm = contact.name || `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim() || 'Contact'
+                          return (
+                            <div key={contact.id} className="fa-contact">
+                              <div><div className="fa-cn">{nm}</div><div className="fa-ce">{contact.email}</div></div>
+                              <div className="fa-ca">
+                                <a className="fa-icon-btn" href={`mailto:${contact.email}`} aria-label="Écrire un email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></a>
+                                {dirId && props.onOpenContact ? <button type="button" className="fa-icon-btn" aria-label="Voir les emails" onClick={() => props.onOpenContact?.(dirId)}>→</button> : null}
+                              </div>
+                            </div>
+                          )
+                        }) : <div className="fa-empty"><span className="fa-et">Aucun contact avec email pour cette annonce.</span></div>}
+                      </div>
+                    </div>
+                  </section>
+                  <section className="fa-section">
+                    <div className="fa-sec-head-row"><div className="fa-sec-label">Affaires</div><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('commercial')}>Détail dans Commercialisation →</button></div>
+                    <div className="fa-mod fa-pipeline-card">
+                      <div className="fa-pipeline">
+                        <div className={`fa-step ${offreCls}`}>
+                          <span className="fa-step-node">{offreCls === 'fa-done' ? '✓' : '1'}</span>
+                          <span className="fa-step-name">Offre</span>
+                          <span className={`fa-step-status ${stState(offreCls)}`}>{offreState || 'Non renseignée'}</span>
+                          {props.detail.offre_event_date ? <span className="fa-step-meta">Offre du <b>{formatDate(props.detail.offre_event_date)}</b></span> : (props.detail.offre_montant != null ? <span className="fa-step-meta"><b>{formatPrice(props.detail.offre_montant)}</b></span> : null)}
+                        </div>
+                        <div className={`fa-step ${compromisCls}`}>
+                          <span className="fa-step-node">{compromisCls === 'fa-done' ? '✓' : '2'}</span>
+                          <span className="fa-step-name">Compromis</span>
+                          <span className={`fa-step-status ${stState(compromisCls)}`}>{compromisState || 'Non renseigné'}</span>
+                          {acteDate ? <span className="fa-step-meta">Acte le <b>{formatDate(acteDate)}</b></span> : null}
+                          {sequestre != null && safeText(sequestre) ? <span className="fa-step-meta">Séquestre {formatPrice(sequestre)}</span> : null}
+                        </div>
+                        <div className={`fa-step ${venteCls}`}>
+                          <span className="fa-step-node">{venteCls === 'fa-done' ? '✓' : '3'}</span>
+                          <span className="fa-step-name">Vente</span>
+                          <span className={`fa-step-status ${stState(venteCls)}`}>{venteDone ? 'Vendu' : 'Non renseignée'}</span>
+                          {props.detail.vente_date ? <span className="fa-step-meta">Vendu le <b>{formatDate(props.detail.vente_date)}</b></span> : <span className="fa-step-meta">Prix &amp; date à renseigner</span>}
+                          {props.detail.vente_prix != null ? <span className="fa-step-meta"><b>{formatPrice(props.detail.vente_prix)}</b></span> : null}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
                 )
               })() : null}
-              {activeDetailTab === 'summary' ? (
-                <section className="detail-section detail-summary-cockpit">
-                  <div className="detail-summary-board">
-                    <article className="detail-summary-card is-visibility">
-                      <div className="detail-summary-card-head">
-                        <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="visibility" /></span>
-                        <h5>Visibilite</h5>
-                      </div>
-                      <strong>{activePortalTotal ? `${activePortalTotal} portail${activePortalTotal > 1 ? 's' : ''} actif${activePortalTotal > 1 ? 's' : ''}` : 'Aucun portail actif'}</strong>
-                      <div className="detail-mini-portals">
-                        {visibleSummaryPortals.length > 0 ? visibleSummaryPortals.map((portal) => (
-                          <span key={`summary-${portal}`} className={`detail-mini-portal ${portalBrandClass(portal)}`}>{portalBrandLabel(portal)}</span>
-                        )) : <span className="detail-mini-portal is-generic">Aucune</span>}
-                        {hiddenSummaryPortalCount > 0 ? <span className="detail-mini-portal is-overflow">+{hiddenSummaryPortalCount}</span> : null}
-                      </div>
-                    </article>
-                    {hasDiagnosticVignettes ? (
-                      <article className="detail-summary-card is-diagnostics">
-                        <div className="detail-summary-card-head">
-                          <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="hektor" /></span>
-                          <h5>Diagnostics</h5>
-                        </div>
-                        <DpeGesVignettes detail={props.detail} />
-                      </article>
-                    ) : null}
-                    {props.contacts.length > 0 ? (
-                      <article className="detail-summary-card is-contact">
-                        <div className="detail-summary-card-head">
-                          <span className="detail-summary-card-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
-                          <h5>Mandants</h5>
-                        </div>
-                        <strong>{props.contacts.length} contact{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
-                        <p>{contactSummaryLabel || primaryContact?.name || '-'}</p>
-                        <button className="section-toggle-button" type="button" onClick={() => setActiveDetailTab('mandate')}>
-                          Voir contacts
-                        </button>
-                      </article>
-                    ) : null}
-                  </div>
-                </section>
-              ) : null}
 
               {(activeDetailTab === 'mandate' || activeDetailTab === 'commercial') ? (
               <section className="detail-section detail-section-topstack">
@@ -17668,7 +17742,6 @@ function DossierDetailLayout(props: {
               ) : null}
               {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
               </div>
-            </main>
 
             <div className="detail-column-main">
               {activeDetailTab === 'diffusion' ? (
@@ -17815,6 +17888,8 @@ function DossierDetailLayout(props: {
               </section>
               ) : null}
             </div>
+            </div>
+            </main>
           </div>
         </div>
       </div>
