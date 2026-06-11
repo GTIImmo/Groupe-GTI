@@ -224,6 +224,27 @@
   background: transparent !important;
 }
 
+/* =============================================================================
+   (Couleur) Fond de la fiche très légèrement teinté — petite touche, blanc dominant.
+   Les cartes blanches ressortent ; la page n'est plus crûment blanche.
+   ============================================================================= */
+.detail-screen .detail-cockpit-panel {
+  background:
+    radial-gradient(1000px 420px at 100% -4%, rgba(197, 0, 95, 0.055), transparent 56%),
+    linear-gradient(180deg, #fdfbfc 0%, #faf6f8 100%) !important;
+}
+
+/* (Cohérence onglets) Boutons « Modifier l'annonce / contacts » en magenta (fini le teal). */
+.detail-screen .hektor-context-action-button-content,
+.detail-screen .hektor-context-action-button-contact {
+  border-color: rgba(197, 0, 95, 0.22) !important;
+  color: var(--ds-brand-700) !important;
+}
+.detail-screen .hektor-context-action-button-content > span,
+.detail-screen .hektor-context-action-button-contact > span {
+  background: var(--ds-brand) !important;
+}
+
 /* Synthèse : le « board » d'infos (Visibilité / Diagnostics / Mandants) passe en
    grille fluide après retrait du photo + « Points clés » redondants (déjà dans le hero).
    Évite les trous laissés par l'ancienne grille à zones nommées. */
