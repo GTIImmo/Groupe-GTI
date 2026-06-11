@@ -163,15 +163,16 @@
     top: var(--ds-space-3) !important;
     align-self: start !important;
   }
-  /* Synthèse : Visites & Emails côte à côte (effet dashboard, fin de l'empilement étiré) */
-  .detail-screen .detail-activity-visits,
-  .detail-screen .detail-activity-emails {
-    float: left !important;
-    width: calc(50% - 14px) !important;
-    box-sizing: border-box !important;
+  /* Synthèse : Visites & Emails côte à côte (effet dashboard).
+     Le parent est une grille 1 colonne → on le passe en 2 colonnes,
+     tous les enfants restent pleine largeur sauf les 2 blocs d'activité. */
+  .detail-screen .detail-column-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    column-gap: var(--ds-space-4) !important;
   }
-  .detail-screen .detail-activity-emails { margin-left: 16px !important; }
-  .detail-screen .detail-summary-cockpit { clear: both !important; }
+  .detail-screen .detail-column-main > * { grid-column: 1 / -1 !important; }
+  .detail-screen .detail-column-main > .detail-activity-visits { grid-column: 1 / 2 !important; }
+  .detail-screen .detail-column-main > .detail-activity-emails { grid-column: 2 / 3 !important; }
 }
 
 /* --- (2) Reporting : bandeau de marque GTI (visible seulement à l'impression) --- */
