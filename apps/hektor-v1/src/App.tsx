@@ -6843,7 +6843,7 @@ function sortSummaryPortals(values: string[]) {
   })
 }
 
-type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'reporting'
+type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'reporting' | 'estimation'
 type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor'
 
 const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
@@ -6854,6 +6854,17 @@ const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon:
   { key: 'content', label: 'Contenu annonce', short: '05', icon: 'content' },
   { key: 'history', label: 'Historique', short: '06', icon: 'history' },
   { key: 'reporting', label: 'Reporting', short: '07', icon: 'commercial' },
+]
+
+// Onglets de l'état ESTIMATION : pas de Commercialisation ni Diffusion (avant mandat),
+// « Mandat & contacts » devient « Leads », + un onglet « Estimation » (avis de valeur).
+const estimationTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
+  { key: 'summary', label: 'Synthèse', short: '01', icon: 'summary' },
+  { key: 'estimation', label: 'Estimation', short: '02', icon: 'priority' },
+  { key: 'mandate', label: 'Leads', short: '03', icon: 'contact' },
+  { key: 'content', label: 'Contenu annonce', short: '04', icon: 'content' },
+  { key: 'history', label: 'Historique', short: '05', icon: 'history' },
+  { key: 'reporting', label: 'Reporting', short: '06', icon: 'commercial' },
 ]
 
 function DetailIcon({ type }: { type: DetailIconKey }) {
@@ -16728,6 +16739,7 @@ function DossierDetailLayout(props: {
   // État ESTIMATION : annonce non encore sous mandat (statut « Estimation »).
   // Réoriente la fiche vers la transformation du lead (cf. maquette « Fiche estimation »).
   const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
+  const detailTabsForVariant = isEstimation ? estimationTabs : detailTabs
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
@@ -17064,8 +17076,8 @@ function DossierDetailLayout(props: {
                 </section>
               ) : null}
 
-              <nav className="detail-tabbar" aria-label="Navigation detail annonce" style={{ gridTemplateColumns: `repeat(${detailTabs.length}, minmax(0, 1fr))` }}>
-                {detailTabs.map((tab) => (
+              <nav className="detail-tabbar" aria-label="Navigation detail annonce" style={{ gridTemplateColumns: `repeat(${detailTabsForVariant.length}, minmax(0, 1fr))` }}>
+                {detailTabsForVariant.map((tab) => (
                   <button
                     key={tab.key}
                     className={`detail-tab-button ${activeDetailTab === tab.key ? 'is-active' : ''}`}
@@ -17079,7 +17091,34 @@ function DossierDetailLayout(props: {
                 ))}
               </nav>
 
-              {!isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
+              {isEstimation && activeDetailTab === 'summary' ? (
+                <div className="fa-v5 fa-demarches-slot">
+                  <div className="fa-mod fa-primary" style={{ padding: '14px 22px' }}>
+                    <div className="fa-sec-lead" style={{ marginBottom: 13 }}><span className="fa-sl-t">Transformation du lead</span><span className="fa-sl-pill" style={{ color: 'var(--fa-brand-ink)', background: 'var(--fa-brand-soft)', borderColor: '#f3d7e3' }}><span className="fa-sl-d" style={{ background: 'var(--fa-brand)' }} />Mandat à valider</span></div>
+                    <div className="fe-pipe" style={{ marginBottom: 16 }}>
+                      <div className="fe-pipe-step is-todo"><span className="fe-ps-k">Étape 1</span><span className="fe-ps-v">Lead qualifié</span></div>
+                      <div className="fe-pipe-step is-todo"><span className="fe-ps-k">Étape 2</span><span className="fe-ps-v">Visite R1</span></div>
+                      <div className="fe-pipe-step is-current"><span className="fe-ps-k">Étape 3 · en cours</span><span className="fe-ps-v">Avis de valeur</span></div>
+                      <div className="fe-pipe-step is-goal"><span className="fe-ps-k">Objectif</span><span className="fe-ps-v">Signer le mandat</span><svg className="fe-ps-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></div>
+                    </div>
+                    <div className="fe-conv">
+                      <div className="fe-conv-cta">
+                        <div className="fe-conv-t">Faire signer le mandat</div>
+                        <p className="fe-conv-p">L&apos;avis de valeur est prêt. Crée la demande de validation du mandat : à la signature, la fiche bascule en <b style={{ color: 'var(--fa-brand-ink)' }}>annonce active</b> et la diffusion se débloque.</p>
+                        <div className="fe-conv-actions">
+                          <button className="ds-btn fa-tb-modif" type="button" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}><strong>Valider le mandat</strong></button>
+                        </div>
+                      </div>
+                      <div className="fe-dstat-pair">
+                        <div className="fe-dstat"><span className="fe-dstat-ic">R1</span><div><div className="fe-dk">Visite estimation</div><div className="fe-dv fe-todo">En construction</div></div></div>
+                        <div className="fe-dstat"><span className="fe-dstat-ic">R2</span><div><div className="fe-dk">Présentation</div><div className="fe-dv fe-todo">En construction</div></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {!isEstimation && !isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
                 <div className="fa-v5 fa-demarches-slot">
                   <div className="fa-demarches" role="group" aria-label="Démarches">
                     <span className="fa-dm-label">Démarches</span>
@@ -17117,6 +17156,34 @@ function DossierDetailLayout(props: {
               ) : null}
 
               <div className="detail-column-main">
+              {activeDetailTab === 'estimation' ? (
+                <div className="fa-v5 fa-synthese">
+                  <section className="fa-section">
+                    <div className="fa-sec-lead"><span className="fa-sl-t">Avis de valeur</span><span className="fa-sl-pill" style={{ color: 'var(--fa-gold)', background: '#f7f0e3', borderColor: '#ecdfc7' }}><span className="fa-sl-d" style={{ background: 'var(--fa-gold)' }} />Estimation</span></div>
+                    <div className="fa-mandate">
+                      <div className="fa-mandate-fields">
+                        <div className="fa-mfield"><span className="fa-mk">Fourchette basse</span><span className="fa-mv fe-todo">En construction</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Valeur retenue</span><span className="fa-mv" style={{ color: 'var(--fa-brand)' }}>{dossier.prix ? formatPrice(dossier.prix) : <span className="fe-todo">À renseigner</span>}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Fourchette haute</span><span className="fa-mv fe-todo">En construction</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Prix au m²</span><span className="fa-mv">{(() => {
+                          const toNum = (v: unknown) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^\d.,]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
+                          const prix = toNum(dossier.prix); const surf = toNum(props.detail.surface_habitable_detail ?? props.detail.surface)
+                          return prix > 0 && surf > 0 ? `${Math.round(prix / surf).toLocaleString('fr-FR')} €` : <span className="fe-todo">En construction</span>
+                        })()}</span></div>
+                      </div>
+                    </div>
+                  </section>
+                  <section className="fa-section">
+                    <div className="fa-sec-label">Biens comparables · Suivi commercial</div>
+                    <div className="fe-locked">
+                      <span className="fe-tl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true"><path d="M3 21h18M5 21V7l8-4 8 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" /></svg></span>
+                      <span className="fe-tl-badge">En construction</span>
+                      <div className="fe-tl-t">Biens comparables &amp; suivi commercial</div>
+                      <p className="fe-tl-s">La sélection de biens comparables, la méthode d&apos;estimation et le suivi des RDV/relances seront branchés sur les données Hektor.</p>
+                    </div>
+                  </section>
+                </div>
+              ) : null}
               {activeDetailTab === 'reporting' ? (() => {
                 const reportAppointments = parseAppointmentRequests(props.detail)
                 const ownerContact = props.contacts.find((contact) => /mandant|propri|owner|vendeur/i.test(contact.role || '')) ?? props.contacts[0] ?? null
@@ -17194,6 +17261,29 @@ function DossierDetailLayout(props: {
                 const stState = (c: string) => c === 'fa-done' ? 'fa-ok' : c === 'fa-active' ? 'fa-active' : 'fa-pending'
                 return (
                 <div className="fa-v5 fa-synthese">
+                  {isEstimation ? (
+                  <section className="fa-section">
+                    <div className="fa-sec-label">Montant de l&apos;estimation</div>
+                    <div className="fa-mandate">
+                      <div className="fa-mandate-fields">
+                        <div className="fa-mfield"><span className="fa-mk">Valeur retenue</span><span className="fa-mv" style={{ color: 'var(--fa-brand)' }}>{dossier.prix ? formatPrice(dossier.prix) : <span className="fe-todo">À renseigner</span>}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Fourchette</span><span className="fa-mv fe-todo">En construction</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Prix au m²</span><span className="fa-mv">{(() => {
+                          const toNum = (v: unknown) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^\d.,]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
+                          const prix = toNum(dossier.prix); const surf = toNum(props.detail.surface_habitable_detail ?? props.detail.surface)
+                          return prix > 0 && surf > 0 ? `${Math.round(prix / surf).toLocaleString('fr-FR')} €` : <span className="fe-todo">En construction</span>
+                        })()}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Prix souhaité vendeur</span><span className="fa-mv fe-todo">En construction</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Écart vendeur</span><span className="fa-mv fe-todo">En construction</span></div>
+                      </div>
+                      <div className="fa-mandate-hist">
+                        <span className="fa-mh-label">Document d&apos;estimation</span>
+                        <span className="fa-mh-point"><span className="fa-mh-dot" style={{ background: 'var(--fa-gold)' }} /><span className="fa-mh-price" style={{ fontSize: '14px' }}>À générer</span></span>
+                        <span className="fa-mh-empty">Avis de valeur à éditer et présenter au vendeur.</span>
+                      </div>
+                    </div>
+                  </section>
+                  ) : (
                   <section className="fa-section">
                     <div className="fa-sec-label">Mandat</div>
                     <div className="fa-mandate">
@@ -17212,8 +17302,9 @@ function DossierDetailLayout(props: {
                       </div>
                     </div>
                   </section>
+                  )}
                   <section className="fa-section">
-                    <div className="fa-sec-lead"><span className="fa-sl-t">Activité</span><span className="fa-sl-pill"><span className="fa-sl-d" />Suivi quotidien</span></div>
+                    <div className="fa-sec-lead"><span className="fa-sl-t">Activité</span><span className="fa-sl-pill"><span className="fa-sl-d" />{isEstimation ? 'Suivi prospection' : 'Suivi quotidien'}</span></div>
                     <div className="fa-duo">
                       <div className="fa-mod fa-primary">
                         <div className="fa-mod-h"><h2>Visites &amp; RDV</h2><span className="fa-mod-meta">{summaryAppointments.length} demande{summaryAppointments.length > 1 ? 's' : ''}</span></div>

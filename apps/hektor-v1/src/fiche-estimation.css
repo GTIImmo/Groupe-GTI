@@ -5,6 +5,9 @@
    styles.css (31k lignes) et la fiche annonce.
    ========================================================================= */
 
+/* Placeholder « En construction » (donnée non câblée) */
+.fa-v5 .fe-todo{color:var(--fa-faint);font-style:italic;font-weight:500}
+
 /* --- Rail : badge statut Estimation (or, pas vert) + titre [Sans titre] --- */
 .fa-v5 .fe-status-est{background:rgba(168,129,74,.92) !important;color:#fff !important}
 .fa-v5 .fe-status-est .ds-hero-statusdot,
