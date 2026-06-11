@@ -16822,17 +16822,86 @@ function DossierDetailLayout(props: {
           <div className="detail-cockpit-body">
             <main className="detail-cockpit-main">
               <section className="detail-overview">
-                <div className="detail-overview-actions">
-                  <button className="detail-overview-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
-                </div>
-                <div className="detail-overview-summary">
-                  <div className="detail-header-topline">
-                    <div className="detail-property-title">
-                      <span>{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
-                      <div className="detail-editable-title-row">
-                        <h2>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                <div className="ds-hero">
+                  {primaryImage ? (
+                    <button className="ds-hero-photo" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
+                      <img src={primaryImage} alt={dossier.titre_bien || 'Bien'} />
+                    </button>
+                  ) : (
+                    <div className="ds-hero-photo ds-hero-photo-empty" aria-hidden="true"><DetailIcon type="photo" /></div>
+                  )}
+                  <div className="ds-hero-main">
+                    <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span>
+                    <h2 className="ds-hero-title">{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h2>
+                    {props.address ? <p className="ds-hero-address">{props.address}</p> : null}
+                    <div className="ds-hero-pills">
+                      <StatusPill value={dossier.statut_annonce} />
+                      <StatusPill value={diffusableLabel(dossier.diffusable)} />
+                      <StatusPill value={isValidationApproved(validationDraft) ? 'Mandat valide' : 'Mandat a valider'} />
+                    </div>
+                    <div className="ds-hero-stats">
+                      <div className="ds-stat ds-stat-price">
+                        <span>Prix annonce</span>
+                        <strong>{formatPrice(dossier.prix)}</strong>
                       </div>
-                    {props.address ? <p className="detail-summary-address">{props.address}</p> : null}
+                      <div className="ds-stat">
+                        <span>Surface habitable</span>
+                        <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
+                      </div>
+                      <div className="ds-stat">
+                        <span>Type de bien</span>
+                        <strong>{propertyTypeLabel(dossier.type_bien)}</strong>
+                      </div>
+                      <div className="ds-stat">
+                        <span>Reference</span>
+                        <strong>{dossier.numero_dossier ?? '-'}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="ds-hero-side">
+                    <div className="ds-hero-toprow">
+                      {!isLightweightDetail ? (
+                        <div className="ds-cmdbar">
+                          {props.onChangeAnnonceStatus ? (
+                            <button className="ds-btn ds-btn-soft" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
+                              <span aria-hidden="true"><DetailIcon type="actions" /></span>
+                              <strong>Statut</strong>
+                            </button>
+                          ) : null}
+                          <div className="ds-menuwrap">
+                            <button className="ds-btn ds-btn-outline" type="button" aria-expanded={headerMenu === 'modify'} onClick={() => setHeaderMenu(headerMenu === 'modify' ? null : 'modify')}>
+                              <strong>Modifier</strong>
+                              <span className="ds-caret" aria-hidden="true">▾</span>
+                            </button>
+                            {headerMenu === 'modify' ? (
+                              <div className="ds-menu">
+                                <button className="ds-mi" type="button" onClick={() => { setHektorEditModalOpen(true); setHeaderMenu(null) }}>L&apos;annonce</button>
+                                <button className="ds-mi" type="button" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true); setHeaderMenu(null) }}>Les contacts</button>
+                                {hektorActionItem ? (
+                                  <button className="ds-mi" type="button" onClick={() => { hektorActionItem.onClick({ stopPropagation() {} }); setHeaderMenu(null) }}>Dans Hektor ↗</button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="ds-menuwrap">
+                            <button className="ds-btn ds-btn-icon" type="button" aria-label="Plus d'actions" aria-expanded={headerMenu === 'more'} onClick={() => setHeaderMenu(headerMenu === 'more' ? null : 'more')}>⋯</button>
+                            {headerMenu === 'more' ? (
+                              <div className="ds-menu ds-menu-right">
+                                {props.onArchiveAnnonce && dossier.archive !== '1' ? (
+                                  <button className="ds-mi" type="button" onClick={() => { props.onArchiveAnnonce?.(dossier); setHeaderMenu(null) }}>Archiver</button>
+                                ) : null}
+                                {hektorActionItem ? (
+                                  <button className="ds-mi" type="button" onClick={() => { hektorActionItem.onClick({ stopPropagation() {} }); setHeaderMenu(null) }}>Ouvrir dans Hektor ↗</button>
+                                ) : null}
+                                {props.onDeleteAnnonce ? (
+                                  <button className="ds-mi ds-mi-danger" type="button" onClick={() => { props.onDeleteAnnonce?.(dossier); setHeaderMenu(null) }}>Supprimer</button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                      <button className="detail-overview-close" type="button" onClick={props.onBack} aria-label="Fermer">{props.backLabel}</button>
                     </div>
                     {dossier.commercial_nom || dossier.agence_nom ? (
                       <div className="detail-owner-card">
@@ -16849,70 +16918,8 @@ function DossierDetailLayout(props: {
                         </div>
                       </div>
                     ) : null}
-                    {!isLightweightDetail ? (
-                      <div className="ds-cmdbar">
-                        <span className="ds-cmdbar-label">Gestion</span>
-                        {props.onChangeAnnonceStatus ? (
-                          <button className="ds-btn ds-btn-soft" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
-                            <span aria-hidden="true"><DetailIcon type="actions" /></span>
-                            <strong>Statut</strong>
-                          </button>
-                        ) : null}
-                        <div className="ds-menuwrap">
-                          <button className="ds-btn ds-btn-outline" type="button" aria-expanded={headerMenu === 'modify'} onClick={() => setHeaderMenu(headerMenu === 'modify' ? null : 'modify')}>
-                            <strong>Modifier</strong>
-                            <span className="ds-caret" aria-hidden="true">▾</span>
-                          </button>
-                          {headerMenu === 'modify' ? (
-                            <div className="ds-menu">
-                              <button className="ds-mi" type="button" onClick={() => { setHektorEditModalOpen(true); setHeaderMenu(null) }}>L&apos;annonce</button>
-                              <button className="ds-mi" type="button" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true); setHeaderMenu(null) }}>Les contacts</button>
-                              {hektorActionItem ? (
-                                <button className="ds-mi" type="button" onClick={() => { hektorActionItem.onClick({ stopPropagation() {} }); setHeaderMenu(null) }}>Dans Hektor ↗</button>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="ds-menuwrap">
-                          <button className="ds-btn ds-btn-icon" type="button" aria-label="Plus d'actions" aria-expanded={headerMenu === 'more'} onClick={() => setHeaderMenu(headerMenu === 'more' ? null : 'more')}>⋯</button>
-                          {headerMenu === 'more' ? (
-                            <div className="ds-menu ds-menu-right">
-                              {props.onArchiveAnnonce && dossier.archive !== '1' ? (
-                                <button className="ds-mi" type="button" onClick={() => { props.onArchiveAnnonce?.(dossier); setHeaderMenu(null) }}>Archiver</button>
-                              ) : null}
-                              {hektorActionItem ? (
-                                <button className="ds-mi" type="button" onClick={() => { hektorActionItem.onClick({ stopPropagation() {} }); setHeaderMenu(null) }}>Ouvrir dans Hektor ↗</button>
-                              ) : null}
-                              {props.onDeleteAnnonce ? (
-                                <button className="ds-mi ds-mi-danger" type="button" onClick={() => { props.onDeleteAnnonce?.(dossier); setHeaderMenu(null) }}>Supprimer</button>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    ) : null}
-                    {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                   </div>
-                  <div className="detail-keyfacts" aria-label="Carte d'identite du bien">
-                    <div className="detail-keyfact-grid">
-                      <div className="detail-keyfact-item">
-                        <span>Surface habitable</span>
-                        <strong>{formatSurface(props.detail.surface_habitable_detail ?? props.detail.surface)}</strong>
-                      </div>
-                      <div className="detail-keyfact-item">
-                        <span>Type de bien</span>
-                        <strong>{propertyTypeLabel(dossier.type_bien)}</strong>
-                      </div>
-                      <div className="detail-keyfact-item detail-keyfact-reference">
-                        <span>Reference</span>
-                        <strong>{dossier.numero_dossier ?? '-'}</strong>
-                      </div>
-                    </div>
-                    <div className="detail-keyfact-main">
-                      <span>Prix annonce</span>
-                      <strong>{formatPrice(dossier.prix)}</strong>
-                    </div>
-                  </div>
+                  {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                 </div>
                 {!isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
                   <div className="detail-actions-strip detail-action-console-list">

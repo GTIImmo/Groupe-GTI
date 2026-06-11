@@ -175,6 +175,51 @@
   .detail-screen .detail-column-main > .detail-activity-emails { grid-column: 2 / 3 !important; }
 }
 
+/* =============================================================================
+   HERO de l'en-tête — reconstruction premium (photo + identité + stats + responsable).
+   Remplace l'ancien balisage rapiécé ; toutes les fonctions sont conservées dans le JSX.
+   ============================================================================= */
+.detail-screen .ds-hero {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) auto;
+  gap: var(--ds-space-5);
+  align-items: start;
+}
+.detail-screen .ds-hero-photo {
+  width: 196px; height: 138px;
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden; padding: 0;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-neutral-100);
+  cursor: pointer; display: block;
+}
+.detail-screen .ds-hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-screen .ds-hero-photo-empty { display: grid; place-items: center; color: var(--ds-neutral-400); cursor: default; }
+.detail-screen .ds-hero-photo-empty svg { width: 42px; height: 42px; }
+.detail-screen .ds-hero-main { min-width: 0; display: flex; flex-direction: column; gap: var(--ds-space-2); }
+.detail-screen .ds-hero-kicker {
+  align-self: flex-start;
+  font-size: 10px; font-weight: var(--ds-weight-bold); letter-spacing: var(--ds-tracking-wide);
+  text-transform: uppercase; color: var(--ds-brand-700);
+  background: var(--ds-brand-50); border: 1px solid var(--ds-brand-100);
+  padding: 3px 9px; border-radius: var(--ds-radius-pill);
+}
+.detail-screen .ds-hero-title { font-size: var(--ds-text-2xl); font-weight: var(--ds-weight-bold); letter-spacing: var(--ds-tracking-tight); line-height: 1.12; color: var(--ds-ink); margin: 0; }
+.detail-screen .ds-hero-address { font-size: var(--ds-text-sm); color: var(--ds-text-muted); margin: 0; }
+.detail-screen .ds-hero-pills { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 2px; }
+.detail-screen .ds-hero-stats { display: flex; gap: var(--ds-space-6); flex-wrap: wrap; margin-top: var(--ds-space-2); }
+.detail-screen .ds-stat span { display: block; font-size: 10.5px; font-weight: var(--ds-weight-bold); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ds-text-subtle); }
+.detail-screen .ds-stat strong { font-size: var(--ds-text-lg); font-weight: var(--ds-weight-bold); color: var(--ds-ink); }
+.detail-screen .ds-stat-price strong { font-size: var(--ds-text-2xl); font-weight: var(--ds-weight-bold); color: var(--ds-brand); }
+.detail-screen .ds-hero-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--ds-space-3); }
+.detail-screen .ds-hero-toprow { display: flex; align-items: center; gap: var(--ds-space-2); }
+.detail-screen .ds-hero-toprow .detail-overview-close { position: static !important; }
+@media (max-width: 1040px) {
+  .detail-screen .ds-hero { grid-template-columns: 1fr; }
+  .detail-screen .ds-hero-side { align-items: stretch; }
+  .detail-screen .ds-hero-toprow { justify-content: flex-end; }
+}
+
 /* --- (2) Reporting : bandeau de marque GTI (visible seulement à l'impression) --- */
 .detail-reporting-print-head { display: none; }
 
