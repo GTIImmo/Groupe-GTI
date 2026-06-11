@@ -17098,8 +17098,8 @@ function DossierDetailLayout(props: {
                   <div className="fa-mod fa-primary" style={{ padding: '14px 22px' }}>
                     <div className="fa-sec-lead" style={{ marginBottom: 13 }}><span className="fa-sl-t">Transformation du lead</span><span className="fa-sl-pill" style={{ color: 'var(--fa-brand-ink)', background: 'var(--fa-brand-soft)', borderColor: '#f3d7e3' }}><span className="fa-sl-d" style={{ background: 'var(--fa-brand)' }} />Mandat à valider</span></div>
                     <div className="fe-pipe" style={{ marginBottom: 16 }}>
-                      <div className="fe-pipe-step is-todo"><span className="fe-ps-k">Étape 1</span><span className="fe-ps-v">Lead qualifié</span></div>
-                      <div className="fe-pipe-step is-todo"><span className="fe-ps-k">Étape 2</span><span className="fe-ps-v">Visite R1</span></div>
+                      <div className="fe-pipe-step is-done"><span className="fe-ps-k">Étape 1</span><span className="fe-ps-v">Lead qualifié</span><svg className="fe-ps-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg></div>
+                      <div className="fe-pipe-step is-done"><span className="fe-ps-k">Étape 2</span><span className="fe-ps-v">Visite R1</span><svg className="fe-ps-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg></div>
                       <div className="fe-pipe-step is-current"><span className="fe-ps-k">Étape 3 · en cours</span><span className="fe-ps-v">Avis de valeur</span></div>
                       <div className="fe-pipe-step is-goal"><span className="fe-ps-k">Objectif</span><span className="fe-ps-v">Signer le mandat</span><svg className="fe-ps-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></div>
                     </div>
@@ -17108,7 +17108,8 @@ function DossierDetailLayout(props: {
                         <div className="fe-conv-t">Faire signer le mandat</div>
                         <p className="fe-conv-p">L&apos;avis de valeur est prêt. Crée la demande de validation du mandat : à la signature, la fiche bascule en <b style={{ color: 'var(--fa-brand-ink)' }}>annonce active</b> et la diffusion se débloque.</p>
                         <div className="fe-conv-actions">
-                          <button className="ds-btn fa-tb-modif" type="button" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}><strong>Valider le mandat</strong></button>
+                          <button className="fe-btn fe-brand" type="button" onClick={() => { setActiveDetailTab('mandate'); setContactSectionOpen(true) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5M9 13l2 2 4-4" /></svg>Valider le mandat</button>
+                          <button className="fe-btn" type="button" onClick={() => setActiveDetailTab('estimation')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>Éditer l&apos;estimation</button>
                         </div>
                       </div>
                       <div className="fe-dstat-pair">

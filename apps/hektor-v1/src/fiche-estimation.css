@@ -5,6 +5,13 @@
    styles.css (31k lignes) et la fiche annonce.
    ========================================================================= */
 
+/* Boutons du bandeau conversion (3 rôles maquette : brand rempli / contour) */
+.fa-v5 .fe-btn{font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1px solid var(--fa-line-strong);background:#fff;color:var(--fa-ink);transition:.15s;white-space:nowrap;line-height:1}
+.fa-v5 .fe-btn svg{width:15px;height:15px}
+.fa-v5 .fe-btn:hover{border-color:var(--fa-brand);color:var(--fa-brand-ink)}
+.fa-v5 .fe-btn.fe-brand{background:var(--fa-brand);border-color:var(--fa-brand);color:#fff;box-shadow:0 6px 14px -7px rgba(194,18,95,.6)}
+.fa-v5 .fe-btn.fe-brand:hover{background:var(--fa-brand-ink);border-color:var(--fa-brand-ink);color:#fff}
+
 /* Placeholder « En construction » (donnée non câblée) */
 .fa-v5 .fe-todo{color:var(--fa-faint);font-style:italic;font-weight:500}
 

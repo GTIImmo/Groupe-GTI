@@ -367,12 +367,9 @@
 .fa-v5.fa-cockpit .detail-tab-button.is-active::after{content:"";position:absolute;left:15px;right:15px;bottom:-1px;height:2.5px;background:linear-gradient(90deg,var(--fa-brand),#df6a9c);border-radius:3px}
 .fa-v5.fa-cockpit .detail-tab-button.is-active .detail-tab-icon{background:none !important}
 /* ===== Ordre du rail v4 : photo → identité → Diagnostics → Diffusion → Responsable → Mandants ===== */
-.fa-v5.fa-cockpit .ds-hero > .ds-hero-photo{order:0}
-.fa-v5.fa-cockpit .ds-hero > .ds-hero-main{order:1}
-.fa-v5.fa-cockpit .ds-hero > .fa-rb-diag{order:2}
-.fa-v5.fa-cockpit .ds-hero > .fa-rb-diff{order:3}
-.fa-v5.fa-cockpit .ds-hero > .ds-hero-side{order:4}
-.fa-v5.fa-cockpit .ds-hero > .fa-rb-mand{order:5}
+/* Ordre du rail = ordre DOM. Les anciennes regles flex 'order' ont ete retirees :
+   elles referencaient .ds-hero-side (supprime) et ne couvraient pas les nouveaux
+   blocs (Suivi du lead, Responsable), qui retombaient a order:0 et remontaient en haut. */
 /* blocs du rail (Diagnostics / Diffusion / Mandants) */
 .fa-v5.fa-cockpit .ds-hero .fa-rblock{margin-top:13px;padding-top:13px;border-top:1px solid var(--fa-line)}
 .fa-v5.fa-cockpit .fa-rail-empty{font-size:12.5px;color:var(--fa-muted);margin:2px 0}
