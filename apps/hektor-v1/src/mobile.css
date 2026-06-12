@@ -1791,3 +1791,409 @@
     border-radius: 8px !important;
   }
 }
+
+/* =====================================================================
+   RAFFINEMENT MOBILE 2026 — bloc additif, réversible (supprimer ce bloc
+   = retour exact à l'état précédent). Aucune ligne existante modifiée.
+   Objectifs : cohérence de marque GTI (magenta/encre/gris, retrait du
+   teal résiduel), cibles tactiles iOS 44pt / Android 48dp, accessibilité
+   (focus visible, mouvement réduit), finitions OS modernes.
+   ===================================================================== */
+
+:root {
+  /* Palette de marque mobile (charte Pantone GTI) */
+  --m-brand: #c5005f;
+  --m-brand-strong: #9a004c;
+  --m-brand-soft: rgba(197, 0, 95, 0.09);
+  --m-brand-line: rgba(197, 0, 95, 0.28);
+  --m-ink: #222323;
+  --m-grey: #a1a4a4;
+  /* Accent secondaire / état « consultable / allégé » — neutre graphite
+     (remplace l'ancien bleu-vert hors charte) */
+  --m-muted-ink: #4f5656;
+  --m-muted-line: rgba(34, 35, 35, 0.16);
+  --m-muted-soft: rgba(34, 35, 35, 0.05);
+  /* État « prêt / succès » conservé (vert sémantique) */
+  --m-ready: #237247;
+  --m-ready-soft: rgba(39, 136, 92, 0.1);
+  /* Surfaces & rayons */
+  --m-surface: #ffffff;
+  /* Cibles tactiles */
+  --m-tap: 48px;       /* primaire (Android 48dp) */
+  --m-tap-min: 44px;   /* minimum (iOS 44pt) */
+}
+
+@media (max-width: 1180px) {
+  /* ---- 1. Cohérence de marque : retrait du teal résiduel --------------- */
+
+  /* Sélection de carte : surbrillance magenta (au lieu du teal) */
+  .mobile-list-card.is-selected {
+    border-color: var(--m-brand-line);
+    box-shadow: 0 14px 30px rgba(197, 0, 95, 0.14);
+  }
+
+  /* Annonce « allégée / consultable » : accent neutre graphite */
+  .mobile-list-card.is-lightweight-listing {
+    border-color: var(--m-muted-line);
+    background:
+      linear-gradient(135deg, var(--m-muted-soft) 0%, rgba(255, 255, 255, 0) 52%),
+      #ffffff;
+  }
+  /* Variante « détail prêt » conserve le vert sémantique (inchangé visuellement
+     mais réexprimé via token pour cohérence) */
+  .mobile-list-card.is-lightweight-listing.has-detail-cache {
+    border-color: rgba(39, 136, 92, 0.22);
+    background:
+      linear-gradient(135deg, var(--m-ready-soft) 0%, rgba(255, 255, 255, 0) 52%),
+      #ffffff;
+  }
+
+  /* Fiche contact : carte neutre/magenta au lieu du teal */
+  .mobile-contact-detail-card {
+    border-color: rgba(34, 35, 35, 0.1);
+    background:
+      linear-gradient(135deg, var(--m-brand-soft) 0%, rgba(255, 255, 255, 0) 54%),
+      #ffffff;
+  }
+
+  /* Boutons d'action contact : hiérarchie claire — Appeler/Fiche neutres,
+     Email en magenta (action la plus fréquente). Cibles ≥ 48px. */
+  .mobile-contact-actions a,
+  .mobile-contact-actions button,
+  .mobile-contact-pager button,
+  .mobile-contact-relations button,
+  .mobile-contact-directory-button {
+    min-height: var(--m-tap);
+    border-color: var(--m-muted-line);
+    background: #f4f5f5;
+    color: var(--m-ink);
+  }
+  .mobile-contact-actions a.is-email {
+    border-color: var(--m-brand-line);
+    background: var(--m-brand-soft);
+    color: var(--m-brand);
+  }
+
+  /* Puce de détail : neutre ; variante « prête » reste verte */
+  .mobile-detail-chip {
+    border-color: var(--m-muted-line);
+    background: var(--m-muted-soft);
+    color: var(--m-muted-ink);
+  }
+  .mobile-detail-chip.is-ready {
+    border-color: rgba(39, 136, 92, 0.22);
+    background: var(--m-ready-soft);
+    color: var(--m-ready);
+  }
+
+  /* Ombre du bouton « charger détail » : neutralisée (plus de teal) */
+  .mobile-lightweight-button {
+    box-shadow: 0 12px 24px rgba(34, 35, 35, 0.16);
+  }
+
+  /* ---- 2. Cibles tactiles (iOS 44pt / Android 48dp) -------------------- */
+
+  .mobile-detail-actionbar button {
+    min-height: var(--m-tap);
+  }
+  .mobile-reassign-button {
+    min-height: var(--m-tap-min);
+  }
+  .mobile-detail-disclosure summary {
+    min-height: var(--m-tap);
+  }
+  .mobile-toggle-row {
+    min-height: 52px;
+  }
+  .mobile-toggle-row input {
+    width: 28px;
+    height: 28px;
+  }
+  .mobile-search-scope button {
+    min-height: var(--m-tap-min);
+  }
+
+  /* ---- 3. Finitions OS modernes --------------------------------------- */
+
+  /* Supprime le flash gris natif au tap (Android/Chrome) */
+  .mobile-app-shell,
+  .mobile-app-shell *,
+  .mobile-detail-overlay,
+  .mobile-detail-overlay *,
+  .contact-detail-modal,
+  .contact-detail-modal * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Anneau de focus clavier/lecteur d'écran (accessibilité) */
+  .mobile-app-shell :focus-visible,
+  .mobile-detail-panel :focus-visible,
+  .contact-detail-modal :focus-visible {
+    outline: 2px solid var(--m-brand);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  /* Scroll mobile : confinement + inertie iOS */
+  .mobile-app-shell,
+  .mobile-detail-panel {
+    overscroll-behavior-y: contain;
+  }
+
+  /* Empêche le zoom iOS au focus d'un champ (taille ≥ 16px déjà ok ;
+     sécurise les champs hérités) */
+  .mobile-app-shell input,
+  .mobile-app-shell select,
+  .mobile-app-shell textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Respect de « réduire les animations » (réglage système iOS/Android) */
+@media (max-width: 1180px) and (prefers-reduced-motion: reduce) {
+  .mobile-app-shell *,
+  .mobile-detail-overlay *,
+  .contact-detail-modal * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =====================================================================
+   MODE SOMBRE MOBILE — bloc additif, réversible. S'active uniquement si
+   l'utilisateur a réglé son téléphone en thème sombre (iOS/Android), et
+   uniquement sur l'expérience mobile (≤1180px). Aucune incidence desktop
+   ni en thème clair.
+   Couvre les surfaces NATIVES mobiles (shell, navigation, cartes, fiche
+   détail). Les composants Hektor encastrés (formulaires réutilisés du
+   desktop) reçoivent un fond sombre de base ; leur fine typographie peut
+   demander un dernier réglage sur appareil réel.
+   ===================================================================== */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  :root {
+    --md-bg-1: #14171a;
+    --md-bg-2: #0f1214;
+    --md-surface: #1c2226;
+    --md-surface-2: #232a2f;
+    --md-inset: #181e22;
+    --md-border: rgba(255, 255, 255, 0.10);
+    --md-border-strong: rgba(255, 255, 255, 0.16);
+    --md-text: #eef1f1;
+    --md-text-muted: #9aa3a3;
+    --md-brand: #ff4d97;        /* magenta éclairci pour contraste sur sombre */
+    --md-brand-soft: rgba(255, 77, 151, 0.14);
+    --md-brand-line: rgba(255, 77, 151, 0.40);
+    --md-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  }
+
+  /* ---- Coquille & fond ---- */
+  .mobile-app-shell {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255, 77, 151, 0.12), transparent 32%),
+      linear-gradient(180deg, var(--md-bg-1) 0%, var(--md-bg-2) 100%);
+    color: var(--md-text);
+  }
+
+  /* ---- Navigation basse ---- */
+  .mobile-bottom-nav {
+    border-color: var(--md-border);
+    background: rgba(28, 34, 38, 0.96);
+    box-shadow: var(--md-shadow);
+  }
+  .mobile-bottom-nav-item {
+    color: var(--md-text-muted);
+  }
+  .mobile-bottom-nav-item.is-active {
+    background: linear-gradient(135deg, var(--md-brand-soft) 0%, rgba(28, 34, 38, 0) 80%);
+    color: var(--md-brand);
+    box-shadow: inset 0 0 0 1px var(--md-brand-line);
+  }
+
+  /* ---- Conteneurs principaux ---- */
+  .mobile-command-card,
+  .mobile-card-list,
+  .mobile-empty-card,
+  .mobile-detail-panel,
+  .mobile-list-card,
+  .mobile-metric-chip,
+  .mobile-suivi-filter,
+  .mobile-contact-detail-card {
+    border-color: var(--md-border);
+    background: var(--md-surface);
+    box-shadow: var(--md-shadow);
+  }
+  .mobile-list-card {
+    background:
+      linear-gradient(135deg, var(--md-brand-soft) 0%, rgba(28, 34, 38, 0) 48%),
+      var(--md-surface);
+  }
+  .mobile-list-card.is-lightweight-listing {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(28, 34, 38, 0) 52%),
+      var(--md-surface);
+  }
+  /* Tonalités de carte contact : la règle claire vit dans fiche-contact-v2.css
+     (importé après mobile.css). On gagne par l'ancêtre .mobile-app-shell
+     (spécificité supérieure) plutôt que par !important. */
+  .mobile-app-shell .mobile-list-card.is-buyer,
+  .mobile-app-shell .mobile-list-card.is-owner,
+  .mobile-app-shell .mobile-list-card.is-mandate,
+  .mobile-app-shell .mobile-list-card.is-notary,
+  .mobile-app-shell .mobile-list-card.is-mixed {
+    background:
+      linear-gradient(135deg, var(--md-brand-soft) 0%, rgba(28, 34, 38, 0) 50%),
+      var(--md-surface) !important;
+  }
+  .mobile-empty-card {
+    color: var(--md-text-muted);
+  }
+
+  /* ---- Champs & boutons ---- */
+  .mobile-search-field input {
+    border-color: var(--md-border);
+    background: var(--md-inset);
+    color: var(--md-text);
+  }
+  .mobile-command-actions button,
+  .mobile-primary-button,
+  .mobile-ghost-button {
+    border-color: var(--md-border);
+    background: var(--md-surface-2);
+    color: var(--md-text);
+  }
+  .mobile-primary-button {
+    border-color: transparent;
+    background: var(--m-brand);
+    color: #ffffff;
+  }
+  .mobile-ghost-button {
+    border-color: var(--md-brand-line);
+    color: var(--md-brand);
+  }
+  .mobile-stats-toggle.is-active {
+    border-color: var(--md-brand-line);
+    background: var(--md-brand-soft);
+    color: var(--md-brand);
+  }
+  .mobile-search-scope {
+    border-color: var(--md-border);
+    background: var(--md-inset);
+  }
+
+  /* ---- Cartes : sous-blocs & textes ---- */
+  .mobile-card-grid > div,
+  .mobile-detail-facts > div,
+  .mobile-detail-lines > div,
+  .mobile-contact-card,
+  .mobile-detail-text,
+  .mobile-timeline-item,
+  .mobile-transaction-card,
+  .mobile-toggle-row {
+    border-color: var(--md-border);
+    background: var(--md-inset);
+  }
+  .mobile-list-card-main strong,
+  .mobile-metric-chip strong,
+  .mobile-suivi-filter strong,
+  .mobile-card-grid strong,
+  .mobile-detail-facts strong,
+  .mobile-transaction-head strong {
+    color: var(--md-text);
+  }
+  .mobile-card-subline,
+  .mobile-search-field span,
+  .mobile-section-kicker,
+  .mobile-card-meta,
+  .mobile-mini-label,
+  .mobile-metric-chip span,
+  .mobile-suivi-filter span,
+  .mobile-list-head span,
+  .mobile-detail-muted {
+    color: var(--md-text-muted);
+  }
+  .mobile-list-head h2 {
+    color: var(--md-text);
+  }
+
+  /* ---- Fiche détail (overlay natif) ---- */
+  .mobile-detail-panel {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255, 77, 151, 0.1), transparent 30%),
+      linear-gradient(180deg, var(--md-bg-1) 0%, var(--md-bg-2) 100%);
+  }
+  .mobile-detail-section,
+  .mobile-detail-empty,
+  .mobile-detail-loading,
+  .mobile-detail-title-card,
+  .mobile-detail-actionbar {
+    border-color: var(--md-border);
+    background: var(--md-surface);
+    box-shadow: var(--md-shadow);
+  }
+  .mobile-detail-title-card h2,
+  .mobile-detail-section-head strong {
+    color: var(--md-text);
+  }
+  .mobile-detail-facts > div:first-child {
+    border-color: var(--md-brand-line);
+    background: var(--md-brand-soft);
+  }
+  .mobile-detail-facts > div:first-child strong {
+    color: var(--md-brand);
+  }
+  .mobile-detail-disclosure summary {
+    color: var(--md-text);
+  }
+  .mobile-detail-disclosure summary::after {
+    background: var(--md-brand-soft);
+    color: var(--md-brand);
+  }
+  .mobile-detail-pilot {
+    border-color: var(--md-brand-line);
+    background:
+      linear-gradient(135deg, var(--md-brand-soft), transparent 48%),
+      var(--md-surface);
+  }
+  /* En-tête de section : accent magenta éclairci */
+  .mobile-detail-section-head span {
+    color: var(--md-brand);
+  }
+  .mobile-detail-section-head span::before {
+    background: var(--md-brand);
+  }
+
+  /* Boutons d'action contact (neutres) en sombre */
+  .mobile-contact-actions a:not(.is-email),
+  .mobile-contact-actions button,
+  .mobile-contact-pager button,
+  .mobile-contact-relations button,
+  .mobile-contact-directory-button {
+    border-color: var(--md-border);
+    background: var(--md-surface-2);
+    color: var(--md-text);
+  }
+  .mobile-contact-actions a.is-email {
+    border-color: var(--md-brand-line);
+    background: var(--md-brand-soft);
+    color: var(--md-brand);
+  }
+  .mobile-contact-card a {
+    color: var(--md-brand);
+  }
+  .mobile-detail-chip {
+    border-color: var(--md-border);
+    background: var(--md-surface-2);
+    color: var(--md-text-muted);
+  }
+
+  /* ---- Composants Hektor encastrés : fond sombre de base ---- */
+  .mobile-detail-embedded .detail-section,
+  .mobile-detail-embedded .detail-card,
+  .mobile-detail-embedded .detail-subsection,
+  .mobile-detail-embedded .appointment-annonce-section {
+    border-color: var(--md-border);
+    background: var(--md-surface-2);
+    color: var(--md-text);
+  }
+}
