@@ -14630,6 +14630,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedMandat={selectedRegisterMandat}
             onSelectMandat={setSelectedRegisterRowId}
             onOpenDetailPage={openDossierDetailPage}
+            onOpenRequestModal={openRequestModal}
             loading={mandatLoading}
           />
         ) : (
@@ -15663,6 +15664,7 @@ function MandatRegisterScreen(props: {
   selectedMandat: MandatRecord | null
   onSelectMandat: (registerRowId: string) => void
   onOpenDetailPage: (id: number) => void
+  onOpenRequestModal: (appDossierId: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   loading: boolean
 }) {
   const [expandedMandants, setExpandedMandants] = useState<Record<string, boolean>>({})
@@ -15686,6 +15688,26 @@ function MandatRegisterScreen(props: {
     ['Agence', selectedDetail.agence_nom ?? '-'] as [string, string],
   ] : []
   const selectedMandantsLabel = selectedDetail ? mandateRegisterMandantsLabel(selectedDetail) : ''
+  // Valeurs d'affichage dérivées (refonte design — aucune logique métier, aucun
+  // state : juste de la présentation à partir de données déjà chargées).
+  const mdApproved = isValidationApproved(selectedDetail?.validation_diffusion_state)
+  const mdDiffusable = isDiffusableValue(selectedDetail?.diffusable)
+  const mdDebutDate = selectedDetail?.mandat_date_debut ? new Date(selectedDetail.mandat_date_debut) : null
+  const mdFinDate = selectedDetail?.mandat_date_fin ? new Date(selectedDetail.mandat_date_fin) : null
+  const mdDatesValid = Boolean(mdDebutDate && mdFinDate && !Number.isNaN(mdDebutDate.getTime()) && !Number.isNaN(mdFinDate.getTime()) && mdFinDate.getTime() > mdDebutDate.getTime())
+  const mdDayMs = 86400000
+  const mdNowMs = Date.now()
+  const mdDureeJours = mdDatesValid ? Math.round((mdFinDate!.getTime() - mdDebutDate!.getTime()) / mdDayMs) : 0
+  const mdDureeMois = mdDatesValid ? Math.max(1, Math.round(mdDureeJours / 30.44)) : null
+  const mdEcouleJours = mdDatesValid ? Math.min(mdDureeJours, Math.max(0, Math.round((mdNowMs - mdDebutDate!.getTime()) / mdDayMs))) : 0
+  const mdPct = mdDatesValid ? Math.max(0, Math.min(100, Math.round((mdEcouleJours / mdDureeJours) * 100))) : 0
+  const mdJoursRestants = mdDatesValid ? Math.max(0, Math.round((mdFinDate!.getTime() - mdNowMs) / mdDayMs)) : null
+  const mdAddress = selectedDetail ? String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '') : ''
+  const mdPriceEvents = selectedDetail
+    ? readPriceChangeEvents((selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail) as Record<string, unknown>)
+        .slice()
+        .sort((a, b) => new Date(priceChangeAnchorDate(b) ?? 0).getTime() - new Date(priceChangeAnchorDate(a) ?? 0).getTime())
+    : []
 
   return (
     <section className="panel-grid">
@@ -15780,179 +15802,272 @@ function MandatRegisterScreen(props: {
       </section>
       {detailOpen && selectedDetail ? (
         <div className="modal-overlay" onClick={() => setDetailOpen(false)}>
-          <section className="modal-panel modal-panel-detail mandate-register-modal" onClick={(event) => event.stopPropagation()}>
-            <button className="mandate-register-close" type="button" onClick={() => setDetailOpen(false)}>Fermer</button>
-            <div className="panel-head">
-              <div>
-                <p className="eyebrow">Fiche mandat</p>
-                <h3>{selectedDetail.numero_mandat ?? '-'} · {selectedDetail.titre_bien}</h3>
-                <p className="mandate-register-subtitle">{selectedDetail.register_source_kind === 'historique' ? 'Mandat historique' : 'Mandat actif'} · {selectedDetail.numero_dossier ?? '-'}</p>
-              </div>
-              <div className="row-actions">
-                <button className="ghost-button button-subtle" type="button" onClick={() => setDetailOpen(false)}>Fermer</button>
-              </div>
-            </div>
-            <div className="detail-stack detail-stack-rich">
-              <article className="detail-card mandate-sheet-hero-card">
-                <div className="mandate-sheet-hero-layout">
-                  <div className="mandate-sheet-visual">
-                    <div className="mandate-sheet-media">
-                      {selectedImageUrl ? <img src={selectedImageUrl} alt={selectedDetail.titre_bien} loading="lazy" /> : <div className="detail-card-hero-placeholder">Mandat</div>}
-                    </div>
-                    <div className="mandate-sheet-visual-caption">
-                      <span>Mandat</span>
-                      <strong>{selectedDetail.numero_mandat ?? '-'}</strong>
-                    </div>
-                  </div>
-                  <div className="mandate-sheet-summary">
-                    <div className="mandate-sheet-title-row">
-                      <span className="mandate-register-kicker">Mandat {selectedDetail.numero_mandat ?? '-'}</span>
-                      <div className="tag-row">
-                        <StatusPill value={selectedDetail.statut_annonce} />
-                        <StatusPill value={mandateRegisterSourceLabel(selectedDetail)} />
-                        {(selectedDetail.register_version_count ?? 1) > 1 ? <StatusPill value={`${selectedDetail.register_version_count} versions`} /> : null}
-                        {(selectedDetail.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`${selectedDetail.register_embedded_avenant_count} avenant${(selectedDetail.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
-                      </div>
-                    </div>
-                    <strong>{selectedDetail.titre_bien}</strong>
-                    <p>{String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}</p>
-                    <div className="mandate-sheet-actions">
-                      {Boolean(selectedDetail.register_detail_available) ? (
-                        <button
-                          className="ghost-button mandate-register-link primary"
-                          type="button"
-                          onClick={() => {
-                            setDetailOpen(false)
-                            props.onOpenDetailPage(Number(selectedDetail.app_dossier_id))
-                          }}
-                        >
-                          Fiche bien
-                        </button>
-                      ) : null}
-                      <button className="ghost-button mandate-register-link" type="button" onClick={() => openHektorAnnonce(selectedDetail.hektor_annonce_id)}>Hektor</button>
-                    </div>
+          <section
+            id="mandat-detail-root"
+            className="modal-panel modal-panel-detail mandate-register-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="md-panel">
+              <header className="md-topbar">
+                <div className="md-tb-left">
+                  <button className="md-btn md-icon" type="button" aria-label="Retour" onClick={() => setDetailOpen(false)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg>
+                  </button>
+                  <span className="md-tb-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h4" /></svg>
+                  </span>
+                  <div className="md-crumb">
+                    <span className="ey">Détail mandat</span>
+                    <span className="ref">Mandat {selectedDetail.numero_mandat ?? '-'} · {selectedDetail.numero_dossier ?? '-'}</span>
                   </div>
                 </div>
-              </article>
-              <div className="mandate-register-sections">
-                <article className="detail-subsection detail-mandate-section mandate-register-section">
-                  <div className="section-header">
-                    <DetailSectionTitle icon="mandate" title="Detail mandat" />
-                    <strong className="mandate-section-amount">{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</strong>
+                <div className="md-tb-right">
+                  {Boolean(selectedDetail.register_detail_available) ? (
+                    <button
+                      className="md-btn md-brand"
+                      type="button"
+                      onClick={() => {
+                        setDetailOpen(false)
+                        props.onOpenDetailPage(Number(selectedDetail.app_dossier_id))
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" /></svg>
+                      Fiche bien
+                    </button>
+                  ) : null}
+                  <button className="md-btn" type="button" onClick={() => openHektorAnnonce(selectedDetail.hektor_annonce_id)}>
+                    Hektor
+                    <svg className="md-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                  </button>
+                  <button className="md-btn" type="button" aria-label="Fermer" onClick={() => setDetailOpen(false)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                    Fermer
+                  </button>
+                </div>
+              </header>
+
+              <div className="md-workspace">
+                <aside className="md-rail">
+                  <div className="md-hero">
+                    {selectedImageUrl
+                      ? <img className="md-hero-img" src={selectedImageUrl} alt={selectedDetail.titre_bien ?? 'Photo du bien'} loading="lazy" />
+                      : <div className="md-hero-ph">Photo du bien</div>}
+                    <div className="md-hero-grad" />
+                    <span className="md-hero-status"><span className="dot" />{selectedDetail.statut_annonce || 'Actif'}</span>
+                    <span className="md-hero-ref">Réf. {selectedDetail.numero_dossier ?? '-'}</span>
+                    {propertyTypeLabel(selectedDetail.type_bien) !== '-' ? <span className="md-hero-type">{propertyTypeLabel(selectedDetail.type_bien)}</span> : null}
                   </div>
-                  <div className="detail-entity-list detail-mandat-list">
-                    <article className="detail-entity-card detail-mandat-card">
-                      <strong>Mandat {selectedDetail.numero_mandat ?? '-'}</strong>
-                      <div className="detail-mandat-grid">
-                        {selectedMandateLines.map(([label, value]) => (
-                          <div key={`register-mandate-${label}`} className={`detail-mandat-cell ${label === 'Montant' ? 'is-accent' : ''}`}>
-                            <span>{label}</span>
-                            <strong>{value || '-'}</strong>
-                          </div>
-                        ))}
+                  <div className="md-rail-body">
+                    <h1 className="md-r-title">{selectedDetail.titre_bien || `Bien ${selectedDetail.numero_mandat ?? ''}`}</h1>
+                    <div className="md-r-address">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                      {String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}
+                    </div>
+                    <div className="md-price">
+                      <span className="amount">{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</span>
+                      {mandateRegisterObjectLabel(selectedDetail) !== '-' ? <span className="tag">{mandateRegisterObjectLabel(selectedDetail)}</span> : null}
+                    </div>
+                    <div className="md-rblock">
+                      <div className="md-rblock-h"><span className="md-rlabel">Négociateur</span></div>
+                      <div className="md-resp">
+                        <div className="md-avatar">{userInitials(selectedDetail.commercial_nom, null)}</div>
+                        <div>
+                          <div className="nm">{selectedDetail.commercial_nom ?? '-'}</div>
+                          <div className="sb">{selectedDetail.agence_nom ?? '-'}</div>
+                        </div>
                       </div>
-                    </article>
-                  </div>
-                </article>
-                <article className="detail-subsection detail-contact-section mandate-register-section">
-                  <div className="section-header">
-                    <DetailSectionTitle icon="contact" title="Contact" />
-                    {selectedContactItems.length > 0 ? <span>{selectedContactItems.length} contact{selectedContactItems.length > 1 ? 's' : ''}</span> : null}
-                  </div>
-                  <div className="detail-entity-list detail-contact-list">
-                    {selectedContactItems.length > 0 ? selectedContactItems.map((contact, index) => (
-                      <article key={contact.id} className={`detail-entity-card detail-contact-card ${index === 0 ? 'detail-contact-card-primary' : ''}`}>
-                        <div className="detail-contact-head">
-                          <div className={`detail-contact-avatar ${index > 0 ? 'is-secondary' : ''}`}>{userInitials(contact.name, contact.email)}</div>
-                          <div className="detail-contact-identity">
-                            <strong>{contact.name}</strong>
-                            <span>{contact.role || 'Mandant'}</span>
+                    </div>
+                    {(() => {
+                      const primary = selectedContactItems[0]
+                      const others = selectedContactItems.slice(1)
+                      return (
+                        <div className="md-rblock">
+                          <div className="md-rblock-h"><span className="md-rlabel">Mandant{selectedContactItems.length > 1 ? `s · ${selectedContactItems.length}` : ' · 1'}</span></div>
+                          <div className="md-resp">
+                            <div className="md-avatar ink">{userInitials(primary ? primary.name : selectedMandantsLabel, primary ? primary.email : null)}</div>
+                            <div>
+                              <div className="nm">{primary ? primary.name : (selectedMandantsLabel || '-')}</div>
+                              <div className="sb">{primary ? (primary.role || 'Propriétaire vendeur') : mandateRegisterSourceLabel(selectedDetail)}</div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="detail-entity-lines detail-contact-lines">
-                          <div className="detail-entity-line">
-                            <span>Telephone</span>
-                            <strong>{contact.phone ? <a href={`tel:${contact.phone}`} className="detail-contact-link">{contact.phone}</a> : '-'}</strong>
-                          </div>
-                          <div className="detail-entity-line">
-                            <span>Email</span>
-                            <strong>{contact.email ? <a href={`mailto:${contact.email}`} className="detail-contact-link">{contact.email}</a> : '-'}</strong>
-                          </div>
-                          <div className="detail-entity-line detail-entity-line-full">
-                            <span>Adresse</span>
-                            <strong>{[contact.address, contact.postalCode, contact.city].filter(Boolean).join(', ') || '-'}</strong>
-                          </div>
-                          {contact.comment ? (
-                            <div className="detail-entity-line detail-entity-line-full detail-contact-note">
-                              <span>Commentaire</span>
-                              <strong>{contact.comment}</strong>
+                          {primary && [primary.address, primary.postalCode, primary.city].filter(Boolean).length > 0 ? (
+                            <div className="md-rail-addr">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                              {[primary.address, [primary.postalCode, primary.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
+                            </div>
+                          ) : null}
+                          {primary && (primary.phone || primary.email) ? (
+                            <div className="md-rail-contact">
+                              {primary.phone ? (
+                                <a className="md-rc-btn" href={`tel:${primary.phone}`} title="Appeler">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></svg>
+                                </a>
+                              ) : null}
+                              {primary.email ? (
+                                <a className="md-rc-btn" href={`mailto:${primary.email}`} title="E-mail">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+                                </a>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {others.length > 0 ? (
+                            <div className="md-mand-list">
+                              {others.map((contact) => (
+                                <div className="md-mand" key={contact.id}>
+                                  <span className="md-mini-av">{userInitials(contact.name, contact.email)}</span>
+                                  {contact.name}
+                                </div>
+                              ))}
                             </div>
                           ) : null}
                         </div>
-                      </article>
-                    )) : (
-                      <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
-                        <div className="detail-contact-head">
-                          <div className="detail-contact-avatar">{userInitials(selectedMandantsLabel, null)}</div>
-                          <div className="detail-contact-identity">
-                            <strong>Mandant(s)</strong>
-                            <span>{mandateRegisterSourceLabel(selectedDetail)}</span>
-                          </div>
-                        </div>
-                        <div className="detail-entity-lines detail-contact-lines">
-                          <div className="detail-entity-line detail-entity-line-full">
-                            <span>Nom(s)</span>
-                            <strong>{selectedMandantsLabel || '-'}</strong>
-                          </div>
-                          {selectedDetail.mandat_note ? (
-                            <div className="detail-entity-line detail-entity-line-full detail-contact-note">
-                              <span>Note mandat</span>
-                              <strong>{selectedDetail.mandat_note}</strong>
-                            </div>
-                          ) : null}
-                        </div>
-                      </article>
-                    )}
+                      )
+                    })()}
                   </div>
-                </article>
-              </div>
-              <div className="mandate-sheet-secondary-grid">
-                <article className="detail-card mandate-sheet-section mandate-price-section">
-                  <PriceChangeHistoryCard
-                    source={selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail}
-                    title="Historique des prix"
-                    emptyLabel="Aucun changement de prix historisé pour ce mandat."
-                  />
-                </article>
-                <article className="detail-card mandate-sheet-section">
-                  <span className="detail-label">Historique des versions</span>
-                  {selectedHistory.length > 0 ? (
-                    <div className="timeline-list">
-                      {selectedHistory.map((entry, index) => (
-                        <article key={String(entry.history_id ?? index)} className="timeline-card">
-                          <strong>{String(entry.label ?? `Version ${index + 1}`)}</strong>
-                          <span>{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} â†’ {formatDate(String(entry.date_fin ?? ''))}</span>
-                          <p>{formatPrice(String(entry.montant ?? ''))} · {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}</p>
-                          {safeText(entry.note) ? <small>{String(entry.note)}</small> : null}
-                        </article>
-                      ))}
+                </aside>
+
+                <div className="md-main">
+                  <div className="md-ws-toolbar">
+                    <div className="md-ws-title">Mandat {selectedDetail.numero_mandat ?? '-'}</div>
+                  </div>
+
+                  <section className="md-section">
+                    <div className="md-sec-lead">
+                      <span className="sl-t">Avenants &amp; modifications</span>
+                      <span className={`md-pill ${selectedAvenants.length > 0 ? 'brand' : 'neutral'}`}><span className="d" />{selectedAvenants.length > 0 ? `${selectedAvenants.length} avenant${selectedAvenants.length > 1 ? 's' : ''}` : 'Aucun avenant'}</span>
+                      <span className="sl-sp" />
                     </div>
-                  ) : <p>Aucun historique de version disponible.</p>}
-                </article>
-                <article className="detail-card mandate-sheet-section mandate-avenants-section">
-                  <span className="detail-label">Avenants Hektor</span>
-                  {selectedAvenants.length > 0 ? (
-                    <div className="timeline-list">
-                      {selectedAvenants.map((entry, index) => (
-                        <article key={String(entry.avenant_id ?? index)} className="timeline-card">
-                          <strong>{String(entry.numero ?? 'Avenant')}</strong>
-                          <span>{formatDate(String(entry.date ?? ''))}</span>
-                          <p>{String(entry.detail ?? 'Sans detail')}</p>
-                        </article>
-                      ))}
+                    <div className="md-avbox">
+                      <div className="md-avbox-editor">
+                        <MandatDocumentEditor compact dossier={mandateAsDossier(selectedDetail)} detail={selectedDetailPayload as unknown as DossierDetailPayload} contacts={selectedContactItems} address={mdAddress} />
+                      </div>
+                      <div className="md-avbox-actions">
+                        <button className="md-avtile" type="button" onClick={() => { setDetailOpen(false); props.onOpenRequestModal(Number(selectedDetail.app_dossier_id), 'nego', 'demande_baisse_prix') }}>
+                          <span className="md-avtile-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M19 12l-7 7-7-7" /></svg></span>
+                          <span className="md-avtile-t">Baisse de prix</span>
+                          <span className="md-avtile-s">Modifier le montant</span>
+                        </button>
+                        <button className="md-avtile danger" type="button" onClick={() => { setDetailOpen(false); props.onOpenRequestModal(Number(selectedDetail.app_dossier_id), 'nego', 'demande_annulation_mandat') }}>
+                          <span className="md-avtile-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9" /><path d="m9 9 6 6M15 9l-6 6" /></svg></span>
+                          <span className="md-avtile-t">Annuler le mandat</span>
+                          <span className="md-avtile-s">Résilier avant l'échéance</span>
+                        </button>
+                      </div>
+                      {selectedAvenants.length > 0 ? (
+                        <div className="md-avbox-list">
+                          {selectedAvenants.map((entry, index) => (
+                            <article className="md-ver" key={String(entry.avenant_id ?? index)}>
+                              <div className="md-ver-h"><span className="md-ver-t">{String(entry.numero ?? 'Avenant')}</span></div>
+                              <div className="md-ver-meta">{formatDate(String(entry.date ?? ''))}</div>
+                              <div className="md-ver-owner">{String(entry.detail ?? 'Sans détail')}</div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : <p>Aucun avenant explicite dans le brut.</p>}
-                </article>
+                  </section>
+
+                  <section className="md-section">
+                    <div className="md-sec-lead">
+                      <span className="sl-t">Détail du mandat</span>
+                      <span className="md-pill green"><span className="d" />{selectedDetail.statut_annonce || 'Actif'}</span>
+                      {!mdApproved ? <span className="md-pill amber"><span className="d" />À contrôler</span> : null}
+                      <span className="sl-sp" />
+                      <span className={`md-pill ${mdDiffusable ? 'green' : 'neutral'}`}><span className="d" />{mdDiffusable ? 'Diffusable' : 'Non diffusable'}</span>
+                    </div>
+                    <div className="md-mod primary">
+                      <div className="md-figures">
+                        <div className="md-fig"><div className="v brand">{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</div><div className="k">Montant</div></div>
+                        <div className="md-fig"><div className="v">{mdDureeMois !== null ? <>{mdDureeMois} <span className="u">mois</span></> : '-'}</div><div className="k">Durée</div></div>
+                        <div className="md-fig"><div className="v">{mdDatesValid ? <>{mdPct} <span className="u">%</span></> : '-'}</div><div className="k">Temps écoulé</div></div>
+                        <div className="md-fig"><div className="v amber">{mdJoursRestants !== null ? <>{mdJoursRestants} <span className="u">j</span></> : '-'}</div><div className="k">Jours restants</div></div>
+                      </div>
+
+                      {mdDatesValid ? (
+                        <div className="md-lifecycle">
+                          <div className="md-lc-top">
+                            <span className="md-lc-label">Cycle de vie du mandat</span>
+                            <span className="md-lc-rem">échéance le {formatDate(selectedDetail.mandat_date_fin)}{mdDureeMois !== null ? ` · ~${mdDureeMois} mois` : ''}</span>
+                          </div>
+                          <div className="md-lc-track">
+                            <div className="md-lc-fill" style={{ width: `${mdPct}%` }} />
+                            <div className="md-lc-today" style={{ left: `${mdPct}%` }}><span className="md-lc-today-lab">Aujourd'hui</span></div>
+                          </div>
+                          <div className="md-lc-ends">
+                            <div className="md-lc-end"><span className="ek">Signature</span><span className="ev">{formatDate(selectedDetail.mandat_date_debut)}</span></div>
+                            <div className="md-lc-end r"><span className="ek">Échéance</span><span className="ev">{formatDate(selectedDetail.mandat_date_fin)}</span></div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <details className="md-fold">
+                        <summary>
+                          <span className="fs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 5h18M3 12h18M3 19h18" /></svg></span>
+                          <span>Tous les champs du mandat<span className="fs-sub">Numéro, type, dates, validation, négociateur…</span></span>
+                          <span className="md-fold-count">{selectedMandateLines.length} champs</span>
+                          <svg className="md-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div className="md-fold-body">
+                          <div className="md-fgrid">
+                            {selectedMandateLines.map(([label, value]) => (
+                              <div className={`md-fcell ${label === 'Montant' ? 'hl' : ''}`.trim()} key={`md-field-${label}`}>
+                                <span className="md-fk">{label}</span>
+                                <span className={`md-fv ${label === 'Montant' ? 'brand' : ''} ${label === 'Validation' && !mdApproved ? 'amber' : ''} ${label === 'Diffusable' && !mdDiffusable ? 'muted' : ''}`.replace(/\s+/g, ' ').trim()}>{value || '-'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+                  </section>
+
+                  <section className="md-section">
+                    <div className="md-duo">
+                      <div className="md-mod">
+                        <div className="md-mod-h"><h2>Historique des prix</h2></div>
+                        {mdPriceEvents.length > 0 ? (
+                          <div className="md-avbox-list" style={{ padding: 0 }}>
+                            {mdPriceEvents.map((entry, index) => (
+                              <article className="md-ver" key={`md-price-${index}-${String(entry.detected_at ?? 'na')}`}>
+                                <div className="md-ver-meta">{formatPrice(entry.old_value)} → <b>{formatPrice(entry.new_value)}</b></div>
+                                <div className="md-ver-owner">Maj Hektor : {formatDate(priceChangeAnchorDate(entry))}{entry.numero_mandat ? ` · Mandat ${entry.numero_mandat}` : ''}</div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="md-empty">
+                            <span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 19V5M4 19h16M8 16l3-4 3 2 5-7" /></svg></span>
+                            <span className="et"><b>Aucun changement de prix</b>Aucune baisse n'a été historisée pour ce mandat.</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="md-mod">
+                        <div className="md-mod-h"><h2>Historique des versions</h2><span className="md-pill brand"><span className="d" />{(selectedHistory.length || 1)} version{(selectedHistory.length || 1) > 1 ? 's' : ''}</span></div>
+                        {selectedHistory.length > 0 ? (
+                          selectedHistory.map((entry, index) => (
+                            <article className="md-ver" key={String(entry.history_id ?? index)}>
+                              <div className="md-ver-h"><span className="md-ver-t">{String(entry.label ?? `Version ${index + 1}`)}</span></div>
+                              <div className="md-ver-meta">{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} → {formatDate(String(entry.date_fin ?? ''))} · <b>{formatPrice(String(entry.montant ?? ''))}</b></div>
+                              <div className="md-ver-owner">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>
+                                Mandant : {String(entry.mandants_texte ?? selectedDetail.mandants_texte ?? '-')}
+                              </div>
+                            </article>
+                          ))
+                        ) : (
+                          <article className="md-ver">
+                            <div className="md-ver-h"><span className="md-ver-t">Version courante</span><span className="md-pill green" style={{ marginLeft: 'auto' }}><span className="d" />En cours</span></div>
+                            <div className="md-ver-meta">{mandateRegisterObjectLabel(selectedDetail)} · {formatDate(selectedDetail.mandat_date_debut)} → {formatDate(selectedDetail.mandat_date_fin)} · <b>{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</b></div>
+                            <div className="md-ver-owner">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>
+                              Mandant : {selectedMandantsLabel || '-'}
+                            </div>
+                          </article>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+                </div>
               </div>
             </div>
           </section>
