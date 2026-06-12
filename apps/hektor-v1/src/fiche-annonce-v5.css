@@ -309,15 +309,11 @@
 /* copie conforme v4 : pas de bandeau de pills dans le rail (statut sur la photo ;
    Diffusable → bloc Diffusion ; Mandat valide → carte Mandat). Info non perdue. */
 .fa-v5.fa-cockpit .ds-hero-pills{display:none}
-/* démarches « plates » comme v4 : le texte d'état est masqué (l'état reste porté
-   par la couleur du liseré, le badge « + » et l'infobulle au survol). */
-.fa-v5.fa-cockpit .fa-dm-state{display:none}
-.fa-v5.fa-cockpit .fa-dm-name{flex-direction:row;align-items:center;font-weight:700}
-/* démarches conformes v4 : icônes plates grises (sans boîte) + bordure uniforme */
-.fa-v5.fa-cockpit .fa-dm-btn{border:1px solid var(--fa-line-strong) !important;border-radius:11px}
-.fa-v5.fa-cockpit .fa-dm-btn:hover{border-color:var(--fa-brand) !important;box-shadow:0 6px 14px -8px rgba(194,18,95,.35)}
-.fa-v5.fa-cockpit .fa-dm-btn .fa-ic{background:none !important;color:#7a6f67 !important;width:auto !important;height:auto !important}
-.fa-v5.fa-cockpit .fa-dm-btn .fa-ic svg{width:18px !important;height:18px !important}
+/* Démarches : système ÉTAT → couleur + libellé restauré (buildMandatActionModel).
+   Le liseré gauche, la pastille d'icône et le libellé d'état prennent la tonalité de l'état
+   (À corriger / Envoyée / En cours / Diffusion / À ajouter). */
+.fa-v5.fa-cockpit .fa-dm-name{display:flex;flex-direction:column;align-items:flex-start;font-weight:700;line-height:1.15;gap:1px}
+.fa-v5.fa-cockpit .fa-dm-btn{border-radius:11px}
 /* diagnostics : la date « Lus le… » passe dans l'en-tête (on masque celle du composant) */
 .fa-v5.fa-cockpit .detail-dpe-vignettes small{display:none}
 /* carte responsable (côté droit) un peu plus chaude */

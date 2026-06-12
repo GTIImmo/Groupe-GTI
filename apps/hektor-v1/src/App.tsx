@@ -15707,6 +15707,23 @@ function MandatRegisterScreen(props: {
   const mdPct = mdDatesValid ? Math.max(0, Math.min(100, Math.round((mdEcouleJours / mdDureeJours) * 100))) : 0
   const mdJoursRestants = mdDatesValid ? Math.max(0, Math.round((mdFinDate!.getTime() - mdNowMs) / mdDayMs)) : null
   const mdAddress = selectedDetail ? String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '') : ''
+  // Props STABLES pour l'editeur d'avenant. Sans memoisation, chaque re-render de
+  // l'app (poll des jobs Hektor ~5s en prod) recree ces objets -> l'initialDraft
+  // (useMemo) du MandatDocumentEditor change -> son effet [initialDraft] rappelle
+  // setOpen(false) et l'editeur ouvert se referme tout seul. On fige par mandat.
+  const editorRowKey = selectedDetail?.register_row_id ?? null
+  const editorDossier = useMemo(
+    () => (selectedDetail ? mandateAsDossier(selectedDetail) : null),
+    [editorRowKey], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const editorDetail = useMemo(
+    () => ((selectedDetail ? parseRegisterDetailPayload(selectedDetail) : {}) as unknown as DossierDetailPayload),
+    [editorRowKey], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const editorContacts = useMemo(
+    () => buildDetailContactsFromProprietaires(String((editorDetail as unknown as Record<string, unknown>).proprietaires_json ?? '[]'), 'register-contact'),
+    [editorDetail],
+  )
   const mdPriceEvents = selectedDetail
     ? readPriceChangeEvents((selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail) as Record<string, unknown>)
         .slice()
@@ -15947,7 +15964,7 @@ function MandatRegisterScreen(props: {
                     </div>
                     <div className="md-avbox">
                       <div className="md-avbox-editor">
-                        <MandatDocumentEditor compact dossier={mandateAsDossier(selectedDetail)} detail={selectedDetailPayload as unknown as DossierDetailPayload} contacts={selectedContactItems} address={mdAddress} />
+                        {editorDossier ? <MandatDocumentEditor compact dossier={editorDossier} detail={editorDetail} contacts={editorContacts} address={mdAddress} /> : null}
                       </div>
                       <div className="md-avbox-actions">
                         <button className="md-avtile" type="button" onClick={() => { setDetailOpen(false); props.onOpenRequestModal(Number(selectedDetail.app_dossier_id), 'nego', 'demande_baisse_prix') }}>
