@@ -26138,9 +26138,11 @@ function ContactDetailPopup(props: {
                           {linkedCount > 0 ? props.relations.map((relation) => {
                             const relationAppDossierId = Number(relation.app_dossier_id)
                             const relationRef = relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `V${relation.hektor_annonce_id}`
+                            const relationPhoto = (relation.photo_url_listing || '').trim()
+                            const relationHasPhoto = !!relationPhoto && !/no_pic/i.test(relationPhoto)
                             return (
                               <button key={`lk-${relation.hektor_annonce_id}-${relation.role_contact}`} className="lk" type="button" disabled={!Number.isFinite(relationAppDossierId)} onClick={() => { if (!Number.isFinite(relationAppDossierId)) return; props.onClose(); props.onOpenDossier(relationAppDossierId) }}>
-                                <span className="lk-thumb"><span className="st" /><span className="ref">Photo</span></span>
+                                <span className="lk-thumb">{relationHasPhoto ? <img className="lk-thumb-img" src={relationPhoto} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} /> : <span className="ref">Photo</span>}<span className="st" /></span>
                                 <div className="lk-bd">
                                   <div className="lk-ref">{relationRef}</div>
                                   <div className="lk-t">{relation.titre_bien || 'Relation annonce'}</div>

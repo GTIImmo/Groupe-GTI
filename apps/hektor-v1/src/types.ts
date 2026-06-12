@@ -429,6 +429,7 @@ export type AppContactRelation = {
   numero_mandat?: string | null
   titre_bien?: string | null
   role_contact: string
+  photo_url_listing?: string | null
   contact_date_maj?: string | null
   relation_source?: string | null
   transaction_type?: string | null

@@ -1993,7 +1993,33 @@ export async function loadContactRelations(contactId: string): Promise<AppContac
     .eq('hektor_contact_id', contactId.trim())
     .order('last_seen_at', { ascending: false, nullsFirst: false })
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contact relations')
-  return data as AppContactRelation[]
+  const relations = data as AppContactRelation[]
+  // Enrichissement vignette : la vue relations ne porte pas de photo, on la rattache
+  // depuis app_dossiers_current via hektor_annonce_id (une seule requete groupee).
+  try {
+    const annonceIds = Array.from(new Set(relations.map((r) => String(r.hektor_annonce_id ?? '').trim()).filter(Boolean)))
+    if (annonceIds.length) {
+      const { data: photoRows } = await supabase
+        .from('app_dossiers_current')
+        .select('hektor_annonce_id, photo_url_listing')
+        .in('hektor_annonce_id', annonceIds)
+      if (photoRows) {
+        const photoByAnnonce = new Map<string, string>()
+        for (const row of photoRows as Array<{ hektor_annonce_id: string | number | null; photo_url_listing: string | null }>) {
+          const key = String(row.hektor_annonce_id ?? '').trim()
+          const url = (row.photo_url_listing ?? '').trim()
+          if (key && url && !photoByAnnonce.has(key)) photoByAnnonce.set(key, url)
+        }
+        for (const relation of relations) {
+          const key = String(relation.hektor_annonce_id ?? '').trim()
+          if (key && photoByAnnonce.has(key)) relation.photo_url_listing = photoByAnnonce.get(key) ?? null
+        }
+      }
+    }
+  } catch {
+    // L'enrichissement photo est best-effort : on n'echoue jamais le chargement des relations pour ca.
+  }
+  return relations
 }
 
 export async function loadContactSearches(contactId: string): Promise<AppContactSearch[]> {

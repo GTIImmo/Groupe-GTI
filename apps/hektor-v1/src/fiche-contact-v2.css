@@ -289,7 +289,8 @@
 #fcx-root .lk:hover{border-color:#d8ccbf;box-shadow:var(--shadow-card-lg);transform:translateY(-1px)}
 #fcx-root .lk-thumb{position:relative;width:98px;height:74px;border-radius:11px;flex-shrink:0;overflow:hidden;border:1px solid var(--line);background:repeating-linear-gradient(135deg,#efe7dd,#efe7dd 9px,#e7ded2 9px,#e7ded2 18px)}
 #fcx-root .lk-thumb .ref{position:absolute;left:6px;bottom:6px;font-size:9px;font-weight:800;letter-spacing:.04em;color:#fff;background:rgba(20,14,10,.62);padding:2px 7px;border-radius:5px;font-variant-numeric:tabular-nums}
-#fcx-root .lk-thumb .st{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:#5fe39b;box-shadow:0 0 0 2px rgba(255,255,255,.65)}
+#fcx-root .lk-thumb .st{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:#5fe39b;box-shadow:0 0 0 2px rgba(255,255,255,.65);z-index:2}
+#fcx-root .lk-thumb-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1}
 #fcx-root .lk-bd{flex:1;min-width:0}
 #fcx-root .lk-ref{font-size:16px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 #fcx-root .lk-t{font-size:12.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
