@@ -116,7 +116,6 @@ import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
-import ContactSearchModal from './ContactSearchModal'
 
 type DetailContact = {
   id: string
@@ -25366,7 +25365,6 @@ function ContactDetailPopup(props: {
   const [contactEmailMessagesError, setContactEmailMessagesError] = useState<string | null>(null)
   const [contactEmailMessagesLoaded, setContactEmailMessagesLoaded] = useState(false)
   const [contactActionsOpen, setContactActionsOpen] = useState(false)
-  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
@@ -25845,7 +25843,7 @@ function ContactDetailPopup(props: {
 
                       <div className="duo-col">
                         <div className="mod">
-                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span><button className="linkmini" type="button" onClick={() => setSearchModalOpen(true)}>+ Ajouter une recherche</button></div>
+                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span></div>
                           {props.searches.length > 0 ? (
                             <div className="contact-modern-search-list">
                               {props.searches.slice(0, 4).map((search) => {
@@ -26104,16 +26102,6 @@ function ContactDetailPopup(props: {
           sessionEmail={props.sessionEmail}
           onClose={() => setEditing(false)}
           onJobCreated={props.onJobCreated}
-        />
-      ) : null}
-
-      {searchModalOpen && props.canManageContacts ? (
-        <ContactSearchModal
-          contactId={props.contact.hektor_contact_id}
-          contactName={[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || null}
-          negotiatorLabel={props.contact.commercial_nom || props.contact.negociateur_email || null}
-          onClose={() => setSearchModalOpen(false)}
-          onCreated={(job) => props.onJobCreated?.(job)}
         />
       ) : null}
 
