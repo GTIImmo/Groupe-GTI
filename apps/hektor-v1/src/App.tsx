@@ -17121,7 +17121,7 @@ function DossierDetailLayout(props: {
                 </div>
               ) : null}
 
-              {!isEstimation && !isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
+              {activeDetailTab === 'summary' && !isEstimation && !isLightweightDetail && hektorActionModel.items.some((item) => item.typeTone !== 'hektor') ? (
                 <div className="fa-v5 fa-demarches-slot">
                   <div className="fa-demarches" role="group" aria-label="Démarches">
                     <span className="fa-dm-label">Démarches</span>
@@ -17321,7 +17321,7 @@ function DossierDetailLayout(props: {
                             ))}
                           </div>
                         ) : <div className="fa-empty"><span className="fa-ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg></span><span className="fa-et">Aucune demande de visite stockée pour cette annonce.</span></div>}
-                        <div className="fa-row-actions"><button type="button" className="fa-btn fa-brand-soft fa-sm" onClick={() => setActiveDetailTab('commercial')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} width="14" height="14"><path d="M12 5v14M5 12h14" /></svg>Planifier une visite</button><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('commercial')}>Suivi des RDV →</button></div>
+                        <div className="fa-row-actions"><button type="button" className="fa-btn fa-brand-soft fa-sm" onClick={() => setActiveDetailTab(isEstimation ? 'estimation' : 'commercial')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} width="14" height="14"><path d="M12 5v14M5 12h14" /></svg>{isEstimation ? 'Planifier un RDV' : 'Planifier une visite'}</button><button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab(isEstimation ? 'estimation' : 'commercial')}>{isEstimation ? 'Suivi prospection →' : 'Suivi des RDV →'}</button></div>
                       </div>
                       <div className="fa-mod fa-primary">
                         <div className="fa-mod-h"><h2>Emails</h2><span className="fa-mod-meta">{summaryEmailContacts.length} contact{summaryEmailContacts.length > 1 ? 's' : ''}</span></div>
