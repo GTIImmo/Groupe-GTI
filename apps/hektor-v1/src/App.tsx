@@ -15669,6 +15669,10 @@ function MandatRegisterScreen(props: {
 }) {
   const [expandedMandants, setExpandedMandants] = useState<Record<string, boolean>>({})
   const [detailOpen, setDetailOpen] = useState(false)
+  // Ne fermer au clic sur le fond que si le clic a DÉMARRÉ sur le fond : évite la
+  // fermeture accidentelle quand un scroll/drag depuis le panneau se termine sur
+  // la bande d'overlay autour de la carte (bug « se ferme en descendant »).
+  const overlayPressRef = useRef(false)
   const selectedDetail = props.selectedMandat
   const selectedDetailPayload = selectedDetail ? parseRegisterDetailPayload(selectedDetail) : {}
   const selectedHistory = selectedDetail ? parseRegisterHistory(selectedDetail) : []
@@ -15801,7 +15805,11 @@ function MandatRegisterScreen(props: {
         </div>
       </section>
       {detailOpen && selectedDetail ? (
-        <div className="modal-overlay" onClick={() => setDetailOpen(false)}>
+        <div
+          className="modal-overlay"
+          onMouseDown={(event) => { overlayPressRef.current = event.target === event.currentTarget }}
+          onClick={(event) => { if (event.target === event.currentTarget && overlayPressRef.current) { overlayPressRef.current = false; setDetailOpen(false) } }}
+        >
           <section
             id="mandat-detail-root"
             className="modal-panel modal-panel-detail mandate-register-modal"
