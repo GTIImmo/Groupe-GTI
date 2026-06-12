@@ -204,18 +204,20 @@
 #mandat-detail-root .md-avbox-s{font-size:13px;color:var(--md-muted);margin-top:3px;line-height:1.45}
 #mandat-detail-root .md-avbox-list{padding:2px 20px 6px;display:flex;flex-direction:column;gap:10px}
 #mandat-detail-root .md-avbox-foot{padding:2px 20px 16px}
-/* L'éditeur de mandat/avenant réel (MandatDocumentEditor) sert d'en-tête au bloc
-   avenant : on le restyle aux tokens de la maquette SANS toucher au composant. */
+/* L'éditeur réel (MandatDocumentEditor) sert d'en-tête au bloc avenant : on le
+   restyle aux tokens de la maquette UNIQUEMENT en état réduit (en-tête). Quand il
+   est ouvert (.is-open = overlay plein écran position:fixed z-index:10050), on ne
+   touche à RIEN pour qu'il s'affiche exactement comme sur la fiche annonce. */
 #mandat-detail-root .md-avbox-editor{padding:14px 20px 6px}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor{border:0;background:transparent;box-shadow:none;padding:0;margin:0;border-radius:0}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-head{display:flex;align-items:center;gap:15px;padding:0;margin:0;background:transparent;border:0}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-icon{width:46px;height:46px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,#d12a73,#9d0f4e);box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 8px 16px -8px rgba(194,18,95,.6)}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-icon svg{width:22px;height:22px}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-head>div{flex:1;min-width:160px}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-head strong{font-family:'Spectral',Georgia,serif;font-size:18px;font-weight:600;color:var(--md-ink);letter-spacing:-.01em;display:block}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-head small{font-size:13px;color:var(--md-muted);margin-top:3px;display:block;line-height:1.45}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-head button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:9px;padding:9px 14px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0;border:1px solid #ab0f54;background:linear-gradient(180deg,#cd266f,#bb1059);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px -10px rgba(194,18,95,.7);transition:.15s}
-#mandat-detail-root .md-avbox-editor .mandat-document-editor-head button:hover{background:linear-gradient(180deg,#bd1a63,#a30f4e);color:#fff}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open){border:0;background:transparent;box-shadow:none;padding:0;margin:0;border-radius:0}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-head{display:flex;align-items:center;gap:15px;padding:0;margin:0;background:transparent;border:0}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-icon{width:46px;height:46px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,#d12a73,#9d0f4e);box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 8px 16px -8px rgba(194,18,95,.6)}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-icon svg{width:22px;height:22px}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-head>div{flex:1;min-width:160px}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-head strong{font-family:'Spectral',Georgia,serif;font-size:18px;font-weight:600;color:var(--md-ink);letter-spacing:-.01em;display:block}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-head small{font-size:13px;color:var(--md-muted);margin-top:3px;display:block;line-height:1.45}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-head button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:9px;padding:9px 14px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0;border:1px solid #ab0f54;background:linear-gradient(180deg,#cd266f,#bb1059);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px -10px rgba(194,18,95,.7);transition:.15s}
+#mandat-detail-root .md-avbox-editor .mandat-document-editor:not(.is-open) .mandat-document-editor-head button:hover{background:linear-gradient(180deg,#bd1a63,#a30f4e);color:#fff}
 #mandat-detail-root .md-avbox-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:2px 20px 16px}
 #mandat-detail-root .md-avtile{text-align:left;font-family:inherit;border:1px solid var(--md-line);border-radius:13px;padding:12px 15px;background:linear-gradient(180deg,#fffdfb,#faf6f1);cursor:pointer;transition:.16s;display:flex;flex-direction:column;gap:8px}
 #mandat-detail-root .md-avtile:hover{border-color:var(--md-brand);transform:translateY(-2px);box-shadow:0 10px 22px -12px rgba(194,18,95,.4)}
