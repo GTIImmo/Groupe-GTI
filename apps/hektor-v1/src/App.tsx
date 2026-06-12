@@ -16996,15 +16996,7 @@ function DossierDetailLayout(props: {
                       </div>
                       )}
                     </div>
-                    {/* Blocs rail v4(3) : Diagnostics · Diffusion · Responsable · Mandants */}
-                    <div className="fa-rblock fa-rb-diag">
-                      <div className="fa-rblock-h"><span className="fa-rlabel">Diagnostics</span>{props.detail.console_missing_fields_extracted_at ? <span className="fa-diag-date">Lus le {formatDate(props.detail.console_missing_fields_extracted_at)}</span> : null}</div>
-                      {hasDpeGesVignettes(props.detail) ? (
-                        <DpeGesVignettes detail={props.detail} compact />
-                      ) : (
-                        <p className="fa-rail-empty">Diagnostics en cours.</p>
-                      )}
-                    </div>
+                    {/* Rail : Diffusion · Responsable · Mandants · Diagnostics — Diagnostics descendu en dernier (choix utilisateur) */}
                     {isEstimation ? (
                       <div className="fa-rblock">
                         <div className="fa-rblock-h"><span className="fa-rlabel">Suivi du lead</span><span className="fa-diag-date">Estimation</span></div>
@@ -17057,6 +17049,14 @@ function DossierDetailLayout(props: {
                         </div>
                       )
                     })()}
+                    <div className="fa-rblock fa-rb-diag">
+                      <div className="fa-rblock-h"><span className="fa-rlabel">Diagnostics</span>{props.detail.console_missing_fields_extracted_at ? <span className="fa-diag-date">Lus le {formatDate(props.detail.console_missing_fields_extracted_at)}</span> : null}</div>
+                      {hasDpeGesVignettes(props.detail) ? (
+                        <DpeGesVignettes detail={props.detail} compact />
+                      ) : (
+                        <p className="fa-rail-empty">Diagnostics en cours.</p>
+                      )}
+                    </div>
                   {headerMenu ? <div className="ds-menu-backdrop" onClick={() => setHeaderMenu(null)} /> : null}
                 </div>
               </section>
