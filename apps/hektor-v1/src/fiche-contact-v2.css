@@ -175,6 +175,20 @@
 #fcx-root .btn.sm.fcx-search-del{color:#b3261e;border-color:#f0ccc7;background:#fff}
 #fcx-root .btn.sm.fcx-search-del:hover{background:#fdeceb;border-color:#e8a39b;color:#9a1f17}
 #fcx-root .btn.sm.fcx-search-del:disabled{opacity:.55;cursor:default}
+/* Carte recherche acquéreur — hiérarchie + secteurs repliables */
+#fcx-root .lk.fcx-srch{align-items:stretch;gap:16px;padding:14px}
+#fcx-root .lk.fcx-srch:hover{transform:none;border-color:var(--line);box-shadow:var(--shadow-card)}
+#fcx-root .fcx-srch .lk-bd{display:flex;flex-direction:column;gap:9px}
+#fcx-root .fcx-srch-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#fcx-root .fcx-srch-type{font-size:14px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fcx-root .fcx-srch-sec{background:var(--line-soft,#f6f1ea);border:1px solid var(--line);border-radius:11px;padding:9px 11px}
+#fcx-root .fcx-srch-sec-k{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--brand-ink,#a8155e);letter-spacing:.01em}
+#fcx-root .fcx-srch-sec-k svg{color:var(--brand-ink,#a8155e);flex-shrink:0}
+#fcx-root .fcx-srch-sec-v{display:block;margin-top:5px;font-size:12.5px;line-height:1.55;color:var(--ink-soft,#5a4f45);overflow-wrap:anywhere}
+#fcx-root .fcx-srch-more{margin-top:6px;display:inline-block;padding:0;border:0;background:none;font:inherit;font-size:11.5px;font-weight:700;color:var(--brand-ink,#a8155e);cursor:pointer}
+#fcx-root .fcx-srch-more:hover{text-decoration:underline}
+#fcx-root .fcx-srch-meta{display:flex;flex-wrap:wrap;gap:6px}
+#fcx-root .fcx-srch-chip{font-size:11px;font-weight:600;color:var(--ink-soft,#5a4f45);background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums}
 #fcx-root .mod-meta{font-size:12px;font-weight:600;color:var(--muted)}
 
 /* statut pills */

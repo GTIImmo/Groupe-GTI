@@ -25677,6 +25677,12 @@ function ContactDetailPopup(props: {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
   const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
+  const [expandedSearchKeys, setExpandedSearchKeys] = useState<Set<string>>(() => new Set())
+  const toggleSearchExpanded = (key: string) => setExpandedSearchKeys((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key); else next.add(key)
+    return next
+  })
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
   const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
   const contactSearchKind = contactSearchIdentity.contactKind ?? 'acquereur'
@@ -26178,15 +26184,28 @@ function ContactDetailPopup(props: {
                                 const cities = contactJsonList(search.villes_json)
                                 const types = contactSearchTypes(search.types_json)
                                 const criteria = contactSearchCriteriaLabels(search)
+                                const isExpanded = expandedSearchKeys.has(search.contact_search_key)
+                                const shownCities = isExpanded ? cities : cities.slice(0, 6)
+                                const hiddenCities = cities.length - shownCities.length
                                 return (
-                                  <div key={`search-${search.contact_search_key}`} className="lk" style={{ cursor: 'default' }}>
+                                  <div key={`search-${search.contact_search_key}`} className="lk fcx-srch" style={{ cursor: 'default' }}>
                                     <div className="lk-bd">
-                                      <div className="lk-ref" style={{ fontSize: 15 }}>{cities.join(', ') || 'Secteur non renseigné'}</div>
-                                      <div className="lk-t">{types.join(', ') || search.offre || 'Type non renseigné'}</div>
-                                      <div className="lk-tags">
+                                      <div className="fcx-srch-top">
+                                        <span className="fcx-srch-type">{types.join(' · ') || search.offre || 'Type non renseigné'}</span>
                                         <span className={`tg ${contactBool(search.is_active) ? 'green' : ''}`}>{contactBool(search.is_active) ? 'Active' : 'Archivée'}</span>
-                                        {criteria.slice(0, 2).map((item) => <span key={`crit-${search.contact_search_key}-${item}`} className="tg">{item}</span>)}
                                       </div>
+                                      <div className="fcx-srch-sec">
+                                        <span className="fcx-srch-sec-k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} width="13" height="13"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>{cities.length} commune{cities.length > 1 ? 's' : ''}</span>
+                                        <span className="fcx-srch-sec-v">{shownCities.join(' · ') || 'Secteur non renseigné'}{hiddenCities > 0 ? ' …' : ''}</span>
+                                        {cities.length > 6 ? (
+                                          <button type="button" className="fcx-srch-more" onClick={() => toggleSearchExpanded(search.contact_search_key)}>{isExpanded ? 'Réduire' : `+ ${hiddenCities} autres communes`}</button>
+                                        ) : null}
+                                      </div>
+                                      {criteria.length ? (
+                                        <div className="fcx-srch-meta">
+                                          {criteria.slice(0, 3).map((item) => <span key={`crit-${search.contact_search_key}-${item}`} className="fcx-srch-chip">{item}</span>)}
+                                        </div>
+                                      ) : null}
                                     </div>
                                     {props.canManageContacts ? (
                                       <div className="lk-actions fcx-search-actions">
