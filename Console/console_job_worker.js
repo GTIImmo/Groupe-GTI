@@ -2668,11 +2668,28 @@ async function handleRefreshConsoleContactData(job) {
     "--skip-stats",
   ], { timeoutMs: 60000, previewSize: 3000 });
 
+  // Recopie en local les champs override (non retournes par Hektor) pour ce contact. Non bloquant.
+  let overridePullStdout = null;
+  try {
+    const overridePull = await runProjectPythonScript([
+      "phase2/sync/pull_contact_overrides.py",
+      "--contact-id",
+      hektorContactId,
+    ], { timeoutMs: 45000, previewSize: 2000 });
+    overridePullStdout = overridePull.stdout;
+  } catch (error) {
+    await logJob(job.id, "refresh_console_contact_data", "running", "Copie locale override contact echouee (non bloquant)", {
+      hektor_contact_id: hektorContactId,
+      error: error instanceof Error ? error.message : String(error),
+    }).catch(() => {});
+  }
+
   await logJob(job.id, "refresh_console_contact_data", "done", "Contact reconstruit et pousse vers Supabase", {
     hektor_contact_id: hektorContactId,
     normalize_stdout: normalizeOutput.stdout,
     build_stdout: buildOutput.stdout,
     push_stdout: pushOutput.stdout,
+    override_pull_stdout: overridePullStdout,
   });
 
   return {
@@ -7029,6 +7046,47 @@ async function updateHektorContactIdentity(job, contactId, payload) {
   };
 }
 
+// Persiste dans app_contact_override les champs que l'API Hektor ne retourne pas en lecture,
+// a partir de ce que le worker vient d'envoyer a Hektor. Non bloquant.
+async function upsertContactOverride(contactId, payload, options = {}) {
+  const id = String(contactId || "").trim();
+  if (!/^\d+$/.test(id)) return { status: "skipped", reason: "invalid_contact_id" };
+  const row = {
+    hektor_contact_id: id,
+    address: cleanString(payload.address) || null,
+    birth_date: cleanString(payload.birth_date) || null,
+    birth_place: cleanString(payload.birth_place) || null,
+    marital_status: cleanString(payload.marital_status) || null,
+    source_id: cleanString(payload.id_source) || null,
+    category_id: cleanString(payload.category_id) || null,
+    comments: typeof payload.comments === "string" ? payload.comments : null,
+    crm_mandate_summary: typeof payload.crm_mandate_summary_enabled === "boolean" ? payload.crm_mandate_summary_enabled : null,
+    crm_mandate_expiration: typeof payload.crm_mandate_expiration_enabled === "boolean" ? payload.crm_mandate_expiration_enabled : null,
+    crm_birthday: typeof payload.crm_birthday_enabled === "boolean" ? payload.crm_birthday_enabled : null,
+    rgpd_email_sent: typeof payload.send_rgpd_email === "boolean" ? payload.send_rgpd_email : null,
+    updated_by: cleanString(options.updatedBy) || "console_worker",
+    updated_at: new Date().toISOString(),
+  };
+  await supabaseRequest("app_contact_override", {
+    method: "POST",
+    body: JSON.stringify(row),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+  return { status: "done", hektor_contact_id: id };
+}
+
+async function upsertContactOverrideBestEffort(job, contactId, payload, options = {}) {
+  try {
+    return await upsertContactOverride(contactId, payload, options);
+  } catch (error) {
+    await logJob(job.id, "contact_override", "error", "Ecriture override contact echouee (non bloquant)", {
+      hektor_contact_id: String(contactId || ""),
+      error: error instanceof Error ? error.message : String(error),
+    }).catch(() => {});
+    return { status: "error", error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function handleCreateHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
   const executionPayload = await resolveContactAgencyExecutionPayload(payload) || contactAgencyExecutionPayload(payload);
@@ -7036,6 +7094,7 @@ async function handleCreateHektorContact(job) {
 
   const created = await createHektorContact(job, payload);
   const crmSettings = await updateHektorContactCrmSettings(job, created.contactId, payload);
+  await upsertContactOverrideBestEffort(job, created.contactId, payload, { updatedBy: payload.target_hektor_user_email || payload.hektor_user_email });
   const postCreateStep = await applyHektorContactPostCreateStep(job, created, payload);
   await sleep(1200);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, created.contactId, {
@@ -7084,6 +7143,7 @@ async function handleUpdateHektorContact(job) {
 
   const updated = await updateHektorContactIdentity(job, contactId, contextPayload);
   const crmSettings = await updateHektorContactCrmSettings(job, contactId, contextPayload);
+  await upsertContactOverrideBestEffort(job, contactId, contextPayload, { updatedBy: contextPayload.target_hektor_user_email || contextPayload.hektor_user_email });
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "update_hektor_contact",

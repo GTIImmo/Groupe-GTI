@@ -1954,6 +1954,61 @@ export async function loadContactById(contactId: string): Promise<AppContact | n
   return data ? normalizeContactRow(data as unknown as AppContact) : null
 }
 
+export type ContactOverride = {
+  hektor_contact_id: string
+  address?: string | null
+  birth_date?: string | null
+  birth_place?: string | null
+  marital_status?: string | null
+  source_id?: string | null
+  category_id?: string | null
+  comments?: string | null
+  crm_mandate_summary?: boolean | null
+  crm_mandate_expiration?: boolean | null
+  crm_birthday?: boolean | null
+  rgpd_email_sent?: boolean | null
+  updated_by?: string | null
+  updated_at?: string | null
+}
+
+// Champs de la fiche contact que l'API Hektor ne retourne pas en lecture.
+// Stockes dans app_contact_override (ecrit par l'app a l'enregistrement et par le worker apres POST Hektor).
+export async function loadContactOverride(contactId: string): Promise<ContactOverride | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const cleanId = contactId.trim()
+  if (!cleanId) return null
+  const { data, error } = await supabase
+    .from('app_contact_override')
+    .select('*')
+    .eq('hektor_contact_id', cleanId)
+    .maybeSingle()
+  if (error) {
+    console.warn('loadContactOverride failed', error.message)
+    return null
+  }
+  return (data as ContactOverride | null) ?? null
+}
+
+export async function saveContactOverride(input: {
+  contactId: string
+  override: Omit<ContactOverride, 'hektor_contact_id' | 'updated_at' | 'updated_by'>
+  updatedBy?: string | null
+}): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const cleanId = input.contactId.trim()
+  if (!cleanId) return
+  const row = {
+    hektor_contact_id: cleanId,
+    ...input.override,
+    updated_by: input.updatedBy ?? null,
+    updated_at: new Date().toISOString(),
+  }
+  const { error } = await supabase
+    .from('app_contact_override')
+    .upsert(row, { onConflict: 'hektor_contact_id' })
+  if (error) throw new Error(error.message)
+}
+
 async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
   if (!hasSupabaseEnv || !supabase) return 0
   let query = applyContactFiltersToQuery(
