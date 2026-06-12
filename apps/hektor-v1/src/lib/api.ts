@@ -4904,6 +4904,13 @@ export type HektorContactIdentityInput = {
 
 export type HektorContactSearchInput = NonNullable<HektorContactIdentityInput['contactNextStep']>
 
+type HektorContactSearchJobContext = {
+  contactKind?: string | null
+  qualification?: string | null
+  city?: string | null
+  postalCode?: string | null
+}
+
 function hContactSearchPayload(search: HektorContactSearchInput) {
   return {
     kind: 'search_criteria',
@@ -4942,9 +4949,23 @@ function hContactSearchPayload(search: HektorContactSearchInput) {
   }
 }
 
+function hContactSearchContextPayload(input: HektorContactSearchJobContext = {}) {
+  const payload: Record<string, string> = {}
+  const contactKind = cleanOptionalText(input.contactKind)
+  const qualification = cleanOptionalText(input.qualification)
+  const city = cleanOptionalText(input.city)
+  const postalCode = cleanOptionalText(input.postalCode)
+  if (contactKind) payload.contact_kind = contactKind
+  if (qualification) payload.qualification = qualification
+  if (city) payload.city = city
+  if (postalCode) payload.postal_code = postalCode
+  return payload
+}
+
 export async function createHektorContactSearchJob(input: {
   contactId: string
   search: HektorContactSearchInput
+  context?: HektorContactSearchJobContext
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -4957,9 +4978,10 @@ export async function createHektorContactSearchJob(input: {
   if (!search.city && !search.postalCode && !(search.localities && search.localities.length)) {
     throw new Error('Au moins une localite requise')
   }
+  const contextPayload = hContactSearchContextPayload(input.context)
   const { data, error } = await supabase.rpc('app_console_create_contact_search_job', {
     target_contact_id: cleanContactId,
-    search_payload: { search },
+    search_payload: { ...contextPayload, search },
     job_priority: input.priority ?? 17,
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search job')
@@ -4970,6 +4992,7 @@ export async function createUpdateHektorContactSearchJob(input: {
   contactId: string
   searchIndex: number
   search: HektorContactSearchInput
+  context?: HektorContactSearchJobContext
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -4979,9 +5002,10 @@ export async function createUpdateHektorContactSearchJob(input: {
   const search = hContactSearchPayload(input.search)
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
+  const contextPayload = hContactSearchContextPayload(input.context)
   const { data, error } = await supabase.rpc('app_console_create_update_contact_search_job', {
     target_contact_id: cleanContactId,
-    search_payload: { search, search_index: input.searchIndex },
+    search_payload: { ...contextPayload, search, search_index: input.searchIndex },
     job_priority: input.priority ?? 16,
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search update job')

@@ -1147,7 +1147,7 @@ async function loadContactExecutionContext(contactId) {
   if (!/^\d+$/.test(cleanContactId)) throw new Error("contact_id Hektor numerique requis");
 
   const params = new URLSearchParams({
-    select: "hektor_contact_id,hektor_agence_id,hektor_negociateur_id,negociateur_email,commercial_nom,agence_nom,display_name,archive",
+    select: "hektor_contact_id,hektor_agence_id,hektor_negociateur_id,negociateur_email,commercial_nom,agence_nom,display_name,archive,ville,code_postal,typologies_json,relation_roles_json",
     hektor_contact_id: `eq.${cleanContactId}`,
     limit: "1",
   });
@@ -6236,7 +6236,7 @@ async function fetchHektorContactEditForm(contactId) {
 }
 
 function normalizeHektorContactQualification(value, fallback = "2") {
-  const text = cleanString(value).toLowerCase()
+  const text = String(cleanString(value) || "").toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9_ -]/g, "")
@@ -6263,7 +6263,7 @@ function normalizeHektorContactQualification(value, fallback = "2") {
 }
 
 function normalizeHektorContactStatus(value, fallback = "1") {
-  const text = cleanString(value).toLowerCase()
+  const text = String(cleanString(value) || "").toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9_ -]/g, "")
@@ -6758,6 +6758,52 @@ function stringArray(value) {
   return [];
 }
 
+function contactJsonStringArray(value) {
+  if (Array.isArray(value)) return stringArray(value);
+  if (typeof value === "string") {
+    const parsed = safeJsonParse(value, null);
+    if (Array.isArray(parsed)) return stringArray(parsed);
+    return stringArray(value);
+  }
+  return [];
+}
+
+function normalizeContactSearchContextText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_ -]/g, " ")
+    .replace(/\s+/g, "_");
+}
+
+function inferContactSearchQualification(payload, contact) {
+  const explicit = firstDefined(payload, ["qualification", "contact_qualification", "contactQualification"]);
+  const explicitQualification = normalizeHektorContactQualification(explicit, "");
+  if (["1", "2"].includes(explicitQualification)) return explicitQualification;
+
+  const kind = firstDefined(payload, ["contact_kind", "contactKind", "search_contact_kind", "searchContactKind"]);
+  const kindQualification = normalizeHektorContactQualification(kind, "");
+  if (["1", "2"].includes(kindQualification)) return kindQualification;
+
+  const tags = [
+    ...contactJsonStringArray(contact && contact.typologies_json),
+    ...contactJsonStringArray(contact && contact.relation_roles_json),
+  ].map(normalizeContactSearchContextText);
+  if (tags.some((tag) => tag.includes("locataire"))) return "1";
+  if (tags.some((tag) => tag.includes("acquereur") || tag.includes("acheteur"))) return "2";
+  return "2";
+}
+
+function contactSearchExecutionContact(payload, contact) {
+  const source = payload || {};
+  return {
+    qualification: inferContactSearchQualification(source, contact),
+    city: cleanString(source.city || source.ville || (contact && contact.ville)),
+    postalCode: cleanString(source.postal_code || source.code_postal || source.code || (contact && contact.code_postal)),
+  };
+}
+
 function firstCleanString(source, keys) {
   for (const key of keys) {
     if (Object.prototype.hasOwnProperty.call(source || {}, key)) {
@@ -6802,7 +6848,7 @@ async function buildHektorContactSearchContainer(contactId, contact, payload) {
     return null;
   }
   if (!["1", "2"].includes(contact.qualification)) {
-    return null;
+    throw new Error(`Recherche contact Hektor impossible pour qualification ${contact.qualification || "manquante"} (acquereur ou locataire requis)`);
   }
 
   const typeIds = stringArray(next.propertyTypeIds || next.property_type_ids || next.typesBiens || next.types_biens)
@@ -6952,17 +6998,78 @@ async function buildHektorContactSearchContainer(contactId, contact, payload) {
   };
 }
 
+function compactHektorPreview(text, maxLength = 240) {
+  return String(text || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+async function primeHektorContactSearchWizard(job, contactId, container) {
+  const idCritere = container.criteresId ? String(container.criteresId) : "";
+  const launchState = idCritere ? "relaunchCreate" : "launchCreate";
+  const referer = `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`;
+  const launchBody = new URLSearchParams({
+    mode: "contact-ajoutCritereProspect",
+    idProspect: String(contactId),
+    isFirstCallEditSearch: "false",
+    state: launchState,
+  });
+  if (idCritere) launchBody.set("idCritere", idCritere);
+
+  await logJob(job.id, "hektor_contact_search_wizard", "running", "Initialisation assistant recherche contact Hektor", {
+    hektor_contact_id: String(contactId),
+    state: launchState,
+    idCritere: idCritere || null,
+  });
+
+  const launchResponse = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: launchBody,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: referer,
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+
+  const viewBody = appendHektorCriteriaRequest(new URLSearchParams(), {
+    mode: "contact-ajoutCritereProspect",
+    state: "getVueByContext",
+    container,
+  });
+  const viewResponse = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body: viewBody,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: referer,
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+
+  await logJob(job.id, "hektor_contact_search_wizard", "done", "Assistant recherche contact Hektor initialise", {
+    hektor_contact_id: String(contactId),
+    state: launchState,
+    idCritere: idCritere || null,
+    launch_preview: compactHektorPreview(launchResponse.text),
+    view_preview: compactHektorPreview(viewResponse.text),
+  });
+}
+
 async function createHektorContactSearchCriteria(job, contactId, contact, payload) {
   const container = await buildHektorContactSearchContainer(contactId, contact, payload);
   if (!container) return { status: "skipped", reason: "not_requested" };
 
-  await logJob(job.id, "hektor_contact_search", "running", "Creation recherche contact Hektor", {
+  await logJob(job.id, "hektor_contact_search", "running", container.criteresId ? "Modification recherche contact Hektor" : "Creation recherche contact Hektor", {
     hektor_contact_id: String(contactId),
+    criteresId: container.criteresId || null,
     offreDem: container.offreDem,
     typesBiens: container.typesBiens,
     villes: container.villes,
     criteres: Object.keys(container.criteresDetails),
   });
+
+  if (payload && (payload.__prime_contact_search_wizard || container.criteresId)) {
+    await primeHektorContactSearchWizard(job, contactId, container);
+  }
 
   const checkBody = appendHektorCriteriaRequest(new URLSearchParams(), {
     mode: "contact-ajoutCritereProspect",
@@ -7008,13 +7115,15 @@ async function createHektorContactSearchCriteria(job, contactId, contact, payloa
   } catch (_) {
     created = createResponse.text;
   }
-  await logJob(job.id, "hektor_contact_search", "done", "Recherche contact Hektor creee", {
+  await logJob(job.id, "hektor_contact_search", "done", container.criteresId ? "Recherche contact Hektor modifiee" : "Recherche contact Hektor creee", {
     hektor_contact_id: String(contactId),
+    criteresId: container.criteresId || null,
     result: created,
   });
   return {
-    status: "created",
+    status: container.criteresId ? "updated" : "created",
     hektor_contact_id: String(contactId),
+    idCritere: container.criteresId || null,
     result: created,
   };
 }
@@ -7223,16 +7332,12 @@ async function handleAddHektorContactSearch(job) {
 
   // La recherche reutilise createHektorContactSearchCriteria via le contact_next_step.
   // Qualification 1 (locataire) / 2 (acquereur) : indispensable au garde-fou et au code offre.
-  const qualification = ["1", "2"].includes(String(payload.qualification))
-    ? String(payload.qualification)
-    : normalizeHektorContactQualification(payload.qualification, "2");
-  const searchQualification = ["1", "2"].includes(qualification) ? qualification : "2";
-  const contact = {
-    qualification: searchQualification,
-    city: cleanString(payload.city || payload.ville),
-    postalCode: cleanString(payload.postal_code || payload.code_postal || payload.code),
+  const contact = contactSearchExecutionContact(payload, context.contact);
+  const wrappedPayload = {
+    ...contextPayload,
+    __prime_contact_search_wizard: true,
+    contact_next_step: contactSearchSpecFromPayload(payload),
   };
-  const wrappedPayload = { ...contextPayload, contact_next_step: contactSearchSpecFromPayload(payload) };
 
   const search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
   if (search && search.status === "skipped") {
@@ -7273,7 +7378,7 @@ async function ensureContactSearchExecution(job, payload) {
   };
   const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
   await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
-  return { contactId, contextPayload };
+  return { contactId, contextPayload, context };
 }
 
 // Liste les recherches (criteres prospect) d'un contact en scrapant l'onglet
@@ -7335,21 +7440,17 @@ async function resolveContactSearchTargetCritereId(job, contactId, payload) {
 
 async function handleUpdateHektorContactSearch(job) {
   const payload = safeJsonParse(job.payload_json);
-  const { contactId, contextPayload } = await ensureContactSearchExecution(job, payload);
+  const { contactId, contextPayload, context } = await ensureContactSearchExecution(job, payload);
 
   const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
-  const qualification = ["1", "2"].includes(String(payload.qualification))
-    ? String(payload.qualification)
-    : normalizeHektorContactQualification(payload.qualification, "2");
-  const searchQualification = ["1", "2"].includes(qualification) ? qualification : "2";
-  const contact = {
-    qualification: searchQualification,
-    city: cleanString(payload.city || payload.ville),
-    postalCode: cleanString(payload.postal_code || payload.code_postal || payload.code),
-  };
+  const contact = contactSearchExecutionContact(payload, context.contact);
   const spec = contactSearchSpecFromPayload(payload);
   spec.criteresId = idCritere;
-  const wrappedPayload = { ...contextPayload, contact_next_step: spec };
+  const wrappedPayload = {
+    ...contextPayload,
+    __prime_contact_search_wizard: true,
+    contact_next_step: spec,
+  };
 
   const search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
   if (search && search.status === "skipped") {

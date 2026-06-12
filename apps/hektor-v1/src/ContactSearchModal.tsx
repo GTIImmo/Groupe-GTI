@@ -6,6 +6,7 @@ import ContactSearchFields, {
   contactSearchValueToInput,
   defaultContactSearchValue,
   type ContactSearchFieldsValue,
+  type OfferOption,
 } from './ContactSearchFields'
 import './contact-search.css'
 
@@ -15,6 +16,10 @@ export type ContactSearchModalProps = {
   negotiatorLabel?: string | null
   defaultCity?: string | null
   defaultPostalCode?: string | null
+  defaultOfferCode?: string | null
+  offerOptions?: OfferOption[]
+  contactKind?: string | null
+  contactQualification?: string | null
   mode?: 'create' | 'edit'
   initialSearch?: AppContactSearch | null
   onClose: () => void
@@ -28,6 +33,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
   const [value, setValue] = useState<ContactSearchFieldsValue>(() => {
     if (props.initialSearch) return contactSearchValueFromSearch(props.initialSearch)
     const seed: Partial<ContactSearchFieldsValue> = {}
+    if (props.defaultOfferCode) seed.offerCode = props.defaultOfferCode
     if (props.defaultCity || props.defaultPostalCode) {
       seed.localities = [{ city: (props.defaultCity || '').trim(), postalCode: (props.defaultPostalCode || '').trim() }]
     }
@@ -44,9 +50,15 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
     setPending(true)
     try {
       const search = contactSearchValueToInput(value)
+      const context = {
+        contactKind: props.contactKind ?? null,
+        qualification: props.contactQualification ?? null,
+        city: props.defaultCity ?? null,
+        postalCode: props.defaultPostalCode ?? null,
+      }
       const job = isEdit && props.initialSearch
-        ? await createUpdateHektorContactSearchJob({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search })
-        : await createHektorContactSearchJob({ contactId: props.contactId, search })
+        ? await createUpdateHektorContactSearchJob({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context })
+        : await createHektorContactSearchJob({ contactId: props.contactId, search, context })
       props.onCreated?.(job)
       props.onClose()
     } catch (e) {
@@ -54,6 +66,8 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
       setPending(false)
     }
   }
+
+  const searchContextLabel = props.contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquereur'
 
   return (
     <div className="csearch-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) props.onClose() }}>
@@ -67,7 +81,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
               <div>
                 <div className="edit-eyebrow">Création Hektor</div>
                 <h2 className="edit-title" id="csearchTitle">{isEdit ? 'Modifier la recherche' : 'Ajouter une recherche'}</h2>
-                <div className="edit-sub">{props.contactName ? `Recherche acquéreur pour ${props.contactName}` : 'Recherche acquéreur'} · resynchronisation Hektor</div>
+                <div className="edit-sub">{props.contactName ? `${searchContextLabel} pour ${props.contactName}` : searchContextLabel} · resynchronisation Hektor</div>
               </div>
             </div>
             <div className="head-right">
@@ -82,7 +96,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
           </div>
 
           <div className="wiz-scroll" ref={scrollRef}>
-            <ContactSearchFields value={value} onChange={setValue} scrollRef={scrollRef} />
+            <ContactSearchFields value={value} onChange={setValue} offerOptions={props.offerOptions} scrollRef={scrollRef} />
           </div>
 
           <div className="edit-foot">

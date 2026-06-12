@@ -22280,6 +22280,11 @@ function hektorDefaultContactSearchOffer(kind: string) {
   return hektorContactSearchOfferOptionsByKind[kind]?.[0]?.value ?? '0'
 }
 
+function hektorContactQualificationForKind(kind?: string | null) {
+  if (kind === 'locataire') return '1'
+  return '2'
+}
+
 function ownerAnnonceOptionTitle(option: OwnerAnnonceSearchOption) {
   return option.titre_bien?.trim()
     || option.numero_dossier?.trim()
@@ -25250,6 +25255,8 @@ function ContactDetailPopup(props: {
   const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
   const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
+  const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
+  const contactSearchKind = contactSearchIdentity.contactKind ?? 'acquereur'
 
   async function handleDeleteContactSearch(search: AppContactSearch) {
     if (!props.canManageContacts) return
@@ -26081,6 +26088,12 @@ function ContactDetailPopup(props: {
           contactId={props.contact.hektor_contact_id}
           contactName={[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || null}
           negotiatorLabel={props.contact.commercial_nom || props.contact.negociateur_email || null}
+          defaultCity={props.contact.ville ?? null}
+          defaultPostalCode={props.contact.code_postal ?? null}
+          defaultOfferCode={hektorDefaultContactSearchOffer(contactSearchKind)}
+          offerOptions={hektorContactSearchOfferOptionsByKind[contactSearchKind] ?? hektorContactSearchOfferOptionsByKind.acquereur}
+          contactKind={contactSearchKind}
+          contactQualification={hektorContactQualificationForKind(contactSearchKind)}
           mode={editingSearch ? 'edit' : 'create'}
           initialSearch={editingSearch}
           onClose={() => { setSearchModalOpen(false); setEditingSearch(null) }}
