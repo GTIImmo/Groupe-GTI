@@ -16975,7 +16975,7 @@ function DossierDetailLayout(props: {
                       {isEstimation ? (
                         <div className="fe-est-value">
                           <div className="fe-ev-head"><span className="fa-rlabel">Avis de valeur</span><span className="fe-ev-tag">À confirmer</span></div>
-                          <div className="fe-ev-main">{dossier.prix ? formatPrice(dossier.prix) : <span style={{ fontSize: '17px', color: 'var(--fa-faint)', fontStyle: 'italic' }}>À renseigner</span>}</div>
+                          <div className="fe-ev-main">{dossier.prix ? formatPrice(dossier.prix) : <span style={{ fontSize: '17px', color: 'var(--fa-faint)', fontStyle: 'italic' }}>En construction</span>}</div>
                           <div className="fe-ev-foot">Fourchette d&apos;estimation · <em>En construction</em></div>
                         </div>
                       ) : (
@@ -17166,7 +17166,7 @@ function DossierDetailLayout(props: {
                     <div className="fa-mandate">
                       <div className="fa-mandate-fields">
                         <div className="fa-mfield"><span className="fa-mk">Fourchette basse</span><span className="fa-mv fe-todo">En construction</span></div>
-                        <div className="fa-mfield"><span className="fa-mk">Valeur retenue</span><span className="fa-mv" style={{ color: 'var(--fa-brand)' }}>{dossier.prix ? formatPrice(dossier.prix) : <span className="fe-todo">À renseigner</span>}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Valeur retenue</span><span className="fa-mv" style={{ color: 'var(--fa-brand)' }}>{dossier.prix ? formatPrice(dossier.prix) : <span className="fe-todo">En construction</span>}</span></div>
                         <div className="fa-mfield"><span className="fa-mk">Fourchette haute</span><span className="fa-mv fe-todo">En construction</span></div>
                         <div className="fa-mfield"><span className="fa-mk">Prix au m²</span><span className="fa-mv">{(() => {
                           const toNum = (v: unknown) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^\d.,]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
@@ -17269,7 +17269,7 @@ function DossierDetailLayout(props: {
                     <div className="fa-sec-label">Montant de l&apos;estimation</div>
                     <div className="fa-mandate">
                       <div className="fa-mandate-fields">
-                        <div className="fa-mfield"><span className="fa-mk">Valeur retenue</span><span className="fa-mv" style={{ color: 'var(--fa-brand)' }}>{dossier.prix ? formatPrice(dossier.prix) : <span className="fe-todo">À renseigner</span>}</span></div>
+                        <div className="fa-mfield"><span className="fa-mk">Valeur retenue</span><span className="fa-mv" style={{ color: 'var(--fa-brand)' }}>{dossier.prix ? formatPrice(dossier.prix) : <span className="fe-todo">En construction</span>}</span></div>
                         <div className="fa-mfield"><span className="fa-mk">Fourchette</span><span className="fa-mv fe-todo">En construction</span></div>
                         <div className="fa-mfield"><span className="fa-mk">Prix au m²</span><span className="fa-mv">{(() => {
                           const toNum = (v: unknown) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^\d.,]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
