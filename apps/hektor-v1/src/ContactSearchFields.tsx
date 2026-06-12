@@ -51,10 +51,12 @@ const EQUIPMENTS = [
 ]
 const DPE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 const NAV = [
-  { target: 's-offre', label: 'Offre & type' }, { target: 's-loc', label: 'Localités' }, { target: 's-budget', label: 'Budget' },
+  { target: 's-offre', label: 'Offre & type' }, { target: 's-loc', label: 'Localités & rayon' }, { target: 's-budget', label: 'Budget' },
   { target: 's-surface', label: 'Surfaces' }, { target: 's-pieces', label: 'Pièces' }, { target: 's-equip', label: 'Équipements' },
-  { target: 's-energie', label: 'Énergie' },
+  { target: 's-alerte', label: 'Alerte & note' },
 ]
+
+const TYPE_LABEL: Record<string, string> = Object.fromEntries([...TYPE_MAIN, ...TYPE_MORE].map((t) => [t.id, t.label]))
 
 const EQUIP_ITEM_BY_CODE: Record<string, string> = {
   garage_parking: 'ITEM_GARAGE_PARKING', terrasse: 'ITEM_TERRASSE', balcon: 'ITEM_BALCON', piscine: 'ITEM_PISCINE',
@@ -65,6 +67,17 @@ const EQUIP_ITEM_BY_CODE: Record<string, string> = {
 }
 
 function fmtEur(n: number) { return new Intl.NumberFormat('fr-FR').format(n) }
+
+// Icônes SVG inline (trait 1.7, viewBox 24) — identiques à la maquette.
+const IC = {
+  home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" /></svg>,
+  pin: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>,
+  euro: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>,
+  grid: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3h18v18H3zM3 9h18M9 21V9" /></svg>,
+  rooms: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 12h18M5 18v-6h14v6" /></svg>,
+  shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /></svg>,
+  bell: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" /></svg>,
+}
 
 export function defaultContactSearchValue(seed?: Partial<ContactSearchFieldsValue>): ContactSearchFieldsValue {
   return {
@@ -115,7 +128,6 @@ function num(value: unknown, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
-// Construit une valeur de formulaire a partir d'une recherche existante (mode edition).
 export function contactSearchValueFromSearch(src: AppContactSearch): ContactSearchFieldsValue {
   const crit = critereMap(src.criteres_json)
   const villes = parseJsonSafe(src.villes_json)
@@ -167,6 +179,12 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
   const [activeNav, setActiveNav] = useState('s-offre')
   const [showMoreTypes, setShowMoreTypes] = useState(false)
   const [locInput, setLocInput] = useState('')
+  // Champs visuels (alignés sur la maquette) — non envoyés au worker.
+  const [rayon, setRayon] = useState(15)
+  const [financement, setFinancement] = useState('valide')
+  const [alerteOn, setAlerteOn] = useState(true)
+  const [alerteFreq, setAlerteFreq] = useState('quotidienne')
+  const [seuil, setSeuil] = useState(75)
 
   const set = (patch: Partial<ContactSearchFieldsValue>) => onChange({ ...value, ...patch })
   const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
@@ -192,14 +210,25 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
     setActiveNav(target)
   }
 
+  // Estimation visuelle (heuristique de demo, comme la maquette) — pas un vrai matching.
+  const nMatch = useMemo(() => {
+    let n = 12
+    const span = value.priceMax - value.priceMin
+    n -= span < 60000 ? 3 : 0
+    n += span > 120000 ? 2 : 0
+    n += Math.round(rayon / 8)
+    n -= value.surfaceMin > 120 ? 3 : value.surfaceMin > 100 ? 1 : 0
+    n -= seuil >= 85 ? 3 : seuil >= 80 ? 1 : 0
+    n -= value.rooms >= 5 ? 2 : 0
+    return Math.max(0, Math.min(18, n))
+  }, [value.priceMin, value.priceMax, value.surfaceMin, value.rooms, rayon, seuil])
+
   const recap = useMemo(() => ({
-    offre: offerOptions.find((o) => o.value === value.offerCode)?.label ?? value.offerCode,
-    types: value.typeIds.length,
     budget: `${Math.round(value.priceMin / 1000)}–${Math.round(value.priceMax / 1000)} k€`,
-    secteur: value.localities.length ? `${value.localities[0].city || value.localities[0].postalCode}${value.localities.length > 1 ? ` +${value.localities.length - 1}` : ''}` : '—',
+    secteur: value.localities.length ? `${value.localities[0].city || value.localities[0].postalCode}${rayon ? ` · ${rayon} km` : ''}` : '—',
     surface: value.surfaceMin ? `≥ ${value.surfaceMin} m²` : '—',
     pieces: `${value.rooms || '—'} p. · ${value.bedrooms || '—'} ch.`,
-  }), [value, offerOptions])
+  }), [value, rayon])
 
   return (
     <div className={`step2a${showNav ? '' : ' no-nav'}${showPreview ? '' : ' no-pre'}`}>
@@ -207,14 +236,17 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
         <aside className="s2-nav">
           <div className="s2-nav-t">Le brief</div>
           {NAV.map((n) => (
-            <button key={n.target} type="button" className={`enav${activeNav === n.target ? ' on' : ''}`} onClick={() => goSection(n.target)}>{n.label}</button>
+            <button key={n.target} type="button" className={`enav${activeNav === n.target ? ' on' : ''}`} onClick={() => goSection(n.target)}>
+              {n.target === 's-offre' ? IC.home : n.target === 's-loc' ? IC.pin : n.target === 's-budget' ? IC.euro : n.target === 's-surface' ? IC.grid : n.target === 's-pieces' ? IC.rooms : n.target === 's-equip' ? IC.shield : IC.bell}
+              {n.label}
+            </button>
           ))}
         </aside>
       ) : null}
 
       <div className="s2-body">
         <div className="fsec" id="s-offre">
-          <div className="fsec-h"><span className="fsec-t">Offre &amp; type de bien</span><span className="fsec-sp" /><span className="tag-sync">Synchronisé</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.home}</span><span className="fsec-t">Offre &amp; type de bien</span><span className="fsec-sp" /><span className="tag-sync">Synchronisé</span></div>
           <div className="field full" style={{ marginBottom: 16 }}>
             <div className="crit-label"><span>Type d'offre · offerCode</span></div>
             <div className="seg">
@@ -245,9 +277,9 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
         </div>
 
         <div className="fsec" id="s-loc">
-          <div className="fsec-h"><span className="fsec-t">Localités</span><span className="fsec-sp" /><span className="tag-sync">Requis</span></div>
-          <div className="field full">
-            <div className="crit-label"><span>Communes · city + postalCode</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.pin}</span><span className="fsec-t">Localités &amp; rayon</span><span className="fsec-sp" /><span className="tag-sync">Requis</span></div>
+          <div className="field full" style={{ marginBottom: 16 }}>
+            <div className="crit-label"><span>Localités · city + postalCode</span></div>
             <div className="choice">
               {value.localities.map((l, i) => (
                 <button key={`${l.city}-${l.postalCode}-${i}`} type="button" className="cbtn on" disabled={disabled} onClick={() => set({ localities: value.localities.filter((_, j) => j !== i) })}>
@@ -265,10 +297,18 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
               </button>
             </div>
           </div>
+          <div className="field full">
+            <label>Rayon autour des localités</label>
+            <div className="slider">
+              <div className="slider-top"><span className="slider-val">{rayon} km autour</span><span className="slider-cap">{rayon === 0 ? 'localités seules' : `~ ${Math.max(1, Math.round(rayon / 1.4))} communes`}</span></div>
+              <input type="range" min={0} max={40} step={5} value={rayon} aria-label="Rayon en km" disabled={disabled} onChange={(e) => setRayon(Number(e.target.value))} />
+              <div className="range-ends"><span>Localités seules</span><span>40 km</span></div>
+            </div>
+          </div>
         </div>
 
         <div className="fsec" id="s-budget">
-          <div className="fsec-h"><span className="fsec-t">Budget</span><span className="fsec-sp" /><span className="tag-sync">PRIX_MIN / MAX</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.euro}</span><span className="fsec-t">Budget</span><span className="fsec-sp" /><span className="tag-sync">PRIX_MIN / MAX</span></div>
           <div className="field full" style={{ marginBottom: 16 }}>
             <label>Fourchette de prix</label>
             <div className="slider">
@@ -286,16 +326,22 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
           </div>
           <div className="fgrid2">
             <div className="field">
-              <div className="crit-label"><span>Marge · PRIX_MARGE</span></div>
+              <div className="crit-label"><span>Marge · PRIX_MARGE</span><span className="tag-todo">À brancher</span></div>
               <select className="inp" value={value.priceMargin} disabled={disabled} onChange={(e) => set({ priceMargin: e.target.value })}>
                 <option value="">Aucune</option><option value="5">± 5 %</option><option value="10">± 10 %</option><option value="20">± 20 %</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Financement</label>
+              <select className="inp" value={financement} disabled={disabled} onChange={(e) => setFinancement(e.target.value)}>
+                <option value="valide">Validé</option><option value="encours">En cours</option><option value="comptant">Comptant</option>
               </select>
             </div>
           </div>
         </div>
 
         <div className="fsec" id="s-surface">
-          <div className="fsec-h"><span className="fsec-t">Surfaces</span><span className="fsec-sp" /><span className="tag-sync">SURFACE_MIN / TERRAIN</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.grid}</span><span className="fsec-t">Surfaces</span><span className="fsec-sp" /><span className="tag-sync">SURFACE_MIN / TERRAIN</span></div>
           <div className="fgrid2">
             <div className="field">
               <label>Habitable min.</label>
@@ -317,12 +363,12 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
         </div>
 
         <div className="fsec" id="s-pieces">
-          <div className="fsec-h"><span className="fsec-t">Pièces &amp; chambres</span><span className="fsec-sp" /><span className="tag-sync">PIECES / CHAMBRE_MIN</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.rooms}</span><span className="fsec-t">Pièces &amp; chambres</span><span className="fsec-sp" /><span className="tag-sync">PIECES / CHAMBRE_MIN</span></div>
           <div className="steps">
             {[
-              { label: 'Pièces min.', key: 'rooms' as const, min: 0, max: 12 },
-              { label: 'Chambres min.', key: 'bedrooms' as const, min: 0, max: 10 },
-              { label: 'SDB / SDE min.', key: 'bathrooms' as const, min: 0, max: 6 },
+              { label: 'Pièces min.', key: 'rooms' as const, min: 0, max: 12, todo: false },
+              { label: 'Chambres min.', key: 'bedrooms' as const, min: 0, max: 10, todo: false },
+              { label: 'SDB / SDE min.', key: 'bathrooms' as const, min: 0, max: 6, todo: true },
             ].map((s) => (
               <div className="sg" key={s.key}>
                 <label>{s.label}</label>
@@ -337,7 +383,7 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
         </div>
 
         <div className="fsec" id="s-equip">
-          <div className="fsec-h"><span className="fsec-t">Équipements</span><span className="fsec-sp" /><span className="tag-sync">Synchronisé</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.shield}</span><span className="fsec-t">Équipements</span><span className="fsec-sp" /><span className="tag-sync">Synchronisé</span></div>
           <div className="choice">
             {EQUIPMENTS.map((e) => (
               <button key={e.code} type="button" className={`cbtn teal${value.equipments.includes(e.code) ? ' on' : ''}`} disabled={disabled} onClick={() => set({ equipments: toggleIn(value.equipments, e.code) })}>{e.label}</button>
@@ -345,8 +391,32 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
           </div>
         </div>
 
+        <div className="fsec" id="s-alerte">
+          <div className="fsec-h"><span className="fsec-ic">{IC.bell}</span><span className="fsec-t">Alerte email &amp; note</span><span className="fsec-sp" /><span className="tag-todo">À brancher</span></div>
+          <button type="button" className={`toggle-row${alerteOn ? '' : ' off'}`} aria-pressed={alerteOn} onClick={() => setAlerteOn((v) => !v)}>
+            <span className="tg" />
+            <span className="tr-bd"><span className="tr-t">Alerte email automatique</span><span className="tr-s">L'acquéreur reçoit les nouveaux biens dépassant le seuil de score.</span></span>
+          </button>
+          <div className={`fgrid2 alerte-params${alerteOn ? '' : ' off'}`}>
+            <div className="field">
+              <label>Fréquence</label>
+              <select className="inp" value={alerteFreq} onChange={(e) => setAlerteFreq(e.target.value)}>
+                <option value="quotidienne">Quotidienne</option><option value="hebdo">Hebdomadaire</option><option value="temps_reel">Temps réel</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Seuil de score</label>
+              <div className="slider">
+                <div className="slider-top"><span className="slider-val">≥ {seuil} %</span></div>
+                <input type="range" min={50} max={95} step={5} value={seuil} onChange={(e) => setSeuil(Number(e.target.value))} />
+                <div className="range-ends"><span>50 %</span><span>95 %</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="fsec" id="s-energie">
-          <div className="fsec-h"><span className="fsec-t">Énergie</span><span className="fsec-sp" /><span className="tag-sync">DPE</span></div>
+          <div className="fsec-h"><span className="fsec-ic">{IC.shield}</span><span className="fsec-t">Énergie (DPE)</span><span className="fsec-sp" /><span className="tag-sync">DPE</span></div>
           <div className="field full">
             <div className="crit-label"><span>DPE max · DPE_CONS_LETTER</span></div>
             <div className="choice">
@@ -360,10 +430,14 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
 
       {showPreview ? (
         <aside className="s2-pre">
-          <div className="pv-t">Récapitulatif</div>
+          <div className="pv-t">Aperçu en direct</div>
+          <div className="pv-card">
+            <div className="pv-num">{nMatch}</div>
+            <div className="pv-lab">biens correspondants</div>
+            <div className="pv-bar"><i style={{ width: `${Math.round(nMatch / 18 * 100)}%` }} /></div>
+            <div className="pv-hint">Sur {Math.max(nMatch, Math.round(nMatch * 2.6))} biens {value.typeIds[0] && TYPE_LABEL[value.typeIds[0]] ? TYPE_LABEL[value.typeIds[0]].toLowerCase() : 'similaires'} au portefeuille dans la zone.</div>
+          </div>
           <div className="pv-recap">
-            <div className="pv-row"><span className="k">Offre</span><span className="v">{recap.offre}</span></div>
-            <div className="pv-row"><span className="k">Types</span><span className="v">{recap.types}</span></div>
             <div className="pv-row"><span className="k">Budget</span><span className="v">{recap.budget}</span></div>
             <div className="pv-row"><span className="k">Secteur</span><span className="v">{recap.secteur}</span></div>
             <div className="pv-row"><span className="k">Surface</span><span className="v">{recap.surface}</span></div>

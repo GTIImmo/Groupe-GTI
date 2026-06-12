@@ -167,6 +167,12 @@
 #fcx-root .mod.primary:hover{transform:translateY(-2px)}
 #fcx-root .mod-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 #fcx-root .mod h2{font-size:15.5px;font-weight:700;color:var(--ink)}
+#fcx-root .mod-h .btn.fcx-search-add{margin-left:auto;flex-shrink:0;gap:6px}
+#fcx-root .lk-actions.fcx-search-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-self:stretch;justify-content:center}
+#fcx-root .lk-actions.fcx-search-actions .btn.sm{gap:6px;justify-content:flex-start;white-space:nowrap}
+#fcx-root .btn.sm.fcx-search-del{color:#b3261e;border-color:#f0ccc7;background:#fff}
+#fcx-root .btn.sm.fcx-search-del:hover{background:#fdeceb;border-color:#e8a39b;color:#9a1f17}
+#fcx-root .btn.sm.fcx-search-del:disabled{opacity:.55;cursor:default}
 #fcx-root .mod-meta{font-size:12px;font-weight:600;color:var(--muted)}
 
 /* statut pills */

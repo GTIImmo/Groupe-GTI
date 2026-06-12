@@ -119,6 +119,7 @@ import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
 import ContactSearchModal from './ContactSearchModal'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
+import './contact-new.css'
 
 type DetailContact = {
   id: string
@@ -22482,6 +22483,7 @@ function HektorContactIdentityForm(props: {
   const [ownerAnnonceError, setOwnerAnnonceError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cnewScrollRef = useRef<HTMLDivElement | null>(null)
   const [duplicateCandidates, setDuplicateCandidates] = useState<AppContact[]>([])
   const [duplicatesAccepted, setDuplicatesAccepted] = useState(false)
   const [selectedHektorUserId, setSelectedHektorUserId] = useState(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
@@ -22811,6 +22813,427 @@ function HektorContactIdentityForm(props: {
     } finally {
       setPending(false)
     }
+  }
+
+  // ----- Apercu live (cosmetique uniquement, derive des memes states) -----
+  const cnewInitials = (((firstName.trim()[0] || '') + (lastName.trim()[0] || (isCompanyPerson ? (companyName.trim()[0] || '') : ''))).toUpperCase()) || '?'
+  const cnewCivLabel = civility && civility !== '-' ? `${civility} ` : ''
+  const cnewMainName = isCompanyPerson ? (companyName.trim() || lastName.trim()) : lastName.trim()
+  const cnewKindLabel = hektorContactKindOptions.find((option) => option.value === contactKind)?.label ?? 'Contact'
+  const cnewSecteur = [postalCode.trim(), city.trim()].filter(Boolean).join(' ')
+  const cnewFilled = [cnewMainName, firstName.trim(), email.trim(), phone.trim(), city.trim()].filter(Boolean).length
+  const cnewStepNumber = contactStep === 'identity' ? 1 : 2
+  const cnewStep2Label = hasSearchStep ? (contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquéreur') : hasOwnerStep ? 'Relier une annonce' : 'Fiche directe'
+  const cnewHasStep2 = hasSearchStep || hasOwnerStep
+  const cnewSubmitLabel = pending ? 'Création…' : duplicatesAccepted ? 'Continuer malgré doublon' : (contactStep === 'identity' && cnewHasStep2) ? 'Étape suivante' : 'Créer le contact'
+
+  if (isCreateMode) {
+    return (
+      <form className={`cnew contact-editor-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
+        <div className="edit" role="dialog" aria-modal="true" aria-labelledby="cnewTitle">
+          <header className="edit-head">
+            <div className="edit-h-main">
+              <span className="edit-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10" cy="8" r="4" /><path d="M3 21a7 7 0 0 1 12-5" /><path d="M19 14v6M16 17h6" /></svg>
+              </span>
+              <div>
+                <div className="edit-eyebrow">Création Hektor</div>
+                <h2 className="edit-title" id="cnewTitle">Nouveau contact</h2>
+                <div className="head-meta"><span className="hm-pill"><span className="hm-dot" />Création globale · resynchronisation Hektor</span></div>
+              </div>
+            </div>
+            <div className="head-right">
+              <div className="head-step">Étape <b>{cnewStepNumber}</b> / 2</div>
+              {props.onCancel ? (
+                <button className="edit-close" type="button" onClick={props.onCancel} disabled={pending}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" /></svg>Fermer
+                </button>
+              ) : null}
+            </div>
+          </header>
+
+          <div className="edit-context">
+            <div className="ctx-acct">
+              <div className="wrap">
+                <span className="k">Compte Hektor</span>
+                {availableHektorNegotiators.length > 0 ? (
+                  <select
+                    value={selectedHektorUserId}
+                    onChange={(event) => setSelectedHektorUserId(event.target.value)}
+                    disabled={props.profileRole === 'commercial' && availableHektorNegotiators.length <= 1}
+                    required
+                    aria-label="Compte Hektor"
+                  >
+                    <option value="">{props.profileRole === 'commercial' ? 'Acces personnel' : 'Choisir le negociateur'}</option>
+                    {availableHektorNegotiators.map((negotiator) => (
+                      <option key={`contact-hektor-user-${negotiator.idUser}`} value={negotiator.idUser}>
+                        {negotiator.label}{negotiator.agenceNom ? ` - ${negotiator.agenceNom}` : ''}{negotiator.email ? ` - ${negotiator.email}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input value={selectedHektorEmail || selectedHektorId || 'Contexte Hektor non detecte'} disabled aria-label="Compte Hektor" />
+                )}
+              </div>
+              <span className="hint">Le contact sera créé sous ce compte Hektor.</span>
+            </div>
+            <div className="stepper">
+              <div className={`step-conn${contactStep !== 'identity' ? ' rev' : ''}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </div>
+              <button
+                type="button"
+                className={`cstep${contactStep === 'identity' ? ' on' : ' done'}`}
+                onClick={() => { if (contactStep !== 'identity' && !pending) setContactStep('identity') }}
+              >
+                <span className="step-n">1</span>
+                <span className="step-tx"><span className="step-k">Étape 1</span><span className="step-t">Identité</span></span>
+                <svg className="step-done-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12.5 10 17 19 7" /></svg>
+              </button>
+              <div className={`cstep${contactStep !== 'identity' ? ' on' : ''}`}>
+                <span className="step-n">2</span>
+                <span className="step-tx"><span className="step-k">Étape 2</span><span className="step-t">{cnewStep2Label}</span></span>
+                <svg className="step-done-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12.5 10 17 19 7" /></svg>
+              </div>
+            </div>
+          </div>
+
+          {duplicateCandidates.length > 0 ? (
+            <div className="cnew-dup">
+              <strong>Doublon possible détecté</strong>
+              <span>Contrôlez avant validation. Un second clic crée quand même la demande.</span>
+              {duplicateCandidates.slice(0, 4).map((candidate) => (
+                <small key={`candidate-${candidate.hektor_contact_id}`}>{candidate.display_name} - ID {candidate.hektor_contact_id} - {candidate.email || candidate.phone_primary || contactArchiveLabel(candidate)}</small>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="wiz-scroll" ref={cnewScrollRef}>
+            {contactStep === 'identity' ? (
+              <div className="step1 step1-grid">
+                <div className="s1-form">
+                  {/* ---- Identité & typologie ---- */}
+                  <div className="fsec">
+                    <div className="fsec-h">
+                      <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>
+                      <span className="fsec-t">Identité &amp; typologie</span><span className="fsec-sp" /><span className="tag-sync">Synchronisé</span>
+                    </div>
+                    <div className="fgrid3" style={{ marginBottom: 15 }}>
+                      <div className="field">
+                        <label>Type Hektor</label>
+                        <select className="inp" value={contactKind} onChange={(event) => setContactKind(event.target.value)} required>
+                          {hektorContactKindOptions.map((option) => (
+                            <option key={`contact-kind-${option.value}`} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        <span className="field-note brand">{hektorContactKindOptions.find((option) => option.value === contactKind)?.detail}</span>
+                      </div>
+                      <div className="field">
+                        <label>Structure</label>
+                        <select className="inp" value={personType} onChange={(event) => setPersonType(event.target.value)} required>
+                          {personTypeOptions.map((option) => (
+                            <option key={`person-type-${option.value}`} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        {isPartnerKind ? <span className="field-note">Hektor partenaire accepte personne morale ou physique.</span> : null}
+                      </div>
+                      {isCompanyPerson ? (
+                        <div className="field">
+                          <label>Forme juridique</label>
+                          <select className="inp" value={legalForm} onChange={(event) => setLegalForm(event.target.value)} required>
+                            {hektorLegalFormOptions.map((option) => (
+                              <option key={`legal-form-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="field">
+                          <label>Civilité</label>
+                          <select className="inp" value={civility} onChange={(event) => setCivility(event.target.value)}>
+                            <option value="">—</option>
+                            {isPartnerKind ? <option value="Me.">Me.</option> : null}
+                            {isPartnerKind ? <option value="Indivision">Indivision</option> : null}
+                            <option value="M.">M.</option>
+                            <option value="Mme.">Mme.</option>
+                            <option value="Mlle.">Mlle.</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    {isCompanyPerson ? (
+                      <div className="fgrid3" style={{ marginBottom: 15 }}>
+                        <div className="field col2"><label>Raison sociale</label><input className="inp" value={companyName} onChange={(event) => setCompanyName(event.target.value)} required /></div>
+                        <div className="field"><label>SIRET</label><input className="inp" value={siret} onChange={(event) => setSiret(event.target.value)} inputMode="numeric" /></div>
+                      </div>
+                    ) : (
+                      <div className="fgrid3" style={{ marginBottom: 15 }}>
+                        <div className="field"><label>Nom</label><input className="inp" value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Nom de famille" required /></div>
+                        <div className="field"><label>Prénom</label><input className="inp" value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Prénom" /></div>
+                        <div className="field"><label>Email</label><input className="inp" value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="adresse@email.fr" /></div>
+                      </div>
+                    )}
+                    {isPartnerKind ? (
+                      <div className="fgrid3">
+                        <div className="field"><label>Métier partenaire</label>
+                          <select className="inp" value={partnerJobId} onChange={(event) => setPartnerJobId(event.target.value)}>
+                            {hektorPartnerJobOptions.map((option) => (
+                              <option key={`partner-job-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field col2"><label>Site internet</label><input className="inp" value={website} onChange={(event) => setWebsite(event.target.value)} inputMode="url" /></div>
+                      </div>
+                    ) : null}
+                    {isCompanyPerson ? (
+                      <div className="fgrid3"><div className="field"><label>Email</label><input className="inp" value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="adresse@email.fr" /></div></div>
+                    ) : null}
+                  </div>
+
+                  {/* ---- Coordonnées ---- */}
+                  <div className="fsec">
+                    <div className="fsec-h">
+                      <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span>
+                      <span className="fsec-t">Coordonnées</span>
+                    </div>
+                    <div className="fgrid3" style={{ marginBottom: 15 }}>
+                      <div className="field"><label>Portable</label><input className="inp" value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="06 …" /></div>
+                      <div className="field"><label>Fixe</label><input className="inp" value={phoneSecondary} onChange={(event) => setPhoneSecondary(event.target.value)} inputMode="tel" placeholder="—" /></div>
+                      <div className="field"><label>Code postal</label><input className="inp" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} inputMode="numeric" placeholder="43500" /></div>
+                    </div>
+                    <div className="fgrid3">
+                      <div className="field col2"><label>Adresse</label><input className="inp" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="N° et libellé de voie" /></div>
+                      <div className="field"><label>Ville</label><input className="inp" value={city} onChange={(event) => setCity(event.target.value)} placeholder="Commune" /></div>
+                    </div>
+                    {isCouplePerson ? (
+                      <>
+                        <div className="subhead"><span className="st">Conjoint</span></div>
+                        <div className="fgrid3" style={{ marginBottom: 15 }}>
+                          <div className="field"><label>Nom conjoint</label><input className="inp" value={spouseLastName} onChange={(event) => setSpouseLastName(event.target.value)} required /></div>
+                          <div className="field"><label>Prénom conjoint</label><input className="inp" value={spouseFirstName} onChange={(event) => setSpouseFirstName(event.target.value)} /></div>
+                          <div className="field"><label>Email conjoint</label><input className="inp" value={spouseEmail} onChange={(event) => setSpouseEmail(event.target.value)} type="email" /></div>
+                        </div>
+                        <div className="fgrid3">
+                          <div className="field"><label>Téléphone conjoint</label><input className="inp" value={spousePhone} onChange={(event) => setSpousePhone(event.target.value)} inputMode="tel" /></div>
+                          <div className="field"><label>Adresse conjoint</label><input className="inp" value={spouseAddress} onChange={(event) => setSpouseAddress(event.target.value)} /></div>
+                          <div className="field"><label>CP / Ville conjoint</label><input className="inp" value={spousePostalCode} onChange={(event) => setSpousePostalCode(event.target.value)} inputMode="numeric" placeholder="CP" /></div>
+                          <div className="field col2"><label>Ville conjoint</label><input className="inp" value={spouseCity} onChange={(event) => setSpouseCity(event.target.value)} /></div>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* ---- Qualification & naissance ---- */}
+                  <div className="fsec">
+                    <div className="fsec-h">
+                      <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 7h18M3 12h18M3 17h12" /></svg></span>
+                      <span className="fsec-t">Qualification &amp; naissance</span>
+                    </div>
+                    <div className="fgrid3" style={{ marginBottom: 15 }}>
+                      <div className="field"><label>Date de naissance</label><input className="inp" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" /><span className="field-note warm">Utilisée par le message anniversaire Hektor.</span></div>
+                      <div className="field col2"><label>Lieu de naissance</label><input className="inp" value={birthPlace} onChange={(event) => setBirthPlace(event.target.value)} placeholder="—" /></div>
+                    </div>
+                    <div className="fgrid3">
+                      <div className="field"><label>Statut matrimonial</label>
+                        <select className="inp" value={maritalStatus} onChange={(event) => setMaritalStatus(event.target.value)}>
+                          <option value="">Non précisé</option>
+                          <option value="single">Célibataire</option>
+                          <option value="married">Marié(e)</option>
+                          <option value="civil_union">Pacsé(e)</option>
+                          <option value="divorced">Divorcé(e)</option>
+                          <option value="widower">Veuf(ve)</option>
+                        </select>
+                      </div>
+                      <div className="field"><label>Source</label>
+                        <select className="inp" value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
+                          {hektorContactSourceOptions.map((option) => (
+                            <option key={`contact-source-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field"><label>Catégorie</label>
+                        <select className="inp" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+                          {hektorContactCategoryOptions.map((option) => (
+                            <option key={`contact-category-${option.value || 'none'}`} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ---- Automatismes & RGPD ---- */}
+                  <div className="fsec">
+                    <div className="fsec-h">
+                      <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
+                      <span className="fsec-t">Automatismes Hektor &amp; RGPD</span>
+                    </div>
+                    <div className="fgrid3" style={{ marginBottom: 15 }}>
+                      <div className="field"><label>Mail nouveau mandat</label>
+                        <select className="inp" value={crmMandateSummaryEnabled} onChange={(event) => setCrmMandateSummaryEnabled(event.target.value)}>
+                          <option value="">Réglage Hektor</option><option value="true">Activé</option><option value="false">Coupé</option>
+                        </select>
+                        <span className="field-note">Automatisme CRM par contact.</span>
+                      </div>
+                      <div className="field"><label>Mail échéance mandat</label>
+                        <select className="inp" value={crmMandateExpirationEnabled} onChange={(event) => setCrmMandateExpirationEnabled(event.target.value)}>
+                          <option value="">Réglage Hektor</option><option value="true">Activé</option><option value="false">Coupé</option>
+                        </select>
+                        <span className="field-note">Alerte avant fin de mandat.</span>
+                      </div>
+                      <div className="field"><label>Message anniversaire</label>
+                        <select className="inp" value={crmBirthdayEnabled} onChange={(event) => setCrmBirthdayEnabled(event.target.value)}>
+                          <option value="">Réglage Hektor</option><option value="true">Activé</option><option value="false">Coupé</option>
+                        </select>
+                        <span className="field-note">Nécessite une date de naissance.</span>
+                      </div>
+                    </div>
+                    <button type="button" className={`check${sendRgpdEmail ? '' : ' off'}`} aria-pressed={sendRgpdEmail} onClick={() => setSendRgpdEmail((v) => !v)} style={{ marginBottom: 15 }}>
+                      <span className="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5 10 17 19 7" /></svg></span>
+                      <span className="tr-bd"><span className="check-t">Envoyer l'email d'activation Espace personnel / RGPD</span><span className="check-s">Le contact reçoit le lien d'activation et le consentement RGPD.</span></span>
+                    </button>
+                    <div className="field full"><label>Note Hektor</label><textarea className="inp" value={comments} onChange={(event) => setComments(event.target.value)} rows={3} placeholder="Note interne synchronisée avec Hektor…" /></div>
+                  </div>
+                </div>
+
+                <aside className="s1-side">
+                  <div className="s1-eyebrow">Aperçu de la fiche</div>
+                  <div className="pcard">
+                    <div className="pcard-top">
+                      <div className="pc-av">{cnewInitials}</div>
+                      <div className="pc-nm">
+                        {(cnewMainName || firstName.trim())
+                          ? <>{cnewCivLabel}{firstName.trim() ? `${firstName.trim()} ` : ''}<b>{cnewMainName.toUpperCase()}</b></>
+                          : <span className="ph">Nouveau contact</span>}
+                      </div>
+                      <span className="pc-chip">{cnewKindLabel}</span>
+                    </div>
+                    <div className="pcard-body">
+                      <div className="pc-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg><span className={phone.trim() ? '' : 'empty'}>{phone.trim() || 'Téléphone —'}</span></div>
+                      <div className="pc-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg><span className={email.trim() ? '' : 'empty'}>{email.trim() || 'Email —'}</span></div>
+                      <div className="pc-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg><span className={cnewSecteur ? '' : 'empty'}>{cnewSecteur || 'Secteur —'}</span></div>
+                    </div>
+                    <div className="pcard-foot">
+                      <div className="pc-meter-top"><span>Complétion</span><b>{cnewFilled} / 5</b></div>
+                      <div className="pc-bar"><i style={{ width: `${cnewFilled / 5 * 100}%` }} /></div>
+                      <div className="pc-neg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg>Négociateur · {selectedHektorUser?.label ?? selectedHektorEmail ?? 'Compte Hektor'}</div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            ) : null}
+
+            {contactStep === 'search' ? (
+              <div className="step1" style={{ maxWidth: 'none', padding: '18px 24px 14px' }}>
+                <label className="check" style={{ marginBottom: 14 }} aria-pressed={createSearchCriteria} onClick={(event) => { event.preventDefault() }}>
+                  <span className="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5 10 17 19 7" /></svg></span>
+                  <span className="tr-bd">
+                    <span className="check-t" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <input type="checkbox" checked={createSearchCriteria} onChange={(event) => setCreateSearchCriteria(event.target.checked)} />
+                      Créer la recherche dans Hektor
+                    </span>
+                    <span className="check-s">Page 2 Hektor : offre, types, secteur et critères de la recherche acquéreur.</span>
+                  </span>
+                </label>
+                <div className="csearch">
+                  <ContactSearchFields
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    offerOptions={searchOfferOptions}
+                    showNav
+                    showPreview
+                    disabled={!createSearchCriteria}
+                    scrollRef={cnewScrollRef}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {contactStep === 'owner' ? (
+              <div className="step2b">
+                <div className="fsec">
+                  <div className="fsec-h">
+                    <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5" /></svg></span>
+                    <span className="fsec-t">Relier à une annonce</span><span className="fsec-sp" /><span className="tag-sync">Relation propriétaire</span>
+                  </div>
+                  <div className="owner-choice">
+                    {[
+                      { value: 'link_existing', label: 'Rattacher un bien existant' },
+                      { value: 'create_property', label: 'Créer un bien' },
+                      { value: 'finish', label: 'Terminer' },
+                    ].map((option) => (
+                      <button
+                        key={`owner-next-${option.value}`}
+                        type="button"
+                        className={`cbtn${ownerNextAction === option.value ? ' on' : ''}`}
+                        onClick={() => setOwnerNextAction(option.value as 'finish' | 'link_existing' | 'create_property')}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {ownerNextAction === 'link_existing' ? (
+                    <>
+                      <div className="search-row">
+                        <input
+                          className="inp"
+                          value={ownerAnnonceSearch}
+                          onChange={(event) => { setOwnerAnnonceSearch(event.target.value); setOwnerAnnonceId('') }}
+                          placeholder="Rechercher une annonce (réf., titre, ville, commercial)…"
+                          autoComplete="off"
+                        />
+                        <button type="button" className="btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>Rechercher</button>
+                      </div>
+                      {ownerAnnonceError ? <p className="form-error" style={{ color: '#9d0f4e', fontWeight: 700, fontSize: 12.5, margin: '0 0 10px' }}>{ownerAnnonceError}</p> : null}
+                      <div>
+                        {ownerAnnonceOptions.length > 0 ? ownerAnnonceOptions.map((option) => {
+                          const selected = String(option.hektor_annonce_id) === ownerAnnonceId
+                          return (
+                            <button
+                              key={`owner-annonce-${option.hektor_annonce_id}`}
+                              type="button"
+                              className={`lk${selected ? ' on' : ''}`}
+                              onClick={() => { setOwnerAnnonceId(String(option.hektor_annonce_id)); setOwnerAnnonceSearch(ownerAnnonceOptionTitle(option)) }}
+                            >
+                              <span className="lk-thumb"><span className="ph">Photo</span></span>
+                              <span className="lk-bd">
+                                <span className="lk-ref">{ownerAnnonceOptionMeta(option) || `ID ${option.hektor_annonce_id}`}</span>
+                                <span className="lk-t">{ownerAnnonceOptionTitle(option)}</span>
+                                <span className="lk-meta">{ownerAnnonceOptionSubtitle(option) || `Annonce ${option.hektor_annonce_id}`}</span>
+                              </span>
+                              <span className="lk-radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5 10 17 19 7" /></svg></span>
+                            </button>
+                          )
+                        }) : (
+                          <p className="owner-empty">{ownerAnnonceLoading ? 'Recherche en cours…' : ownerAnnonceSearch.trim() ? 'Aucune annonce trouvée.' : 'Les annonces récentes du négociateur apparaissent ici.'}</p>
+                        )}
+                      </div>
+                      {selectedOwnerAnnonce ? (
+                        <div className="owner-selected">
+                          <strong>Bien sélectionné</strong>
+                          <span>{ownerAnnonceOptionTitle(selectedOwnerAnnonce)} · ID {selectedOwnerAnnonce.hektor_annonce_id}</span>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <footer className="edit-foot">
+            {error ? <span className="err">{error}</span> : null}
+            {contactStep !== 'identity' ? (
+              <button className="btn-neutral" type="button" onClick={() => setContactStep('identity')} disabled={pending}>← Retour</button>
+            ) : props.onCancel ? (
+              <button className="btn-neutral" type="button" onClick={props.onCancel} disabled={pending}>Annuler</button>
+            ) : null}
+            <button className="btn-brand" type="submit" disabled={pending}>
+              <span>{cnewSubmitLabel}</span>
+              {(contactStep === 'identity' && cnewHasStep2) ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg> : null}
+            </button>
+          </footer>
+        </div>
+      </form>
+    )
   }
 
   return (
@@ -25748,7 +26171,7 @@ function ContactDetailPopup(props: {
 
                       <div className="duo-col">
                         <div className="mod">
-                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span>{props.canManageContacts ? <button className="linkmini" type="button" onClick={() => { setEditingSearch(null); setSearchModalOpen(true) }}>+ Ajouter une recherche</button> : null}</div>
+                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span>{props.canManageContacts ? <button className="btn brand sm fcx-search-add" type="button" onClick={() => { setEditingSearch(null); setSearchModalOpen(true) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} width="14" height="14"><path d="M12 5v14M5 12h14" /></svg>Ajouter une recherche</button> : null}</div>
                           {props.searches.length > 0 ? (
                             <div className="contact-modern-search-list">
                               {props.searches.slice(0, 4).map((search) => {
@@ -25766,10 +26189,16 @@ function ContactDetailPopup(props: {
                                       </div>
                                     </div>
                                     {props.canManageContacts ? (
-                                      <div className="lk-actions">
-                                        <button className="linkmini" type="button" onClick={() => setEditingSearch(search)}>Modifier</button>
+                                      <div className="lk-actions fcx-search-actions">
+                                        <button className="btn brand-soft sm" type="button" onClick={() => setEditingSearch(search)}>
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="13" height="13"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                                          Modifier
+                                        </button>
                                         {contactBool(search.is_active) ? (
-                                          <button className="linkmini danger" type="button" disabled={searchDeletePending === search.contact_search_key} onClick={() => handleDeleteContactSearch(search)}>{searchDeletePending === search.contact_search_key ? 'Suppression…' : 'Supprimer'}</button>
+                                          <button className="btn ghost sm fcx-search-del" type="button" disabled={searchDeletePending === search.contact_search_key} onClick={() => handleDeleteContactSearch(search)}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="13" height="13"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                                            {searchDeletePending === search.contact_search_key ? 'Suppression…' : 'Supprimer'}
+                                          </button>
                                         ) : null}
                                       </div>
                                     ) : null}

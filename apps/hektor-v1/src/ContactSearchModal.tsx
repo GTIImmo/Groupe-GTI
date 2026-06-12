@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createHektorContactSearchJob, createUpdateHektorContactSearchJob } from './lib/api'
 import type { AppContactSearch, ConsoleJob } from './types'
 import ContactSearchFields, {
@@ -69,7 +70,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
 
   const searchContextLabel = props.contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquereur'
 
-  return (
+  return createPortal(
     <div className="csearch-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) props.onClose() }}>
       <div className="csearch">
         <div className="edit" role="dialog" aria-modal="true" aria-labelledby="csearchTitle" data-screen-label="Ajouter une recherche">
@@ -81,7 +82,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
               <div>
                 <div className="edit-eyebrow">Création Hektor</div>
                 <h2 className="edit-title" id="csearchTitle">{isEdit ? 'Modifier la recherche' : 'Ajouter une recherche'}</h2>
-                <div className="edit-sub">{props.contactName ? `${searchContextLabel} pour ${props.contactName}` : searchContextLabel} · resynchronisation Hektor</div>
+                <div className="head-meta"><span className="hm-pill"><span className="hm-dot" />{props.contactName ? `${searchContextLabel} pour ${props.contactName}` : searchContextLabel} · resynchronisation Hektor</span></div>
               </div>
             </div>
             <div className="head-right">
@@ -91,7 +92,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
 
           <div className="edit-context">
             <span className="ctx-k">Compte Hektor</span>
-            <span className="ctx-wrap">{props.negotiatorLabel || 'Négociateur du contact'}</span>
+            <span className="ctx-wrap"><span className="ctx-sel">{props.negotiatorLabel || 'Négociateur du contact'}</span></span>
             <span className="ctx-hint">La recherche est créée sous le compte du négociateur du contact.</span>
           </div>
 
@@ -106,6 +107,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
