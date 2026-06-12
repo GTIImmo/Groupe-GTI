@@ -70,6 +70,7 @@ import {
   createHektorContactJob,
   createUpdateHektorContactJob,
   createDeleteHektorContactJob,
+  createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
@@ -116,6 +117,8 @@ import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
+import ContactSearchModal from './ContactSearchModal'
+import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 
 type DetailContact = {
   id: string
@@ -22461,20 +22464,11 @@ function HektorContactIdentityForm(props: {
   const [crmBirthdayEnabled, setCrmBirthdayEnabled] = useState(optionalBooleanSelectValue(initial.crmBirthdayEnabled))
   const [contactStep, setContactStep] = useState<'identity' | 'search' | 'owner'>('identity')
   const [createSearchCriteria, setCreateSearchCriteria] = useState(true)
-  const [searchOfferCode, setSearchOfferCode] = useState(hektorDefaultContactSearchOffer(initial.contactKind ?? 'acquereur'))
-  const [searchTypeIds, setSearchTypeIds] = useState<string[]>(['2'])
-  const [searchCity, setSearchCity] = useState(initial.city ?? '')
-  const [searchPostalCode, setSearchPostalCode] = useState(initial.postalCode ?? '')
-  const [searchPriceMin, setSearchPriceMin] = useState('')
-  const [searchPriceMax, setSearchPriceMax] = useState('')
-  const [searchSurfaceMin, setSearchSurfaceMin] = useState('')
-  const [searchSurfaceMax, setSearchSurfaceMax] = useState('')
-  const [searchRoomsMin, setSearchRoomsMin] = useState('')
-  const [searchRoomsMax, setSearchRoomsMax] = useState('')
-  const [searchBedroomsMin, setSearchBedroomsMin] = useState('')
-  const [searchBedroomsMax, setSearchBedroomsMax] = useState('')
-  const [searchLandSurfaceMin, setSearchLandSurfaceMin] = useState('')
-  const [searchLandSurfaceMax, setSearchLandSurfaceMax] = useState('')
+  const [searchValue, setSearchValue] = useState<ContactSearchFieldsValue>(() => defaultContactSearchValue({
+    offerCode: hektorDefaultContactSearchOffer(initial.contactKind ?? 'acquereur'),
+    typeIds: ['2'],
+    localities: (initial.city || initial.postalCode) ? [{ city: (initial.city ?? '').trim(), postalCode: (initial.postalCode ?? '').trim() }] : [],
+  }))
   const [ownerNextAction, setOwnerNextAction] = useState<'finish' | 'link_existing' | 'create_property'>('finish')
   const [ownerAnnonceId, setOwnerAnnonceId] = useState('')
   const [ownerAnnonceSearch, setOwnerAnnonceSearch] = useState('')
@@ -22518,8 +22512,7 @@ function HektorContactIdentityForm(props: {
   useEffect(() => {
     if (!isCreateMode) return
     setContactStep('identity')
-    setSearchOfferCode(hektorDefaultContactSearchOffer(contactKind))
-    setSearchTypeIds(['2'])
+    setSearchValue((v) => ({ ...v, offerCode: hektorDefaultContactSearchOffer(contactKind), typeIds: ['2'] }))
     setOwnerNextAction('finish')
     setOwnerAnnonceId('')
     setOwnerAnnonceSearch('')
@@ -22529,8 +22522,7 @@ function HektorContactIdentityForm(props: {
 
   useEffect(() => {
     if (!isCreateMode || contactStep !== 'identity') return
-    setSearchCity(city)
-    setSearchPostalCode(postalCode)
+    setSearchValue((v) => (v.localities.length ? v : { ...v, localities: (city || postalCode) ? [{ city, postalCode }] : [] }))
   }, [city, contactStep, isCreateMode, postalCode])
 
   useEffect(() => {
@@ -22610,20 +22602,11 @@ function HektorContactIdentityForm(props: {
     setDuplicatesAccepted(false)
     setContactStep('identity')
     setCreateSearchCriteria(true)
-    setSearchOfferCode(hektorDefaultContactSearchOffer(next.contactKind ?? 'acquereur'))
-    setSearchTypeIds(['2'])
-    setSearchCity(next.city ?? '')
-    setSearchPostalCode(next.postalCode ?? '')
-    setSearchPriceMin('')
-    setSearchPriceMax('')
-    setSearchSurfaceMin('')
-    setSearchSurfaceMax('')
-    setSearchRoomsMin('')
-    setSearchRoomsMax('')
-    setSearchBedroomsMin('')
-    setSearchBedroomsMax('')
-    setSearchLandSurfaceMin('')
-    setSearchLandSurfaceMax('')
+    setSearchValue(defaultContactSearchValue({
+      offerCode: hektorDefaultContactSearchOffer(next.contactKind ?? 'acquereur'),
+      typeIds: ['2'],
+      localities: (next.city || next.postalCode) ? [{ city: (next.city ?? '').trim(), postalCode: (next.postalCode ?? '').trim() }] : [],
+    }))
     setOwnerNextAction('finish')
     setOwnerAnnonceId('')
     setOwnerAnnonceSearch('')
@@ -22632,34 +22615,12 @@ function HektorContactIdentityForm(props: {
     setSelectedHektorUserId(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
   }, [defaultHektorOption?.idUser, props.contact?.hektor_contact_id, props.hektorUserEmail, props.hektorUserId, props.mode])
 
-  const toggleSearchType = (typeId: string) => {
-    setSearchTypeIds((current) => (
-      current.includes(typeId)
-        ? current.filter((value) => value !== typeId)
-        : [...current, typeId]
-    ))
-  }
-
   const buildContactNextStep = (): HektorContactIdentityInput['contactNextStep'] => {
     if (!isCreateMode) return null
     if (hasSearchStep) {
       return {
-        kind: 'search_criteria',
+        ...contactSearchValueToInput(searchValue),
         enabled: createSearchCriteria,
-        offerCode: searchOfferCode,
-        propertyTypeIds: searchTypeIds,
-        city: searchCity,
-        postalCode: searchPostalCode,
-        priceMin: searchPriceMin,
-        priceMax: searchPriceMax,
-        surfaceMin: searchSurfaceMin,
-        surfaceMax: searchSurfaceMax,
-        roomsMin: searchRoomsMin,
-        roomsMax: searchRoomsMax,
-        bedroomsMin: searchBedroomsMin,
-        bedroomsMax: searchBedroomsMax,
-        landSurfaceMin: searchLandSurfaceMin,
-        landSurfaceMax: searchLandSurfaceMax,
       }
     }
     if (hasOwnerStep) {
@@ -22749,15 +22710,15 @@ function HektorContactIdentityForm(props: {
       return
     }
     if (contactStep === 'search' && createSearchCriteria) {
-      if (searchTypeIds.length === 0) {
+      if (searchValue.typeIds.length === 0) {
         setError('Selectionne au moins un type de bien pour la recherche Hektor.')
         return
       }
-      if (!searchCity.trim() && !searchPostalCode.trim()) {
-        setError('Ville ou code postal requis pour la recherche Hektor.')
+      if (!searchValue.localities.length) {
+        setError('Ajoute au moins une commune pour la recherche Hektor.')
         return
       }
-      if (!searchPriceMax.trim()) {
+      if (!searchValue.priceMax) {
         setError('Budget maximum requis pour creer la recherche Hektor.')
         return
       }
@@ -22768,8 +22729,7 @@ function HektorContactIdentityForm(props: {
     }
     if (props.mode === 'create' && contactStep === 'identity') {
       if (hasSearchStep) {
-        setSearchCity((current) => current || city)
-        setSearchPostalCode((current) => current || postalCode)
+        setSearchValue((v) => (v.localities.length ? v : { ...v, localities: (city || postalCode) ? [{ city, postalCode }] : [] }))
         setDuplicateCandidates([])
         setContactStep('search')
         return
@@ -22833,20 +22793,7 @@ function HektorContactIdentityForm(props: {
         setCrmBirthdayEnabled('')
         setContactStep('identity')
         setCreateSearchCriteria(true)
-        setSearchOfferCode(hektorDefaultContactSearchOffer('acquereur'))
-        setSearchTypeIds(['2'])
-        setSearchCity('')
-        setSearchPostalCode('')
-        setSearchPriceMin('')
-        setSearchPriceMax('')
-        setSearchSurfaceMin('')
-        setSearchSurfaceMax('')
-        setSearchRoomsMin('')
-        setSearchRoomsMax('')
-        setSearchBedroomsMin('')
-        setSearchBedroomsMax('')
-        setSearchLandSurfaceMin('')
-        setSearchLandSurfaceMax('')
+        setSearchValue(defaultContactSearchValue({ offerCode: hektorDefaultContactSearchOffer('acquereur'), typeIds: ['2'] }))
         setOwnerNextAction('finish')
         setOwnerAnnonceId('')
         setOwnerAnnonceSearch('')
@@ -23128,88 +23075,22 @@ function HektorContactIdentityForm(props: {
       {contactStep === 'search' ? (
         <div className="contact-next-step-panel">
           <div className="contact-next-step-head">
-            <strong>{contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquereur'}</strong>
-            <span>Page 2 Hektor: offre, types de biens, secteur et criteres principaux.</span>
+            <strong>{contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquéreur'}</strong>
+            <span>Page 2 Hektor : offre, types, secteur et critères de la recherche.</span>
           </div>
           <label className="contact-editor-toggle contact-next-toggle">
             <input type="checkbox" checked={createSearchCriteria} onChange={(event) => setCreateSearchCriteria(event.target.checked)} />
-            <span>Creer la recherche dans Hektor</span>
+            <span>Créer la recherche dans Hektor</span>
           </label>
-          <div className="contact-next-segmented" role="group" aria-label="Type d'offre">
-            {searchOfferOptions.map((option) => (
-              <button
-                key={`search-offer-${option.value}`}
-                type="button"
-                className={searchOfferCode === option.value ? 'is-selected' : ''}
-                onClick={() => setSearchOfferCode(option.value)}
-                disabled={!createSearchCriteria}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <div className="contact-search-type-grid">
-            {hektorContactSearchTypeOptions.map((option) => (
-              <button
-                key={`search-type-${option.value}`}
-                type="button"
-                className={searchTypeIds.includes(option.value) ? 'is-selected' : ''}
-                onClick={() => toggleSearchType(option.value)}
-                disabled={!createSearchCriteria}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <div className="hektor-inline-grid contact-editor-grid contact-next-grid">
-            <label>
-              <span>Ville recherche</span>
-              <input value={searchCity} onChange={(event) => setSearchCity(event.target.value)} disabled={!createSearchCriteria} />
-            </label>
-            <label className="is-small">
-              <span>Code postal</span>
-              <input value={searchPostalCode} onChange={(event) => setSearchPostalCode(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Budget min</span>
-              <input value={searchPriceMin} onChange={(event) => setSearchPriceMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Budget max</span>
-              <input value={searchPriceMax} onChange={(event) => setSearchPriceMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Surface min</span>
-              <input value={searchSurfaceMin} onChange={(event) => setSearchSurfaceMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Surface max</span>
-              <input value={searchSurfaceMax} onChange={(event) => setSearchSurfaceMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Pieces min</span>
-              <input value={searchRoomsMin} onChange={(event) => setSearchRoomsMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Pieces max</span>
-              <input value={searchRoomsMax} onChange={(event) => setSearchRoomsMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Chambres min</span>
-              <input value={searchBedroomsMin} onChange={(event) => setSearchBedroomsMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Chambres max</span>
-              <input value={searchBedroomsMax} onChange={(event) => setSearchBedroomsMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Terrain min</span>
-              <input value={searchLandSurfaceMin} onChange={(event) => setSearchLandSurfaceMin(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
-            <label>
-              <span>Terrain max</span>
-              <input value={searchLandSurfaceMax} onChange={(event) => setSearchLandSurfaceMax(event.target.value)} inputMode="numeric" disabled={!createSearchCriteria} />
-            </label>
+          <div className="csearch">
+            <ContactSearchFields
+              value={searchValue}
+              onChange={setSearchValue}
+              offerOptions={searchOfferOptions}
+              showNav={false}
+              showPreview={false}
+              disabled={!createSearchCriteria}
+            />
           </div>
         </div>
       ) : null}
@@ -25365,7 +25246,24 @@ function ContactDetailPopup(props: {
   const [contactEmailMessagesError, setContactEmailMessagesError] = useState<string | null>(null)
   const [contactEmailMessagesLoaded, setContactEmailMessagesLoaded] = useState(false)
   const [contactActionsOpen, setContactActionsOpen] = useState(false)
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
+  const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
+
+  async function handleDeleteContactSearch(search: AppContactSearch) {
+    if (!props.canManageContacts) return
+    if (typeof window !== 'undefined' && !window.confirm('Archiver cette recherche dans Hektor ? Elle disparaîtra des recherches actives.')) return
+    setSearchDeletePending(search.contact_search_key)
+    try {
+      const job = await createDeleteHektorContactSearchJob({ contactId: props.contact.hektor_contact_id, searchIndex: search.search_index })
+      props.onJobCreated?.(job)
+    } catch (error) {
+      if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Suppression de la recherche impossible.')
+    } finally {
+      setSearchDeletePending(null)
+    }
+  }
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
@@ -25843,7 +25741,7 @@ function ContactDetailPopup(props: {
 
                       <div className="duo-col">
                         <div className="mod">
-                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span></div>
+                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span>{props.canManageContacts ? <button className="linkmini" type="button" onClick={() => { setEditingSearch(null); setSearchModalOpen(true) }}>+ Ajouter une recherche</button> : null}</div>
                           {props.searches.length > 0 ? (
                             <div className="contact-modern-search-list">
                               {props.searches.slice(0, 4).map((search) => {
@@ -25860,6 +25758,14 @@ function ContactDetailPopup(props: {
                                         {criteria.slice(0, 2).map((item) => <span key={`crit-${search.contact_search_key}-${item}`} className="tg">{item}</span>)}
                                       </div>
                                     </div>
+                                    {props.canManageContacts ? (
+                                      <div className="lk-actions">
+                                        <button className="linkmini" type="button" onClick={() => setEditingSearch(search)}>Modifier</button>
+                                        {contactBool(search.is_active) ? (
+                                          <button className="linkmini danger" type="button" disabled={searchDeletePending === search.contact_search_key} onClick={() => handleDeleteContactSearch(search)}>{searchDeletePending === search.contact_search_key ? 'Suppression…' : 'Supprimer'}</button>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
                                   </div>
                                 )
                               })}
@@ -26168,6 +26074,18 @@ function ContactDetailPopup(props: {
             </div>
           </form>
         </ContactWorkflowModal>
+      ) : null}
+
+      {(searchModalOpen || editingSearch) && props.canManageContacts ? (
+        <ContactSearchModal
+          contactId={props.contact.hektor_contact_id}
+          contactName={[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || null}
+          negotiatorLabel={props.contact.commercial_nom || props.contact.negociateur_email || null}
+          mode={editingSearch ? 'edit' : 'create'}
+          initialSearch={editingSearch}
+          onClose={() => { setSearchModalOpen(false); setEditingSearch(null) }}
+          onCreated={(job) => props.onJobCreated?.(job)}
+        />
       ) : null}
     </div>
   )

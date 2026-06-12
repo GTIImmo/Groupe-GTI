@@ -28,6 +28,9 @@ const ACTION_JOB_TYPES = new Set([
   "link_hektor_mandant",
   "create_hektor_contact",
   "update_hektor_contact",
+  "add_hektor_contact_search",
+  "update_hektor_contact_search",
+  "delete_hektor_contact_search",
   "create_hektor_mandant_contact",
   "update_hektor_mandant_contact",
   "update_hektor_annonce_fields",
@@ -6813,16 +6816,41 @@ async function buildHektorContactSearchContainer(contactId, contact, payload) {
   const postalCode = firstCleanString(next, ["postalCode", "postal_code", "code_postal", "code"]) || contact.postalCode || "";
   const cityId = firstCleanString(next, ["hektorCityId", "hektor_city_id", "idVille"]);
   const postalId = firstCleanString(next, ["hektorPostalCodeId", "hektor_postal_code_id", "idCode"]);
-  let villes = [];
-  if (cityId) villes.push({ id: cityId, type: "0" });
-  if (!cityId && postalId) villes.push({ id: postalId, type: "1" });
-  if (!villes.length) {
-    const locality = await resolveHektorPublicLocality(postalCode, city);
-    if (locality && locality.idVille) {
-      villes.push({ id: locality.idVille, type: "0" });
-    } else if (locality && locality.idCode) {
-      villes.push({ id: locality.idCode, type: "1" });
+
+  // Localites : on accepte soit une liste next.localities[{city,postalCode,hektorCityId,...}],
+  // soit la commune unique city/postalCode. Chaque commune est resolue en {id,type}.
+  const localityEntries = [];
+  if (Array.isArray(next.localities)) {
+    for (const loc of next.localities) {
+      if (!loc || typeof loc !== "object") continue;
+      localityEntries.push({
+        city: firstCleanString(loc, ["city", "ville"]),
+        postalCode: firstCleanString(loc, ["postalCode", "postal_code", "code_postal", "code"]),
+        cityId: firstCleanString(loc, ["hektorCityId", "hektor_city_id", "idVille"]),
+        postalId: firstCleanString(loc, ["hektorPostalCodeId", "hektor_postal_code_id", "idCode"]),
+      });
     }
+  }
+  if (!localityEntries.length) {
+    localityEntries.push({ city, postalCode, cityId, postalId });
+  }
+
+  const villes = [];
+  const seenVilleKeys = new Set();
+  for (const entry of localityEntries) {
+    let resolved = null;
+    if (entry.cityId) resolved = { id: entry.cityId, type: "0" };
+    else if (entry.postalId) resolved = { id: entry.postalId, type: "1" };
+    else if (entry.city || entry.postalCode) {
+      const locality = await resolveHektorPublicLocality(entry.postalCode, entry.city);
+      if (locality && locality.idVille) resolved = { id: locality.idVille, type: "0" };
+      else if (locality && locality.idCode) resolved = { id: locality.idCode, type: "1" };
+    }
+    if (!resolved) continue;
+    const key = `${resolved.type}:${resolved.id}`;
+    if (seenVilleKeys.has(key)) continue;
+    seenVilleKeys.add(key);
+    villes.push(resolved);
   }
   if (!villes.length) throw new Error("Ville Hektor non resolue pour creer la recherche contact");
 
@@ -6841,19 +6869,81 @@ async function buildHektorContactSearchContainer(contactId, contact, payload) {
   addCriterion("ITEM_CHAMBRE_MAX", ["bedroomsMax", "bedrooms_max", "chambre_max"]);
   addCriterion("ITEM_SURFACE_TERRAIN_MIN", ["landSurfaceMin", "land_surface_min", "surface_terrain_min"]);
   addCriterion("ITEM_SURFACE_TERRAIN_MAX", ["landSurfaceMax", "land_surface_max", "surface_terrain_max"]);
+  // Criteres supplementaires (format Hektor confirme sur les recherches reelles).
+  addCriterion("ITEM_PRIX_MARGE", ["priceMargin", "price_margin", "prix_marge", "marge"]);
+  addCriterion("ITEM_SDB_SDE_MIN", ["bathroomsMin", "bathrooms_min", "sdb_min", "sdbMin"]);
+  addCriterion("ITEM_SDB_SDE_MAX", ["bathroomsMax", "bathrooms_max", "sdb_max", "sdbMax"]);
+  addCriterion("ITEM_SURFACE_SEJOUR_MIN", ["livingRoomSurfaceMin", "living_room_surface_min", "sejour_min"]);
+  addCriterion("ITEM_SURFACE_SEJOUR_MAX", ["livingRoomSurfaceMax", "living_room_surface_max", "sejour_max"]);
+  addCriterion("ITEM_FLOORS_MIN", ["floorsMin", "floors_min", "etage_min"]);
+  addCriterion("ITEM_FLOORS_MAX", ["floorsMax", "floors_max", "etage_max"]);
+  addCriterion("ITEM_NB_NIVEAU_MIN", ["levelsMin", "levels_min", "niveaux_min"]);
+  addCriterion("ITEM_NB_NIVEAU_MAX", ["levelsMax", "levels_max", "niveaux_max"]);
+  // Enums (lettre DPE, chauffage, cuisine, occupation) : valeur = code Hektor.
+  addCriterion("ITEM_DPE_CONS_LETTER", ["dpeLetter", "dpe_letter", "dpe"]);
+  addCriterion("ITEM_CHAUFFAGE_TYPE", ["heatingType", "heating_type", "chauffage_type"]);
+  addCriterion("ITEM_CHAUFFAGE_ENERGIE", ["heatingEnergy", "heating_energy", "chauffage_energie"]);
+  addCriterion("ITEM_CUISINE_TYPE", ["kitchenType", "kitchen_type", "cuisine_type"]);
+  addCriterion("ITEM_OCCUPATION", ["occupation"]);
+
+  // Equipements / terrain : criteres booleens Hektor (valeur "OUI" / "NON").
+  const EQUIPMENT_CRITERIA = {
+    garage_parking: "ITEM_GARAGE_PARKING",
+    terrasse: "ITEM_TERRASSE",
+    balcon: "ITEM_BALCON",
+    piscine: "ITEM_PISCINE",
+    ascenseur: "ITEM_ASCENSEUR",
+    cheminee: "ITEM_CHEMINEE",
+    cave: "ITEM_CAVE",
+    double_vitrage: "ITEM_DOUBLE_VITRAGE",
+    plain_pied: "ITEM_PLAIN_PIED",
+    mitoyen: "ITEM_MITTOYEN",
+    grenier_comble: "ITEM_GRENIER_COMBLE",
+    acces_handi: "ITEM_ACCES_HANDI",
+    terrain_constructible: "ITEM_TERRAIN_CONSTRUCTIBLE",
+    terrain_arbore: "ITEM_TERRAIN_ARBORE",
+    terrain_piscinable: "ITEM_TERRAIN_PISCINABLE",
+    terrain_viabilise: "ITEM_TERRAIN_VIABILISE",
+  };
+  const equipmentItemByKey = new Map();
+  for (const [shortKey, itemKey] of Object.entries(EQUIPMENT_CRITERIA)) {
+    equipmentItemByKey.set(shortKey.toUpperCase(), itemKey);
+    equipmentItemByKey.set(itemKey.toUpperCase(), itemKey);
+  }
+  const addBooleanEquipment = (rawKey, rawValue) => {
+    const itemKey = equipmentItemByKey.get(String(rawKey || "").trim().toUpperCase());
+    if (!itemKey) return;
+    const truthy = rawValue === undefined
+      || /^(1|true|oui|yes|on)$/i.test(String(rawValue).trim());
+    criteresDetails[itemKey] = { value: truthy ? "OUI" : "NON", ponderation: "1" };
+  };
+  const equipmentList = stringArray(next.equipments || next.equipements || next.equipment || next.features);
+  for (const item of equipmentList) addBooleanEquipment(item);
+  if (next.equipmentMap && typeof next.equipmentMap === "object") {
+    for (const [key, value] of Object.entries(next.equipmentMap)) addBooleanEquipment(key, value);
+  }
+
+  // Particularites Hektor : liste d'ids -> conteneur.particularites.
+  const particulariteIds = stringArray(next.particulariteIds || next.particularite_ids || next.particularites)
+    .map((item) => Number(String(item).replace(/[^0-9]/g, "")))
+    .filter((value) => Number.isSafeInteger(value) && value > 0);
+
   if (!criteresDetails.ITEM_PRIX_MAX) {
     throw new Error("Budget maximum requis pour creer la recherche contact Hektor");
   }
 
+  // criteresId : 0 = nouvelle recherche ; > 0 = edition d'une recherche existante.
+  const criteresId = Number(firstCleanString(next, ["criteresId", "idCritere", "critere_id", "hektor_critere_id"]).replace(/[^0-9]/g, "")) || 0;
+
   return {
     prospectId: Number(contactId),
-    criteresId: 0,
+    criteresId,
     offreDem: Number(offerCode),
     typesBiens: typeIds,
     typesTransacs: [],
     criteresDetails,
     quartiers: [],
-    particularites: [],
+    particularites: particulariteIds,
     activites: [],
     villes,
     isFirstCallEditSearch: false,
@@ -7094,6 +7184,245 @@ async function handleUpdateHektorContact(job) {
     status: "updated",
     ...updated,
     crm_settings: crmSettings,
+    sync_job: syncJob,
+  };
+}
+
+// Construit l'objet "search spec" attendu par buildHektorContactSearchContainer
+// a partir d'un payload de job autonome. Accepte la spec sous payload.search,
+// payload.contact_next_step, ou directement a la racine du payload.
+function contactSearchSpecFromPayload(payload) {
+  const source = payload || {};
+  const nested = (source.search && typeof source.search === "object" && source.search)
+    || (source.recherche && typeof source.recherche === "object" && source.recherche)
+    || contactNextStepPayload(source)
+    || source;
+  return { ...nested, kind: "search_criteria", enabled: true };
+}
+
+async function handleAddHektorContactSearch(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+
+  const context = await loadContactExecutionContext(contactId);
+  const contextPayload = {
+    ...payload,
+    hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
+    target_hektor_user_email: payload.target_hektor_user_email || payload.hektor_user_email || context.contact.negociateur_email || null,
+    contact_negociateur_email: context.contact.negociateur_email || null,
+    contact_hektor_agence_id: context.contact.hektor_agence_id || null,
+    hektor_agence_id: payload.hektor_agence_id || payload.target_hektor_agence_id || context.contact.hektor_agence_id || null,
+    target_hektor_agence_id: payload.target_hektor_agence_id || payload.hektor_agence_id || context.contact.hektor_agence_id || null,
+    contact_hektor_negociateur_id: context.contact.hektor_negociateur_id || null,
+    hektor_negociateur_id: payload.hektor_negociateur_id || payload.target_hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+    target_hektor_negociateur_id: payload.target_hektor_negociateur_id || payload.hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+  };
+  const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
+  await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  // La recherche reutilise createHektorContactSearchCriteria via le contact_next_step.
+  // Qualification 1 (locataire) / 2 (acquereur) : indispensable au garde-fou et au code offre.
+  const qualification = ["1", "2"].includes(String(payload.qualification))
+    ? String(payload.qualification)
+    : normalizeHektorContactQualification(payload.qualification, "2");
+  const searchQualification = ["1", "2"].includes(qualification) ? qualification : "2";
+  const contact = {
+    qualification: searchQualification,
+    city: cleanString(payload.city || payload.ville),
+    postalCode: cleanString(payload.postal_code || payload.code_postal || payload.code),
+  };
+  const wrappedPayload = { ...contextPayload, contact_next_step: contactSearchSpecFromPayload(payload) };
+
+  const search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
+  if (search && search.status === "skipped") {
+    throw new Error(`Recherche contact non creee (${search.reason || "payload incomplet"})`);
+  }
+
+  await sleep(1000);
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
+    reason: "add_hektor_contact_search",
+    priority: 82,
+  });
+
+  return {
+    status: "created",
+    hektor_contact_id: contactId,
+    search,
+    sync_job: syncJob,
+  };
+}
+
+// Prepare l'execution d'une action recherche : resout l'id contact, bascule dans
+// le contexte negociateur cible (indispensable, sinon Hektor renvoie 403).
+async function ensureContactSearchExecution(job, payload) {
+  const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  const context = await loadContactExecutionContext(contactId);
+  const contextPayload = {
+    ...payload,
+    hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
+    target_hektor_user_email: payload.target_hektor_user_email || payload.hektor_user_email || context.contact.negociateur_email || null,
+    contact_negociateur_email: context.contact.negociateur_email || null,
+    contact_hektor_agence_id: context.contact.hektor_agence_id || null,
+    hektor_agence_id: payload.hektor_agence_id || payload.target_hektor_agence_id || context.contact.hektor_agence_id || null,
+    target_hektor_agence_id: payload.target_hektor_agence_id || payload.hektor_agence_id || context.contact.hektor_agence_id || null,
+    contact_hektor_negociateur_id: context.contact.hektor_negociateur_id || null,
+    hektor_negociateur_id: payload.hektor_negociateur_id || payload.target_hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+    target_hektor_negociateur_id: payload.target_hektor_negociateur_id || payload.hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+  };
+  const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
+  await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
+  return { contactId, contextPayload };
+}
+
+// Liste les recherches (criteres prospect) d'un contact en scrapant l'onglet
+// recherche de la console : seul endroit qui expose l'idCritere Hektor.
+// A appeler APRES ensureContactSearchExecution (contexte negociateur actif).
+async function fetchHektorContactSearchList(contactId) {
+  const id = String(contactId);
+  const body = new URLSearchParams({
+    mode: "contacts-contactProfile-recherche-changeTab",
+    id,
+    idContact: id,
+  });
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(id)}`,
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  let html = response.text;
+  try {
+    const parsed = JSON.parse(html);
+    if (typeof parsed === "string") html = parsed;
+  } catch (_) {
+    // l'endpoint renvoie soit du HTML brut soit une chaine HTML encodee en JSON
+  }
+  const ids = [];
+  const seen = new Set();
+  const re = /(?:dropDownMenu_|contentDrop_|valueInputAutoarchivage|rel=["'])(\d{3,9})|getWizardCritere\(\s*\d+\s*,\s*(\d{3,9})/g;
+  let match;
+  while ((match = re.exec(html))) {
+    const critId = match[1] || match[2];
+    if (!critId || critId === id || seen.has(critId)) continue;
+    seen.add(critId);
+    ids.push(critId);
+  }
+  return ids.map((idCritere, index) => ({ index, idCritere }));
+}
+
+// Resout l'idCritere cible : id explicite du payload, sinon par index de recherche.
+async function resolveContactSearchTargetCritereId(job, contactId, payload) {
+  const explicit = cleanString(payload.idCritere || payload.critere_id || payload.hektor_critere_id);
+  if (/^\d+$/.test(explicit)) return explicit;
+  const list = await fetchHektorContactSearchList(contactId);
+  if (!list.length) throw new Error(`Aucune recherche Hektor trouvee pour le contact ${contactId}`);
+  const rawIndex = cleanString(payload.search_index !== undefined ? payload.search_index : payload.searchIndex);
+  const index = /^\d+$/.test(rawIndex) ? Number(rawIndex) : 0;
+  const target = list.find((entry) => entry.index === index) || list[0];
+  await logJob(job.id, "hektor_contact_search_list", "done", "Recherches Hektor listees", {
+    hektor_contact_id: String(contactId),
+    count: list.length,
+    requested_index: index,
+    selected_idCritere: target.idCritere,
+  });
+  return target.idCritere;
+}
+
+async function handleUpdateHektorContactSearch(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const { contactId, contextPayload } = await ensureContactSearchExecution(job, payload);
+
+  const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
+  const qualification = ["1", "2"].includes(String(payload.qualification))
+    ? String(payload.qualification)
+    : normalizeHektorContactQualification(payload.qualification, "2");
+  const searchQualification = ["1", "2"].includes(qualification) ? qualification : "2";
+  const contact = {
+    qualification: searchQualification,
+    city: cleanString(payload.city || payload.ville),
+    postalCode: cleanString(payload.postal_code || payload.code_postal || payload.code),
+  };
+  const spec = contactSearchSpecFromPayload(payload);
+  spec.criteresId = idCritere;
+  const wrappedPayload = { ...contextPayload, contact_next_step: spec };
+
+  const search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
+  if (search && search.status === "skipped") {
+    throw new Error(`Recherche contact non modifiee (${search.reason || "payload incomplet"})`);
+  }
+
+  await sleep(1000);
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
+    reason: "update_hektor_contact_search",
+    priority: 82,
+  });
+
+  return {
+    status: "updated",
+    hektor_contact_id: contactId,
+    idCritere,
+    search,
+    sync_job: syncJob,
+  };
+}
+
+// Archive (= suppression cote app) une recherche via modifDateArchiveCritere.
+async function archiveHektorContactSearch(job, contactId, idCritere) {
+  const now = new Date();
+  const dateArchive = `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
+  await logJob(job.id, "hektor_contact_search_archive", "running", "Archivage recherche contact Hektor", {
+    hektor_contact_id: String(contactId),
+    idCritere: String(idCritere),
+    dateArchive,
+  });
+  const body = new URLSearchParams({
+    mode: "contacts-contactProfile-modifDateArchiveCritere",
+    idCritere: String(idCritere),
+    dateArchive,
+  });
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  let parsed = response.text;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = response.text;
+  }
+  await logJob(job.id, "hektor_contact_search_archive", "done", "Recherche contact Hektor archivee", {
+    hektor_contact_id: String(contactId),
+    idCritere: String(idCritere),
+    result: parsed,
+  });
+  return { dateArchive, result: parsed };
+}
+
+async function handleDeleteHektorContactSearch(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const { contactId } = await ensureContactSearchExecution(job, payload);
+  const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
+  const archive = await archiveHektorContactSearch(job, contactId, idCritere);
+  await sleep(1000);
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
+    reason: "delete_hektor_contact_search",
+    priority: 82,
+  });
+  return {
+    status: "archived",
+    hektor_contact_id: contactId,
+    idCritere,
+    archive,
     sync_job: syncJob,
   };
 }
@@ -8139,6 +8468,12 @@ async function runHandler(job) {
       return handleCreateHektorContact(job);
     case "update_hektor_contact":
       return handleUpdateHektorContact(job);
+    case "add_hektor_contact_search":
+      return handleAddHektorContactSearch(job);
+    case "update_hektor_contact_search":
+      return handleUpdateHektorContactSearch(job);
+    case "delete_hektor_contact_search":
+      return handleDeleteHektorContactSearch(job);
     case "delete_hektor_contact":
       return handleDeleteHektorContact(job);
     case "create_hektor_mandant_contact":

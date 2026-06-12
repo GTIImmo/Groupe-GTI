@@ -4880,9 +4880,131 @@ export type HektorContactIdentityInput = {
     bedroomsMax?: string | null
     landSurfaceMin?: string | null
     landSurfaceMax?: string | null
+    priceMargin?: string | null
+    bathroomsMin?: string | null
+    bathroomsMax?: string | null
+    livingRoomSurfaceMin?: string | null
+    livingRoomSurfaceMax?: string | null
+    floorsMin?: string | null
+    floorsMax?: string | null
+    levelsMin?: string | null
+    levelsMax?: string | null
+    dpeLetter?: string | null
+    heatingType?: string | null
+    heatingEnergy?: string | null
+    kitchenType?: string | null
+    occupation?: string | null
+    equipments?: string[] | null
+    particulariteIds?: string[] | null
+    localities?: Array<{ city?: string | null; postalCode?: string | null }> | null
     action?: string | null
     hektorAnnonceId?: string | null
   } | null
+}
+
+export type HektorContactSearchInput = NonNullable<HektorContactIdentityInput['contactNextStep']>
+
+function hContactSearchPayload(search: HektorContactSearchInput) {
+  return {
+    kind: 'search_criteria',
+    enabled: search.enabled !== false,
+    offerCode: cleanOptionalText(search.offerCode),
+    propertyTypeIds: Array.isArray(search.propertyTypeIds) ? search.propertyTypeIds : [],
+    city: cleanOptionalText(search.city),
+    postalCode: cleanOptionalText(search.postalCode),
+    localities: Array.isArray(search.localities) ? search.localities : undefined,
+    priceMin: cleanOptionalText(search.priceMin),
+    priceMax: cleanOptionalText(search.priceMax),
+    priceMargin: cleanOptionalText(search.priceMargin),
+    surfaceMin: cleanOptionalText(search.surfaceMin),
+    surfaceMax: cleanOptionalText(search.surfaceMax),
+    landSurfaceMin: cleanOptionalText(search.landSurfaceMin),
+    landSurfaceMax: cleanOptionalText(search.landSurfaceMax),
+    livingRoomSurfaceMin: cleanOptionalText(search.livingRoomSurfaceMin),
+    livingRoomSurfaceMax: cleanOptionalText(search.livingRoomSurfaceMax),
+    roomsMin: cleanOptionalText(search.roomsMin),
+    roomsMax: cleanOptionalText(search.roomsMax),
+    bedroomsMin: cleanOptionalText(search.bedroomsMin),
+    bedroomsMax: cleanOptionalText(search.bedroomsMax),
+    bathroomsMin: cleanOptionalText(search.bathroomsMin),
+    bathroomsMax: cleanOptionalText(search.bathroomsMax),
+    floorsMin: cleanOptionalText(search.floorsMin),
+    floorsMax: cleanOptionalText(search.floorsMax),
+    levelsMin: cleanOptionalText(search.levelsMin),
+    levelsMax: cleanOptionalText(search.levelsMax),
+    dpeLetter: cleanOptionalText(search.dpeLetter),
+    heatingType: cleanOptionalText(search.heatingType),
+    heatingEnergy: cleanOptionalText(search.heatingEnergy),
+    kitchenType: cleanOptionalText(search.kitchenType),
+    occupation: cleanOptionalText(search.occupation),
+    equipments: Array.isArray(search.equipments) ? search.equipments : [],
+    particulariteIds: Array.isArray(search.particulariteIds) ? search.particulariteIds : [],
+  }
+}
+
+export async function createHektorContactSearchJob(input: {
+  contactId: string
+  search: HektorContactSearchInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const search = hContactSearchPayload(input.search)
+  if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
+  if (!search.priceMax) throw new Error('Budget maximum requis')
+  if (!search.city && !search.postalCode && !(search.localities && search.localities.length)) {
+    throw new Error('Au moins une localite requise')
+  }
+  const { data, error } = await supabase.rpc('app_console_create_contact_search_job', {
+    target_contact_id: cleanContactId,
+    search_payload: { search },
+    job_priority: input.priority ?? 17,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search job')
+  return data as ConsoleJob
+}
+
+export async function createUpdateHektorContactSearchJob(input: {
+  contactId: string
+  searchIndex: number
+  search: HektorContactSearchInput
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const search = hContactSearchPayload(input.search)
+  if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
+  if (!search.priceMax) throw new Error('Budget maximum requis')
+  const { data, error } = await supabase.rpc('app_console_create_update_contact_search_job', {
+    target_contact_id: cleanContactId,
+    search_payload: { search, search_index: input.searchIndex },
+    job_priority: input.priority ?? 16,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search update job')
+  return data as ConsoleJob
+}
+
+export async function createDeleteHektorContactSearchJob(input: {
+  contactId: string
+  searchIndex: number
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const { data, error } = await supabase.rpc('app_console_create_delete_contact_search_job', {
+    target_contact_id: cleanContactId,
+    search_index: input.searchIndex,
+    target_critere_id: null,
+    job_priority: input.priority ?? 14,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search delete job')
+  return data as ConsoleJob
 }
 
 export type OwnerAnnonceSearchOption = Pick<
@@ -5801,6 +5923,9 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'update_hektor_annonce_fields',
   'create_hektor_contact',
   'update_hektor_contact',
+  'add_hektor_contact_search',
+  'update_hektor_contact_search',
+  'delete_hektor_contact_search',
   'delete_hektor_contact',
   'create_hektor_mandant_contact',
   'update_hektor_mandant_contact',
