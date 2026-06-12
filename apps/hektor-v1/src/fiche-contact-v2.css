@@ -167,7 +167,9 @@
 #fcx-root .mod.primary:hover{transform:translateY(-2px)}
 #fcx-root .mod-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 #fcx-root .mod h2{font-size:15.5px;font-weight:700;color:var(--ink)}
-#fcx-root .mod-h .btn.fcx-search-add{margin-left:auto;flex-shrink:0;gap:6px}
+#fcx-root .mod-h .btn.fcx-search-add{margin-left:auto;flex-shrink:0;gap:7px;font-weight:700;border:1px solid #ab0f54;color:#fff;background:linear-gradient(180deg,#cd266f,#bb1059);box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px -10px rgba(194,18,95,.7)}
+#fcx-root .mod-h .btn.fcx-search-add:hover{background:linear-gradient(180deg,#bd1a63,#a30f4e);border-color:#9a0e4a;color:#fff}
+#fcx-root .mod-h .btn.fcx-search-add svg{color:#fff}
 #fcx-root .lk-actions.fcx-search-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-self:stretch;justify-content:center}
 #fcx-root .lk-actions.fcx-search-actions .btn.sm{gap:6px;justify-content:flex-start;white-space:nowrap}
 #fcx-root .btn.sm.fcx-search-del{color:#b3261e;border-color:#f0ccc7;background:#fff}
