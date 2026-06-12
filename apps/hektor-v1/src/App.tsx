@@ -116,6 +116,7 @@ import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
+import ContactSearchModal from './ContactSearchModal'
 
 type DetailContact = {
   id: string
@@ -15673,6 +15674,23 @@ function MandatRegisterScreen(props: {
   // fermeture accidentelle quand un scroll/drag depuis le panneau se termine sur
   // la bande d'overlay autour de la carte (bug « se ferme en descendant »).
   const overlayPressRef = useRef(false)
+  // Données COMPLÈTES du mandat (comme la fiche annonce) pour préremplir l'éditeur
+  // d'avenant à l'identique : le payload registre n'a ni proprietaires_json, ni
+  // honoraires, ni prix net/public. On charge le vrai DossierDetailPayload via l'API.
+  const [editorDetailed, setEditorDetailed] = useState<DetailedDossier | null>(null)
+  const [editorLoading, setEditorLoading] = useState(false)
+  const editorDossierId = props.selectedMandat?.app_dossier_id ?? null
+  useEffect(() => {
+    if (!detailOpen || editorDossierId == null) { setEditorDetailed(null); setEditorLoading(false); return }
+    let cancelled = false
+    setEditorLoading(true)
+    setEditorDetailed(null)
+    loadDossierDetail(editorDossierId)
+      .then((loaded) => { if (!cancelled) setEditorDetailed(loaded) })
+      .catch(() => { if (!cancelled) setEditorDetailed(null) })
+      .finally(() => { if (!cancelled) setEditorLoading(false) })
+    return () => { cancelled = true }
+  }, [detailOpen, editorDossierId])
   const selectedDetail = props.selectedMandat
   const selectedDetailPayload = selectedDetail ? parseRegisterDetailPayload(selectedDetail) : {}
   const selectedHistory = selectedDetail ? parseRegisterHistory(selectedDetail) : []
@@ -15716,13 +15734,30 @@ function MandatRegisterScreen(props: {
     () => (selectedDetail ? mandateAsDossier(selectedDetail) : null),
     [editorRowKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const editorDetail = useMemo(
+  // Données complètes chargées -> préremplissage identique à la fiche annonce
+  // (mêmes derivations : contacts depuis proprietaires_json, adresse depuis le detail).
+  const editorFullDetail = useMemo(
+    () => (editorDetailed ? detailPayload(editorDetailed) : null),
+    [editorDetailed],
+  )
+  const editorFullContacts = useMemo(
+    () => (editorFullDetail ? buildDetailContactsFromProprietaires(editorFullDetail.proprietaires_json, 'detail-contact') : []),
+    [editorFullDetail],
+  )
+  const editorFullAddress = useMemo(
+    () => (editorFullDetail
+      ? [editorFullDetail.adresse_privee_listing || editorFullDetail.adresse_detail, editorFullDetail.code_postal_public_listing || editorFullDetail.code_postal_prive_detail || editorFullDetail.code_postal, editorFullDetail.ville_publique_listing || editorFullDetail.ville_privee_detail || selectedDetail?.ville].filter(Boolean).join(', ')
+      : ''),
+    [editorFullDetail], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  // Repli sur le payload registre si app_dossier_id absent / chargement indisponible.
+  const editorPartialDetail = useMemo(
     () => ((selectedDetail ? parseRegisterDetailPayload(selectedDetail) : {}) as unknown as DossierDetailPayload),
     [editorRowKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const editorContacts = useMemo(
-    () => buildDetailContactsFromProprietaires(String((editorDetail as unknown as Record<string, unknown>).proprietaires_json ?? '[]'), 'register-contact'),
-    [editorDetail],
+  const editorPartialContacts = useMemo(
+    () => buildDetailContactsFromProprietaires(String((editorPartialDetail as unknown as Record<string, unknown>).proprietaires_json ?? '[]'), 'register-contact'),
+    [editorPartialDetail],
   )
   const mdPriceEvents = selectedDetail
     ? readPriceChangeEvents((selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail) as Record<string, unknown>)
@@ -15964,7 +15999,13 @@ function MandatRegisterScreen(props: {
                     </div>
                     <div className="md-avbox">
                       <div className="md-avbox-editor">
-                        {editorDossier ? <MandatDocumentEditor compact dossier={editorDossier} detail={editorDetail} contacts={editorContacts} address={mdAddress} /> : null}
+                        {editorFullDetail && editorDossier ? (
+                          <MandatDocumentEditor compact dossier={editorDossier} detail={editorFullDetail} contacts={editorFullContacts} address={editorFullAddress} />
+                        ) : editorLoading ? (
+                          <div className="md-editor-loading"><span className="md-editor-spinner" />Chargement de l'éditeur…</div>
+                        ) : editorDossier ? (
+                          <MandatDocumentEditor compact dossier={editorDossier} detail={editorPartialDetail} contacts={editorPartialContacts} address={mdAddress} />
+                        ) : null}
                       </div>
                       <div className="md-avbox-actions">
                         <button className="md-avtile" type="button" onClick={() => { setDetailOpen(false); props.onOpenRequestModal(Number(selectedDetail.app_dossier_id), 'nego', 'demande_baisse_prix') }}>
@@ -25325,6 +25366,7 @@ function ContactDetailPopup(props: {
   const [contactEmailMessagesError, setContactEmailMessagesError] = useState<string | null>(null)
   const [contactEmailMessagesLoaded, setContactEmailMessagesLoaded] = useState(false)
   const [contactActionsOpen, setContactActionsOpen] = useState(false)
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedTypologies = contactTypologyBadges(props.contact)
@@ -25803,7 +25845,7 @@ function ContactDetailPopup(props: {
 
                       <div className="duo-col">
                         <div className="mod">
-                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span></div>
+                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span><button className="linkmini" type="button" onClick={() => setSearchModalOpen(true)}>+ Ajouter une recherche</button></div>
                           {props.searches.length > 0 ? (
                             <div className="contact-modern-search-list">
                               {props.searches.slice(0, 4).map((search) => {
@@ -26062,6 +26104,16 @@ function ContactDetailPopup(props: {
           sessionEmail={props.sessionEmail}
           onClose={() => setEditing(false)}
           onJobCreated={props.onJobCreated}
+        />
+      ) : null}
+
+      {searchModalOpen && props.canManageContacts ? (
+        <ContactSearchModal
+          contactId={props.contact.hektor_contact_id}
+          contactName={[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || null}
+          negotiatorLabel={props.contact.commercial_nom || props.contact.negociateur_email || null}
+          onClose={() => setSearchModalOpen(false)}
+          onCreated={(job) => props.onJobCreated?.(job)}
         />
       ) : null}
 
