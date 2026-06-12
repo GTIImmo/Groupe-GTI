@@ -288,6 +288,7 @@ ARCHIVE_INDEX_NULLABLE_KEYS = (
     "mandat_montant",
     "mandants_texte",
     "local_detail_updated_at",
+    "photo_url_listing",
 )
 
 HISTORICAL_INDEX_NULLABLE_KEYS = (
@@ -312,6 +313,7 @@ HISTORICAL_INDEX_NULLABLE_KEYS = (
     "mandat_montant",
     "mandants_texte",
     "local_detail_updated_at",
+    "photo_url_listing",
 )
 
 
@@ -711,6 +713,7 @@ def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict
             "search_text": None,
             "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
             "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
+            "photo_url_listing": normalized.get("photo_url_listing"),
         }
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
@@ -752,6 +755,7 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
             "search_text": None,
             "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
             "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
+            "photo_url_listing": normalized.get("photo_url_listing"),
         }
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]

@@ -170,25 +170,31 @@
 #fcx-root .mod-h .btn.fcx-search-add{margin-left:auto;flex-shrink:0;gap:7px;font-weight:700;border:1px solid #ab0f54;color:#fff;background:linear-gradient(180deg,#cd266f,#bb1059);box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px -10px rgba(194,18,95,.7)}
 #fcx-root .mod-h .btn.fcx-search-add:hover{background:linear-gradient(180deg,#bd1a63,#a30f4e);border-color:#9a0e4a;color:#fff}
 #fcx-root .mod-h .btn.fcx-search-add svg{color:#fff}
-#fcx-root .lk-actions.fcx-search-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-self:stretch;justify-content:center}
-#fcx-root .lk-actions.fcx-search-actions .btn.sm{gap:6px;justify-content:flex-start;white-space:nowrap}
 #fcx-root .btn.sm.fcx-search-del{color:#b3261e;border-color:#f0ccc7;background:#fff}
 #fcx-root .btn.sm.fcx-search-del:hover{background:#fdeceb;border-color:#e8a39b;color:#9a1f17}
 #fcx-root .btn.sm.fcx-search-del:disabled{opacity:.55;cursor:default}
-/* Carte recherche acquéreur — hiérarchie + secteurs repliables */
-#fcx-root .lk.fcx-srch{align-items:stretch;gap:16px;padding:14px}
+/* Carte recherche acquéreur — carte verticale, en-tête, secteurs repliables, pied d'actions */
+#fcx-root .lk.fcx-srch{flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;border-radius:16px;cursor:default}
 #fcx-root .lk.fcx-srch:hover{transform:none;border-color:var(--line);box-shadow:var(--shadow-card)}
-#fcx-root .fcx-srch .lk-bd{display:flex;flex-direction:column;gap:9px}
-#fcx-root .fcx-srch-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-#fcx-root .fcx-srch-type{font-size:14px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#fcx-root .fcx-srch-sec{background:var(--line-soft,#f6f1ea);border:1px solid var(--line);border-radius:11px;padding:9px 11px}
-#fcx-root .fcx-srch-sec-k{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--brand-ink,#a8155e);letter-spacing:.01em}
+#fcx-root .fcx-srch .lk-bd{display:flex;flex-direction:column;gap:11px;padding:13px 14px 14px}
+/* En-tête : badge loupe + type (ellipsis) + statut (jamais tronqué) */
+#fcx-root .fcx-srch-top{display:flex;align-items:center;gap:9px}
+#fcx-root .fcx-srch-ic{flex-shrink:0;width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--brand-ink,#a8155e);background:var(--brand-soft,#fbe6f0)}
+#fcx-root .fcx-srch-type{flex:1;min-width:0;font-size:14.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fcx-root .fcx-srch-top .tg{flex-shrink:0;white-space:nowrap}
+/* Encart secteurs */
+#fcx-root .fcx-srch-sec{background:var(--line-soft,#f6f1ea);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+#fcx-root .fcx-srch-sec-k{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--brand-ink,#a8155e);letter-spacing:.01em;text-transform:uppercase}
 #fcx-root .fcx-srch-sec-k svg{color:var(--brand-ink,#a8155e);flex-shrink:0}
-#fcx-root .fcx-srch-sec-v{display:block;margin-top:5px;font-size:12.5px;line-height:1.55;color:var(--ink-soft,#5a4f45);overflow-wrap:anywhere}
-#fcx-root .fcx-srch-more{margin-top:6px;display:inline-block;padding:0;border:0;background:none;font:inherit;font-size:11.5px;font-weight:700;color:var(--brand-ink,#a8155e);cursor:pointer}
+#fcx-root .fcx-srch-sec-v{display:block;margin-top:6px;font-size:12.5px;line-height:1.55;color:var(--ink-soft,#5a4f45);overflow-wrap:anywhere}
+#fcx-root .fcx-srch-more{margin-top:7px;display:inline-block;padding:0;border:0;background:none;font:inherit;font-size:11.5px;font-weight:700;color:var(--brand-ink,#a8155e);cursor:pointer}
 #fcx-root .fcx-srch-more:hover{text-decoration:underline}
-#fcx-root .fcx-srch-meta{display:flex;flex-wrap:wrap;gap:6px}
-#fcx-root .fcx-srch-chip{font-size:11px;font-weight:600;color:var(--ink-soft,#5a4f45);background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums}
+/* Chips critères */
+#fcx-root .fcx-srch-meta{display:flex;flex-wrap:wrap;gap:7px}
+#fcx-root .fcx-srch-chip{font-size:11.5px;font-weight:600;color:var(--ink-soft,#5a4f45);background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-variant-numeric:tabular-nums}
+/* Pied d'actions : barre horizontale, séparée, boutons à parts égales */
+#fcx-root .fcx-srch .lk-actions.fcx-search-actions{display:flex;flex-direction:row;align-items:stretch;gap:8px;padding:10px 12px;margin:0;border-top:1px solid var(--line-soft,#efe7dd);background:#fdfbf8}
+#fcx-root .fcx-srch .fcx-search-actions .btn.sm{flex:1;justify-content:center;gap:7px;white-space:nowrap;font-weight:700}
 #fcx-root .mod-meta{font-size:12px;font-weight:600;color:var(--muted)}
 
 /* statut pills */

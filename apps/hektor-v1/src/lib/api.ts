@@ -1570,6 +1570,7 @@ type LightweightAnnonceIndexRow = {
   mandants_texte: string | null
   has_local_detail: boolean | number | string | null
   local_detail_updated_at: string | null
+  photo_url_listing?: string | null
 }
 
 type LightweightDetailCacheRow = {
@@ -1607,7 +1608,7 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
   return {
     app_dossier_id: Number(row.app_archive_id ?? row.app_historical_id ?? row.hektor_annonce_id),
     hektor_annonce_id: Number(row.hektor_annonce_id),
-    photo_url_listing: null,
+    photo_url_listing: row.photo_url_listing ?? null,
     images_preview_json: null,
     archive: row.archive ?? '1',
     diffusable: row.diffusable ?? null,
@@ -1994,26 +1995,39 @@ export async function loadContactRelations(contactId: string): Promise<AppContac
     .order('last_seen_at', { ascending: false, nullsFirst: false })
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contact relations')
   const relations = data as AppContactRelation[]
-  // Enrichissement vignette : la vue relations ne porte pas de photo, on la rattache
-  // depuis app_dossiers_current via hektor_annonce_id (une seule requete groupee).
+  // Enrichissement vignette : la vue relations ne porte pas de photo. On la rattache
+  // par hektor_annonce_id depuis l'index propre a l'etat de chaque annonce (pas de
+  // melange avec le registre des mandats) :
+  //  - app_dossiers_current                : biens actifs (index principal)
+  //  - app_historical_annonce_index_current : biens vendus / clos (encore actifs)
+  //  - app_archive_annonce_index_current    : biens archives
   try {
     const annonceIds = Array.from(new Set(relations.map((r) => String(r.hektor_annonce_id ?? '').trim()).filter(Boolean)))
     if (annonceIds.length) {
-      const { data: photoRows } = await supabase
-        .from('app_dossiers_current')
-        .select('hektor_annonce_id, photo_url_listing')
-        .in('hektor_annonce_id', annonceIds)
-      if (photoRows) {
-        const photoByAnnonce = new Map<string, string>()
-        for (const row of photoRows as Array<{ hektor_annonce_id: string | number | null; photo_url_listing: string | null }>) {
+      const [dossiersRes, historicalRes, archiveRes] = await Promise.all([
+        supabase.from('app_dossiers_current').select('hektor_annonce_id, photo_url_listing').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_historical_annonce_index_current').select('hektor_annonce_id, photo_url_listing').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_archive_annonce_index_current').select('hektor_annonce_id, photo_url_listing').in('hektor_annonce_id', annonceIds),
+      ])
+      const photoByAnnonce = new Map<string, string>()
+      const isReal = (url: string) => !!url && !/no_pic/i.test(url)
+      const ingest = (rows: Array<{ hektor_annonce_id: string | number | null; photo_url_listing: string | null }> | null) => {
+        for (const row of rows ?? []) {
           const key = String(row.hektor_annonce_id ?? '').trim()
           const url = (row.photo_url_listing ?? '').trim()
-          if (key && url && !photoByAnnonce.has(key)) photoByAnnonce.set(key, url)
+          if (!key || !url) continue
+          // On prefere toujours une vraie photo a un placeholder no_pic deja stocke.
+          if (!photoByAnnonce.has(key) || (isReal(url) && !isReal(photoByAnnonce.get(key) ?? ''))) {
+            photoByAnnonce.set(key, url)
+          }
         }
-        for (const relation of relations) {
-          const key = String(relation.hektor_annonce_id ?? '').trim()
-          if (key && photoByAnnonce.has(key)) relation.photo_url_listing = photoByAnnonce.get(key) ?? null
-        }
+      }
+      ingest(dossiersRes.data as never)
+      ingest(historicalRes.data as never)
+      ingest(archiveRes.data as never)
+      for (const relation of relations) {
+        const key = String(relation.hektor_annonce_id ?? '').trim()
+        if (key && photoByAnnonce.has(key)) relation.photo_url_listing = photoByAnnonce.get(key) ?? null
       }
     }
   } catch {
@@ -2057,8 +2071,8 @@ export async function loadDossiersPage({
   const requestScope = normalizeFilterValue(filters.requestScope)
   const requestType = normalizeFilterValue(filters.requestType)
   const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
-  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at'
-  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at'
+  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
+  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
   if (filters.archive === archivedFilterValue) {
     if (!canUseLightweightIndexes) {
       return { rows: [], total: 0, page, pageSize }
@@ -2362,7 +2376,7 @@ async function loadLightweightAnnonceDetailCache(
   const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
   const payloadIndex = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
   let currentIndex: Record<string, unknown> = {}
-  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at`
+  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing`
   const { data: indexData, error: indexError } = await supabase
     .from(indexTable)
     .select(indexSelect)
@@ -3382,8 +3396,8 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
     (historicalListingStatuses.includes(statut) ||
       ((filters.archive === allFilterValue || filters.archive === activeArchiveFilterValue) && (!statut || statut === annonceSearchListingsFilterValue)))
   const primaryStatsSelect = 'app_dossier_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error,mandants_texte'
-  const archiveStatsSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte'
-  const historicalStatsSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte'
+  const archiveStatsSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte,photo_url_listing'
+  const historicalStatsSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte,photo_url_listing'
 
   if (includePrimary) {
     let from = 0

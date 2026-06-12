@@ -22075,20 +22075,34 @@ function contactSearchTypes(value: AppContactSearch['types_json']) {
 }
 
 function contactRangeLabel(label: string, min?: string | null, max?: string | null, suffix = '') {
-  const left = safeText(min)
-  const right = safeText(max)
+  // Une borne valant 0 (ou vide) = non renseignee -> on ne l'affiche pas.
+  const clean = (value?: string | null) => {
+    const text = safeText(value)
+    if (!text) return ''
+    return /^0+([.,]0+)?$/.test(text.trim()) ? '' : text
+  }
+  const fmt = (text: string) => {
+    const n = Number(text.replace(/[\s ]/g, '').replace(',', '.'))
+    return Number.isFinite(n) ? n.toLocaleString('fr-FR') : text
+  }
+  const left = clean(min)
+  const right = clean(max)
   if (!left && !right) return null
-  const value = left && right ? `${left} - ${right}${suffix}` : left ? `min ${left}${suffix}` : `max ${right}${suffix}`
+  const value = left && right
+    ? `${fmt(left)} – ${fmt(right)}${suffix}`
+    : left
+      ? `min ${fmt(left)}${suffix}`
+      : `max ${fmt(right)}${suffix}`
   return `${label}: ${value}`
 }
 
 function contactSearchCriteriaLabels(search: AppContactSearch) {
   return [
-    contactRangeLabel('Budget', search.prix_min, search.prix_max, ' EUR'),
-    contactRangeLabel('Surface', search.surface_min, search.surface_max, ' m2'),
-    contactRangeLabel('Pieces', search.pieces_min, search.pieces_max),
+    contactRangeLabel('Budget', search.prix_min, search.prix_max, ' €'),
+    contactRangeLabel('Surface', search.surface_min, search.surface_max, ' m²'),
+    contactRangeLabel('Pièces', search.pieces_min, search.pieces_max),
     contactRangeLabel('Chambres', search.chambre_min, search.chambre_max),
-    contactRangeLabel('Terrain', search.surface_terrain_min, search.surface_terrain_max, ' m2'),
+    contactRangeLabel('Terrain', search.surface_terrain_min, search.surface_terrain_max, ' m²'),
   ].filter(Boolean) as string[]
 }
 
@@ -26002,6 +26016,21 @@ function ContactDetailPopup(props: {
   const relationLeadLabel = roleLabels.length ? roleLabels.join(' · ') : (props.relations.length ? 'Relation annonce' : 'Profil à qualifier')
   const relationLeadHasRole = roleLabels.length > 0 || props.relations.length > 0
   const linkedCount = props.relations.length
+  // Un même bien peut apparaître plusieurs fois (ex: rôle acquéreur sur la transaction
+  // compromis ET sur la vente). On déduplique par bien pour l'affichage "Annonces liées"
+  // (cohérent avec le compteur "distinct" du listing) sans toucher au tableau global.
+  const linkedRelations = (() => {
+    const seen = new Set<string>()
+    const out: AppContactRelation[] = []
+    for (const relation of props.relations) {
+      const key = String(relation.app_dossier_id ?? '').trim() || String(relation.hektor_annonce_id ?? '').trim()
+      if (key && seen.has(key)) continue
+      if (key) seen.add(key)
+      out.push(relation)
+    }
+    return out
+  })()
+  const linkedDistinctCount = linkedRelations.length
   const roleTagClass = (role: string) => {
     const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     if (normalized === 'mandant') return 'tg brand'
@@ -26134,8 +26163,8 @@ function ContactDetailPopup(props: {
                     <div className="duo">
                       <div className="duo-col">
                         <div className="mod">
-                          <div className="mod-h"><h2>Annonces liées</h2><span className="mod-meta strong">{linkedCount} bien{linkedCount > 1 ? 's' : ''}</span></div>
-                          {linkedCount > 0 ? props.relations.map((relation) => {
+                          <div className="mod-h"><h2>Annonces liées</h2><span className="mod-meta strong">{linkedDistinctCount} bien{linkedDistinctCount > 1 ? 's' : ''}</span></div>
+                          {linkedDistinctCount > 0 ? linkedRelations.map((relation) => {
                             const relationAppDossierId = Number(relation.app_dossier_id)
                             const relationRef = relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `V${relation.hektor_annonce_id}`
                             const relationPhoto = (relation.photo_url_listing || '').trim()
@@ -26154,9 +26183,9 @@ function ContactDetailPopup(props: {
                           }) : (
                             <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21V8l9-5 9 5v13" /><path d="M9 21v-6h6v6" /></svg></span><span className="et">Aucune annonce liée dans l'index courant.</span></div>
                           )}
-                          {linkedCount > 0 ? (
+                          {linkedDistinctCount > 0 ? (
                             <div className="lk-foot">
-                              <span className="lk-stat">{linkedCount} annonce{linkedCount > 1 ? 's' : ''} liée{linkedCount > 1 ? 's' : ''}</span>
+                              <span className="lk-stat">{linkedDistinctCount} annonce{linkedDistinctCount > 1 ? 's' : ''} liée{linkedDistinctCount > 1 ? 's' : ''}</span>
                             </div>
                           ) : null}
                         </div>
@@ -26193,6 +26222,7 @@ function ContactDetailPopup(props: {
                                   <div key={`search-${search.contact_search_key}`} className="lk fcx-srch" style={{ cursor: 'default' }}>
                                     <div className="lk-bd">
                                       <div className="fcx-srch-top">
+                                        <span className="fcx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="14" height="14"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.4-3.4" /></svg></span>
                                         <span className="fcx-srch-type">{types.join(' · ') || search.offre || 'Type non renseigné'}</span>
                                         <span className={`tg ${contactBool(search.is_active) ? 'green' : ''}`}>{contactBool(search.is_active) ? 'Active' : 'Archivée'}</span>
                                       </div>

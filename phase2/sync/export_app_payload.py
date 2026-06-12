@@ -245,7 +245,8 @@ SELECT
         ELSE substr(mandants_texte, 1, 240) || '...'
     END AS mandants_texte,
     CASE WHEN detail_statut_name IS NOT NULL THEN 1 ELSE 0 END AS has_local_detail,
-    NULL AS local_detail_updated_at
+    NULL AS local_detail_updated_at,
+    photo_url_listing
 FROM app_view_generale
 WHERE COALESCE(archive, '0') = '1'
 ORDER BY
@@ -282,7 +283,8 @@ SELECT
         ELSE substr(mandants_texte, 1, 240) || '...'
     END AS mandants_texte,
     CASE WHEN detail_statut_name IS NOT NULL THEN 1 ELSE 0 END AS has_local_detail,
-    NULL AS local_detail_updated_at
+    NULL AS local_detail_updated_at,
+    photo_url_listing
 FROM app_view_generale
 WHERE COALESCE(archive, '0') = '0'
   AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Vendu', 'Clos')
