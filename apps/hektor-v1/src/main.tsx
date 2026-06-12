@@ -16,7 +16,6 @@ import './mobile.css'
 import './detail-premium.css'
 import './fiche-annonce-v5.css'
 import './fiche-estimation.css'
-import './fiche-contact-v2.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

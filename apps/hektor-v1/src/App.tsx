@@ -91,7 +91,6 @@ import {
   loadContactRelations,
   loadContactSearches,
   loadContactById,
-  loadContactOverride,
   loadContactsPage,
   loadContactStats,
   findContactDuplicateCandidates,
@@ -24778,399 +24777,6 @@ function GoogleAgendaContactModal(props: {
   )
 }
 
-const contactEditSections = [
-  { id: 'sec-identite', label: 'Identité', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg> },
-  { id: 'sec-loc', label: 'Localisation', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg> },
-  { id: 'sec-qualif', label: 'Qualification', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 7h18M3 12h18M3 17h12" /></svg> },
-  { id: 'sec-auto', label: 'Automatismes', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg> },
-  { id: 'sec-note', label: 'Note Hektor', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg> },
-] as const
-
-function ContactEditModalV2(props: {
-  contact: AppContact
-  hektorUserEmail?: string | null
-  hektorUserId?: string | null
-  hektorNegotiators?: HektorNegotiatorOption[]
-  profileRole?: UserProfile['role'] | null
-  sessionEmail?: string | null
-  onClose: () => void
-  onJobCreated?: (job: ConsoleJob) => void
-}) {
-  const normalizedSessionEmail = normalizeEmail(props.sessionEmail)
-  const availableHektorNegotiators = useMemo(() => {
-    const options = props.hektorNegotiators ?? []
-    if (props.profileRole === 'commercial') return options.filter((item) => normalizeEmail(item.email) === normalizedSessionEmail)
-    return options
-  }, [normalizedSessionEmail, props.hektorNegotiators, props.profileRole])
-  const defaultHektorOption = useMemo(() => (
-    findContactHektorOption(availableHektorNegotiators, { email: props.contact.negociateur_email })
-      ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
-      ?? findContactHektorOption(availableHektorNegotiators, { email: props.profileRole === 'commercial' ? normalizedSessionEmail : null })
-      ?? null
-  ), [availableHektorNegotiators, normalizedSessionEmail, props.contact.negociateur_email, props.hektorUserEmail, props.hektorUserId, props.profileRole])
-  const initial = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
-
-  const [civility, setCivility] = useState(initial.civility ?? '')
-  const [lastName, setLastName] = useState(initial.lastName ?? '')
-  const [firstName, setFirstName] = useState(initial.firstName ?? '')
-  const [email, setEmail] = useState(initial.email ?? '')
-  const [phone, setPhone] = useState(initial.phone ?? '')
-  const [phoneSecondary, setPhoneSecondary] = useState(initial.phoneSecondary ?? '')
-  const [address, setAddress] = useState(initial.address ?? '')
-  const [postalCode, setPostalCode] = useState(initial.postalCode ?? '')
-  const [city, setCity] = useState(initial.city ?? '')
-  const [birthDate, setBirthDate] = useState(initial.birthDate ?? '')
-  const [birthPlace, setBirthPlace] = useState(initial.birthPlace ?? '')
-  const [maritalStatus, setMaritalStatus] = useState(initial.maritalStatus ?? '')
-  const [sourceId, setSourceId] = useState(initial.sourceId ?? '')
-  const [categoryId, setCategoryId] = useState(initial.categoryId ?? '')
-  const [comments, setComments] = useState(initial.comments ?? '')
-  const [sendRgpdEmail, setSendRgpdEmail] = useState(initial.sendRgpdEmail !== false)
-  const [crmMandateSummaryEnabled, setCrmMandateSummaryEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateSummaryEnabled))
-  const [crmMandateExpirationEnabled, setCrmMandateExpirationEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateExpirationEnabled))
-  const [crmBirthdayEnabled, setCrmBirthdayEnabled] = useState(optionalBooleanSelectValue(initial.crmBirthdayEnabled))
-  const [selectedHektorUserId, setSelectedHektorUserId] = useState(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
-  const [activeSection, setActiveSection] = useState<string>('sec-identite')
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const editBodyRef = useRef<HTMLDivElement | null>(null)
-
-  const selectedHektorUser = useMemo(() => (
-    findContactHektorOption(availableHektorNegotiators, { idUser: selectedHektorUserId })
-      ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
-      ?? null
-  ), [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
-  const selectedHektorEmail = selectedHektorUser?.email ?? props.contact.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
-  const selectedHektorId = selectedHektorUser?.idUser ?? (availableHektorNegotiators.length === 0 ? (selectedHektorUserId.trim() || props.hektorUserId || null) : null)
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') props.onClose() }
-    document.addEventListener('keydown', onKey)
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previous
-    }
-  }, [props.onClose])
-
-  // Preremplit les champs que l'API Hektor ne retourne pas en lecture (cache app_contact_override).
-  useEffect(() => {
-    let cancelled = false
-    void loadContactOverride(props.contact.hektor_contact_id).then((override) => {
-      if (cancelled || !override) return
-      if (override.address) setAddress(override.address)
-      if (override.birth_date) setBirthDate(override.birth_date)
-      if (override.birth_place) setBirthPlace(override.birth_place)
-      if (override.marital_status) setMaritalStatus(override.marital_status)
-      if (override.source_id) setSourceId(override.source_id)
-      if (override.category_id) setCategoryId(override.category_id)
-      if (override.comments) setComments(override.comments)
-      if (typeof override.crm_mandate_summary === 'boolean') setCrmMandateSummaryEnabled(optionalBooleanSelectValue(override.crm_mandate_summary))
-      if (typeof override.crm_mandate_expiration === 'boolean') setCrmMandateExpirationEnabled(optionalBooleanSelectValue(override.crm_mandate_expiration))
-      if (typeof override.crm_birthday === 'boolean') setCrmBirthdayEnabled(optionalBooleanSelectValue(override.crm_birthday))
-      if (typeof override.rgpd_email_sent === 'boolean') setSendRgpdEmail(override.rgpd_email_sent)
-    })
-    return () => { cancelled = true }
-  }, [props.contact.hektor_contact_id])
-
-  const scrollToSection = (id: string) => {
-    const body = editBodyRef.current
-    const target = body?.querySelector<HTMLElement>(`#${id}`)
-    if (!body || !target) { setActiveSection(id); return }
-    const first = body.firstElementChild as HTMLElement | null
-    body.scrollTo({ top: Math.max(0, target.offsetTop - (first?.offsetTop ?? 0) - 4), behavior: 'smooth' })
-    setActiveSection(id)
-  }
-
-  const handleBodyScroll = () => {
-    const body = editBodyRef.current
-    if (!body) return
-    const first = body.firstElementChild as HTMLElement | null
-    const top = body.scrollTop + 30
-    let current: string = contactEditSections[0].id
-    contactEditSections.forEach((section) => {
-      const target = body.querySelector<HTMLElement>(`#${section.id}`)
-      if (target && (target.offsetTop - (first?.offsetTop ?? 0)) <= top) current = section.id
-    })
-    setActiveSection(current)
-  }
-
-  const civilityOptions: Array<{ value: string; label: string }> = [
-    { value: 'Mme.', label: 'Mme.' },
-    { value: 'M.', label: 'M.' },
-    { value: '', label: '—' },
-  ]
-  const autoSegments: Array<{ value: 'true' | 'false' | ''; label: string }> = [
-    { value: '', label: 'Réglage' },
-    { value: 'true', label: 'Activé' },
-    { value: 'false', label: 'Coupé' },
-  ]
-  const renderAutoSeg = (value: string, onChange: (next: 'true' | 'false' | '') => void) => (
-    <div className="seg3">
-      {autoSegments.map((segment) => (
-        <button key={`seg-${segment.label}`} type="button" className={value === segment.value ? 'on' : ''} onClick={() => onChange(segment.value)}>{segment.label}</button>
-      ))}
-    </div>
-  )
-
-  const editContextName = `${civility ? `${civility} ` : ''}${[firstName, lastName].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
-  const editContextMeta = `Fiche contact${[postalCode, city].filter(Boolean).join(' ') ? ` · ${[postalCode, city].filter(Boolean).join(' ')}` : ''}`
-
-  const handleSave = async () => {
-    setError(null)
-    if (!lastName.trim()) { setError('Nom contact requis.'); setActiveSection('sec-identite'); scrollToSection('sec-identite'); return }
-    if (availableHektorNegotiators.length > 0 && !selectedHektorUser) { setError('Choisis le négociateur Hektor qui portera la modification.'); return }
-    if (!selectedHektorId && !selectedHektorEmail) { setError('Choisis le compte Hektor qui portera la modification.'); return }
-    setPending(true)
-    try {
-      const input: HektorContactIdentityInput = {
-        civility,
-        lastName: lastName.trim(),
-        firstName,
-        companyName: '',
-        legalForm: '',
-        siret: '',
-        partnerJobId: '',
-        website: '',
-        spouseLastName: '',
-        spouseFirstName: '',
-        spouseEmail: '',
-        spousePhone: '',
-        spouseAddress: '',
-        spousePostalCode: '',
-        spouseCity: '',
-        email,
-        phone,
-        phoneSecondary,
-        address,
-        postalCode,
-        city,
-        birthDate,
-        birthPlace,
-        maritalStatus,
-        contactKind: undefined,
-        personType: undefined,
-        sourceId,
-        categoryId,
-        comments,
-        sendRgpdEmail,
-        crmMandateSummaryEnabled: optionalBooleanFromSelect(crmMandateSummaryEnabled),
-        crmMandateExpirationEnabled: optionalBooleanFromSelect(crmMandateExpirationEnabled),
-        crmBirthdayEnabled: optionalBooleanFromSelect(crmBirthdayEnabled),
-        hektorUserEmail: selectedHektorEmail,
-        hektorUserId: selectedHektorId,
-        hektorUserLabel: selectedHektorUser?.label ?? null,
-        hektorNegotiatorId: selectedHektorUser?.hektorNegociateurId ?? null,
-        hektorAgencyId: selectedHektorUser?.hektorAgenceId ?? null,
-        hektorAgencyUserId: selectedHektorUser?.agenceIdUser ?? null,
-        hektorAgencyLabel: selectedHektorUser?.agenceNom ?? null,
-        contactNextStep: null,
-      }
-      const job = await createUpdateHektorContactJob({ contactId: props.contact.hektor_contact_id, contact: input, priority: 16 })
-      props.onJobCreated?.(job)
-      // Les champs override sont ecrits par le worker APRES confirmation Hektor (comme les champs normaux),
-      // pour garder la fiche coherente et ne persister que ce que Hektor a reellement accepte.
-      props.onClose()
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Modification du contact impossible.')
-    } finally {
-      setPending(false)
-    }
-  }
-
-  return (
-    <div className="edit-overlay" onClick={props.onClose}>
-      <div className="edit" role="dialog" aria-modal="true" aria-labelledby="contactEditTitle" data-screen-label="Modifier le contact" onClick={(event) => event.stopPropagation()}>
-        <header className="edit-head">
-          <div className="edit-h-main">
-            <span className="edit-badge">ID</span>
-            <div>
-              <div className="edit-eyebrow">Mise à jour Hektor</div>
-              <h2 className="edit-title" id="contactEditTitle">Modifier le contact</h2>
-              <p className="edit-sub">Les changements sont envoyés au worker Hektor puis resynchronisés vers le local et Supabase.</p>
-            </div>
-          </div>
-          <button className="edit-close" type="button" onClick={props.onClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" /></svg>Fermer
-          </button>
-        </header>
-
-        <div className="edit-context">
-          <div className="ec-who">
-            <span className="ec-av">{userInitials(props.contact.display_name, props.contact.email)}</span>
-            <div>
-              <div className="ec-nm">{editContextName}</div>
-              <div className="ec-meta">{editContextMeta}</div>
-            </div>
-          </div>
-          <span className="ec-sp" />
-          <label className="ec-acct">
-            <span className="k">Compte Hektor</span>
-            {availableHektorNegotiators.length > 0 ? (
-              <select
-                value={selectedHektorUserId}
-                onChange={(event) => setSelectedHektorUserId(event.target.value)}
-                disabled={props.profileRole === 'commercial' && availableHektorNegotiators.length <= 1}
-                aria-label="Compte Hektor"
-              >
-                <option value="">{props.profileRole === 'commercial' ? 'Accès personnel' : 'Choisir le négociateur'}</option>
-                {availableHektorNegotiators.map((negotiator) => (
-                  <option key={`edit-hektor-user-${negotiator.idUser}`} value={negotiator.idUser}>
-                    {negotiator.label}{negotiator.agenceNom ? ` — ${negotiator.agenceNom}` : ''}{negotiator.email ? ` — ${negotiator.email}` : ''}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select aria-label="Compte Hektor" disabled value="ctx">
-                <option value="ctx">{selectedHektorEmail || selectedHektorId || 'Contexte Hektor non détecté'}</option>
-              </select>
-            )}
-          </label>
-        </div>
-
-        <div className="edit-main">
-          <aside className="edit-nav">
-            <div className="edit-nav-t">Sections</div>
-            {contactEditSections.map((section) => (
-              <button key={section.id} type="button" className={`enav ${activeSection === section.id ? 'on' : ''}`} onClick={() => scrollToSection(section.id)}>
-                {section.icon}{section.label}
-              </button>
-            ))}
-          </aside>
-
-          <div className="edit-body" ref={editBodyRef} onScroll={handleBodyScroll}>
-            <div className="fsec" id="sec-identite">
-              <div className="fsec-h">
-                <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>
-                <span className="fsec-t">Identité &amp; coordonnées</span>
-              </div>
-              <div className="fgrid3">
-                <div className="field">
-                  <label>Civilité</label>
-                  <div className="seg2">
-                    {civilityOptions.map((option) => (
-                      <button key={`civ-${option.label}`} type="button" className={civility === option.value ? 'on' : ''} onClick={() => setCivility(option.value)}>{option.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="field"><label>Nom</label><input className="inp" value={lastName} onChange={(event) => setLastName(event.target.value)} /></div>
-                <div className="field"><label>Prénom</label><input className="inp" value={firstName} onChange={(event) => setFirstName(event.target.value)} /></div>
-                <div className="field col2"><label>Email</label><input className="inp" type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></div>
-                <div className="field"><label>Portable</label><input className="inp" value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" /></div>
-                <div className="field"><label>Fixe</label><input className="inp" value={phoneSecondary} onChange={(event) => setPhoneSecondary(event.target.value)} inputMode="tel" placeholder="—" /></div>
-                <div className="field col2"><label>Adresse</label><input className="inp" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="N° et libellé de voie" /></div>
-              </div>
-            </div>
-
-            <div className="fsec" id="sec-loc">
-              <div className="fsec-h">
-                <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
-                <span className="fsec-t">Localisation &amp; naissance</span>
-              </div>
-              <div className="fgrid3">
-                <div className="field"><label>Code postal</label><input className="inp" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} inputMode="numeric" /></div>
-                <div className="field col2"><label>Ville</label><input className="inp" value={city} onChange={(event) => setCity(event.target.value)} /></div>
-                <div className="field">
-                  <label>Date de naissance</label>
-                  <input className="inp" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" />
-                  <span className="field-note warm">Utilisée par le message anniversaire Hektor.</span>
-                </div>
-                <div className="field col2"><label>Lieu de naissance</label><input className="inp" value={birthPlace} onChange={(event) => setBirthPlace(event.target.value)} placeholder="—" /></div>
-              </div>
-            </div>
-
-            <div className="fsec" id="sec-qualif">
-              <div className="fsec-h">
-                <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 7h18M3 12h18M3 17h12" /></svg></span>
-                <span className="fsec-t">Qualification</span>
-              </div>
-              <div className="fgrid3">
-                <div className="field">
-                  <label>Statut matrimonial</label>
-                  <select className="inp" value={maritalStatus} onChange={(event) => setMaritalStatus(event.target.value)}>
-                    <option value="">Non précisé</option>
-                    <option value="single">Célibataire</option>
-                    <option value="married">Marié(e)</option>
-                    <option value="civil_union">Pacsé(e)</option>
-                    <option value="divorced">Divorcé(e)</option>
-                    <option value="widower">Veuf(ve)</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Source</label>
-                  <select className="inp" value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
-                    {hektorContactSourceOptions.map((option) => (
-                      <option key={`edit-source-${option.value || 'none'}`} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Catégorie</label>
-                  <select className="inp" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                    {hektorContactCategoryOptions.map((option) => (
-                      <option key={`edit-category-${option.value || 'none'}`} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="fsec" id="sec-auto">
-              <div className="fsec-h">
-                <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
-                <span className="fsec-t">Automatismes Hektor</span>
-                <span className="fsec-sp" />
-                <span className="fsec-tag">Réglage par contact</span>
-              </div>
-              <div className="autocards">
-                <div className="autoc">
-                  <div className="autoc-t">Mail nouveau mandat</div>
-                  {renderAutoSeg(crmMandateSummaryEnabled, setCrmMandateSummaryEnabled)}
-                  <div className="autoc-note">Automatisme CRM déclenché à la prise de mandat.</div>
-                </div>
-                <div className="autoc">
-                  <div className="autoc-t">Mail échéance mandat</div>
-                  {renderAutoSeg(crmMandateExpirationEnabled, setCrmMandateExpirationEnabled)}
-                  <div className="autoc-note">Alerte Hektor avant la fin du mandat.</div>
-                </div>
-                <div className="autoc">
-                  <div className="autoc-t">Message anniversaire</div>
-                  {renderAutoSeg(crmBirthdayEnabled, setCrmBirthdayEnabled)}
-                  <div className="autoc-note">Nécessite une date de naissance renseignée.</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 14 }}>
-                <button type="button" className={`rgpd ${sendRgpdEmail ? '' : 'off'}`} aria-pressed={sendRgpdEmail} onClick={() => setSendRgpdEmail((value) => !value)}>
-                  <span className="rgpd-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7" /></svg></span>
-                  <span className="rgpd-bd">
-                    <span className="rgpd-t">Envoyer l'email d'activation Espace personnel / RGPD</span>
-                    <span className="rgpd-s">Le contact reçoit le lien d'activation de son espace et le consentement RGPD.</span>
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="fsec" id="sec-note">
-              <div className="fsec-h">
-                <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg></span>
-                <span className="fsec-t">Note Hektor</span>
-              </div>
-              <div className="field full"><textarea className="inp" value={comments} onChange={(event) => setComments(event.target.value)} placeholder="Note interne synchronisée avec Hektor…" /></div>
-            </div>
-          </div>
-        </div>
-
-        <footer className="edit-foot">
-          {error ? <span className="edit-error">{error}</span> : <span className="spacer"><span className="d" />Synchronisé via le worker Hektor</span>}
-          <button className="btn ghost" type="button" onClick={props.onClose} disabled={pending}>Annuler</button>
-          <button className="btn brand" type="button" onClick={() => void handleSave()} disabled={pending}>{pending ? 'Enregistrement…' : 'Enregistrer les modifications'}</button>
-        </footer>
-      </div>
-    </div>
-  )
-}
-
 function ContactDetailPopup(props: {
   contact: AppContact
   relations: AppContactRelation[]
@@ -25496,472 +25102,641 @@ function ContactDetailPopup(props: {
     )
   }
 
-  const avatarInitials = userInitials(props.contact.display_name, props.contact.email)
-  const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
-  const isArchived = contactArchiveLabel(props.contact) === 'Archive'
-  const hasSeverity = Boolean(props.contact.duplicate_max_severity)
-  const severityLabel = contactSeverityLabel(props.contact.duplicate_max_severity)
-  const isEligibleApp = contactBool(props.contact.supabase_sync_eligible)
-  const hasDetail = contactBool(props.contact.has_contact_detail)
-  const syncDate = props.contact.contact_detail_synced_at ? formatDate(props.contact.contact_detail_synced_at) : null
-  const candidateId = props.contact.duplicate_primary_candidate_id ?? null
-  const roleLabels = selectedRoles.map((role) => contactDirectoryRoleLabel(role))
-  const relationLeadLabel = roleLabels.length ? roleLabels.join(' · ') : (props.relations.length ? 'Relation annonce' : 'Profil à qualifier')
-  const relationLeadHasRole = roleLabels.length > 0 || props.relations.length > 0
-  const linkedCount = props.relations.length
-  const roleTagClass = (role: string) => {
-    const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    if (normalized === 'mandant') return 'tg brand'
-    if (normalized === 'proprietaire' || normalized.startsWith('acquereur')) return 'tg green'
-    return 'tg'
-  }
-  const activityItems: Array<{ d: string; t: string; s: string; soft?: boolean }> = []
-  if (props.contact.contact_detail_synced_at) activityItems.push({ d: formatDate(props.contact.contact_detail_synced_at), t: 'Synchronisation Hektor', s: candidateId ? `Détail candidat ${candidateId} rapproché sur la fiche.` : 'Fiche resynchronisée depuis Hektor.' })
-  if (props.contact.date_maj) activityItems.push({ d: formatDate(props.contact.date_maj), t: 'Fiche mise à jour', s: 'Dernière modification de la fiche contact.', soft: true })
-  props.relations.slice(0, 1).forEach((relation) => activityItems.push({ d: relation.contact_date_maj ? formatDate(relation.contact_date_maj) : '—', t: 'Annonce rattachée', s: `${relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`} · ${contactDirectoryRoleLabel(relation.role_contact)}.`, soft: true }))
-  if (props.contact.date_enregistrement) activityItems.push({ d: formatDate(props.contact.date_enregistrement), t: 'Contact créé', s: `Import depuis Hektor${contactLocation && contactLocation !== '-' ? ` · secteur ${contactLocation}` : ''}.`, soft: true })
-  const sortedGoogleEvents = [...activeGoogleContactEvents].sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())
-  const upcomingGoogleEvents = sortedGoogleEvents.filter((event) => new Date(event.starts_at).getTime() >= Date.now())
-
   return (
-    <div className="fcx" id="fcx-root" data-screen-label="Fiche contact">
-      <div className="fcx-overlay" onClick={props.onClose}>
-        <main className="panel" onClick={(event) => event.stopPropagation()}>
+    <div className="modal-overlay contact-detail-overlay" onClick={props.onClose}>
+      <section className="modal-panel contact-detail-modal contact-detail-modern-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="contact-modern-shell">
+          <nav className="contact-modern-breadcrumb" aria-label="Fil d'Ariane">
+            <span>Contacts</span>
+            <span>/</span>
+            <strong>{props.contact.display_name}</strong>
+          </nav>
 
-          <header className="topbar" data-screen-label="En-tête fiche contact">
-            <div className="tb-left">
-              <button className="btn icon" type="button" aria-label="Retour" onClick={props.onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg></button>
-              <span className="tb-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>
-              <div className="crumb"><span className="ey">Fiche contact</span><span className="ref">{contactFullName}</span></div>
+          <header className="contact-modern-hero">
+            <div className="contact-modern-identity">
+              <div className="contact-modern-avatar" aria-hidden="true">
+                <span>{userInitials(props.contact.display_name, props.contact.email)}</span>
+                <i />
+              </div>
+              <div className="contact-modern-title-block">
+                <p>Fiche contact</p>
+                <h3>{contactFullName}</h3>
+                <div className="contact-modern-badges">
+                  <StatusPill value={contactArchiveLabel(props.contact)} />
+                  {selectedTypologies.slice(0, 3).map((badge) => (
+                    <span key={`hero-${badge}`} className={contactRoleChipClass(badge)}>{contactDirectoryRoleLabel(badge)}</span>
+                  ))}
+                  <span className={`contact-duplicate-pill ${contactDuplicateTone(props.contact.duplicate_max_severity)}`}>{contactSeverityLabel(props.contact.duplicate_max_severity)}</span>
+                </div>
+                <div className="contact-modern-meta">
+                  <span><DetailIcon type="contact" />{contactPhone || '-'}</span>
+                  <span><DetailIcon type="content" />{contactEmail || '-'}</span>
+                  <span><DetailIcon type="location" />{contactLocation}</span>
+                  <span><DetailIcon type="commercial" />Negociateur : {props.contact.commercial_nom || '-'}</span>
+                  <span><DetailIcon type="mandate" />Agence : {props.contact.agence_nom || '-'}</span>
+                </div>
+              </div>
             </div>
-            <div className="tb-right">
+
+            <div className="contact-modern-actions" aria-label="Actions contact">
               {contactPhone ? (
-                <a className="btn" href={`tel:${contactPhone}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg>Appeler</a>
+                <a className="contact-modern-action contact-modern-action-primary" href={`tel:${contactPhone}`}>
+                  <DetailIcon type="contact" />
+                  <span>Appeler</span>
+                </a>
               ) : null}
               {contactEmail ? (
-                <button className="btn" type="button" onClick={() => setContactEmailComposerOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>Email</button>
+                <button className="contact-modern-action" type="button" onClick={() => setContactEmailComposerOpen(true)}>
+                  <DetailIcon type="content" />
+                  <span>Email</span>
+                </button>
               ) : null}
-              <button className="btn brand" type="button" onClick={handleOpenCreateGoogleContactAgenda}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /><path d="M12 14v4M10 16h4" /></svg>Créer RDV</button>
+              <button className="contact-modern-action contact-modern-action-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                <DetailIcon type="history" />
+                <span>Creer RDV</span>
+              </button>
               {props.canManageContacts ? (
-                <button className="btn" type="button" onClick={() => setEditing(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" /></svg>Modifier</button>
+                <button className="contact-modern-action" type="button" onClick={() => setEditing(true)}>
+                  <DetailIcon type="commercial" />
+                  <span>Modifier</span>
+                </button>
               ) : null}
-              <div className={`menu-wrap ${contactActionsOpen ? 'open' : ''}`}>
-                <button className="btn icon" type="button" aria-haspopup="true" aria-expanded={contactActionsOpen} aria-label="Plus d'options" onClick={() => setContactActionsOpen((open) => !open)}><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg></button>
+              <div className="contact-modern-action-menu">
+                <button className="contact-modern-icon-button" type="button" aria-label="Actions supplementaires" aria-expanded={contactActionsOpen} onClick={() => setContactActionsOpen((open) => !open)}>
+                  <DetailIcon type="actions" />
+                </button>
                 {contactActionsOpen ? (
-                  <div className="menu-pop">
-                    <button className="menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(props.contact.hektor_contact_id) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor<svg className="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
+                  <div className="contact-modern-menu" role="menu">
+                    <button type="button" onClick={() => {
+                      setContactActionsOpen(false)
+                      openHektorContact(props.contact.hektor_contact_id)
+                    }}>
+                      <DetailIcon type="hektor" />
+                      <span>Ouvrir dans Hektor</span>
+                    </button>
                     {props.canDeleteContacts ? (
-                      <button className="menu-item danger" type="button" onClick={() => { setContactActionsOpen(false); setDeleteOpen(true) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Supprimer</button>
+                      <button className="is-danger" type="button" onClick={() => {
+                        setContactActionsOpen(false)
+                        setDeleteOpen(true)
+                      }}>
+                        <DetailIcon type="history" />
+                        <span>Supprimer</span>
+                      </button>
                     ) : null}
-                    <div className="menu-sep" />
-                    <button className="menu-item" type="button" onClick={() => { setContactActionsOpen(false); props.onClose() }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" /></svg>Fermer</button>
+                    <button type="button" onClick={props.onClose}>
+                      <span aria-hidden="true">x</span>
+                      <span>Fermer</span>
+                    </button>
                   </div>
                 ) : null}
               </div>
-              <button className="btn-close" type="button" aria-label="Fermer" onClick={props.onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
             </div>
           </header>
 
-          <div className="workspace">
-
-            <aside className="rail" data-screen-label="Volet identité">
-              <div className="rail-inner">
-                <div className="chero">
-                  <div className="chero-top">
-                    <div className="chero-av">{avatarInitials}{!isArchived ? <span className="on" /> : null}</div>
-                    <h1 className="chero-nm">{contactFullName}</h1>
-                  </div>
-                  <div className="chips">
-                    <span className={`chip ${isArchived ? 'gold' : 'green'}`}><span className="d" />{isArchived ? 'Archivé' : 'Actif'}</span>
-                    {roleLabels.map((label) => <span key={`chip-role-${label}`} className="chip green"><span className="d" />{label}</span>)}
-                    {hasSeverity ? <span className="chip gold"><span className="d" />{severityLabel}</span> : null}
-                    {isEligibleApp ? <span className="chip brand"><span className="d" />Éligible app</span> : null}
-                  </div>
-                </div>
-
-                <div className="rblock">
-                  <div className="rblock-h"><span className="rlabel">Coordonnées CRM</span>{props.canManageContacts ? <button className="linkmini" type="button" onClick={() => setEditing(true)}>Modifier</button> : null}</div>
-                  <div className="coord">
-                    <span className="coord-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span>
-                    <div className="coord-bd"><div className="coord-k">Téléphone</div><div className="coord-v">{contactPhone || '-'}</div></div>
-                    {contactPhone ? <a className="coord-act" href={`tel:${contactPhone}`} aria-label="Appeler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></a> : null}
-                  </div>
-                  <div className="coord">
-                    <span className="coord-ic teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>
-                    <div className="coord-bd"><div className="coord-k">Email</div><div className="coord-v">{contactEmail || '-'}</div></div>
-                    {contactEmail ? <button className="coord-act" type="button" aria-label="Écrire" onClick={() => setContactEmailComposerOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></button> : null}
-                  </div>
-                  <div className="coord">
-                    <span className="coord-ic green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
-                    <div className="coord-bd"><div className="coord-k">Secteur</div><div className="coord-v">{contactLocation}</div></div>
-                  </div>
-                </div>
-
-                <div className="rblock">
-                  <div className="rblock-h"><span className="rlabel">Négociateur</span></div>
-                  <div className="resp">
-                    <div className="avatar">{negotiatorInitials}</div>
-                    <div><div className="nm">{props.contact.commercial_nom || 'Non affecté'}</div><div className="sb">{props.contact.agence_nom || 'Groupe GTI'}</div></div>
-                  </div>
-                </div>
-
-                <div className="rblock">
-                  <div className="rblock-h"><span className="rlabel">Rattachement</span></div>
-                  <div className="coord" style={{ paddingTop: 0 }}>
-                    <span className="coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21V8l9-5 9 5v13" /><path d="M9 21v-6h6v6M3 12h18" /></svg></span>
-                    <div className="coord-bd"><div className="coord-k">Agence</div><div className="coord-v">{props.contact.agence_nom || '-'}</div></div>
-                  </div>
-                  <div className="coord">
-                    <span className="coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
-                    <div className="coord-bd"><div className="coord-k">Détail Hektor</div><div className="coord-v" style={hasDetail ? { color: '#1f6e44' } : undefined}>{hasDetail ? 'Détail Hektor lu' : 'Détail à charger'}</div></div>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-            <div className="main" data-screen-label="Zone de travail">
-              <nav className="tabs">
-                <button className={`tab ${contactDetailTab === 'summary' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('summary')}>Synthèse</button>
-                <button className={`tab ${contactDetailTab === 'rdv' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('rdv')}>Rendez-vous</button>
-                <button className={`tab ${contactDetailTab === 'emails' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('emails')}>Échanges</button>
-                <button className={`tab ${contactDetailTab === 'history' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('history')}>Suivi &amp; historique</button>
-                <button className={`tab ${contactDetailTab === 'notes' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('notes')}>Notes &amp; qualif.</button>
-                <button className={`tab ${contactDetailTab === 'sync' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('sync')}>Données Hektor</button>
-              </nav>
-
-              {contactDetailTab === 'summary' ? (
-                <div className="tab-panel">
-                  <section className="section" data-screen-label="Relations contact">
-                    <div className="sec-lead">
-                      <span className="sl-t">Relations</span>
-                      <span className={`sl-pill ${relationLeadHasRole ? '' : 'gold'}`}><span className="d" />{relationLeadLabel}</span>
-                      <span className="sl-sp" />
-                      <span className="sl-hint">Profil vendeur &amp; acquéreur potentiel</span>
-                    </div>
-                    <div className="duo">
-                      <div className="duo-col">
-                        <div className="mod">
-                          <div className="mod-h"><h2>Annonces liées</h2><span className="mod-meta strong">{linkedCount} bien{linkedCount > 1 ? 's' : ''}</span></div>
-                          {linkedCount > 0 ? props.relations.map((relation) => {
-                            const relationAppDossierId = Number(relation.app_dossier_id)
-                            const relationRef = relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `V${relation.hektor_annonce_id}`
-                            return (
-                              <button key={`lk-${relation.hektor_annonce_id}-${relation.role_contact}`} className="lk" type="button" disabled={!Number.isFinite(relationAppDossierId)} onClick={() => { if (!Number.isFinite(relationAppDossierId)) return; props.onClose(); props.onOpenDossier(relationAppDossierId) }}>
-                                <span className="lk-thumb"><span className="st" /><span className="ref">Photo</span></span>
-                                <div className="lk-bd">
-                                  <div className="lk-ref">{relationRef}</div>
-                                  <div className="lk-t">{relation.titre_bien || 'Relation annonce'}</div>
-                                  <div className="lk-tags"><span className={roleTagClass(relation.role_contact)}>{contactDirectoryRoleLabel(relation.role_contact)}</span></div>
-                                </div>
-                                <span className="lk-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
-                              </button>
-                            )
-                          }) : (
-                            <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21V8l9-5 9 5v13" /><path d="M9 21v-6h6v6" /></svg></span><span className="et">Aucune annonce liée dans l'index courant.</span></div>
-                          )}
-                          {linkedCount > 0 ? (
-                            <div className="lk-foot">
-                              <span className="lk-stat">{linkedCount} annonce{linkedCount > 1 ? 's' : ''} liée{linkedCount > 1 ? 's' : ''}</span>
-                            </div>
-                          ) : null}
-                        </div>
-
-                        <div className="mod">
-                          <div className="mod-h"><h2>Activité récente</h2><button className="linkmini" type="button" onClick={() => setContactDetailTab('history')}>Tout l'historique →</button></div>
-                          {activityItems.length > 0 ? (
-                            <div className="tl">
-                              {activityItems.map((item, index) => (
-                                <div key={`act-${index}`} className={`tl-it ${item.soft ? 'soft' : ''}`}>
-                                  <div className="tl-d">{item.d}</div>
-                                  <div className="tl-t">{item.t}</div>
-                                  <div className="tl-s">{item.s}</div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : <div className="empty"><span className="et">Aucune activité enregistrée pour le moment.</span></div>}
-                        </div>
-                      </div>
-
-                      <div className="duo-col">
-                        <div className="mod">
-                          <div className="mod-h"><h2>Recherches acquéreurs</h2><span className="mod-meta">{selectedActiveSearches.length} active{selectedActiveSearches.length > 1 ? 's' : ''}</span></div>
-                          {props.searches.length > 0 ? (
-                            <div className="contact-modern-search-list">
-                              {props.searches.slice(0, 4).map((search) => {
-                                const cities = contactJsonList(search.villes_json)
-                                const types = contactSearchTypes(search.types_json)
-                                const criteria = contactSearchCriteriaLabels(search)
-                                return (
-                                  <div key={`search-${search.contact_search_key}`} className="lk" style={{ cursor: 'default' }}>
-                                    <div className="lk-bd">
-                                      <div className="lk-ref" style={{ fontSize: 15 }}>{cities.join(', ') || 'Secteur non renseigné'}</div>
-                                      <div className="lk-t">{types.join(', ') || search.offre || 'Type non renseigné'}</div>
-                                      <div className="lk-tags">
-                                        <span className={`tg ${contactBool(search.is_active) ? 'green' : ''}`}>{contactBool(search.is_active) ? 'Active' : 'Archivée'}</span>
-                                        {criteria.slice(0, 2).map((item) => <span key={`crit-${search.contact_search_key}-${item}`} className="tg">{item}</span>)}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <>
-                              <div className="empty-lg">
-                                <span className="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></span>
-                                <div className="eh">Aucune recherche active</div>
-                                <div className="es">{hasDetail ? 'Aucun critère d\'acquisition poussé sur Supabase. Créez une recherche pour rapprocher ce contact des biens.' : 'Recherche visible après chargement de la fiche détail Hektor.'}</div>
-                              </div>
-                              <div className="crit">
-                                <div className="crit-c"><div className="crit-k">Budget</div><div className="crit-v">À définir</div></div>
-                                <div className="crit-c"><div className="crit-k">Secteur</div><div className="crit-v">À définir</div></div>
-                                <div className="crit-c"><div className="crit-k">Type de bien</div><div className="crit-v">À définir</div></div>
-                                <div className="crit-c"><div className="crit-k">Surface min.</div><div className="crit-v">À définir</div></div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="section">
-                    <div className="mod">
-                      <div className="dub">
-                        <span className="dub-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="9" cy="8" r="3.4" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="M16 5.2a3.4 3.4 0 0 1 0 5.6M18 14.4a6 6 0 0 1 3 5.6" /></svg></span>
-                        <div className="dub-bd">
-                          <div className="dub-t">{duplicateCount > 0 ? `${duplicateCount} groupe${duplicateCount > 1 ? 's' : ''} doublon détecté${duplicateCount > 1 ? 's' : ''}` : 'Aucun doublon détecté'}</div>
-                          <div className="dub-s">{duplicateCount > 0 ? 'Doublons à contrôler avant fusion pour fiabiliser la base contact.' : 'La fiche ne présente aucun groupe doublon classé.'}</div>
-                        </div>
-                        {candidateId ? <span className="dub-candi">Candidat principal · {candidateId}</span> : null}
-                        {duplicateCount > 0 ? <button className="btn brand-soft sm" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>Comparer &amp; fusionner</button> : null}
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="section">
-                    <div className="sec-head-row">
-                      <div className="sec-label">Dernière synchronisation Hektor</div>
-                      <button className="linkmini" type="button" onClick={() => setContactDetailTab('sync')}>Détail synchronisation →</button>
-                    </div>
-                    <div className="dbar">
-                      <span className="dbar-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2" /><path d="M18 4v5h-5M6 20v-5h5" /></svg></span>
-                      <div>
-                        <div className="dbar-t">{hasDetail ? 'Détail Hektor disponible' : 'Détail Hektor à charger'}</div>
-                        <div className="dbar-s">{hasDetail ? 'Fiche resynchronisée depuis Hektor · candidat rapproché' : 'En attente de la prochaine reprise Hektor'}</div>
-                      </div>
-                      <div className="dbar-grid">
-                        <div className="dbar-f"><span className="k">État</span><span className={`v ${hasDetail ? 'ok' : ''}`}>{hasDetail ? 'Détail lu' : 'À charger'}</span></div>
-                        <div className="dbar-f"><span className="k">Lu le</span><span className="v">{syncDate || '—'}</span></div>
-                        <div className="dbar-f"><span className="k">Candidat principal</span><span className="v">{candidateId || '—'}</span></div>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              ) : null}
-
-              {contactDetailTab === 'rdv' ? (
-                <div className="tab-panel">
-                  <section className="section">
-                    <div className="mod primary">
-                      <div className="mod-h"><h2>Rendez-vous à venir</h2><span className="mod-meta">{upcomingGoogleEvents.length} RDV planifié{upcomingGoogleEvents.length > 1 ? 's' : ''}</span></div>
-                      {googleContactEventsError ? <p className="field-note warm" style={{ marginBottom: 10 }}>{googleContactEventsError}</p> : null}
-                      {sortedGoogleEvents.length > 0 ? (
-                        <div className="rdv-list">
-                          {sortedGoogleEvents.map((event) => {
-                            const eventAppDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
-                            const typeLabel = googleAgendaEventTypeOptions.find((option) => option.value === event.event_type)?.label ?? 'RDV'
-                            return (
-                              <article key={`rdv-${event.id}`} className="rdv-item">
-                                <div className="rdv-item-head"><span className="rdv-item-type">{typeLabel}</span><strong>{event.summary}</strong></div>
-                                <div className="rdv-facts">
-                                  <span>{formatDateTime(event.starts_at)} - {formatDateTime(event.ends_at)}</span>
-                                  <span>{event.google_calendar_email}</span>
-                                  {event.location ? <span>{event.location}</span> : null}
-                                </div>
-                                <div className="rdv-actions">
-                                  {Number.isFinite(eventAppDossierId) ? <button className="btn sm" type="button" onClick={() => { props.onClose(); props.onOpenDossier(eventAppDossierId) }}>Ouvrir dossier</button> : null}
-                                  {event.google_html_link ? <a className="btn sm" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a> : null}
-                                  {canPrintVisitVoucher(event) ? <button className="btn brand-soft sm" type="button" onClick={() => void handleOpenVisitVoucherPrint(event)} disabled={googleContactAgendaDeletingId === event.id || googleContactAgendaPrintingId === event.id}>{googleContactAgendaPrintingId === event.id ? 'Préparation…' : 'Bon de visite'}</button> : null}
-                                  <button className="btn sm" type="button" onClick={() => handleOpenEditGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>Modifier</button>
-                                  <button className="btn sm" type="button" onClick={() => void handleDeleteGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>{googleContactAgendaDeletingId === event.id ? 'Suppression…' : 'Supprimer'}</button>
-                                </div>
-                              </article>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></svg></span><span className="et">{googleContactEventsLoading ? 'Chargement des rendez-vous…' : 'Aucun rendez-vous planifié avec ce contact pour le moment.'}</span></div>
-                      )}
-                      <div className="row-actions">
-                        <button className="btn brand-soft sm" type="button" onClick={handleOpenCreateGoogleContactAgenda}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" /></svg>Créer un RDV Google</button>
-                      </div>
-                    </div>
-                  </section>
-                  <section className="section">
-                    <div className="sec-label">Agenda Google</div>
-                    <div className="mod">
-                      <div className="fgrid">
-                        <div className="fcell"><span className="fk">Agenda négociateur</span><span className="fv">{contactGmailSubjectEmail || props.contact.negociateur_email || '—'}</span></div>
-                        <div className="fcell"><span className="fk">RDV liés</span><span className="fv">{activeGoogleContactEvents.length}</span></div>
-                        <div className="fcell"><span className="fk">Prochain RDV</span><span className={`fv ${nextGoogleEventLabel ? '' : 'muted'}`}>{nextGoogleEventLabel || '—'}</span></div>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              ) : null}
-
-              {contactDetailTab === 'emails' ? (
-                <div className="tab-panel">
-                  <section className="section">
-                    <div className="mod">
-                      <div className="mod-h"><h2>Adresses de contact</h2><span className="mod-meta">{contactEmail ? '1 adresse' : '0 adresse'}</span></div>
-                      {contactEmail ? (
-                        <div className="contact">
-                          <div><div className="cn">{contactFullName}</div><div className="ce">{contactEmail}</div></div>
-                          <div className="ca">
-                            <button className="icon-btn" type="button" aria-label="Écrire un email" onClick={() => setContactEmailComposerOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></button>
-                            <button className="icon-btn" type="button" aria-label="Actualiser les échanges" onClick={() => void reloadContactEmailMessages()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
-                          </div>
-                        </div>
-                      ) : <div className="empty"><span className="et">Aucune adresse email renseignée pour ce contact.</span></div>}
-                    </div>
-                  </section>
-                  <section className="section">
-                    <div className="sec-head-row">
-                      <div className="sec-label">Fil d'échanges</div>
-                      <span className="sl-hint">{isGoogleWorkspaceEmail(contactGmailSubjectEmail) ? contactGmailSubjectEmail : 'Compte Gmail non reconnu'}</span>
-                    </div>
-                    <div className="mod">
-                      {contactEmailMessagesError ? <p className="field-note warm" style={{ marginBottom: 10 }}>{contactEmailMessagesError}</p> : null}
-                      {contactEmail && contactEmailMessages.length > 0 ? renderContactEmailMessages() : (
-                        <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span><span className="et">{contactEmailMessagesLoading ? 'Chargement des emails Gmail…' : 'Aucun email synchronisé avec ce contact pour l\'instant.'}</span></div>
-                      )}
-                      <div className="row-actions">
-                        {contactEmail ? <button className="btn brand-soft sm" type="button" onClick={() => setContactEmailComposerOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" /></svg>Écrire un email</button> : null}
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              ) : null}
-
-              {contactDetailTab === 'history' ? (
-                <div className="tab-panel">
-                  <section className="section">
-                    <div className="sec-head-row">
-                      <div className="sec-label">Historique</div>
-                    </div>
-                    <div className="mod">
-                      {activityItems.length > 0 ? (
-                        <div className="tl">
-                          {activityItems.map((item, index) => (
-                            <div key={`hist-${index}`} className={`tl-it ${item.soft ? 'soft' : ''}`}>
-                              <div className="tl-d">{item.d}</div>
-                              <div className="tl-t">{item.t}</div>
-                              <div className="tl-s">{item.s}</div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className="empty"><span className="et">Aucun évènement enregistré pour ce contact.</span></div>}
-                    </div>
-                  </section>
-                </div>
-              ) : null}
-
-              {contactDetailTab === 'notes' ? (
-                <div className="tab-panel">
-                  <section className="section">
-                    <div className="sec-head-row">
-                      <div className="sec-label">Notes &amp; qualification</div>
-                      {props.canManageContacts ? <button className="btn brand-soft sm" type="button" onClick={() => setEditing(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" /></svg>Modifier la qualif.</button> : null}
-                    </div>
-                    <div className="mod">
-                      <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg></span><span className="et">Aucune note contact dans l'app pour le moment. La fiche conserve les informations Hektor, les RDV Google et les relations annonces.</span></div>
-                    </div>
-                  </section>
-                </div>
-              ) : null}
-
-              {contactDetailTab === 'sync' ? (
-                <div className="tab-panel">
-                  <section className="section">
-                    <div className="dbar">
-                      <span className="dbar-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2" /><path d="M18 4v5h-5M6 20v-5h5" /></svg></span>
-                      <div>
-                        <div className="dbar-t">Synchronisation Hektor</div>
-                        <div className="dbar-s">{hasDetail ? 'Dernière reprise · détail candidat lu' : 'Détail non encore chargé'}</div>
-                      </div>
-                      <div className="dbar-grid">
-                        <div className="dbar-f"><span className="k">État</span><span className={`v ${hasDetail ? 'ok' : ''}`}>{hasDetail ? 'À jour' : 'À charger'}</span></div>
-                        <div className="dbar-f"><span className="k">Lu le</span><span className="v">{syncDate || '—'}</span></div>
-                      </div>
-                    </div>
-                  </section>
-                  <section className="section">
-                    <div className="sec-label">Détail candidat Hektor</div>
-                    <div className="mod">
-                      <div className="fgrid">
-                        <div className="fcell"><span className="fk">Candidat principal</span><span className="fv">{candidateId || '—'}</span></div>
-                        <div className="fcell"><span className="fk">Détail Hektor</span><span className={`fv ${hasDetail ? 'brand' : 'muted'}`}>{hasDetail ? 'Disponible' : 'À charger'}</span></div>
-                        <div className="fcell"><span className="fk">Détail lu le</span><span className="fv">{syncDate || '—'}</span></div>
-                        <div className="fcell"><span className="fk">Doublons</span><span className="fv">{duplicateCount}</span></div>
-                        <div className="fcell"><span className="fk">Négociateur</span><span className="fv">{props.contact.commercial_nom || '—'}</span></div>
-                        <div className="fcell"><span className="fk">Agence</span><span className="fv">{props.contact.agence_nom || '—'}</span></div>
-                        <div className="fcell"><span className="fk">Éligible app</span><span className="fv">{isEligibleApp ? 'Oui' : 'Hors périmètre'}</span></div>
-                        <div className="fcell"><span className="fk">ID contact</span><span className="fv">{props.contact.hektor_contact_id}</span></div>
-                      </div>
-                    </div>
-                  </section>
-                  <section className="section">
-                    <div className="sec-label">Recherches connues</div>
-                    <div className="mod">
-                      {props.searches.length > 0 ? (
-                        <div className="fgrid">
-                          <div className="fcell"><span className="fk">Recherches connues</span><span className="fv">{props.contact.total_search_count ?? props.searches.length}</span></div>
-                          <div className="fcell"><span className="fk">Actives</span><span className="fv">{selectedActiveSearches.length}</span></div>
-                          <div className="fcell"><span className="fk">Archivées</span><span className="fv">{selectedArchivedSearches.length}</span></div>
-                        </div>
-                      ) : (
-                        <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg></span><span className="et">Aucune recherche active poussée sur Supabase pour ce contact.</span></div>
-                      )}
-                    </div>
-                  </section>
-                </div>
-              ) : null}
+          <div className="contact-modern-metrics" aria-label="Indicateurs contact">
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-blue"><DetailIcon type="mandate" /></span>
+              <strong>{props.relations.length}</strong>
+              <small>relation annonce liee</small>
+            </div>
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-green"><DetailIcon type="visibility" /></span>
+              <strong>{selectedActiveSearches.length}</strong>
+              <small>recherche active</small>
+            </div>
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-purple"><DetailIcon type="history" /></span>
+              <strong>{activeGoogleContactEvents.filter((event) => new Date(event.starts_at).getTime() >= Date.now()).length}</strong>
+              <small>RDV a venir</small>
+            </div>
+            <div className="contact-modern-metric">
+              <span className="metric-icon is-orange"><DetailIcon type="contact" /></span>
+              <strong>{duplicateCount}</strong>
+              <small>groupes doublon</small>
             </div>
           </div>
-        </main>
-      </div>
 
+          <div className="contact-modern-layout">
+            <aside className="contact-modern-left">
+              <article className="contact-modern-card">
+                <div className="contact-modern-card-head">
+                  <span>Identite</span>
+                  <strong>Coordonnees CRM</strong>
+                </div>
+                <div className="contact-modern-info-list">
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-phone"><DetailIcon type="contact" /></span>
+                    <div><small>Telephone</small><strong>{contactPhone || '-'}</strong></div>
+                    {contactPhone ? <a href={`tel:${contactPhone}`} aria-label="Appeler"><DetailIcon type="contact" /></a> : null}
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-email"><DetailIcon type="content" /></span>
+                    <div><small>Email</small><strong>{contactEmail || '-'}</strong></div>
+                    {contactEmail ? <button type="button" aria-label="Envoyer un email" onClick={() => setContactEmailComposerOpen(true)}><DetailIcon type="content" /></button> : null}
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-location"><DetailIcon type="location" /></span>
+                    <div><small>Secteur</small><strong>{contactLocation}</strong></div>
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-owner"><DetailIcon type="commercial" /></span>
+                    <div><small>Negociateur</small><strong>{props.contact.commercial_nom || '-'}</strong></div>
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-agency"><DetailIcon type="mandate" /></span>
+                    <div><small>Agence</small><strong>{props.contact.agence_nom || '-'}</strong></div>
+                  </div>
+                  <div className="contact-modern-info-row">
+                    <span className="info-icon is-sync"><DetailIcon type="hektor" /></span>
+                    <div><small>Detail</small><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</strong></div>
+                  </div>
+                </div>
+              </article>
+            </aside>
+
+            <main className="contact-modern-center">
+              <article className="contact-modern-card contact-modern-work-card">
+                <div className="contact-modern-tabs" role="tablist" aria-label="Sections fiche contact">
+                  {contactTabs.map((tab) => (
+                    <button key={tab.key} className={contactDetailTab === tab.key ? 'is-active' : ''} type="button" role="tab" aria-selected={contactDetailTab === tab.key} onClick={() => setContactDetailTab(tab.key)}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {contactDetailTab === 'summary' ? (
+                  <div className="contact-modern-tab-panel">
+                    <section className="contact-modern-next-action">
+                      <div>
+                        <span>Prochaine action conseillee</span>
+                        <strong>{nextGoogleContactEvent ? nextGoogleContactEvent.summary : 'Planifier le prochain contact'}</strong>
+                        <p>{nextGoogleContactEvent ? `${nextGoogleEventLabel} dans Google Agenda.` : 'Creer un RDV Google depuis cette fiche pour garder le suivi CRM a jour.'}</p>
+                      </div>
+                      <button className="ghost-button button-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>Creer RDV Google</button>
+                    </section>
+
+                    <section className="contact-modern-status-card">
+                      <span>Statut du contact</span>
+                      <div>
+                        <StatusPill value={contactArchiveLabel(props.contact)} />
+                        <span className={`contact-duplicate-pill ${contactDuplicateTone(props.contact.duplicate_max_severity)}`}>{contactSeverityLabel(props.contact.duplicate_max_severity)}</span>
+                        {contactBool(props.contact.supabase_sync_eligible) ? <StatusPill value="Eligible app" /> : null}
+                        {selectedRoles.map((role) => <StatusPill key={`role-${role}`} value={contactDirectoryRoleLabel(role)} />)}
+                        {selectedTypologies.map((badge) => <span key={`type-${badge}`} className={contactRoleChipClass(badge)}>{contactDirectoryRoleLabel(badge)}</span>)}
+                      </div>
+                    </section>
+
+                    <section className="contact-modern-sync-summary">
+                      <strong>Derniere synchronisation Hektor</strong>
+                      <div>
+                        <span>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor disponible' : 'Detail Hektor a charger'}</span>
+                        <span>{props.contact.contact_detail_synced_at ? `Detail lu le ${formatDate(props.contact.contact_detail_synced_at)}` : 'Date de lecture non disponible'}</span>
+                        <span>{props.contact.duplicate_primary_candidate_id ? `Candidat principal : ${props.contact.duplicate_primary_candidate_id}` : 'Aucun candidat principal force'}</span>
+                      </div>
+                    </section>
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'rdv' ? (
+                  <div className="contact-modern-tab-panel">
+                    <div className="contact-modern-section-head">
+                      <div>
+                        <span>RDV Google</span>
+                        <strong>{googleContactEventsLoading ? 'Chargement...' : `${activeGoogleContactEvents.length} rendez-vous lie(s)`}</strong>
+                      </div>
+                      <button className="ghost-button button-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>Creer RDV Google</button>
+                    </div>
+                    {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
+                    {renderGoogleContactEvents()}
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'emails' ? (
+                  <div className="contact-modern-tab-panel contact-email-tab-panel">
+                    <div className="contact-modern-section-head">
+                      <div>
+                        <span>Gmail</span>
+                        <strong>{contactEmailMessagesLoading ? 'Chargement...' : `${contactEmailMessages.length} email(s) lie(s)`}</strong>
+                        <small className="contact-email-account-line">{isGoogleWorkspaceEmail(contactGmailSubjectEmail) ? contactGmailSubjectEmail : 'Compte Gmail non reconnu'}</small>
+                      </div>
+                      <div className="contact-email-tab-actions">
+                        {contactEmail ? <button className="ghost-button button-subtle" type="button" onClick={() => setContactEmailComposerOpen(true)}>Ecrire</button> : null}
+                        <button className="ghost-button button-primary" type="button" onClick={() => void reloadContactEmailMessages()} disabled={contactEmailMessagesLoading || !contactEmail}>
+                          {contactEmailMessagesLoading ? 'Actualisation...' : 'Actualiser'}
+                        </button>
+                      </div>
+                    </div>
+                    {contactEmailMessagesError ? <p className="form-error">{contactEmailMessagesError}</p> : null}
+                    {renderContactEmailMessages()}
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'history' ? (
+                  <div className="contact-modern-tab-panel">
+                    <div className="contact-modern-timeline">
+                      <div><span>Relations annonce</span><strong>{props.relations.length}</strong><small>{primaryRelation ? primaryRelation.titre_bien || primaryRelation.numero_dossier || 'Annonce liee' : 'Aucune annonce liee'}</small></div>
+                      <div><span>Recherches connues</span><strong>{props.contact.total_search_count ?? props.searches.length}</strong><small>{selectedActiveSearches.length} active(s), {selectedArchivedSearches.length} archivee(s)</small></div>
+                      <div><span>Controle qualite</span><strong>{duplicateCount}</strong><small>groupe(s) doublon detecte(s)</small></div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'notes' ? (
+                  <div className="contact-modern-tab-panel">
+                    <section className="contact-modern-empty-card">
+                      <DetailIcon type="content" />
+                      <strong>Aucune note contact dans l'app pour le moment.</strong>
+                      <span>La fiche garde les informations Hektor, les RDV Google et les relations annonces.</span>
+                    </section>
+                  </div>
+                ) : null}
+
+                {contactDetailTab === 'sync' ? (
+                  <div className="contact-modern-tab-panel">
+                    <section className="contact-modern-sync-grid">
+                      <div><span>Hektor</span><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail lu' : 'Detail non charge'}</strong></div>
+                      <div><span>Supabase</span><strong>{contactBool(props.contact.supabase_sync_eligible) ? 'Eligible app' : 'Hors perimetre'}</strong></div>
+                      <div><span>Doublons</span><strong>{duplicateCount}</strong></div>
+                      <div><span>ID contact</span><strong>{props.contact.hektor_contact_id}</strong></div>
+                    </section>
+                  </div>
+                ) : null}
+              </article>
+            </main>
+
+            <aside className="contact-modern-right">
+              <article className="contact-modern-card">
+                <div className="contact-modern-side-head">
+                  <strong>Annonces liees</strong>
+                  <span>{props.relations.length}</span>
+                </div>
+                {props.relations.length > 0 ? (
+                  <div className="contact-modern-property-list">
+                    {props.relations.map((relation) => {
+                      const relationLabel = contactDirectoryRoleLabel(relation.role_contact)
+                      const relationAppDossierId = Number(relation.app_dossier_id)
+                      return (
+                        <button key={`modern-${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => {
+                          if (!Number.isFinite(relationAppDossierId)) return
+                          props.onClose()
+                          props.onOpenDossier(relationAppDossierId)
+                        }} disabled={!Number.isFinite(relationAppDossierId)}>
+                          <span className="contact-modern-property-thumb"><DetailIcon type="mandate" /></span>
+                          <span>
+                            <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
+                            <small>{relation.titre_bien || relationLabel}</small>
+                            <em>{[contactTransactionLabel(relation), relation.transaction_date ? formatDate(relation.transaction_date) : null].filter(Boolean).join(' - ') || 'Relation annonce'}</em>
+                          </span>
+                          <i className={contactRoleChipClass(relation.role_contact)}>{relationLabel}</i>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : <p className="contact-modern-empty">Aucune annonce liee dans l'index courant.</p>}
+              </article>
+
+              <article className="contact-modern-card">
+                <div className="contact-modern-side-head">
+                  <strong>Recherches acquereurs</strong>
+                  <span>{selectedActiveSearches.length}</span>
+                </div>
+                {props.searches.length > 0 ? (
+                  <div className="contact-modern-search-list">
+                    {props.searches.slice(0, 4).map((search) => {
+                      const cities = contactJsonList(search.villes_json)
+                      const types = contactSearchTypes(search.types_json)
+                      return (
+                        <div key={`modern-search-${search.contact_search_key}`} className={contactBool(search.is_active) ? 'is-active' : ''}>
+                          <strong>{cities.join(', ') || 'Secteur non renseigne'}</strong>
+                          <span>{types.join(', ') || search.offre || 'Type non renseigne'}</span>
+                          <StatusPill value={contactBool(search.is_active) ? 'Active' : 'Archive'} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <section className="contact-modern-empty-card is-compact">
+                    <DetailIcon type="visibility" />
+                    <strong>Aucune recherche active</strong>
+                    <span>{contactBool(props.contact.has_contact_detail) ? 'Aucune recherche active poussee sur Supabase pour ce contact.' : 'Recherche visible apres chargement Hektor.'}</span>
+                  </section>
+                )}
+              </article>
+
+              <article className="contact-modern-card">
+                <div className="contact-modern-side-head">
+                  <strong>Doublons</strong>
+                  <span className={duplicateCount > 0 ? 'is-warning' : ''}>{duplicateCount}</span>
+                </div>
+                <p>{duplicateCount ? `${duplicateCount} groupe(s) doublon detecte(s).` : 'Aucun doublon classe.'}</p>
+                <small>{props.contact.duplicate_primary_candidate_id ? `Candidat principal : ${props.contact.duplicate_primary_candidate_id}` : 'Controle qualite sans candidat principal force.'}</small>
+              </article>
+            </aside>
+          </div>
+        </div>
+        <div className="contact-detail-modal-head">
+          <div className="contact-detail-heading-main">
+            <div className="contact-detail-title">
+              <ContactTypeMark contact={props.contact} />
+              <div>
+                <p className="eyebrow">Fiche contact</p>
+                <h3>{props.contact.display_name}</h3>
+                <span>ID {props.contact.hektor_contact_id} - {contactArchiveLabel(props.contact)}</span>
+              </div>
+            </div>
+            <div className="contact-communication-panel" aria-label="Actions de contact direct">
+              {props.contact.phone_primary ? (
+                <a className="contact-quick-action is-phone" href={`tel:${props.contact.phone_primary}`}>
+                  <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
+                  <span><strong>Appeler</strong><small>{props.contact.phone_primary}</small></span>
+                </a>
+              ) : null}
+              {props.contact.email ? (
+                <button className="contact-quick-action is-email" type="button" onClick={() => setContactEmailComposerOpen(true)}>
+                  <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="content" /></span>
+                  <span><strong>Email</strong><small>{props.contact.email}</small></span>
+                </button>
+              ) : null}
+              <button className="contact-quick-action is-rdv" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                <span className="contact-quick-action-icon" aria-hidden="true"><DetailIcon type="history" /></span>
+                <span><strong>Creer RDV</strong><small>Agenda Google</small></span>
+              </button>
+            </div>
+          </div>
+          <div className="contact-management-actions" aria-label="Gestion du contact">
+            <button className="contact-management-button is-hektor" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>
+              <span aria-hidden="true"><DetailIcon type="hektor" /></span>
+              Hektor
+            </button>
+            {props.canManageContacts ? (
+              <button className="contact-management-button is-edit" type="button" onClick={() => setEditing(true)}>
+                <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+                Modifier
+              </button>
+            ) : null}
+            {props.canDeleteContacts ? (
+              <button className="contact-management-button is-delete" type="button" onClick={() => setDeleteOpen(true)}>
+                <span aria-hidden="true"><DetailIcon type="history" /></span>
+                Supprimer
+              </button>
+            ) : null}
+            <button className="contact-management-button is-close" type="button" onClick={props.onClose}>
+              <span aria-hidden="true">x</span>
+              Fermer
+            </button>
+          </div>
+          <div className="contact-detail-hero-stats" aria-label="Synthese contact">
+            <span className="is-relations"><strong>{props.relations.length}</strong><small>relation(s) annonce</small></span>
+            <span className={selectedActiveSearches.length > 0 ? 'is-search-active' : ''}><strong>{selectedActiveSearches.length}</strong><small>recherche(s) active(s)</small></span>
+            <span className={duplicateCount > 0 ? 'is-duplicate' : ''}><strong>{duplicateCount}</strong><small>groupe(s) doublon</small></span>
+          </div>
+        </div>
+
+        <div className="contact-detail-modal-grid">
+          <div className="contact-detail-profile-column">
+            <article className="detail-card contact-profile-card contact-detail-main-card">
+              <div className="contact-card-heading">
+                <span className="detail-label">Identite</span>
+                <strong>{props.contact.civilite ? `${props.contact.civilite} ` : ''}{[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}</strong>
+              </div>
+              <div className="contact-info-list">
+                <div className="contact-info-item is-phone">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="contact" /></span>
+                  <div><span>Telephone</span><strong>{props.contact.phone_primary || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-email">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="content" /></span>
+                  <div><span>Email</span><strong>{props.contact.email || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-location">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="location" /></span>
+                  <div><span>Secteur</span><strong>{[props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-owner">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="commercial" /></span>
+                  <div><span>Negociateur</span><strong>{props.contact.commercial_nom || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-agency">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+                  <div><span>Agence</span><strong>{props.contact.agence_nom || '-'}</strong></div>
+                </div>
+                <div className="contact-info-item is-sync">
+                  <span className="contact-info-icon" aria-hidden="true"><DetailIcon type="hektor" /></span>
+                  <div><span>Detail</span><strong>{contactBool(props.contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</strong></div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div className="contact-detail-activity-column">
+            <article className="detail-card contact-detail-control-card">
+            <div className="contact-card-heading">
+              <span className="detail-label">Controle</span>
+              <strong>Statut, qualite et synchronisation</strong>
+            </div>
+            <div className="tag-row">
+              <StatusPill value={contactArchiveLabel(props.contact)} />
+              <span className={`contact-duplicate-pill ${contactDuplicateTone(props.contact.duplicate_max_severity)}`}>{contactSeverityLabel(props.contact.duplicate_max_severity)}</span>
+              {props.contact.active_search_count ? <StatusPill value="Recherche active" /> : null}
+              <StatusPill value={contactBool(props.contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
+              {contactBool(props.contact.supabase_sync_eligible) ? <StatusPill value="Eligible app" /> : null}
+              {selectedRoles.map((role) => <StatusPill key={role} value={contactDirectoryRoleLabel(role)} />)}
+            </div>
+            {selectedTypologies.length > 0 ? (
+              <div className="contact-chip-row">
+                {selectedTypologies.map((badge) => <span key={`selected-${badge}`} className={contactRoleChipClass(badge)}>{contactDirectoryRoleLabel(badge)}</span>)}
+              </div>
+            ) : null}
+            <div className="contact-detail-notes">
+              <span>{duplicateCount ? `${duplicateCount} groupe(s) doublon detecte(s)` : 'Pas de doublon classe'}</span>
+              {contactBool(props.contact.has_contact_detail) ? (
+                <span>{props.contact.total_search_count ?? 0} recherche(s) connue(s), dont {props.contact.active_search_count ?? 0} active(s)</span>
+              ) : (
+                <span>Fiche detail non encore chargee: recherches inconnues dans Supabase.</span>
+              )}
+              {contactBool(props.contact.has_contact_detail) && props.contact.contact_detail_synced_at ? <span>Detail lu le {formatDate(props.contact.contact_detail_synced_at)}</span> : null}
+              {props.contact.duplicate_primary_candidate_id ? <span>Candidat principal: {props.contact.duplicate_primary_candidate_id}</span> : null}
+            </div>
+            </article>
+
+            <article className="detail-card contact-google-agenda-card">
+            <div className="contact-card-heading">
+              <div>
+                <span className="detail-label">RDV Google</span>
+                <strong>{googleContactEventsLoading ? 'Chargement...' : `${activeGoogleContactEvents.length} rendez-vous lie(s)`}</strong>
+              </div>
+              <button className="ghost-button button-primary" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                Creer RDV Google
+              </button>
+            </div>
+            <div className={`contact-next-step-card ${nextGoogleContactEvent ? 'has-event' : 'is-empty'}`}>
+              <span>{nextGoogleContactEvent ? 'Prochaine action' : 'Action conseillee'}</span>
+              <strong>{nextGoogleContactEvent ? nextGoogleContactEvent.summary : 'Planifier le prochain contact'}</strong>
+              <small>{nextGoogleContactEvent ? formatDateTime(nextGoogleContactEvent.starts_at) : 'Creer un RDV Google depuis cette fiche pour garder le suivi CRM a jour.'}</small>
+            </div>
+            {googleContactEventsError ? <p className="form-error">{googleContactEventsError}</p> : null}
+            {activeGoogleContactEvents.length > 0 ? (
+              <div className="contact-google-agenda-list">
+                {activeGoogleContactEvents.map((event) => {
+                  const eventInvitees = Array.isArray(event.attendees_json) ? event.attendees_json : []
+                  const inviteeContacts = googleAgendaEventInviteeContacts(event)
+                  const contactInvitee = inviteeContacts.find((item) => item.hektorContactId === props.contact.hektor_contact_id)
+                  const eventAppDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
+                  return (
+                    <article key={`contact-google-event-${event.id}`} className="contact-google-agenda-item">
+                      <div className="contact-google-agenda-item-head">
+                        <span>{googleAgendaEventTypeOptions.find((option) => option.value === event.event_type)?.label ?? 'RDV'}</span>
+                        <strong>{event.summary}</strong>
+                      </div>
+                      <div className="contact-google-agenda-facts">
+                        <span>{formatDateTime(event.starts_at)} - {formatDateTime(event.ends_at)}</span>
+                        <span>{event.google_calendar_email}</span>
+                        {event.location ? <span>{event.location}</span> : null}
+                        {contactInvitee?.label ? <span>Invite : {contactInvitee.label}</span> : null}
+                        {eventInvitees.length > 0 ? <span>{eventInvitees.length} invite(s)</span> : null}
+                      </div>
+                      <div className="contact-google-agenda-actions">
+                        {Number.isFinite(eventAppDossierId) ? (
+                          <button className="ghost-button button-subtle" type="button" onClick={() => {
+                            props.onClose()
+                            props.onOpenDossier(eventAppDossierId)
+                          }}>
+                            Ouvrir dossier
+                          </button>
+                        ) : null}
+                        {event.google_html_link ? (
+                          <a className="ghost-button button-subtle" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
+                        ) : null}
+                        {canPrintVisitVoucher(event) ? (
+                          <button className="ghost-button button-primary" type="button" onClick={() => void handleOpenVisitVoucherPrint(event)} disabled={googleContactAgendaDeletingId === event.id || googleContactAgendaPrintingId === event.id}>
+                            {googleContactAgendaPrintingId === event.id ? 'Preparation...' : 'Bon de visite'}
+                          </button>
+                        ) : null}
+                        <button className="ghost-button button-subtle" type="button" onClick={() => handleOpenEditGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>
+                          Modifier
+                        </button>
+                        <button className="ghost-button button-subtle" type="button" onClick={() => void handleDeleteGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>
+                          {googleContactAgendaDeletingId === event.id ? 'Suppression...' : 'Supprimer'}
+                        </button>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            ) : <p>{googleContactEventsLoading ? 'Chargement des rendez-vous...' : 'Aucun RDV Google lie a ce contact pour le moment.'}</p>}
+            </article>
+            {googleContactAgendaOpen ? (
+              <GoogleAgendaContactModal
+                contact={props.contact}
+                relations={props.relations}
+                hektorNegotiators={props.hektorNegotiators}
+                sessionEmail={props.sessionEmail}
+                editingEvent={googleContactAgendaEditingEvent}
+                onClose={() => {
+                  setGoogleContactAgendaOpen(false)
+                  setGoogleContactAgendaEditingEvent(null)
+                }}
+                onCreated={handleGoogleContactAgendaCreated}
+                onUpdated={handleGoogleContactAgendaUpdated}
+              />
+            ) : null}
+          </div>
+
+          <div className="contact-detail-property-column">
+            <article className="detail-card contact-search-detail">
+            <div className="contact-card-heading">
+              <div>
+                <span className="detail-label">Recherches acquereurs</span>
+                <strong>Projet et criteres</strong>
+              </div>
+            </div>
+            <div className="contact-search-overview">
+              <div><strong>{selectedActiveSearches.length}</strong><span>actives</span></div>
+              <div><strong>{selectedArchivedSearches.length}</strong><span>archivees</span></div>
+              <div><strong>{props.contact.total_search_count ?? props.searches.length}</strong><span>connues</span></div>
+            </div>
+            <div className="contact-search-summary">
+              <span>{contactBool(props.contact.has_contact_detail) ? 'Les recherches proviennent du detail contact Hektor deja charge.' : 'Fiche detail non encore chargee pour ce contact.'}</span>
+            </div>
+            {props.searches.length > 0 ? (
+              <div className="contact-search-list">
+                {props.searches.map((search) => {
+                  const cities = contactJsonList(search.villes_json)
+                  const types = contactSearchTypes(search.types_json)
+                  const criteria = contactSearchCriteriaLabels(search)
+                  return (
+                    <div key={search.contact_search_key} className={`contact-search-item ${contactBool(search.is_active) ? 'is-active' : 'is-archived'}`}>
+                      <div className="contact-search-item-head">
+                        <strong>{cities.join(', ') || 'Secteur non renseigne'}</strong>
+                        <StatusPill value={contactBool(search.is_active) ? 'Active' : 'Archive'} />
+                      </div>
+                      <span>{types.join(', ') || search.offre || 'Type non renseigne'}</span>
+                      {criteria.length > 0 ? (
+                        <div className="contact-search-criteria">
+                          {criteria.map((item) => <small key={`${search.contact_search_key}-${item}`}>{item}</small>)}
+                        </div>
+                      ) : <small>Aucun critere chiffre exploitable.</small>}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : <p>{contactBool(props.contact.has_contact_detail) ? 'Aucune recherche active poussee sur Supabase pour ce contact.' : 'Les recherches seront visibles apres chargement de la fiche detail Hektor.'}</p>}
+            </article>
+
+            <article className="detail-card contact-detail-relations-card">
+            <div className="contact-card-heading">
+              <div>
+                <span className="detail-label">Annonces liees</span>
+                <strong>Biens et historique</strong>
+              </div>
+            </div>
+            {props.relations.length > 0 ? (
+              <div className="contact-relation-list">
+                {props.relations.map((relation) => {
+                  const relationLabel = contactDirectoryRoleLabel(relation.role_contact)
+                  const relationAppDossierId = Number(relation.app_dossier_id)
+                  return (
+                    <button key={`${relation.hektor_contact_id}-${relation.hektor_annonce_id}-${relation.role_contact}`} type="button" onClick={() => {
+                      if (!Number.isFinite(relationAppDossierId)) return
+                      props.onClose()
+                      props.onOpenDossier(relationAppDossierId)
+                    }} disabled={!Number.isFinite(relationAppDossierId)}>
+                      <span className="contact-relation-button-head">
+                        <strong>{relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`}</strong>
+                        <span className={contactRoleChipClass(relation.role_contact)}>{relationLabel}</span>
+                      </span>
+                      <span>{relation.titre_bien || relationLabel}</span>
+                      <small>{[contactTransactionLabel(relation), relation.transaction_date ? formatDate(relation.transaction_date) : null].filter(Boolean).join(' - ') || 'Relation annonce'}</small>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : <p>Aucune annonce liee dans l'index courant.</p>}
+            </article>
+          </div>
+        </div>
+      </section>
       {editing && props.canManageContacts ? (
-        <ContactEditModalV2
-          contact={props.contact}
-          hektorUserEmail={props.hektorUserEmail}
-          hektorUserId={props.hektorUserId}
-          hektorNegotiators={props.hektorNegotiators}
-          profileRole={props.profileRole}
-          sessionEmail={props.sessionEmail}
+        <ContactWorkflowModal
+          title="Modifier le contact"
+          eyebrow="Mise a jour Hektor"
+          summary="Les changements sont envoyes au worker Hektor puis resynchronises vers le local et Supabase."
+          tone="edit"
           onClose={() => setEditing(false)}
-          onJobCreated={props.onJobCreated}
-        />
+        >
+          <HektorContactIdentityForm
+            mode="update"
+            contact={props.contact}
+            hektorUserEmail={props.hektorUserEmail}
+            hektorUserId={props.hektorUserId}
+            hektorNegotiators={props.hektorNegotiators}
+            profileRole={props.profileRole}
+            sessionEmail={props.sessionEmail}
+            onCancel={() => setEditing(false)}
+            onJobCreated={props.onJobCreated}
+          />
+        </ContactWorkflowModal>
       ) : null}
-
-      {googleContactAgendaOpen ? (
-        <GoogleAgendaContactModal
-          contact={props.contact}
-          relations={props.relations}
-          hektorNegotiators={props.hektorNegotiators}
-          sessionEmail={props.sessionEmail}
-          editingEvent={googleContactAgendaEditingEvent}
-          onClose={() => {
-            setGoogleContactAgendaOpen(false)
-            setGoogleContactAgendaEditingEvent(null)
-          }}
-          onCreated={handleGoogleContactAgendaCreated}
-          onUpdated={handleGoogleContactAgendaUpdated}
-        />
-      ) : null}
-
       {contactEmailComposerOpen ? (
         <ContactEmailComposerModal
           contact={props.contact}
@@ -25972,7 +25747,6 @@ function ContactDetailPopup(props: {
           onClose={() => setContactEmailComposerOpen(false)}
         />
       ) : null}
-
       {deleteOpen && props.canDeleteContacts ? (
         <ContactWorkflowModal
           title="Supprimer le contact"
