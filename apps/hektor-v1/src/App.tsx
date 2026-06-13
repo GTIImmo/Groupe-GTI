@@ -118,6 +118,7 @@ import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
 import ContactSearchModal from './ContactSearchModal'
+import RechercheAcquereur from './RechercheAcquereur'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 
@@ -8243,6 +8244,8 @@ export default function App() {
     return window.localStorage.getItem('gti-sidebar-collapsed') === '1'
   })
   const [requestComment, setRequestComment] = useState('')
+  const [rechercheAcquereurOpen, setRechercheAcquereurOpen] = useState(false)
+  const [rechercheAcquereurSearch, setRechercheAcquereurSearch] = useState<AppContactSearch | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -13410,6 +13413,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </div>
         ) : null}
 
+        <RechercheAcquereur open={rechercheAcquereurOpen} onClose={() => setRechercheAcquereurOpen(false)} contact={selectedContact} search={rechercheAcquereurSearch} />
+
     </>
   )
 
@@ -13725,6 +13730,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={handleOptimisticContactDeleted}
+            onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
           />
         ) : screen === 'suivi' ? (
           <MobileSuiviCards
@@ -14621,6 +14627,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={handleOptimisticContactDeleted}
+            onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
           />
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
@@ -15158,7 +15165,7 @@ function HomeDashboardScreen(props: {
             <div className="home-panel-head"><h3>Mes priorites</h3></div>
             <HomePriority label="Annonces sans photo" value={withoutPhoto.length} detail="A completer" tone="magenta" icon="photo" />
             <HomePriority label="Mandats a completer" value={withoutMandat.length} detail="En attente" tone="teal" icon="mandate" />
-            <HomePriority label="Acquereurs actifs" value={props.contactStats.activeSearchContacts} detail="A contacter" tone="teal" icon="contact" />
+            <HomePriority label="Acquereurs actifs" value={props.contactStats.activeSearchContacts} detail="Rapprocher les biens" tone="teal" icon="contact" />
           </section>
           <section className="home-panel home-panel-wide">
             <div className="home-panel-head"><h3>Biens a suivre</h3><button type="button" onClick={() => props.onOpenScreen('mandats')}>Voir tout</button></div>
@@ -15196,9 +15203,9 @@ function HomeConstructionPanel({ title, detail }: { title: string; detail: strin
   )
 }
 
-function HomePriority({ label, value, detail, tone, icon = 'priority' }: { label: string; value: number | string; detail: string; tone: HomeDashboardTone; icon?: DetailIconKey }) {
+function HomePriority({ label, value, detail, tone, icon = 'priority', onClick }: { label: string; value: number | string; detail: string; tone: HomeDashboardTone; icon?: DetailIconKey; onClick?: () => void }) {
   return (
-    <button className={`home-priority home-tone-${tone}`} type="button">
+    <button className={`home-priority home-tone-${tone}`} type="button" onClick={onClick}>
       <span className="home-priority-icon" aria-hidden="true"><DetailIcon type={icon} /></span>
       <span><strong>{label}</strong><small>{detail}</small></span>
       <em>{value}</em>
@@ -25668,6 +25675,7 @@ function ContactDetailPopup(props: {
   onContactDeleted?: (contact: AppContact) => void
   onClose: () => void
   onOpenDossier: (id: number) => void
+  onOpenRechercheAcquereur?: (search: AppContactSearch) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -26253,6 +26261,12 @@ function ContactDetailPopup(props: {
                                         ) : null}
                                       </div>
                                     ) : null}
+                                    {contactBool(search.is_active) && props.onOpenRechercheAcquereur ? (
+                                      <button className="btn fcx-rapprocher" type="button" onClick={() => props.onOpenRechercheAcquereur?.(search)}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="14" height="14"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5Z"/><path d="M9 21V13h6v8"/><circle cx="17" cy="7" r="3.5"/><path d="M15.5 5.5 17 7l2-2"/></svg>
+                                        Rapprocher les biens
+                                      </button>
+                                    ) : null}
                                   </div>
                                 )
                               })}
@@ -26613,6 +26627,7 @@ function ContactsScreen(props: {
   sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
   onContactDeleted?: (contact: AppContact) => void
+  onOpenRechercheAcquereur?: (search: AppContactSearch) => void
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
@@ -26736,6 +26751,7 @@ function ContactsScreen(props: {
           onContactDeleted={props.onContactDeleted}
           onClose={() => setDetailOpen(false)}
           onOpenDossier={props.onOpenDossier}
+          onOpenRechercheAcquereur={props.onOpenRechercheAcquereur}
         />
       ) : null}
     </section>
@@ -26766,6 +26782,7 @@ function MobileContactCards(props: {
   sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
   onContactDeleted?: (contact: AppContact) => void
+  onOpenRechercheAcquereur?: (search: AppContactSearch) => void
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
   const openContactDetail = (contactId: string) => {
@@ -26877,6 +26894,7 @@ function MobileContactCards(props: {
           onContactDeleted={props.onContactDeleted}
           onClose={() => setDetailOpen(false)}
           onOpenDossier={props.onOpenDossier}
+          onOpenRechercheAcquereur={props.onOpenRechercheAcquereur}
         />
       ) : null}
     </section>
