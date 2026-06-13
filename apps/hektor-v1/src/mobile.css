@@ -2196,4 +2196,46 @@
     background: var(--md-surface-2);
     color: var(--md-text);
   }
+
+  /* ---- Pastilles de statut & avatars de tonalité (fonds clairs !important
+     dans fiche-contact-v2.css) : version sombre translucide lisible ---- */
+  .mobile-app-shell .mobile-status-row .status-pill,
+  .mobile-app-shell .mobile-list-card .status-pill {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #e7eaea !important;
+  }
+  /* On garde une teinte d'état là où elle porte du sens */
+  .mobile-app-shell .status-pill.status-pill-state-active {
+    background: rgba(47, 125, 89, 0.26) !important;
+    border-color: rgba(47, 125, 89, 0.5) !important;
+    color: #d7f5e6 !important;
+  }
+  .mobile-app-shell .status-pill.status-pill-state-sold,
+  .mobile-app-shell .status-pill.status-pill-state-offer {
+    background: rgba(180, 83, 9, 0.28) !important;
+    border-color: rgba(180, 83, 9, 0.52) !important;
+    color: #ffe6d2 !important;
+  }
+  .mobile-app-shell .contact-type-mark {
+    background: var(--md-surface-2) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+}
+
+/* ---- Équilibrage de la rangée de commande sur téléphone (clair + sombre).
+   La disposition existante (Stats pleine largeur, Réinitialiser flottant)
+   est déséquilibrée ; on passe à une grille 2 colonnes régulière 2×2.
+   On surclasse les règles ≤420px existantes via l'ancêtre .mobile-app-shell. */
+@media (max-width: 767px) {
+  .mobile-app-shell .mobile-command-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mobile-app-shell .mobile-command-actions .mobile-stats-toggle,
+  .mobile-app-shell .mobile-command-actions button:first-child,
+  .mobile-app-shell .mobile-command-actions button:last-child {
+    grid-column: auto;
+    grid-row: auto;
+  }
 }
