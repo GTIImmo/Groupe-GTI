@@ -2083,6 +2083,50 @@ export async function loadRapprochements(contactSearchKey: string): Promise<Rapp
   return (data ?? []) as RapprochementRow[]
 }
 
+// ---- Étape B : traçabilité (propositions, statuts, relances) · app-only ----
+export type StatutRow = { app_dossier_id: number; status: string; channel: string | null; reason: string | null; proposed_at: string | null }
+export type RelanceRow = {
+  id: number; contact_search_key: string; app_dossier_id: number | null; hektor_contact_id: string
+  type: string; label: string | null; sub: string | null; due_date: string | null; status: string
+  negociateur_email: string | null; created_at: string; updated_at: string
+}
+
+export async function loadSearchStatuts(contactSearchKey: string): Promise<StatutRow[]> {
+  if (!hasSupabaseEnv || !supabase || !contactSearchKey.trim()) return []
+  const { data, error } = await supabase.rpc('app_get_search_statuts', { p_search_key: contactSearchKey.trim() })
+  if (error) throw new Error(error.message ?? 'Unable to load statuts')
+  return (data ?? []) as StatutRow[]
+}
+
+export async function loadRelances(contactSearchKey: string): Promise<RelanceRow[]> {
+  if (!hasSupabaseEnv || !supabase || !contactSearchKey.trim()) return []
+  const { data, error } = await supabase.rpc('app_list_relances', { p_search_key: contactSearchKey.trim() })
+  if (error) throw new Error(error.message ?? 'Unable to load relances')
+  return (data ?? []) as RelanceRow[]
+}
+
+export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const { error } = await supabase.rpc('app_record_proposition', {
+    p_search_key: contactSearchKey, p_dossier_id: appDossierId, p_channel: channel, p_note: note ?? null, p_nego: nego ?? null,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to record proposition')
+}
+
+export async function setBienStatut(contactSearchKey: string, appDossierId: number, status: string, reason?: string | null, nego?: string | null): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const { error } = await supabase.rpc('app_set_bien_statut', {
+    p_search_key: contactSearchKey, p_dossier_id: appDossierId, p_status: status, p_reason: reason ?? null, p_nego: nego ?? null,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to set statut')
+}
+
+export async function setRelanceStatus(relanceId: number, status: 'fait' | 'reporte'): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const { error } = await supabase.rpc('app_relance_set_status', { p_relance_id: relanceId, p_status: status })
+  if (error) throw new Error(error.message ?? 'Unable to update relance')
+}
+
 export async function loadDossiersPage({
   filters,
   page,

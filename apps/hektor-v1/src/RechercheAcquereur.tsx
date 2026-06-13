@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppContact, AppContactSearch } from './types'
-import { loadRapprochements, type RapprochementRow } from './lib/api'
+import {
+  loadRapprochements, loadSearchStatuts, loadRelances,
+  recordProposition, setBienStatut, setRelanceStatus,
+  type RapprochementRow, type StatutRow, type RelanceRow,
+} from './lib/api'
 
 /**
  * Recherche Acquéreur — écran de rapprochement acquéreur / biens.
@@ -45,10 +49,12 @@ interface Property {
   crit: Crit[]
   specs: Spec[]
   inEnvoi?: boolean
+  appDossierId?: number
 }
 
 interface Relance {
   id: string
+  dbId?: number
   ref: string
   icon: 'late' | 'normal' | 'fav' | 'maj'
   title: string
@@ -260,7 +266,27 @@ function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null)
     surface: r.surface != null ? Math.round(Number(r.surface)) : 0,
     scoreClass, score: r.score,
     status: 'todo', group: 'todo', tagCls: 'todo', tagLabel: 'À proposer',
-    crit, specs,
+    crit, specs, appDossierId: r.app_dossier_id,
+  }
+}
+
+// Applique le statut persisté (étape B) sur une carte (par défaut: à proposer).
+function applyStatut(p: Property, st?: StatutRow): Property {
+  if (!st || st.status === 'jamais_vu') return p
+  if (st.status === 'ecarte') return { ...p, status: 'ecarte', group: 'ecarte', tagCls: 'ecarte', tagLabel: 'Écarté · négociateur', foot: st.reason ? `Écarté · ${st.reason}` : 'Écarté par le négociateur' }
+  if (st.status === 'visite') return { ...p, status: 'visite', group: 'encours', tagCls: 'visite', tagLabel: 'Visite prévue', foot: st.channel ? `Visite proposée · ${st.channel}` : 'Visite prévue' }
+  const lbl = st.channel || 'contact'
+  return { ...p, status: 'propose', group: 'encours', tagCls: 'propose', tagLabel: `Proposé · ${lbl}`, foot: `Proposé par ${lbl}` }
+}
+
+// Map d'une relance persistée vers le modèle d'affichage.
+function relToRelance(r: RelanceRow): Relance {
+  const late = r.due_date ? new Date(r.due_date).getTime() < Date.now() : false
+  return {
+    id: `db-${r.id}`, dbId: r.id,
+    ref: r.app_dossier_id != null ? String(r.app_dossier_id) : 'search',
+    icon: late ? 'late' : 'normal',
+    title: r.label || 'Relance', sub: r.sub || '', snoozable: true,
   }
 }
 
@@ -320,20 +346,32 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
     }, 1100)
   }, [])
 
-  // Chargement des rapprochements persistés (scoring SQL). Fallback mock si aucune recherche (mode design).
+  // Chargement des rapprochements persistés (scoring SQL) + statuts + relances. Fallback mock si aucune recherche.
   const searchKey = search?.contact_search_key
+  const negoEmail = contact?.negociateur_email ?? null
+
   useEffect(() => {
     if (!open) return
-    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setLoadError(null); setLoading(false); return }
+    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setLoadError(null); setLoading(false); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    loadRapprochements(searchKey)
-      .then((rows) => { if (!cancelled) setProperties(rows.map((r) => rapproToProperty(r, search))) })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]) } })
+    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey)])
+      .then(([rows, sts, rels]: [RapprochementRow[], StatutRow[], RelanceRow[]]) => {
+        if (cancelled) return
+        const stMap = new Map(sts.map((s) => [s.app_dossier_id, s]))
+        setProperties(rows.map((r) => applyStatut(rapproToProperty(r, search), stMap.get(r.app_dossier_id))))
+        setRelances(rels.map(relToRelance))
+      })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, searchKey])
+
+  const reloadRelances = useCallback(() => {
+    if (!searchKey) return
+    loadRelances(searchKey).then((rels) => setRelances(rels.map(relToRelance))).catch(() => {})
+  }, [searchKey])
 
   /* --------------------------- dérivés --------------------------- */
   const counts = useMemo(() => ({
@@ -374,30 +412,48 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
     })
   }, [])
 
+  const dossierIdsForRefs = useCallback((refs: string[]) =>
+    properties.filter((p) => refs.includes(p.ref)).map((p) => p.appDossierId).filter((x): x is number => x != null),
+    [properties])
+
   const propose = useCallback((refs: string[], chan: Channel) => {
     const c = CHAN_CONFIG[chan]
     setProperties((list) => list.map((p) => refs.includes(p.ref)
       ? { ...p, status: c.status, group: 'encours', tagCls: c.tagCls, tagLabel: c.tagLabel, foot: c.foot, inEnvoi: false }
       : p))
-    refs.forEach(addRelance)
     flash(refs)
+    if (searchKey) {
+      Promise.all(dossierIdsForRefs(refs).map((id) => recordProposition(searchKey, id, chan, null, negoEmail)))
+        .then(reloadRelances)
+        .catch((e) => toast(`Erreur d'enregistrement : ${e?.message ?? ''}`))
+    } else {
+      refs.forEach(addRelance)
+    }
     toast(`${refs.length} bien(s) proposé(s) par ${c.lbl}.`)
-  }, [addRelance, flash, toast])
+  }, [searchKey, negoEmail, dossierIdsForRefs, reloadRelances, addRelance, flash, toast])
 
   const ecarter = useCallback((refs: string[]) => {
     setProperties((list) => list.map((p) => refs.includes(p.ref)
       ? { ...p, status: 'ecarte', group: 'ecarte', tagCls: 'ecarte', tagLabel: 'Écarté · négociateur', foot: `Écarté par le négociateur le ${TODAY} · hors sélection.`, inEnvoi: false }
       : p))
+    if (searchKey) {
+      Promise.all(dossierIdsForRefs(refs).map((id) => setBienStatut(searchKey, id, 'ecarte', null, negoEmail)))
+        .catch((e) => toast(`Erreur : ${e?.message ?? ''}`))
+    }
     toast(`${refs.length} bien(s) écarté(s).`)
-  }, [toast])
+  }, [searchKey, negoEmail, dossierIdsForRefs, toast])
 
   const restore = useCallback((ref: string) => {
     setProperties((list) => list.map((p) => p.ref === ref
       ? { ...p, status: 'todo', group: 'todo', tagCls: 'todo', tagLabel: 'À proposer', foot: undefined, inEnvoi: false }
       : p))
     flash([ref])
+    if (searchKey) {
+      const id = properties.find((p) => p.ref === ref)?.appDossierId
+      if (id != null) setBienStatut(searchKey, id, 'jamais_vu', null, negoEmail).catch(() => {})
+    }
     toast('Bien rétabli dans « À proposer ».')
-  }, [flash, toast])
+  }, [searchKey, negoEmail, properties, flash, toast])
 
   const toggleBook = useCallback((ref: string) => {
     setProperties((list) => list.map((p) => p.ref === ref ? { ...p, inEnvoi: !p.inEnvoi } : p))
@@ -440,9 +496,17 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   }, [mailRefs, propose, toast])
 
   const doneRelance = useCallback((id: string) => {
+    const rel = relances.find((r) => r.id === id)
     setRelances((list) => list.filter((r) => r.id !== id))
+    if (rel?.dbId) setRelanceStatus(rel.dbId, 'fait').catch(() => {})
     toast('Relance marquée comme faite.')
-  }, [toast])
+  }, [relances, toast])
+
+  const snoozeRelance = useCallback((id: string) => {
+    const rel = relances.find((r) => r.id === id)
+    if (rel?.dbId) setRelanceStatus(rel.dbId, 'reporte').then(reloadRelances).catch(() => {})
+    toast('Relance reportée de 3 jours.')
+  }, [relances, reloadRelances, toast])
 
   const cardAction = useCallback((p: Property, act: string) => {
     if (act === 'book') toggleBook(p.ref)
@@ -824,7 +888,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
                       <div className="rel-bd"><div className="rel-t">{r.title}</div><div className="rel-s">{r.sub}</div></div>
                       <div className="rel-act">
                         <button className="rel-btn" onClick={() => doneRelance(r.id)}>Fait</button>
-                        {r.snoozable && <button className="rel-btn ghost" onClick={() => toast('Relance reportée de 3 jours.')}>+3 j</button>}
+                        {r.snoozable && <button className="rel-btn ghost" onClick={() => snoozeRelance(r.id)}>+3 j</button>}
                       </div>
                     </div>
                   ))}
