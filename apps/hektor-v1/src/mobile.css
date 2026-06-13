@@ -2379,3 +2379,89 @@
     color: var(--md-text) !important;
   }
 }
+
+/* =====================================================================
+   FICHE CONTACT (ContactDetailPopup, composant `.fcx-overlay`) — mode
+   sombre. Scopé sous `.fcx-overlay` : n'affecte que cette modale, et
+   uniquement en mobile/tablette sombre (desktop ≥1181 intact).
+   ===================================================================== */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  .fcx-overlay .panel {
+    background: var(--md-bg-1) !important;
+    color: var(--md-text) !important;
+  }
+  .fcx-overlay .topbar {
+    background: var(--md-surface) !important;
+    border-color: var(--md-border) !important;
+  }
+  .fcx-overlay .rail,
+  .fcx-overlay .rail-inner,
+  .fcx-overlay .workspace,
+  .fcx-overlay .main,
+  .fcx-overlay .tab-panel,
+  .fcx-overlay .chero,
+  .fcx-overlay .chero-top {
+    background: transparent !important;
+    color: var(--md-text) !important;
+  }
+  .fcx-overlay .coord-ic,
+  .fcx-overlay .coord-act,
+  .fcx-overlay .mod,
+  .fcx-overlay .lk,
+  .fcx-overlay .crit-c,
+  .fcx-overlay .dub-candi,
+  .fcx-overlay .dub-ic,
+  .fcx-overlay .empty-lg,
+  .fcx-overlay .btn-close,
+  .fcx-overlay .btn {
+    background: var(--md-surface-2) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+  .fcx-overlay .coord-k,
+  .fcx-overlay .rlabel,
+  .fcx-overlay .ey,
+  .fcx-overlay .crumb,
+  .fcx-overlay .sb,
+  .fcx-overlay .tb-badge {
+    color: var(--md-text-muted) !important;
+  }
+  .fcx-overlay .coord-v,
+  .fcx-overlay .nm,
+  .fcx-overlay .chero-nm,
+  .fcx-overlay .ref,
+  .fcx-overlay .rblock-h,
+  .fcx-overlay h1,
+  .fcx-overlay h2,
+  .fcx-overlay h3,
+  .fcx-overlay h4,
+  .fcx-overlay .sl-t,
+  .fcx-overlay .tl-t,
+  .fcx-overlay .lk-ref {
+    color: var(--md-text) !important;
+  }
+  .fcx-overlay .mod-meta strong {
+    color: var(--md-brand) !important;
+  }
+  .fcx-overlay .chip {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+  }
+  .fcx-overlay .mod-meta {
+    background: var(--md-brand-soft) !important;
+    border-color: var(--md-brand-line) !important;
+  }
+  .fcx-overlay .linkmini,
+  .fcx-overlay .tab.on,
+  .fcx-overlay .tab[aria-selected="true"] {
+    color: var(--md-brand) !important;
+  }
+  .fcx-overlay .tab {
+    color: var(--md-text-muted) !important;
+  }
+  .fcx-overlay .separator,
+  .fcx-overlay hr {
+    border-color: var(--md-border) !important;
+    background: var(--md-border) !important;
+  }
+}
