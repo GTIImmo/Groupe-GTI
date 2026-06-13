@@ -336,6 +336,8 @@
 
 /* ===== flux unifié & cartes ===== */
 .rech-acq .feed{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.rech-acq .ra-feed-state{padding:18px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--muted);font-size:13.5px;text-align:center}
+.rech-acq .ra-feed-state.err{border-color:#e8a39b;background:#fdeceb;color:#9a1f17}
 .rech-acq .lcard{position:relative;display:grid;grid-template-columns:176px minmax(0,1fr) 176px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow-card);transition:box-shadow .2s,transform .2s}
 .rech-acq .lcard:hover{box-shadow:var(--shadow-card-lg);transform:translateY(-1px)}
 .rech-acq .lc-accent{position:absolute;left:0;top:0;bottom:0;width:4px;z-index:4}

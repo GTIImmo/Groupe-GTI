@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppContact, AppContactSearch } from './types'
+import { loadRapprochements, type RapprochementRow } from './lib/api'
 
 /**
  * Recherche Acquéreur — écran de rapprochement acquéreur / biens.
@@ -233,6 +234,36 @@ const RA_EQUIP: Record<string, string> = {
 const raInitials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'AC'
 
+// Map d'un rapprochement persisté (RPC) vers le modèle de carte Property de l'écran.
+function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null): Property {
+  const tj = search?.types_json
+  const typeMap = (tj && typeof tj === 'object' && !Array.isArray(tj))
+    ? (tj as Record<string, unknown>)
+    : raParse<Record<string, unknown>>(tj, {})
+  const typeLabel = r.type_code && typeMap?.[r.type_code]
+    ? String(typeMap[r.type_code])
+    : (r.type_code ? `Type ${r.type_code}` : 'Bien')
+  const ref = r.numero_mandat || r.numero_dossier || (r.hektor_annonce_id ? `V${r.hektor_annonce_id}` : String(r.app_dossier_id))
+  const specs: Spec[] = []
+  if (r.surface != null) specs.push({ icon: 'surface', label: `${Math.round(Number(r.surface))} m²` })
+  if (r.nb_pieces != null) specs.push({ icon: 'pieces', label: `${Math.round(Number(r.nb_pieces))} pièces` })
+  if (r.nb_chambres != null) specs.push({ icon: 'chambres', label: `${Math.round(Number(r.nb_chambres))} ch.` })
+  const scoreClass: Property['scoreClass'] = r.score >= 85 ? 's-green' : r.score >= 70 ? 's-gold' : 's-red'
+  const priceNum = r.prix != null ? Number(r.prix) : 0
+  const price = r.prix != null ? `${Math.round(Number(r.prix)).toLocaleString('fr-FR')} €` : '—'
+  const crit: Crit[] = (r.components ?? []).map((c) => ({ k: c.k, ok: c.ok, v: c.v }))
+  return {
+    ref,
+    type: `${typeLabel}${r.ville ? ` · ${r.ville}` : ''}`,
+    title: r.title || `${typeLabel}${r.ville ? ` à ${r.ville}` : ''}`,
+    price, priceNum,
+    surface: r.surface != null ? Math.round(Number(r.surface)) : 0,
+    scoreClass, score: r.score,
+    status: 'todo', group: 'todo', tagCls: 'todo', tagLabel: 'À proposer',
+    crit, specs,
+  }
+}
+
 export interface RechercheAcquereurProps {
   open: boolean
   onClose: () => void
@@ -250,6 +281,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   const [relExpanded, setRelExpanded] = useState(false)
   const [flashing, setFlashing] = useState<Set<string>>(new Set())
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // sélecteur de canal : refs en attente d'un choix de canal
   const [chanRefs, setChanRefs] = useState<string[] | null>(null)
@@ -286,6 +319,21 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
       })
     }, 1100)
   }, [])
+
+  // Chargement des rapprochements persistés (scoring SQL). Fallback mock si aucune recherche (mode design).
+  const searchKey = search?.contact_search_key
+  useEffect(() => {
+    if (!open) return
+    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setLoadError(null); setLoading(false); return }
+    let cancelled = false
+    setLoading(true); setLoadError(null)
+    loadRapprochements(searchKey)
+      .then((rows) => { if (!cancelled) setProperties(rows.map((r) => rapproToProperty(r, search))) })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]) } })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, searchKey])
 
   /* --------------------------- dérivés --------------------------- */
   const counts = useMemo(() => ({
@@ -706,7 +754,12 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
             </div>
 
             <div className="feed">
-              {visibleProperties.map((p) => (
+              {loading && <div className="ra-feed-state">Chargement des biens correspondants…</div>}
+              {loadError && <div className="ra-feed-state err">Impossible de charger les rapprochements : {loadError}</div>}
+              {!loading && !loadError && visibleProperties.length === 0 && (
+                <div className="ra-feed-state">Aucun bien correspondant pour cette recherche.</div>
+              )}
+              {visibleProperties.slice(0, 60).map((p) => (
                 <article key={p.ref} className={`lcard${p.inEnvoi ? ' inenvoi' : ''}${flashing.has(p.ref) ? ' lc-flash' : ''}`} data-status={p.status}>
                   <div className="lc-accent" />
                   <div className="lc-photo">
@@ -749,6 +802,9 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
                   </div>
                 </article>
               ))}
+              {visibleProperties.length > 60 && (
+                <div className="ra-feed-state">+ {visibleProperties.length - 60} autres biens correspondants (affinez les critères ou le tri).</div>
+              )}
             </div>
           </div>
 

@@ -2049,6 +2049,40 @@ export async function loadContactSearches(contactId: string): Promise<AppContact
   return (data as AppContactSearch[]).map(normalizeContactSearchRow)
 }
 
+export type RapprochementComponent = { k: string; ok: boolean; v: string }
+export type RapprochementRow = {
+  app_dossier_id: number
+  hektor_annonce_id: number | null
+  numero_mandat: string | null
+  numero_dossier: string | null
+  type_code: string | null
+  ville: string | null
+  title: string | null
+  prix: number | null
+  surface: number | null
+  nb_pieces: number | null
+  nb_chambres: number | null
+  photo_url: string | null
+  negociateur_email: string | null
+  score: number
+  components: RapprochementComponent[] | null
+  first_seen_at: string | null
+  computed_at: string | null
+}
+
+/**
+ * Rapprochements persistés (étape A) : appelle la fonction SQL app_get_rapprochements
+ * (scoring 100% serveur, refresh paresseux >24h). Le front ne calcule rien.
+ */
+export async function loadRapprochements(contactSearchKey: string): Promise<RapprochementRow[]> {
+  if (!hasSupabaseEnv || !supabase || !contactSearchKey.trim()) return []
+  const { data, error } = await supabase.rpc('app_get_rapprochements', {
+    p_search_key: contactSearchKey.trim(),
+  })
+  if (error) throw new Error(error.message ?? 'Unable to load rapprochements')
+  return (data ?? []) as RapprochementRow[]
+}
+
 export async function loadDossiersPage({
   filters,
   page,
