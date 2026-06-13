@@ -2465,3 +2465,58 @@
     background: var(--md-border) !important;
   }
 }
+
+/* --- Formulaires/panneaux Hektor encastrés (fiche annonce) : cartes de
+   champs en mode sombre (HektorAnnonceFieldDetailPanel, info-cards) --- */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  .mobile-detail-embedded .hektor-detail-field-group,
+  .mobile-detail-embedded .hektor-detail-field-group.is-filled,
+  .mobile-detail-embedded .hektor-detail-field-group.is-empty,
+  .mobile-detail-embedded .info-card,
+  .mobile-detail-embedded .hektor-field-row,
+  .mobile-detail-embedded .price-change-grid > div,
+  .mobile-detail-embedded .info-grid > div {
+    background: var(--md-surface-2) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+  /* Valeurs lisibles, libellés en gris clair */
+  .mobile-detail-embedded .hektor-detail-field-group strong,
+  .mobile-detail-embedded .info-card strong,
+  .mobile-detail-embedded b {
+    color: var(--md-text) !important;
+  }
+  /* Champs de formulaire (édition) en sombre */
+  .mobile-detail-embedded input,
+  .mobile-detail-embedded textarea,
+  .mobile-detail-embedded select {
+    background: var(--md-inset) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+  /* Valeurs & corps de texte des sections natives (lignes diffusion,
+     timelines, notes) : éviter le sombre-sur-sombre */
+  .mobile-detail-panel .mobile-detail-lines b,
+  .mobile-detail-panel .mobile-timeline-item p,
+  .mobile-detail-panel .mobile-timeline-item strong,
+  .mobile-detail-panel .mobile-detail-text p,
+  .mobile-detail-panel .mobile-rich-text,
+  .mobile-detail-panel .mobile-detail-lines small,
+  .mobile-detail-panel .mobile-detail-lines small a {
+    color: var(--md-text) !important;
+  }
+  /* Pastilles de statut dans la fiche (hors en-tête, ex. « Non renseigné »
+     des transactions) : traitement sombre translucide */
+  .mobile-detail-panel .mobile-detail-section .status-pill,
+  .mobile-detail-panel .mobile-transaction-card .status-pill {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #e7eaea !important;
+  }
+  /* Bouton destructif (Supprimer) : variante sombre rouge translucide */
+  .mobile-danger-button {
+    border-color: rgba(229, 115, 115, 0.42) !important;
+    background: rgba(159, 53, 53, 0.20) !important;
+    color: #ffb3a7 !important;
+  }
+}
