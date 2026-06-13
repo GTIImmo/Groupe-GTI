@@ -5,6 +5,7 @@ import {
   recordProposition, setBienStatut, setRelanceStatus,
   type RapprochementRow, type StatutRow, type RelanceRow,
 } from './lib/api'
+import RapprochementStats from './RapprochementStats'
 
 /**
  * Recherche Acquéreur — écran de rapprochement acquéreur / biens.
@@ -309,6 +310,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [statsOpen, setStatsOpen] = useState(false)
 
   // sélecteur de canal : refs en attente d'un choix de canal
   const [chanRefs, setChanRefs] = useState<string[] | null>(null)
@@ -555,6 +557,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
         return
       }
       if (e.key === 'Escape') {
+        if (statsOpen) return // l'overlay stats gère sa propre fermeture
         if (mailRefs) setMailRefs(null)
         else if (chanRefs) setChanRefs(null)
         else if (moreOpen) setMoreOpen(false)
@@ -563,7 +566,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, presenterOpen, mailRefs, chanRefs, moreOpen, prGo, onClose])
+  }, [open, presenterOpen, mailRefs, chanRefs, moreOpen, statsOpen, prGo, onClose])
 
   if (!open) return null
 
@@ -646,6 +649,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
               <div className="menu-pop" hidden={!moreOpen} onClick={() => setMoreOpen(false)}>
                 <button className="menu-item" onClick={() => toast('Renommer la recherche…')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" /></svg>Renommer la recherche</button>
                 <button className="menu-item" onClick={() => toast('Resynchronisation Hektor lancée.')}><IcSync />Resynchroniser Hektor</button>
+                <button className="menu-item" onClick={() => setStatsOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></svg>Statistiques des rapprochements</button>
                 <button className="menu-item" onClick={() => toast('Ouverture de la fiche acquéreur…')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M14 4h6v6" /><path d="M20 4 10 14" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg>Ouvrir la fiche acquéreur<svg className="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
                 <div className="menu-sep" />
                 <button className="menu-item danger" onClick={() => toast('Recherche archivée.')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Archiver la recherche</button>
@@ -1078,6 +1082,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
           </div>
         )
       })()}
+
+      <RapprochementStats open={statsOpen} onClose={() => setStatsOpen(false)} />
 
       {/* toasts */}
       <div className="rech-acq-toasts">

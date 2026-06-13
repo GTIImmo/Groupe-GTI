@@ -2153,6 +2153,22 @@ export async function markNotificationRead(id: number): Promise<void> {
   if (error) throw new Error(error.message ?? 'Unable to mark notification read')
 }
 
+// ---- Étape E : statistiques de rapprochement ----
+export type RapprochementStats = {
+  global: { rapprochements: number; recherches_avec_rappro: number; propositions: number; ecartes: number; visites: number; alertes_non_lues: number; delai_moyen_jours: number | null }
+  criteres: { actives: number; sans_type: number; sans_secteur: number; sans_type_ni_secteur: number }
+  par_negociateur: { negociateur_email: string; rapprochements: number; rapprochements_80: number; propositions: number; ecartes: number; taux_proposition_pct: number | null }[]
+  biens_ecartes: { app_dossier_id: number; titre: string | null; ville: string | null; n_ecarte: number }[]
+  recherches_dormantes: number
+}
+
+export async function loadRapprochementStats(): Promise<RapprochementStats | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const { data, error } = await supabase.rpc('app_get_rapprochement_stats', {})
+  if (error) throw new Error(error.message ?? 'Unable to load stats')
+  return (data ?? null) as RapprochementStats | null
+}
+
 export async function loadDossiersPage({
   filters,
   page,
