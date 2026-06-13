@@ -2239,3 +2239,143 @@
     grid-row: auto;
   }
 }
+
+/* =====================================================================
+   ACCUEIL & AGENDA sur mobile — ces écrans utilisent des composants
+   desktop responsive (HomeDashboardScreen / GoogleAgendaGlobalScreen)
+   qui portent encore le teal hors charte (#0f6874) et n'ont pas de mode
+   sombre. On les harmonise UNIQUEMENT dans le contexte mobile
+   (`.mobile-app-shell`, inexistant ≥1181px) → zéro impact desktop.
+   ===================================================================== */
+
+/* --- Teal hors charte -> magenta GTI (clair + sombre) --- */
+@media (max-width: 1180px) {
+  .mobile-app-shell .eyebrow,
+  .mobile-app-shell .home-secondary-action,
+  .mobile-app-shell .home-kpi-icon,
+  .mobile-app-shell .home-priority-icon,
+  .mobile-app-shell .home-kpi-icon svg,
+  .mobile-app-shell .home-priority-icon svg,
+  .mobile-app-shell .home-panel-head button {
+    color: var(--m-brand) !important;
+  }
+  .mobile-app-shell .home-secondary-action {
+    border-color: var(--m-brand-line) !important;
+  }
+  .mobile-app-shell .home-user-chip {
+    background: var(--m-brand) !important;
+    color: #ffffff !important;
+  }
+  .mobile-app-shell .home-kpi-icon,
+  .mobile-app-shell .home-priority-icon {
+    background: var(--m-brand-soft) !important;
+    border-color: var(--m-brand-line) !important;
+  }
+}
+
+/* --- Mode sombre des écrans Accueil/Agenda --- */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  /* Texte par défaut clair */
+  .mobile-app-shell .home-dashboard,
+  .mobile-app-shell .home-dashboard h1,
+  .mobile-app-shell .home-dashboard h2,
+  .mobile-app-shell .home-dashboard h3,
+  .mobile-app-shell .home-dashboard strong,
+  .mobile-app-shell .google-agenda-global-screen {
+    color: var(--md-text) !important;
+  }
+  /* Surfaces (cartes, panneaux, recherche) en sombre */
+  .mobile-app-shell .home-kpi-card,
+  .mobile-app-shell .home-panel,
+  .mobile-app-shell .home-priority,
+  .mobile-app-shell .home-secondary-action,
+  .mobile-app-shell .home-empty,
+  .mobile-app-shell .home-construction-panel,
+  .mobile-app-shell .home-search-box,
+  .mobile-app-shell .home-mini-table,
+  .mobile-app-shell .home-table {
+    background: var(--md-surface) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+  /* Accent magenta éclairci en sombre */
+  .mobile-app-shell .eyebrow,
+  .mobile-app-shell .home-secondary-action,
+  .mobile-app-shell .home-kpi-icon,
+  .mobile-app-shell .home-priority-icon,
+  .mobile-app-shell .home-kpi-icon svg,
+  .mobile-app-shell .home-priority-icon svg,
+  .mobile-app-shell .home-panel-head button {
+    color: var(--md-brand) !important;
+  }
+  .mobile-app-shell .home-kpi-icon,
+  .mobile-app-shell .home-priority-icon {
+    background: var(--md-brand-soft) !important;
+    border-color: var(--md-brand-line) !important;
+  }
+  .mobile-app-shell .home-user-chip {
+    background: var(--md-brand) !important;
+  }
+  .mobile-app-shell .home-panel-head button {
+    background: var(--md-surface-2) !important;
+    border-color: var(--md-brand-line) !important;
+  }
+}
+
+/* --- Agenda : teal -> magenta (bouton primaire + eyebrow), clair + sombre --- */
+@media (max-width: 1180px) {
+  .mobile-app-shell .button-primary,
+  .mobile-app-shell .ghost-button.button-primary {
+    background: var(--m-brand) !important;
+    border-color: var(--m-brand) !important;
+    color: #ffffff !important;
+  }
+  .mobile-app-shell .google-agenda-panel-head span {
+    color: var(--m-brand) !important;
+  }
+}
+
+/* --- Agenda : surfaces en mode sombre --- */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  .mobile-app-shell .google-agenda-panel,
+  .mobile-app-shell .google-agenda-modal-meta {
+    background: var(--md-surface) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+  .mobile-app-shell .google-agenda-panel input,
+  .mobile-app-shell .google-agenda-panel select {
+    background: var(--md-inset) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+  .mobile-app-shell .google-agenda-view-toggle {
+    background: var(--md-inset) !important;
+  }
+  .mobile-app-shell .google-agenda-view-toggle button.is-active {
+    background: var(--md-surface-2) !important;
+    color: var(--md-text) !important;
+  }
+  .mobile-app-shell .button-primary,
+  .mobile-app-shell .ghost-button.button-primary {
+    background: var(--md-brand) !important;
+    border-color: var(--md-brand) !important;
+  }
+  .mobile-app-shell .google-agenda-panel-head span {
+    color: var(--md-brand) !important;
+  }
+  .mobile-app-shell .google-agenda-panel-head strong {
+    color: var(--md-text) !important;
+  }
+  /* Cartes KPI agenda (dégradé clair) -> surface sombre */
+  .mobile-app-shell .google-agenda-kpi,
+  .mobile-app-shell .google-agenda-kpi.is-calendar,
+  .mobile-app-shell .google-agenda-kpi.is-period,
+  .mobile-app-shell .google-agenda-kpi.is-gti,
+  .mobile-app-shell .google-agenda-kpi.is-busy,
+  .mobile-app-shell .google-agenda-kpi.is-free {
+    background: var(--md-surface) !important;
+    border-color: var(--md-border) !important;
+    color: var(--md-text) !important;
+  }
+}
