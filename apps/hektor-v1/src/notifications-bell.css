@@ -1,0 +1,52 @@
+/* Cloche de notifications négociateur — scopé .gti-notif (étape C rapprochement) */
+.gti-notif { position: relative; display: inline-flex; }
+
+.gti-notif-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.08);
+  color: #fff; transition: background .15s, border-color .15s;
+}
+.gti-notif-btn:hover { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.36); }
+.gti-notif-btn svg { width: 18px; height: 18px; }
+
+.gti-notif-badge {
+  position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 9px; background: #c2125f; color: #fff; font-size: 10.5px; font-weight: 800;
+  line-height: 17px; text-align: center; box-shadow: 0 0 0 2px rgba(0,0,0,.18);
+}
+
+.gti-notif-pop {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1400;
+  width: 340px; max-width: 86vw; background: #fff; color: #1c1815;
+  border: 1px solid #e7ddce; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 10px 40px -12px rgba(28,24,21,.45), 0 2px 8px rgba(28,24,21,.12);
+}
+.gti-notif-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px; border-bottom: 1px solid #f0e9df; background: #faf6ef;
+}
+.gti-notif-title { font-weight: 700; font-size: 13.5px; }
+.gti-notif-mark { border: none; background: none; color: #c2125f; font-size: 12px; font-weight: 600; cursor: pointer; }
+.gti-notif-mark:hover { text-decoration: underline; }
+
+.gti-notif-list { max-height: 380px; overflow-y: auto; }
+.gti-notif-empty { padding: 22px 14px; text-align: center; color: #8a8278; font-size: 13px; }
+
+.gti-notif-item {
+  display: flex; gap: 9px; width: 100%; text-align: left; padding: 11px 14px;
+  border: none; border-bottom: 1px solid #f4eee5; background: #fff; cursor: pointer;
+  transition: background .12s;
+}
+.gti-notif-item:last-child { border-bottom: none; }
+.gti-notif-item:hover { background: #faf6ef; }
+.gti-notif-item.is-unread { background: #fdf2f7; }
+.gti-notif-item.is-unread:hover { background: #fbe8f0; }
+
+.gti-notif-dot { flex-shrink: 0; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #c2125f; }
+.gti-notif-item:not(.is-unread) .gti-notif-it-bd { padding-left: 17px; }
+
+.gti-notif-it-bd { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gti-notif-it-t { font-weight: 700; font-size: 13px; }
+.gti-notif-it-s { font-size: 12.5px; color: #5a5249; line-height: 1.35; }
+.gti-notif-it-d { font-size: 11px; color: #9a9288; margin-top: 1px; }

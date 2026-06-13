@@ -2127,6 +2127,32 @@ export async function setRelanceStatus(relanceId: number, status: 'fait' | 'repo
   if (error) throw new Error(error.message ?? 'Unable to update relance')
 }
 
+// ---- Étape C : notifications négociateur ----
+export type NotificationRow = {
+  id: number; type: string; title: string; body: string | null
+  contact_search_key: string | null; app_dossier_id: number | null
+  read_at: string | null; created_at: string
+}
+
+export async function loadNotifications(negociateurEmail: string | null): Promise<NotificationRow[]> {
+  if (!hasSupabaseEnv || !supabase || !negociateurEmail) return []
+  const { data, error } = await supabase
+    .from('app_notification')
+    .select('id,type,title,body,contact_search_key,app_dossier_id,read_at,created_at')
+    .eq('negociateur_email', negociateurEmail)
+    .order('read_at', { ascending: true, nullsFirst: true })
+    .order('created_at', { ascending: false })
+    .limit(30)
+  if (error) throw new Error(error.message ?? 'Unable to load notifications')
+  return (data ?? []) as NotificationRow[]
+}
+
+export async function markNotificationRead(id: number): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const { error } = await supabase.rpc('app_mark_notification_read', { p_id: id })
+  if (error) throw new Error(error.message ?? 'Unable to mark notification read')
+}
+
 export async function loadDossiersPage({
   filters,
   page,

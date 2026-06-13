@@ -119,6 +119,7 @@ import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
 import ContactSearchModal from './ContactSearchModal'
 import RechercheAcquereur from './RechercheAcquereur'
+import NotificationsBell from './NotificationsBell'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 
@@ -13885,6 +13886,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non detectee'}</span>
               </div>
               <div className="user-card-actions">
+                <NotificationsBell negociateurEmail={sessionEmail} />
                 {isAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
                 {session ? <button className="signout-button-inline" type="button" title="Se deconnecter" data-short="S" onClick={handleSignOut}>Se deconnecter</button> : null}
               </div>
