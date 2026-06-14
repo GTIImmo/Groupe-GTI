@@ -1084,7 +1084,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               <div className="mail-biens">
                 {mailBiens.map((b) => (
                   <div className="mb-card" key={b.ref}>
-                    <div className="mb-photo"><IcPhoto /></div>
+                    <div className="mb-photo">{b.photo ? <img className="mb-photo-img" src={b.photo} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} /> : <IcPhoto />}</div>
                     <div className="mb-bd">
                       <div className="mb-ref">{b.ref}</div>
                       <div className="mb-title">{b.title}</div>
