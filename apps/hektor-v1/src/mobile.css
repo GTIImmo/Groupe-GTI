@@ -1934,8 +1934,10 @@
     border-radius: 8px;
   }
 
-  /* Scroll mobile : confinement + inertie iOS */
-  .mobile-app-shell,
+  /* Scroll mobile : confinement uniquement sur les vrais scrollers internes
+     (la fiche détail). NE PAS mettre sur .mobile-app-shell : c'est un conteneur
+     de défilement sans débordement propre (overflow-x:hidden hérité) → avec
+     `contain`, Android Chrome bloque la propagation du scroll tactile au body. */
   .mobile-detail-panel {
     overscroll-behavior-y: contain;
   }
