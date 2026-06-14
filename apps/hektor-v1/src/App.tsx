@@ -13421,6 +13421,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           search={rechercheAcquereurSearch}
           senderEmail={selectedContact ? resolveGoogleWorkspaceCalendarEmail({ emails: [selectedContact.negociateur_email, sessionEmail], label: selectedContact.commercial_nom, hektorNegotiators }) : null}
           acquereurEmail={selectedContact ? appContactAgendaEmail(selectedContact) : null}
+          onOpenAnnonce={(id) => { setRechercheAcquereurOpen(false); setScreen('mandats'); setSelectedMandatId(id); setSelectedDossierId(id); setDetailOpen(true) }}
         />
 
     </>

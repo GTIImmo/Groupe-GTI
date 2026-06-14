@@ -2062,6 +2062,9 @@ export type RapprochementRow = {
   surface: number | null
   nb_pieces: number | null
   nb_chambres: number | null
+  surface_terrain: number | null
+  equipements: string[] | null
+  prix_old: number | null
   photo_url: string | null
   negociateur_email: string | null
   score: number

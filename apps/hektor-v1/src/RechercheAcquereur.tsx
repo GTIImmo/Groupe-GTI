@@ -52,6 +52,11 @@ interface Property {
   inEnvoi?: boolean
   appDossierId?: number
   photo?: string | null
+  pricePerM2?: string
+  priceOld?: string
+  priceDrop?: string
+  terrain?: string
+  equipements?: string[]
 }
 
 interface Relance {
@@ -277,6 +282,14 @@ function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null)
   const priceNum = r.prix != null ? Number(r.prix) : 0
   const price = r.prix != null ? `${Math.round(Number(r.prix)).toLocaleString('fr-FR')} €` : '—'
   const crit: Crit[] = (r.components ?? []).map((c) => ({ k: c.k, ok: c.ok, v: c.v }))
+  const surfNum = r.surface != null ? Number(r.surface) : 0
+  const pricePerM2 = priceNum > 0 && surfNum > 0 ? `${Math.round(priceNum / surfNum).toLocaleString('fr-FR')} €/m²` : undefined
+  const priceOldNum = r.prix_old != null ? Number(r.prix_old) : 0
+  const priceOld = priceOldNum > priceNum ? `${Math.round(priceOldNum).toLocaleString('fr-FR')} €` : undefined
+  const priceDrop = priceOldNum > priceNum ? `− ${Math.round(priceOldNum - priceNum).toLocaleString('fr-FR')} €` : undefined
+  const terrainNum = r.surface_terrain != null ? Number(r.surface_terrain) : 0
+  const terrain = terrainNum > 0 ? `Terrain ${Math.round(terrainNum).toLocaleString('fr-FR')} m²` : undefined
+  const equipements = (r.equipements ?? []).filter(Boolean)
   return {
     ref,
     type: `${typeLabel}${r.ville ? ` · ${r.ville}` : ''}`,
@@ -286,6 +299,7 @@ function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null)
     scoreClass, score: r.score,
     status: 'todo', group: 'todo', tagCls: 'todo', tagLabel: 'À proposer',
     crit, specs, appDossierId: r.app_dossier_id, photo: r.photo_url,
+    pricePerM2, priceOld, priceDrop, terrain, equipements,
   }
 }
 
@@ -316,11 +330,12 @@ export interface RechercheAcquereurProps {
   search?: AppContactSearch | null
   senderEmail?: string | null
   acquereurEmail?: string | null
+  onOpenAnnonce?: (appDossierId: number) => void
 }
 
 const GTI_DOMAIN = 'gti-immobilier.fr'
 
-export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail }: RechercheAcquereurProps) {
+export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce }: RechercheAcquereurProps) {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES)
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -588,8 +603,11 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     else if (act === 'restore') restore(p.ref)
     else if (act === 'relance') toast('Relance envoyée à l’acquéreur.')
     else if (act === 'cr') toast('Visite confirmée — pensez au compte-rendu.')
-    else if (act === 'annonce') toast('Ouverture de l’annonce…')
-  }, [toggleBook, openChan, ecarter, restore, toast])
+    else if (act === 'annonce') {
+      if (onOpenAnnonce && p.appDossierId != null) onOpenAnnonce(p.appDossierId)
+      else toast('Ouverture de l’annonce…')
+    }
+  }, [toggleBook, openChan, ecarter, restore, toast, onOpenAnnonce])
 
   const focusBrief = useCallback(() => {
     railRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
@@ -923,6 +941,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                       ? <img className="lc-photo-img" src={p.photo} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                       : <span className="lc-photo-lbl"><IcPhoto />Sans photo</span>}
                     <span className={`lc-tag ${p.tagCls}`}><span className="d" />{p.tagLabel}</span>
+                    {p.priceDrop && <span className="lc-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 7l6 6 4-4 8 8M21 17v-4h-4" /></svg>{p.priceDrop}</span>}
                     {p.flag && <span className="lc-flag">{p.flag}</span>}
                     <div className={`lc-score ${p.scoreClass}`} tabIndex={p.crit.length ? 0 : undefined}>
                       <span>{p.score}</span><small>%</small>
@@ -943,11 +962,22 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                       {p.isNew && <span className="lc-new">Nouveau</span>}
                     </div>
                     <h3 className="lc-title">{p.title}</h3>
-                    <div className="lc-price">{p.price}</div>
+                    <div className="lc-price-row">
+                      <span className="lc-price">{p.price}</span>
+                      {p.pricePerM2 && <span className="lc-ppm2">· {p.pricePerM2}</span>}
+                      {p.priceOld && <span className="lc-price-old">{p.priceOld}</span>}
+                    </div>
                     <div className="lc-specs">
                       {p.specs.map((s, i) => <span className="lc-spec" key={i}><SpecIcon k={s.icon} />{s.label}</span>)}
+                      {p.terrain && <span className="lc-spec"><SpecIcon k="surface" />{p.terrain}</span>}
                     </div>
+                    {p.equipements && p.equipements.length > 0 && (
+                      <div className="lc-equip"><IcCheck />{p.equipements.join(' · ')}</div>
+                    )}
                     {p.foot && <div className="lc-foot"><IcDoc />{p.foot}</div>}
+                    {onOpenAnnonce && p.appDossierId != null && (
+                      <button className="lc-annonce" type="button" onClick={() => cardAction(p, 'annonce')}>Voir l'annonce<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
+                    )}
                   </div>
                   <div className="lc-side">
                     {p.status === 'todo' && (
@@ -1090,7 +1120,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                       <div className="mb-title">{b.title}</div>
                       <div className="mb-price">{b.price}</div>
                       <div className="mb-specs">{b.specs.map((s) => s.label).join(' · ')}</div>
-                      <a className="mb-link" onClick={() => toast('Ouverture de l’annonce…')}>Voir l’annonce →</a>
+                      <a className="mb-link" onClick={() => { if (onOpenAnnonce && b.appDossierId != null) onOpenAnnonce(b.appDossierId); else toast('Ouverture de l’annonce…') }}>Voir l’annonce →</a>
                     </div>
                   </div>
                 ))}
@@ -1143,6 +1173,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                   {prPhotos.length > 1 && <button className="pr-gnav prev" aria-label="Photo précédente" onClick={() => setPrPhoto((i) => (i - 1 + prPhotos.length) % prPhotos.length)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m15 6-6 6 6 6" /></svg></button>}
                   {prPhotos.length > 1 && <button className="pr-gnav next" aria-label="Photo suivante" onClick={() => setPrPhoto((i) => (i + 1) % prPhotos.length)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m9 6 6 6-6 6" /></svg></button>}
                   {prPhotos.length > 0 && <div className="pr-pcount">{Math.min(prPhoto, prPhotos.length - 1) + 1} / {prPhotos.length}</div>}
+                  {prCurrent.priceDrop && <div className="pr-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 7l6 6 4-4 8 8M21 17v-4h-4" /></svg>{prCurrent.priceDrop}</div>}
                   <div className={`pr-verdict ${v[0]}`}>{v[1]}</div>
                   {prPhotos.length > 1 && (
                     <div className="pr-thumbs">
@@ -1154,8 +1185,15 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                   <div className="pr-info-top">
                     <div className="pr-ref">{prCurrent.ref} · {prCurrent.type}</div>
                     <h2 className="pr-title">{prCurrent.title}</h2>
-                    <div className="pr-price">{prCurrent.price}</div>
-                    <div className="pr-specs">{prCurrent.specs.map((s, i) => <span className="pr-spec" key={i}>{s.label}</span>)}</div>
+                    <div className="pr-price-row">
+                      <span className="pr-price">{prCurrent.price}</span>
+                      {prCurrent.pricePerM2 && <span className="pr-ppm2">· {prCurrent.pricePerM2}</span>}
+                      {prCurrent.priceOld && <span className="pr-price-old">{prCurrent.priceOld}</span>}
+                    </div>
+                    <div className="pr-specs">{prCurrent.specs.map((s, i) => <span className="pr-spec" key={i}>{s.label}</span>)}{prCurrent.terrain && <span className="pr-spec">{prCurrent.terrain}</span>}</div>
+                    {prCurrent.equipements && prCurrent.equipements.length > 0 && (
+                      <div className="pr-equip"><IcCheck />{prCurrent.equipements.join(' · ')}</div>
+                    )}
                     <div className="pr-crit-h">Correspondance avec votre recherche</div>
                     <div className="pr-criteria">
                       {critRows.map((c) => (
@@ -1169,7 +1207,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                   </div>
                   <div className="pr-actions">
                     <button className="pr-act ecart" onClick={() => ecarter([prCurrent.ref])}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" /></svg>Écarter</button>
-                    <button className="pr-act annonce" onClick={() => toast('Ouverture de l’annonce…')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M14 4h6v6M20 4 10 14" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg>Annonce</button>
+                    <button className="pr-act annonce" onClick={() => { if (onOpenAnnonce && prCurrent.appDossierId != null) onOpenAnnonce(prCurrent.appDossierId); else toast('Ouverture de l’annonce…') }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M14 4h6v6M20 4 10 14" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg>Annonce</button>
                     <button className="pr-act prop" onClick={() => openChan([prCurrent.ref])}><IcSend />Proposer…</button>
                   </div>
                 </div>
