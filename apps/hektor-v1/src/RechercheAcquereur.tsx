@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppContact, AppContactSearch } from './types'
 import {
-  loadRapprochements, loadSearchStatuts, loadRelances,
+  loadRapprochements, loadSearchStatuts, loadRelances, loadSearchTimeline, loadDossierPhotos,
   recordProposition, setBienStatut, setRelanceStatus,
-  type RapprochementRow, type StatutRow, type RelanceRow,
+  type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow,
 } from './lib/api'
 import RapprochementStats from './RapprochementStats'
 
@@ -51,6 +51,7 @@ interface Property {
   specs: Spec[]
   inEnvoi?: boolean
   appDossierId?: number
+  photo?: string | null
 }
 
 interface Relance {
@@ -146,14 +147,6 @@ const CHAN_CONFIG: Record<Channel, { status: Status; tagCls: Property['tagCls'];
   virtuelle: { status: 'visite', tagCls: 'visite', tagLabel: 'Visite virtuelle prévue', foot: `Visite virtuelle proposée le ${TODAY}`, lbl: 'visite virtuelle' },
 }
 
-const PHOTOS = [
-  { l: 'Façade', g: 'linear-gradient(150deg,#efe7dc,#d9ccba)' },
-  { l: 'Séjour', g: 'linear-gradient(150deg,#e6ecef,#ccd7dd)' },
-  { l: 'Cuisine', g: 'linear-gradient(150deg,#efe9da,#ddcdb0)' },
-  { l: 'Jardin', g: 'linear-gradient(150deg,#e3ece0,#c7d9c4)' },
-  { l: 'Extérieur', g: 'linear-gradient(150deg,#efe2e8,#dec5d2)' },
-]
-
 const MAIL_TEMPLATES = {
   contact: {
     subj: 'Une sélection de biens pour votre projet',
@@ -241,6 +234,11 @@ const RA_EQUIP: Record<string, string> = {
 const raInitials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'AC'
 
+const fmtDate = (iso: string): string => {
+  const d = new Date(iso)
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString('fr-FR') : ''
+}
+
 // Map d'un rapprochement persisté (RPC) vers le modèle de carte Property de l'écran.
 function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null): Property {
   const tj = search?.types_json
@@ -267,7 +265,7 @@ function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null)
     surface: r.surface != null ? Math.round(Number(r.surface)) : 0,
     scoreClass, score: r.score,
     status: 'todo', group: 'todo', tagCls: 'todo', tagLabel: 'À proposer',
-    crit, specs, appDossierId: r.app_dossier_id,
+    crit, specs, appDossierId: r.app_dossier_id, photo: r.photo_url,
   }
 }
 
@@ -311,6 +309,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
+  const [timeline, setTimeline] = useState<TimelineRow[]>([])
+  const [prPhotos, setPrPhotos] = useState<string[]>([])
 
   // sélecteur de canal : refs en attente d'un choix de canal
   const [chanRefs, setChanRefs] = useState<string[] | null>(null)
@@ -354,17 +354,18 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
 
   useEffect(() => {
     if (!open) return
-    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setLoadError(null); setLoading(false); return }
+    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setTimeline([]); setLoadError(null); setLoading(false); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey)])
-      .then(([rows, sts, rels]: [RapprochementRow[], StatutRow[], RelanceRow[]]) => {
+    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey), loadSearchTimeline(searchKey)])
+      .then(([rows, sts, rels, tl]: [RapprochementRow[], StatutRow[], RelanceRow[], TimelineRow[]]) => {
         if (cancelled) return
         const stMap = new Map(sts.map((s) => [s.app_dossier_id, s]))
         setProperties(rows.map((r) => applyStatut(rapproToProperty(r, search), stMap.get(r.app_dossier_id))))
         setRelances(rels.map(relToRelance))
+        setTimeline(tl)
       })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]); setTimeline([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -402,6 +403,15 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
 
   const trayRefs = useMemo(() => properties.filter((p) => p.inEnvoi).map((p) => p.ref), [properties])
   const presenterBiens = useMemo(() => sortedProperties.filter((p) => p.status !== 'ecarte'), [sortedProperties])
+
+  // photos du bien affiché dans le présentateur (chargées à la navigation)
+  const prDossierId = presenterBiens[Math.min(prIdx, Math.max(0, presenterBiens.length - 1))]?.appDossierId
+  useEffect(() => {
+    if (!presenterOpen || prDossierId == null) { setPrPhotos([]); return }
+    let cancelled = false
+    loadDossierPhotos(prDossierId).then((ph) => { if (!cancelled) setPrPhotos(ph) }).catch(() => { if (!cancelled) setPrPhotos([]) })
+    return () => { cancelled = true }
+  }, [presenterOpen, prDossierId])
 
   const sortLabel = sort === 'score' ? 'classés par correspondance'
     : sort === 'prix' ? 'classés par prix' : sort === 'surface' ? 'classés par surface' : 'nouveautés en tête'
@@ -600,6 +610,24 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   const cityLabel = cities[0] || 'Toutes communes'
   const crumbRef = `${types[0] || 'Bien'}${cities.length ? ` · ${cities[0]}` : ''}`
 
+  // Insights « À surveiller » calculés depuis le feed réel
+  const prixMaxNum = Number((search?.prix_max ?? '').replace(/[^0-9.]/g, '')) || 0
+  const insights: { title: string; body: string }[] = []
+  if (prixMaxNum > 0) {
+    const over = properties.filter((p) => p.priceNum > prixMaxNum)
+    if (over.length > 0) insights.push({
+      title: 'Budget bientôt atteint',
+      body: `${over.length} bien${over.length > 1 ? 's' : ''} au-dessus du budget (dans la marge) — à valider avec l'acquéreur avant proposition.`,
+    })
+  }
+  if (cities.length > 0) {
+    const inSecteur = properties.filter((p) => p.crit.some((c) => c.k === 'Secteur' && c.ok)).length
+    if (inSecteur < 3) insights.push({
+      title: 'Secteur peu fourni',
+      body: `${inSecteur === 0 ? 'Aucun bien' : `${inSecteur} bien${inSecteur > 1 ? 's' : ''}`} dans le secteur recherché. Élargir le rayon améliorerait les correspondances.`,
+    })
+  }
+
   const renderActions = (p: Property) => {
     if (p.status === 'todo') return (
       <>
@@ -779,21 +807,19 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
                 <div className="alerte">
                   <span className="alerte-ic"><IcBell /></span>
                   <div>
-                    <div className="alerte-t">Alerte email active</div>
-                    <div className="alerte-s">L'acquéreur reçoit automatiquement les nouveaux biens correspondants.</div>
+                    <div className="alerte-t">Alerte rapprochement {searchActive ? 'active' : 'inactive'}</div>
+                    <div className="alerte-s">Le négociateur est notifié dès qu'un nouveau bien correspond à cette recherche au-dessus du seuil.</div>
                   </div>
                   <div className="alerte-grid">
-                    <div className="af"><span className="k">État</span><span className="v ok">Active</span></div>
-                    <div className="af"><span className="k">Fréquence</span><span className="v">Quotidienne</span></div>
-                    <div className="af"><span className="k">Seuil de score</span><span className="v">≥ 75 %</span></div>
-                    <div className="af"><span className="k">Dernier envoi</span><span className="v">09/06/2026</span></div>
+                    <div className="af"><span className="k">État</span><span className={`v ${searchActive ? 'ok' : ''}`}>{searchActive ? 'Active' : 'Inactive'}</span></div>
+                    <div className="af"><span className="k">Seuil de score</span><span className="v">≥ 80 %</span></div>
                   </div>
                 </div>
                 <div className="mod" style={{ marginTop: 14 }}>
-                  <div className="mod-h"><h2>Paramètres de l'alerte</h2><button className="linkmini" onClick={() => toast('Modifier l’alerte…')}>Modifier</button></div>
+                  <div className="mod-h"><h2>Fonctionnement</h2></div>
                   <div className="empty">
                     <span className="ee"><IcSync /></span>
-                    <span className="et">L'alerte est synchronisée avec Hektor. Les biens dépassant le seuil de score sont poussés automatiquement à l'acquéreur et tracés ci-dessous sous le statut « Proposé ».</span>
+                    <span className="et">Le moteur recalcule automatiquement les rapprochements (nouveaux biens en stock, baisses de prix). Au-delà de 80 % de correspondance, une alerte est créée pour le négociateur.</span>
                   </div>
                 </div>
               </div>
@@ -831,6 +857,9 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
                 <article key={p.ref} className={`lcard${p.inEnvoi ? ' inenvoi' : ''}${flashing.has(p.ref) ? ' lc-flash' : ''}`} data-status={p.status}>
                   <div className="lc-accent" />
                   <div className="lc-photo">
+                    {p.photo
+                      ? <img className="lc-photo-img" src={p.photo} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                      : <span className="lc-photo-lbl"><IcPhoto />Sans photo</span>}
                     <span className={`lc-tag ${p.tagCls}`}><span className="d" />{p.tagLabel}</span>
                     {p.flag && <span className="lc-flag">{p.flag}</span>}
                     <div className={`lc-score ${p.scoreClass}`} tabIndex={p.crit.length ? 0 : undefined}>
@@ -844,7 +873,6 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
                         </div>
                       )}
                     </div>
-                    <span className="lc-photo-lbl"><IcPhoto />Photo</span>
                   </div>
                   <div className="lc-main">
                     <div className="lc-head">
@@ -925,24 +953,29 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
             <div className="cx">
               <div className="cx-h"><span className="t">Activité de la recherche</span></div>
               <div className="tl">
-                <div className="tl-it"><div className="tl-d">09/06/2026</div><div className="tl-t">Bien proposé</div><div className="tl-s">V770062329 envoyé par email · ouvert le jour même.</div></div>
-                <div className="tl-it"><div className="tl-d">07/06/2026</div><div className="tl-t">2 nouveaux correspondants</div><div className="tl-s">Détectés par l'alerte (score ≥ 75 %).</div></div>
-                <div className="tl-it soft"><div className="tl-d">02/06/2026</div><div className="tl-t">Critères affinés</div><div className="tl-s">Budget relevé à 230 k€ · secteur élargi à 15 km.</div></div>
-                <div className="tl-it soft"><div className="tl-d">21/05/2026</div><div className="tl-t">Recherche créée</div><div className="tl-s">Par Marion BILLIG DURAND · alerte activée.</div></div>
+                {timeline.length === 0 ? (
+                  <div className="empty"><span className="et">Aucune activité enregistrée pour le moment.</span></div>
+                ) : timeline.map((ev, i) => (
+                  <div className={`tl-it${ev.kind === 'nouveau' ? ' soft' : ''}`} key={i}>
+                    <div className="tl-d">{fmtDate(ev.event_at)}</div>
+                    <div className="tl-t">{ev.title}</div>
+                    {ev.sub && <div className="tl-s">{ev.sub}</div>}
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="cx">
-              <div className="cx-h"><span className="t">À surveiller</span></div>
-              <div className="insight">
-                <div className="ih"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>Budget bientôt atteint</div>
-                <div className="ib"><b>1 bien</b> à 245 k€ dépasse le budget de 15 k€ — à valider avec l'acquéreur avant proposition.</div>
+            {insights.length > 0 && (
+              <div className="cx">
+                <div className="cx-h"><span className="t">À surveiller</span></div>
+                {insights.map((ins, i) => (
+                  <div className="insight" key={i}>
+                    <div className="ih"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>{ins.title}</div>
+                    <div className="ib">{ins.body}</div>
+                  </div>
+                ))}
               </div>
-              <div className="insight">
-                <div className="ih"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>Secteur peu fourni</div>
-                <div className="ib">Peu de maisons 4P sur Craponne ce mois-ci. Élargir le rayon améliorerait les correspondances.</div>
-              </div>
-            </div>
+            )}
           </aside>
         </div>
       </main>
@@ -1037,18 +1070,23 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
               <button className="pr-nav prev" aria-label="Bien précédent" onClick={() => prGo(-1)}><span className="pr-nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg></span><span className="pr-nav-lbl">Bien préc.</span></button>
               <div className="pr-card">
                 <div className="pr-gallery">
-                  <div className="pr-slide" style={{ background: PHOTOS[prPhoto].g }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="rgba(20,14,10,.38)" strokeWidth="1.3"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m4 18 5-5 4 4 3-3 4 4" /></svg>
-                    <span className="pr-slide-lbl">{PHOTOS[prPhoto].l}</span>
+                  <div className="pr-slide" style={prPhotos.length ? { backgroundImage: `url("${prPhotos[Math.min(prPhoto, prPhotos.length - 1)]}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+                    {prPhotos.length === 0 && (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(20,14,10,.38)" strokeWidth="1.3"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m4 18 5-5 4 4 3-3 4 4" /></svg>
+                        <span className="pr-slide-lbl">Sans photo</span>
+                      </>
+                    )}
                   </div>
-                  <button className="pr-gnav prev" aria-label="Photo précédente" onClick={() => setPrPhoto((i) => (i - 1 + PHOTOS.length) % PHOTOS.length)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m15 6-6 6 6 6" /></svg></button>
-                  <button className="pr-gnav next" aria-label="Photo suivante" onClick={() => setPrPhoto((i) => (i + 1) % PHOTOS.length)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m9 6 6 6-6 6" /></svg></button>
-                  <button className="pr-vv" onClick={() => toast('Lien de visite virtuelle 360° prêt à partager.')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M3 12a9 9 0 0 1 9-9" opacity=".45" /><path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none" /></svg>Visite virtuelle 360°</button>
-                  <div className="pr-pcount">{prPhoto + 1} / {PHOTOS.length}</div>
+                  {prPhotos.length > 1 && <button className="pr-gnav prev" aria-label="Photo précédente" onClick={() => setPrPhoto((i) => (i - 1 + prPhotos.length) % prPhotos.length)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m15 6-6 6 6 6" /></svg></button>}
+                  {prPhotos.length > 1 && <button className="pr-gnav next" aria-label="Photo suivante" onClick={() => setPrPhoto((i) => (i + 1) % prPhotos.length)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m9 6 6 6-6 6" /></svg></button>}
+                  {prPhotos.length > 0 && <div className="pr-pcount">{Math.min(prPhoto, prPhotos.length - 1) + 1} / {prPhotos.length}</div>}
                   <div className={`pr-verdict ${v[0]}`}>{v[1]}</div>
-                  <div className="pr-thumbs">
-                    {PHOTOS.map((p, i) => <button key={i} className={`pr-thumb${i === prPhoto ? ' on' : ''}`} style={{ background: p.g }} onClick={() => setPrPhoto(i)} />)}
-                  </div>
+                  {prPhotos.length > 1 && (
+                    <div className="pr-thumbs">
+                      {prPhotos.slice(0, 8).map((url, i) => <button key={i} className={`pr-thumb${i === prPhoto ? ' on' : ''}`} style={{ backgroundImage: `url("${url}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} onClick={() => setPrPhoto(i)} />)}
+                    </div>
+                  )}
                 </div>
                 <div className="pr-info" data-n={prIdx + 1}>
                   <div className="pr-info-top">

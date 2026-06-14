@@ -350,7 +350,9 @@
 .rech-acq .lcard[data-status="ecarte"] .lc-photo{filter:grayscale(.5)}
 .rech-acq .lcard.inenvoi{outline:2px solid var(--brand);outline-offset:-1px}
 .rech-acq .lc-photo{position:relative;min-height:158px;background:linear-gradient(150deg,#efe7dc,#e4d8c8);overflow:hidden}
-.rech-acq .lc-photo::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 95% at 78% 8%, rgba(255,255,255,.55), transparent 58%)}
+.rech-acq .lc-photo::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 95% at 78% 8%, rgba(255,255,255,.55), transparent 58%);pointer-events:none}
+.rech-acq .lc-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:18px 0 0 18px;z-index:1}
+.rech-acq .lc-photo>.lc-tag,.rech-acq .lc-photo>.lc-flag,.rech-acq .lc-photo>.lc-score,.rech-acq .lc-photo>.lc-photo-lbl{z-index:2}
 .rech-acq .lc-photo-lbl{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#b7a999}
 .rech-acq .lc-photo-lbl svg{width:26px;height:26px;opacity:.55}
 .rech-acq .lc-statepic{position:absolute;top:10px;left:10px;z-index:3;width:30px;height:30px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px -3px rgba(32,27,24,.35);border:1.5px solid}

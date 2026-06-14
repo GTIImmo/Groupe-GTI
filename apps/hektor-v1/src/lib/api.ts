@@ -2169,6 +2169,23 @@ export async function loadRapprochementStats(): Promise<RapprochementStats | nul
   return (data ?? null) as RapprochementStats | null
 }
 
+// ---- Historique (timeline) + photos d'un bien ----
+export type TimelineRow = { event_at: string; kind: string; title: string; sub: string }
+
+export async function loadSearchTimeline(contactSearchKey: string): Promise<TimelineRow[]> {
+  if (!hasSupabaseEnv || !supabase || !contactSearchKey.trim()) return []
+  const { data, error } = await supabase.rpc('app_get_search_timeline', { p_search_key: contactSearchKey.trim() })
+  if (error) throw new Error(error.message ?? 'Unable to load timeline')
+  return (data ?? []) as TimelineRow[]
+}
+
+export async function loadDossierPhotos(appDossierId: number): Promise<string[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase.rpc('app_get_dossier_photos', { p_dossier_id: appDossierId })
+  if (error) throw new Error(error.message ?? 'Unable to load photos')
+  return (data ?? []) as string[]
+}
+
 export async function loadDossiersPage({
   filters,
   page,
