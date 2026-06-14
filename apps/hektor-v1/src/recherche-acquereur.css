@@ -338,6 +338,13 @@
 .rech-acq .feed{display:flex;flex-direction:column;gap:14px;margin-top:6px}
 .rech-acq .ra-feed-state{padding:18px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--muted);font-size:13.5px;text-align:center}
 .rech-acq .ra-feed-state.err{border-color:#e8a39b;background:#fdeceb;color:#9a1f17}
+/* popup de confirmation d'envoi */
+.rech-acq .ra-confirm-body{padding:14px 18px;display:flex;flex-direction:column;gap:8px}
+.rech-acq .ra-confirm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:13px}
+.rech-acq .ra-confirm-k{color:var(--muted);font-weight:600;flex-shrink:0}
+.rech-acq .ra-confirm-v{color:var(--ink);font-weight:700;text-align:right;word-break:break-all}
+.rech-acq .ra-confirm-warn{margin-top:4px;padding:9px 11px;border-radius:9px;background:#fdeceb;border:1px solid #e8a39b;color:#9a1f17;font-size:12.5px;line-height:1.4}
+.rech-acq .ra-confirm-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px 16px;border-top:1px solid var(--line)}
 .rech-acq .lcard{position:relative;display:grid;grid-template-columns:176px minmax(0,1fr) 176px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow-card);transition:box-shadow .2s,transform .2s}
 .rech-acq .lcard:hover{box-shadow:var(--shadow-card-lg);transform:translateY(-1px)}
 .rech-acq .lc-accent{position:absolute;left:0;top:0;bottom:0;width:4px;z-index:4}

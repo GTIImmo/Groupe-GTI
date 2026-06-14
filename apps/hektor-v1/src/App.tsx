@@ -13414,7 +13414,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </div>
         ) : null}
 
-        <RechercheAcquereur open={rechercheAcquereurOpen} onClose={() => setRechercheAcquereurOpen(false)} contact={selectedContact} search={rechercheAcquereurSearch} />
+        <RechercheAcquereur
+          open={rechercheAcquereurOpen}
+          onClose={() => setRechercheAcquereurOpen(false)}
+          contact={selectedContact}
+          search={rechercheAcquereurSearch}
+          senderEmail={selectedContact ? resolveGoogleWorkspaceCalendarEmail({ emails: [selectedContact.negociateur_email, sessionEmail], label: selectedContact.commercial_nom, hektorNegotiators }) : null}
+          acquereurEmail={selectedContact ? appContactAgendaEmail(selectedContact) : null}
+        />
 
     </>
   )

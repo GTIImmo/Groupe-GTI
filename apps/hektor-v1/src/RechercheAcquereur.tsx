@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppContact, AppContactSearch } from './types'
 import {
   loadRapprochements, loadSearchStatuts, loadRelances, loadSearchTimeline, loadDossierPhotos,
-  recordProposition, setBienStatut, setRelanceStatus,
+  recordProposition, setBienStatut, setRelanceStatus, sendGoogleWorkspaceCrmEmail,
   type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow,
 } from './lib/api'
 import RapprochementStats from './RapprochementStats'
@@ -239,6 +239,26 @@ const fmtDate = (iso: string): string => {
   return Number.isFinite(d.getTime()) ? d.toLocaleDateString('fr-FR') : ''
 }
 
+const htmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// Corps HTML de l'email de proposition : message + cartes biens (photo, ref, prix, specs) + signature.
+function buildEmailHtml(message: string, biens: Property[], signature: string): string {
+  const intro = htmlEsc(message).replace(/\n/g, '<br>')
+  const cards = biens.map((b) => `
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:10px 0;border:1px solid #e7ddce;border-radius:8px;overflow:hidden">
+      <tr>
+        ${b.photo ? `<td style="width:150px;vertical-align:top"><img src="${b.photo}" width="150" style="display:block;width:150px;height:112px;object-fit:cover" alt=""></td>` : ''}
+        <td style="padding:10px 14px;vertical-align:top;font-family:Arial,Helvetica,sans-serif">
+          <div style="font-size:12px;color:#8a8278">${htmlEsc(b.ref)} · ${htmlEsc(b.type)}</div>
+          <div style="font-size:15px;font-weight:bold;color:#1c1815;margin:2px 0">${htmlEsc(b.title)}</div>
+          <div style="font-size:15px;color:#c2125f;font-weight:bold">${htmlEsc(b.price)}</div>
+          <div style="font-size:12px;color:#5a5249;margin-top:3px">${b.specs.map((s) => htmlEsc(s.label)).join(' · ')}</div>
+        </td>
+      </tr>
+    </table>`).join('')
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1c1815;line-height:1.5">${intro}<br><br>${cards}<br><div style="color:#5a5249;font-size:13px;white-space:pre-line">${htmlEsc(signature)}</div></div>`
+}
+
 // Map d'un rapprochement persisté (RPC) vers le modèle de carte Property de l'écran.
 function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null): Property {
   const tj = search?.types_json
@@ -294,9 +314,13 @@ export interface RechercheAcquereurProps {
   onClose: () => void
   contact?: AppContact | null
   search?: AppContactSearch | null
+  senderEmail?: string | null
+  acquereurEmail?: string | null
 }
 
-export default function RechercheAcquereur({ open, onClose, contact, search }: RechercheAcquereurProps) {
+const GTI_DOMAIN = 'gti-immobilier.fr'
+
+export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail }: RechercheAcquereurProps) {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES)
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -311,6 +335,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   const [statsOpen, setStatsOpen] = useState(false)
   const [timeline, setTimeline] = useState<TimelineRow[]>([])
   const [prPhotos, setPrPhotos] = useState<string[]>([])
+  const [confirmSend, setConfirmSend] = useState(false)
+  const [sending, setSending] = useState(false)
 
   // sélecteur de canal : refs en attente d'un choix de canal
   const [chanRefs, setChanRefs] = useState<string[] | null>(null)
@@ -351,6 +377,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   // Chargement des rapprochements persistés (scoring SQL) + statuts + relances. Fallback mock si aucune recherche.
   const searchKey = search?.contact_search_key
   const negoEmail = contact?.negociateur_email ?? null
+  const mailName = contact?.display_name?.trim() || 'Madame, Monsieur'
 
   useEffect(() => {
     if (!open) return
@@ -484,8 +511,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
     setMailRefs(refs)
     setMailTpl('contact')
     setMailSubj(MAIL_TEMPLATES.contact.subj)
-    setMailMsg(MAIL_TEMPLATES.contact.msg)
-  }, [])
+    setMailMsg(MAIL_TEMPLATES.contact.msg.replace(/M\. MOREL/g, mailName))
+  }, [mailName])
 
   const chooseChannel = useCallback((chan: Channel) => {
     const refs = chanRefs ?? []
@@ -497,15 +524,49 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
   const applyTemplate = useCallback((t: TemplateKey) => {
     setMailTpl(t)
     setMailSubj(MAIL_TEMPLATES[t].subj)
-    setMailMsg(MAIL_TEMPLATES[t].msg)
-  }, [])
+    setMailMsg(MAIL_TEMPLATES[t].msg.replace(/M\. MOREL/g, mailName))
+  }, [mailName])
 
-  const sendMail = useCallback(() => {
+  const senderValid = Boolean(senderEmail && senderEmail.toLowerCase().endsWith(`@${GTI_DOMAIN}`))
+  const canSendEmail = senderValid && Boolean(acquereurEmail)
+
+  // Étape 1 : demander confirmation (jamais d'envoi direct)
+  const requestSend = useCallback(() => {
+    if (!acquereurEmail) { toast("Aucune adresse email pour cet acquéreur — envoi impossible."); return }
+    if (!senderValid) { toast("Adresse Gmail négociateur invalide (@gti-immobilier.fr requise)."); return }
+    setConfirmSend(true)
+  }, [acquereurEmail, senderValid, toast])
+
+  // Étape 2 : envoi réel Gmail après confirmation ; proposition tracée UNIQUEMENT si succès
+  const confirmAndSend = useCallback(async () => {
     const refs = mailRefs ?? []
-    setMailRefs(null)
-    propose(refs, 'email')
-    toast('Email interactif envoyé · le client peut répondre directement.')
-  }, [mailRefs, propose, toast])
+    if (sending || !acquereurEmail || !senderEmail) return
+    setSending(true)
+    try {
+      const biens = refs.map((r) => properties.find((p) => p.ref === r)).filter(Boolean) as Property[]
+      const signature = `${contact?.commercial_nom || 'Groupe GTI'}\n${contact?.agence_nom || 'Groupe GTI'}`
+      const res = await sendGoogleWorkspaceCrmEmail({
+        subjectEmail: senderEmail,
+        to: [acquereurEmail],
+        subject: mailSubj,
+        bodyText: mailMsg,
+        bodyHtml: buildEmailHtml(mailMsg, biens, signature),
+        fromName: contact?.commercial_nom ? `${contact.commercial_nom} - GTI Immobilier` : 'GTI Immobilier',
+        replyTo: senderEmail,
+        relatedEntityType: 'contact',
+        relatedEntityId: contact?.hektor_contact_id ?? null,
+      })
+      if (!res?.ok) throw new Error('Envoi refusé par le serveur')
+      setConfirmSend(false)
+      setMailRefs(null)
+      propose(refs, 'email') // succès uniquement → trace proposition + relance J+5
+      toast(`Email envoyé à ${acquereurEmail}.`)
+    } catch (e) {
+      toast(`Échec de l'envoi : ${(e as Error)?.message ?? 'erreur'} — aucun bien marqué proposé.`)
+    } finally {
+      setSending(false)
+    }
+  }, [mailRefs, sending, acquereurEmail, senderEmail, properties, mailSubj, mailMsg, contact, propose, toast])
 
   const doneRelance = useCallback((id: string) => {
     const rel = relances.find((r) => r.id === id)
@@ -568,6 +629,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
       }
       if (e.key === 'Escape') {
         if (statsOpen) return // l'overlay stats gère sa propre fermeture
+        if (confirmSend) { if (!sending) setConfirmSend(false); return }
         if (mailRefs) setMailRefs(null)
         else if (chanRefs) setChanRefs(null)
         else if (moreOpen) setMoreOpen(false)
@@ -576,7 +638,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, presenterOpen, mailRefs, chanRefs, moreOpen, statsOpen, prGo, onClose])
+  }, [open, presenterOpen, mailRefs, chanRefs, moreOpen, statsOpen, confirmSend, sending, prGo, onClose])
 
   if (!open) return null
 
@@ -1007,7 +1069,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
           <div className="mail-pop" role="dialog" aria-label="Aperçu de l'email">
             <div className="mail-head">
               <span className="mail-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>
-              <div className="mail-head-bd"><div className="mail-h-t">Aperçu de l'email</div><div className="mail-h-s">À : {acqName}{acqEmail ? ` <${acqEmail}>` : ''}</div></div>
+              <div className="mail-head-bd"><div className="mail-h-t">Aperçu de l'email</div><div className="mail-h-s">À : {mailName}{acquereurEmail ? ` <${acquereurEmail}>` : ' — aucune adresse email'}</div></div>
               <button className="x" aria-label="Fermer" onClick={() => setMailRefs(null)}><IcClose /></button>
             </div>
             <div className="mail-tpl">
@@ -1047,7 +1109,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
               <div className="mail-foot-btns">
                 <button className="btn ghost sm" onClick={() => setMailRefs(null)}>Annuler</button>
                 <button className="btn ghost sm" onClick={() => toast('Aperçu interactif (page client) à brancher.')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu interactif</button>
-                <button className="btn brand sm" onClick={sendMail}><IcSend />Envoyer l'email</button>
+                <button className="btn brand sm" onClick={requestSend} disabled={!canSendEmail} title={canSendEmail ? undefined : 'Adresse négociateur ou acquéreur manquante'}><IcSend />Envoyer l'email</button>
               </div>
             </div>
           </div>
@@ -1120,6 +1182,31 @@ export default function RechercheAcquereur({ open, onClose, contact, search }: R
           </div>
         )
       })()}
+
+      {/* confirmation d'envoi réel (garde-fou anti-envoi accidentel) */}
+      {confirmSend && (
+        <div className="chan-back" onClick={(e) => { if (e.target === e.currentTarget && !sending) setConfirmSend(false) }}>
+          <div className="chan-pop ra-confirm" role="dialog" aria-label="Confirmer l'envoi de l'email">
+            <div className="chan-top">
+              <span className="chan-top-ic"><IcSend /></span>
+              <div className="chan-top-bd">
+                <div className="chan-top-t">Confirmer l'envoi de l'email</div>
+                <div className="chan-top-s">{mailRefs?.length ?? 0} bien{(mailRefs?.length ?? 0) > 1 ? 's' : ''} · envoi réel au client</div>
+              </div>
+              <button className="x" aria-label="Fermer" onClick={() => { if (!sending) setConfirmSend(false) }}><IcClose /></button>
+            </div>
+            <div className="ra-confirm-body">
+              <div className="ra-confirm-row"><span className="ra-confirm-k">Destinataire</span><span className="ra-confirm-v">{acquereurEmail}</span></div>
+              <div className="ra-confirm-row"><span className="ra-confirm-k">Expéditeur</span><span className="ra-confirm-v">{senderEmail}</span></div>
+              <div className="ra-confirm-warn">Cet email part réellement au client et ne peut pas être annulé.</div>
+            </div>
+            <div className="ra-confirm-foot">
+              <button className="btn sm" onClick={() => setConfirmSend(false)} disabled={sending}>Annuler</button>
+              <button className="btn brand sm" onClick={confirmAndSend} disabled={sending}><IcSend />{sending ? 'Envoi…' : `Confirmer l'envoi à ${acquereurEmail}`}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <RapprochementStats open={statsOpen} onClose={() => setStatsOpen(false)} />
 
