@@ -295,6 +295,8 @@
 .rech-acq .chan-back[hidden]{display:none}
 /* la confirmation d'envoi doit passer AU-DESSUS de l'aperçu email (.mail-back z-index 215) */
 .rech-acq .ra-confirm-back{z-index:230}
+/* le modal agenda (RDV visite) ouvert depuis la Recherche doit passer au-dessus de l'overlay (z-index 1000) — règle GLOBALE (modal portalé hors .rech-acq) */
+.ra-agenda-modal-overlay{z-index:1100 !important}
 @keyframes rachanfade{from{opacity:0}to{opacity:1}}
 .rech-acq .chan-pop{background:#fff;border-radius:20px;box-shadow:0 40px 90px -24px rgba(20,14,10,.55),0 2px 6px rgba(20,14,10,.1);width:420px;max-width:100%;padding:0;border:1px solid var(--line);overflow:hidden;animation:rachanpop .26s cubic-bezier(.2,.9,.3,1.18)}
 @keyframes rachanpop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}

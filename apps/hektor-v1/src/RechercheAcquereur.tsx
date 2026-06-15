@@ -51,6 +51,10 @@ interface Property {
   specs: Spec[]
   inEnvoi?: boolean
   appDossierId?: number
+  hektorAnnonceId?: number | null
+  ville?: string | null
+  numeroMandat?: string | null
+  numeroDossier?: string | null
   photo?: string | null
   pricePerM2?: string
   priceOld?: string
@@ -299,6 +303,8 @@ function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null)
     scoreClass, score: r.score,
     status: 'todo', group: 'todo', tagCls: 'todo', tagLabel: 'À proposer',
     crit, specs, appDossierId: r.app_dossier_id, photo: r.photo_url,
+    hektorAnnonceId: r.hektor_annonce_id ?? null, ville: r.ville ?? null,
+    numeroMandat: r.numero_mandat ?? null, numeroDossier: r.numero_dossier ?? null,
     pricePerM2, priceOld, priceDrop, terrain, equipements,
   }
 }
@@ -323,6 +329,20 @@ function relToRelance(r: RelanceRow): Relance {
   }
 }
 
+export interface VisitePlanInput {
+  appDossierId: number
+  hektorAnnonceId: number | null
+  titre: string
+  ville: string | null
+  numeroMandat: string | null
+  numeroDossier: string | null
+  photo: string | null
+  acquereurEmail: string | null
+  acquereurContactId: string | null
+  acquereurName: string
+  contactSearchKey: string | null
+}
+
 export interface RechercheAcquereurProps {
   open: boolean
   onClose: () => void
@@ -331,11 +351,12 @@ export interface RechercheAcquereurProps {
   senderEmail?: string | null
   acquereurEmail?: string | null
   onOpenAnnonce?: (appDossierId: number) => void
+  onPlanifierVisite?: (input: VisitePlanInput) => void
 }
 
 const GTI_DOMAIN = 'gti-immobilier.fr'
 
-export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce }: RechercheAcquereurProps) {
+export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite }: RechercheAcquereurProps) {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES)
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -547,6 +568,28 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     else propose(refs, chan)
   }, [chanRefs, openMail, propose])
 
+  // planification de visite : délègue à App (vrai RDV Google Agenda pré-rempli)
+  const openVisit = useCallback((refs: string[]) => {
+    if (!refs.length) return
+    setChanRefs(null)
+    const p = properties.find((x) => refs.includes(x.ref) && x.appDossierId != null)
+    if (!p || p.appDossierId == null) { toast('Bien introuvable pour la visite.'); return }
+    if (!onPlanifierVisite) { toast('Planification de visite indisponible ici.'); return }
+    onPlanifierVisite({
+      appDossierId: p.appDossierId,
+      hektorAnnonceId: p.hektorAnnonceId ?? null,
+      titre: p.title,
+      ville: p.ville ?? null,
+      numeroMandat: p.numeroMandat ?? null,
+      numeroDossier: p.numeroDossier ?? null,
+      photo: p.photo ?? null,
+      acquereurEmail: acquereurEmail ?? null,
+      acquereurContactId: contact?.hektor_contact_id ?? null,
+      acquereurName: contact?.display_name?.trim() || 'Acquéreur',
+      contactSearchKey: searchKey || null,
+    })
+  }, [properties, onPlanifierVisite, acquereurEmail, contact, searchKey, toast])
+
   const applyTemplate = useCallback((t: TemplateKey) => {
     setMailTpl(t)
     setMailSubj(MAIL_TEMPLATES[t].subj)
@@ -609,7 +652,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
 
   const cardAction = useCallback((p: Property, act: string) => {
     if (act === 'book') toggleBook(p.ref)
-    else if (act === 'propose' || act === 'visite') openChan([p.ref])
+    else if (act === 'propose') openChan([p.ref])
+    else if (act === 'visite') openVisit([p.ref])
     else if (act === 'ecarter') ecarter([p.ref])
     else if (act === 'restore') restore(p.ref)
     else if (act === 'relance') toast('Relance envoyée à l’acquéreur.')
@@ -618,7 +662,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       if (onOpenAnnonce && p.appDossierId != null) onOpenAnnonce(p.appDossierId)
       else toast('Ouverture de l’annonce…')
     }
-  }, [toggleBook, openChan, ecarter, restore, toast, onOpenAnnonce])
+  }, [toggleBook, openChan, openVisit, ecarter, restore, toast, onOpenAnnonce])
 
   const focusBrief = useCallback(() => {
     railRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1109,9 +1153,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
             <div className="chan-body">
               <button className="chan-item" onClick={() => chooseChannel('email')}><span className="chan-ic email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span><span><span className="ci-t">Email</span><span className="ci-s">Envoyer la sélection avec lien annonce</span></span></button>
               <button className="chan-item" onClick={() => chooseChannel('telephone')}><span className="chan-ic tel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span><span><span className="ci-t">Téléphone</span><span className="ci-s">Appeler l'acquéreur pour présenter le(s) bien(s)</span></span></button>
-              <button className="chan-item" onClick={() => chooseChannel('rdv')}><span className="chan-ic rdv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg></span><span><span className="ci-t">Rendez-vous agence</span><span className="ci-s">Présenter les biens en agence</span></span></button>
-              <button className="chan-item" onClick={() => chooseChannel('visite')}><span className="chan-ic visite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="8" cy="15" r="4" /><path d="m11 12 8-8 2 2-2 2 2 2-2 2-3-3" /></svg></span><span><span className="ci-t">Visite physique</span><span className="ci-s">Planifier une visite sur place</span></span></button>
-              <button className="chan-item" onClick={() => chooseChannel('virtuelle')}><span className="chan-ic virtuelle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" /></svg></span><span><span className="ci-t">Visite virtuelle</span><span className="ci-s">Envoyer un lien visio / visite 3D</span></span></button>
+              <button className="chan-item" onClick={() => openVisit(chanRefs ?? [])}><span className="chan-ic visite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="8" cy="15" r="4" /><path d="m11 12 8-8 2 2-2 2 2 2-2 2-3-3" /></svg></span><span><span className="ci-t">Visite du bien</span><span className="ci-s">Planifier une visite (sur place ou à distance)</span></span></button>
             </div>
             <div className="chan-foot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.6h.01" /></svg>L'acquéreur sera notifié et une relance programmée automatiquement.</div>
           </div>

@@ -120,7 +120,7 @@ import { MobileLayout } from './layouts/MobileLayout'
 import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
 import ContactSearchModal from './ContactSearchModal'
-import RechercheAcquereur from './RechercheAcquereur'
+import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import NotificationsBell from './NotificationsBell'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -8249,6 +8249,7 @@ export default function App() {
   const [requestComment, setRequestComment] = useState('')
   const [rechercheAcquereurOpen, setRechercheAcquereurOpen] = useState(false)
   const [rechercheAcquereurSearch, setRechercheAcquereurSearch] = useState<AppContactSearch | null>(null)
+  const [visitBooking, setVisitBooking] = useState<VisitePlanInput | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -13424,7 +13425,56 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           senderEmail={selectedContact ? resolveGoogleWorkspaceCalendarEmail({ emails: [selectedContact.negociateur_email, sessionEmail], label: selectedContact.commercial_nom, hektorNegotiators }) : null}
           acquereurEmail={selectedContact ? appContactAgendaEmail(selectedContact) : null}
           onOpenAnnonce={(id) => { setRechercheAcquereurOpen(false); setScreen('mandats'); setSelectedMandatId(id); setSelectedDossierId(id); setDetailOpen(true) }}
+          onPlanifierVisite={(input) => setVisitBooking(input)}
         />
+
+        {visitBooking ? (() => {
+          const presetAnnonce = {
+            app_dossier_id: visitBooking.appDossierId,
+            hektor_annonce_id: visitBooking.hektorAnnonceId ?? 0,
+            numero_dossier: visitBooking.numeroDossier,
+            numero_mandat: visitBooking.numeroMandat,
+            titre_bien: visitBooking.titre,
+            ville: visitBooking.ville,
+            code_postal: null,
+            commercial_nom: selectedContact?.commercial_nom ?? null,
+            agence_nom: selectedContact?.agence_nom ?? null,
+            statut_annonce: null,
+            archive: false,
+            photo_url_listing: visitBooking.photo,
+            images_preview_json: null,
+          } as unknown as OwnerAnnonceSearchOption
+          const presetContactLink = visitBooking.acquereurEmail
+            ? { email: visitBooking.acquereurEmail, label: visitBooking.acquereurName, hektorContactId: visitBooking.acquereurContactId, source: 'rapprochement' }
+            : null
+          const calEmail = (selectedContact
+            ? resolveGoogleWorkspaceCalendarEmail({ emails: [selectedContact.negociateur_email, sessionEmail], label: selectedContact.commercial_nom, hektorNegotiators })
+            : sessionEmail) || ''
+          const slotStart = new Date(); slotStart.setSeconds(0, 0); slotStart.setMinutes(0); slotStart.setHours(slotStart.getHours() + 1)
+          const slot = { start: slotStart.toISOString(), end: new Date(slotStart.getTime() + 3600000).toISOString() }
+          return (
+            <GoogleAgendaGlobalEventModal
+              calendarEmail={calEmail}
+              slot={slot}
+              hektorNegotiators={hektorNegotiators}
+              canManageContacts={canManageContacts}
+              hektorUserEmail={contactHektorUserEmail}
+              hektorUserId={contactHektorUserId}
+              profileRole={profile?.role ?? null}
+              sessionEmail={sessionEmail}
+              presetAnnonce={presetAnnonce}
+              presetContactLink={presetContactLink}
+              presetEventType="visite"
+              presetSummary={`Visite ${visitBooking.titre}`}
+              presetLocation={visitBooking.ville ?? ''}
+              presetMetadata={{ source: 'rapprochement', contact_search_key: visitBooking.contactSearchKey }}
+              overlayClassName="ra-agenda-modal-overlay"
+              onClose={() => setVisitBooking(null)}
+              onCreated={() => setVisitBooking(null)}
+              onUpdated={() => setVisitBooking(null)}
+            />
+          )
+        })() : null}
 
     </>
   )
@@ -19433,6 +19483,13 @@ function GoogleAgendaGlobalEventModal(props: {
   hektorUserId?: string | null
   profileRole?: UserProfile['role'] | null
   sessionEmail?: string | null
+  presetAnnonce?: OwnerAnnonceSearchOption | null
+  presetContactLink?: GoogleAgendaInviteeContactLink | null
+  presetEventType?: GoogleCalendarEventLink['event_type']
+  presetSummary?: string | null
+  presetLocation?: string | null
+  presetMetadata?: Record<string, unknown>
+  overlayClassName?: string
   onClose: () => void
   onCreated?: (event: GoogleCalendarEventLink | null) => void
   onUpdated?: (event: GoogleCalendarEventLink | null) => void
@@ -19452,8 +19509,8 @@ function GoogleAgendaGlobalEventModal(props: {
   const initialAnnonce = googleAgendaEventAnnonceOption(editingEvent, [])
   const initialContactLink = googleAgendaEventPrimaryInviteeContactLink(editingEvent, initialAttendees)
   const agendaOwner = findContactHektorOption(props.hektorNegotiators ?? [], { email: modalCalendarEmail })
-  const [eventType, setEventType] = useState<GoogleCalendarEventLink['event_type']>(editingEvent?.event_type ?? 'visite')
-  const [selectedAnnonce, setSelectedAnnonce] = useState<OwnerAnnonceSearchOption | null>(() => initialAnnonce)
+  const [eventType, setEventType] = useState<GoogleCalendarEventLink['event_type']>(editingEvent?.event_type ?? props.presetEventType ?? 'visite')
+  const [selectedAnnonce, setSelectedAnnonce] = useState<OwnerAnnonceSearchOption | null>(() => initialAnnonce ?? props.presetAnnonce ?? null)
   const [annonceSearch, setAnnonceSearch] = useState('')
   const [annonceOptions, setAnnonceOptions] = useState<OwnerAnnonceSearchOption[]>([])
   const [annonceLoading, setAnnonceLoading] = useState(false)
@@ -19464,19 +19521,19 @@ function GoogleAgendaGlobalEventModal(props: {
   const [contactSearchLoading, setContactSearchLoading] = useState(false)
   const [contactSearchError, setContactSearchError] = useState<string | null>(null)
   const [contactCreateOpen, setContactCreateOpen] = useState(false)
-  const [createdContactLink, setCreatedContactLink] = useState<GoogleAgendaInviteeContactLink | null>(() => initialContactLink)
+  const [createdContactLink, setCreatedContactLink] = useState<GoogleAgendaInviteeContactLink | null>(() => initialContactLink ?? props.presetContactLink ?? null)
   const [linkedRelationContactOptions, setLinkedRelationContactOptions] = useState<AnnonceContactInviteeOption[]>([])
   const [linkedRelationContactsLoading, setLinkedRelationContactsLoading] = useState(false)
   const [linkedRelationContactsError, setLinkedRelationContactsError] = useState<string | null>(null)
-  const [summary, setSummary] = useState(editingEvent?.summary ?? '')
+  const [summary, setSummary] = useState(editingEvent?.summary ?? props.presetSummary ?? '')
   const [startAt, setStartAt] = useState(defaultStartAt)
   const [durationMinutes, setDurationMinutes] = useState(defaultDuration)
-  const [location, setLocation] = useState(editingEvent?.location ?? '')
+  const [location, setLocation] = useState(editingEvent?.location ?? props.presetLocation ?? '')
   const [attendeesText, setAttendeesText] = useState(joinEmailList(initialAttendees))
   const [attendeeContactLinks, setAttendeeContactLinks] = useState<GoogleAgendaInviteeContactLink[]>(() => (
     mergeGoogleAgendaInviteeContactLinks(
       editingEvent ? googleAgendaEventInviteeContacts(editingEvent) : [],
-      initialContactLink ? [initialContactLink] : [],
+      (initialContactLink ?? props.presetContactLink) ? [(initialContactLink ?? props.presetContactLink)!] : [],
       initialAttendees,
     )
   ))
@@ -19821,6 +19878,7 @@ function GoogleAgendaGlobalEventModal(props: {
         bon_visite_ready: isVisit && Boolean(selectedAnnonce) && Boolean(activeContactEmail),
         attendee_contacts: attendeeContacts,
         attendee_contact_count: attendeeContacts.length,
+        ...(props.presetMetadata ?? {}),
       }
       if (editingEvent) {
         const updated = await updateGoogleCalendarEvent(editingEvent.id, {
@@ -19874,7 +19932,7 @@ function GoogleAgendaGlobalEventModal(props: {
   if (typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="modal-overlay google-agenda-modal-overlay" onClick={props.onClose}>
+    <div className={`modal-overlay google-agenda-modal-overlay${props.overlayClassName ? ` ${props.overlayClassName}` : ''}`} onClick={props.onClose}>
       <section className="modal-panel google-agenda-modal google-agenda-contact-modal google-agenda-global-create-modal" onClick={(event) => event.stopPropagation()}>
         <div className="google-agenda-modal-head">
           <div>
