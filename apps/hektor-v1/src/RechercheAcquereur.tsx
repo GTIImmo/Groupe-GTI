@@ -1245,7 +1245,12 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               <span className="mail-foot-n">{mailBiens.length}{mailBiens.length > 1 ? ' biens joints' : ' bien joint'}</span>
               <div className="mail-foot-btns">
                 <button className="btn ghost sm" onClick={() => setMailRefs(null)}>Annuler</button>
-                <button className="btn ghost sm" onClick={() => toast('Aperçu interactif (page client) à brancher.')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu interactif</button>
+                <button className="btn ghost sm" onClick={() => {
+                  const signature = `${contact?.commercial_nom || 'Groupe GTI'}\n${contact?.agence_nom || 'Groupe GTI'}`
+                  const w = window.open('', '_blank')
+                  if (!w) { toast('Autorise les pop-ups pour voir l’aperçu.'); return }
+                  w.document.open(); w.document.write(buildEmailHtml(mailMsg, mailBiens, signature)); w.document.close()
+                }} title="Aperçu de l'email tel qu'il sera reçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu</button>
                 <button className="btn brand sm" onClick={requestSend} disabled={!canSendEmail} title={canSendEmail ? undefined : 'Adresse négociateur ou acquéreur manquante'}><IcSend />Envoyer l'email</button>
               </div>
             </div>
