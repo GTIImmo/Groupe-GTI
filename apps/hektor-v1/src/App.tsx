@@ -96,6 +96,8 @@ import {
   loadContactStats,
   loadSearchesToComplete,
   type SearchToComplete,
+  loadDossierPropositions,
+  type DossierPropositionRow,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
   searchMandantContactOptions,
@@ -18216,6 +18218,7 @@ function DossierDetailLayout(props: {
                   onHektorActionJobCreated={props.onHektorActionJobCreated}
                 />
               ) : null}
+              {activeDetailTab === 'commercial' ? <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} /> : null}
               {activeDetailTab === 'commercial' ? <AppointmentAnnonceSection dossier={dossier} detail={props.detail} /> : null}
               </div>
 
@@ -20215,6 +20218,55 @@ function GoogleAgendaGlobalEventModal(props: {
       </section>
     </div>,
     document.body,
+  )
+}
+
+function DossierPropositionsSection({ dossier, onOpenContact }: { dossier: Dossier | null; onOpenContact?: (contactId: string) => void }) {
+  const [rows, setRows] = useState<DossierPropositionRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const dossierId = dossier?.app_dossier_id ?? null
+  useEffect(() => {
+    if (dossierId == null) { setRows([]); return }
+    let cancelled = false
+    setLoading(true)
+    loadDossierPropositions(dossierId)
+      .then((r) => { if (!cancelled) setRows(r) })
+      .catch(() => { if (!cancelled) setRows([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [dossierId])
+
+  const channelLabel = (c: string) => (
+    c === 'email' ? 'Email' : c === 'telephone' ? 'Téléphone'
+      : c === 'visite' ? 'Visite (sur place)' : c === 'virtuelle' ? 'Visite (à distance)'
+      : c === 'rdv' ? 'Visite du bien' : c
+  )
+  const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) } catch { return d } }
+  const propName = (r: DossierPropositionRow) => r.display_name || [r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || r.hektor_contact_id
+
+  return (
+    <section className="detail-card dossier-prop-section">
+      <div className="detail-card-head"><h3>Propositions acquéreurs</h3>{rows.length > 0 ? <span className="dossier-prop-count">{rows.length}</span> : null}</div>
+      {loading ? (
+        <p className="empty-state">Chargement…</p>
+      ) : rows.length === 0 ? (
+        <p className="empty-state">Ce bien n'a été proposé à aucun acquéreur depuis le rapprochement.</p>
+      ) : (
+        <div className="dossier-prop-list">
+          {rows.map((r, i) => (
+            <div key={`${r.hektor_contact_id}-${i}`} className="dossier-prop-row">
+              <button type="button" className="dpr-name" onClick={() => r.hektor_contact_id && onOpenContact?.(r.hektor_contact_id)} title="Ouvrir la fiche contact">
+                <strong>{propName(r)}</strong>
+                <small>{channelLabel(r.channel)} · {fmtDate(r.created_at)}{r.status_after === 'visite' ? ' · Visite prévue' : ''}</small>
+              </button>
+              {r.gmail_thread_id ? (
+                <a className="dpr-mail" href={`https://mail.google.com/mail/u/0/#all/${r.gmail_thread_id}`} target="_blank" rel="noreferrer">Voir l'email →</a>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 

@@ -502,14 +502,14 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     properties.filter((p) => refs.includes(p.ref)).map((p) => p.appDossierId).filter((x): x is number => x != null),
     [properties])
 
-  const propose = useCallback((refs: string[], chan: Channel) => {
+  const propose = useCallback((refs: string[], chan: Channel, gmail?: { messageId?: string | null; threadId?: string | null }) => {
     const c = CHAN_CONFIG[chan]
     setProperties((list) => list.map((p) => refs.includes(p.ref)
       ? { ...p, status: c.status, group: 'encours', tagCls: c.tagCls, tagLabel: c.tagLabel, foot: c.foot, inEnvoi: false }
       : p))
     flash(refs)
     if (searchKey) {
-      Promise.all(dossierIdsForRefs(refs).map((id) => recordProposition(searchKey, id, chan, null, negoEmail)))
+      Promise.all(dossierIdsForRefs(refs).map((id) => recordProposition(searchKey, id, chan, null, negoEmail, gmail?.messageId ?? null, gmail?.threadId ?? null)))
         .then(reloadRelances)
         .catch((e) => toast(`Erreur d'enregistrement : ${e?.message ?? ''}`))
     } else {
@@ -628,7 +628,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       if (!res?.ok) throw new Error('Envoi refusé par le serveur')
       setConfirmSend(false)
       setMailRefs(null)
-      propose(refs, 'email') // succès uniquement → trace proposition + relance J+5
+      propose(refs, 'email', { messageId: res?.messageId ?? null, threadId: res?.threadId ?? null }) // succès uniquement → trace proposition + relance J+5
       toast(`Email envoyé à ${acquereurEmail}.`)
     } catch (e) {
       toast(`Échec de l'envoi : ${(e as Error)?.message ?? 'erreur'} — aucun bien marqué proposé.`)

@@ -2139,12 +2139,28 @@ export async function loadRelances(contactSearchKey: string): Promise<RelanceRow
   return (data ?? []) as RelanceRow[]
 }
 
-export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null): Promise<void> {
+export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null, gmailMessageId?: string | null, gmailThreadId?: string | null): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_record_proposition', {
     p_search_key: contactSearchKey, p_dossier_id: appDossierId, p_channel: channel, p_note: note ?? null, p_nego: nego ?? null,
+    p_gmail_message_id: gmailMessageId ?? null, p_gmail_thread_id: gmailThreadId ?? null,
   })
   if (error) throw new Error(error.message ?? 'Unable to record proposition')
+}
+
+export type DossierPropositionRow = {
+  contact_search_key: string; hektor_contact_id: string
+  display_name: string | null; civilite: string | null; nom: string | null; prenom: string | null
+  channel: string; status_after: string | null; note: string | null
+  gmail_message_id: string | null; gmail_thread_id: string | null; created_at: string
+}
+
+/** Acquéreurs à qui un bien a été proposé (pour la fiche annonce). */
+export async function loadDossierPropositions(appDossierId: number): Promise<DossierPropositionRow[]> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  const { data, error } = await supabase.rpc('app_get_dossier_propositions', { p_app_dossier_id: appDossierId })
+  if (error) throw new Error(error.message ?? 'Unable to load dossier propositions')
+  return (data ?? []) as DossierPropositionRow[]
 }
 
 export async function setBienStatut(contactSearchKey: string, appDossierId: number, status: string, reason?: string | null, nego?: string | null): Promise<void> {

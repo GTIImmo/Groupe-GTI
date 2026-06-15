@@ -4956,6 +4956,51 @@
   color: #c5005f;
 }
 
+/* Fiche annonce — section Propositions acquéreurs (conservation email/visite) */
+.dossier-prop-count {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c5005f;
+  background: rgba(197, 0, 95, 0.09);
+  border-radius: 99px;
+  padding: 1px 9px;
+}
+.dossier-prop-list { display: flex; flex-direction: column; gap: 6px; }
+.dossier-prop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid #ece4da;
+  border-radius: 10px;
+  background: #fff;
+}
+.dossier-prop-row .dpr-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  min-width: 0;
+}
+.dossier-prop-row .dpr-name strong { font-size: 13.5px; color: #20140d; }
+.dossier-prop-row .dpr-name small { font-size: 11.5px; color: #8a7f74; }
+.dossier-prop-row .dpr-name:hover strong { color: #c5005f; }
+.dossier-prop-row .dpr-mail {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c5005f;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dossier-prop-row .dpr-mail:hover { text-decoration: underline; }
+
 .home-tone-magenta .home-kpi-icon,
 .home-tone-magenta .home-priority-icon,
 .home-list-icon.home-status-accent,
