@@ -1055,7 +1055,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                         <div className="lc-bd">
                           <div className="lc-bd-h">Pourquoi {p.score} % ?</div>
                           {p.crit.map((c) => (
-                            <div className={`lc-bd-row${c.ok ? '' : ' no'}`} key={c.k}><span className="bdk">{c.k}</span><span className={`bdv${c.ok ? ' ok' : ''}`}>{c.ok ? c.v : 'Hors critère'}</span></div>
+                            <div className={`lc-bd-row${c.ok ? '' : ' no'}`} key={c.k}><span className="bdk">{c.k}</span><span className={`bdv${c.ok ? ' ok' : ''}`}>{c.v}</span></div>
                           ))}
                         </div>
                       )}
@@ -1309,7 +1309,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                         <div className={`pr-crit ${c.ok ? 'ok' : 'no'}`} key={c.k}>
                           <span className="pr-crit-ic">{c.ok ? <IcCheck /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 6l12 12M18 6 6 18" /></svg>}</span>
                           <span className="pr-crit-k">{c.k}</span>
-                          <span className="pr-crit-v">{c.ok ? c.v : 'Hors critère'}</span>
+                          <span className="pr-crit-v">{c.v}</span>
                         </div>
                       ))}
                     </div>
