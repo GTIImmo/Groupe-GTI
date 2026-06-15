@@ -116,17 +116,19 @@
    KPI band — restyle « design only » de la bande existante
    (.header-kpis-secondary). Données + clics inchangés.
    ============================================================ */
-.header-kpis.header-kpis-secondary{
-  display:flex;flex-wrap:nowrap;align-items:stretch;gap:0;overflow-x:auto;
-  border:1px solid #e2e5e6;border-radius:14px;background:#fff;padding:0;scrollbar-width:thin;
+.app-shell .header-kpis.header-kpis-secondary{
+  display:flex !important;flex-wrap:nowrap !important;grid-template-columns:none !important;grid-template-rows:none !important;
+  align-items:stretch;gap:0 !important;overflow-x:auto;overflow-y:hidden;
+  border:1px solid #e2e5e6;border-radius:14px;background:#fff;padding:0 !important;scrollbar-width:thin;
   box-shadow:0 1px 3px rgba(34,35,35,.06);
 }
 .header-kpis.header-kpis-secondary::-webkit-scrollbar{height:6px;}
 .header-kpis.header-kpis-secondary::-webkit-scrollbar-thumb{background:#cfd3d4;border-radius:9px;}
-.header-kpis.header-kpis-secondary .header-kpi-card{
-  flex:none;min-width:128px;display:flex;flex-direction:column;justify-content:center;gap:4px;
-  padding:12px 16px;border:0;border-right:1px solid #eef0f1;border-bottom:3px solid transparent;
-  border-radius:0;background:#fff;text-align:left;white-space:nowrap;transition:background .13s,border-color .13s;
+.app-shell .header-kpis.header-kpis-secondary .header-kpi-card{
+  flex:0 0 auto !important;min-width:118px !important;width:auto !important;height:auto !important;min-height:0 !important;
+  display:flex !important;flex-direction:column;justify-content:center;gap:4px !important;
+  padding:10px 16px !important;margin:0 !important;border:0;border-right:1px solid #eef0f1;border-bottom:3px solid transparent;
+  border-radius:0 !important;background:#fff;text-align:left;white-space:nowrap;transition:background .13s,border-color .13s;
 }
 .header-kpis.header-kpis-secondary .header-kpi-card:last-child{border-right:0;}
 .header-kpis.header-kpis-secondary .header-kpi-card.is-clickable{cursor:pointer;}
@@ -143,7 +145,7 @@
 .header-kpis.header-kpis-secondary .tone-demandes .kpi-ic{background:#f2effe;color:#6643a7;}
 .header-kpis.header-kpis-secondary .tone-warning .kpi-ic{background:#fef3ea;color:#c45c14;}
 /* libellé de groupe vertical (séparateur) */
-.header-kpis.header-kpis-secondary .kpi-grp-lbl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#5c6163;padding:12px 9px;border-right:1px solid #e2e5e6;background:#f6f7f8;white-space:nowrap;flex:none;display:flex;align-items:center;justify-content:center;}
+.app-shell .header-kpis.header-kpis-secondary .kpi-grp-lbl{writing-mode:horizontal-tb !important;transform:none !important;font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8c0044;padding:0 10px !important;border-right:1px solid #e2e5e6;background:#f6f7f8;white-space:nowrap;flex:0 0 auto !important;height:auto !important;min-width:0 !important;display:flex;align-items:center;justify-content:center;}
 /* accent par tonalité (reprend la sémantique couleur de la maquette) */
 .header-kpis.header-kpis-secondary .header-kpi-card.tone-volume.is-active{border-bottom-color:#c5005f;}
 .header-kpis.header-kpis-secondary .header-kpi-card.tone-volume.is-active strong{color:#c5005f;}
