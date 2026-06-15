@@ -8254,6 +8254,7 @@ export default function App() {
   const [rechercheAcquereurSearch, setRechercheAcquereurSearch] = useState<AppContactSearch | null>(null)
   const [visitBooking, setVisitBooking] = useState<VisitePlanInput | null>(null)
   const [visitRefreshKey, setVisitRefreshKey] = useState(0)
+  const [editingVisitEvent, setEditingVisitEvent] = useState<GoogleCalendarEventLink | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -13431,6 +13432,25 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           onOpenAnnonce={(id) => { setRechercheAcquereurOpen(false); setScreen('mandats'); setSelectedMandatId(id); setSelectedDossierId(id); setDetailOpen(true) }}
           onPlanifierVisite={(input) => setVisitBooking(input)}
           visitRefreshKey={visitRefreshKey}
+          onImprimerBonVisite={async (event) => {
+            if (!selectedContact) return
+            const printWindow = window.open('', '_blank')
+            writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml())
+            let photoUrl: string | null = null
+            try { photoUrl = await loadVisitVoucherPhotoUrl(event, selectedContactRelations) } catch { /* photo best-effort */ }
+            openVisitVoucherPrint(selectedContact, event, selectedContactRelations, photoUrl, printWindow)
+          }}
+          onModifierRdv={(event) => setEditingVisitEvent(event)}
+          onSupprimerRdv={async (event) => {
+            try {
+              await deleteGoogleCalendarEvent(event.id, { sendUpdates: 'all' })
+              const sk = (event.metadata_json as Record<string, unknown> | null)?.contact_search_key
+              if (typeof sk === 'string' && event.app_dossier_id != null) {
+                await setBienStatut(sk, event.app_dossier_id, 'jamais_vu', null, null).catch(() => {})
+              }
+              setVisitRefreshKey((k) => k + 1)
+            } catch { /* suppression best-effort */ }
+          }}
         />
 
         {visitBooking ? (() => {
@@ -13486,6 +13506,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             />
           )
         })() : null}
+
+        {editingVisitEvent ? (
+          <GoogleAgendaGlobalEventModal
+            calendarEmail={normalizeEmail(editingVisitEvent.google_calendar_email) || sessionEmail || ''}
+            slot={{ start: editingVisitEvent.starts_at, end: editingVisitEvent.ends_at }}
+            editingEvent={editingVisitEvent}
+            hektorNegotiators={hektorNegotiators}
+            canManageContacts={canManageContacts}
+            hektorUserEmail={contactHektorUserEmail}
+            hektorUserId={contactHektorUserId}
+            profileRole={profile?.role ?? null}
+            sessionEmail={sessionEmail}
+            overlayClassName="ra-agenda-modal-overlay"
+            onClose={() => setEditingVisitEvent(null)}
+            onUpdated={() => { setEditingVisitEvent(null); setVisitRefreshKey((k) => k + 1) }}
+            onCreated={() => { setEditingVisitEvent(null); setVisitRefreshKey((k) => k + 1) }}
+          />
+        ) : null}
 
     </>
   )

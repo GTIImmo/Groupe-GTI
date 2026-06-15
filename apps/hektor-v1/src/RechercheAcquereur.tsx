@@ -3,7 +3,8 @@ import type { AppContact, AppContactSearch } from './types'
 import {
   loadRapprochements, loadSearchStatuts, loadRelances, loadSearchTimeline, loadDossierPhotos,
   recordProposition, setBienStatut, setRelanceStatus, sendGoogleWorkspaceCrmEmail,
-  type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow,
+  loadGoogleCalendarEventLinks,
+  type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow, type GoogleCalendarEventLink,
 } from './lib/api'
 import RapprochementStats from './RapprochementStats'
 
@@ -353,11 +354,14 @@ export interface RechercheAcquereurProps {
   onOpenAnnonce?: (appDossierId: number) => void
   onPlanifierVisite?: (input: VisitePlanInput) => void
   visitRefreshKey?: number
+  onImprimerBonVisite?: (event: GoogleCalendarEventLink) => void
+  onModifierRdv?: (event: GoogleCalendarEventLink) => void
+  onSupprimerRdv?: (event: GoogleCalendarEventLink) => void
 }
 
 const GTI_DOMAIN = 'gti-immobilier.fr'
 
-export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite, visitRefreshKey }: RechercheAcquereurProps) {
+export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite, visitRefreshKey, onImprimerBonVisite, onModifierRdv, onSupprimerRdv }: RechercheAcquereurProps) {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES)
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -372,6 +376,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const [loadError, setLoadError] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
   const [timeline, setTimeline] = useState<TimelineRow[]>([])
+  const [visitEvents, setVisitEvents] = useState<Record<number, GoogleCalendarEventLink>>({})
   const [prPhotos, setPrPhotos] = useState<string[]>([])
   const [confirmSend, setConfirmSend] = useState(false)
   const [sending, setSending] = useState(false)
@@ -435,6 +440,29 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, searchKey, visitRefreshKey])
+
+  // RDV Google "visite" du contact, indexés par bien (pour les boutons Bon de visite / Modifier / Supprimer)
+  useEffect(() => {
+    const cid = contact?.hektor_contact_id
+    if (!open || !cid) { setVisitEvents({}); return }
+    let cancelled = false
+    loadGoogleCalendarEventLinks({ hektorContactId: cid, limit: 100 })
+      .then((events) => {
+        if (cancelled) return
+        const map: Record<number, GoogleCalendarEventLink> = {}
+        for (const e of events) {
+          if (e.event_type !== 'visite') continue
+          if (e.status && e.status !== 'active') continue
+          if (e.app_dossier_id == null) continue
+          const prev = map[e.app_dossier_id]
+          if (!prev || (e.starts_at || '') > (prev.starts_at || '')) map[e.app_dossier_id] = e
+        }
+        setVisitEvents(map)
+      })
+      .catch(() => { if (!cancelled) setVisitEvents({}) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, contact?.hektor_contact_id, searchKey, visitRefreshKey])
 
   const reloadRelances = useCallback(() => {
     if (!searchKey) return
@@ -778,13 +806,24 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
         <button className="btn ghost sm" onClick={() => cardAction(p, 'restore')}>Remettre à proposer</button>
       </>
     )
-    if (p.status === 'visite') return (
-      <>
-        <button className="btn brand-soft sm" onClick={() => cardAction(p, 'cr')}>Confirmer la visite</button>
-        <button className="btn ghost sm" onClick={() => cardAction(p, 'restore')}>Remettre à proposer</button>
-        <button className="btn ghost sm" onClick={() => cardAction(p, 'annonce')}>Voir l’annonce</button>
-      </>
-    )
+    if (p.status === 'visite') {
+      const ev = p.appDossierId != null ? visitEvents[p.appDossierId] : undefined
+      return (
+        <>
+          {ev ? (
+            <>
+              <button className="btn brand-soft sm" onClick={() => onImprimerBonVisite?.(ev)}>Bon de visite</button>
+              <button className="btn ghost sm" onClick={() => onModifierRdv?.(ev)}>Modifier</button>
+              <button className="btn ghost sm" onClick={() => onSupprimerRdv?.(ev)}>Supprimer</button>
+            </>
+          ) : (
+            <button className="btn brand-soft sm" onClick={() => cardAction(p, 'visite')}>Planifier la visite</button>
+          )}
+          <button className="btn ghost sm" onClick={() => cardAction(p, 'restore')}>Remettre à proposer</button>
+          <button className="btn ghost sm" onClick={() => cardAction(p, 'annonce')}>Voir l’annonce</button>
+        </>
+      )
+    }
     return (
       <>
         <button className="btn ghost sm" onClick={() => cardAction(p, 'restore')}>Rétablir</button>
