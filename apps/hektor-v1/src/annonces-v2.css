@@ -156,6 +156,38 @@
 .header-kpis.header-kpis-secondary .header-kpi-card.is-active{background:#f6f7f8;}
 
 /* ============================================================
+   Modale d'action — restyle premium façon maquette (scopé annonces).
+   Structure existante (.action-menu-dialog + ActionButton) déjà = modale
+   + cartes icône/titre/desc/CTA ; on ne change que l'esthétique.
+   ============================================================ */
+.app-screen-mandats .action-menu-dialog-backdrop{background:rgba(20,20,22,.5) !important;backdrop-filter:blur(6px) saturate(1.4);display:flex;align-items:center;justify-content:center;z-index:200;}
+.app-screen-mandats .action-menu-dialog{width:468px !important;max-width:calc(100vw - 32px);background:#fff !important;border-radius:26px !important;box-shadow:0 0 0 1px rgba(34,35,35,.07),0 8px 24px rgba(34,35,35,.08),0 32px 80px rgba(34,35,35,.18) !important;padding:0 !important;overflow:hidden;border:0 !important;}
+.app-screen-mandats .action-menu-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:24px 24px 4px !important;border:0 !important;}
+.app-screen-mandats .action-menu-dialog-eyebrow{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8c0044;margin:0;display:flex;align-items:center;gap:6px;}
+.app-screen-mandats .action-menu-dialog-eyebrow::before{content:"";width:5px;height:5px;border-radius:50%;background:#c5005f;}
+.app-screen-mandats .action-menu-dialog-head h4{margin:2px 0 0;font-size:22px;font-weight:800;color:#222323;letter-spacing:-.02em;}
+.app-screen-mandats .action-menu-close{width:34px;height:34px;border-radius:50% !important;border:1px solid rgba(34,35,35,.12) !important;background:rgba(34,35,35,.04) !important;color:#3b4143 !important;display:grid;place-items:center;padding:0 !important;font-size:0 !important;}
+.app-screen-mandats .action-menu-close::before{content:"✕";font-size:14px;}
+.app-screen-mandats .action-menu-dialog-copy{margin:14px 24px 0 !important;padding:11px 14px !important;background:linear-gradient(135deg,#f6f7f8,#f9f9fa);border:1px solid #e2e5e6;border-radius:14px;font-size:12.5px;color:#5c6163;line-height:1.5;}
+.app-screen-mandats .action-menu-dialog-list{padding:14px 18px 22px !important;display:flex;flex-direction:column;gap:8px;}
+/* cartes d'action */
+.app-screen-mandats .action-menu-item{display:flex !important;align-items:center;gap:15px;width:100%;border:1.5px solid rgba(34,35,35,.08) !important;background:#fafafa !important;border-radius:16px !important;padding:14px 16px !important;cursor:pointer;text-align:left;transition:border-color .15s,background .15s,transform .12s,box-shadow .15s;}
+.app-screen-mandats .action-menu-item:hover{border-color:#f6b6d5 !important;background:#fff !important;transform:translateY(-1px);box-shadow:0 4px 16px rgba(34,35,35,.08);}
+.app-screen-mandats .action-menu-item-icon{width:46px;height:46px;border-radius:14px !important;display:grid;place-items:center;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 1px 3px rgba(34,35,35,.12);}
+.app-screen-mandats .action-menu-item-icon svg{width:21px;height:21px;}
+.app-screen-mandats .action-menu-item-icon-diffusion{background:linear-gradient(145deg,#fce4ec,#f8bbd0) !important;color:#8c0044 !important;}
+.app-screen-mandats .action-menu-item-icon-price-drop{background:linear-gradient(145deg,#e8f5e9,#c8e6c9) !important;color:#2e7d32 !important;}
+.app-screen-mandats .action-menu-item-icon-hektor{background:linear-gradient(145deg,#1a7f79,#0d5c57) !important;color:#fff !important;}
+.app-screen-mandats .action-menu-item-icon-validation,
+.app-screen-mandats .action-menu-item-icon-cancellation{background:linear-gradient(145deg,#ede7f6,#d1c4e9) !important;color:#5e35b1 !important;}
+.app-screen-mandats .action-menu-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.app-screen-mandats .action-menu-item-label{font-size:14.5px;font-weight:700;color:#222323;}
+.app-screen-mandats .action-menu-item-helper{font-size:12px;color:#5c6163;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app-screen-mandats .action-menu-item-state{font-size:12px;font-weight:700;padding:6px 14px;border-radius:99px;background:#fdf0f6;color:#8c0044;border:1.5px solid #f9d6e6;white-space:nowrap;flex:none;}
+.app-screen-mandats .action-menu-item-arrow{color:rgba(34,35,35,.25);flex:none;display:flex;}
+.app-screen-mandats .action-menu-item:hover .action-menu-item-arrow{color:rgba(34,35,35,.5);transform:translateX(2px);}
+
+/* ============================================================
    Toolbar — carte façon maquette (scopé écran Annonces).
    ============================================================ */
 .app-shell.app-screen-mandats .hero{background:#fff !important;border:1px solid #e2e5e6 !important;border-radius:16px !important;box-shadow:0 2px 8px -2px rgba(34,35,35,.10),0 1px 3px rgba(34,35,35,.06) !important;padding:12px 14px !important;}
