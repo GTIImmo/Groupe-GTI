@@ -352,11 +352,12 @@ export interface RechercheAcquereurProps {
   acquereurEmail?: string | null
   onOpenAnnonce?: (appDossierId: number) => void
   onPlanifierVisite?: (input: VisitePlanInput) => void
+  visitRefreshKey?: number
 }
 
 const GTI_DOMAIN = 'gti-immobilier.fr'
 
-export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite }: RechercheAcquereurProps) {
+export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite, visitRefreshKey }: RechercheAcquereurProps) {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES)
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -433,7 +434,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, searchKey])
+  }, [open, searchKey, visitRefreshKey])
 
   const reloadRelances = useCallback(() => {
     if (!searchKey) return

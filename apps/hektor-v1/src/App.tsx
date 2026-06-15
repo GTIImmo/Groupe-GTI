@@ -98,6 +98,7 @@ import {
   type SearchToComplete,
   loadDossierPropositions,
   type DossierPropositionRow,
+  setBienStatut,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
   searchMandantContactOptions,
@@ -8252,6 +8253,7 @@ export default function App() {
   const [rechercheAcquereurOpen, setRechercheAcquereurOpen] = useState(false)
   const [rechercheAcquereurSearch, setRechercheAcquereurSearch] = useState<AppContactSearch | null>(null)
   const [visitBooking, setVisitBooking] = useState<VisitePlanInput | null>(null)
+  const [visitRefreshKey, setVisitRefreshKey] = useState(0)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -13428,6 +13430,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           acquereurEmail={selectedContact ? appContactAgendaEmail(selectedContact) : null}
           onOpenAnnonce={(id) => { setRechercheAcquereurOpen(false); setScreen('mandats'); setSelectedMandatId(id); setSelectedDossierId(id); setDetailOpen(true) }}
           onPlanifierVisite={(input) => setVisitBooking(input)}
+          visitRefreshKey={visitRefreshKey}
         />
 
         {visitBooking ? (() => {
@@ -13472,7 +13475,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               presetMetadata={{ source: 'rapprochement', contact_search_key: visitBooking.contactSearchKey }}
               overlayClassName="ra-agenda-modal-overlay"
               onClose={() => setVisitBooking(null)}
-              onCreated={() => setVisitBooking(null)}
+              onCreated={async () => {
+                if (visitBooking.contactSearchKey && visitBooking.appDossierId != null) {
+                  try { await setBienStatut(visitBooking.contactSearchKey, visitBooking.appDossierId, 'visite', null, calEmail || null) } catch { /* statut best-effort */ }
+                }
+                setVisitBooking(null)
+                setVisitRefreshKey((k) => k + 1)
+              }}
               onUpdated={() => setVisitBooking(null)}
             />
           )
