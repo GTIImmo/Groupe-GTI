@@ -44,6 +44,11 @@ interface Buyer {
   statusLabel: string
   crit: Crit[]
   date: string
+  briefType: string | null
+  briefVilles: string[]
+  briefBudget: string | null
+  briefSurfaceMin: string | null
+  briefPiecesMin: string | null
   isNew?: boolean
   sel?: boolean
 }
@@ -120,6 +125,36 @@ function mapStatus(st: string | null): { status: Status; group: Group } {
   return { status: 'todo', group: 'todo' }
 }
 
+// Premier type de bien recherché (types_json = { code: label }).
+function parseFirstTypeLabel(tj: Record<string, string> | string[] | null): string | null {
+  if (!tj) return null
+  if (Array.isArray(tj)) { const v = tj.map((x) => String(x).trim()).filter(Boolean)[0]; return v || null }
+  for (const [k, v] of Object.entries(tj as Record<string, unknown>)) {
+    const s = String(v ?? '').trim()
+    if (s && s !== '0' && s.toLowerCase() !== 'false') return s !== '1' ? s : k
+  }
+  return null
+}
+// Communes recherchées (villes_json = tableau ou objet).
+function parseVilles(vj: Record<string, string> | string[] | null): string[] {
+  if (!vj) return []
+  const raw = Array.isArray(vj) ? vj : Object.values(vj as Record<string, unknown>)
+  return raw.map((x) => String(x ?? '').trim()).filter(Boolean)
+}
+// Budget compact en k€ pour le résumé de recherche.
+function compactBudget(min: number | null, max: number | null): string | null {
+  const k = (n: number) => `${Math.round(n / 1000)}`
+  if (min != null && max != null) return `${k(min)}–${k(max)} k€`
+  if (max != null) return `≤ ${k(max)} k€`
+  if (min != null) return `≥ ${k(min)} k€`
+  return null
+}
+// Pourcentage lisible dans un libellé de composant ("85 %"), sinon null.
+function critPct(v: string): number | null {
+  const m = v.match(/(\d+)\s*%/)
+  return m ? Math.min(100, Number(m[1])) : null
+}
+
 function rowToBuyer(r: RapprochementForDossierRow): Buyer {
   const name = (r.display_name || `${r.prenom ?? ''} ${r.nom ?? ''}`).trim() || 'Acquéreur'
   const { status, group } = mapStatus(r.statut)
@@ -146,6 +181,11 @@ function rowToBuyer(r: RapprochementForDossierRow): Buyer {
     statusLabel: STATUS_LABEL[status],
     crit: (r.components ?? []).map((c) => ({ k: c.k, ok: c.ok, v: c.v })),
     date: dateFoot,
+    briefType: parseFirstTypeLabel(r.types_json),
+    briefVilles: parseVilles(r.villes_json),
+    briefBudget: compactBudget(min, max),
+    briefSurfaceMin: r.surface_min != null ? `≥ ${Math.round(Number(r.surface_min))} m²` : null,
+    briefPiecesMin: r.pieces_min != null ? `≥ ${Math.round(Number(r.pieces_min))} pièces` : null,
     isNew: status === 'todo' && isRecent(r.first_seen_at),
   }
 }
@@ -504,7 +544,7 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     )
     return (
       <>
-        <button className="btn-sm brand-fill" onClick={() => openChan([b.searchKey])}><IcSend />Proposer le bien…</button>
+        <button className="btn-sm brand-fill" onClick={() => openChan([b.searchKey])}><IcSend />Proposer</button>
         <button className="btn-ecart" onClick={() => ecarter([b.searchKey])}>Écarter</button>
       </>
     )
@@ -652,7 +692,6 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
                 )}
                 <div id="ramFeed">
                   {visible.slice(0, 80).map((b) => {
-                    const bs = budgetState(b)
                     return (
                       <article key={b.searchKey} className={`acard${b.sel ? ' sel' : ''}`} data-status={b.status}>
                         <div className="ac-thumb">
@@ -663,9 +702,16 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
                             {b.crit.length > 0 && (
                               <div className="sc-bd">
                                 <div className="sc-bd-h">Pourquoi {b.score} % ?</div>
-                                {b.crit.map((c) => (
-                                  <div className={`sc-bd-row${c.ok ? '' : ' no'}`} key={c.k}><span className="bdk">{c.k}</span><span className={`bdv${c.ok ? ' ok' : ''}`}>{c.v}</span></div>
-                                ))}
+                                {b.crit.map((c) => {
+                                  const pct = critPct(c.v)
+                                  return (
+                                    <div className={`sc-bd-row${c.ok ? '' : ' no'}`} key={c.k}>
+                                      <span className="bdk">{c.k}</span>
+                                      {pct != null ? <span className="bdbar"><span style={{ width: `${pct}%` }} /></span> : null}
+                                      <span className={`bdv${c.ok ? ' ok' : ''}`}>{c.v}</span>
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )}
                           </div>
@@ -673,9 +719,15 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
                         <div className="ac-main">
                           <div className="ac-top">
                             <div>
-                              <div className="ac-name">{b.name}</div>
+                              <div className="ac-name-row">
+                                {b.contactId ? (
+                                  <button type="button" className="ac-name-link" onClick={() => onOpenContact?.(b.contactId as string)} title="Ouvrir la fiche contact">
+                                    {b.name}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M14 4h6v6M20 4 10 14" /><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" /></svg>
+                                  </button>
+                                ) : <span className="ac-name">{b.name}</span>}
+                              </div>
                               <div className="ac-meta">
-                                {b.ownerNom && <span className="ac-owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>{b.ownerNom}</span>}
+                                {b.ownerNom && <span className="ac-owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>Négo : {b.ownerNom}</span>}
                                 {b.isNew && <span className="ac-new">Nouveau</span>}
                               </div>
                             </div>
@@ -684,12 +736,16 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
                             {b.phone && <span><IcPhone />{b.phone}</span>}
                             {b.email && <span><IcMail />{b.email}</span>}
                           </div>
-                          <div className="ac-budget">
-                            <span className={`budget-icon${bs === 'warn' ? ' warn' : bs === 'bad' ? ' bad' : ''}`}><IcEuro /></span>
-                            <div><div className="budget-lbl">Budget acquéreur</div><div className="budget-val">{b.budgetLabel}</div></div>
-                            <span className={`budget-hint ${bs === 'na' ? '' : bs}`}>{budgetHintLabel[bs]}</span>
+                          <div className="ac-brief">
+                            <div className="ac-brief-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" strokeLinecap="round" /></svg>Sa recherche</div>
+                            <div className="ac-brief-chips">
+                              {b.briefType && <span className="ac-chip type">{b.briefType}</span>}
+                              {b.briefVilles.length > 0 && <span className="ac-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>{b.briefVilles[0]}{b.briefVilles.length > 1 ? ` +${b.briefVilles.length - 1}` : ''}</span>}
+                              {b.briefBudget && <span className="ac-chip">{b.briefBudget}</span>}
+                              {b.briefSurfaceMin && <span className="ac-chip">{b.briefSurfaceMin}</span>}
+                              {b.briefPiecesMin && <span className="ac-chip">{b.briefPiecesMin}</span>}
+                            </div>
                           </div>
-                          <MatchTags crit={b.crit} />
                         </div>
                         <div className="ac-side">
                           {b.status === 'todo' && (
