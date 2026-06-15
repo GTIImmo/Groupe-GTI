@@ -14077,15 +14077,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <p className="eyebrow">GTI Immobilier</p>
           <h1>{screenHeader.title}</h1>
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
-          <button
-            className="sidebar-collapse-button"
-            type="button"
-            aria-label={sidebarCollapsed ? 'Agrandir le menu' : 'Reduire le menu'}
-            aria-pressed={sidebarCollapsed}
-            onClick={() => setSidebarCollapsed((value) => !value)}
-          >
-            <span>{sidebarCollapsed ? 'Ouvrir' : 'Reduire'}</span>
-          </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
           <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
@@ -15857,11 +15848,11 @@ function MandatsScreen(props: {
               <colgroup>
                 <col style={{ width: '64px' }} />{/* photo */}
                 <col />{/* bien — flexible */}
-                <col style={{ width: '170px' }} />{/* négociateur */}
-                <col style={{ width: '156px' }} />{/* statut */}
-                <col style={{ width: '120px' }} />{/* diffusion */}
-                <col style={{ width: '84px' }} />{/* vues */}
-                <col style={{ width: '132px' }} />{/* actions */}
+                <col style={{ width: '168px' }} />{/* négociateur */}
+                <col style={{ width: '150px' }} />{/* statut */}
+                <col style={{ width: '134px' }} />{/* diffusion */}
+                <col style={{ width: '78px' }} />{/* vues */}
+                <col style={{ width: '128px' }} />{/* actions */}
               </colgroup>
             ) : null}
             <thead>

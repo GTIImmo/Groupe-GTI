@@ -19,7 +19,9 @@
 
 /* ── table ── */
 .annonces-v2 .table-wrap.listing-table-active{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.annonces-v2 table{width:100%;border-collapse:collapse;min-width:880px;}
+/* max-width = largeur de conception de la maquette (1440) : évite l'éclatement
+   des colonnes sur écrans très larges (la colonne Bien absorbait tout l'espace). */
+.annonces-v2 table{width:100%;max-width:1460px;border-collapse:collapse;min-width:880px;table-layout:fixed;}
 .annonces-v2 thead th{background:var(--av-surface-2);text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--av-subtle);padding:11px 12px;border-top:1px solid var(--av-border);border-bottom:1px solid var(--av-border);white-space:nowrap;}
 .annonces-v2 thead th.av-right{text-align:right;}
 .annonces-v2 thead th.av-pad-l{padding-left:22px;}
@@ -76,9 +78,9 @@
 .annonces-v2 .av-al.amber{background:var(--av-warn-soft);color:var(--av-warn);border:1px solid rgba(182,106,22,.2);}
 .annonces-v2 .av-al.grey{background:var(--av-neutral-100);color:var(--av-muted);border:1px solid var(--av-border);}
 
-/* diffusion chips */
-.annonces-v2 .av-dp-row{display:flex;gap:4px;}
-.annonces-v2 .av-dp{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap;}
+/* diffusion chips — compacts pour tenir dans la colonne fixe (LBC/BI/GTI complets) */
+.annonces-v2 .av-dp-row{display:flex;gap:4px;overflow:visible;}
+.annonces-v2 .av-dp{font-size:10px;font-weight:700;padding:3px 6px;border-radius:99px;white-space:nowrap;flex:none;overflow:visible;text-overflow:clip;}
 .annonces-v2 .av-dp.on{background:var(--av-green-soft);color:var(--av-green);border:1px solid rgba(47,125,89,.28);}
 .annonces-v2 .av-dp.off{background:var(--av-neutral-100);color:#9aa0a0;border:1px solid var(--av-border);}
 
@@ -136,7 +138,7 @@
   width:46px;height:46px;border-radius:14px;flex:none;display:grid;place-items:center;cursor:pointer;padding:0;
   border:0;background:linear-gradient(160deg,#d12a73,#9d0f4e);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px -7px rgba(194,18,95,.6);
-  transition:filter .15s,transform .12s;margin-bottom:8px;
+  transition:filter .15s,transform .12s;margin-bottom:2px;
 }
 .brand-block .rail-logo-toggle:hover{filter:brightness(1.1);transform:translateY(-1px);}
 .brand-block .rail-logo-toggle:active{transform:translateY(0);}
