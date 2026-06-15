@@ -180,4 +180,12 @@
   .app-shell.is-sidebar-collapsed .side-rail .rail-brand,
   .app-shell.is-sidebar-collapsed .side-rail .rail-reduce{display:none;}
   .app-shell.is-sidebar-collapsed .side-rail .brand-block.rail-top{justify-content:center;}
+
+  /* replié : masque le nom + les boutons du pied (cloche / Utilisateurs /
+     Se déconnecter) — ils dépassent en 86px et provoquent l'ascenseur.
+     On ne garde que l'avatar (accès aux actions en dépliant). */
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-meta,
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-card-actions{display:none !important;}
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-card-top{justify-content:center;}
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-card{padding:8px;}
 }
