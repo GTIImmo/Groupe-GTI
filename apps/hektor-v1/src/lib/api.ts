@@ -2086,6 +2086,37 @@ export async function loadRapprochements(contactSearchKey: string): Promise<Rapp
   return (data ?? []) as RapprochementRow[]
 }
 
+/**
+ * Recherches acquéreur « à compléter » : actives mais à qui il manque un pilier
+ * (prix ou secteur) → ne produisent pas de rapprochements exploitables.
+ * Scopées au négociateur (email) ; null = toutes (vue admin).
+ */
+export type SearchToComplete = {
+  contact_search_key: string
+  hektor_contact_id: string
+  display_name: string | null
+  civilite: string | null
+  nom: string | null
+  prenom: string | null
+  contact_email: string | null
+  commercial_nom: string | null
+  negociateur_email: string | null
+  offre: string | null
+  types_json: Record<string, string> | null
+  search_index: number | null
+  manque_prix: boolean
+  manque_secteur: boolean
+}
+
+export async function loadSearchesToComplete(negociateurEmail?: string | null): Promise<SearchToComplete[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase.rpc('app_searches_to_complete', {
+    p_negociateur_email: negociateurEmail?.trim() || null,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to load searches to complete')
+  return (data ?? []) as SearchToComplete[]
+}
+
 // ---- Étape B : traçabilité (propositions, statuts, relances) · app-only ----
 export type StatutRow = { app_dossier_id: number; status: string; channel: string | null; reason: string | null; proposed_at: string | null }
 export type RelanceRow = {

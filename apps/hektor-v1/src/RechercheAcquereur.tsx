@@ -340,6 +340,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sort, setSort] = useState<SortKey>('score')
+  const [seuilAffichage, setSeuilAffichage] = useState(75)
   const [alerteOpen, setAlerteOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [relExpanded, setRelExpanded] = useState(false)
@@ -439,8 +440,18 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   }, [properties, sort])
 
   const visibleProperties = useMemo(
-    () => sortedProperties.filter((p) => filter === 'all' || p.group === filter),
-    [sortedProperties, filter],
+    () => sortedProperties.filter((p) =>
+      (filter === 'all' || p.group === filter) &&
+      // le curseur ne masque que les biens encore "à proposer" ; les biens
+      // déjà engagés (en cours) ou écartés restent toujours visibles
+      (p.group !== 'todo' || p.score >= seuilAffichage)),
+    [sortedProperties, filter, seuilAffichage],
+  )
+
+  const hiddenByCursor = useMemo(
+    () => sortedProperties.filter((p) =>
+      (filter === 'all' || p.group === filter) && p.group === 'todo' && p.score < seuilAffichage).length,
+    [sortedProperties, filter, seuilAffichage],
   )
 
   const trayRefs = useMemo(() => properties.filter((p) => p.inEnvoi).map((p) => p.ref), [properties])
@@ -918,8 +929,20 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
             )}
 
             <div className="sortbar">
-              <span className="listcount">{counts.all} biens · {sortLabel}</span>
-              <div className="pills" style={{ marginLeft: 'auto' }}>
+              <span className="listcount">
+                {visibleProperties.length} bien(s) affichés
+                {hiddenByCursor > 0 && <span className="lc-hidden"> · {hiddenByCursor} sous le seuil</span>}
+                {' · '}{sortLabel}
+              </span>
+              <label className="seuil-ctl" title="Masquer du feed les biens à proposer dont la correspondance est sous ce seuil (l'alerte reste à ≥ 80 %)">
+                <span className="seuil-lbl">Afficher ≥ <b>{seuilAffichage} %</b></span>
+                <input
+                  type="range" min={60} max={95} step={5} value={seuilAffichage}
+                  onChange={(e) => setSeuilAffichage(Number(e.target.value))}
+                  className="seuil-range" aria-label="Seuil d'affichage des correspondances"
+                />
+              </label>
+              <div className="pills">
                 {([['score', 'Score'], ['prix', 'Prix'], ['nouveaute', 'Nouveauté'], ['surface', 'Surface']] as [SortKey, string][]).map(([key, label]) => (
                   <button key={key} className={`pill${sort === key ? ' on' : ''}`} onClick={() => setSort(key)}>{label}</button>
                 ))}

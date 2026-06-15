@@ -94,6 +94,8 @@ import {
   loadContactById,
   loadContactsPage,
   loadContactStats,
+  loadSearchesToComplete,
+  type SearchToComplete,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
   searchMandantContactOptions,
@@ -13665,6 +13667,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenRequestModal={openRequestModal}
             onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
             onCreateContact={canManageContacts ? () => setContactCreateOpen(true) : undefined}
+            negociateurEmail={sessionEmail}
+            onOpenContact={openContactDirectory}
           />
         ) : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
@@ -14493,6 +14497,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenRequestModal={openRequestModal}
             onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
             onCreateContact={canManageContacts ? () => setContactCreateOpen(true) : undefined}
+            negociateurEmail={sessionEmail}
+            onOpenContact={openContactDirectory}
           />
         ) : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
@@ -14942,8 +14948,23 @@ function HomeDashboardScreen(props: {
   onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onCreateAnnonce?: () => void
   onCreateContact?: () => void
+  negociateurEmail?: string | null
+  onOpenContact?: (contactId: string) => void
 }) {
   const activeMandats = props.mandats.filter(homeIsActiveMandat)
+
+  // Étape 5 — recherches acquéreur « à compléter » (filet de sécurité)
+  const [toComplete, setToComplete] = useState<SearchToComplete[]>([])
+  const [toCompleteOpen, setToCompleteOpen] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    // négociateur : ses propres recherches ; admin/pauline : toutes
+    const scope = props.variant === 'commercial' ? (props.negociateurEmail ?? null) : null
+    loadSearchesToComplete(scope)
+      .then((rows) => { if (!cancelled) setToComplete(rows) })
+      .catch(() => { if (!cancelled) setToComplete([]) })
+    return () => { cancelled = true }
+  }, [props.variant, props.negociateurEmail])
   const openRequests = props.requests.filter(homeRequestIsOpen)
   const correctionRequests = props.requests.filter((request) => request.request_status === 'waiting_commercial' || request.request_status === 'refused')
   const acceptedRequests = props.requests.filter((request) => request.request_status === 'accepted')
@@ -15104,6 +15125,7 @@ function HomeDashboardScreen(props: {
             <HomePriority label="Synchronisations en erreur" value={props.mandatStats.withErrors || 0} detail="A corriger" tone="magenta" icon="alert" />
             <HomePriority label="Mandats expirants" value={expiringMandats.length} detail="Sous 30 jours" tone="magenta" icon="history" />
             <HomePriority label="Diffusions bloquees" value={nonDiffuse.length} detail="Non diffusees" tone="teal" icon="diffusion" />
+            <HomePriority label="Recherches a completer" value={toComplete.length} detail="Prix ou secteur manquant" tone="magenta" icon="alert" onClick={() => setToCompleteOpen(true)} />
           </section>
           <section className="home-panel">
             <div className="home-panel-head"><h3>Actions rapides</h3></div>
@@ -15176,6 +15198,7 @@ function HomeDashboardScreen(props: {
             <HomePriority label="Annonces sans photo" value={withoutPhoto.length} detail="A completer" tone="magenta" icon="photo" />
             <HomePriority label="Mandats a completer" value={withoutMandat.length} detail="En attente" tone="teal" icon="mandate" />
             <HomePriority label="Acquereurs actifs" value={props.contactStats.activeSearchContacts} detail="Rapprocher les biens" tone="teal" icon="contact" />
+            <HomePriority label="Recherches a completer" value={toComplete.length} detail="Prix ou secteur manquant" tone="magenta" icon="alert" onClick={() => setToCompleteOpen(true)} />
           </section>
           <section className="home-panel home-panel-wide">
             <div className="home-panel-head"><h3>Biens a suivre</h3><button type="button" onClick={() => props.onOpenScreen('mandats')}>Voir tout</button></div>
@@ -15196,6 +15219,42 @@ function HomeDashboardScreen(props: {
               detail="Chiffre d'affaires, objectifs et resultats seront affiches ici quand le module reporting sera connecte."
             />
           </section>
+        </div>
+      )}
+
+      {toCompleteOpen && (
+        <div className="home-stc-overlay" role="dialog" aria-modal="true" onClick={() => setToCompleteOpen(false)}>
+          <div className="home-stc-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="home-stc-head">
+              <div>
+                <h3>Recherches a completer</h3>
+                <p>{toComplete.length} recherche(s) acquereur active(s) sans budget ou sans secteur. Tant qu'un de ces deux piliers manque, elles ne generent pas de rapprochement exploitable.</p>
+              </div>
+              <button type="button" className="home-stc-close" onClick={() => setToCompleteOpen(false)} aria-label="Fermer">&times;</button>
+            </div>
+            <div className="home-stc-list">
+              {toComplete.length === 0 ? <p className="home-empty">Aucune recherche a completer.</p> : null}
+              {toComplete.slice(0, 100).map((s) => {
+                const name = s.display_name || [s.civilite, s.prenom, s.nom].filter(Boolean).join(' ') || s.hektor_contact_id
+                const types = s.types_json ? Object.values(s.types_json).join(', ') : null
+                return (
+                  <button
+                    key={s.contact_search_key}
+                    type="button"
+                    className="home-stc-row"
+                    onClick={() => { if (props.onOpenContact) { props.onOpenContact(s.hektor_contact_id); setToCompleteOpen(false) } }}
+                  >
+                    <span className="home-stc-name"><strong>{name}</strong>{types ? <small>{types}</small> : null}</span>
+                    <span className="home-stc-tags">
+                      {s.manque_prix ? <em className="home-stc-tag">Budget manquant</em> : null}
+                      {s.manque_secteur ? <em className="home-stc-tag">Secteur manquant</em> : null}
+                    </span>
+                  </button>
+                )
+              })}
+              {toComplete.length > 100 ? <p className="home-empty">... et {toComplete.length - 100} autres.</p> : null}
+            </div>
+          </div>
         </div>
       )}
     </section>
