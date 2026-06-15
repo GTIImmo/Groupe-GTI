@@ -7727,6 +7727,17 @@ type HeaderMetricItem = {
     | 'suivi_acceptees'
     | 'suivi_rejetees'
     | null
+  group?: string
+}
+
+function KpiToneIcon({ tone }: { tone: string }) {
+  const inner = tone === 'volume' ? <path d="M5 20V10M12 20V4M19 20v-7" />
+    : tone === 'affaires' ? <path d="M5 12.5 10 17 19 7" />
+    : tone === 'diffusion' ? <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c-2.5 3-4 5.5-4 9s1.5 6 4 9" /></>
+    : tone === 'demandes' ? <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5" /></>
+    : tone === 'warning' ? <><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></>
+    : <circle cx="12" cy="12" r="3" />
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{inner}</svg>
 }
 
 function mandateAsDossier(value: MandatRecord): Dossier {
@@ -11739,20 +11750,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     if (screen === 'mandats') {
       return [
-        { label: 'Annonces', value: new Intl.NumberFormat('fr-FR').format(mandatStats.total), tone: 'volume', action: 'all_annonces' },
-        { label: 'Offres en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresEnCours), tone: 'affaires', action: 'offres_en_cours' },
-        { label: 'Offres refusées', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresRefusees), tone: 'affaires', action: 'offres_refusees' },
-        { label: 'Compromis en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisEnCours), tone: 'affaires', action: 'compromis_en_cours' },
-        { label: 'Compromis annulés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisAnnules), tone: 'affaires', action: 'compromis_annules' },
-        { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide' },
-        { label: 'Mandats non valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'diffusion', action: 'mandat_non_valide' },
-        { label: 'Mandat diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse' },
-        { label: 'Mandat non diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'diffusion', action: 'mandat_non_diffuse' },
-        { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'diffusion', action: 'sans_mandat' },
-        { label: 'Demande envoyée', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.sent), tone: 'demandes', action: 'demandes_envoyees' },
-        { label: 'Correction en attente', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.waitingCorrection), tone: 'demandes', action: 'correction_attente' },
-        { label: 'Diffuse sur LeBonCoin', value: new Intl.NumberFormat('fr-FR').format(mandatStats.leboncoin), tone: 'diffusion', action: 'leboncoin' },
-        { label: "Diffuse sur Bien'ici", value: new Intl.NumberFormat('fr-FR').format(mandatStats.bienici), tone: 'diffusion', action: 'bienici' },
+        { label: 'Annonces', value: new Intl.NumberFormat('fr-FR').format(mandatStats.total), tone: 'volume', action: 'all_annonces', group: 'Pipeline transaction' },
+        { label: 'Offres en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresEnCours), tone: 'affaires', action: 'offres_en_cours', group: 'Pipeline transaction' },
+        { label: 'Offres refusées', value: new Intl.NumberFormat('fr-FR').format(mandatStats.offresRefusees), tone: 'affaires', action: 'offres_refusees', group: 'Pipeline transaction' },
+        { label: 'Compromis en cours', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisEnCours), tone: 'affaires', action: 'compromis_en_cours', group: 'Pipeline transaction' },
+        { label: 'Compromis annulés', value: new Intl.NumberFormat('fr-FR').format(mandatStats.compromisAnnules), tone: 'affaires', action: 'compromis_annules', group: 'Pipeline transaction' },
+        { label: 'Mandats valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatValide), tone: 'diffusion', action: 'mandat_valide', group: 'Mandats' },
+        { label: 'Mandats non valides', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonValide), tone: 'warning', action: 'mandat_non_valide', group: 'Mandats' },
+        { label: 'Mandat diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatDiffuse), tone: 'diffusion', action: 'mandat_diffuse', group: 'Mandats' },
+        { label: 'Mandat non diffusé', value: new Intl.NumberFormat('fr-FR').format(mandatStats.mandatNonDiffuse), tone: 'warning', action: 'mandat_non_diffuse', group: 'Mandats' },
+        { label: 'Sans mandat', value: new Intl.NumberFormat('fr-FR').format(mandatStats.withoutMandat), tone: 'warning', action: 'sans_mandat', group: 'Mandats' },
+        { label: 'Diffuse sur LeBonCoin', value: new Intl.NumberFormat('fr-FR').format(mandatStats.leboncoin), tone: 'diffusion', action: 'leboncoin', group: 'Diffusion & qualité' },
+        { label: "Diffuse sur Bien'ici", value: new Intl.NumberFormat('fr-FR').format(mandatStats.bienici), tone: 'diffusion', action: 'bienici', group: 'Diffusion & qualité' },
+        { label: 'Demande envoyée', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.sent), tone: 'demandes', action: 'demandes_envoyees', group: 'Diffusion & qualité' },
+        { label: 'Correction en attente', value: new Intl.NumberFormat('fr-FR').format(commercialRequestStats.waitingCorrection), tone: 'demandes', action: 'correction_attente', group: 'Diffusion & qualité' },
       ]
     }
     if (screen === 'registre') {
@@ -14158,24 +14169,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 {priorityPanel}
                 {commercialMetricsExpanded ? (
                   <div className="header-kpis header-kpis-secondary">
-                    {statsMetrics.map((item) => (
-                      <article
-                        key={item.label}
-                        className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''} ${item.action && item.action === activeMandatKpiAction ? 'is-active' : ''}`}
-                        onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
-                        role={item.action ? 'button' : undefined}
-                        tabIndex={item.action ? 0 : undefined}
-                        onKeyDown={item.action ? (event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            openMandatDrilldown(item.action)
-                          }
-                        } : undefined}
-                      >
-                        <span>{item.label}</span>
-                        <strong>{item.value}</strong>
-                      </article>
-                    ))}
+                    {statsMetrics.map((item, idx) => {
+                      const showGroup = !!item.group && item.group !== statsMetrics[idx - 1]?.group
+                      return (
+                        <Fragment key={item.label}>
+                          {showGroup ? <span className="kpi-grp-lbl">{item.group}</span> : null}
+                          <article
+                            className={`header-kpi-card tone-${item.tone} ${item.action ? 'is-clickable' : ''} ${item.action && item.action === activeMandatKpiAction ? 'is-active' : ''}`}
+                            onClick={item.action ? () => openMandatDrilldown(item.action) : undefined}
+                            role={item.action ? 'button' : undefined}
+                            tabIndex={item.action ? 0 : undefined}
+                            onKeyDown={item.action ? (event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                openMandatDrilldown(item.action)
+                              }
+                            } : undefined}
+                          >
+                            <span className="kpi-row"><span className="kpi-ic" aria-hidden="true"><KpiToneIcon tone={item.tone} /></span><span className="kpi-k">{item.label}</span></span>
+                            <strong>{item.value}</strong>
+                          </article>
+                        </Fragment>
+                      )
+                    })}
                   </div>
                 ) : null}
               </div>

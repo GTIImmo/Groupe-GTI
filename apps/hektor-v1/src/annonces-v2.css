@@ -131,8 +131,19 @@
 .header-kpis.header-kpis-secondary .header-kpi-card:last-child{border-right:0;}
 .header-kpis.header-kpis-secondary .header-kpi-card.is-clickable{cursor:pointer;}
 .header-kpis.header-kpis-secondary .header-kpi-card:hover{background:#f6f7f8;}
-.header-kpis.header-kpis-secondary .header-kpi-card span{font-size:10.5px;font-weight:600;color:#5c6163;line-height:1.2;order:2;}
-.header-kpis.header-kpis-secondary .header-kpi-card strong{font-size:21px;font-weight:700;color:#222323;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;order:1;}
+.header-kpis.header-kpis-secondary .kpi-row{display:flex;align-items:center;gap:6px;order:1;}
+.header-kpis.header-kpis-secondary .kpi-ic{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none;background:#f1f2f3;color:#5c6163;}
+.header-kpis.header-kpis-secondary .kpi-ic svg{width:11px;height:11px;}
+.header-kpis.header-kpis-secondary .kpi-k{font-size:10.5px;font-weight:600;color:#5c6163;line-height:1.2;}
+.header-kpis.header-kpis-secondary .header-kpi-card strong{font-size:21px;font-weight:700;color:#222323;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;order:2;}
+/* icône colorée par tonalité (façon maquette) */
+.header-kpis.header-kpis-secondary .tone-volume .kpi-ic{background:#fdf0f6;color:#c5005f;}
+.header-kpis.header-kpis-secondary .tone-affaires .kpi-ic{background:#ecf7f1;color:#1f8a5b;}
+.header-kpis.header-kpis-secondary .tone-diffusion .kpi-ic{background:#e6efee;color:#0f766e;}
+.header-kpis.header-kpis-secondary .tone-demandes .kpi-ic{background:#f2effe;color:#6643a7;}
+.header-kpis.header-kpis-secondary .tone-warning .kpi-ic{background:#fef3ea;color:#c45c14;}
+/* libellé de groupe vertical (séparateur) */
+.header-kpis.header-kpis-secondary .kpi-grp-lbl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#5c6163;padding:12px 9px;border-right:1px solid #e2e5e6;background:#f6f7f8;white-space:nowrap;flex:none;display:flex;align-items:center;justify-content:center;}
 /* accent par tonalité (reprend la sémantique couleur de la maquette) */
 .header-kpis.header-kpis-secondary .header-kpi-card.tone-volume.is-active{border-bottom-color:#c5005f;}
 .header-kpis.header-kpis-secondary .header-kpi-card.tone-volume.is-active strong{color:#c5005f;}
