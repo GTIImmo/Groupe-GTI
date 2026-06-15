@@ -730,11 +730,13 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       <>
         <button className="btn brand-soft sm" onClick={() => cardAction(p, 'relance')}>Relancer</button>
         <button className="btn ghost sm" onClick={() => cardAction(p, 'visite')}>Planifier visite</button>
+        <button className="btn ghost sm" onClick={() => cardAction(p, 'restore')}>Remettre à proposer</button>
       </>
     )
     if (p.status === 'visite') return (
       <>
         <button className="btn brand-soft sm" onClick={() => cardAction(p, 'cr')}>Confirmer la visite</button>
+        <button className="btn ghost sm" onClick={() => cardAction(p, 'restore')}>Remettre à proposer</button>
         <button className="btn ghost sm" onClick={() => cardAction(p, 'annonce')}>Voir l’annonce</button>
       </>
     )
@@ -1246,7 +1248,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
 
       {/* confirmation d'envoi réel (garde-fou anti-envoi accidentel) */}
       {confirmSend && (
-        <div className="chan-back" onClick={(e) => { if (e.target === e.currentTarget && !sending) setConfirmSend(false) }}>
+        <div className="chan-back ra-confirm-back" onClick={(e) => { if (e.target === e.currentTarget && !sending) setConfirmSend(false) }}>
           <div className="chan-pop ra-confirm" role="dialog" aria-label="Confirmer l'envoi de l'email">
             <div className="chan-top">
               <span className="chan-top-ic"><IcSend /></span>
