@@ -15791,6 +15791,13 @@ function MandatsScreen(props: {
   const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${props.totalNoun ?? (isEstimationMode ? 'estimations' : 'annonces actives')}`
   // Badge « acquéreurs correspondants non proposés » — comptage batch pour la page courante.
   const [acqCounts, setAcqCounts] = useState<Map<number, RapprochementCount>>(new Map())
+  // Message transitoire (clic rapprochement sur une annonce non diffusable).
+  const [rapproNotice, setRapproNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (!rapproNotice) return
+    const t = window.setTimeout(() => setRapproNotice(null), 4000)
+    return () => window.clearTimeout(t)
+  }, [rapproNotice])
   const eligibleIdsKey = isEstimationMode ? '' : props.mandats
     .filter((m) => m.statut_annonce === 'Actif' && m.diffusable === '1')
     .map((m) => m.app_dossier_id).join(',')
@@ -15803,6 +15810,12 @@ function MandatsScreen(props: {
   }, [isEstimationMode, eligibleIdsKey])
   return (
     <section className={`panel-grid ${isEstimationMode ? 'panel-grid-estimation' : 'panel-grid-active-listing annonces-v2'}`}>
+      {rapproNotice ? (
+        <div className="av-notice" role="status" onClick={() => setRapproNotice(null)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
+          <span>{rapproNotice}</span>
+        </div>
+      ) : null}
       <section className={`panel panel-wide ${isEstimationMode ? 'panel-estimation-listing' : 'panel-active-listing'}`}>
         <div className="panel-head">
           <div className="listing-title-stack">
@@ -15911,7 +15924,10 @@ function MandatsScreen(props: {
                 const avRefPhoto = item.numero_dossier || (item.hektor_annonce_id ? `V${item.hektor_annonce_id}` : '')
                 const avCount = acqCounts.get(item.app_dossier_id)
                 const avBadge = avCount && avCount.n_non_proposes > 0 ? avCount.n_non_proposes : 0
-                const avShowRappro = Boolean(props.onOpenRapprochement) && !isLightweight && item.statut_annonce === 'Actif' && item.diffusable === '1'
+                // L'icône rapprochement s'affiche pour toute annonce réelle ; seules les
+                // annonces Actives + diffusables sont « éligibles » (ouvrent l'écran).
+                const avShowRappro = Boolean(props.onOpenRapprochement) && !isLightweight
+                const avEligible = item.statut_annonce === 'Actif' && item.diffusable === '1'
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
@@ -16004,16 +16020,22 @@ function MandatsScreen(props: {
                               )}
                               {avShowRappro ? (
                                 <button
-                                  className="av-acq-ico"
+                                  className={`av-acq-ico${avEligible ? '' : ' is-disabled'}`}
                                   type="button"
-                                  title={`${avBadge || avCount?.n_total || 0} acquéreur(s) correspondant(s)${avBadge ? ' · non proposés' : ''}`}
+                                  title={avEligible
+                                    ? `${avBadge || avCount?.n_total || 0} acquéreur(s) correspondant(s)${avBadge ? ' · non proposés' : ''}`
+                                    : "Annonce pas encore diffusable — rapprochement indisponible"}
                                   aria-label="Rapprochement acquéreurs"
-                                  onClick={(event) => { event.stopPropagation(); props.onOpenRapprochement?.(item) }}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    if (avEligible) props.onOpenRapprochement?.(item)
+                                    else setRapproNotice("Cette annonce n’est pas encore diffusable : le rapprochement acquéreurs sera disponible une fois l’annonce active et diffusable.")
+                                  }}
                                 >
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                                  {avBadge > 0 ? <span className="av-acq-badge">{avBadge > 99 ? '99+' : avBadge}</span> : null}
+                                  {avEligible && avBadge > 0 ? <span className="av-acq-badge">{avBadge > 99 ? '99+' : avBadge}</span> : null}
                                 </button>
-                              ) : <span className="av-acq-spacer" aria-hidden="true" />}
+                              ) : null}
                             </div>
                           </td>
                         </>
