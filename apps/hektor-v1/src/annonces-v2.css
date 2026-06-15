@@ -277,6 +277,11 @@
   .app-shell.is-sidebar-collapsed .side-rail .rail-reduce{display:none;}
   .app-shell.is-sidebar-collapsed .side-rail .brand-block.rail-top{justify-content:center;}
 
+  /* replié : on ne garde que le picto des items de menu (le libellé, même actif,
+     est masqué — il réapparaissait à cause de la couleur blanche forcée) */
+  .app-shell.is-sidebar-collapsed .side-rail .screen-nav .nav-button{font-size:0 !important;justify-content:center !important;}
+  .app-shell.is-sidebar-collapsed .side-rail .screen-nav .nav-button::before{font-size:0 !important;}
+
   /* replié : masque le nom + les boutons du pied (cloche / Utilisateurs /
      Se déconnecter) — ils dépassent en 86px et provoquent l'ascenseur.
      On ne garde que l'avatar (accès aux actions en dépliant). */

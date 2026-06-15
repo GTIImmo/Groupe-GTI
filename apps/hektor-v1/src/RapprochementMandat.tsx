@@ -139,7 +139,9 @@ function parseFirstTypeLabel(tj: Record<string, string> | string[] | null): stri
 function parseVilles(vj: Record<string, string> | string[] | null): string[] {
   if (!vj) return []
   const raw = Array.isArray(vj) ? vj : Object.values(vj as Record<string, unknown>)
-  return raw.map((x) => String(x ?? '').trim()).filter(Boolean)
+  return raw
+    .map((x) => String(x ?? '').replace(/\b\d{5}\b/g, '').replace(/[()]/g, '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
 }
 // Budget compact en k€ pour le résumé de recherche.
 function compactBudget(min: number | null, max: number | null): string | null {
