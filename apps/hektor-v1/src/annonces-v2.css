@@ -82,6 +82,11 @@
 .annonces-v2 .av-dp.on{background:var(--av-green-soft);color:var(--av-green);border:1px solid rgba(47,125,89,.28);}
 .annonces-v2 .av-dp.off{background:var(--av-neutral-100);color:#9aa0a0;border:1px solid var(--av-border);}
 
+/* vues cell (placeholder « … » — pas de source de comptage de vues) */
+.annonces-v2 .av-vues{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+.annonces-v2 .av-vues b{font-size:15px;font-weight:700;color:var(--av-subtle);line-height:1;letter-spacing:.04em;}
+.annonces-v2 .av-vues .av-vues-meta{font-size:10.5px;color:var(--av-subtle);}
+
 /* actions cell */
 .annonces-v2 .av-acts-cell{display:flex;align-items:center;gap:6px;}
 .annonces-v2 .av-acq-ico{width:34px;height:34px;border-radius:10px;border:1.5px solid #9ecdc8;background:#e6efee;color:#0f766e;display:grid;place-items:center;cursor:pointer;text-decoration:none;transition:.15s;flex:none;position:relative;padding:0;}
@@ -123,3 +128,18 @@
 .header-kpis.header-kpis-secondary .header-kpi-card.tone-demandes.is-active{border-bottom-color:#6643a7;}
 .header-kpis.header-kpis-secondary .header-kpi-card.tone-demandes.is-active strong{color:#6643a7;}
 .header-kpis.header-kpis-secondary .header-kpi-card.is-active{background:#f6f7f8;}
+
+/* ============================================================
+   Logo GTI = bouton d'ouverture/réduction du rail (maquette rail-mark)
+   ============================================================ */
+.brand-block .rail-logo-toggle{
+  width:46px;height:46px;border-radius:14px;flex:none;display:grid;place-items:center;cursor:pointer;padding:0;
+  border:0;background:linear-gradient(160deg,#d12a73,#9d0f4e);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px -7px rgba(194,18,95,.6);
+  transition:filter .15s,transform .12s;margin-bottom:8px;
+}
+.brand-block .rail-logo-toggle:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.brand-block .rail-logo-toggle:active{transform:translateY(0);}
+.brand-block .rail-logo-toggle img{width:24px;height:auto;filter:brightness(0) invert(1);}
+/* En mode replié, le logo reste le repère/cliquable principal */
+.app-shell.is-sidebar-collapsed .brand-block .rail-logo-toggle{margin-bottom:0;}

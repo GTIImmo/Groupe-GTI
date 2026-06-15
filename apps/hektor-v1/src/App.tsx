@@ -14064,6 +14064,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <span aria-hidden="true" />
         </button>
         <div className="brand-block">
+          <button
+            className="rail-logo-toggle"
+            type="button"
+            aria-label={sidebarCollapsed ? 'Ouvrir le menu' : 'Reduire le menu'}
+            aria-pressed={sidebarCollapsed}
+            title={sidebarCollapsed ? 'Ouvrir le menu' : 'Reduire le menu'}
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            <img src="/gti-mark.png" alt="Groupe GTI" />
+          </button>
           <p className="eyebrow">GTI Immobilier</p>
           <h1>{screenHeader.title}</h1>
           {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
@@ -15843,11 +15853,22 @@ function MandatsScreen(props: {
         <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'listing-table-estimation' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
           <table>
+            {!isEstimationMode ? (
+              <colgroup>
+                <col style={{ width: '64px' }} />{/* photo */}
+                <col />{/* bien — flexible */}
+                <col style={{ width: '170px' }} />{/* négociateur */}
+                <col style={{ width: '156px' }} />{/* statut */}
+                <col style={{ width: '120px' }} />{/* diffusion */}
+                <col style={{ width: '84px' }} />{/* vues */}
+                <col style={{ width: '132px' }} />{/* actions */}
+              </colgroup>
+            ) : null}
             <thead>
               {isEstimationMode ? (
                 <tr><th>Projet</th><th>Bien</th><th>Negociateur</th><th>Avancement</th><th>Photo</th><th>Actions</th></tr>
               ) : (
-                <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-pad-r av-right">Actions</th></tr>
+                <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-right">Vues 30 j</th><th className="av-pad-r av-right">Actions</th></tr>
               )}
             </thead>
             <tbody>
@@ -15964,6 +15985,12 @@ function MandatsScreen(props: {
                               <span className={`av-dp ${hasLeboncoin ? 'on' : 'off'}`}>LBC</span>
                               <span className={`av-dp ${hasBienici ? 'on' : 'off'}`}>BI</span>
                               <span className={`av-dp ${hasSiteGti ? 'on' : 'off'}`}>GTI</span>
+                            </div>
+                          </td>
+                          <td className="av-right">
+                            <div className="av-vues" title="Statistique de vues non disponible">
+                              <b>…</b>
+                              <span className="av-vues-meta">vues</span>
                             </div>
                           </td>
                           <td className="av-pad-r">
