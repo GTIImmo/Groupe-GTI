@@ -14063,20 +14063,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         >
           <span aria-hidden="true" />
         </button>
-        <div className="brand-block">
+        <div className="brand-block rail-top">
           <button
-            className="rail-logo-toggle"
+            className="rail-mark"
             type="button"
-            aria-label={sidebarCollapsed ? 'Ouvrir le menu' : 'Reduire le menu'}
+            aria-label={sidebarCollapsed ? 'Deplier le menu' : 'Replier le menu'}
             aria-pressed={sidebarCollapsed}
-            title={sidebarCollapsed ? 'Ouvrir le menu' : 'Reduire le menu'}
+            title="Deplier / replier le menu"
             onClick={() => setSidebarCollapsed((value) => !value)}
           >
             <img src="/gti-mark.png" alt="Groupe GTI" />
           </button>
-          <p className="eyebrow">GTI Immobilier</p>
-          <h1>{screenHeader.title}</h1>
-          {screenHeader.copy ? <p>{screenHeader.copy}</p> : null}
+          <div className="rail-brand">
+            <strong>Groupe GTI</strong>
+            <span>{screenHeader.title}</span>
+          </div>
+          <button
+            className="rail-reduce"
+            type="button"
+            aria-label="Replier le menu"
+            title="Replier le menu"
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            <svg viewBox="0 0 24 24" fill="none"><path d="m15 6-6 6 6 6" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
           <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>

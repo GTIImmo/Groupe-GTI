@@ -141,39 +141,43 @@
 .header-kpis.header-kpis-secondary .header-kpi-card.is-active{background:#f6f7f8;}
 
 /* ============================================================
-   Logo GTI = bouton d'ouverture/réduction du rail (maquette rail-mark)
+   Rail gauche — reproduction fidèle de la maquette (desktop).
+   Colonne flex : rail-top (logo + marque + chevron) · menu (flex:1,
+   défile en interne) · pied utilisateur épinglé. Plus d'ascenseur sur
+   tout le rail ; logo détaché du texte ; clic logo/chevron = repli.
    ============================================================ */
-.brand-block .rail-logo-toggle{
-  width:46px;height:46px;border-radius:14px;flex:none;display:grid;place-items:center;cursor:pointer;padding:0;
-  border:0;background:linear-gradient(160deg,#d12a73,#9d0f4e);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px -7px rgba(194,18,95,.6);
-  transition:filter .15s,transform .12s;margin-bottom:2px;
+@media (min-width:901px){
+  .app-shell .side-rail{display:flex !important;flex-direction:column !important;height:100vh !important;overflow:hidden !important;grid-template-rows:none !important;grid-template-columns:none !important;}
+
+  /* rail-top : logo + marque côte à côte + chevron */
+  .app-shell .side-rail .brand-block.rail-top{display:flex !important;flex-direction:row !important;align-items:center;gap:10px;height:46px;min-height:46px;flex:none;margin:0 0 14px;padding:0;}
+  .app-shell .side-rail .brand-block.rail-top::before{display:none !important;}
+  .app-shell .side-rail .rail-mark{width:46px;height:46px;border-radius:14px;flex:none;display:grid;place-items:center;cursor:pointer;border:0;padding:0;background:linear-gradient(160deg,#d12a73,#9d0f4e);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px -7px rgba(194,18,95,.6);transition:filter .15s,transform .12s;}
+  .app-shell .side-rail .rail-mark:hover{filter:brightness(1.1);transform:translateY(-1px);}
+  .app-shell .side-rail .rail-mark img{width:24px;height:auto;filter:brightness(0) invert(1);}
+  .app-shell .side-rail .rail-brand{display:flex;flex-direction:column;line-height:1.18;white-space:nowrap;overflow:hidden;flex:1;min-width:0;}
+  .app-shell .side-rail .rail-brand strong{font-size:14.5px;color:#fff;font-weight:700;}
+  .app-shell .side-rail .rail-brand span{font-size:11px;color:rgba(244,245,245,.6);overflow:hidden;text-overflow:ellipsis;}
+  .app-shell .side-rail .rail-reduce{width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;display:grid;place-items:center;cursor:pointer;transition:.18s;flex:none;}
+  .app-shell .side-rail .rail-reduce:hover{background:rgba(255,255,255,.14);}
+  .app-shell .side-rail .rail-reduce svg{width:15px;height:15px;}
+
+  /* menu : occupe l'espace et défile en interne (jamais d'ascenseur sur tout le rail) */
+  .app-shell .side-rail .screen-nav{flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;overflow-x:hidden;}
+  .app-shell .side-rail .screen-nav::-webkit-scrollbar{width:4px;}
+  .app-shell .side-rail .screen-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9px;}
+  .app-shell .side-rail .screen-nav .nav-button{height:42px;}
+
+  /* pied utilisateur : épinglé en bas, compact */
+  .app-shell .side-rail .header-user-stack{flex:none;margin-top:10px;}
+  .app-shell .side-rail .header-user-stack .user-avatar,
+  .app-shell .side-rail .rail-av{width:38px;height:38px;}
+  .app-shell .side-rail .header-user-stack .user-card{padding:8px 10px;}
+  .app-shell .side-rail .header-user-stack .user-card-actions{gap:4px;}
+  .app-shell .side-rail .header-user-stack .signout-button-inline{padding:3px 7px;}
+
+  /* replié : on masque la marque texte + le chevron, logo centré */
+  .app-shell.is-sidebar-collapsed .side-rail .rail-brand,
+  .app-shell.is-sidebar-collapsed .side-rail .rail-reduce{display:none;}
+  .app-shell.is-sidebar-collapsed .side-rail .brand-block.rail-top{justify-content:center;}
 }
-.brand-block .rail-logo-toggle:hover{filter:brightness(1.1);transform:translateY(-1px);}
-.brand-block .rail-logo-toggle:active{transform:translateY(0);}
-.brand-block .rail-logo-toggle img{width:24px;height:auto;filter:brightness(0) invert(1);}
-/* En mode replié, le logo reste le repère/cliquable principal */
-.app-shell.is-sidebar-collapsed .brand-block .rail-logo-toggle{margin-bottom:0;}
-
-/* ============================================================
-   Rail gauche — densifié : icônes/boutons plus compacts pour que
-   le contenu tienne sans ascenseur (retour utilisateur).
-   ============================================================ */
-.app-shell .side-rail .screen-nav .nav-button{height:40px;}
-.app-shell .side-rail .header-user-stack .user-avatar,
-.app-shell .side-rail .rail-av{width:38px;height:38px;}
-.app-shell .side-rail .header-user-stack .user-card{padding:7px 10px;}
-.app-shell .side-rail .header-user-stack .user-card-actions{gap:4px;}
-.app-shell .side-rail .header-user-stack .signout-button-inline{padding:3px 7px;}
-
-/* 1) Supprime le vieux mark hexagone (.brand-block::before) : doublon avec le
-   nouveau logo cliquable. */
-.app-shell .side-rail .brand-block::before{display:none !important;}
-
-/* 2) Plus d'ascenseur sur tout le rail : le rail ne déborde pas, et seule la
-   zone menu défile en interne si l'écran est trop court (marque + carte
-   utilisateur restent fixes). */
-.app-shell .side-rail{overflow:hidden;}
-.app-shell .side-rail .screen-nav{overflow-y:auto;overflow-x:hidden;min-height:0;}
-.app-shell .side-rail .screen-nav::-webkit-scrollbar{width:4px;}
-.app-shell .side-rail .screen-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9px;}
