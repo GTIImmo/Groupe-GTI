@@ -13504,6 +13504,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           visitRefreshKey={visitRefreshKey}
           onOpenContact={(id) => { setRapprochementMandat(null); openContactDirectory(id) }}
           onPlanifierVisite={(input) => setVisitBooking(input)}
+          onImprimerBonVisite={async (event) => {
+            const cid = event.hektor_contact_id
+            if (!cid) return
+            const printWindow = window.open('', '_blank')
+            writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml())
+            try {
+              const [acquereur, relations] = await Promise.all([loadContactById(cid), loadContactRelations(cid)])
+              if (!acquereur) { writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml()); return }
+              let photoUrl: string | null = null
+              try { photoUrl = await loadVisitVoucherPhotoUrl(event, relations) } catch { /* photo best-effort */ }
+              openVisitVoucherPrint(acquereur, event, relations, photoUrl, printWindow)
+            } catch { /* chargement best-effort */ }
+          }}
           onModifierRdv={(event) => setEditingVisitEvent(event)}
           onSupprimerRdv={async (event) => {
             try {
