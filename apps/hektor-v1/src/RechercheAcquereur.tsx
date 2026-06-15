@@ -357,11 +357,12 @@ export interface RechercheAcquereurProps {
   onImprimerBonVisite?: (event: GoogleCalendarEventLink) => void
   onModifierRdv?: (event: GoogleCalendarEventLink) => void
   onSupprimerRdv?: (event: GoogleCalendarEventLink) => void
+  onAffinerRecherche?: () => void
 }
 
 const GTI_DOMAIN = 'gti-immobilier.fr'
 
-export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite, visitRefreshKey, onImprimerBonVisite, onModifierRdv, onSupprimerRdv }: RechercheAcquereurProps) {
+export default function RechercheAcquereur({ open, onClose, contact, search, senderEmail, acquereurEmail, onOpenAnnonce, onPlanifierVisite, visitRefreshKey, onImprimerBonVisite, onModifierRdv, onSupprimerRdv, onAffinerRecherche }: RechercheAcquereurProps) {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES)
   const [relances, setRelances] = useState<Relance[]>(INITIAL_RELANCES)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -845,7 +846,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
             <div className="crumb"><span className="ey">Recherche acquéreur</span><span className="ref">{crumbRef}</span></div>
           </div>
           <div className="tb-right">
-            <button className="btn" onClick={focusBrief}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 5h18M6 12h12M10 19h4" /></svg>Affiner les critères</button>
+            <button className="btn" onClick={() => onAffinerRecherche ? onAffinerRecherche() : focusBrief()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 5h18M6 12h12M10 19h4" /></svg>Affiner les critères</button>
             <button className="btn brand" onClick={() => { if (trayRefs.length) openChan(trayRefs); else toast('Sélectionnez d’abord des biens à proposer.') }}><IcSend />Envoyer une sélection</button>
             <div className={`menu-wrap${moreOpen ? ' open' : ''}`}>
               <button className="btn icon" aria-haspopup="true" aria-expanded={moreOpen} aria-label="Plus d'options" onClick={(e) => { e.stopPropagation(); setMoreOpen((v) => !v) }}>
@@ -880,7 +881,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               </div>
 
               <div className="rblock">
-                <div className="rblock-h"><span className="rlabel">Le brief · critères</span><button className="linkmini" onClick={focusBrief}>Affiner</button></div>
+                <div className="rblock-h"><span className="rlabel">Le brief · critères</span><button className="linkmini" onClick={() => onAffinerRecherche ? onAffinerRecherche() : focusBrief()}>Affiner</button></div>
 
                 <div className="crit-must">
                   <div className="must-row">

@@ -8255,6 +8255,7 @@ export default function App() {
   const [visitBooking, setVisitBooking] = useState<VisitePlanInput | null>(null)
   const [visitRefreshKey, setVisitRefreshKey] = useState(0)
   const [editingVisitEvent, setEditingVisitEvent] = useState<GoogleCalendarEventLink | null>(null)
+  const [affinerSearch, setAffinerSearch] = useState<AppContactSearch | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -13451,6 +13452,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               setVisitRefreshKey((k) => k + 1)
             } catch { /* suppression best-effort */ }
           }}
+          onAffinerRecherche={() => { setRechercheAcquereurOpen(false); setAffinerSearch(rechercheAcquereurSearch) }}
         />
 
         {visitBooking ? (() => {
@@ -13522,6 +13524,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onClose={() => setEditingVisitEvent(null)}
             onUpdated={() => { setEditingVisitEvent(null); setVisitRefreshKey((k) => k + 1) }}
             onCreated={() => { setEditingVisitEvent(null); setVisitRefreshKey((k) => k + 1) }}
+          />
+        ) : null}
+
+        {affinerSearch && selectedContact && canManageContacts ? (
+          <ContactSearchModal
+            contactId={selectedContact.hektor_contact_id}
+            contactName={[selectedContact.prenom, selectedContact.nom].filter(Boolean).join(' ') || selectedContact.display_name || null}
+            negotiatorLabel={selectedContact.commercial_nom || selectedContact.negociateur_email || null}
+            defaultCity={selectedContact.ville ?? null}
+            defaultPostalCode={selectedContact.code_postal ?? null}
+            defaultOfferCode={hektorDefaultContactSearchOffer('acquereur')}
+            offerOptions={hektorContactSearchOfferOptionsByKind['acquereur'] ?? hektorContactSearchOfferOptionsByKind.acquereur}
+            contactKind="acquereur"
+            contactQualification={hektorContactQualificationForKind('acquereur')}
+            mode="edit"
+            initialSearch={affinerSearch}
+            onClose={() => setAffinerSearch(null)}
+            onCreated={(job) => rememberHektorActionJob(job)}
           />
         ) : null}
 
