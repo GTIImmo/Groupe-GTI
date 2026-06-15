@@ -255,6 +255,14 @@
   .app-shell .side-rail .screen-nav::-webkit-scrollbar{width:4px;}
   .app-shell .side-rail .screen-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9px;}
   .app-shell .side-rail .screen-nav .nav-button{height:46px !important;}
+  /* item actif coloré façon maquette : dégradé magenta + texte/icône blancs */
+  .app-shell .side-rail .screen-nav .nav-button.is-active{background:linear-gradient(135deg,rgba(197,0,95,.96),rgba(140,0,68,.97)) !important;color:#fff !important;box-shadow:0 8px 18px -9px rgba(194,18,95,.8) !important;}
+  .app-shell .side-rail .screen-nav .nav-button.is-active,
+  .app-shell .side-rail .screen-nav .nav-button.is-active *{color:#fff !important;}
+  .app-shell .side-rail .screen-nav .nav-button.is-active svg,
+  .app-shell .side-rail .screen-nav .nav-button.is-active svg *{stroke:#fff !important;color:#fff !important;}
+  .app-shell .side-rail .screen-nav .nav-button.is-active::before,
+  .app-shell .side-rail .screen-nav .nav-button.is-active::after{background:#fff !important;}
 
   /* pied utilisateur : épinglé en bas, compact */
   .app-shell .side-rail .header-user-stack{flex:none;margin-top:10px;}
