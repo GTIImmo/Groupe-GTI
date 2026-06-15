@@ -376,6 +376,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const [loadError, setLoadError] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
   const [timeline, setTimeline] = useState<TimelineRow[]>([])
+  const [reloadKey, setReloadKey] = useState(0)
   const [visitEvents, setVisitEvents] = useState<Record<number, GoogleCalendarEventLink>>({})
   const [prPhotos, setPrPhotos] = useState<string[]>([])
   const [confirmSend, setConfirmSend] = useState(false)
@@ -439,7 +440,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, searchKey, visitRefreshKey])
+  }, [open, searchKey, visitRefreshKey, reloadKey])
 
   // RDV Google "visite" du contact, indexés par bien (pour les boutons Bon de visite / Modifier / Supprimer)
   useEffect(() => {
@@ -685,13 +686,12 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     else if (act === 'visite') openVisit([p.ref])
     else if (act === 'ecarter') ecarter([p.ref])
     else if (act === 'restore') restore(p.ref)
-    else if (act === 'relance') toast('Relance envoyée à l’acquéreur.')
-    else if (act === 'cr') toast('Visite confirmée — pensez au compte-rendu.')
+    else if (act === 'relance') { openMail([p.ref]); applyTemplate('relance') }
     else if (act === 'annonce') {
       if (onOpenAnnonce && p.appDossierId != null) onOpenAnnonce(p.appDossierId)
       else toast('Ouverture de l’annonce…')
     }
-  }, [toggleBook, openChan, openVisit, ecarter, restore, toast, onOpenAnnonce])
+  }, [toggleBook, openChan, openVisit, ecarter, restore, openMail, applyTemplate, toast, onOpenAnnonce])
 
   const focusBrief = useCallback(() => {
     railRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
@@ -852,12 +852,9 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                 <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
               </button>
               <div className="menu-pop" hidden={!moreOpen} onClick={() => setMoreOpen(false)}>
-                <button className="menu-item" onClick={() => toast('Renommer la recherche…')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" /></svg>Renommer la recherche</button>
-                <button className="menu-item" onClick={() => toast('Resynchronisation Hektor lancée.')}><IcSync />Resynchroniser Hektor</button>
+                <button className="menu-item" onClick={() => setReloadKey((k) => k + 1)}><IcSync />Actualiser les rapprochements</button>
                 <button className="menu-item" onClick={() => setStatsOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></svg>Statistiques des rapprochements</button>
-                <button className="menu-item" onClick={() => toast('Ouverture de la fiche acquéreur…')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M14 4h6v6" /><path d="M20 4 10 14" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg>Ouvrir la fiche acquéreur<svg className="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
-                <div className="menu-sep" />
-                <button className="menu-item danger" onClick={() => toast('Recherche archivée.')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Archiver la recherche</button>
+                <button className="menu-item" onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m15 6-6 6 6 6" /></svg>Revenir à la fiche acquéreur</button>
               </div>
             </div>
             <button className="btn-close" aria-label="Fermer" onClick={onClose}><IcClose /></button>
