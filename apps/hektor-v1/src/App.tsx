@@ -98,6 +98,8 @@ import {
   type SearchToComplete,
   loadDossierPropositions,
   type DossierPropositionRow,
+  loadRapprochementCounts,
+  type RapprochementCount,
   setBienStatut,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
@@ -15786,8 +15788,20 @@ function MandatsScreen(props: {
 }) {
   const isEstimationMode = props.mode === 'estimation'
   const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${props.totalNoun ?? (isEstimationMode ? 'estimations' : 'annonces actives')}`
+  // Badge « acquéreurs correspondants non proposés » — comptage batch pour la page courante.
+  const [acqCounts, setAcqCounts] = useState<Map<number, RapprochementCount>>(new Map())
+  const eligibleIdsKey = isEstimationMode ? '' : props.mandats
+    .filter((m) => m.statut_annonce === 'Actif' && m.diffusable === '1')
+    .map((m) => m.app_dossier_id).join(',')
+  useEffect(() => {
+    if (isEstimationMode || !eligibleIdsKey) { setAcqCounts(new Map()); return }
+    let cancelled = false
+    const ids = eligibleIdsKey.split(',').map(Number).filter((n) => Number.isFinite(n))
+    loadRapprochementCounts(ids).then((m) => { if (!cancelled) setAcqCounts(m) }).catch(() => { if (!cancelled) setAcqCounts(new Map()) })
+    return () => { cancelled = true }
+  }, [isEstimationMode, eligibleIdsKey])
   return (
-    <section className={`panel-grid ${isEstimationMode ? 'panel-grid-estimation' : 'panel-grid-active-listing'}`}>
+    <section className={`panel-grid ${isEstimationMode ? 'panel-grid-estimation' : 'panel-grid-active-listing annonces-v2'}`}>
       <section className={`panel panel-wide ${isEstimationMode ? 'panel-estimation-listing' : 'panel-active-listing'}`}>
         <div className="panel-head">
           <div className="listing-title-stack">
@@ -15833,7 +15847,7 @@ function MandatsScreen(props: {
               {isEstimationMode ? (
                 <tr><th>Projet</th><th>Bien</th><th>Negociateur</th><th>Avancement</th><th>Photo</th><th>Actions</th></tr>
               ) : (
-                <tr><th>Mandat</th><th>Bien</th><th>Negociateur</th><th>Statut</th><th className="portal-col">LBC</th><th className="portal-col">BI</th><th className="portal-col">GTI</th><th>Photo</th><th>Actions</th></tr>
+                <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-pad-r av-right">Actions</th></tr>
               )}
             </thead>
             <tbody>
@@ -15863,6 +15877,29 @@ function MandatsScreen(props: {
                   : hasExportedDetail
                     ? 'Fiche prete'
                     : 'Detail'
+                // ── valeurs dérivées pour le rendu « liste premium » (mode actif) ──
+                const avStatut = item.vente_id
+                  ? { c: 'vendu', l: 'Vendu' }
+                  : item.compromis_id
+                    ? { c: 'compromis', l: 'Sous compromis' }
+                    : item.offre_id
+                      ? { c: 'offre', l: 'Offre reçue' }
+                      : { c: '', l: item.statut_annonce || 'Actif' }
+                const avFin = item.mandat_date_fin ? new Date(item.mandat_date_fin) : null
+                const avMandatDays = avFin && Number.isFinite(avFin.getTime())
+                  ? Math.ceil((avFin.getTime() - Date.now()) / 86400000)
+                  : null
+                const avAlerts: Array<{ cls: string; label: string }> = []
+                if (avMandatDays != null && avMandatDays >= 0 && avMandatDays <= 30) avAlerts.push({ cls: 'warn', label: `Mandat J-${avMandatDays}` })
+                if (!item.photo_url_listing) avAlerts.push({ cls: 'amber', label: 'Sans photo' })
+                if (item.has_diffusion_error) avAlerts.push({ cls: 'warn', label: 'Diffusion en erreur' })
+                const avPrixLabel = item.prix != null ? `${new Intl.NumberFormat('fr-FR').format(Number(item.prix))} €` : '—'
+                const avNegoName = commercialDisplay(item)
+                const avNegoInitials = avNegoName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'GTI'
+                const avRefPhoto = item.numero_dossier || (item.hektor_annonce_id ? `V${item.hektor_annonce_id}` : '')
+                const avCount = acqCounts.get(item.app_dossier_id)
+                const avBadge = avCount && avCount.n_non_proposes > 0 ? avCount.n_non_proposes : 0
+                const avShowRappro = Boolean(props.onOpenRapprochement) && !isLightweight && item.statut_annonce === 'Actif' && item.diffusable === '1'
                 return (
                   <Fragment key={item.app_dossier_id}>
                     <tr
@@ -15880,57 +15917,89 @@ function MandatsScreen(props: {
                       }}
                     >
                       {isEstimationMode ? (
-                        <td className="estimation-project-cell"><strong>{project.title}</strong><span>{project.mandate}</span><span>{project.context}</span></td>
-                      ) : (
-                        <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.ville ?? '-'}</span></td>
-                      )}
-                      <td className={isEstimationMode ? 'estimation-property-cell' : undefined}><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
-                      <td className={isEstimationMode ? 'estimation-negotiator-cell' : undefined}><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
-                      {isEstimationMode ? (
-                        <td className="estimation-progress-cell"><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
+                        <>
+                          <td className="estimation-project-cell"><strong>{project.title}</strong><span>{project.mandate}</span><span>{project.context}</span></td>
+                          <td className="estimation-property-cell"><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
+                          <td className="estimation-negotiator-cell"><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
+                          <td className="estimation-progress-cell"><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
+                          <td className="estimation-photo-cell"><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
+                          <td>
+                            <div className="row-actions">
+                              <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
+                            </div>
+                          </td>
+                        </>
                       ) : (
                         <>
-                          <td><StatusPill value={item.statut_annonce ?? 'Non renseigne'} /><small>{item.archive === '1' ? 'Archivee' : 'Active'}</small></td>
-                          <td className="portal-cell"><PortalStatusMark enabled={hasLeboncoin} /></td>
-                          <td className="portal-cell"><PortalStatusMark enabled={hasBienici} /></td>
-                          <td className="portal-cell"><PortalStatusMark enabled={hasSiteGti} /></td>
+                          <td className="av-pad-l">
+                            <div className="av-thumb-wrap">
+                              <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
+                              {avRefPhoto ? <span className="av-ref-photo">{avRefPhoto}</span> : null}
+                            </div>
+                          </td>
+                          <td className="av-bien">
+                            <b>{item.titre_bien}</b>
+                            <div className="av-meta">
+                              <span className="av-type">{propertyTypeLabel(item.type_bien)}</span>
+                              <span className="av-msep">·</span>
+                              <span className="av-mnum">n°{item.numero_mandat ?? '—'}</span>
+                              {item.ville ? <span className="av-ville">{item.ville}</span> : null}
+                            </div>
+                            <span className="av-prix-inline">{avPrixLabel}</span>
+                          </td>
+                          <td>
+                            <div className="av-nego">
+                              <span className="av-av">{avNegoInitials}</span>
+                              <div><b>{avNegoName}</b><span>{item.agence_nom ?? '—'}</span></div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="av-statut">
+                              <span className={`av-pill ${avStatut.c}`}>{avStatut.l}</span>
+                              {avAlerts.length ? <div className="av-al-row">{avAlerts.map((a, ai) => <span key={ai} className={`av-al ${a.cls}`}>{a.label}</span>)}</div> : null}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="av-dp-row">
+                              <span className={`av-dp ${hasLeboncoin ? 'on' : 'off'}`}>LBC</span>
+                              <span className={`av-dp ${hasBienici ? 'on' : 'off'}`}>BI</span>
+                              <span className={`av-dp ${hasSiteGti ? 'on' : 'off'}`}>GTI</span>
+                            </div>
+                          </td>
+                          <td className="av-pad-r">
+                            <div className="row-actions">
+                              {isLightweight ? (
+                                <button
+                                  className={`lightweight-row-action ${hasExportedDetail ? 'is-ready' : 'is-import'}`}
+                                  type="button"
+                                  onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }}
+                                  title={rowActionTitle}
+                                >
+                                  <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail && isHistoricalLightweight ? 'O' : isArchivedLightweight ? 'D' : 'C'}</span>
+                                  <span className="lightweight-row-action-label">
+                                    <strong>{rowActionStrong}</strong>
+                                    <small>{rowActionSmall}</small>
+                                  </span>
+                                </button>
+                              ) : (
+                                <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
+                              )}
+                              {avShowRappro ? (
+                                <button
+                                  className="av-acq-ico"
+                                  type="button"
+                                  title={`${avBadge || avCount?.n_total || 0} acquéreur(s) correspondant(s)${avBadge ? ' · non proposés' : ''}`}
+                                  aria-label="Rapprochement acquéreurs"
+                                  onClick={(event) => { event.stopPropagation(); props.onOpenRapprochement?.(item) }}
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                                  {avBadge > 0 ? <span className="av-acq-badge">{avBadge > 99 ? '99+' : avBadge}</span> : null}
+                                </button>
+                              ) : null}
+                            </div>
+                          </td>
                         </>
                       )}
-                      <td className={isEstimationMode ? 'estimation-photo-cell' : undefined}><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
-                      <td>
-                        <div className="row-actions">
-                          {isEstimationMode ? (
-                            <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
-                          ) : isLightweight ? (
-                            <button
-                              className={`lightweight-row-action ${hasExportedDetail ? 'is-ready' : 'is-import'}`}
-                              type="button"
-                              onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }}
-                              title={rowActionTitle}
-                            >
-                              <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail && isHistoricalLightweight ? 'O' : isArchivedLightweight ? 'D' : 'C'}</span>
-                              <span className="lightweight-row-action-label">
-                                <strong>{rowActionStrong}</strong>
-                                <small>{rowActionSmall}</small>
-                              </span>
-                            </button>
-                          ) : (
-                            <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
-                          )}
-                          {props.onOpenRapprochement && !isEstimationMode && !isLightweight && item.statut_annonce === 'Actif' && item.diffusable === '1' ? (
-                            <button
-                              className="rappro-entry-btn"
-                              type="button"
-                              title="Rapprochement acquéreurs — trouver les acheteurs correspondants"
-                              aria-label="Rapprochement acquéreurs"
-                              onClick={(event) => { event.stopPropagation(); props.onOpenRapprochement?.(item) }}
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0" /><circle cx="17.5" cy="9.5" r="2.2" /><path d="M15 20a5 5 0 0 1 6.5-4.8" /></svg>
-                              <span>Acquéreurs</span>
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
                     </tr>
                   </Fragment>
                 )

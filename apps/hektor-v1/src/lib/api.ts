@@ -2133,6 +2133,22 @@ export async function loadRapprochementsForDossier(appDossierId: number): Promis
   return (data ?? []) as RapprochementForDossierRow[]
 }
 
+export type RapprochementCount = { app_dossier_id: number; n_total: number; n_non_proposes: number }
+
+/**
+ * Compteur batch d'acquéreurs correspondants par bien (badge du listing annonces).
+ * Un seul appel pour toute la page. Renvoie une Map appDossierId → {total, nonProposes}.
+ */
+export async function loadRapprochementCounts(appDossierIds: number[]): Promise<Map<number, RapprochementCount>> {
+  const ids = Array.from(new Set(appDossierIds.filter((x) => x != null)))
+  if (!hasSupabaseEnv || !supabase || ids.length === 0) return new Map()
+  const { data, error } = await supabase.rpc('app_count_rapprochements_for_dossiers', { p_dossier_ids: ids })
+  if (error) throw new Error(error.message ?? 'Unable to load rapprochement counts')
+  const map = new Map<number, RapprochementCount>()
+  for (const row of (data ?? []) as RapprochementCount[]) map.set(row.app_dossier_id, row)
+  return map
+}
+
 /**
  * Recherches acquéreur « à compléter » : actives mais à qui il manque un pilier
  * (prix ou secteur) → ne produisent pas de rapprochements exploitables.

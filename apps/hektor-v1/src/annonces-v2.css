@@ -1,0 +1,125 @@
+/* ============================================================
+   Annonces actives — refonte visuelle « liste premium »
+   Transposition fidèle de ui_kits/console/annonces-actives.html
+   (handoff Claude Design / GTI). Scopé sous .annonces-v2 (table +
+   panel de la page Annonces, mode actif) pour ne casser ni styles.css
+   ni les autres écrans. Aucune logique modifiée : visuel uniquement.
+   ============================================================ */
+
+.annonces-v2{
+  --av-brand:#c5005f;--av-brand-700:#8c0044;--av-brand-50:#fdf0f6;--av-brand-100:#f9d6e6;--av-brand-300:#e58cb8;
+  --av-ink:#222323;--av-ink-soft:#3b4143;--av-muted:#5c6163;--av-subtle:#9da0a0;
+  --av-surface:#ffffff;--av-surface-2:#f6f7f8;--av-surface-3:#eef0f1;
+  --av-border:#e2e5e6;--av-border-strong:#cfd3d4;--av-divider:#eef0f1;
+  --av-green:#1f8a5b;--av-green-soft:#ecf7f1;--av-info:#2f6f8a;--av-info-soft:#e6eff3;
+  --av-violet:#6643a7;--av-violet-soft:#f2effe;--av-warn:#b6680a;--av-warn-soft:#fdf3e7;
+  --av-danger:#b5482f;--av-danger-soft:#fcefec;--av-neutral-100:#f1f2f3;--av-neutral-200:#e4e7e8;
+  --av-mono:'JetBrains Mono','SFMono-Regular',ui-monospace,monospace;
+}
+
+/* ── table ── */
+.annonces-v2 .table-wrap.listing-table-active{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.annonces-v2 table{width:100%;border-collapse:collapse;min-width:880px;}
+.annonces-v2 thead th{background:var(--av-surface-2);text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--av-subtle);padding:11px 12px;border-top:1px solid var(--av-border);border-bottom:1px solid var(--av-border);white-space:nowrap;}
+.annonces-v2 thead th.av-right{text-align:right;}
+.annonces-v2 thead th.av-pad-l{padding-left:22px;}
+.annonces-v2 thead th.av-pad-r{padding-right:24px;}
+.annonces-v2 tbody td{padding:0 12px;height:84px;border-bottom:1px solid var(--av-divider);vertical-align:middle;}
+.annonces-v2 tbody tr{position:relative;cursor:pointer;transition:background .12s;}
+.annonces-v2 tbody tr::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background .12s;}
+.annonces-v2 tbody tr:hover{background:var(--av-surface-2);}
+.annonces-v2 tbody tr:hover::after{background:var(--av-brand);}
+.annonces-v2 tbody tr.is-selected{background:var(--av-brand-50);}
+.annonces-v2 tbody tr.is-selected::after{background:var(--av-brand);}
+.annonces-v2 tbody tr:last-child td{border-bottom:0;}
+.annonces-v2 .av-pad-l{padding-left:22px !important;}
+.annonces-v2 .av-pad-r{padding-right:24px !important;}
+
+/* photo cell */
+.annonces-v2 .av-thumb-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.annonces-v2 .av-thumb{width:56px;height:46px;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(34,35,35,.08),0 1px 2px rgba(34,35,35,.06);display:grid;place-items:center;color:rgba(255,255,255,.7);background:var(--av-neutral-200);flex:none;}
+.annonces-v2 .av-thumb img{width:100%;height:100%;object-fit:cover;}
+.annonces-v2 .av-thumb svg{width:18px;height:18px;}
+.annonces-v2 .av-ref-photo{font-family:var(--av-mono);font-size:9px;font-weight:700;color:var(--av-subtle);letter-spacing:.02em;white-space:nowrap;max-width:68px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
+
+/* bien cell */
+.annonces-v2 .av-bien{min-width:0;max-height:80px;overflow:hidden;}
+.annonces-v2 .av-bien b{font-size:13px;font-weight:700;color:var(--av-ink);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.annonces-v2 .av-bien .av-meta{font-size:11px;color:var(--av-muted);margin-top:2px;display:flex;gap:5px;flex-wrap:nowrap;overflow:hidden;align-items:center;}
+.annonces-v2 .av-bien .av-type{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.annonces-v2 .av-bien .av-type::before{content:"";width:5px;height:5px;border-radius:2px;background:var(--av-brand-300);flex:none;}
+.annonces-v2 .av-bien .av-msep{color:var(--av-subtle);font-weight:700;line-height:1;}
+.annonces-v2 .av-bien .av-mnum{font-family:var(--av-mono);font-size:10.5px;font-weight:700;color:var(--av-brand-700);white-space:nowrap;}
+.annonces-v2 .av-bien .av-ville{font-size:10.5px;color:var(--av-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annonces-v2 .av-bien .av-prix-inline{font-size:13px;font-weight:700;color:var(--av-brand-700);font-variant-numeric:tabular-nums;margin-top:4px;display:block;white-space:nowrap;}
+
+/* négociateur cell */
+.annonces-v2 .av-nego{display:flex;align-items:center;gap:9px;overflow:hidden;}
+.annonces-v2 .av-nego .av-av{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;background:linear-gradient(145deg,#e58cb8,#8c0044);}
+.annonces-v2 .av-nego b{font-size:13px;font-weight:700;color:var(--av-ink);display:block;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annonces-v2 .av-nego span{font-size:11px;color:var(--av-subtle);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* statut cell */
+.annonces-v2 .av-statut{display:flex;flex-direction:column;gap:3px;align-items:flex-start;max-height:80px;overflow:hidden;}
+.annonces-v2 .av-pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap;background:var(--av-green-soft);border:1px solid rgba(31,138,91,.28);color:var(--av-green);}
+.annonces-v2 .av-pill::before{content:"";width:5px;height:5px;border-radius:50%;flex:none;background:var(--av-green);}
+.annonces-v2 .av-pill.offre{background:var(--av-info-soft);border-color:rgba(47,111,138,.28);color:var(--av-info);}
+.annonces-v2 .av-pill.offre::before{background:var(--av-info);}
+.annonces-v2 .av-pill.compromis{background:var(--av-violet-soft);border-color:rgba(102,67,167,.28);color:var(--av-violet);}
+.annonces-v2 .av-pill.compromis::before{background:var(--av-violet);}
+.annonces-v2 .av-pill.vendu{background:var(--av-warn-soft);border-color:rgba(182,106,22,.28);color:var(--av-warn);}
+.annonces-v2 .av-pill.vendu::before{background:var(--av-warn);}
+/* alertes */
+.annonces-v2 .av-al-row{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+.annonces-v2 .av-al{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;white-space:nowrap;}
+.annonces-v2 .av-al.warn{background:var(--av-danger-soft);color:var(--av-danger);border:1px solid rgba(185,74,72,.2);}
+.annonces-v2 .av-al.amber{background:var(--av-warn-soft);color:var(--av-warn);border:1px solid rgba(182,106,22,.2);}
+.annonces-v2 .av-al.grey{background:var(--av-neutral-100);color:var(--av-muted);border:1px solid var(--av-border);}
+
+/* diffusion chips */
+.annonces-v2 .av-dp-row{display:flex;gap:4px;}
+.annonces-v2 .av-dp{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap;}
+.annonces-v2 .av-dp.on{background:var(--av-green-soft);color:var(--av-green);border:1px solid rgba(47,125,89,.28);}
+.annonces-v2 .av-dp.off{background:var(--av-neutral-100);color:#9aa0a0;border:1px solid var(--av-border);}
+
+/* actions cell */
+.annonces-v2 .av-acts-cell{display:flex;align-items:center;gap:6px;}
+.annonces-v2 .av-acq-ico{width:34px;height:34px;border-radius:10px;border:1.5px solid #9ecdc8;background:#e6efee;color:#0f766e;display:grid;place-items:center;cursor:pointer;text-decoration:none;transition:.15s;flex:none;position:relative;padding:0;}
+.annonces-v2 .av-acq-ico:hover{border-color:#0f766e;color:#0b5b54;background:#d3e6e3;transform:scale(1.06);}
+.annonces-v2 .av-acq-ico svg{width:15px;height:15px;}
+.annonces-v2 .av-acq-badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:99px;background:var(--av-brand);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;font-family:var(--av-mono);}
+
+/* the existing MandatActionMenu trigger lives here ; we just constrain width to align rows */
+.annonces-v2 .row-actions{display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+
+/* ============================================================
+   KPI band — restyle « design only » de la bande existante
+   (.header-kpis-secondary). Données + clics inchangés.
+   ============================================================ */
+.header-kpis.header-kpis-secondary{
+  display:flex;flex-wrap:nowrap;align-items:stretch;gap:0;overflow-x:auto;
+  border:1px solid #e2e5e6;border-radius:14px;background:#fff;padding:0;scrollbar-width:thin;
+  box-shadow:0 1px 3px rgba(34,35,35,.06);
+}
+.header-kpis.header-kpis-secondary::-webkit-scrollbar{height:6px;}
+.header-kpis.header-kpis-secondary::-webkit-scrollbar-thumb{background:#cfd3d4;border-radius:9px;}
+.header-kpis.header-kpis-secondary .header-kpi-card{
+  flex:none;min-width:128px;display:flex;flex-direction:column;justify-content:center;gap:4px;
+  padding:12px 16px;border:0;border-right:1px solid #eef0f1;border-bottom:3px solid transparent;
+  border-radius:0;background:#fff;text-align:left;white-space:nowrap;transition:background .13s,border-color .13s;
+}
+.header-kpis.header-kpis-secondary .header-kpi-card:last-child{border-right:0;}
+.header-kpis.header-kpis-secondary .header-kpi-card.is-clickable{cursor:pointer;}
+.header-kpis.header-kpis-secondary .header-kpi-card:hover{background:#f6f7f8;}
+.header-kpis.header-kpis-secondary .header-kpi-card span{font-size:10.5px;font-weight:600;color:#5c6163;line-height:1.2;order:2;}
+.header-kpis.header-kpis-secondary .header-kpi-card strong{font-size:21px;font-weight:700;color:#222323;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;order:1;}
+/* accent par tonalité (reprend la sémantique couleur de la maquette) */
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-volume.is-active{border-bottom-color:#c5005f;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-volume.is-active strong{color:#c5005f;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-affaires.is-active{border-bottom-color:#1f8a5b;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-affaires.is-active strong{color:#1f8a5b;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-diffusion.is-active{border-bottom-color:#0f766e;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-diffusion.is-active strong{color:#0f766e;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-demandes.is-active{border-bottom-color:#6643a7;}
+.header-kpis.header-kpis-secondary .header-kpi-card.tone-demandes.is-active strong{color:#6643a7;}
+.header-kpis.header-kpis-secondary .header-kpi-card.is-active{background:#f6f7f8;}
