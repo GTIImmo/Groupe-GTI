@@ -156,6 +156,19 @@
 .header-kpis.header-kpis-secondary .header-kpi-card.is-active{background:#f6f7f8;}
 
 /* ============================================================
+   Tiroir de filtres — slide-in droite façon maquette (scopé annonces).
+   ============================================================ */
+.app-shell.app-screen-mandats .filters-overlay{background:rgba(20,20,22,.5) !important;backdrop-filter:blur(4px);display:flex !important;align-items:stretch !important;justify-content:flex-end !important;padding:0 !important;z-index:201;}
+.app-shell.app-screen-mandats .filters-drawer{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:auto !important;width:500px !important;max-width:92vw !important;height:100vh !important;max-height:100vh !important;border-radius:0 !important;background:#fff !important;box-shadow:-20px 0 60px -20px rgba(0,0,0,.4) !important;display:flex !important;flex-direction:column;margin:0 !important;transform:none !important;animation:av-drawer-fade .2s ease;}
+@keyframes av-drawer-fade{from{opacity:.5}to{opacity:1}}
+.app-shell.app-screen-mandats .filters-drawer .filters-head{padding:22px 22px 16px !important;border-bottom:1px solid #e2e5e6;flex:none;}
+.app-shell.app-screen-mandats .filters-drawer .filters-head .eyebrow{color:#8c0044;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin:0 0 4px;}
+.app-shell.app-screen-mandats .filters-drawer .filters-head strong{font-size:18px;font-weight:700;color:#222323;}
+.app-shell.app-screen-mandats .filters-drawer .filter-grid{display:grid !important;grid-template-columns:1fr 1fr;gap:14px 18px;padding:18px 22px !important;overflow-y:auto;flex:1;align-content:start;}
+.app-shell.app-screen-mandats .filters-drawer select{background:#f6f7f8 !important;border:1px solid #cfd3d4 !important;border-radius:10px !important;padding:9px 12px !important;font-size:13.5px;color:#222323;}
+.app-shell.app-screen-mandats .filters-drawer select:focus{outline:none;border-color:#c5005f !important;box-shadow:0 0 0 3px rgba(197,0,95,.12) !important;}
+
+/* ============================================================
    Modale d'action — restyle premium façon maquette (scopé annonces).
    Structure existante (.action-menu-dialog + ActionButton) déjà = modale
    + cartes icône/titre/desc/CTA ; on ne change que l'esthétique.
