@@ -156,6 +156,32 @@
 .header-kpis.header-kpis-secondary .header-kpi-card.is-active{background:#f6f7f8;}
 
 /* ============================================================
+   Toolbar — carte façon maquette (scopé écran Annonces).
+   ============================================================ */
+.app-shell.app-screen-mandats .hero{background:#fff !important;border:1px solid #e2e5e6 !important;border-radius:16px !important;box-shadow:0 2px 8px -2px rgba(34,35,35,.10),0 1px 3px rgba(34,35,35,.06) !important;padding:12px 14px !important;}
+.app-screen-mandats .hero-stack{display:flex;flex-direction:column;gap:12px;}
+.app-screen-mandats .hero-top-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+/* recherche en pilule + loupe, label masqué */
+.app-shell.app-screen-mandats .hero-top-row .search-box{flex:1 1 280px;display:flex;align-items:center;gap:10px;background:#f6f7f8 !important;border:1px solid #e2e5e6 !important;border-radius:12px !important;padding:0 14px !important;position:relative;min-height:44px;}
+.app-screen-mandats .hero-top-row .search-box:focus-within{border-color:#c5005f;box-shadow:0 0 0 3px rgba(197,0,95,.12);}
+.app-screen-mandats .hero-top-row .search-box > span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.app-screen-mandats .hero-top-row .search-box::before{content:"";width:16px;height:16px;flex:none;background:#9da0a0;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.2-3.2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.2-3.2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;}
+.app-screen-mandats .hero-top-row .search-box input{flex:1;border:0;background:transparent;font:inherit;font-size:14px;color:#222323;padding:12px 0;outline:none;}
+/* boutons toolbar */
+.app-screen-mandats .hero-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.app-screen-mandats .hero-actions .ghost-button,
+.app-screen-mandats .header-control-row .kpi-toggle-button{font-size:13.5px;font-weight:600;padding:11px 15px;border-radius:12px;border:1px solid #cfd3d4;background:#fff;color:#3b4143;display:inline-flex;align-items:center;gap:7px;min-height:44px;}
+.app-screen-mandats .hero-actions .ghost-button:hover,
+.app-screen-mandats .header-control-row .kpi-toggle-button:hover{border-color:#c5005f;color:#8c0044;}
+.app-shell.app-screen-mandats .hero-actions .ghost-button.button-primary{background-image:linear-gradient(135deg,#c5005f,#a30049) !important;background-color:#c5005f !important;border-color:transparent !important;color:#fff !important;box-shadow:0 6px 14px -8px rgba(194,18,95,.7) !important;}
+.app-shell.app-screen-mandats .hero-actions .ghost-button.button-primary:hover{background-image:linear-gradient(135deg,#a30049,#8c0044) !important;}
+.app-shell.app-screen-mandats .header-control-row .kpi-toggle-button strong{color:#8c0044 !important;}
+/* Stats / Priorités : chips compteur */
+.app-screen-mandats .header-control-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.app-screen-mandats .header-control-row .kpi-toggle-button strong{font-size:12px;font-weight:700;color:#8c0044;background:#fdf0f6;border-radius:99px;padding:1px 8px;margin-left:2px;}
+.app-screen-mandats .header-control-row .kpi-toggle-button.is-open{border-color:#c5005f;color:#8c0044;background:#fdf0f6;}
+
+/* ============================================================
    Rail gauche — reproduction fidèle de la maquette (desktop).
    Colonne flex : rail-top (logo + marque + chevron) · menu (flex:1,
    défile en interne) · pied utilisateur épinglé. Plus d'ascenseur sur
