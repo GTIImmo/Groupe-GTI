@@ -124,6 +124,7 @@ import { useResponsiveExperience } from './hooks/useResponsiveExperience'
 import mandatTemplateHtml from './mandat-template.html?raw'
 import ContactSearchModal from './ContactSearchModal'
 import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
+import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import NotificationsBell from './NotificationsBell'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -8256,6 +8257,7 @@ export default function App() {
   const [visitRefreshKey, setVisitRefreshKey] = useState(0)
   const [editingVisitEvent, setEditingVisitEvent] = useState<GoogleCalendarEventLink | null>(null)
   const [affinerSearch, setAffinerSearch] = useState<AppContactSearch | null>(null)
+  const [rapprochementMandat, setRapprochementMandat] = useState<MandatContext | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -9387,6 +9389,43 @@ export default function App() {
     setWorkItemPage(1)
     setContactPage(1)
     setDetailOpen(false)
+  }
+
+  function openRapprochementMandat(src: {
+    app_dossier_id: number
+    hektor_annonce_id?: number | null
+    numero_mandat?: string | null
+    numero_dossier?: string | null
+    titre_bien?: string | null
+    type_bien?: string | null
+    ville?: string | null
+    code_postal?: string | null
+    prix?: number | null
+    surface?: number | string | null
+    photo_url_listing?: string | null
+    statut_annonce?: string | null
+    commercial_nom?: string | null
+    negociateur_email?: string | null
+    agence_nom?: string | null
+  }) {
+    const surfaceNum = src.surface != null && src.surface !== '' ? Number(src.surface) : null
+    setRapprochementMandat({
+      appDossierId: src.app_dossier_id,
+      hektorAnnonceId: src.hektor_annonce_id ?? null,
+      numeroMandat: src.numero_mandat ?? null,
+      numeroDossier: src.numero_dossier ?? null,
+      titre: src.titre_bien || 'Bien',
+      type: src.type_bien ?? null,
+      ville: src.ville ?? null,
+      codePostal: src.code_postal ?? null,
+      prix: src.prix ?? null,
+      surface: Number.isFinite(surfaceNum as number) ? (surfaceNum as number) : null,
+      photo: src.photo_url_listing ?? null,
+      statut: src.statut_annonce ?? null,
+      negociateurNom: src.commercial_nom ?? null,
+      negociateurEmail: src.negociateur_email ?? null,
+      agence: src.agence_nom ?? null,
+    })
   }
 
   function openContactDirectory(contactId: string | null | undefined) {
@@ -13455,6 +13494,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           onAffinerRecherche={() => { setRechercheAcquereurOpen(false); setAffinerSearch(rechercheAcquereurSearch) }}
         />
 
+        <RapprochementMandat
+          open={rapprochementMandat != null}
+          onClose={() => setRapprochementMandat(null)}
+          mandat={rapprochementMandat}
+          senderEmail={rapprochementMandat
+            ? resolveGoogleWorkspaceCalendarEmail({ emails: [rapprochementMandat.negociateurEmail, sessionEmail], label: rapprochementMandat.negociateurNom, hektorNegotiators })
+            : null}
+          visitRefreshKey={visitRefreshKey}
+          onOpenContact={(id) => { setRapprochementMandat(null); openContactDirectory(id) }}
+          onPlanifierVisite={(input) => setVisitBooking(input)}
+          onModifierRdv={(event) => setEditingVisitEvent(event)}
+          onSupprimerRdv={async (event) => {
+            try {
+              await deleteGoogleCalendarEvent(event.id, { sendUpdates: 'all' })
+              const sk = (event.metadata_json as Record<string, unknown> | null)?.contact_search_key
+              if (typeof sk === 'string' && event.app_dossier_id != null) {
+                await setBienStatut(sk, event.app_dossier_id, 'jamais_vu', null, null).catch(() => {})
+              }
+              setVisitRefreshKey((k) => k + 1)
+            } catch { /* suppression best-effort */ }
+          }}
+        />
+
         {visitBooking ? (() => {
           const presetAnnonce = {
             app_dossier_id: visitBooking.appDossierId,
@@ -13464,8 +13526,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             titre_bien: visitBooking.titre,
             ville: visitBooking.ville,
             code_postal: null,
-            commercial_nom: selectedContact?.commercial_nom ?? null,
-            agence_nom: selectedContact?.agence_nom ?? null,
+            commercial_nom: visitBooking.negoCommercialNom ?? selectedContact?.commercial_nom ?? null,
+            agence_nom: visitBooking.negoAgenceNom ?? selectedContact?.agence_nom ?? null,
             statut_annonce: null,
             archive: false,
             photo_url_listing: visitBooking.photo,
@@ -13474,9 +13536,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           const presetContactLink = visitBooking.acquereurEmail
             ? { email: visitBooking.acquereurEmail, label: visitBooking.acquereurName, hektorContactId: visitBooking.acquereurContactId, source: 'rapprochement' }
             : null
-          const calEmail = (selectedContact
-            ? resolveGoogleWorkspaceCalendarEmail({ emails: [selectedContact.negociateur_email, sessionEmail], label: selectedContact.commercial_nom, hektorNegotiators })
-            : sessionEmail) || ''
+          const calEmail = (visitBooking.calendarEmail
+            || (selectedContact
+              ? resolveGoogleWorkspaceCalendarEmail({ emails: [selectedContact.negociateur_email, sessionEmail], label: selectedContact.commercial_nom, hektorNegotiators })
+              : sessionEmail)) || ''
           const slotStart = new Date(); slotStart.setSeconds(0, 0); slotStart.setMinutes(0); slotStart.setHours(slotStart.getHours() + 1)
           const slot = { start: slotStart.toISOString(), end: new Date(slotStart.getTime() + 3600000).toISOString() }
           return (
@@ -14665,6 +14728,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenDiffusionModal={openDiffusionModal}
             onOpenDetailPage={openDossierDetailPage}
             onOpenLightweightDetail={openLightweightDetailImport}
+            onOpenRapprochement={openRapprochementMandat}
             requestPending={requestPending}
             onSelectMandat={setSelectedMandatId}
             loading={mandatLoading}
@@ -14861,6 +14925,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onOpenContact={openContactDirectory}
+                onOpenRapprochement={openRapprochementMandat}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
               />
@@ -15687,6 +15752,7 @@ function MandatsScreen(props: {
   requestPending: boolean
   onSelectMandat: (id: number) => void
   onOpenLightweightDetail: (item: MandatRecord) => void
+  onOpenRapprochement?: (item: MandatRecord) => void
   loading: boolean
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
@@ -15838,6 +15904,18 @@ function MandatsScreen(props: {
                           ) : (
                             <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />
                           )}
+                          {props.onOpenRapprochement && !isEstimationMode && !isLightweight && item.statut_annonce === 'Actif' && item.diffusable === '1' ? (
+                            <button
+                              className="rappro-entry-btn"
+                              type="button"
+                              title="Rapprochement acquéreurs — trouver les acheteurs correspondants"
+                              aria-label="Rapprochement acquéreurs"
+                              onClick={(event) => { event.stopPropagation(); props.onOpenRapprochement?.(item) }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0" /><circle cx="17.5" cy="9.5" r="2.2" /><path d="M15 20a5 5 0 0 1 6.5-4.8" /></svg>
+                              <span>Acquéreurs</span>
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -17056,6 +17134,7 @@ function DossierDetailLayout(props: {
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
   address: string
+  onOpenRapprochement?: (dossier: Dossier) => void
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
@@ -17264,6 +17343,12 @@ function DossierDetailLayout(props: {
                             <button className="ds-btn ds-btn-soft" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
                               <span aria-hidden="true"><DetailIcon type="actions" /></span>
                               <strong>Statut</strong>
+                            </button>
+                          ) : null}
+                          {props.onOpenRapprochement && dossier.statut_annonce === 'Actif' && dossier.diffusable === '1' ? (
+                            <button className="ds-btn ds-btn-soft" type="button" title="Rapprochement acquéreurs — trouver les acheteurs correspondants" onClick={() => props.onOpenRapprochement?.(dossier)}>
+                              <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} width={14} height={14}><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0" /><circle cx="17.5" cy="9.5" r="2.2" /><path d="M15 20a5 5 0 0 1 6.5-4.8" /></svg></span>
+                              <strong>Acquéreurs</strong>
                             </button>
                           ) : null}
                           {(showMandatePilot && props.allowMarkValidation) || (showDiffusionPilot && props.allowMarkDiffusable) ? (

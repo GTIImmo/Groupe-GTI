@@ -19,6 +19,7 @@ import './fiche-estimation.css'
 import './fiche-contact-v2.css'
 import './mandat-detail-v1.css'
 import './recherche-acquereur.css'
+import './recherche-mandat.css'
 import './notifications-bell.css'
 import './rapprochement-stats.css'
 

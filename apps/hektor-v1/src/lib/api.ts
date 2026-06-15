@@ -2086,6 +2086,53 @@ export async function loadRapprochements(contactSearchKey: string): Promise<Rapp
   return (data ?? []) as RapprochementRow[]
 }
 
+// ---- Rapprochement inversé (bien → acquéreurs) ----
+export type RapprochementForDossierRow = {
+  contact_search_key: string
+  hektor_contact_id: string | null
+  display_name: string | null
+  nom: string | null
+  prenom: string | null
+  email: string | null
+  phone: string | null
+  search_index: number | null
+  villes_json: Record<string, string> | string[] | null
+  types_json: Record<string, string> | null
+  criteres_json: Record<string, unknown> | null
+  prix_min: number | null
+  prix_max: number | null
+  surface_min: number | null
+  pieces_min: number | null
+  chambre_min: number | null
+  surface_terrain_min: number | null
+  owner_negociateur_email: string | null
+  owner_commercial_nom: string | null
+  agence_nom: string | null
+  score: number
+  components: RapprochementComponent[] | null
+  statut: string | null
+  statut_channel: string | null
+  statut_reason: string | null
+  proposed_at: string | null
+  first_seen_at: string | null
+  computed_at: string | null
+}
+
+/**
+ * Rapprochement inversé : pour un bien (app_dossier_id) → acquéreurs dont la recherche
+ * active correspond (scoring v2 déjà persisté, lecture pure, tri score décroissant).
+ * Miroir de loadRapprochements ; le couple bien×recherche partage les mêmes tables d'action,
+ * donc toute proposition/statut tracé depuis cet écran apparaît aussi côté acquéreur.
+ */
+export async function loadRapprochementsForDossier(appDossierId: number): Promise<RapprochementForDossierRow[]> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  const { data, error } = await supabase.rpc('app_get_rapprochements_for_dossier', {
+    p_dossier_id: appDossierId,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to load rapprochements for dossier')
+  return (data ?? []) as RapprochementForDossierRow[]
+}
+
 /**
  * Recherches acquéreur « à compléter » : actives mais à qui il manque un pilier
  * (prix ou secteur) → ne produisent pas de rapprochements exploitables.
@@ -2226,6 +2273,14 @@ export async function loadSearchTimeline(contactSearchKey: string): Promise<Time
   if (!hasSupabaseEnv || !supabase || !contactSearchKey.trim()) return []
   const { data, error } = await supabase.rpc('app_get_search_timeline', { p_search_key: contactSearchKey.trim() })
   if (error) throw new Error(error.message ?? 'Unable to load timeline')
+  return (data ?? []) as TimelineRow[]
+}
+
+/** Timeline côté bien : tous les événements (tous acquéreurs) pour un dossier. */
+export async function loadDossierTimeline(appDossierId: number): Promise<TimelineRow[]> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  const { data, error } = await supabase.rpc('app_get_dossier_timeline', { p_dossier_id: appDossierId })
+  if (error) throw new Error(error.message ?? 'Unable to load dossier timeline')
   return (data ?? []) as TimelineRow[]
 }
 

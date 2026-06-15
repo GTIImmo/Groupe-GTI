@@ -1,0 +1,457 @@
+/* ============================================================
+   Rapprochement Mandat → Acquéreurs — écran inverse (bien → acquéreurs)
+   Transposition fidèle du prototype ui_kits/console/rapprochement-mandat.html
+   (Claude Design / handoff GTI). Tout est scopé sous .rapp-mandat pour ne
+   pas entrer en collision avec styles.css ni recherche-acquereur.css.
+   ============================================================ */
+
+.rapp-mandat{
+  --brand:#c5005f;--brand-ink:#8c0044;--brand-soft:#fdf0f6;--brand-line:#f6b6d5;
+  --ink:#222323;--ink-soft:#3b4143;--muted:#5c6163;--faint:#9da0a0;
+  --line:#e2e5e6;--line-soft:#eef0f1;--line-strong:#cfd3d4;
+  --surface:#f6f7f8;--card:#ffffff;--card-2:#f6f7f8;
+  --green:#1f8a5b;--green-soft:#ecf7f1;--green-line:#a8d9c3;
+  --gold:#a8814a;--gold-soft:#faf3e6;--gold-line:#dfc99a;
+  --teal:#0f766e;--teal-soft:#e6efee;--teal-line:#9ecdc8;
+  --red:#b5482f;--red-soft:#fcefec;--red-line:#f0d4cf;
+  --orange:#c45c14;--orange-soft:#fef3ea;--orange-line:#f5c8a0;
+  --violet:#6643a7;--violet-soft:#f2effe;--violet-line:#c4b2e8;
+  --font:'Inter',system-ui,sans-serif;--font-serif:'Spectral',Georgia,serif;--font-mono:'JetBrains Mono','SFMono-Regular',monospace;
+  --r-card:18px;--r-pill:99px;--r-chip:8px;
+  --shadow-xs:0 1px 3px rgba(34,35,35,.07);
+  --shadow-card:0 2px 8px -2px rgba(34,35,35,.10),0 1px 3px rgba(34,35,35,.06);
+  --shadow-card-lg:0 8px 24px -8px rgba(34,35,35,.16),0 2px 6px rgba(34,35,35,.07);
+  --shadow-pop:0 24px 54px -16px rgba(34,35,35,.32),0 4px 12px rgba(34,35,35,.08);
+
+  position:fixed;inset:0;z-index:1000;font-family:var(--font);font-size:14px;color:var(--ink);
+  background:var(--surface);-webkit-font-smoothing:antialiased;
+}
+.rapp-mandat *,.rapp-mandat *::before,.rapp-mandat *::after{box-sizing:border-box;margin:0;padding:0}
+.rapp-mandat *:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:5px}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.rapp-mandat .panel{height:100vh;display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+.rapp-mandat .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px;height:56px;background:var(--ink);flex-shrink:0;position:relative;z-index:20}
+.rapp-mandat .tb-left,.rapp-mandat .tb-right{display:flex;align-items:center;gap:9px}
+.rapp-mandat .crumb{display:flex;flex-direction:column;gap:1px;min-width:0}
+.rapp-mandat .crumb .ey{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+.rapp-mandat .crumb .ref{font-size:14px;font-weight:700;color:#fff;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rapp-mandat .crumb .ref b{color:rgba(245,202,220,.9);font-family:var(--font-mono);font-size:12.5px}
+.rapp-mandat .tb-badge{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#d72c76,#a30049);flex-shrink:0}
+.rapp-mandat .tb-badge svg{width:18px;height:18px;color:#fff}
+
+/* Buttons */
+.rapp-mandat .btn{font-family:var(--font);font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;border:1px solid var(--line-strong);background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);cursor:pointer;white-space:nowrap;transition:.13s}
+.rapp-mandat .btn:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3);color:#fff}
+.rapp-mandat .btn svg{width:15px;height:15px;flex-shrink:0}
+.rapp-mandat .btn.icon{padding:8px;border-radius:9px}
+.rapp-mandat .btn.brand{background:linear-gradient(180deg,#d72c76,#bb1059);border-color:#ab0054;color:#fff;box-shadow:0 6px 14px -8px rgba(194,18,95,.7)}
+.rapp-mandat .btn.brand:hover{background:linear-gradient(180deg,#c21f6a,#a30049)}
+.rapp-mandat .btn.on{background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)}
+.rapp-mandat .btn-close{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:none;color:rgba(255,255,255,.55);cursor:pointer;transition:.13s}
+.rapp-mandat .btn-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.rapp-mandat .btn-close svg{width:15px;height:15px}
+
+/* ── Workspace ───────────────────────────────────────────────────────────── */
+.rapp-mandat .workspace{flex:1;display:grid;grid-template-columns:310px minmax(0,1fr) 264px;overflow:hidden}
+
+/* ── Rail gauche · Fiche mandat ─────────────────────────────────────────── */
+.rapp-mandat .rail{display:flex;flex-direction:column;background:var(--card);border-right:1px solid var(--line);overflow-y:auto;overflow-x:hidden}
+.rapp-mandat .rail::-webkit-scrollbar{width:4px}.rapp-mandat .rail::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px}
+
+.rapp-mandat .m-photo{position:relative;height:178px;background:linear-gradient(150deg,#efe7dc,#e4d8c8);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.rapp-mandat .m-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rapp-mandat .m-photo::after{content:"";position:absolute;inset:0;background:radial-gradient(100% 80% at 80% 10%,rgba(255,255,255,.45),transparent 62%),linear-gradient(180deg,transparent 55%,rgba(34,35,35,.55))}
+.rapp-mandat .m-photo-lbl{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;color:rgba(255,255,255,.5);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.rapp-mandat .m-photo-lbl svg{width:32px;height:32px;opacity:.6}
+.rapp-mandat .m-status-tag{position:absolute;top:12px;left:12px;z-index:2;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:5px 10px;border-radius:99px;background:#fff;color:var(--green);border:1px solid var(--green-line);display:inline-flex;align-items:center;gap:5px}
+.rapp-mandat .m-status-tag::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.rapp-mandat .m-price-block{position:absolute;bottom:12px;left:12px;right:12px;z-index:2;display:flex;align-items:flex-end;justify-content:space-between}
+.rapp-mandat .m-price{font-family:var(--font-serif);font-size:24px;font-weight:600;color:#fff;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.4);font-variant-numeric:tabular-nums}
+.rapp-mandat .m-surf{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.75);background:rgba(0,0,0,.3);padding:3px 8px;border-radius:7px;backdrop-filter:blur(4px)}
+
+/* Rail body */
+.rapp-mandat .rail-body{padding:16px;display:flex;flex-direction:column;gap:0}
+.rapp-mandat .m-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.rapp-mandat .m-ref{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--brand-ink)}
+.rapp-mandat .m-type{font-size:12px;font-weight:600;color:var(--muted)}
+.rapp-mandat .m-title{font-family:var(--font-serif);font-size:18px;font-weight:600;color:var(--ink);line-height:1.18;letter-spacing:-.01em}
+.rapp-mandat .m-addr{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:5px}
+.rapp-mandat .m-addr svg{width:13px;height:13px;color:var(--faint);flex-shrink:0}
+
+.rapp-mandat .m-specs{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.rapp-mandat .m-spec{font-size:12.5px;font-weight:600;color:var(--ink-soft);display:inline-flex;align-items:center;gap:5px}
+.rapp-mandat .m-spec svg{width:14px;height:14px;color:var(--faint)}
+
+/* Divider */
+.rapp-mandat .rdiv{height:1px;background:var(--line-soft);margin:14px 0}
+
+/* Négo */
+.rapp-mandat .nego-row{display:flex;align-items:center;gap:10px}
+.rapp-mandat .nego-av{width:36px;height:36px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(145deg,var(--brand),var(--brand-ink))}
+.rapp-mandat .nego-nm{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.2}
+.rapp-mandat .nego-ag{font-size:11.5px;color:var(--muted)}
+.rapp-mandat .rlabel{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:9px;display:block}
+
+/* KPI bandeau rail */
+.rapp-mandat .rail-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.rapp-mandat .rk{background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rapp-mandat .rk .k{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.rapp-mandat .rk .v{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.rapp-mandat .rk .v.ok{color:var(--green)}.rapp-mandat .rk .v.warn{color:var(--orange)}.rapp-mandat .rk .v.hot{color:var(--brand-ink)}
+.rapp-mandat .rk .s{font-size:11px;color:var(--muted);font-weight:600}
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+.rapp-mandat .main{display:flex;flex-direction:column;overflow:hidden}
+.rapp-mandat .results-head{padding:18px 20px 0;flex-shrink:0}
+.rapp-mandat .rh-title{font-family:var(--font-serif);font-size:21px;font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.15}
+.rapp-mandat .rh-sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:13px;color:var(--muted);font-weight:600}
+.rapp-mandat .rh-sub .dot{width:3px;height:3px;border-radius:50%;background:var(--faint);flex-shrink:0}
+.rapp-mandat .rh-sub .it b{color:var(--ink)}
+.rapp-mandat .rh-sub .it.hot b{color:var(--brand-ink)}
+.rapp-mandat .rh-sub .it.new b{color:var(--teal)}
+
+/* Filters */
+.rapp-mandat .filters{display:flex;align-items:center;gap:6px;padding:14px 20px 0;flex-wrap:wrap;flex-shrink:0}
+.rapp-mandat .fpill{font-family:var(--font);font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;border:1px solid var(--line-strong);background:#fff;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.13s}
+.rapp-mandat .fpill:hover{border-color:var(--brand);color:var(--brand-ink)}
+.rapp-mandat .fpill.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rapp-mandat .fpill .c{font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;background:rgba(0,0,0,.06);color:inherit;min-width:18px;text-align:center}
+.rapp-mandat .fpill.on .c{background:rgba(255,255,255,.22)}
+.rapp-mandat .fpill.alerte-btn{border-color:var(--brand-line);color:var(--brand-ink);background:var(--brand-soft)}
+.rapp-mandat .fpill.alerte-btn svg{width:14px;height:14px}
+.rapp-mandat .fpill.alerte-btn:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* Sort bar */
+.rapp-mandat .sortbar{display:flex;align-items:center;gap:10px;padding:12px 20px;flex-shrink:0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.rapp-mandat .listcount{font-size:12.5px;font-weight:700;color:var(--muted)}
+.rapp-mandat .lc-hidden{color:var(--faint);font-weight:600}
+.rapp-mandat .spills{display:flex;gap:4px;margin-left:auto}
+.rapp-mandat .spill{font-family:var(--font);font-size:12px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;color:var(--muted);cursor:pointer;transition:.12s}
+.rapp-mandat .spill.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rapp-mandat .spill:hover:not(.on){border-color:var(--ink);color:var(--ink)}
+
+/* Mode toggle */
+.rapp-mandat .mode-toggle{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.rapp-mandat .mode-btn-list{font-family:var(--font);font-size:12px;font-weight:700;padding:6px 12px;border-radius:9px;border:1px solid var(--line-strong);background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.13s;white-space:nowrap}
+.rapp-mandat .mode-btn-list svg{width:13px;height:13px}
+.rapp-mandat .mode-btn-list.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rapp-mandat .mode-btn-disc{font-family:var(--font);font-size:13px;font-weight:800;padding:8px 18px;border-radius:99px;border:none;background:linear-gradient(135deg,#e03578,#b8005a);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.16s;box-shadow:0 4px 18px -6px rgba(197,0,95,.65);white-space:nowrap;letter-spacing:-.01em}
+.rapp-mandat .mode-btn-disc svg{width:15px;height:15px}
+.rapp-mandat .mode-btn-disc:hover{transform:translateY(-1px) scale(1.02);box-shadow:0 8px 24px -6px rgba(197,0,95,.7)}
+.rapp-mandat .mode-btn-disc.on{background:linear-gradient(135deg,#2a2320,#1b1613);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+
+/* ── Score slider ───────────────────────────────────────────────────── */
+.rapp-mandat .score-ctrl{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--card-2);border-bottom:1px solid var(--line-soft);flex-shrink:0}
+.rapp-mandat .sc-lbl{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.rapp-mandat .sc-val{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--ink);min-width:46px;font-variant-numeric:tabular-nums;line-height:1}
+.rapp-mandat .sc-val small{font-size:11px;font-weight:700;color:var(--muted)}
+.rapp-mandat .sc-range{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:99px;outline:none;cursor:pointer;background:linear-gradient(to right,var(--brand) var(--pct,0%),var(--line-strong) var(--pct,0%));transition:background .1s}
+.rapp-mandat .sc-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2.5px solid var(--brand);box-shadow:0 2px 8px rgba(197,0,95,.35);cursor:pointer;transition:.12s}
+.rapp-mandat .sc-range::-webkit-slider-thumb:hover{transform:scale(1.12)}
+.rapp-mandat .sc-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 8px rgba(197,0,95,.35);cursor:pointer}
+.rapp-mandat .sc-hint{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+
+/* Feed */
+.rapp-mandat .feed{flex:1;overflow-y:auto;padding:14px 20px 24px}
+.rapp-mandat .feed::-webkit-scrollbar{width:5px}.rapp-mandat .feed::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px}
+.rapp-mandat .feedwrap.hidden{display:none!important}
+.rapp-mandat #ramFeed{display:flex;flex-direction:column;gap:16px}
+.rapp-mandat .feed-state{text-align:center;padding:40px 20px;color:var(--faint);font-size:13px;font-weight:600;line-height:1.6}
+.rapp-mandat .feed-state.err{color:var(--red)}
+
+/* Tray (sélection) */
+.rapp-mandat .tray{flex-shrink:0;display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#2a2320,#1b1613);color:#fff;margin:10px 20px 0;border-radius:14px;padding:11px 12px 11px 16px;box-shadow:0 16px 34px -16px rgba(0,0,0,.55);flex-wrap:wrap}
+.rapp-mandat .tray-l{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:#e7ddd3;white-space:nowrap}
+.rapp-mandat .tray-l b{color:#fff;font-weight:800}
+.rapp-mandat .tray-ic{width:30px;height:30px;border-radius:9px;background:rgba(197,0,95,.9);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rapp-mandat .tray-ic svg{width:16px;height:16px;color:#fff}
+.rapp-mandat .tray-r{display:flex;gap:7px;margin-left:auto;flex-shrink:0}
+.rapp-mandat .tray .btn{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#ece4db;font-size:13px;padding:8px 13px}
+.rapp-mandat .tray .btn:hover{background:rgba(255,255,255,.13);color:#fff}
+.rapp-mandat .tray .btn.brand{background:linear-gradient(180deg,#d72c76,#bb1059);border-color:#bb1059}
+
+/* Alerte band */
+.rapp-mandat .alerte-band{margin:10px 20px 0;display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#2a2320,#1b1613);border-radius:14px;padding:13px 16px;color:#fff;flex-wrap:wrap;flex-shrink:0}
+.rapp-mandat .al-ic{width:38px;height:38px;border-radius:11px;background:rgba(197,0,95,.85);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rapp-mandat .al-ic svg{width:18px;height:18px;color:#fff}
+.rapp-mandat .al-t{font-size:14px;font-weight:700}
+.rapp-mandat .al-s{font-size:11.5px;color:#b9ada3;margin-top:2px}
+.rapp-mandat .al-grid{display:flex;gap:20px;margin-left:auto;flex-wrap:wrap}
+.rapp-mandat .af{display:flex;flex-direction:column;gap:2px;white-space:nowrap}
+.rapp-mandat .af .k{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9a8d83}
+.rapp-mandat .af .v{font-size:13px;font-weight:700;color:#f3ebe2}
+.rapp-mandat .af .v.ok{color:#7fe0a6;display:inline-flex;align-items:center;gap:5px}
+.rapp-mandat .af .v.ok::before{content:"";width:6px;height:6px;border-radius:50%;background:#5fe39b;flex-shrink:0}
+
+/* ── Acquéreur Card ──────────────────────────────────────────────────────── */
+.rapp-mandat .acard{position:relative;display:grid;grid-template-columns:104px minmax(0,1fr) 158px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow-card);transition:box-shadow .2s,transform .2s}
+.rapp-mandat .acard:hover{box-shadow:var(--shadow-card-lg);transform:translateY(-1px)}
+.rapp-mandat .acard[data-status="ecarte"]{opacity:.68}
+.rapp-mandat .acard[data-status="ecarte"]:hover{opacity:.9}
+
+/* Thumb zone */
+.rapp-mandat .ac-thumb{position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#f0e8e2,#e8dcd5);overflow:hidden;min-height:116px}
+.rapp-mandat .acard[data-status="encours"] .ac-thumb{background:linear-gradient(155deg,#e2eeec,#d4e8e5)}
+.rapp-mandat .acard[data-status="visite"] .ac-thumb{background:linear-gradient(155deg,#e2f0ea,#d4e9dc)}
+.rapp-mandat .acard[data-status="offre"] .ac-thumb{background:linear-gradient(155deg,#fce8f2,#f7d0e5)}
+.rapp-mandat .acard[data-status="ecarte"] .ac-thumb{background:linear-gradient(155deg,#f0f1f2,#e8eaeb)}
+.rapp-mandat .ac-av{font-family:var(--font-serif);font-size:26px;font-weight:700;color:rgba(34,35,35,.20);letter-spacing:-.02em;user-select:none}
+.rapp-mandat .ac-score-badge{position:absolute;bottom:9px;left:9px;font-family:var(--font-serif);font-size:13.5px;font-weight:700;padding:4px 9px;border-radius:8px;line-height:1;cursor:help;font-variant-numeric:tabular-nums}
+.rapp-mandat .ac-score-badge.s-green{background:var(--green);color:#fff;box-shadow:0 2px 8px -2px rgba(31,138,91,.5)}
+.rapp-mandat .ac-score-badge.s-gold{background:var(--gold);color:#fff;box-shadow:0 2px 8px -2px rgba(168,129,74,.5)}
+.rapp-mandat .ac-score-badge.s-red{background:var(--red);color:#fff;box-shadow:0 2px 8px -2px rgba(181,72,47,.5)}
+.rapp-mandat .ac-score-badge small{font-size:10px;font-weight:800;opacity:.85}
+
+/* Score tooltip */
+.rapp-mandat .sc-bd{position:absolute;left:8px;bottom:calc(100% + 8px);width:210px;background:#241e1a;color:#fff;border-radius:13px;padding:12px 13px;box-shadow:var(--shadow-pop);opacity:0;visibility:hidden;pointer-events:none;transition:.16s;z-index:30;text-align:left}
+.rapp-mandat .ac-score-badge:hover .sc-bd,.rapp-mandat .ac-score-badge:focus-within .sc-bd{opacity:1;visibility:visible}
+.rapp-mandat .sc-bd::after{content:"";position:absolute;top:100%;left:14px;border:6px solid transparent;border-top-color:#241e1a}
+.rapp-mandat .sc-bd-h{font-size:11px;font-weight:800;color:#fff;margin-bottom:8px}
+.rapp-mandat .sc-bd-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;font-size:12px;font-weight:700}
+.rapp-mandat .sc-bd-row+.sc-bd-row{border-top:1px solid rgba(255,255,255,.08)}
+.rapp-mandat .sc-bd-row .bdk{color:#cabfb5;font-weight:600}
+.rapp-mandat .sc-bd-row .bdv.ok{color:#7fe0a6}
+.rapp-mandat .sc-bd-row.no .bdv{color:#f3a08c}
+.rapp-mandat .sc-bd-row.no .bdk{color:#a99c92}
+
+/* Status chip (in thumb, top) */
+.rapp-mandat .ac-status-flag{position:absolute;top:9px;left:9px;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:99px;border:1px solid;white-space:nowrap}
+.rapp-mandat .ac-status-flag.todo{background:var(--gold-soft);border-color:var(--gold-line);color:#7a5a12}
+.rapp-mandat .ac-status-flag.encours{background:var(--teal-soft);border-color:var(--teal-line);color:#1a5e58}
+.rapp-mandat .ac-status-flag.visite{background:var(--green-soft);border-color:var(--green-line);color:#1a6647}
+.rapp-mandat .ac-status-flag.offre{background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)}
+.rapp-mandat .ac-status-flag.ecarte{background:#fff;border-color:var(--line-strong);color:var(--faint)}
+
+/* Badges new/hot */
+.rapp-mandat .ac-new{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-line);padding:2px 7px;border-radius:99px}
+.rapp-mandat .ac-hot{font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:linear-gradient(180deg,#d72c76,#bb1059);border:1px solid #ab0054;padding:2px 8px;border-radius:99px}
+
+/* Main info */
+.rapp-mandat .ac-main{padding:15px 17px;min-width:0;display:flex;flex-direction:column;gap:11px;border-right:1px solid var(--line-soft)}
+.rapp-mandat .ac-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rapp-mandat .ac-name{font-family:var(--font-serif);font-size:16.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.rapp-mandat .ac-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px}
+.rapp-mandat .ac-src{font-size:10.5px;font-weight:700;color:var(--faint);background:var(--card-2);border:1px solid var(--line);padding:2px 7px;border-radius:99px}
+.rapp-mandat .ac-owner{font-size:10.5px;font-weight:700;color:var(--violet);background:var(--violet-soft);border:1px solid var(--violet-line);padding:2px 8px;border-radius:99px;display:inline-flex;align-items:center;gap:4px}
+.rapp-mandat .ac-owner svg{width:10px;height:10px}
+.rapp-mandat .ac-contact{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rapp-mandat .ac-contact span{display:inline-flex;align-items:center;gap:4px}
+.rapp-mandat .ac-contact svg{width:11px;height:11px;color:var(--faint)}
+
+/* Budget bar */
+.rapp-mandat .ac-budget{display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--card-2);border:1px solid var(--line);border-radius:10px}
+.rapp-mandat .budget-icon{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--green-soft);border:1px solid var(--green-line);color:var(--green)}
+.rapp-mandat .budget-icon svg{width:13px;height:13px}
+.rapp-mandat .budget-icon.warn{background:var(--gold-soft);border-color:var(--gold-line);color:var(--gold)}
+.rapp-mandat .budget-icon.bad{background:var(--red-soft);border-color:var(--red-line);color:var(--red)}
+.rapp-mandat .budget-lbl{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.rapp-mandat .budget-val{font-size:12.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.2}
+.rapp-mandat .budget-hint{font-size:11px;font-weight:600;margin-left:auto;white-space:nowrap}
+.rapp-mandat .budget-hint.ok{color:var(--green)}.rapp-mandat .budget-hint.warn{color:var(--gold)}.rapp-mandat .budget-hint.bad{color:var(--red)}
+
+/* Match tags */
+.rapp-mandat .ac-match{display:flex;flex-wrap:wrap;gap:4px}
+.rapp-mandat .mt{font-size:10px;font-weight:700;padding:3px 8px;border-radius:7px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--green-line);background:var(--green-soft);color:#1f6e44}
+.rapp-mandat .mt svg{width:10px;height:10px}
+.rapp-mandat .mt.no{border-color:var(--red-line);background:var(--red-soft);color:var(--red)}
+.rapp-mandat .mt.na{border-color:var(--line);background:var(--card-2);color:var(--faint)}
+
+/* Side actions */
+.rapp-mandat .ac-side{padding:13px 12px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#fffdfb,#fdf8f2);position:relative}
+.rapp-mandat .ac-pick{position:absolute;top:11px;right:11px;width:22px;height:22px;border-radius:6px;border:2px solid var(--line-strong);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:.14s;box-shadow:var(--shadow-xs)}
+.rapp-mandat .ac-pick:hover{border-color:var(--brand)}
+.rapp-mandat .ac-pick svg{width:12px;height:12px;opacity:0;transition:opacity .12s;color:#fff}
+.rapp-mandat .acard.sel .ac-pick{background:var(--brand);border-color:var(--brand)}
+.rapp-mandat .acard.sel .ac-pick svg{opacity:1}
+.rapp-mandat .ac-date{font-size:10.5px;color:var(--muted);font-weight:600;display:flex;align-items:flex-start;gap:4px;line-height:1.4;margin-top:28px}
+.rapp-mandat .ac-date svg{width:11px;height:11px;color:var(--faint);flex-shrink:0;margin-top:1px}
+.rapp-mandat .ac-actions{display:flex;flex-direction:column;gap:5px;width:100%;margin-top:auto}
+.rapp-mandat .btn-sm{font-family:var(--font);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border-radius:9px;border:1px solid;cursor:pointer;transition:.13s;white-space:nowrap;width:100%}
+.rapp-mandat .btn-sm svg{width:13px;height:13px;flex-shrink:0}
+.rapp-mandat .btn-sm.brand-soft{background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)}
+.rapp-mandat .btn-sm.brand-soft:hover{background:#f6cce0;border-color:var(--brand)}
+.rapp-mandat .btn-sm.brand-fill{background:linear-gradient(180deg,#d72c76,#bb1059);border-color:#ab0054;color:#fff;box-shadow:0 6px 14px -10px rgba(194,18,95,.7)}
+.rapp-mandat .btn-sm.brand-fill:hover{background:linear-gradient(180deg,#c21f6a,#a30049)}
+.rapp-mandat .btn-sm.ghost{background:#fff;border-color:var(--line-strong);color:var(--ink-soft)}
+.rapp-mandat .btn-sm.ghost:hover{border-color:var(--ink);color:var(--ink)}
+.rapp-mandat .btn-ecart{font-family:var(--font);font-size:11.5px;font-weight:600;width:100%;padding:6px;border-radius:8px;cursor:pointer;border:none;background:transparent;color:var(--faint);transition:.14s;text-align:center}
+.rapp-mandat .btn-ecart:hover{color:var(--red);background:var(--red-soft)}
+
+/* ── Right panel ────────────────────────────────────────────────── */
+.rapp-mandat .rpanel{display:flex;flex-direction:column;background:var(--card);border-left:1px solid var(--line);overflow-y:auto;overflow-x:hidden}
+.rapp-mandat .rpanel::-webkit-scrollbar{width:4px}.rapp-mandat .rpanel::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px}
+.rapp-mandat .rp-sec{padding:16px;border-bottom:1px solid var(--line-soft)}
+.rapp-mandat .rp-sec:last-child{border-bottom:none}
+.rapp-mandat .rp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.rapp-mandat .rp-title{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.rapp-mandat .rp-badge{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--brand);color:#fff;min-width:18px;text-align:center}
+.rapp-mandat .rp-empty{font-size:12px;color:var(--faint);font-weight:600;text-align:center;padding:12px 0;font-style:italic}
+/* Relance items */
+.rapp-mandat .rl-item{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border:1px solid var(--line);border-radius:12px;margin-bottom:7px;cursor:pointer;transition:.13s;background:#fff}
+.rapp-mandat .rl-item:last-child{margin-bottom:0}
+.rapp-mandat .rl-item:hover{border-color:var(--brand-line);background:var(--brand-soft)}
+.rapp-mandat .rl-av{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#fff;background:linear-gradient(145deg,var(--brand),var(--brand-ink));margin-top:1px}
+.rapp-mandat .rl-body{min-width:0}
+.rapp-mandat .rl-name{font-size:12px;font-weight:700;color:var(--ink);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rapp-mandat .rl-sub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.3}
+.rapp-mandat .rl-date{font-size:10.5px;font-weight:700;margin-top:4px;display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;border:1px solid}
+.rapp-mandat .rl-date.urgent{color:var(--brand-ink);border-color:var(--brand-line);background:var(--brand-soft)}
+.rapp-mandat .rl-date.soon{color:var(--gold);border-color:var(--gold-line);background:var(--gold-soft)}
+.rapp-mandat .rl-date svg{width:10px;height:10px}
+/* Historique */
+.rapp-mandat .hist-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;position:relative}
+.rapp-mandat .hist-item:not(:last-child){border-bottom:1px solid var(--line-soft)}
+.rapp-mandat .hist-ic{width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid}
+.rapp-mandat .hist-ic svg{width:12px;height:12px}
+.rapp-mandat .hist-ic.email{background:var(--teal-soft);border-color:var(--teal-line);color:var(--teal)}
+.rapp-mandat .hist-ic.rdv,.rapp-mandat .hist-ic.visite{background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)}
+.rapp-mandat .hist-ic.note{background:var(--gold-soft);border-color:var(--gold-line);color:var(--gold)}
+.rapp-mandat .hist-ic.proposition,.rapp-mandat .hist-ic.offre{background:var(--green-soft);border-color:var(--green-line);color:var(--green)}
+.rapp-mandat .hist-ic.relance,.rapp-mandat .hist-ic.nouveau,.rapp-mandat .hist-ic.alert{background:var(--violet-soft);border-color:var(--violet-line);color:var(--violet)}
+.rapp-mandat .hist-body{min-width:0}
+.rapp-mandat .hist-txt{font-size:11.5px;color:var(--ink-soft);font-weight:600;line-height:1.35}
+.rapp-mandat .hist-txt b{color:var(--ink)}
+.rapp-mandat .hist-date{font-size:10.5px;color:var(--faint);margin-top:2px}
+
+/* ── Channel Popover ─────────────────────────────────────────────────────── */
+.rapp-mandat .chan-back{position:fixed;inset:0;background:rgba(20,14,10,.5);backdrop-filter:blur(3px);z-index:1070;display:flex;align-items:center;justify-content:center;padding:20px;animation:ram-fadein .2s ease}
+@keyframes ram-fadein{from{opacity:0}to{opacity:1}}
+.rapp-mandat .chan-pop{background:#fff;border-radius:20px;box-shadow:var(--shadow-pop);width:420px;max-width:100%;border:1px solid var(--line);overflow:hidden;animation:ram-popin .26s cubic-bezier(.2,.9,.3,1.18)}
+@keyframes ram-popin{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.rapp-mandat .chan-top{display:flex;align-items:center;gap:12px;padding:16px;background:radial-gradient(130% 150% at 0% 0%,#fbeaf1,#fffdfb 58%);border-bottom:1px solid var(--line-soft);position:relative}
+.rapp-mandat .chan-top-ic{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,#d12a73,#9d0f4e);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 16px -8px rgba(194,18,95,.6)}
+.rapp-mandat .chan-top-ic svg{width:20px;height:20px}
+.rapp-mandat .chan-top-t{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.15}
+.rapp-mandat .chan-top-s{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+.rapp-mandat .chan-x{position:absolute;top:13px;right:13px;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:.13s}
+.rapp-mandat .chan-x:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.rapp-mandat .chan-x svg{width:14px;height:14px}
+.rapp-mandat .chan-body{padding:9px}
+.rapp-mandat .chan-item{display:flex;align-items:center;gap:13px;width:100%;text-align:left;border:1px solid transparent;border-radius:13px;padding:11px 12px;background:transparent;cursor:pointer;font-family:var(--font);transition:.14s}
+.rapp-mandat .chan-item:hover{background:var(--brand-soft);border-color:var(--brand-line)}
+.rapp-mandat .chan-item::after{content:"";width:7px;height:7px;border-top:2px solid var(--faint);border-right:2px solid var(--faint);transform:rotate(45deg);margin-left:auto;margin-right:4px;opacity:0;transition:.14s;flex-shrink:0}
+.rapp-mandat .chan-item:hover::after{opacity:1;margin-right:0;border-color:var(--brand)}
+.rapp-mandat .chan-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid}
+.rapp-mandat .chan-ic svg{width:18px;height:18px}
+.rapp-mandat .chan-ic.email{background:var(--teal-soft);border-color:var(--teal-line);color:var(--teal)}
+.rapp-mandat .chan-ic.tel{background:#eef1f4;border-color:#dce1e7;color:#41566b}
+.rapp-mandat .chan-ic.visite{background:var(--green-soft);border-color:var(--green-line);color:var(--green)}
+.rapp-mandat .ci-t{font-size:14px;font-weight:700;color:var(--ink)}
+.rapp-mandat .ci-s{font-size:12px;color:var(--muted);margin-top:1px}
+.rapp-mandat .chan-foot{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--line-soft);background:var(--card-2);font-size:11.5px;color:var(--muted);font-weight:600}
+.rapp-mandat .chan-foot svg{width:13px;height:13px;color:var(--faint);flex-shrink:0}
+
+/* Email preview modal (réutilise le langage chan-pop, plus large) */
+.rapp-mandat .mail-pop{width:560px}
+.rapp-mandat .mail-tpl{display:flex;align-items:center;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.rapp-mandat .mail-tpl-lbl{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.rapp-mandat .tpl{font-size:12px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;color:var(--muted);cursor:pointer}
+.rapp-mandat .tpl.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rapp-mandat .mail-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto}
+.rapp-mandat .mail-field{display:flex;flex-direction:column;gap:4px}
+.rapp-mandat .mail-flbl{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.rapp-mandat .mail-subj,.rapp-mandat .mail-msg{font-family:var(--font);font-size:13px;color:var(--ink);border:1px solid var(--line-strong);border-radius:9px;padding:9px 11px;width:100%;background:#fff;resize:vertical}
+.rapp-mandat .mb-card{display:flex;gap:11px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card-2)}
+.rapp-mandat .mb-photo{width:88px;height:66px;border-radius:8px;overflow:hidden;flex-shrink:0;background:linear-gradient(155deg,#f0e8e2,#e8dcd5);display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.rapp-mandat .mb-photo img{width:100%;height:100%;object-fit:cover}
+.rapp-mandat .mb-photo svg{width:22px;height:22px}
+.rapp-mandat .mb-ref{font-size:11px;font-weight:700;color:var(--faint)}
+.rapp-mandat .mb-title{font-size:13px;font-weight:700;color:var(--ink)}
+.rapp-mandat .mb-price{font-size:13px;font-weight:700;color:var(--brand-ink)}
+.rapp-mandat .mb-specs{font-size:11.5px;color:var(--muted);margin-top:2px}
+.rapp-mandat .mail-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 16px;border-top:1px solid var(--line-soft);background:var(--card-2)}
+.rapp-mandat .mail-foot-n{font-size:11.5px;font-weight:700;color:var(--muted)}
+.rapp-mandat .mail-foot-btns{display:flex;gap:7px}
+.rapp-mandat .btn-flat{font-family:var(--font);font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:9px;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);cursor:pointer;transition:.13s}
+.rapp-mandat .btn-flat:hover{border-color:var(--ink);color:var(--ink)}
+.rapp-mandat .btn-flat svg{width:14px;height:14px}
+.rapp-mandat .btn-flat.brand{background:linear-gradient(180deg,#d72c76,#bb1059);border-color:#ab0054;color:#fff}
+.rapp-mandat .btn-flat.brand:disabled{opacity:.5;cursor:not-allowed}
+
+/* Confirm send modal */
+.rapp-mandat .confirm-back{z-index:1090}
+.rapp-mandat .confirm-body{padding:14px 16px;display:flex;flex-direction:column;gap:9px}
+.rapp-mandat .confirm-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.rapp-mandat .confirm-k{font-weight:700;color:var(--faint)}
+.rapp-mandat .confirm-v{font-weight:700;color:var(--ink);text-align:right;word-break:break-all}
+.rapp-mandat .confirm-warn{font-size:11.5px;font-weight:600;color:var(--red);background:var(--red-soft);border:1px solid var(--red-line);border-radius:9px;padding:8px 10px}
+
+/* ── Mode Découverte (Tinder) ──────────────────────────────────────────── */
+.rapp-mandat .discovery{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 20px 24px;gap:16px;overflow:hidden;background:var(--surface)}
+.rapp-mandat .disc-topbar{display:flex;align-items:center;gap:12px;width:100%;max-width:500px}
+.rapp-mandat .disc-progress{flex:1;height:4px;background:var(--line);border-radius:99px;overflow:hidden}
+.rapp-mandat .disc-progress-inner{height:100%;background:linear-gradient(90deg,var(--brand),#e85a8a);border-radius:99px;transition:width .35s ease}
+.rapp-mandat .disc-counter-txt{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rapp-mandat .disc-nav-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.13s;color:var(--muted);flex-shrink:0}
+.rapp-mandat .disc-nav-btn:hover{border-color:var(--ink);color:var(--ink)}
+.rapp-mandat .disc-nav-btn svg{width:13px;height:13px}
+.rapp-mandat .disc-card-wrap{position:relative;width:100%;max-width:500px}
+.rapp-mandat .disc-card-wrap::before,.rapp-mandat .disc-card-wrap::after{content:"";position:absolute;inset:0;background:var(--card);border:1px solid var(--line);border-radius:22px;z-index:-1}
+.rapp-mandat .disc-card-wrap::before{transform:rotate(2.5deg) translateY(7px);opacity:.45;box-shadow:0 4px 14px rgba(0,0,0,.07)}
+.rapp-mandat .disc-card-wrap::after{transform:rotate(-1.5deg) translateY(4px);opacity:.65;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.rapp-mandat .disc-card{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 16px 48px -20px rgba(34,35,35,.28),0 2px 10px rgba(34,35,35,.07);transition:transform .38s cubic-bezier(.25,.46,.45,.94),opacity .32s;transform-origin:50% 100%;position:relative}
+.rapp-mandat .disc-card.swipe-left{transform:translateX(-130%) rotate(-14deg);opacity:0;pointer-events:none}
+.rapp-mandat .disc-card.swipe-right{transform:translateX(130%) rotate(14deg);opacity:0;pointer-events:none}
+.rapp-mandat .disc-card.enter{animation:ram-discenter .34s cubic-bezier(.2,.9,.3,1.08) both}
+@keyframes ram-discenter{from{opacity:0;transform:translateY(30px) scale(.94)}to{opacity:1;transform:none}}
+.rapp-mandat .disc-stamp{position:absolute;top:22px;z-index:10;font-size:18px;font-weight:900;padding:5px 14px;border-radius:9px;letter-spacing:.08em;opacity:0;pointer-events:none}
+.rapp-mandat .disc-stamp.like{left:18px;color:#1f8a5b;border:3px solid #1f8a5b;background:rgba(31,138,91,.12);transform:rotate(-12deg)}
+.rapp-mandat .disc-stamp.nope{right:18px;color:#b5482f;border:3px solid #b5482f;background:rgba(181,72,47,.1);transform:rotate(12deg)}
+.rapp-mandat .disc-card.swipe-right .disc-stamp.like{opacity:1}
+.rapp-mandat .disc-card.swipe-left .disc-stamp.nope{opacity:1}
+.rapp-mandat .disc-card-hero{position:relative;height:170px;display:flex;align-items:flex-end;overflow:hidden}
+.rapp-mandat .disc-card-hero.h-green{background:linear-gradient(145deg,#174d38,#2b8c60)}
+.rapp-mandat .disc-card-hero.h-teal{background:linear-gradient(145deg,#144d52,#1f7c84)}
+.rapp-mandat .disc-card-hero.h-gold{background:linear-gradient(145deg,#6a4012,#b07028)}
+.rapp-mandat .disc-card-hero.h-brand{background:linear-gradient(145deg,#7a0036,#c5005f)}
+.rapp-mandat .disc-card-hero.h-red{background:linear-gradient(145deg,#5c1e10,#9a3020)}
+.rapp-mandat .disc-hero-av{position:absolute;top:50%;left:50%;transform:translate(-50%,-58%);width:72px;height:72px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:rgba(255,255,255,.95);background:rgba(255,255,255,.16);backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,.28);box-shadow:0 8px 32px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25);font-family:var(--font-serif)}
+.rapp-mandat .disc-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,8,6,.7) 0%,rgba(10,8,6,.1) 50%,transparent 100%)}
+.rapp-mandat .disc-hero-bottom{position:relative;z-index:2;padding:14px 20px 16px;width:100%}
+.rapp-mandat .disc-hero-name{font-family:var(--font-serif);font-size:21px;font-weight:600;color:#fff;letter-spacing:-.015em;line-height:1;text-shadow:0 1px 6px rgba(0,0,0,.35)}
+.rapp-mandat .disc-hero-meta{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.rapp-mandat .disc-hero-meta .tagw{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);color:rgba(255,255,255,.92);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px}
+.rapp-mandat .disc-hero-score{position:absolute;top:12px;right:14px;z-index:3;font-family:var(--font-serif);font-size:20px;font-weight:700;color:#fff;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);padding:5px 12px;border-radius:11px;line-height:1;border:1px solid rgba(255,255,255,.24)}
+.rapp-mandat .disc-hero-score small{font-size:11px;font-weight:700;opacity:.8}
+.rapp-mandat .disc-body{padding:16px 22px;display:flex;flex-direction:column;gap:11px}
+.rapp-mandat .disc-crow{font-size:12.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:7px}
+.rapp-mandat .disc-crow svg{width:12px;height:12px;color:var(--faint);flex-shrink:0}
+.rapp-mandat .disc-budget{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--card-2);border:1px solid var(--line);border-radius:11px}
+.rapp-mandat .disc-bic{width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.rapp-mandat .disc-bic svg{width:13px;height:13px}
+.rapp-mandat .disc-bic.ok{background:var(--green-soft);border:1px solid var(--green-line);color:var(--green)}
+.rapp-mandat .disc-bic.warn{background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--gold)}
+.rapp-mandat .disc-bval{font-size:13.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.rapp-mandat .disc-bhint{margin-left:auto;font-size:11.5px;font-weight:600}
+.rapp-mandat .disc-bhint.ok{color:var(--green)}.rapp-mandat .disc-bhint.warn{color:var(--gold)}
+.rapp-mandat .disc-match{display:flex;flex-wrap:wrap;gap:4px}
+.rapp-mandat .disc-actions{display:flex;align-items:flex-start;justify-content:center;gap:22px;padding:6px 22px 22px}
+.rapp-mandat .disc-act-wrap{display:flex;flex-direction:column;align-items:center;gap:7px}
+.rapp-mandat .disc-act-circle{border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.17s;flex-shrink:0;border-radius:50%}
+.rapp-mandat .disc-act-circle.ecart{width:62px;height:62px;background:#fff;border:2px solid var(--line-strong);color:var(--muted);box-shadow:0 4px 18px rgba(0,0,0,.1)}
+.rapp-mandat .disc-act-circle.ecart:hover{background:var(--red-soft);border-color:var(--red);color:var(--red);transform:scale(1.12) rotate(-8deg);box-shadow:0 8px 26px rgba(181,72,47,.3)}
+.rapp-mandat .disc-act-circle.ecart svg{width:24px;height:24px}
+.rapp-mandat .disc-act-circle.skip{width:44px;height:44px;background:#fff;border:1.5px solid var(--line-strong);color:var(--faint);margin-top:9px}
+.rapp-mandat .disc-act-circle.skip:hover{border-color:var(--gold);color:var(--gold);transform:scale(1.08)}
+.rapp-mandat .disc-act-circle.skip svg{width:16px;height:16px}
+.rapp-mandat .disc-act-circle.propose{width:62px;height:62px;background:linear-gradient(145deg,#d72c76,#b5004f);border:2px solid transparent;color:#fff;box-shadow:0 6px 22px rgba(197,0,95,.45)}
+.rapp-mandat .disc-act-circle.propose:hover{transform:scale(1.12) rotate(8deg);box-shadow:0 12px 32px rgba(197,0,95,.6)}
+.rapp-mandat .disc-act-circle.propose svg{width:24px;height:24px}
+.rapp-mandat .disc-act-label{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.rapp-mandat .disc-hint{font-size:11px;color:var(--faint);font-weight:600}
+.rapp-mandat .disc-empty{text-align:center;padding:40px 20px;color:var(--faint);font-size:13px;font-weight:600;line-height:1.6}
+
+/* Toast */
+.rapp-mandat .toast-wrap{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);z-index:1100;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.rapp-mandat .toast{background:#1f8a5b;color:#fff;font-size:13px;font-weight:700;padding:10px 18px;border-radius:10px;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);animation:ram-toastin .25s ease;display:flex;align-items:center;gap:8px}
+@keyframes ram-toastin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Bouton d'entrée « Acquéreurs » sur le listing d'annonces (hors overlay) ─ */
+.rappro-entry-btn{display:inline-flex;align-items:center;gap:6px;font-family:'Inter',system-ui,sans-serif;font-size:12px;font-weight:700;padding:6px 11px;border-radius:9px;border:1px solid #9ecdc8;background:#e6efee;color:#0f766e;cursor:pointer;white-space:nowrap;transition:transform .12s,background .12s,border-color .12s}
+.rappro-entry-btn:hover{background:#0f766e;border-color:#0f766e;color:#fff;transform:scale(1.04)}
+.rappro-entry-btn svg{width:15px;height:15px;flex-shrink:0}
+
+/* Responsive : sous 1100px, masquer le rpanel ; sous 880px, masquer le rail */
+@media (max-width:1180px){.rapp-mandat .workspace{grid-template-columns:280px minmax(0,1fr)}.rapp-mandat .rpanel{display:none}}
+@media (max-width:880px){.rapp-mandat .workspace{grid-template-columns:1fr}.rapp-mandat .rail{display:none}}

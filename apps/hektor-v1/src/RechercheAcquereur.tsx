@@ -342,6 +342,11 @@ export interface VisitePlanInput {
   acquereurContactId: string | null
   acquereurName: string
   contactSearchKey: string | null
+  // Optionnel : permet à l'écran Rapprochement Mandat d'imposer l'agenda et l'identité
+  // du négociateur propriétaire du bien (sinon résolu depuis le contact sélectionné dans App).
+  calendarEmail?: string | null
+  negoCommercialNom?: string | null
+  negoAgenceNom?: string | null
 }
 
 export interface RechercheAcquereurProps {
