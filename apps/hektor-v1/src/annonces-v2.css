@@ -22,7 +22,7 @@
 /* max-width = largeur de conception de la maquette (1440) : évite l'éclatement
    des colonnes sur écrans très larges (la colonne Bien absorbait tout l'espace). */
 .annonces-v2 table{width:100%;max-width:1460px;border-collapse:collapse;min-width:880px;}
-.annonces-v2 thead th{background:var(--av-surface-2);text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--av-subtle);padding:11px 12px;border-top:1px solid var(--av-border);border-bottom:1px solid var(--av-border);white-space:nowrap;}
+.app-shell .annonces-v2 .table-wrap thead th{background:var(--av-surface-2) !important;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--av-subtle) !important;padding:11px 12px;border-top:1px solid var(--av-border);border-bottom:1px solid var(--av-border);white-space:nowrap;}
 .annonces-v2 thead th.av-right{text-align:right;}
 .annonces-v2 thead th.av-pad-l{padding-left:22px;}
 .annonces-v2 thead th.av-pad-r{padding-right:24px;}
@@ -53,7 +53,11 @@
 .annonces-v2 .av-bien .av-msep{color:var(--av-subtle);font-weight:700;line-height:1;}
 .annonces-v2 .av-bien .av-mnum{font-family:var(--av-mono);font-size:10.5px;font-weight:700;color:var(--av-brand-700);white-space:nowrap;}
 .annonces-v2 .av-bien .av-ville{font-size:10.5px;color:var(--av-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annonces-v2 .av-bien .av-surf-meta{font-size:10.5px;font-weight:600;color:var(--av-ink);white-space:nowrap;font-variant-numeric:tabular-nums;padding-left:5px;border-left:1px solid var(--av-border);}
 .annonces-v2 .av-bien .av-prix-inline{font-size:13px;font-weight:700;color:var(--av-brand-700);font-variant-numeric:tabular-nums;margin-top:4px;display:block;white-space:nowrap;}
+
+/* chip compteur : teinte fidèle maquette (brand-50 / brand-700 + bordure) */
+.annonces-v2 .listing-total-label{background:var(--av-brand-50) !important;color:var(--av-brand-700) !important;border:1px solid var(--av-brand-100) !important;border-radius:999px !important;}
 
 /* négociateur cell */
 .annonces-v2 .av-nego{display:flex;align-items:center;gap:9px;overflow:hidden;}
@@ -166,7 +170,7 @@
   .app-shell .side-rail .screen-nav{flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;overflow-x:hidden;}
   .app-shell .side-rail .screen-nav::-webkit-scrollbar{width:4px;}
   .app-shell .side-rail .screen-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9px;}
-  .app-shell .side-rail .screen-nav .nav-button{height:42px;}
+  .app-shell .side-rail .screen-nav .nav-button{height:46px !important;}
 
   /* pied utilisateur : épinglé en bas, compact */
   .app-shell .side-rail .header-user-stack{flex:none;margin-top:10px;}

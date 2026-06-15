@@ -15932,6 +15932,9 @@ function MandatsScreen(props: {
                 const avNegoName = commercialDisplay(item)
                 const avNegoInitials = avNegoName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'GTI'
                 const avRefPhoto = item.numero_dossier || (item.hektor_annonce_id ? `V${item.hektor_annonce_id}` : '')
+                // Surface : pas de champ dédié au listing ; on l'extrait du titre si présent (donnée réelle, non inventée).
+                const avSurfaceMatch = (item.titre_bien || '').match(/(\d[\d  ]{0,6}\d|\d)\s*m(?:²|2)\b/i)
+                const avSurfaceLabel = avSurfaceMatch ? `${avSurfaceMatch[1].replace(/[  ]/g, '')} m²` : null
                 const avCount = acqCounts.get(item.app_dossier_id)
                 const avBadge = avCount && avCount.n_non_proposes > 0 ? avCount.n_non_proposes : 0
                 // L'icône rapprochement s'affiche pour toute annonce réelle ; seules les
@@ -15982,6 +15985,7 @@ function MandatsScreen(props: {
                               <span className="av-msep">·</span>
                               <span className="av-mnum">n°{item.numero_mandat ?? '—'}</span>
                               {item.ville ? <span className="av-ville">{item.ville}</span> : null}
+                              {avSurfaceLabel ? <span className="av-surf-meta">{avSurfaceLabel}</span> : null}
                             </div>
                             <span className="av-prix-inline">{avPrixLabel}</span>
                           </td>
