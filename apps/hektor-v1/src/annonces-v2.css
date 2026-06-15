@@ -21,7 +21,7 @@
 .annonces-v2 .table-wrap.listing-table-active{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 /* max-width = largeur de conception de la maquette (1440) : évite l'éclatement
    des colonnes sur écrans très larges (la colonne Bien absorbait tout l'espace). */
-.annonces-v2 table{width:100%;max-width:1460px;border-collapse:collapse;min-width:880px;table-layout:fixed;}
+.annonces-v2 table{width:100%;max-width:1460px;border-collapse:collapse;min-width:880px;}
 .annonces-v2 thead th{background:var(--av-surface-2);text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--av-subtle);padding:11px 12px;border-top:1px solid var(--av-border);border-bottom:1px solid var(--av-border);white-space:nowrap;}
 .annonces-v2 thead th.av-right{text-align:right;}
 .annonces-v2 thead th.av-pad-l{padding-left:22px;}
@@ -96,8 +96,10 @@
 .annonces-v2 .av-acq-ico svg{width:15px;height:15px;}
 .annonces-v2 .av-acq-badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:99px;background:var(--av-brand);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;font-family:var(--av-mono);}
 
-/* the existing MandatActionMenu trigger lives here ; we just constrain width to align rows */
-.annonces-v2 .row-actions{display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+/* the existing MandatActionMenu trigger lives here ; on aligne les boutons « Action »
+   d'une ligne à l'autre en réservant toujours le créneau de l'icône acquéreurs */
+.annonces-v2 .row-actions{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:nowrap;}
+.annonces-v2 .av-acq-spacer{width:34px;height:34px;flex:none;}
 
 /* ============================================================
    KPI band — restyle « design only » de la bande existante
@@ -145,3 +147,14 @@
 .brand-block .rail-logo-toggle img{width:24px;height:auto;filter:brightness(0) invert(1);}
 /* En mode replié, le logo reste le repère/cliquable principal */
 .app-shell.is-sidebar-collapsed .brand-block .rail-logo-toggle{margin-bottom:0;}
+
+/* ============================================================
+   Rail gauche — densifié : icônes/boutons plus compacts pour que
+   le contenu tienne sans ascenseur (retour utilisateur).
+   ============================================================ */
+.app-shell .side-rail .screen-nav .nav-button{height:40px;}
+.app-shell .side-rail .header-user-stack .user-avatar,
+.app-shell .side-rail .rail-av{width:38px;height:38px;}
+.app-shell .side-rail .header-user-stack .user-card{padding:7px 10px;}
+.app-shell .side-rail .header-user-stack .user-card-actions{gap:4px;}
+.app-shell .side-rail .header-user-stack .signout-button-inline{padding:3px 7px;}
