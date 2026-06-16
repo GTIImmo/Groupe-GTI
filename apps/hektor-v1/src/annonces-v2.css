@@ -84,9 +84,12 @@
 
 /* diffusion chips — compacts pour tenir dans la colonne fixe (LBC/BI/GTI complets) */
 .annonces-v2 .av-dp-row{display:flex;gap:4px;overflow:visible;}
-.annonces-v2 .av-dp{font-size:10px;font-weight:700;padding:3px 6px;border-radius:99px;white-space:nowrap;flex:none;overflow:visible;text-overflow:clip;}
-.annonces-v2 .av-dp.on{background:var(--av-green-soft);color:var(--av-green);border:1px solid rgba(47,125,89,.28);}
-.annonces-v2 .av-dp.off{background:var(--av-neutral-100);color:#9aa0a0;border:1px solid var(--av-border);}
+.annonces-v2 .av-dp{font-size:10px;font-weight:800;padding:3px 8px 3px 7px;border-radius:99px;white-space:nowrap;flex:none;display:inline-flex;align-items:center;gap:5px;letter-spacing:.02em;transition:.12s;}
+.annonces-v2 .av-dp::before{content:"";width:6px;height:6px;border-radius:99px;flex:none;}
+.annonces-v2 .av-dp.on{background:var(--av-green-soft);color:#15663f;border:1px solid rgba(31,138,91,.5);}
+.annonces-v2 .av-dp.on::before{background:var(--av-green);box-shadow:0 0 0 2px rgba(31,138,91,.18);}
+.annonces-v2 .av-dp.off{background:transparent;color:var(--av-subtle);border:1px dashed var(--av-border-strong);opacity:.8;}
+.annonces-v2 .av-dp.off::before{background:transparent;border:1.5px solid var(--av-border-strong);}
 
 /* vues cell (placeholder « … » — pas de source de comptage de vues) */
 .annonces-v2 .av-vues{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
@@ -95,13 +98,16 @@
 
 /* actions cell */
 .annonces-v2 .av-acts-cell{display:flex;align-items:center;gap:6px;}
-.annonces-v2 .av-acq-ico{width:34px;height:34px;border-radius:10px;border:1.5px solid #9ecdc8;background:#e6efee;color:#0f766e;display:grid;place-items:center;cursor:pointer;text-decoration:none;transition:.15s;flex:none;position:relative;padding:0;}
-.annonces-v2 .av-acq-ico:hover{border-color:#0f766e;color:#0b5b54;background:#d3e6e3;transform:scale(1.06);}
+.annonces-v2 .av-acq-ico{height:34px;min-width:34px;border-radius:10px;border:1.5px solid #9ecdc8;background:#e6efee;color:#0f766e;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;text-decoration:none;transition:.15s;flex:none;padding:0;}
+.annonces-v2 .av-acq-ico:hover{border-color:#0f766e;color:#0b5b54;background:#d3e6e3;transform:translateY(-1px);box-shadow:0 6px 14px -8px rgba(15,118,110,.6);}
 .annonces-v2 .av-acq-ico svg{width:15px;height:15px;}
+/* avec acquéreurs non proposés : pastille magenta « icône + nombre » (appel à l'action) */
+.annonces-v2 .av-acq-ico.has-count{min-width:auto;padding:0 11px 0 9px;background:var(--av-brand-50);border-color:var(--av-brand-100);color:var(--av-brand-700);}
+.annonces-v2 .av-acq-ico.has-count:hover{background:var(--av-brand-100);border-color:var(--av-brand-300);color:var(--av-brand-700);box-shadow:0 6px 14px -8px rgba(197,0,95,.55);}
+.annonces-v2 .av-acq-n{font-size:12.5px;font-weight:800;line-height:1;color:var(--av-brand);font-family:var(--av-mono);letter-spacing:-.02em;}
 /* annonce pas encore diffusable : icône visible mais grisée (clic = message) */
 .annonces-v2 .av-acq-ico.is-disabled{border-color:var(--av-border-strong);background:var(--av-neutral-100);color:var(--av-subtle);}
-.annonces-v2 .av-acq-ico.is-disabled:hover{border-color:var(--av-muted);background:var(--av-neutral-200);color:var(--av-muted);transform:none;}
-.annonces-v2 .av-acq-badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:99px;background:var(--av-brand);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;font-family:var(--av-mono);}
+.annonces-v2 .av-acq-ico.is-disabled:hover{border-color:var(--av-muted);background:var(--av-neutral-200);color:var(--av-muted);transform:none;box-shadow:none;}
 
 /* the existing MandatActionMenu trigger lives here ; on aligne les boutons « Action »
    d'une ligne à l'autre en réservant toujours le créneau de l'icône acquéreurs */
