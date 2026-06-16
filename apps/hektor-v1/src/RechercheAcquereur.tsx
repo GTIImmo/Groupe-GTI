@@ -903,19 +903,33 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
 
                 <div className="crit-must">
                   <div className="must-row">
-                    <span className="crit-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg></span>
-                    <div className="crit-bd"><div className="crit-k">Type d'offre</div><div className="crit-v">{raOffreLabel(search?.offre)}</div></div>
-                    <span className="must-badge">Requis</span>
+                    <div className="mr-top">
+                      <span className="crit-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg></span>
+                      <span className="crit-k">Type d'offre</span>
+                      <span className="must-badge">Requis</span>
+                    </div>
+                    <div className="crit-v">{raOffreLabel(search?.offre)}</div>
                   </div>
                   <div className="must-row">
-                    <span className="crit-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
-                    <div className="crit-bd"><div className="crit-k">Localités</div><div className="crit-v">{cities.length ? <>{cities.slice(0, 3).join(' · ')}{cities.length > 3 ? <span className="soft"> · +{cities.length - 3}</span> : null}</> : <span className="soft">Toutes communes</span>}</div></div>
-                    <span className="must-badge">Requis</span>
+                    <div className="mr-top">
+                      <span className="crit-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
+                      <span className="crit-k">Localités</span>
+                      <span className="must-badge">Requis</span>
+                    </div>
+                    <div className="crit-v">{cities.length ? (
+                      <span className="crit-chips">
+                        {cities.slice(0, 3).map((c) => <span className="crit-chip" key={c}>{c.replace(/\s*\d{5}/g, '').trim()}</span>)}
+                        {cities.length > 3 ? <span className="crit-chip more">+{cities.length - 3}</span> : null}
+                      </span>
+                    ) : <span className="soft">Toutes communes</span>}</div>
                   </div>
                   <div className="must-row">
-                    <span className="crit-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M18 7a7 7 0 1 0 0 10M4 10h9M4 14h7" /></svg></span>
-                    <div className="crit-bd"><div className="crit-k">Prix</div><div className="crit-v">{prixRange || <span className="soft">Non renseigné</span>}</div></div>
-                    <span className="must-badge">Requis</span>
+                    <div className="mr-top">
+                      <span className="crit-ic brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M18 7a7 7 0 1 0 0 10M4 10h9M4 14h7" /></svg></span>
+                      <span className="crit-k">Prix</span>
+                      <span className="must-badge">Requis</span>
+                    </div>
+                    <div className="crit-v">{prixRange || <span className="soft">Non renseigné</span>}</div>
                   </div>
                 </div>
 

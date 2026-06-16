@@ -118,12 +118,21 @@
 .rech-acq .crit-flag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--card-2);border:1px solid var(--line);color:var(--muted);align-self:flex-start;margin-top:3px;flex-shrink:0}
 .rech-acq .crit-flag.must{background:var(--brand-soft);border-color:#f3d7e3;color:var(--brand-ink)}
 
-/* criteria — impératifs (mis en avant) */
-.rech-acq .crit-must{display:flex;flex-direction:column;gap:8px;margin-top:2px}
-.rech-acq .must-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:13px;background:linear-gradient(180deg,#fbeaf1,#f9e7ef);border:1px solid #f1d3e0}
-.rech-acq .must-row .crit-ic{background:#fff;border-color:#f3d7e3;color:var(--brand-ink);width:34px;height:34px}
-.rech-acq .must-row .crit-k{color:var(--brand-ink)}
-.rech-acq .must-badge{margin-left:auto;align-self:flex-start;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:var(--brand);color:#fff;flex-shrink:0;white-space:nowrap}
+/* criteria — impératifs (mis en avant) — carte : en-tête (icône+label+REQUIS) puis valeur pleine largeur */
+.rech-acq .crit-must{display:flex;flex-direction:column;gap:10px;margin-top:2px}
+.rech-acq .must-row{display:flex;flex-direction:column;gap:9px;padding:12px 13px 13px;border-radius:16px;
+  background:linear-gradient(180deg,#fdeff5 0%,#fbe7ef 100%);border:1px solid #f2d3e0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7), 0 8px 18px -12px rgba(157,15,78,.28)}
+.rech-acq .mr-top{display:flex;align-items:center;gap:9px}
+.rech-acq .must-row .crit-ic{width:30px;height:30px;border-radius:9px;flex-shrink:0;background:#fff;border-color:#f4d6e2;color:var(--brand-ink);box-shadow:0 3px 7px -3px rgba(157,15,78,.35)}
+.rech-acq .must-row .crit-ic svg{width:15px;height:15px}
+.rech-acq .must-row .crit-k{flex:1;min-width:0;color:var(--brand-ink);font-size:10px;font-weight:800;letter-spacing:.11em}
+.rech-acq .must-row .crit-v{font-size:15px;font-weight:750;color:var(--ink);line-height:1.3;letter-spacing:-.005em;margin:0;word-break:break-word}
+.rech-acq .must-badge{flex-shrink:0;font-size:8.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:linear-gradient(180deg,var(--brand),var(--brand-ink));color:#fff;white-space:nowrap;box-shadow:0 4px 9px -4px rgba(194,18,95,.55)}
+/* localités en pastilles */
+.rech-acq .crit-chips{display:flex;flex-wrap:wrap;gap:5px}
+.rech-acq .crit-chip{font-size:12px;font-weight:700;color:var(--brand-ink);background:#fff;border:1px solid #f1d3e0;border-radius:8px;padding:3px 9px;line-height:1.3}
+.rech-acq .crit-chip.more{color:var(--muted);background:transparent;border-style:dashed}
 
 .rech-acq .crit-sub{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);margin:14px 0 8px}
 
