@@ -752,6 +752,15 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     return () => document.removeEventListener('keydown', onKey)
   }, [open, presenterOpen, mailRefs, chanRefs, moreOpen, statsOpen, confirmSend, sending, prGo, onClose])
 
+  // Alertes « nouveau bien correspondant » (notifications, perspective contact).
+  // ⚠️ Hooks AVANT tout return anticipé (sinon nb de hooks variable → React #310).
+  const newAlertsCount = useMemo(() => notifs.filter((n) => !n.read_at).length, [notifs])
+  const openNotif = useCallback((n: NotificationRow) => {
+    setNotifs((list) => list.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)))
+    markNotificationRead(n.id).catch(() => {})
+    if (onOpenAnnonce && n.app_dossier_id != null) onOpenAnnonce(n.app_dossier_id)
+  }, [onOpenAnnonce])
+
   if (!open) return null
 
   const prCurrent = presenterBiens[Math.min(prIdx, Math.max(0, presenterBiens.length - 1))]
@@ -780,13 +789,6 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const findCrit = (cle: string) => { const m = (Array.isArray(criteres) ? criteres : []).find((c) => String(c?.cle ?? '') === cle); return m ? String(m.valeur ?? '').trim() : '' }
   const dpe = findCrit('ITEM_DPE_CONS_LETTER')
   const searchActive = contact ? (search ? search.is_active === true || search.is_active === 1 || search.is_active === '1' : false) : true
-  // Alertes « nouveau bien correspondant » (notifications, perspective contact) → cloche + bloc dédié.
-  const newAlertsCount = useMemo(() => notifs.filter((n) => !n.read_at).length, [notifs])
-  const openNotif = useCallback((n: NotificationRow) => {
-    setNotifs((list) => list.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)))
-    markNotificationRead(n.id).catch(() => {})
-    if (onOpenAnnonce && n.app_dossier_id != null) onOpenAnnonce(n.app_dossier_id)
-  }, [onOpenAnnonce])
   const typeLabel = types.join(' · ')
   const cityLabel = cities[0] || 'Toutes communes'
   const crumbRef = `${types[0] || 'Bien'}${cities.length ? ` · ${cities[0]}` : ''}`
