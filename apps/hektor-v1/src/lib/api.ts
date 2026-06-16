@@ -2202,6 +2202,14 @@ export async function loadRelances(contactSearchKey: string): Promise<RelanceRow
   return (data ?? []) as RelanceRow[]
 }
 
+/** Relances d'un bien (tous couples bien×recherche) — pour l'écran Rapprochement Mandat. */
+export async function loadRelancesForDossier(appDossierId: number): Promise<RelanceRow[]> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  const { data, error } = await supabase.rpc('app_list_relances_for_dossier', { p_dossier_id: appDossierId })
+  if (error) throw new Error(error.message ?? 'Unable to load relances for dossier')
+  return (data ?? []) as RelanceRow[]
+}
+
 export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null, gmailMessageId?: string | null, gmailThreadId?: string | null): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_record_proposition', {

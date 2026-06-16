@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  loadRapprochementsForDossier, loadDossierTimeline,
+  loadRapprochementsForDossier, loadDossierTimeline, loadRelancesForDossier, setRelanceStatus,
   recordProposition, setBienStatut, sendGoogleWorkspaceCrmEmail, loadGoogleCalendarEventLinks,
-  type RapprochementForDossierRow, type TimelineRow, type GoogleCalendarEventLink,
+  type RapprochementForDossierRow, type TimelineRow, type GoogleCalendarEventLink, type RelanceRow,
 } from './lib/api'
 import type { VisitePlanInput } from './RechercheAcquereur'
 
@@ -106,6 +106,7 @@ const IcBell = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const IcCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
 const IcX3 = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 6l12 12M18 6 6 18" /></svg>
 const IcCal = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+const IcClock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
 const IcPhone = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z" /></svg>
 const IcMail = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="m2 8 10 7 10-7" /></svg>
 const IcEuro = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 7a7 7 0 1 0 0 10M4 10h9M4 14h7" /></svg>
@@ -232,6 +233,7 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
   const [discIdx, setDiscIdx] = useState(0)
   const [swipe, setSwipe] = useState<'' | 'left' | 'right'>('')
   const [timeline, setTimeline] = useState<TimelineRow[]>([])
+  const [relanceRows, setRelanceRows] = useState<RelanceRow[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -263,13 +265,14 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     if (!open || dossierId == null) { setBuyers([]); setTimeline([]); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    Promise.all([loadRapprochementsForDossier(dossierId), loadDossierTimeline(dossierId)])
-      .then(([rows, tl]: [RapprochementForDossierRow[], TimelineRow[]]) => {
+    Promise.all([loadRapprochementsForDossier(dossierId), loadDossierTimeline(dossierId), loadRelancesForDossier(dossierId)])
+      .then(([rows, tl, rels]: [RapprochementForDossierRow[], TimelineRow[], RelanceRow[]]) => {
         if (cancelled) return
         setBuyers(rows.map((r) => rowToBuyer(r)))
         setTimeline(tl)
+        setRelanceRows(rels)
       })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setBuyers([]); setTimeline([]) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setBuyers([]); setTimeline([]); setRelanceRows([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -330,11 +333,30 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
   )
   const selKeys = useMemo(() => buyers.filter((b) => b.sel).map((b) => b.searchKey), [buyers])
 
-  // relances dérivées : proposés sans visite (les + anciens en tête)
-  const relances = useMemo(() => buyers
-    .filter((b) => b.status === 'propose')
-    .slice(0, 6)
-    .map((b) => ({ key: b.searchKey, name: b.name, initials: b.initials, sub: b.date })), [buyers])
+  // relances réelles du bien (table app_relance_rapprochement, créées à J+5 par proposition)
+  const reloadRelances = useCallback(() => {
+    if (dossierId == null) return
+    loadRelancesForDossier(dossierId).then(setRelanceRows).catch(() => {})
+  }, [dossierId])
+  const relances = useMemo(() => relanceRows.map((r) => {
+    const b = buyers.find((x) => x.searchKey === r.contact_search_key)
+    const name = b?.name || 'Acquéreur'
+    const late = r.due_date ? new Date(r.due_date).getTime() < Date.now() : false
+    return {
+      id: r.id, key: r.contact_search_key, contactId: b?.contactId ?? r.hektor_contact_id ?? null,
+      name, initials: name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'AC',
+      sub: r.sub || r.label || 'Relance', dueDate: r.due_date, late, reporte: r.status === 'reporte',
+    }
+  }), [relanceRows, buyers])
+  const doneRelance = useCallback((id: number) => {
+    setRelanceRows((rows) => rows.filter((r) => r.id !== id))
+    setRelanceStatus(id, 'fait').then(reloadRelances).catch(() => { toast("Échec de l'enregistrement."); reloadRelances() })
+    toast('Relance marquée comme faite.')
+  }, [reloadRelances, toast])
+  const snoozeRelance = useCallback((id: number) => {
+    setRelanceStatus(id, 'reporte').then(reloadRelances).catch(() => reloadRelances())
+    toast('Relance reportée de 3 jours.')
+  }, [reloadRelances, toast])
 
   const discPool = useMemo(() => visible.filter((b) => b.status !== 'ecarte'), [visible])
 
@@ -823,9 +845,17 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
             <div className="rp-sec">
               <div className="rp-hdr"><span className="rp-title">Relances à faire</span><span className="rp-badge">{relances.length}</span></div>
               {relances.length === 0 ? <div className="rp-empty">Aucune relance en attente.</div> : relances.map((r) => (
-                <div className="rl-item" key={r.key} onClick={() => { const buyer = buyers.find((x) => x.searchKey === r.key); if (buyer?.contactId) onOpenContact?.(buyer.contactId) }}>
-                  <div className="rl-av">{r.initials}</div>
-                  <div className="rl-body"><div className="rl-name">{r.name}</div><div className="rl-sub">{r.sub}</div></div>
+                <div className="rl-item" key={r.id}>
+                  <button type="button" className="rl-av" onClick={() => r.contactId && onOpenContact?.(r.contactId)} title="Ouvrir la fiche contact">{r.initials}</button>
+                  <div className="rl-body">
+                    <div className="rl-name">{r.name}</div>
+                    <div className="rl-sub">{r.sub}</div>
+                    {r.dueDate && <span className={`rl-date${r.late ? ' urgent' : ' soon'}`}><IcClock />{r.late ? 'En retard' : `Échéance ${fmtDate(r.dueDate)}`}</span>}
+                  </div>
+                  <div className="rl-act">
+                    <button type="button" className="rl-btn" onClick={() => doneRelance(r.id)}>Fait</button>
+                    <button type="button" className="rl-btn ghost" onClick={() => snoozeRelance(r.id)}>+3 j</button>
+                  </div>
                 </div>
               ))}
             </div>

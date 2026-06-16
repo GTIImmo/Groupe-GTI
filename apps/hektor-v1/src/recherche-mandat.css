@@ -316,6 +316,12 @@
 .rapp-mandat .rl-date.urgent{color:var(--brand-ink);border-color:var(--brand-line);background:var(--brand-soft)}
 .rapp-mandat .rl-date.soon{color:var(--gold);border-color:var(--gold-line);background:var(--gold-soft)}
 .rapp-mandat .rl-date svg{width:10px;height:10px}
+.rapp-mandat .rl-av{border:0;cursor:pointer;font-family:var(--font)}
+.rapp-mandat .rl-act{display:flex;flex-direction:column;gap:4px;flex:none;margin-left:auto}
+.rapp-mandat .rl-btn{font-family:var(--font);font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:7px;border:1px solid var(--brand-line);background:var(--brand-soft);color:var(--brand-ink);cursor:pointer;white-space:nowrap;transition:.12s}
+.rapp-mandat .rl-btn:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+.rapp-mandat .rl-btn.ghost{background:#fff;border-color:var(--line-strong);color:var(--muted)}
+.rapp-mandat .rl-btn.ghost:hover{border-color:var(--ink);color:var(--ink);background:#fff}
 /* Historique */
 .rapp-mandat .hist-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;position:relative}
 .rapp-mandat .hist-item:not(:last-child){border-bottom:1px solid var(--line-soft)}
