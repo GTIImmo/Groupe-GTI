@@ -1,0 +1,31 @@
+/* ============================================================
+   Pictos du menu de gauche — refonte représentative par vue.
+   Remplace les pictos génériques (trend / file-check / target…) par
+   des icônes parlantes, mappées par l'attribut [title] (stable, pas
+   par nth-child fragile). Importé EN DERNIER dans main.tsx pour gagner
+   la cascade ; spécificité .app-shell .side-rail … pour dépasser les
+   règles existantes (toutes en !important). Visuel uniquement.
+   ============================================================ */
+:root{
+  /* Annonces — immeuble (parc de biens) : deux blocs + fenêtres + sol */
+  --nv-annonces:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='9' height='17' rx='1'/%3E%3Crect x='14' y='9' width='5' height='12' rx='1'/%3E%3Cpath d='M7.4 7h1.6M11 7h1.6M7.4 10.5h1.6M11 10.5h1.6M7.4 14h1.6M11 14h1.6'/%3E%3Cpath d='M16 12.5h1.4M16 16h1.4'/%3E%3Cpath d='M3.5 21h17'/%3E%3C/svg%3E");
+  /* Estimations — loupe + € (évaluer la valeur du bien) */
+  --nv-estimations:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m20.5 20.5-4-4'/%3E%3Cpath d='M12.7 8.7a2.6 2.6 0 1 0 0 4'/%3E%3Cpath d='M8.4 10.7h3.4'/%3E%3C/svg%3E");
+  /* Mandats — contrat signé (document + paraphe) */
+  --nv-mandats:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5'/%3E%3Cpath d='M8 16.6c1-1.3 2-1.3 3 0s2 1.3 3 0'/%3E%3C/svg%3E");
+  /* Contacts — carte de contact (portrait + lignes) */
+  --nv-contacts:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Ccircle cx='8.5' cy='10.6' r='2.1'/%3E%3Cpath d='M5.4 16.2a3.2 3.2 0 0 1 6.2 0'/%3E%3Cpath d='M14.5 10h4'/%3E%3Cpath d='M14.5 13.4h4'/%3E%3C/svg%3E");
+  /* Agenda — calendrier (anneaux + jour coché) */
+  --nv-agenda:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15' rx='2'/%3E%3Cpath d='M8 3v4'/%3E%3Cpath d='M16 3v4'/%3E%3Cpath d='M3.5 9.5h17'/%3E%3Cpath d='m9.4 14.6 1.6 1.6 3.6-3.6'/%3E%3C/svg%3E");
+  /* Suivi — presse-papier de suivi (clip + coche + ligne) */
+  --nv-suivi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3.2A1.2 1.2 0 0 1 10.2 2h3.6A1.2 1.2 0 0 1 15 3.2V4z'/%3E%3Cpath d='m8.6 12.2 1.5 1.5 3.3-3.3'/%3E%3Cpath d='M8.6 16.6h6.8'/%3E%3C/svg%3E");
+}
+
+/* Mapping par titre (robuste : indépendant de l'ordre et du profil admin).
+   Couvre le rail desktop ET le menu mobile (même .screen-nav). */
+.app-shell .side-rail .screen-nav .nav-button[title="Annonces"]::before{ -webkit-mask-image:var(--nv-annonces) !important; mask-image:var(--nv-annonces) !important; }
+.app-shell .side-rail .screen-nav .nav-button[title="Estimations"]::before{ -webkit-mask-image:var(--nv-estimations) !important; mask-image:var(--nv-estimations) !important; }
+.app-shell .side-rail .screen-nav .nav-button[title="Mandats"]::before{ -webkit-mask-image:var(--nv-mandats) !important; mask-image:var(--nv-mandats) !important; }
+.app-shell .side-rail .screen-nav .nav-button[title="Contacts"]::before{ -webkit-mask-image:var(--nv-contacts) !important; mask-image:var(--nv-contacts) !important; }
+.app-shell .side-rail .screen-nav .nav-button[title="Agenda"]::before{ -webkit-mask-image:var(--nv-agenda) !important; mask-image:var(--nv-agenda) !important; }
+.app-shell .side-rail .screen-nav .nav-button[title="Suivi"]::before{ -webkit-mask-image:var(--nv-suivi) !important; mask-image:var(--nv-suivi) !important; }
