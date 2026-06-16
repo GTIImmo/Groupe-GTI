@@ -112,6 +112,10 @@
 /* the existing MandatActionMenu trigger lives here ; on aligne les boutons « Action »
    d'une ligne à l'autre en réservant toujours le créneau de l'icône acquéreurs */
 .annonces-v2 .row-actions{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:nowrap;}
+/* créneau de largeur FIXE pour le bouton rapprochement : la pastille (icône+nombre)
+   et l'icône seule occupent le même gabarit -> le bouton « Action » ne se décale plus
+   d'une ligne à l'autre ; tous les boutons rappro partagent le même bord droit. */
+.annonces-v2 .av-acq-slot{flex:none;width:64px;display:flex;align-items:center;justify-content:flex-end;}
 
 /* message transitoire (clic rapprochement sur annonce non diffusable) */
 .annonces-v2 .av-notice{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:1200;display:flex;align-items:center;gap:10px;max-width:520px;padding:12px 16px;border-radius:12px;background:#241e1a;color:#fff;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 18px 40px -16px rgba(0,0,0,.55);cursor:pointer;animation:av-notice-in .22s ease;}
