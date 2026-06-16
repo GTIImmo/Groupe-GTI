@@ -15885,13 +15885,13 @@ function MandatsScreen(props: {
           <table>
             {!isEstimationMode ? (
               <colgroup>
-                <col style={{ width: '100px' }} />{/* photo (vignette agrandie 74px) */}
+                <col style={{ width: '112px' }} />{/* photo (vignette 100px) */}
                 <col />{/* bien — flexible */}
-                <col style={{ width: '158px' }} />{/* négociateur */}
+                <col style={{ width: '160px' }} />{/* négociateur */}
                 <col style={{ width: '154px' }} />{/* statut */}
-                <col style={{ width: '120px' }} />{/* diffusion */}
+                <col style={{ width: '116px' }} />{/* diffusion */}
                 <col style={{ width: '78px' }} />{/* vues */}
-                <col style={{ width: '144px' }} />{/* actions */}
+                <col style={{ width: '120px' }} />{/* actions */}
               </colgroup>
             ) : null}
             <thead>
