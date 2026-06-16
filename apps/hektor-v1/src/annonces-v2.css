@@ -284,6 +284,8 @@
   .app-shell.is-sidebar-collapsed .side-rail .rail-brand,
   .app-shell.is-sidebar-collapsed .side-rail .rail-reduce{display:none;}
   .app-shell.is-sidebar-collapsed .side-rail .brand-block.rail-top{justify-content:center;}
+  /* largeur du rail replié calée sur la maquette (82px) */
+  .app-shell.is-sidebar-collapsed .side-rail{width:82px !important;min-width:82px !important;max-width:82px !important;padding-left:0 !important;padding-right:0 !important;}
 
   /* replié : on ne garde que le picto des items de menu (le libellé, même actif,
      est masqué — il réapparaissait à cause de la couleur blanche forcée) */
