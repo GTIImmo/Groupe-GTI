@@ -42,9 +42,11 @@
 /* La vraie vignette est le composant <ListingThumbnail> (.listing-thumb), stylé dans
    le monolithe styles.css en 56×56. On l'agrandit en paysage, ciblé au listing Annonces. */
 .annonces-v2 .av-thumb-wrap .listing-thumb,
-.annonces-v2 .av-thumb-wrap .listing-thumb-placeholder{width:74px !important;height:58px !important;border-radius:11px !important;border:1px solid rgba(34,35,35,.1) !important;box-shadow:inset 0 0 0 1px rgba(34,35,35,.05),0 2px 7px -3px rgba(34,35,35,.25) !important;}
+.annonces-v2 .av-thumb-wrap .listing-thumb-placeholder{width:74px !important;height:58px !important;max-width:none !important;min-width:74px !important;object-fit:cover !important;border-radius:11px !important;border:1px solid rgba(34,35,35,.1) !important;box-shadow:inset 0 0 0 1px rgba(34,35,35,.05),0 2px 7px -3px rgba(34,35,35,.25) !important;}
 .annonces-v2 .av-thumb-wrap .listing-thumb-placeholder{font-size:19px;}
-.annonces-v2 .av-ref-photo{font-family:var(--av-mono);font-size:9px;font-weight:700;color:var(--av-subtle);letter-spacing:.02em;white-space:nowrap;max-width:84px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
+/* la colonne Photo doit loger la vignette agrandie : on réduit le padding gauche du listing */
+.annonces-v2 td.av-pad-l{padding-left:14px !important;}
+.annonces-v2 .av-ref-photo{font-family:var(--av-mono);font-size:9px;font-weight:700;color:var(--av-subtle);letter-spacing:.02em;white-space:nowrap;max-width:80px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
 
 /* bien cell */
 .annonces-v2 .av-bien{min-width:0;max-height:80px;overflow:hidden;}
