@@ -15942,7 +15942,7 @@ function MandatsScreen(props: {
                   : null
                 const avAlerts: Array<{ cls: string; label: string }> = []
                 if (avMandatDays != null && avMandatDays >= 0 && avMandatDays <= 30) avAlerts.push({ cls: 'warn', label: `Mandat J-${avMandatDays}` })
-                if (!item.photo_url_listing) avAlerts.push({ cls: 'amber', label: 'Sans photo' })
+                if (!listingPreviewUrl(item.images_preview_json, item.photo_url_listing)) avAlerts.push({ cls: 'amber', label: 'Sans photo' })
                 if (item.has_diffusion_error) avAlerts.push({ cls: 'warn', label: 'Diffusion en erreur' })
                 const avPrixLabel = item.prix != null ? `${new Intl.NumberFormat('fr-FR').format(Number(item.prix))} €` : '—'
                 const avNegoName = commercialDisplay(item)
