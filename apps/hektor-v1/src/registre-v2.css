@@ -1,0 +1,288 @@
+/* ============================================================
+   Registre des mandats — refonte visuelle « cahier à spirale »
+   Transposition fidèle de ui_kits/console/mandats-listing.html
+   (handoff Claude Design / GTI). Scopé sous .app-screen-registre et
+   .registre-nb pour n'impacter ni styles.css ni les autres écrans.
+   Aucune logique métier modifiée : visuel uniquement.
+   ============================================================ */
+
+/* Variables définies au niveau de l'écran (pas seulement du cahier) : la toolbar
+   et la bande KPI vivent dans l'en-tête, HORS de .registre-nb — elles doivent
+   donc pouvoir résoudre var(--rg-*) elles aussi. */
+.app-screen-registre{
+  --rg-brand:#c5005f;--rg-brand-700:#8c0044;--rg-brand-50:#fdf0f6;--rg-brand-100:#f9d6e6;
+  --rg-ink:#222323;--rg-paper:#fefcf0;
+  --rg-rule:rgba(160,180,220,.09);--rg-rule-strong:rgba(160,180,220,.3);
+  --rg-ok:#1a7a4a;--rg-ko:#b5182f;--rg-neutral:rgba(34,35,35,.45);
+}
+
+/* ── Le panneau-carte d'origine devient un simple conteneur transparent :
+   c'est le « cahier » (.nb-wrap) qui porte désormais l'habillage. ── */
+.app-screen-registre .registre-nb.panel{
+  background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important;
+}
+
+/* ══════════════════════════════════
+   CAHIER À SPIRALE
+══════════════════════════════════ */
+.registre-nb .nb-wrap{
+  display:flex;
+  margin-left:10px;
+  border-radius:6px 14px 14px 6px;
+  box-shadow:
+    -4px 0 0 0 #8a7a5a,
+    -8px 0 0 0 #6e6040,
+    0 8px 40px rgba(60,40,10,.28),
+    0 2px 8px rgba(60,40,10,.15);
+  position:relative;
+}
+
+/* Tranche gauche — dos relié */
+.registre-nb .nb-spine{
+  width:24px;flex:none;
+  background:linear-gradient(180deg,#c8ba88,#b0a470,#c8ba88);
+  border-radius:6px 0 0 6px;position:relative;
+  box-shadow:inset -3px 0 6px rgba(0,0,0,.12),inset 2px 0 4px rgba(255,255,255,.2);
+}
+/* Rainures gravées dans le dos */
+.registre-nb .nb-spine::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    transparent 0px,transparent 20px,
+    rgba(80,70,40,.18) 20px,rgba(80,70,40,.18) 21px,
+    transparent 21px,transparent 42px);
+}
+/* Anneaux métalliques (full CSS, sans JS : se répètent sur toute la hauteur) */
+.registre-nb .nb-rings{
+  position:absolute;top:18px;bottom:18px;left:-9px;width:22px;pointer-events:none;
+  background-image:
+    radial-gradient(circle 4px at 11px 11px, #1f1810 0%, #3a3020 55%, rgba(58,48,32,0) 60%),
+    radial-gradient(ellipse 10px 8px at 11px 11px, #c4bca0 0%, #9a8c70 45%, #6e6048 72%, rgba(110,96,72,0) 78%);
+  background-size:22px 23px;background-repeat:repeat-y;background-position:center top;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));
+}
+
+/* Page du cahier */
+.registre-nb .notebook{
+  flex:1;min-width:0;
+  border-radius:0 14px 14px 0;overflow:hidden;
+  background:var(--rg-paper);position:relative;
+  box-shadow:inset 3px 0 8px rgba(0,0,0,.04);
+}
+/* Lignes réglées très subtiles */
+.registre-nb .notebook::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:repeating-linear-gradient(
+    to bottom,transparent 0px,transparent 47px,var(--rg-rule) 47px,var(--rg-rule) 48px);
+}
+
+/* En-tête du cahier (réutilise .panel-head, restylé) */
+.app-screen-registre .registre-nb .nb-head{
+  display:flex !important;align-items:center;justify-content:space-between;gap:20px;
+  padding:16px 24px 14px 24px !important;margin:0 !important;
+  border:0 !important;border-bottom:2px solid rgba(160,180,220,.25) !important;
+  background:rgba(240,230,190,.2);position:relative;z-index:1;
+}
+.registre-nb .nb-left{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.registre-nb .nb-title{font-size:22px;font-weight:700;color:var(--rg-ink);letter-spacing:-.01em;margin:0;}
+.registre-nb .nb-badge{
+  font-size:12px;font-weight:700;color:var(--rg-brand-700);
+  background:var(--rg-brand-50);border:1px solid var(--rg-brand-100);
+  padding:3px 10px;border-radius:99px;white-space:nowrap;
+}
+/* Pagination — façon cahier */
+.registre-nb .pager{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.registre-nb .pager .pg-info{font-size:12.5px;font-weight:600;color:rgba(34,35,35,.45);}
+.registre-nb .pager .loading-inline{font-size:12px;color:var(--rg-brand-700);}
+.app-screen-registre .registre-nb .pager .pg-btn{
+  font:inherit;font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;
+  border:1px solid rgba(34,35,35,.15);background:rgba(255,252,232,.95);color:var(--rg-ink);cursor:pointer;transition:.12s;
+}
+.app-screen-registre .registre-nb .pager .pg-btn:hover:not(:disabled){border-color:var(--rg-brand);color:var(--rg-brand-700);}
+.app-screen-registre .registre-nb .pager .pg-btn:disabled{opacity:.35;cursor:default;}
+.registre-nb .pager .page-jump{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(34,35,35,.4);font-weight:600;}
+.app-screen-registre .registre-nb .pager .page-jump input{
+  width:46px;text-align:center;font:inherit;font-size:13px;font-weight:700;padding:7px;border-radius:8px;
+  border:1px solid rgba(34,35,35,.15);background:rgba(255,252,232,.95);color:var(--rg-ink);outline:none;
+}
+.app-screen-registre .registre-nb .pager .page-jump input:focus{border-color:var(--rg-brand);}
+
+/* ══════════════════════════════════
+   TABLE (sur la page du cahier)
+══════════════════════════════════ */
+.registre-nb .table-wrap.register-table-wrap{
+  border:0 !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;
+}
+.app-screen-registre .registre-nb .register-table{
+  min-width:980px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
+}
+.app-screen-registre .registre-nb .register-table th{
+  font-size:10px !important;font-weight:800 !important;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(34,35,35,.42) !important;padding:11px 12px !important;
+  background:rgba(230,220,180,.2) !important;border:0 !important;border-bottom:1.5px solid var(--rg-rule-strong) !important;
+  text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.app-screen-registre .registre-nb .register-table th:first-child{padding-left:20px !important;}
+.app-screen-registre .registre-nb .register-table th:last-child{padding-right:20px !important;}
+.app-screen-registre .registre-nb .register-table tbody td{
+  padding:13px 12px !important;border:0 !important;border-bottom:1px solid rgba(160,180,220,.15) !important;
+  vertical-align:middle;white-space:nowrap;background:transparent;
+}
+.app-screen-registre .registre-nb .register-table tbody td:first-child{padding-left:20px !important;border-left:3px solid transparent !important;transition:border-color .1s;}
+.app-screen-registre .registre-nb .register-table tbody td:last-child{padding-right:20px !important;}
+.app-screen-registre .registre-nb .register-table tbody tr:last-child td{border-bottom:0 !important;}
+/* Lignes : survol + accent magenta, pas de dégradé d'état hérité */
+.app-screen-registre .registre-nb .register-table tbody tr,
+.app-screen-registre .registre-nb .register-table tbody tr.register-row-state-current,
+.app-screen-registre .registre-nb .register-table tbody tr.register-row-state-cancelled{
+  background:transparent !important;cursor:pointer;transition:background .1s;
+}
+.app-screen-registre .registre-nb .register-table tbody tr:hover{background:rgba(197,0,95,.04) !important;}
+.app-screen-registre .registre-nb .register-table tbody tr:hover td:first-child{border-left-color:var(--rg-brand) !important;}
+.app-screen-registre .registre-nb .register-table tbody tr.is-selected{background:rgba(197,0,95,.07) !important;}
+.app-screen-registre .registre-nb .register-table tbody tr.is-selected td:first-child{border-left-color:var(--rg-brand) !important;}
+.app-screen-registre .registre-nb .register-table tbody tr:hover .reg-acts{opacity:1;}
+
+/* Largeurs de colonnes (table-layout:fixed — la colonne Mandant(s) absorbe le
+   reste ; calées pour tenir dans la page sans défilement horizontal). */
+.app-screen-registre .registre-nb .register-col-mandat{width:120px;}
+.app-screen-registre .registre-nb .register-col-etat{width:152px;}
+.app-screen-registre .registre-nb .register-col-date{width:96px;}
+.app-screen-registre .registre-nb .register-col-amount{width:130px;}
+.app-screen-registre .registre-nb .register-col-mandants{width:auto;}
+.app-screen-registre .registre-nb .register-col-nature{width:188px;white-space:normal;}
+.app-screen-registre .registre-nb .register-col-acts{width:58px;text-align:right;}
+
+/* Cellule N° de mandat */
+.registre-nb .register-col-mandat .register-primary{font-size:16px;font-weight:800;color:var(--rg-ink);letter-spacing:-.02em;line-height:1.1;}
+.registre-nb .register-col-mandat .register-type-inline{color:rgba(34,35,35,.42);font-size:11px;text-transform:capitalize;margin-top:2px;}
+.registre-nb .register-col-mandat .register-secondary{color:rgba(34,35,35,.4);font-size:10px;font-weight:700;letter-spacing:.06em;}
+.registre-nb .register-col-mandat .register-tag-row{margin-top:7px;flex-wrap:wrap;}
+.registre-nb .register-col-mandat{overflow:hidden;}
+
+/* Cellule État (fusion Statut + Validé + Diffusable) */
+.registre-nb .reg-etat{display:flex;flex-direction:column;gap:5px;}
+.registre-nb .reg-etat-row{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;white-space:nowrap;}
+.registre-nb .reg-etat-row .reg-ic{width:13px;height:13px;flex:none;}
+.registre-nb .reg-etat-row.ok{color:var(--rg-ok);}
+.registre-nb .reg-etat-row.ko{color:var(--rg-ko);}
+.registre-nb .reg-etat-row.neutral{color:var(--rg-neutral);}
+
+/* Dates */
+.registre-nb .register-date{color:var(--rg-ink);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}
+
+/* Montant (ink, façon maquette — pas magenta) + ligne « modif prix » */
+.registre-nb .register-amount{color:var(--rg-ink) !important;font-size:14.5px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+.registre-nb .register-price-history{display:block;color:rgba(34,35,35,.4);font-size:10.5px;font-weight:600;margin-top:3px;white-space:nowrap;}
+
+/* Mandant(s) */
+.registre-nb .register-col-mandants .register-primary{font-size:13px;font-weight:700;color:var(--rg-ink);line-height:1.35;white-space:normal;}
+.registre-nb .register-more-button{
+  margin-top:6px;width:22px;height:22px;border-radius:999px;
+  border:1px solid rgba(34,35,35,.14);background:rgba(255,252,238,.9);color:rgba(34,35,35,.5);
+  font-size:13px;font-weight:800;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.registre-nb .register-more-button:hover{border-color:var(--rg-brand);color:var(--rg-brand-700);background:var(--rg-brand-50);}
+
+/* Nature et situation (type + adresse sur 2 lignes) */
+.registre-nb .register-col-nature{overflow:hidden;}
+.registre-nb .register-nat-type{display:block;font-size:13px;font-weight:600;color:var(--rg-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.registre-nb .register-nat-addr{display:block;font-size:11.5px;color:rgba(34,35,35,.42);margin-top:3px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Actions (flèche → détail) */
+.registre-nb .reg-acts{display:flex;align-items:center;justify-content:flex-end;gap:5px;}
+.app-screen-registre .registre-nb .reg-act{
+  width:30px;height:30px;border-radius:8px;border:1px solid rgba(34,35,35,.14);
+  background:rgba(255,252,238,.9);color:rgba(34,35,35,.4);display:grid;place-items:center;cursor:pointer;transition:.13s;flex:none;padding:0;
+}
+.registre-nb .reg-act svg{width:14px;height:14px;}
+.app-screen-registre .registre-nb .reg-act:hover{border-color:var(--rg-brand);color:var(--rg-brand-700);background:var(--rg-brand-50);}
+.app-screen-registre .registre-nb .reg-act.reg-act-cta{background:var(--rg-brand);border-color:var(--rg-brand);color:#fff;box-shadow:0 2px 8px rgba(197,0,95,.28);}
+.app-screen-registre .registre-nb .reg-act.reg-act-cta:hover{background:#a8004f;color:#fff;}
+
+/* Badges « source / +versions / +avenants » (conservés, ton sobre sur papier) */
+.registre-nb .register-tag-row .status-pill{
+  background:rgba(34,35,35,.05);color:rgba(34,35,35,.55);border:1px solid rgba(34,35,35,.1);
+  padding:3px 7px;font-size:9px;letter-spacing:.03em;border-radius:8px;
+}
+
+/* ============================================================
+   TOOLBAR — carte moderne (façon maquette), scopé écran Registre.
+   ============================================================ */
+.app-screen-registre .hero{
+  background:#fff !important;border:1px solid rgba(34,35,35,.1) !important;border-radius:12px !important;
+  box-shadow:0 1px 3px rgba(34,35,35,.06) !important;padding:9px 12px !important;
+}
+.app-screen-registre .hero-stack{display:flex;flex-direction:column;gap:10px;}
+.app-screen-registre .hero-top-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+/* recherche en pilule + loupe (label masqué visuellement) */
+.app-screen-registre .hero-top-row .search-box{
+  flex:1 1 280px;display:flex;align-items:center;gap:10px;
+  background:#f5f5f6 !important;border:1px solid rgba(34,35,35,.1) !important;border-radius:9px !important;
+  padding:0 14px !important;position:relative;min-height:42px;
+}
+.app-screen-registre .hero-top-row .search-box:focus-within{background:#fff !important;border-color:var(--rg-brand) !important;box-shadow:0 0 0 3px rgba(197,0,95,.1) !important;}
+.app-screen-registre .hero-top-row .search-box > span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.app-screen-registre .hero-top-row .search-box::before{
+  content:"";width:15px;height:15px;flex:none;background:rgba(34,35,35,.35);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.2-3.2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.2-3.2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.app-screen-registre .hero-top-row .search-box input{flex:1;border:0;background:transparent;font:inherit;font-size:13.5px;color:var(--rg-ink);padding:10px 0;outline:none;}
+/* boutons toolbar */
+.app-screen-registre .hero-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.app-screen-registre .hero-actions .ghost-button,
+.app-screen-registre .header-control-row .kpi-toggle-button{
+  font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:9px;
+  border:1px solid rgba(34,35,35,.15);background:#fff;color:var(--rg-ink);display:inline-flex;align-items:center;gap:7px;
+}
+.app-screen-registre .hero-actions .ghost-button:hover,
+.app-screen-registre .header-control-row .kpi-toggle-button:hover{border-color:var(--rg-brand);color:var(--rg-brand-700);}
+.app-screen-registre .hero-actions .ghost-button.button-primary{
+  background-image:linear-gradient(135deg,#c5005f,#a8004f) !important;background-color:#c5005f !important;
+  border-color:transparent !important;color:#fff !important;box-shadow:0 2px 10px rgba(197,0,95,.25) !important;
+}
+.app-screen-registre .hero-actions .ghost-button.button-primary:hover{background-image:linear-gradient(135deg,#a8004f,#8c0044) !important;}
+/* chips Stats / Priorités */
+.app-screen-registre .header-control-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.app-screen-registre .header-control-row .kpi-toggle-button strong{font-size:11px;font-weight:800;color:rgba(34,35,35,.5);background:rgba(34,35,35,.08);border-radius:99px;padding:2px 7px;margin-left:2px;}
+.app-screen-registre .header-control-row .kpi-toggle-button.is-open{border-color:var(--rg-brand);color:var(--rg-brand-700);background:var(--rg-brand-50);}
+.app-screen-registre .header-control-row .kpi-toggle-button.is-open strong{background:var(--rg-brand);color:#fff;}
+
+/* ============================================================
+   BANDE KPI — strip moderne 5 colonnes (façon maquette).
+   Données + clics inchangés (label + valeur).
+   ============================================================ */
+.app-screen-registre .header-kpis.header-kpis-secondary{
+  display:grid !important;grid-template-columns:repeat(5,minmax(0,1fr)) !important;grid-template-rows:none !important;
+  gap:0 !important;padding:0 !important;margin-top:2px !important;overflow:hidden;
+  background:#fff !important;border:1px solid rgba(34,35,35,.1) !important;border-radius:12px !important;box-shadow:0 1px 3px rgba(34,35,35,.05) !important;
+}
+.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card{
+  flex:initial !important;width:auto !important;height:auto !important;min-height:0 !important;min-width:0 !important;margin:0 !important;
+  display:flex !important;flex-direction:column;gap:6px !important;align-items:flex-start;text-align:left;
+  padding:15px 20px !important;border:0 !important;border-right:1px solid rgba(34,35,35,.07) !important;border-radius:0 !important;
+  background:#fff !important;box-shadow:none !important;transition:background .12s;
+}
+.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card:last-child{border-right:0 !important;}
+.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card.is-clickable{cursor:pointer;}
+.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card:hover{background:#fafafa !important;}
+.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card span{
+  order:1;font-size:9.5px !important;font-weight:800 !important;letter-spacing:.1em;text-transform:uppercase !important;color:rgba(34,35,35,.42) !important;line-height:1.25;
+}
+.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card strong{
+  order:2;font-size:26px !important;font-weight:800;color:var(--rg-ink) !important;font-variant-numeric:tabular-nums;line-height:1 !important;letter-spacing:-.02em;
+}
+/* tonalités maquette : « non validés » en orange, « non diffusable » (dernier) en magenta */
+.app-shell.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card.tone-warning strong{color:#c45c14 !important;}
+.app-shell.app-screen-registre .header-kpis.header-kpis-secondary .header-kpi-card:last-child strong{color:var(--rg-brand) !important;}
+
+/* ============================================================
+   Responsive — sur petits écrans, le strip défile horizontalement.
+   ============================================================ */
+@media (max-width:900px){
+  .app-screen-registre .header-kpis.header-kpis-secondary{grid-auto-flow:column;grid-template-columns:none !important;grid-auto-columns:minmax(150px,1fr);}
+  .registre-nb .nb-wrap{margin-left:8px;}
+}

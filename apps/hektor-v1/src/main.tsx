@@ -21,6 +21,7 @@ import './mandat-detail-v1.css'
 import './recherche-acquereur.css'
 import './recherche-mandat.css'
 import './annonces-v2.css'
+import './registre-v2.css'
 import './notifications-bell.css'
 import './rapprochement-stats.css'
 

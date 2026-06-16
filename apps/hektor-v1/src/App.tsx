@@ -6631,6 +6631,26 @@ function mandateRegisterNatureLabel(item: MandatRecord) {
   return [type !== '-' ? type : '', address].filter(Boolean).join(' · ') || '-'
 }
 
+// Refonte design (maquette « Registre des mandats ») : mêmes données que
+// mandateRegisterNatureLabel, mais séparées en nature (type) + situation
+// (adresse) pour l'affichage sur deux lignes. Aucune logique métier modifiée.
+function mandateRegisterNatureParts(item: MandatRecord) {
+  const address = [
+    item.adresse_privee_listing,
+    item.adresse_detail,
+    item.code_postal_prive_detail,
+    item.code_postal,
+    item.ville_privee_detail,
+    item.ville,
+  ]
+    .map((value) => (value ?? '').trim())
+    .filter(Boolean)
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join(', ')
+  const type = propertyTypeLabel(item.type_bien)
+  return { type: type !== '-' ? type : '', address }
+}
+
 function mandateRegisterRowKey(item: MandatRecord) {
   return item.register_row_id ?? `${item.hektor_annonce_id}:${item.numero_mandat ?? item.app_dossier_id ?? 'na'}`
 }
@@ -16193,93 +16213,140 @@ function MandatRegisterScreen(props: {
 
   return (
     <section className="panel-grid">
-      <section className="panel panel-wide">
-        <div className="panel-head">
-          <div><h3>Registre des mandats</h3></div>
-          <div className="page-controls">
-            {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
-            <span>{pageLabel(props.mandatsTotal, mandatPageSize, props.mandatPage)}</span>
-            <span>Page {props.mandatPage} / {props.mandatTotalPages}</span>
-            <button className="ghost-button" type="button" onClick={props.onPrevMandat} disabled={props.mandatPage === 1}>Prec</button>
-            <button className="ghost-button" type="button" onClick={props.onNextMandat} disabled={props.mandatPage * mandatPageSize >= props.mandatsTotal}>Suiv</button>
-            <label className="page-jump">
-              <span>Aller</span>
-              <input type="number" min={1} max={props.mandatTotalPages} value={props.mandatPage} onChange={(event) => props.onGoToMandatPage(Number(event.target.value || 1))} />
-            </label>
-          </div>
-        </div>
-        <div className="table-wrap register-table-wrap">
-          <table className="register-table">
-            <thead>
-              <tr>
-                <th className="register-col-mandat">N° de mandat</th>
-                <th className="register-col-status">Statut</th>
-                <th className="register-col-flag">Valide</th>
-                <th className="register-col-flag">Diffusable</th>
-                <th className="register-col-date">Date de debut</th>
-                <th className="register-col-date">Date de fin</th>
-                <th className="register-col-amount">Montant</th>
-                <th className="register-col-mandants">Mandant(s)</th>
-                <th className="register-col-nature">Nature et situation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {props.mandats.map((item) => {
-                const rowKey = mandateRegisterRowKey(item)
-                const isSelected = rowKey === (props.selectedMandat ? mandateRegisterRowKey(props.selectedMandat) : null)
-                const mandantsLabel = mandateRegisterMandantsLabel(item)
-                const canExpandMandants = mandantsLabel.length > 42
-                const expandKey = rowKey
-                const isMandantsExpanded = Boolean(expandedMandants[expandKey])
-                return (
-                  <tr
-                    key={rowKey}
-                    className={`${mandateLifecycleRowClass(item)} ${isSelected ? 'is-selected' : ''}`.trim()}
-                    onClick={() => {
-                      props.onSelectMandat(rowKey)
-                      setDetailOpen(true)
-                    }}
-                  >
-                    <td className="register-col-mandat">
-                      <strong className="register-primary">{item.numero_mandat ?? '-'}</strong>
-                      {mandateRegisterTypeInlineLabel(item) ? <span className="register-type-inline">{mandateRegisterTypeInlineLabel(item)}</span> : null}
-                      <span className="register-secondary">{item.numero_dossier ?? '-'}</span>
-                      <div className="tag-row register-tag-row">
-                        <StatusPill value={mandateRegisterSourceBadge(item)} />
-                        {(item.register_version_count ?? 1) > 1 ? <StatusPill value={`+${item.register_version_count} versions`} /> : null}
-                        {(item.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`+${item.register_embedded_avenant_count} avenant${(item.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
-                      </div>
-                    </td>
-                    <td className="register-col-status"><StatusPill value={item.statut_annonce} /></td>
-                    <td className="register-col-flag"><span className={`register-bool ${isValidationApproved(item.validation_diffusion_state) ? 'is-yes' : 'is-no'}`}>{mandateRegisterValidationLabel(item.validation_diffusion_state)}</span></td>
-                    <td className="register-col-flag"><span className={`register-bool ${isDiffusableValue(item.diffusable) ? 'is-yes' : 'is-no'}`}>{mandateRegisterDiffusableLabel(item.diffusable)}</span></td>
-                    <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
-                    <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
-                    <td className="register-col-amount">
-                      <strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong>
-                      {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
-                    </td>
-                    <td className="register-col-mandants">
-                      <strong className={`register-primary register-mandants-text ${canExpandMandants && !isMandantsExpanded ? 'is-clamped' : ''}`}>{mandantsLabel}</strong>
-                      {canExpandMandants ? (
-                        <button
-                          className="register-more-button"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            setExpandedMandants((current) => ({ ...current, [expandKey]: !current[expandKey] }))
-                          }}
-                        >
-                          {isMandantsExpanded ? 'âˆ’' : '+'}
-                        </button>
-                      ) : null}
-                    </td>
-                    <td className="register-col-nature"><span className="register-muted">{mandateRegisterNatureLabel(item)}</span></td>
+      <section className="panel panel-wide registre-nb">
+        <div className="nb-wrap">
+          <div className="nb-spine" aria-hidden="true"><span className="nb-rings" /></div>
+          <div className="notebook">
+            <div className="panel-head nb-head">
+              <div className="nb-left">
+                <h3 className="nb-title">Registre des mandats</h3>
+                <span className="nb-badge">{new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} mandats</span>
+              </div>
+              <div className="page-controls pager">
+                {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
+                <span className="pg-info">{pageLabel(props.mandatsTotal, mandatPageSize, props.mandatPage)} · Page {props.mandatPage} / {props.mandatTotalPages}</span>
+                <button className="ghost-button pg-btn" type="button" onClick={props.onPrevMandat} disabled={props.mandatPage === 1}>← Préc</button>
+                <button className="ghost-button pg-btn" type="button" onClick={props.onNextMandat} disabled={props.mandatPage * mandatPageSize >= props.mandatsTotal}>Suiv →</button>
+                <label className="page-jump">
+                  <span>Aller</span>
+                  <input type="number" min={1} max={props.mandatTotalPages} value={props.mandatPage} onChange={(event) => props.onGoToMandatPage(Number(event.target.value || 1))} />
+                </label>
+              </div>
+            </div>
+            <div className="table-wrap register-table-wrap">
+              <table className="register-table">
+                <thead>
+                  <tr>
+                    <th className="register-col-mandat">N° de mandat</th>
+                    <th className="register-col-etat">État</th>
+                    <th className="register-col-date">Date de début</th>
+                    <th className="register-col-date">Date de fin</th>
+                    <th className="register-col-amount">Montant</th>
+                    <th className="register-col-mandants">Mandant(s)</th>
+                    <th className="register-col-nature">Nature et situation</th>
+                    <th className="register-col-acts" aria-label="Actions" />
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {props.mandats.map((item) => {
+                    const rowKey = mandateRegisterRowKey(item)
+                    const isSelected = rowKey === (props.selectedMandat ? mandateRegisterRowKey(props.selectedMandat) : null)
+                    const mandantsLabel = mandateRegisterMandantsLabel(item)
+                    const canExpandMandants = mandantsLabel.length > 42
+                    const expandKey = rowKey
+                    const isMandantsExpanded = Boolean(expandedMandants[expandKey])
+                    const natureParts = mandateRegisterNatureParts(item)
+                    const statutActif = (item.statut_annonce ?? '').trim().toLowerCase() === 'actif'
+                    const isValide = isValidationApproved(item.validation_diffusion_state)
+                    const isDiffusable = isDiffusableValue(item.diffusable)
+                    return (
+                      <tr
+                        key={rowKey}
+                        className={`${mandateLifecycleRowClass(item)} ${isSelected ? 'is-selected' : ''}`.trim()}
+                        onClick={() => {
+                          props.onSelectMandat(rowKey)
+                          setDetailOpen(true)
+                        }}
+                      >
+                        <td className="register-col-mandat">
+                          <strong className="register-primary">{item.numero_mandat ?? '-'}</strong>
+                          {mandateRegisterTypeInlineLabel(item) ? <span className="register-type-inline">{mandateRegisterTypeInlineLabel(item)}</span> : null}
+                          <span className="register-secondary">{item.numero_dossier ?? '-'}</span>
+                          <div className="tag-row register-tag-row">
+                            <StatusPill value={mandateRegisterSourceBadge(item)} />
+                            {(item.register_version_count ?? 1) > 1 ? <StatusPill value={`+${item.register_version_count} versions`} /> : null}
+                            {(item.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`+${item.register_embedded_avenant_count} avenant${(item.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
+                          </div>
+                        </td>
+                        <td className="register-col-etat">
+                          <div className="reg-etat">
+                            <div className={`reg-etat-row ${statutActif ? 'ok' : 'neutral'}`}>
+                              {statutActif
+                                ? <svg className="reg-ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5" /></svg>
+                                : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="5" /></svg>}
+                              <span>{item.statut_annonce || 'Actif'}</span>
+                            </div>
+                            <div className={`reg-etat-row ${isValide ? 'ok' : 'ko'}`}>
+                              {isValide
+                                ? <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
+                                : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>}
+                              <span>{isValide ? 'Validé' : 'Non validé'}</span>
+                            </div>
+                            <div className={`reg-etat-row ${isDiffusable ? 'ok' : 'ko'}`}>
+                              {isDiffusable
+                                ? <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
+                                : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>}
+                              <span>{isDiffusable ? 'Diffusable' : 'Non diffusable'}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
+                        <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
+                        <td className="register-col-amount">
+                          <strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong>
+                          {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
+                        </td>
+                        <td className="register-col-mandants">
+                          <strong className={`register-primary register-mandants-text ${canExpandMandants && !isMandantsExpanded ? 'is-clamped' : ''}`}>{mandantsLabel}</strong>
+                          {canExpandMandants ? (
+                            <button
+                              className="register-more-button"
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setExpandedMandants((current) => ({ ...current, [expandKey]: !current[expandKey] }))
+                              }}
+                            >
+                              {isMandantsExpanded ? 'âˆ’' : '+'}
+                            </button>
+                          ) : null}
+                        </td>
+                        <td className="register-col-nature">
+                          <span className="register-nat-type">{natureParts.type || '—'}</span>
+                          {natureParts.address ? <span className="register-nat-addr">{natureParts.address}</span> : null}
+                        </td>
+                        <td className="register-col-acts">
+                          <div className="reg-acts" onClick={(event) => event.stopPropagation()}>
+                            <button
+                              className="reg-act reg-act-cta"
+                              type="button"
+                              aria-label="Ouvrir le détail du mandat"
+                              onClick={() => {
+                                props.onSelectMandat(rowKey)
+                                setDetailOpen(true)
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
       {detailOpen && selectedDetail ? (
