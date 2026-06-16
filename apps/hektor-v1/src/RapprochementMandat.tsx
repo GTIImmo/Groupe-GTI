@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   loadRapprochementsForDossier, loadDossierTimeline, loadRelancesForDossier, setRelanceStatus,
+  loadNotificationsForDossier, markNotificationRead,
   recordProposition, setBienStatut, sendGoogleWorkspaceCrmEmail, loadGoogleCalendarEventLinks,
-  type RapprochementForDossierRow, type TimelineRow, type GoogleCalendarEventLink, type RelanceRow,
+  type RapprochementForDossierRow, type TimelineRow, type GoogleCalendarEventLink, type RelanceRow, type NotificationRow,
 } from './lib/api'
 import type { VisitePlanInput } from './RechercheAcquereur'
 
@@ -234,6 +235,7 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
   const [swipe, setSwipe] = useState<'' | 'left' | 'right'>('')
   const [timeline, setTimeline] = useState<TimelineRow[]>([])
   const [relanceRows, setRelanceRows] = useState<RelanceRow[]>([])
+  const [notifs, setNotifs] = useState<NotificationRow[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -265,14 +267,15 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     if (!open || dossierId == null) { setBuyers([]); setTimeline([]); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    Promise.all([loadRapprochementsForDossier(dossierId), loadDossierTimeline(dossierId), loadRelancesForDossier(dossierId)])
-      .then(([rows, tl, rels]: [RapprochementForDossierRow[], TimelineRow[], RelanceRow[]]) => {
+    Promise.all([loadRapprochementsForDossier(dossierId), loadDossierTimeline(dossierId), loadRelancesForDossier(dossierId), loadNotificationsForDossier(dossierId)])
+      .then(([rows, tl, rels, nts]: [RapprochementForDossierRow[], TimelineRow[], RelanceRow[], NotificationRow[]]) => {
         if (cancelled) return
         setBuyers(rows.map((r) => rowToBuyer(r)))
         setTimeline(tl)
         setRelanceRows(rels)
+        setNotifs(nts)
       })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setBuyers([]); setTimeline([]); setRelanceRows([]) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setBuyers([]); setTimeline([]); setRelanceRows([]); setNotifs([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -357,6 +360,14 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     setRelanceStatus(id, 'reporte').then(reloadRelances).catch(() => reloadRelances())
     toast('Relance reportée de 3 jours.')
   }, [reloadRelances, toast])
+  // Alertes « nouveau rapprochement » (notifications, perspective bien) → cloche + ce bloc.
+  const newAlertsCount = useMemo(() => notifs.filter((n) => !n.read_at).length, [notifs])
+  const openNotif = useCallback((n: NotificationRow) => {
+    setNotifs((list) => list.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)))
+    markNotificationRead(n.id).catch(() => {})
+    const b = buyers.find((x) => x.searchKey === n.contact_search_key)
+    if (b?.contactId) onOpenContact?.(b.contactId)
+  }, [buyers, onOpenContact])
 
   const discPool = useMemo(() => visible.filter((b) => b.status !== 'ecarte'), [visible])
 
@@ -651,13 +662,16 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
               {([['all', 'Tous'], ['todo', 'À contacter'], ['encours', 'En cours'], ['ecarte', 'Écartés']] as [FilterKey, string][]).map(([key, label]) => (
                 <button key={key} className={`fpill${filter === key ? ' on' : ''}`} onClick={() => setFilter(key)}>{label} <span className="c">{counts[key]}</span></button>
               ))}
-              <button className={`fpill alerte-btn${alerteOpen ? ' on' : ''}`} onClick={() => setAlerteOpen((v) => !v)}><IcBell />Alerte CRM</button>
+              <button className={`fpill alerte-btn${alerteOpen ? ' on' : ''}`} onClick={() => setAlerteOpen((v) => !v)}><IcBell />Alertes{newAlertsCount > 0 && <span className="c alert">{newAlertsCount}</span>}</button>
             </div>
 
             {alerteOpen && (
               <div className="alerte-band">
                 <div className="al-ic"><IcBell /></div>
-                <div><div className="al-t">Alerte CRM active</div><div className="al-s">Tout nouveau profil correspondant au-dessus du seuil est signalé au négociateur propriétaire.</div></div>
+                <div>
+                  <div className="al-t">{newAlertsCount > 0 ? `${newAlertsCount} nouvel${newAlertsCount > 1 ? 's' : ''} acquéreur${newAlertsCount > 1 ? 's' : ''} correspondant${newAlertsCount > 1 ? 's' : ''}` : 'Aucune nouvelle alerte'}</div>
+                  <div className="al-s">Tout nouveau profil correspondant au seuil notifie le négociateur propriétaire — voir le détail dans « Nouveaux rapprochements ».</div>
+                </div>
                 <div className="al-grid">
                   <div className="af"><span className="k">État</span><span className="v ok">Active</span></div>
                   <div className="af"><span className="k">Seuil de score</span><span className="v">≥ 80 %</span></div>
@@ -873,11 +887,20 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
             </div>
 
             <div className="rp-sec">
-              <div className="rp-hdr"><span className="rp-title">Alerte CRM</span><span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--green)', background: 'var(--green-soft)', border: '1px solid var(--green-line)', padding: '2px 8px', borderRadius: 99 }}>Active</span></div>
-              <div style={{ fontSize: '11.5px', color: 'var(--muted)', lineHeight: 1.5 }}>
-                Seuil&nbsp;<b style={{ color: 'var(--ink)' }}>80 %</b> · Temps réel
-                <br />Le négociateur propriétaire est notifié à chaque nouveau profil correspondant.
-              </div>
+              <div className="rp-hdr"><span className="rp-title">Nouveaux rapprochements</span>{newAlertsCount > 0 && <span className="rp-badge alert">{newAlertsCount}</span>}</div>
+              {notifs.length === 0 ? (
+                <div className="rp-empty">Aucune nouvelle alerte. Tout nouveau profil correspondant (≥ 80 %) apparaîtra ici.</div>
+              ) : notifs.map((n) => (
+                <button type="button" key={n.id} className={`nt-item${n.read_at ? '' : ' unread'}`} onClick={() => openNotif(n)} title="Ouvrir la fiche acquéreur">
+                  <div className="nt-ic"><IcBell /></div>
+                  <div className="nt-body">
+                    <div className="nt-title">{n.title}</div>
+                    {n.body && <div className="nt-sub">{n.body}</div>}
+                    <div className="nt-date">{fmtDate(n.created_at)}</div>
+                  </div>
+                  {!n.read_at && <span className="nt-dot" aria-hidden />}
+                </button>
+              ))}
             </div>
           </aside>
         </div>

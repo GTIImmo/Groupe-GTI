@@ -192,6 +192,21 @@
 .rech-acq .fpill.alerte-btn.on{background:var(--brand);border-style:solid;border-color:var(--brand);color:#fff}
 .rech-acq .alerte-wrap{margin-bottom:16px}
 .rech-acq .alerte-wrap[hidden]{display:none}
+.rech-acq .fpill.alerte-btn .c.alert{background:var(--brand);border-color:var(--brand);color:#fff}
+.rech-acq .fpill.alerte-btn.on .c.alert{background:rgba(255,255,255,.22);border-color:transparent;color:#fff}
+/* Bloc « Nouveaux rapprochements » (notifications, perspective contact) */
+.rech-acq .cx-badge{margin-left:auto;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;background:var(--brand);color:#fff;font-variant-numeric:tabular-nums}
+.rech-acq .notif-list{display:flex;flex-direction:column;gap:7px}
+.rech-acq .notif-it{position:relative;display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;font-family:inherit;padding:10px 11px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;transition:.13s}
+.rech-acq .notif-it:hover{border-color:#f3d7e3;background:var(--brand-soft)}
+.rech-acq .notif-it.unread{border-color:#f3d7e3;background:var(--brand-soft)}
+.rech-acq .notif-ic{flex:none;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #f3d7e3;background:#fff;color:var(--brand-ink)}
+.rech-acq .notif-ic svg{width:13px;height:13px}
+.rech-acq .notif-bd{min-width:0;flex:1;display:flex;flex-direction:column}
+.rech-acq .notif-t{font-size:12px;font-weight:700;color:var(--ink);line-height:1.25}
+.rech-acq .notif-s{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rech-acq .notif-d{font-size:10px;color:var(--faint);font-weight:600;margin-top:3px}
+.rech-acq .notif-dot{position:absolute;top:11px;right:11px;width:7px;height:7px;border-radius:99px;background:var(--brand);flex:none}
 .rech-acq .listcount{font-size:12.5px;color:var(--muted);font-weight:600}
 .rech-acq .lc-hidden{color:var(--brand-ink)}
 

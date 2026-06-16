@@ -3,8 +3,9 @@ import type { AppContact, AppContactSearch } from './types'
 import {
   loadRapprochements, loadSearchStatuts, loadRelances, loadSearchTimeline, loadDossierPhotos,
   recordProposition, setBienStatut, setRelanceStatus, sendGoogleWorkspaceCrmEmail,
-  loadGoogleCalendarEventLinks,
+  loadGoogleCalendarEventLinks, loadNotificationsForSearch, markNotificationRead,
   type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow, type GoogleCalendarEventLink,
+  type NotificationRow,
 } from './lib/api'
 import RapprochementStats from './RapprochementStats'
 
@@ -382,6 +383,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const [loadError, setLoadError] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
   const [timeline, setTimeline] = useState<TimelineRow[]>([])
+  const [notifs, setNotifs] = useState<NotificationRow[]>([])
   const [reloadKey, setReloadKey] = useState(0)
   const [visitEvents, setVisitEvents] = useState<Record<number, GoogleCalendarEventLink>>({})
   const [prPhotos, setPrPhotos] = useState<string[]>([])
@@ -431,18 +433,19 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
 
   useEffect(() => {
     if (!open) return
-    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setTimeline([]); setLoadError(null); setLoading(false); return }
+    if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setTimeline([]); setNotifs([]); setLoadError(null); setLoading(false); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey), loadSearchTimeline(searchKey)])
-      .then(([rows, sts, rels, tl]: [RapprochementRow[], StatutRow[], RelanceRow[], TimelineRow[]]) => {
+    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey), loadSearchTimeline(searchKey), loadNotificationsForSearch(searchKey)])
+      .then(([rows, sts, rels, tl, nts]: [RapprochementRow[], StatutRow[], RelanceRow[], TimelineRow[], NotificationRow[]]) => {
         if (cancelled) return
         const stMap = new Map(sts.map((s) => [s.app_dossier_id, s]))
         setProperties(rows.map((r) => applyStatut(rapproToProperty(r, search), stMap.get(r.app_dossier_id))))
         setRelances(rels.map(relToRelance))
         setTimeline(tl)
+        setNotifs(nts)
       })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]); setTimeline([]) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]); setTimeline([]); setNotifs([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -776,6 +779,13 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const findCrit = (cle: string) => { const m = (Array.isArray(criteres) ? criteres : []).find((c) => String(c?.cle ?? '') === cle); return m ? String(m.valeur ?? '').trim() : '' }
   const dpe = findCrit('ITEM_DPE_CONS_LETTER')
   const searchActive = contact ? (search ? search.is_active === true || search.is_active === 1 || search.is_active === '1' : false) : true
+  // Alertes « nouveau bien correspondant » (notifications, perspective contact) → cloche + bloc dédié.
+  const newAlertsCount = useMemo(() => notifs.filter((n) => !n.read_at).length, [notifs])
+  const openNotif = useCallback((n: NotificationRow) => {
+    setNotifs((list) => list.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)))
+    markNotificationRead(n.id).catch(() => {})
+    if (onOpenAnnonce && n.app_dossier_id != null) onOpenAnnonce(n.app_dossier_id)
+  }, [onOpenAnnonce])
   const typeLabel = types.join(' · ')
   const cityLabel = cities[0] || 'Toutes communes'
   const crumbRef = `${types[0] || 'Bien'}${cities.length ? ` · ${cities[0]}` : ''}`
@@ -979,7 +989,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               {([['all', 'Tous'], ['todo', 'À proposer'], ['encours', 'En cours'], ['ecarte', 'Écartés']] as [FilterKey, string][]).map(([key, label]) => (
                 <button key={key} className={`fpill${filter === key ? ' on' : ''}`} onClick={() => setFilter(key)}>{label} <span className="c">{counts[key]}</span></button>
               ))}
-              <button className={`fpill alerte-btn${alerteOpen ? ' on' : ''}`} onClick={() => setAlerteOpen((v) => !v)}><IcBell />Réglage alerte</button>
+              <button className={`fpill alerte-btn${alerteOpen ? ' on' : ''}`} onClick={() => setAlerteOpen((v) => !v)}><IcBell />Alertes{newAlertsCount > 0 && <span className="c alert">{newAlertsCount}</span>}</button>
             </div>
 
             {alerteOpen && (
@@ -987,19 +997,12 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                 <div className="alerte">
                   <span className="alerte-ic"><IcBell /></span>
                   <div>
-                    <div className="alerte-t">Alerte rapprochement {searchActive ? 'active' : 'inactive'}</div>
-                    <div className="alerte-s">Le négociateur est notifié dès qu'un nouveau bien correspond à cette recherche au-dessus du seuil.</div>
+                    <div className="alerte-t">{newAlertsCount > 0 ? `${newAlertsCount} nouveau${newAlertsCount > 1 ? 'x' : ''} bien${newAlertsCount > 1 ? 's' : ''} correspondant${newAlertsCount > 1 ? 's' : ''}` : 'Aucune nouvelle alerte'}</div>
+                    <div className="alerte-s">Le négociateur est notifié dès qu'un nouveau bien correspond à cette recherche au-dessus du seuil — détail dans « Nouveaux rapprochements ».</div>
                   </div>
                   <div className="alerte-grid">
                     <div className="af"><span className="k">État</span><span className={`v ${searchActive ? 'ok' : ''}`}>{searchActive ? 'Active' : 'Inactive'}</span></div>
                     <div className="af"><span className="k">Seuil de score</span><span className="v">≥ 80 %</span></div>
-                  </div>
-                </div>
-                <div className="mod" style={{ marginTop: 14 }}>
-                  <div className="mod-h"><h2>Fonctionnement</h2></div>
-                  <div className="empty">
-                    <span className="ee"><IcSync /></span>
-                    <span className="et">Le moteur recalcule automatiquement les rapprochements (nouveaux biens en stock, baisses de prix). Au-delà de 80 % de correspondance, une alerte est créée pour le négociateur.</span>
                   </div>
                 </div>
               </div>
@@ -1136,6 +1139,25 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                 )}
               </div>
             </div>
+
+            {notifs.length > 0 && (
+              <div className="cx">
+                <div className="cx-h"><span className="t">Nouveaux rapprochements</span>{newAlertsCount > 0 && <span className="cx-badge">{newAlertsCount}</span>}</div>
+                <div className="notif-list">
+                  {notifs.map((n) => (
+                    <button type="button" key={n.id} className={`notif-it${n.read_at ? '' : ' unread'}`} onClick={() => openNotif(n)} title="Ouvrir l’annonce">
+                      <span className="notif-ic"><IcBell /></span>
+                      <span className="notif-bd">
+                        <span className="notif-t">{n.title}</span>
+                        {n.body && <span className="notif-s">{n.body}</span>}
+                        <span className="notif-d">{fmtDate(n.created_at)}</span>
+                      </span>
+                      {!n.read_at && <span className="notif-dot" aria-hidden />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="cx">
               <div className="cx-h"><span className="t">Acquéreur rattaché</span></div>

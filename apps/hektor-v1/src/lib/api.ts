@@ -2268,6 +2268,22 @@ export async function loadNotifications(negociateurEmail: string | null): Promis
   return (data ?? []) as NotificationRow[]
 }
 
+/** Alertes « nouveau rapprochement » d'un bien (perspective bien) — pour l'écran Rapprochement Mandat. */
+export async function loadNotificationsForDossier(appDossierId: number): Promise<NotificationRow[]> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  const { data, error } = await supabase.rpc('app_notifications_for_dossier', { p_dossier_id: appDossierId })
+  if (error) throw new Error(error.message ?? 'Unable to load dossier notifications')
+  return (data ?? []) as NotificationRow[]
+}
+
+/** Alertes « nouveau rapprochement » d'une recherche (perspective contact) — pour l'écran Recherche Acquéreur. */
+export async function loadNotificationsForSearch(contactSearchKey: string): Promise<NotificationRow[]> {
+  if (!hasSupabaseEnv || !supabase || !contactSearchKey.trim()) return []
+  const { data, error } = await supabase.rpc('app_notifications_for_search', { p_search_key: contactSearchKey.trim() })
+  if (error) throw new Error(error.message ?? 'Unable to load search notifications')
+  return (data ?? []) as NotificationRow[]
+}
+
 export async function markNotificationRead(id: number): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_mark_notification_read', { p_id: id })
