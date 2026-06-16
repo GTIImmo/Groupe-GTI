@@ -436,17 +436,18 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setTimeline([]); setNotifs([]); setLoadError(null); setLoading(false); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey), loadSearchTimeline(searchKey), loadNotificationsForSearch(searchKey)])
-      .then(([rows, sts, rels, tl, nts]: [RapprochementRow[], StatutRow[], RelanceRow[], TimelineRow[], NotificationRow[]]) => {
+    Promise.all([loadRapprochements(searchKey), loadSearchStatuts(searchKey), loadRelances(searchKey), loadSearchTimeline(searchKey)])
+      .then(([rows, sts, rels, tl]: [RapprochementRow[], StatutRow[], RelanceRow[], TimelineRow[]]) => {
         if (cancelled) return
         const stMap = new Map(sts.map((s) => [s.app_dossier_id, s]))
         setProperties(rows.map((r) => applyStatut(rapproToProperty(r, search), stMap.get(r.app_dossier_id))))
         setRelances(rels.map(relToRelance))
         setTimeline(tl)
-        setNotifs(nts)
       })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]); setTimeline([]); setNotifs([]) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setProperties([]); setRelances([]); setTimeline([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
+    // Notifications = secondaire : son échec ne doit jamais bloquer la liste des biens.
+    loadNotificationsForSearch(searchKey).then((nts) => { if (!cancelled) setNotifs(nts) }).catch(() => { if (!cancelled) setNotifs([]) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, searchKey, visitRefreshKey, reloadKey])

@@ -267,16 +267,17 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     if (!open || dossierId == null) { setBuyers([]); setTimeline([]); return }
     let cancelled = false
     setLoading(true); setLoadError(null)
-    Promise.all([loadRapprochementsForDossier(dossierId), loadDossierTimeline(dossierId), loadRelancesForDossier(dossierId), loadNotificationsForDossier(dossierId)])
-      .then(([rows, tl, rels, nts]: [RapprochementForDossierRow[], TimelineRow[], RelanceRow[], NotificationRow[]]) => {
+    Promise.all([loadRapprochementsForDossier(dossierId), loadDossierTimeline(dossierId), loadRelancesForDossier(dossierId)])
+      .then(([rows, tl, rels]: [RapprochementForDossierRow[], TimelineRow[], RelanceRow[]]) => {
         if (cancelled) return
         setBuyers(rows.map((r) => rowToBuyer(r)))
         setTimeline(tl)
         setRelanceRows(rels)
-        setNotifs(nts)
       })
-      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setBuyers([]); setTimeline([]); setRelanceRows([]); setNotifs([]) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e?.message ?? 'Erreur de chargement'); setBuyers([]); setTimeline([]); setRelanceRows([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
+    // Notifications = secondaire : son échec ne doit jamais bloquer la liste des acquéreurs.
+    loadNotificationsForDossier(dossierId).then((nts) => { if (!cancelled) setNotifs(nts) }).catch(() => { if (!cancelled) setNotifs([]) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, dossierId, visitRefreshKey, reloadKey])
