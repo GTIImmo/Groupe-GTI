@@ -25,8 +25,9 @@ ACTION_PASS = "pass"      # ✕ Pas pour moi
 ACTION_VISITE = "visite"  # Réserver une visite
 ACTION_OPEN = "open"      # pixel d'ouverture
 ACTION_UNSUB = "unsub"    # désinscription
+ACTION_ESPACE = "espace"  # accès à l'espace client (lien magique)
 
-VALID_ACTIONS = {ACTION_LIKE, ACTION_PASS, ACTION_VISITE, ACTION_OPEN, ACTION_UNSUB}
+VALID_ACTIONS = {ACTION_LIKE, ACTION_PASS, ACTION_VISITE, ACTION_OPEN, ACTION_UNSUB, ACTION_ESPACE}
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -105,3 +106,8 @@ def make_open_token(*, envoi_id: str, secret: str, ttl_days: int | None = 60) ->
 def make_unsub_token(*, envoi_id: str, secret: str) -> str:
     """Token de désinscription (H3 : sans expiration)."""
     return sign_token({"v": 1, "e": str(envoi_id), "a": ACTION_UNSUB, "x": None}, secret)
+
+
+def make_espace_token(*, envoi_id: str, secret: str, ttl_days: int | None = 30) -> str:
+    """Lien magique vers l'espace client (par défaut 30 jours)."""
+    return sign_token({"v": 1, "e": str(envoi_id), "a": ACTION_ESPACE, "x": _exp_ts(ttl_days)}, secret)

@@ -86,11 +86,24 @@ class RapprochementSender:
         #    et au ciblage du worker de relance.
         dossier_ids = self._resolve_dossier_ids(annonce_ids)
 
+        # Résout l'index de recherche (stable) depuis la clé, encore valide à l'envoi.
+        search_index = None
+        if contact_search_key:
+            try:
+                rows = self.renderer._rest_get(
+                    "app_contact_search_current",
+                    {"select": "search_index", "contact_search_key": f"eq.{contact_search_key}", "limit": "1"})
+                if rows and rows[0].get("search_index") is not None:
+                    search_index = int(rows[0]["search_index"])
+            except Exception:
+                pass
+
         # 5) Création de l'envoi (statut dépend du mode).
         envoi = self.tracking.create_envoi(
             contact_search_key=contact_search_key, hektor_contact_id=hektor_contact_id,
             recipient_email=recipient, sender_email=sender_email, variante=variante,
             subject="", dossier_ids=dossier_ids, dry_run=effective_dry_run, created_by=created_by,
+            search_index=search_index,
         )
         envoi_id = envoi["id"]
 

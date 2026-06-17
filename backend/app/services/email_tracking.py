@@ -109,14 +109,14 @@ class EmailTrackingService:
     # --- Envoi ----------------------------------------------------------------
     def create_envoi(self, *, contact_search_key: str | None, hektor_contact_id: str | None, recipient_email: str,
                      sender_email: str, variante: str, subject: str, dossier_ids: list[int],
-                     dry_run: bool = True, created_by: str | None = None) -> dict[str, Any]:
+                     dry_run: bool = True, created_by: str | None = None, search_index: int | None = None) -> dict[str, Any]:
         rows = self._insert("app_email_envoi", {
             "contact_search_key": contact_search_key, "hektor_contact_id": hektor_contact_id,
             "recipient_email": recipient_email, "sender_email": sender_email,
             "variante": variante if variante in ("push", "pull") else None,
             "subject": subject, "statut": "brouillon" if dry_run else "envoye",
             "sent_at": None if dry_run else datetime.now(UTC).isoformat(),
-            "dry_run": dry_run, "created_by": created_by,
+            "dry_run": dry_run, "created_by": created_by, "search_index": search_index,
         })
         envoi = rows[0]
         biens = [{"envoi_id": envoi["id"], "app_dossier_id": d} for d in dossier_ids if d is not None]
@@ -141,7 +141,7 @@ class EmailTrackingService:
 
     # --- Événements (déclenchés par les endpoints Lot A) ----------------------
     def record_event(self, *, envoi_id: str, action: str, ip: str | None = None, user_agent: str | None = None,
-                     bien_id: Any = None) -> None:
+                     bien_id: Any = None, reason: str | None = None) -> None:
         if not is_real_envoi_id(envoi_id):
             return  # preview/dry-run : on ne persiste rien
         evt_type = _ACTION_TO_EVENT.get(action)
@@ -156,7 +156,7 @@ class EmailTrackingService:
         if evt_type == "open":
             self._touch_open(envoi_id, now)
         elif evt_type in ("like", "pass", "visite"):
-            self._touch_click(envoi_id, now, action, bien_id)
+            self._touch_click(envoi_id, now, action, bien_id, reason=reason)
         elif evt_type == "unsub":
             self._touch_unsub(envoi_id, now, ip)
         self._recompute_score(envoi_id)
@@ -174,7 +174,7 @@ class EmailTrackingService:
             patch["statut"] = "ouvert"
         self._patch("app_email_envoi", {"id": f"eq.{envoi_id}"}, patch)
 
-    def _touch_click(self, envoi_id: str, now: str, action: str, bien_id: Any) -> None:
+    def _touch_click(self, envoi_id: str, now: str, action: str, bien_id: Any, reason: str | None = None) -> None:
         env = self._envoi(envoi_id) or {}
         patch: dict[str, Any] = {"click_count": int(env.get("click_count") or 0) + 1}
         if not env.get("first_clicked_at"):
@@ -192,8 +192,10 @@ class EmailTrackingService:
 
         feedback = _ACTION_TO_FEEDBACK.get(action)
         if feedback and bien_id is not None:
-            self._insert("app_email_envoi_bien",
-                         {"envoi_id": envoi_id, "app_dossier_id": bien_id, "feedback": feedback, "feedback_at": now},
+            row = {"envoi_id": envoi_id, "app_dossier_id": bien_id, "feedback": feedback, "feedback_at": now}
+            if reason:
+                row["feedback_reason"] = reason[:60]
+            self._insert("app_email_envoi_bien", row,
                          on_conflict="envoi_id,app_dossier_id", prefer="resolution=merge-duplicates,return=minimal")
 
     def _touch_unsub(self, envoi_id: str, now: str, ip: str | None) -> None:

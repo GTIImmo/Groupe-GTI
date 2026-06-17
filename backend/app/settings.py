@@ -36,6 +36,7 @@ class Settings:
     email_tracking_base_url: str | None
     email_tracking_secret: str | None
     email_real_send_enabled: bool
+    espace_search_write_enabled: bool
     email_daily_send_cap: int
     email_daily_send_alert: int
     email_relance_max_per_bien: int
@@ -138,6 +139,7 @@ def get_settings() -> Settings:
         email_tracking_base_url=os.getenv("EMAIL_TRACKING_BASE_URL", "").strip() or None,
         email_tracking_secret=os.getenv("EMAIL_TRACKING_SECRET", "").strip() or None,
         email_real_send_enabled=(os.getenv("EMAIL_REAL_SEND_ENABLED", "").strip().lower() == "true"),
+        espace_search_write_enabled=(os.getenv("ESPACE_SEARCH_WRITE_ENABLED", "").strip().lower() == "true"),
         email_daily_send_cap=int(os.getenv("EMAIL_DAILY_SEND_CAP", "80").strip() or "80"),
         email_daily_send_alert=int(os.getenv("EMAIL_DAILY_SEND_ALERT", "50").strip() or "50"),
         email_relance_max_per_bien=int(os.getenv("EMAIL_RELANCE_MAX_PER_BIEN", "2").strip() or "2"),

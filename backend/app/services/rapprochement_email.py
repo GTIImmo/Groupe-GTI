@@ -241,7 +241,7 @@ def build_property_card_html(view: dict[str, Any], links: dict[str, str]) -> str
 
     # Deux boutons simples. Le positif emmène vers l'espace client (détails + actions) ;
     # le clic vaut signal « ce bien peut correspondre ». Le négatif = « pas pour moi ».
-    like = _button(links["like"], "Voir ce bien", bg=BRAND["magenta"], fg=BRAND["on_brand"])
+    like = _button(links.get("espace") or links["like"], "Voir ce bien", bg=BRAND["magenta"], fg=BRAND["on_brand"])
     passb = _button(links["pass"], "Pas pour moi", bg=BRAND["surface"], fg=BRAND["ink_soft"], border=BRAND["line_warm"])
 
     return f"""
@@ -477,9 +477,12 @@ class RapprochementEmailService:
         base = self._track_base()
         like = email_tokens.make_feedback_token(envoi_id=envoi_id, bien_id=bien_id, action=email_tokens.ACTION_LIKE, secret=secret)
         passt = email_tokens.make_feedback_token(envoi_id=envoi_id, bien_id=bien_id, action=email_tokens.ACTION_PASS, secret=secret)
+        espace = email_tokens.make_espace_token(envoi_id=envoi_id, secret=secret)
         links = {
             "like": f"{base}/r/feedback/{like}" if base else f"#like-{bien_id}",
             "pass": f"{base}/r/feedback/{passt}" if base else f"#pass-{bien_id}",
+            # « Voir ce bien » ouvre l'espace client (lien magique), pas une simple page de merci.
+            "espace": f"{base}/espace/{espace}" if base else f"#espace-{bien_id}",
         }
         visite = self._appointment_url(annonce_id) if annonce_id else None
         if visite:
