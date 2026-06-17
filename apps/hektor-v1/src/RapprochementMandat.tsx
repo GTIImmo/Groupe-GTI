@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   loadRapprochementsForDossier, loadDossierTimeline, loadRelancesForDossier, setRelanceStatus,
   loadNotificationsForDossier, markNotificationRead,
-  recordProposition, setBienStatut, sendGoogleWorkspaceCrmEmail, loadGoogleCalendarEventLinks,
+  recordProposition, setBienStatut, sendRapprochementEmail, loadGoogleCalendarEventLinks,
   type RapprochementForDossierRow, type TimelineRow, type GoogleCalendarEventLink, type RelanceRow, type NotificationRow,
 } from './lib/api'
 import type { VisitePlanInput } from './RechercheAcquereur'
@@ -458,29 +458,33 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     setConfirmSend(true)
   }, [senderValid, mailRecipients.length, toast])
 
-  // Envoi réel Gmail : un email individuel par acquéreur destinataire. Proposition tracée par succès.
+  // Envoi réel : un email individuel par acquéreur, via le chokepoint backend
+  // (template Tinder + tracking + filtre opt-out + List-Unsubscribe). Tracé par succès.
   const confirmAndSend = useCallback(async () => {
     if (sending || !mandat || !senderEmail || dossierId == null) return
+    const annonceId = mandat.hektorAnnonceId
+    if (annonceId == null) { toast('Annonce non identifiée — envoi impossible.'); return }
     setSending(true)
-    const signature = `${mandat.negociateurNom || 'Groupe GTI'}\n${mandat.agence || 'Groupe GTI'}`
-    const bodyHtml = buildEmailHtml(mailMsg, mandat, signature)
-    let okCount = 0
+    let okCount = 0, skippedOptOut = 0
+    let capReached = false
     const sentKeys: string[] = []
     for (const b of mailRecipients) {
       try {
-        const res = await sendGoogleWorkspaceCrmEmail({
-          subjectEmail: senderEmail,
-          to: [b.email as string],
-          subject: mailSubj,
-          bodyText: mailMsg,
-          bodyHtml,
-          fromName: mandat.negociateurNom ? `${mandat.negociateurNom} - GTI Immobilier` : 'GTI Immobilier',
-          replyTo: senderEmail,
-          relatedEntityType: 'annonce',
-          relatedEntityId: mandat.hektorAnnonceId != null ? String(mandat.hektorAnnonceId) : null,
+        const res = await sendRapprochementEmail({
+          recipientEmail: b.email as string,
+          senderEmail,
+          annonceIds: [annonceId],
+          variante: 'push',
+          contactSearchKey: b.searchKey,
+          hektorContactId: b.contactId,
+          prenom: b.name,
+          customIntro: mailMsg,
+          dryRun: false, // envoi réel gardé côté serveur par EMAIL_REAL_SEND_ENABLED
         })
+        if (res?.skipped === 'opt_out') { skippedOptOut += 1; continue } // désinscrit : jamais tracé
+        if (res?.skipped === 'daily_cap') { capReached = true; break }
         if (!res?.ok) throw new Error('refusé')
-        await recordProposition(b.searchKey, dossierId, 'email', null, negoEmail, res?.messageId ?? null, res?.threadId ?? null).catch(() => {})
+        await recordProposition(b.searchKey, dossierId, 'email', null, negoEmail, res?.messageId ?? null, null).catch(() => {})
         sentKeys.push(b.searchKey)
         okCount += 1
       } catch { /* on continue les autres destinataires */ }
@@ -488,8 +492,11 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     if (sentKeys.length) applyLocal(sentKeys, { status: 'propose', group: 'encours', statusLabel: STATUS_LABEL.propose, date: `Proposé · email le ${new Date().toLocaleDateString('fr-FR')}`, sel: false })
     setSending(false); setConfirmSend(false); setMailKeys(null)
     setReloadKey((x) => x + 1)
-    toast(okCount === mailRecipients.length ? `Email envoyé à ${okCount} acquéreur(s).` : `${okCount}/${mailRecipients.length} envoyé(s) — les échecs n'ont pas été tracés.`)
-  }, [sending, mandat, senderEmail, dossierId, mailMsg, mailSubj, mailRecipients, negoEmail, applyLocal, toast])
+    const parts = [`${okCount}/${mailRecipients.length} envoyé(s)`]
+    if (skippedOptOut) parts.push(`${skippedOptOut} désinscrit(s) ignoré(s)`)
+    if (capReached) parts.push('plafond quotidien atteint')
+    toast(parts.join(' · '))
+  }, [sending, mandat, senderEmail, dossierId, mailMsg, mailRecipients, negoEmail, applyLocal, toast])
 
   /* --------------------------- discovery --------------------------- */
   const discGo = useCallback((d: number) => {
