@@ -277,6 +277,7 @@ class GoogleWorkspaceService:
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
         attachments: list[dict[str, Any]] | None = None,
+        extra_headers: dict[str, str] | None = None,
         dry_run: bool = True,
         requested_by: str | None = None,
         requested_by_email: str | None = None,
@@ -305,6 +306,11 @@ class GoogleWorkspaceService:
         message["Subject"] = clean_subject
         if clean_reply_to:
             message["Reply-To"] = clean_reply_to
+        # En-têtes additionnels (ex. List-Unsubscribe / List-Unsubscribe-Post pour le rapprochement).
+        for header_name, header_value in (extra_headers or {}).items():
+            value = (header_value or "").strip()
+            if value and header_name not in message:
+                message[header_name] = value
         message.set_content(clean_body_text)
         if clean_body_html:
             message.add_alternative(clean_body_html, subtype="html")

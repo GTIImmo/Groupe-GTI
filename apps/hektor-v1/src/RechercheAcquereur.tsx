@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppContact, AppContactSearch } from './types'
 import {
   loadRapprochements, loadSearchStatuts, loadRelances, loadSearchTimeline, loadDossierPhotos,
-  recordProposition, setBienStatut, setRelanceStatus, sendGoogleWorkspaceCrmEmail,
+  recordProposition, setBienStatut, setRelanceStatus, sendRapprochementEmail,
   loadGoogleCalendarEventLinks, loadNotificationsForSearch, markNotificationRead,
   type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow, type GoogleCalendarEventLink,
   type NotificationRow,
 } from './lib/api'
 import RapprochementStats from './RapprochementStats'
+import EmailScoreChip from './EmailScoreChip'
 
 /**
  * Recherche Acquéreur — écran de rapprochement acquéreur / biens.
@@ -653,29 +654,35 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     setSending(true)
     try {
       const biens = refs.map((r) => properties.find((p) => p.ref === r)).filter(Boolean) as Property[]
-      const signature = `${contact?.commercial_nom || 'Groupe GTI'}\n${contact?.agence_nom || 'Groupe GTI'}`
-      const res = await sendGoogleWorkspaceCrmEmail({
-        subjectEmail: senderEmail,
-        to: [acquereurEmail],
-        subject: mailSubj,
-        bodyText: mailMsg,
-        bodyHtml: buildEmailHtml(mailMsg, biens, signature),
-        fromName: contact?.commercial_nom ? `${contact.commercial_nom} - GTI Immobilier` : 'GTI Immobilier',
-        replyTo: senderEmail,
-        relatedEntityType: 'contact',
-        relatedEntityId: contact?.hektor_contact_id ?? null,
+      const annonceIds = biens.map((b) => b.hektorAnnonceId).filter((x): x is number => typeof x === 'number')
+      if (!annonceIds.length) throw new Error("Aucune annonce identifiée pour l'envoi")
+      // Envoi via le chokepoint backend : template Tinder + tracking + opt-out + List-Unsubscribe.
+      // Le mot libre du négociateur (mailMsg) est inséré en intro du template (mode hybride).
+      const res = await sendRapprochementEmail({
+        recipientEmail: acquereurEmail,
+        senderEmail,
+        annonceIds,
+        variante: 'pull',
+        contactSearchKey: searchKey ?? null,
+        hektorContactId: contact?.hektor_contact_id ?? null,
+        prenom: contact?.prenom ?? null,
+        civilite: contact?.civilite ?? null,
+        customIntro: mailMsg,
+        dryRun: false, // l'envoi réel reste gardé côté serveur par EMAIL_REAL_SEND_ENABLED
       })
+      if (res?.skipped === 'opt_out') { toast(`${acquereurEmail} est désinscrit — aucun envoi, aucun bien marqué proposé.`); return }
+      if (res?.skipped === 'daily_cap') { toast('Plafond d’envois quotidien atteint — réessayez demain.'); return }
       if (!res?.ok) throw new Error('Envoi refusé par le serveur')
       setConfirmSend(false)
       setMailRefs(null)
-      propose(refs, 'email', { messageId: res?.messageId ?? null, threadId: res?.threadId ?? null }) // succès uniquement → trace proposition + relance J+5
-      toast(`Email envoyé à ${acquereurEmail}.`)
+      propose(refs, 'email', { messageId: res?.messageId ?? null, threadId: null }) // succès uniquement → trace proposition + relance J+5
+      toast(res?.dryRun ? `Aperçu enregistré (mode test) pour ${acquereurEmail}.` : `Email envoyé à ${acquereurEmail}.`)
     } catch (e) {
       toast(`Échec de l'envoi : ${(e as Error)?.message ?? 'erreur'} — aucun bien marqué proposé.`)
     } finally {
       setSending(false)
     }
-  }, [mailRefs, sending, acquereurEmail, senderEmail, properties, mailSubj, mailMsg, contact, propose, toast])
+  }, [mailRefs, sending, acquereurEmail, senderEmail, properties, mailMsg, contact, searchKey, propose, toast])
 
   const doneRelance = useCallback((id: string) => {
     const rel = relances.find((r) => r.id === id)
@@ -895,6 +902,7 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
                 <div className="chips">
                   <span className={`chip ${searchActive ? 'green' : 'gold'}`}><span className="d" />{searchActive ? 'Recherche active' : 'Recherche archivée'}</span>
                   {cities.length > 0 && <span className="chip teal"><span className="d" />{cities.length} commune{cities.length > 1 ? 's' : ''}</span>}
+                  <EmailScoreChip contactSearchKey={searchKey} hektorContactId={contact?.hektor_contact_id} />
                 </div>
               </div>
 

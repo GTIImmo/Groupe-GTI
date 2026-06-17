@@ -33,6 +33,12 @@ class Settings:
     smtp_from: str | None
     smtp_allow_user_from: bool
     appointment_email_logo_url: str | None
+    email_tracking_base_url: str | None
+    email_tracking_secret: str | None
+    email_real_send_enabled: bool
+    email_daily_send_cap: int
+    email_daily_send_alert: int
+    email_relance_max_per_bien: int
     hektor_api_base_url: str | None
     hektor_client_id: str | None
     hektor_client_secret: str | None
@@ -129,6 +135,12 @@ def get_settings() -> Settings:
         smtp_from=os.getenv("SMTP_FROM", "").strip() or None,
         smtp_allow_user_from=os.getenv("SMTP_ALLOW_USER_FROM", "").strip().lower() == "true",
         appointment_email_logo_url=os.getenv("APPOINTMENT_EMAIL_LOGO_URL", "").strip() or None,
+        email_tracking_base_url=os.getenv("EMAIL_TRACKING_BASE_URL", "").strip() or None,
+        email_tracking_secret=os.getenv("EMAIL_TRACKING_SECRET", "").strip() or None,
+        email_real_send_enabled=(os.getenv("EMAIL_REAL_SEND_ENABLED", "").strip().lower() == "true"),
+        email_daily_send_cap=int(os.getenv("EMAIL_DAILY_SEND_CAP", "80").strip() or "80"),
+        email_daily_send_alert=int(os.getenv("EMAIL_DAILY_SEND_ALERT", "50").strip() or "50"),
+        email_relance_max_per_bien=int(os.getenv("EMAIL_RELANCE_MAX_PER_BIEN", "2").strip() or "2"),
         hektor_api_base_url=os.getenv("HEKTOR_API_BASE_URL", "").strip() or None,
         hektor_client_id=os.getenv("HEKTOR_CLIENT_ID", "").strip() or None,
         hektor_client_secret=os.getenv("HEKTOR_CLIENT_SECRET", "").strip() or None,

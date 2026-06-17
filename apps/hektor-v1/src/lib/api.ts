@@ -2306,6 +2306,77 @@ export async function loadRapprochementStats(): Promise<RapprochementStats | nul
   return (data ?? null) as RapprochementStats | null
 }
 
+// ---- Suivi email de rapprochement (Lot B/C) : statut + score chaud/tiède/froid ----
+export type EmailEnvoiRow = {
+  id: string
+  recipient_email: string | null
+  variante: 'push' | 'pull' | null
+  statut: string
+  score: 'chaud' | 'tiede' | 'froid' | null
+  open_count: number
+  click_count: number
+  sent_at: string | null
+  rdv_at: string | null
+  unsubscribed_at: string | null
+  relances_count: number
+  dry_run: boolean
+  created_at: string
+  biens: { app_dossier_id: number | null; feedback: 'interesse' | 'refuse' | null; feedback_at: string | null }[]
+}
+
+export type RapprochementSendResult = {
+  ok: boolean
+  dryRun?: boolean
+  skipped?: string
+  envoiId?: string
+  subject?: string
+  messageId?: string | null
+  dailyCount?: number
+  dailyCap?: number
+  capAlert?: boolean
+}
+
+// Envoi de rapprochement via le chokepoint backend (opt-out + plafond + List-Unsubscribe + tracking).
+export async function sendRapprochementEmail(input: {
+  recipientEmail: string
+  senderEmail: string
+  annonceIds: number[]
+  variante?: 'push' | 'pull'
+  contactSearchKey?: string | null
+  hektorContactId?: string | null
+  prenom?: string | null
+  civilite?: string | null
+  criteres?: string | null
+  customIntro?: string | null
+  dryRun?: boolean
+}): Promise<RapprochementSendResult> {
+  return invokeBackendApi<RapprochementSendResult>('/emails/rapprochement/send', {
+    method: 'POST',
+    body: {
+      recipient_email: input.recipientEmail,
+      sender_email: input.senderEmail,
+      annonce_ids: input.annonceIds,
+      variante: input.variante ?? 'push',
+      contact_search_key: input.contactSearchKey ?? null,
+      hektor_contact_id: input.hektorContactId ?? null,
+      prenom: input.prenom ?? null,
+      civilite: input.civilite ?? null,
+      criteres: input.criteres ?? null,
+      custom_intro: input.customIntro ?? null,
+      dry_run: input.dryRun ?? true,
+    },
+  })
+}
+
+export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
+  const params = new URLSearchParams()
+  if (input.contactSearchKey?.trim()) params.set('contact_search_key', input.contactSearchKey.trim())
+  if (input.hektorContactId?.trim()) params.set('hektor_contact_id', input.hektorContactId.trim())
+  if (!params.toString()) return []
+  const payload = await invokeBackendApi<{ ok: boolean; envois?: EmailEnvoiRow[] }>(`/emails/rapprochement/tracking?${params.toString()}`, { method: 'GET' })
+  return payload.envois ?? []
+}
+
 // ---- Historique (timeline) + photos d'un bien ----
 export type TimelineRow = { event_at: string; kind: string; title: string; sub: string }
 
