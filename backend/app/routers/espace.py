@@ -72,11 +72,21 @@ async def espace_feedback(token: str, request: Request, settings: Settings = Dep
                                "app_dossier_id": f"eq.{bien_id}", "limit": "1"})
         if not owned:
             return JSONResponse({"ok": False, "error": "not_owned"}, status_code=403)
+    clean_reason = str(reason)[:60] if reason else None
     try:
         tracking.record_event(envoi_id=envoi_id, action=action, bien_id=bien_id, ip=_client_ip(request),
-                              reason=str(reason)[:60] if reason else None)
+                              reason=clean_reason)
     except Exception:
         pass
+    # Requalification guidée : raison du ✕ -> piste pour le négociateur (sûr, pas d'écriture CRM).
+    if action == email_tokens.ACTION_PASS and clean_reason:
+        try:
+            svc = EspaceClientService(settings)
+            envoi = tracking._envoi(envoi_id)
+            if envoi:
+                svc.record_requalif_hint(envoi=envoi, bien_id=bien_id, reason=clean_reason)
+        except Exception:
+            pass
     return JSONResponse({"ok": True})
 
 

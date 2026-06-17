@@ -218,6 +218,32 @@ class EspaceClientService:
                 pass
         return {"ok": True, "emailSent": email_sent}
 
+    # Requalification GUIDÉE (sûre) : la raison du ✕ -> piste pour le négociateur (pas d'écriture CRM auto).
+    _REQUALIF_SUGGESTION = {
+        "trop_cher": "Budget ressenti trop élevé — proposer moins cher ou ajuster le budget.",
+        "secteur": "Secteur non souhaité — revoir les communes de la recherche.",
+        "trop_petit": "Surface jugée insuffisante — augmenter surface / nombre de pièces.",
+        "autre": "Bien écarté (autre raison).",
+    }
+
+    def record_requalif_hint(self, *, envoi: dict[str, Any], bien_id: Any, reason: str) -> None:
+        sugg = self._REQUALIF_SUGGESTION.get(reason)
+        if not sugg:
+            return
+        nego = envoi.get("sender_email") or self._bien_nego_email(bien_id)
+        if not nego:
+            return
+        try:
+            self.tracking._insert("app_notification", {
+                "negociateur_email": nego, "type": "requalification_hint",
+                "title": "Piste de requalification", "body": sugg,
+                "contact_search_key": envoi.get("contact_search_key"),
+                "app_dossier_id": int(bien_id) if str(bien_id or "").isdigit() else None,
+                "payload": {"source": "espace_client", "reason": reason},
+            }, prefer="return=minimal")
+        except Exception:
+            pass
+
     def render_page(self, *, envoi_id: str, token: str) -> str:
         ctx = self.build_context(envoi_id)
         if ctx is None:
