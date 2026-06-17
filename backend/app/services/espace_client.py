@@ -67,7 +67,6 @@ class EspaceClientService:
             {"select": "app_dossier_id,feedback", "envoi_id": f"eq.{envoi_id}"},
         )
         biens: list[dict[str, Any]] = []
-        conseiller = {"nom": "Votre conseiller Groupe GTI", "agence": "Groupe GTI", "email": None}
         for row in bien_rows:
             did = row.get("app_dossier_id")
             if did is None:
@@ -78,21 +77,16 @@ class EspaceClientService:
             view = build_bien_view(dossier, detail)
             view["feedback"] = row.get("feedback")
             view["rdv_url"] = self.renderer._appointment_url(dossier.get("hektor_annonce_id"))
+            # Règle réseau : l'interlocuteur d'un bien = le négociateur du MANDAT (pas le commercial du contact).
+            view["nego"] = {
+                "nom": (dossier.get("commercial_nom") or "Votre conseiller Groupe GTI"),
+                "agence": (dossier.get("agence_nom") or "Groupe GTI"),
+                "email": dossier.get("negociateur_email") or None,
+            }
             biens.append(view)
-            if conseiller["email"] is None:
-                conseiller = {
-                    "nom": (dossier.get("commercial_nom") or "Votre conseiller Groupe GTI"),
-                    "agence": (dossier.get("agence_nom") or "Groupe GTI"),
-                    "email": dossier.get("negociateur_email") or None,
-                }
-        # L'espace est celui de l'ACQUÉREUR → on montre SON négociateur (celui qui le suit
-        # et reçoit ses messages), pas l'agent du bien. Repli sur le bien si absent.
-        contact_conseiller = self._load_conseiller(envoi.get("hektor_contact_id"))
-        if contact_conseiller:
-            conseiller = contact_conseiller
         search_row = self._load_search_for_envoi(envoi)
         search_value = CSM.search_to_value(search_row) if search_row else None
-        return {"envoi": envoi, "biens": biens, "conseiller": conseiller,
+        return {"envoi": envoi, "biens": biens,
                 "search_row": search_row, "search_value": search_value}
 
     def _load_search_for_envoi(self, envoi: dict[str, Any]) -> dict[str, Any] | None:
@@ -112,21 +106,14 @@ class EspaceClientService:
             return rows[0] if rows else None
         return None
 
-    def _load_conseiller(self, hektor_contact_id: str | None) -> dict[str, Any] | None:
-        """Conseiller = le négociateur du CONTACT (acquéreur), depuis app_contacts_current."""
-        if not hektor_contact_id:
+    def _bien_nego_email(self, dossier_id: Any) -> str | None:
+        """Négociateur du MANDAT d'un bien (destinataire des questions sur ce bien)."""
+        if dossier_id is None:
             return None
         rows = self.renderer._rest_get(
-            "app_contacts_current",
-            {"select": "commercial_nom,agence_nom,negociateur_email", "hektor_contact_id": f"eq.{hektor_contact_id}", "limit": "1"})
-        if not rows:
-            return None
-        r = rows[0]
-        if not (r.get("commercial_nom") or r.get("negociateur_email")):
-            return None
-        return {"nom": r.get("commercial_nom") or "Votre conseiller Groupe GTI",
-                "agence": r.get("agence_nom") or "Groupe GTI",
-                "email": r.get("negociateur_email") or None}
+            "app_dossier_current",
+            {"select": "negociateur_email", "app_dossier_id": f"eq.{dossier_id}", "limit": "1"})
+        return (rows[0].get("negociateur_email") if rows else None) or None
 
     def _negociateur_email(self, hektor_contact_id: str | None) -> str | None:
         if not hektor_contact_id:
@@ -194,7 +181,8 @@ class EspaceClientService:
         if not envoi:
             return {"ok": False, "error": "no_envoi"}
         cid = envoi.get("hektor_contact_id")
-        nego = self._negociateur_email(cid) or envoi.get("sender_email")
+        # Règle réseau : la question est rattachée à un bien → elle part au négociateur du MANDAT.
+        nego = self._bien_nego_email(bien_id) or envoi.get("sender_email") or self._negociateur_email(cid)
         msg = (message or "").strip()[:2000]
         try:
             self.tracking._insert("app_espace_message", {
@@ -278,17 +266,21 @@ class EspaceClientService:
           </div>
           <div class="ack" hidden></div>
           {rdv}
+          <div class="qbox">
+            <div class="qinter">Votre interlocuteur pour ce bien : <b>{_esc(v.get('nego',{}).get('nom') or 'Groupe GTI')}</b></div>
+            <textarea class="qtext" placeholder="Une question sur ce bien ?"></textarea>
+            <button class="btn qsend">Envoyer au conseiller</button>
+            <div class="ack qack" hidden></div>
+          </div>
         </div>
       </article>"""
 
     def _render(self, ctx: dict[str, Any], token: str) -> str:
         cards = "".join(self._bien_block(v) for v in ctx["biens"])
-        c = ctx["conseiller"]
         base = (getattr(self.settings, "email_tracking_base_url", None) or self.settings.app_base_url or "").rstrip("/")
         post_url = f"{base}/espace/{html.escape(token)}/feedback"
         search_post = f"{base}/espace/{html.escape(token)}/recherche"
         msg_post = f"{base}/espace/{html.escape(token)}/message"
-        conseiller_mail = (f'<a href="mailto:{_esc(c["email"])}">{_esc(c["email"])}</a>' if c.get("email") else "")
 
         sv = ctx.get("search_value")
         search_block = ""
@@ -345,10 +337,12 @@ class EspaceClientService:
   .reasons{{margin-top:12px}} .reasons-h{{font-size:12px;color:{BRAND['muted_warm']};margin-bottom:8px}}
   .rchip{{border:1px solid {BRAND['line_warm']};background:#fff;color:{BRAND['ink_soft']};border-radius:16px;padding:7px 13px;font-size:13px;margin:0 6px 6px 0;cursor:pointer}}
   .rchip.on{{background:{BRAND['magenta_soft']};border-color:{BRAND['magenta']};color:{BRAND['magenta_strong']}}}
-  .msg{{background:#fff;border:1px solid {BRAND['line_warm']};border-radius:14px;padding:18px 20px;margin:18px 0}}
-  .msg textarea{{width:100%;min-height:80px;padding:11px;border:1px solid {BRAND['line_warm']};border-radius:8px;font-size:15px;color:{BRAND['ink_warm']};font-family:inherit;resize:vertical}}
+  .qbox{{margin-top:14px;border-top:1px solid {BRAND['line_warm']};padding-top:14px}}
+  .qinter{{font-size:13px;color:{BRAND['muted_warm']};margin-bottom:8px}}
+  .qtext{{width:100%;min-height:62px;padding:10px;border:1px solid {BRAND['line_warm']};border-radius:8px;font-size:14px;color:{BRAND['ink_warm']};font-family:inherit;resize:vertical}}
+  .qsend{{margin-top:8px}}
   .foot{{color:{BRAND['muted_warm']};font-size:11px;line-height:1.6;margin-top:22px}}
-  @media (prefers-color-scheme:dark){{body{{background:#15130f;color:#f5efe6}}.card,.adv{{background:#211e19;border-color:#322d25}}.lead p{{color:#c2b9aa}}}}
+  @media (prefers-color-scheme:dark){{body{{background:#15130f;color:#f5efe6}}.card{{background:#211e19;border-color:#322d25}}.lead p{{color:#c2b9aa}}}}
 </style>
 </head>
 <body>
@@ -360,21 +354,12 @@ class EspaceClientService:
     </div>
     {cards}
     {search_block}
-    <div class="msg"><div class="rech-h">Une question ?</div>
-      <p class="rech-sub">Écrivez à votre conseiller, il vous répond directement.</p>
-      <textarea id="msg-text" placeholder="Votre message…"></textarea>
-      <button class="btn like" id="msg-send" style="margin-top:12px">Envoyer à mon conseiller</button>
-      <div class="ack" id="msg-ack" hidden></div>
-    </div>
-    <div class="adv">
-      <div class="av">{_esc((c['nom'][:1] or 'G')).upper()}</div>
-      <div style="flex:1"><div class="nm">{_esc(c['nom'])}</div><div class="ag">{_esc(c['agence'])} · {conseiller_mail}</div></div>
-    </div>
     <div class="foot">Espace personnel sécurisé. Vos choix ne sont visibles que par votre agence.
       GROUPE GTI · RCS Saint-Étienne 502 811 144 · CPI 42022019 000 043 878.</div>
   </div>
 <script>
 const POST={json.dumps(post_url)};
+const MSG={json.dumps(msg_post)};
 async function post(b){{try{{await fetch(POST,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(b)}});}}catch(e){{}}}}
 document.querySelectorAll('.card').forEach(card=>{{
   const bien=card.getAttribute('data-bien');
@@ -397,14 +382,13 @@ document.querySelectorAll('.card').forEach(card=>{{
       post({{bien_id:bien,action:'pass',reason:ch.getAttribute('data-reason')}});
     }});
   }});}}
+  const qs=card.querySelector('.qsend');
+  if(qs){{qs.addEventListener('click',async()=>{{
+    const ta=card.querySelector('.qtext'); const t=ta.value.trim(); if(!t)return;
+    qs.disabled=true; const qa=card.querySelector('.qack'); qa.hidden=false; qa.textContent='Message envoyé à votre conseiller. Il vous répond directement.';
+    try{{await fetch(MSG,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{bien_id:bien,text:t}})}});}}catch(e){{}}
+  }});}}
 }});
-const MSG={json.dumps(msg_post)};
-const ms=document.getElementById('msg-send');
-if(ms){{ms.addEventListener('click',async()=>{{
-  const t=document.getElementById('msg-text').value.trim(); if(!t)return;
-  ms.disabled=true; const a=document.getElementById('msg-ack'); a.hidden=false; a.textContent='Message envoyé à votre conseiller. Il vous répond vite.';
-  try{{await fetch(MSG,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{text:t}})}});}}catch(e){{}}
-}});}}
 const RECH={json.dumps(search_post)};
 const rs=document.getElementById('rech-save');
 if(rs){{rs.addEventListener('click',async()=>{{
