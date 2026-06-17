@@ -85,6 +85,11 @@ class EspaceClientService:
                     "agence": (dossier.get("agence_nom") or "Groupe GTI"),
                     "email": dossier.get("negociateur_email") or None,
                 }
+        # L'espace est celui de l'ACQUÉREUR → on montre SON négociateur (celui qui le suit
+        # et reçoit ses messages), pas l'agent du bien. Repli sur le bien si absent.
+        contact_conseiller = self._load_conseiller(envoi.get("hektor_contact_id"))
+        if contact_conseiller:
+            conseiller = contact_conseiller
         search_row = self._load_search_for_envoi(envoi)
         search_value = CSM.search_to_value(search_row) if search_row else None
         return {"envoi": envoi, "biens": biens, "conseiller": conseiller,
@@ -106,6 +111,22 @@ class EspaceClientService:
                 "app_contact_search_current", {"select": "*", "contact_search_key": f"eq.{key}", "limit": "1"})
             return rows[0] if rows else None
         return None
+
+    def _load_conseiller(self, hektor_contact_id: str | None) -> dict[str, Any] | None:
+        """Conseiller = le négociateur du CONTACT (acquéreur), depuis app_contacts_current."""
+        if not hektor_contact_id:
+            return None
+        rows = self.renderer._rest_get(
+            "app_contacts_current",
+            {"select": "commercial_nom,agence_nom,negociateur_email", "hektor_contact_id": f"eq.{hektor_contact_id}", "limit": "1"})
+        if not rows:
+            return None
+        r = rows[0]
+        if not (r.get("commercial_nom") or r.get("negociateur_email")):
+            return None
+        return {"nom": r.get("commercial_nom") or "Votre conseiller Groupe GTI",
+                "agence": r.get("agence_nom") or "Groupe GTI",
+                "email": r.get("negociateur_email") or None}
 
     def _negociateur_email(self, hektor_contact_id: str | None) -> str | None:
         if not hektor_contact_id:
