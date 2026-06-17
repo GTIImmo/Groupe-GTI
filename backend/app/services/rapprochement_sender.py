@@ -29,6 +29,19 @@ class RapprochementSender:
         self.renderer = RapprochementEmailService(settings)
         self.workspace = GoogleWorkspaceService(settings)
 
+    def _resolve_dossier_ids(self, annonce_ids: list[int]) -> list[int]:
+        """Mappe les hektor_annonce_id vers les app_dossier_id réels (ordre préservé)."""
+        if not annonce_ids:
+            return []
+        ids = ",".join(str(a) for a in annonce_ids)
+        rows = self.renderer._rest_get(
+            "app_dossier_current",
+            {"select": "app_dossier_id,hektor_annonce_id", "hektor_annonce_id": f"in.({ids})"},
+        )
+        by_annonce = {int(r["hektor_annonce_id"]): int(r["app_dossier_id"])
+                      for r in rows if r.get("app_dossier_id") is not None and r.get("hektor_annonce_id") is not None}
+        return [by_annonce[a] for a in annonce_ids if a in by_annonce]
+
     def send(
         self,
         *,
@@ -68,11 +81,16 @@ class RapprochementSender:
                         "dailyCount": daily_count, "cap": self.settings.email_daily_send_cap}
             cap_alert = daily_count >= int(self.settings.email_daily_send_alert)
 
-        # 4) Création de l'envoi (statut dépend du mode).
+        # 4) Résoudre annonce_id (Hektor) -> app_dossier_id réel, pour que les biens
+        #    enregistrés correspondent aux tokens ❤️/✕ (qui portent l'app_dossier_id)
+        #    et au ciblage du worker de relance.
+        dossier_ids = self._resolve_dossier_ids(annonce_ids)
+
+        # 5) Création de l'envoi (statut dépend du mode).
         envoi = self.tracking.create_envoi(
             contact_search_key=contact_search_key, hektor_contact_id=hektor_contact_id,
             recipient_email=recipient, sender_email=sender_email, variante=variante,
-            subject="", dossier_ids=annonce_ids, dry_run=effective_dry_run, created_by=created_by,
+            subject="", dossier_ids=dossier_ids, dry_run=effective_dry_run, created_by=created_by,
         )
         envoi_id = envoi["id"]
 
