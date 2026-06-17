@@ -465,6 +465,9 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
     const annonceId = mandat.hektorAnnonceId
     if (annonceId == null) { toast('Annonce non identifiée — envoi impossible.'); return }
     setSending(true)
+    // L'email doit partir de la boîte du négociateur du MANDAT (send-as). On privilégie
+    // negoEmail (propriétaire du mandat) si c'est une boîte @gti ; repli sur l'expéditeur connecté.
+    const mandatSender = negoEmail && negoEmail.toLowerCase().endsWith(`@${GTI_DOMAIN}`) ? negoEmail : senderEmail
     let okCount = 0, skippedOptOut = 0
     let capReached = false
     const sentKeys: string[] = []
@@ -472,7 +475,7 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
       try {
         const res = await sendRapprochementEmail({
           recipientEmail: b.email as string,
-          senderEmail,
+          senderEmail: mandatSender,
           annonceIds: [annonceId],
           variante: 'push',
           contactSearchKey: b.searchKey,

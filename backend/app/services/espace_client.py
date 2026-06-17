@@ -37,7 +37,7 @@ class EspaceClientService:
             "app_dossier_current",
             {"select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,"
                        "ville,code_postal,prix,type_bien,commercial_nom,negociateur_email,agence_nom,"
-                       "photo_url_listing,statut_annonce",
+                       "photo_url_listing,images_preview_json,statut_annonce",
              "app_dossier_id": f"eq.{dossier_id}", "limit": "1"},
         )
         if not rows:
@@ -58,6 +58,97 @@ class EspaceClientService:
                     detail = {}
         return dossier, detail
 
+    @staticmethod
+    def _photos(dossier: dict[str, Any]) -> list[str]:
+        """Galerie : liste d'URLs https tirée de images_preview_json (ordonnée), repli sur la photo unique."""
+        photos: list[str] = []
+        raw = dossier.get("images_preview_json")
+        items: Any = raw
+        if isinstance(raw, str):
+            try:
+                items = json.loads(raw)
+            except Exception:
+                items = None
+        if isinstance(items, list):
+            ordered: list[tuple[int, str]] = []
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                url = str(it.get("full") or it.get("url") or "").strip()
+                if url.startswith("https://") and "no_pic" not in url:
+                    try:
+                        order = int(it.get("order"))
+                    except Exception:
+                        order = 999
+                    ordered.append((order, url))
+            ordered.sort(key=lambda x: x[0])
+            seen: set[str] = set()
+            for _, url in ordered:
+                if url not in seen:
+                    seen.add(url)
+                    photos.append(url)
+        if not photos:
+            p = str(dossier.get("photo_url_listing") or "").strip()
+            if p.startswith("https://") and "no_pic" not in p:
+                photos = [p]
+        return photos[:12]
+
+    def _view_from_dossier(self, dossier_id: int) -> dict[str, Any] | None:
+        dossier, detail = self._load_dossier_by_id(dossier_id)
+        if not dossier:
+            return None
+        view = build_bien_view(dossier, detail)
+        view["photos"] = self._photos(dossier)
+        view["rdv_url"] = self.renderer._appointment_url(dossier.get("hektor_annonce_id"))
+        # Règle réseau : l'interlocuteur d'un bien = le négociateur du MANDAT (pas le commercial du contact).
+        view["nego"] = {
+            "nom": (dossier.get("commercial_nom") or "Votre conseiller Groupe GTI"),
+            "agence": (dossier.get("agence_nom") or "Groupe GTI"),
+            "email": dossier.get("negociateur_email") or None,
+        }
+        return view
+
+    # Libellés + ordre d'affichage de l'historique (du plus engageant au moins).
+    _HISTORY_LABELS = {"visite": ("Visite organisée", 1), "propose": ("Déjà proposé", 2),
+                       "ecarte": ("Écarté", 3), "ecarté": ("Écarté", 3),
+                       "refuse": ("Pas pour vous", 4), "refusé": ("Pas pour vous", 4)}
+
+    def _load_history(self, envoi: dict[str, Any], *, active_ids: set[int],
+                      refused_ids: set[int]) -> list[dict[str, Any]]:
+        """Biens déjà vus ensemble : proposés / visités / écartés (table statut, à l'échelle du
+        contact) + refusés par le client dans cet envoi. Dédupliqués, hors biens encore actifs."""
+        info: dict[int, tuple[str, int]] = {}
+        cid = str(envoi.get("hektor_contact_id") or "").strip()
+        if cid:
+            try:
+                rows = self.renderer._rest_get(
+                    "app_bien_acquereur_statut",
+                    {"select": "app_dossier_id,status", "hektor_contact_id": f"eq.{cid}"})
+            except Exception:
+                rows = []
+            for r in rows:
+                did = r.get("app_dossier_id")
+                if did is None:
+                    continue
+                lbl = self._HISTORY_LABELS.get(str(r.get("status") or "").strip().lower())
+                if lbl:
+                    info[int(did)] = lbl
+        for did in refused_ids:
+            info.setdefault(int(did), self._HISTORY_LABELS["refuse"])
+
+        out: list[dict[str, Any]] = []
+        for did, (label, rank) in info.items():
+            if did in active_ids:
+                continue
+            view = self._view_from_dossier(did)
+            if not view:
+                continue
+            view["status_label"] = label
+            view["_rank"] = rank
+            out.append(view)
+        out.sort(key=lambda v: v["_rank"])
+        return out[:24]
+
     def build_context(self, envoi_id: str) -> dict[str, Any] | None:
         envoi = self.tracking._envoi(envoi_id)
         if not envoi:
@@ -67,27 +158,129 @@ class EspaceClientService:
             {"select": "app_dossier_id,feedback", "envoi_id": f"eq.{envoi_id}"},
         )
         biens: list[dict[str, Any]] = []
+        refused_ids: set[int] = set()
         for row in bien_rows:
             did = row.get("app_dossier_id")
             if did is None:
                 continue
-            dossier, detail = self._load_dossier_by_id(int(did))
-            if not dossier:
+            # Masquer les biens refusés de la vue principale : ils basculent dans l'historique.
+            if str(row.get("feedback") or "").strip().lower() in ("refuse", "refusé"):
+                refused_ids.add(int(did))
                 continue
-            view = build_bien_view(dossier, detail)
+            view = self._view_from_dossier(int(did))
+            if not view:
+                continue
             view["feedback"] = row.get("feedback")
-            view["rdv_url"] = self.renderer._appointment_url(dossier.get("hektor_annonce_id"))
-            # Règle réseau : l'interlocuteur d'un bien = le négociateur du MANDAT (pas le commercial du contact).
-            view["nego"] = {
-                "nom": (dossier.get("commercial_nom") or "Votre conseiller Groupe GTI"),
-                "agence": (dossier.get("agence_nom") or "Groupe GTI"),
-                "email": dossier.get("negociateur_email") or None,
-            }
             biens.append(view)
+        history = self._load_history(envoi, active_ids={int(v["dossier_id"]) for v in biens},
+                                     refused_ids=refused_ids)
         search_row = self._load_search_for_envoi(envoi)
         search_value = CSM.search_to_value(search_row) if search_row else None
-        return {"envoi": envoi, "biens": biens,
+        return {"envoi": envoi, "biens": biens, "history": history,
                 "search_row": search_row, "search_value": search_value}
+
+    def _contact_envois(self, contact_id: str) -> list[dict[str, Any]]:
+        """Tous les envois d'un contact, le plus récent d'abord (pour l'espace unifié)."""
+        return self.tracking._get(
+            "app_email_envoi",
+            {"select": "id,sender_email,search_index,contact_search_key,created_at",
+             "hektor_contact_id": f"eq.{contact_id}", "order": "created_at.desc", "limit": "80"})
+
+    def latest_envoi_id_for_contact(self, contact_id: str) -> str | None:
+        envois = self._contact_envois(str(contact_id or "").strip())
+        return envois[0]["id"] if envois else None
+
+    def envoi_for_contact_bien(self, contact_id: str, bien_id: Any) -> str | None:
+        """Retrouve l'envoi (le plus récent) ayant proposé ce bien à ce contact — pour tracer le clic."""
+        cid = str(contact_id or "").strip()
+        if not cid or bien_id is None:
+            return None
+        envois = self._contact_envois(cid)
+        if not envois:
+            return None
+        ids = ",".join(e["id"] for e in envois)
+        rows = self.tracking._get(
+            "app_email_envoi_bien",
+            {"select": "envoi_id", "app_dossier_id": f"eq.{bien_id}", "envoi_id": f"in.({ids})"})
+        owned = {r.get("envoi_id") for r in rows}
+        for e in envois:  # envois est trié récent->ancien : on prend le plus récent qui contient ce bien
+            if e["id"] in owned:
+                return e["id"]
+        return None
+
+    def build_context_for_contact(self, hektor_contact_id: str) -> dict[str, Any] | None:
+        """Espace UNIFIÉ : agrège les biens proposés au contact par TOUS les négociateurs.
+
+        - actifs : tout ce qui a été proposé et n'est ni refusé (client) ni écarté (négo) ;
+        - historique : refusés / écartés, à l'échelle du contact ;
+        chaque bien actif porte l'envoi le plus récent qui l'a proposé (pour le tracking)."""
+        contact_id = str(hektor_contact_id or "").strip()
+        if not contact_id:
+            return None
+        envois = self._contact_envois(contact_id)
+        env_at = {e["id"]: (e.get("created_at") or "") for e in envois}
+
+        # État par bien : envoi représentant (le plus récent) + feedback éventuel.
+        state: dict[int, dict[str, Any]] = {}
+        if envois:
+            ids = ",".join(e["id"] for e in envois)
+            rows = self.tracking._get(
+                "app_email_envoi_bien",
+                {"select": "app_dossier_id,feedback,envoi_id", "envoi_id": f"in.({ids})"})
+            for r in rows:
+                did = r.get("app_dossier_id")
+                if did is None:
+                    continue
+                did = int(did)
+                at = env_at.get(r.get("envoi_id"), "")
+                cur = state.get(did)
+                if cur is None or at > cur["at"]:
+                    state[did] = {"envoi_id": r.get("envoi_id"), "at": at, "feedback": cur["feedback"] if cur else None}
+                fb = str(r.get("feedback") or "").strip().lower()
+                if fb:
+                    state[did]["feedback"] = fb
+                    if fb in ("refuse", "refusé"):
+                        state[did]["refused"] = True
+
+        # Statut négociateur (écarté / proposé / visité), à l'échelle du contact.
+        statut: dict[int, str] = {}
+        try:
+            srows = self.renderer._rest_get(
+                "app_bien_acquereur_statut",
+                {"select": "app_dossier_id,status", "hektor_contact_id": f"eq.{contact_id}"})
+        except Exception:
+            srows = []
+        for r in srows:
+            did = r.get("app_dossier_id")
+            if did is not None:
+                statut[int(did)] = str(r.get("status") or "").strip().lower()
+
+        active: list[dict[str, Any]] = []
+        history: list[dict[str, Any]] = []
+        for did, st in state.items():
+            s = statut.get(did, "")
+            refused = bool(st.get("refused")) or s in ("refuse", "refusé")
+            ecarte = s in ("ecarte", "ecarté")
+            view = self._view_from_dossier(did)
+            if not view:
+                continue
+            view["envoi_id"] = st.get("envoi_id")
+            if refused or ecarte:
+                view["status_label"] = "Pas pour vous" if refused else "Écarté"
+                view["_rank"] = 4 if refused else 3
+                history.append(view)
+            else:
+                view["feedback"] = st.get("feedback")
+                view["_at"] = st.get("at") or ""
+                active.append(view)
+        active.sort(key=lambda v: v.get("_at") or "", reverse=True)
+        history.sort(key=lambda v: v["_rank"])
+
+        search_row = self._load_search_for_envoi(envois[0]) if envois else None
+        search_value = CSM.search_to_value(search_row) if search_row else None
+        return {"contact_id": contact_id, "biens": active, "history": history[:24],
+                "search_row": search_row, "search_value": search_value,
+                "primary_envoi_id": (envois[0]["id"] if envois else None)}
 
     def _load_search_for_envoi(self, envoi: dict[str, Any]) -> dict[str, Any] | None:
         """Identifie la recherche par (contact + index) STABLE ; repli sur la clé (ancien envoi)."""
@@ -259,20 +452,38 @@ class EspaceClientService:
                 f"</head><body><div><h1 style='font-family:{FONT_DISPLAY}'>{html.escape(title)}</h1>"
                 f"<p style='color:{BRAND['muted_warm']}'>{html.escape(msg)}</p></div></body></html>")
 
+    @staticmethod
+    def _gallery(v: dict[str, Any]) -> str:
+        photos = [p for p in (v.get("photos") or ([v.get("photo")] if v.get("photo") else [])) if p]
+        if not photos:
+            return '<div class="gal ph-empty">Photos bientôt disponibles</div>'
+        slides = "".join(
+            f'<div class="slide"><img src="{_esc(p)}" alt="{_esc(v["titre"])}" loading="lazy"></div>'
+            for p in photos)
+        nav = ""
+        n = len(photos)
+        if n > 1:
+            dots = "".join(f'<span class="dot{" on" if i == 0 else ""}"></span>' for i in range(n))
+            nav = ('<button class="gnav prev" type="button" aria-label="Photo précédente">‹</button>'
+                   '<button class="gnav next" type="button" aria-label="Photo suivante">›</button>'
+                   f'<div class="gcount"><span class="gcur">1</span> / {n}</div>'
+                   f'<div class="dots">{dots}</div>')
+        return f'<div class="gal" data-n="{n}"><div class="gal-track">{slides}</div>{nav}</div>'
+
     def _bien_block(self, v: dict[str, Any]) -> str:
         hono = v["honoraires"]
-        photo = (f'<div class="ph"><img src="{_esc(v["photo"])}" alt="{_esc(v["titre"])}"></div>'
-                 if v["photo"] else '<div class="ph ph-empty">Photos sur demande</div>')
         sub = f'<div class="sub">{_esc(hono["sub"])}</div>' if hono.get("sub") else ""
         net = f'<div class="sub">{_esc(hono["net"])}</div>' if hono.get("net") else ""
-        rdv = (f'<a class="btn ghost" href="{_esc(v["rdv_url"])}">Réserver une visite</a>'
+        rdv = (f'<a class="btn ghost" href="{_esc(v["rdv_url"])}">Organiser une visite</a>'
                if v.get("rdv_url") else "")
         did = _esc(v["dossier_id"])
-        # État initial selon le feedback déjà enregistré
-        chosen = v.get("feedback")
+        nego_nom = _esc(v.get('nego', {}).get('nom') or 'votre conseiller Groupe GTI')
+        chosen = v.get("feedback")  # état initial selon le feedback déjà enregistré
+        # Espace unifié (contact) : le bien porte l'envoi qui l'a proposé, pour tracer le clic.
+        envoi_attr = f' data-envoi="{_esc(v["envoi_id"])}"' if v.get("envoi_id") else ""
         return f"""
-      <article class="card" data-bien="{did}">
-        {photo}
+      <article class="card" data-bien="{did}"{envoi_attr}>
+        {self._gallery(v)}
         <div class="body">
           <div class="loc">{_esc((v['secteur'] or v['ref']))}</div>
           <h2 class="title">{_esc(v['titre'])}</h2>
@@ -280,11 +491,11 @@ class EspaceClientService:
           {sub}{net}
           <div class="specs">{_specs_line(v['specs'])}</div>
           <div class="actions">
-            <button class="btn like {'on' if chosen=='interesse' else ''}" data-action="like">❤ Ça m'intéresse</button>
+            <button class="btn like {'on' if chosen=='interesse' else ''}" data-action="like">❤ Coup de cœur</button>
             <button class="btn pass {'on' if chosen=='refuse' else ''}" data-action="pass">Pas pour moi</button>
           </div>
           <div class="reasons" hidden>
-            <div class="reasons-h">Pourquoi ? (facultatif)</div>
+            <div class="reasons-h">Pour mieux cibler la prochaine fois — qu'est-ce qui ne va pas&nbsp;?</div>
             <button class="rchip" data-reason="trop_cher">Trop cher</button>
             <button class="rchip" data-reason="secteur">Mauvais secteur</button>
             <button class="rchip" data-reason="trop_petit">Trop petit</button>
@@ -293,37 +504,109 @@ class EspaceClientService:
           <div class="ack" hidden></div>
           {rdv}
           <div class="qbox">
-            <div class="qinter">Votre interlocuteur pour ce bien : <b>{_esc(v.get('nego',{}).get('nom') or 'Groupe GTI')}</b></div>
-            <textarea class="qtext" placeholder="Une question sur ce bien ?"></textarea>
-            <button class="btn qsend">Envoyer au conseiller</button>
+            <div class="qinter">Une question sur ce bien&nbsp;? <b>{nego_nom}</b> vous répond directement.</div>
+            <textarea class="qtext" placeholder="Votre question…"></textarea>
+            <button class="btn qsend">Poser ma question</button>
             <div class="ack qack" hidden></div>
           </div>
         </div>
       </article>"""
 
+    def _history_block(self, history: list[dict[str, Any]]) -> str:
+        if not history:
+            return ""
+        rows = []
+        for v in history:
+            photos = v.get("photos") or ([v.get("photo")] if v.get("photo") else [])
+            thumb = (f'<div class="hthumb"><img src="{_esc(photos[0])}" alt="" loading="lazy"></div>'
+                     if photos else '<div class="hthumb hthumb-empty"></div>')
+            specs = " · ".join(v.get("specs") or [])
+            meta = _esc(" · ".join(p for p in (v.get("secteur"), specs) if p))
+            rows.append(
+                f'<div class="hrow">{thumb}'
+                f'<div class="hmeta"><div class="htitle">{_esc(v["titre"])}</div>'
+                f'<div class="hloc">{meta}</div></div>'
+                f'<span class="hbadge">{_esc(v.get("status_label") or "")}</span></div>')
+        return (
+            '<details class="hist">'
+            f'<summary>Déjà vus ensemble<span class="hist-n">{len(history)}</span>'
+            '<span class="chev" aria-hidden="true">⌄</span></summary>'
+            f'<div class="hist-list">{"".join(rows)}</div>'
+            '</details>')
+
+    @staticmethod
+    def _search_block(sv: dict[str, Any] | None) -> str:
+        if not sv:
+            return ""
+        def _fld(lbl: str, fid: str, val: Any) -> str:
+            v = int(val) if val else ""
+            return f'<label class="fld"><span>{lbl}</span><input type="number" min="0" id="{fid}" value="{v}"></label>'
+        fields = (_fld("Budget min (€)", "f-priceMin", sv["priceMin"]) + _fld("Budget max (€)", "f-priceMax", sv["priceMax"])
+                  + _fld("Surface min (m²)", "f-surfaceMin", sv["surfaceMin"]) + _fld("Pièces min", "f-rooms", sv["rooms"])
+                  + _fld("Chambres min", "f-bedrooms", sv["bedrooms"]))
+        return (
+            '<div class="rech"><div class="rech-h">Affiner ma recherche</div>'
+            '<p class="rech-sub">Ajustez vos critères : vos prochaines propositions collent mieux à votre projet, '
+            'et votre conseiller est prévenu aussitôt.</p>'
+            f'<div class="fields">{fields}</div>'
+            '<button class="btn like" id="rech-save">Mettre à jour</button>'
+            '<div class="ack" id="rech-ack" hidden></div></div>'
+        )
+
+    def _grouped_cards(self, biens: list[dict[str, Any]]) -> str:
+        """Cartes regroupées par négociateur du mandat (en-tête léger si plusieurs négos)."""
+        groups: dict[str, list[dict[str, Any]]] = {}
+        order: list[str] = []
+        for v in biens:
+            nom = (v.get("nego") or {}).get("nom") or "Votre conseiller Groupe GTI"
+            if nom not in groups:
+                groups[nom] = []
+                order.append(nom)
+            groups[nom].append(v)
+        single = len(order) <= 1
+        out: list[str] = []
+        for nom in order:
+            if not single:
+                out.append(f'<div class="negohdr"><span class="negohdr-k">Proposé par</span> {_esc(nom)}</div>')
+            out.extend(self._bien_block(v) for v in groups[nom])
+        return "".join(out)
+
     def _render(self, ctx: dict[str, Any], token: str) -> str:
-        cards = "".join(self._bien_block(v) for v in ctx["biens"])
+        """Espace lié à un envoi (compat) : les biens de cet email."""
+        has_active = bool(ctx["biens"])
+        lead_h1 = "Une sélection rien que pour vous" if has_active else "Votre espace personnel"
+        lead_p = ("Quelques biens repérés pour votre projet. Faites défiler les photos, gardez ceux qui vous "
+                  "parlent — on s'occupe du reste." if has_active else
+                  "Vous avez parcouru tous les biens du moment. Affinez votre recherche ci-dessous : vos "
+                  "prochaines pépites arrivent vite.")
+        return self._shell(token=token, cards="".join(self._bien_block(v) for v in ctx["biens"]),
+                           search_block=self._search_block(ctx.get("search_value")),
+                           history_block=self._history_block(ctx.get("history") or []),
+                           lead_h1=lead_h1, lead_p=lead_p)
+
+    def render_contact_page(self, *, hektor_contact_id: str, token: str) -> str:
+        """Espace UNIFIÉ d'un contact : tous les biens, regroupés par négociateur."""
+        ctx = self.build_context_for_contact(hektor_contact_id)
+        if ctx is None:
+            return self._page_message("Espace introuvable",
+                                      "Cet espace n'est plus disponible. Contactez votre conseiller.")
+        has_active = bool(ctx["biens"])
+        lead_h1 = "Tous vos biens, au même endroit" if has_active else "Votre espace personnel"
+        lead_p = ("Voici tout ce que votre agence a sélectionné pour vous. Gardez ce qui vous plaît — chaque bien "
+                  "vous met en lien avec le bon conseiller." if has_active else
+                  "Vous avez parcouru tous les biens du moment. Affinez votre recherche ci-dessous : vos "
+                  "prochaines pépites arrivent vite.")
+        return self._shell(token=token, cards=self._grouped_cards(ctx["biens"]),
+                           search_block=self._search_block(ctx.get("search_value")),
+                           history_block=self._history_block(ctx.get("history") or []),
+                           lead_h1=lead_h1, lead_p=lead_p)
+
+    def _shell(self, *, token: str, cards: str, search_block: str, history_block: str,
+               lead_h1: str, lead_p: str) -> str:
         base = (getattr(self.settings, "email_tracking_base_url", None) or self.settings.app_base_url or "").rstrip("/")
         post_url = f"{base}/espace/{html.escape(token)}/feedback"
         search_post = f"{base}/espace/{html.escape(token)}/recherche"
         msg_post = f"{base}/espace/{html.escape(token)}/message"
-
-        sv = ctx.get("search_value")
-        search_block = ""
-        if sv:
-            def _fld(lbl: str, fid: str, val: Any) -> str:
-                v = int(val) if val else ""
-                return f'<label class="fld"><span>{lbl}</span><input type="number" min="0" id="{fid}" value="{v}"></label>'
-            fields = (_fld("Budget min (€)", "f-priceMin", sv["priceMin"]) + _fld("Budget max (€)", "f-priceMax", sv["priceMax"])
-                      + _fld("Surface min (m²)", "f-surfaceMin", sv["surfaceMin"]) + _fld("Pièces min", "f-rooms", sv["rooms"])
-                      + _fld("Chambres min", "f-bedrooms", sv["bedrooms"]))
-            search_block = (
-                '<div class="rech"><div class="rech-h">Ma recherche</div>'
-                '<p class="rech-sub">Ajustez vos critères : votre conseiller en est informé, et vos prochains biens s\'affinent.</p>'
-                f'<div class="fields">{fields}</div>'
-                '<button class="btn like" id="rech-save">Enregistrer ma recherche</button>'
-                '<div class="ack" id="rech-ack" hidden></div></div>'
-            )
         return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -338,8 +621,22 @@ class EspaceClientService:
   .top{{background:{BRAND['ink_warm']};border-radius:0 0 12px 12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}}
   .top .name{{color:#fff;font-size:16px;font-weight:600}} .top .tag{{color:#cfc8bd;font-size:11px;letter-spacing:2px;text-transform:uppercase}}
   .lead{{padding:22px 6px 10px}} .lead h1{{font-family:{FONT_DISPLAY};font-size:24px;margin:0 0 6px}} .lead p{{color:{BRAND['ink_soft']};margin:0;line-height:1.6}}
-  .card{{background:#fff;border:1px solid {BRAND['line_warm']};border-radius:14px;overflow:hidden;margin:18px 0}}
-  .ph img{{display:block;width:100%;height:auto}} .ph-empty{{height:180px;display:flex;align-items:center;justify-content:center;color:{BRAND['muted_warm']};background:#efe9e0}}
+  .negohdr{{margin:26px 6px 2px;font-family:{FONT_BODY};font-size:13px;color:{BRAND['ink_warm']};font-weight:600}}
+  .negohdr-k{{color:{BRAND['magenta']};font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-right:6px}}
+  .card{{background:#fff;border:1px solid {BRAND['line_warm']};border-radius:16px;overflow:hidden;margin:20px 0;box-shadow:0 1px 2px rgba(31,28,26,.04),0 12px 30px -18px rgba(31,28,26,.25)}}
+  /* Galerie : bande horizontale scroll-snap, flèches + pastilles, badge compteur */
+  .gal{{position:relative;background:#efe9e0;line-height:0}}
+  .gal-track{{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none}}
+  .gal-track::-webkit-scrollbar{{display:none}}
+  .slide{{flex:0 0 100%;scroll-snap-align:center}}
+  .slide img{{display:block;width:100%;height:310px;object-fit:cover}}
+  .gnav{{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:none;background:rgba(31,28,26,.42);color:#fff;font-size:22px;line-height:36px;text-align:center;cursor:pointer;padding:0;opacity:.92;transition:opacity .15s}}
+  .gnav:hover{{opacity:1}} .gnav.prev{{left:10px}} .gnav.next{{right:10px}}
+  .gcount{{position:absolute;top:12px;right:12px;background:rgba(31,28,26,.55);color:#fff;font-size:12px;line-height:1;padding:5px 10px;border-radius:20px;letter-spacing:.4px}}
+  .dots{{position:absolute;bottom:12px;left:0;right:0;display:flex;gap:6px;justify-content:center;line-height:0}}
+  .dot{{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.55);transition:width .2s,background .2s}}
+  .dot.on{{background:#fff;width:18px;border-radius:4px}}
+  .ph-empty{{height:200px;display:flex;align-items:center;justify-content:center;color:{BRAND['muted_warm']};background:#efe9e0;font-size:14px}}
   .body{{padding:18px 20px}}
   .loc{{color:{BRAND['magenta']};font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}}
   .title{{font-family:{FONT_DISPLAY};font-size:22px;line-height:1.25;margin:8px 0 6px;font-weight:600}}
@@ -368,18 +665,37 @@ class EspaceClientService:
   .qtext{{width:100%;min-height:62px;padding:10px;border:1px solid {BRAND['line_warm']};border-radius:8px;font-size:14px;color:{BRAND['ink_warm']};font-family:inherit;resize:vertical}}
   .qsend{{margin-top:8px}}
   .foot{{color:{BRAND['muted_warm']};font-size:11px;line-height:1.6;margin-top:22px}}
-  @media (prefers-color-scheme:dark){{body{{background:#15130f;color:#f5efe6}}.card{{background:#211e19;border-color:#322d25}}.lead p{{color:#c2b9aa}}}}
+  /* Historique : section repliable, biens déjà vus (proposés / visités / écartés / refusés) */
+  .hist{{background:#fff;border:1px solid {BRAND['line_warm']};border-radius:14px;margin:20px 0;overflow:hidden}}
+  .hist>summary{{list-style:none;cursor:pointer;padding:16px 20px;font-family:{FONT_DISPLAY};font-size:18px;font-weight:600;display:flex;align-items:center}}
+  .hist>summary::-webkit-details-marker{{display:none}}
+  .hist-n{{background:{BRAND['magenta_soft']};color:{BRAND['magenta_strong']};font-family:{FONT_BODY};font-size:12px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:10px}}
+  .chev{{margin-left:auto;color:{BRAND['muted_warm']};font-size:18px;transition:transform .2s}}
+  .hist[open] .chev{{transform:rotate(180deg)}}
+  .hist-list{{padding:0 14px 8px}}
+  .hrow{{display:flex;align-items:center;gap:12px;padding:11px 6px;border-top:1px solid {BRAND['line_warm']}}}
+  .hthumb{{width:66px;height:50px;border-radius:9px;overflow:hidden;flex:none;background:#efe9e0}}
+  .hthumb img{{width:100%;height:100%;object-fit:cover;display:block}}
+  .hmeta{{flex:1;min-width:0}}
+  .htitle{{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+  .hloc{{color:{BRAND['muted_warm']};font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}}
+  .hbadge{{flex:none;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:#efe9e0;color:{BRAND['ink_soft']};white-space:nowrap}}
+  @media (prefers-color-scheme:dark){{body{{background:#15130f;color:#f5efe6}}
+    .card,.rech,.hist{{background:#211e19;border-color:#322d25}}.lead p{{color:#c2b9aa}}
+    .hrow{{border-color:#322d25}}.hthumb,.ph-empty,.gal{{background:#2a261f}}.hbadge{{background:#2a261f;color:#cabfae}}
+    .fld input,.qtext{{background:#1b1813;border-color:#322d25;color:#f5efe6}}}}
 </style>
 </head>
 <body>
   <div class="top"><span class="name">Votre espace</span><span class="tag">groupe gti</span></div>
   <div class="wrap">
     <div class="lead">
-      <h1>Les biens sélectionnés pour vous</h1>
-      <p>Dites-nous ce qui vous plaît. Votre conseiller en est informé aussitôt.</p>
+      <h1>{_esc(lead_h1)}</h1>
+      <p>{_esc(lead_p)}</p>
     </div>
     {cards}
     {search_block}
+    {history_block}
     <div class="foot">Espace personnel sécurisé. Vos choix ne sont visibles que par votre agence.
       GROUPE GTI · RCS Saint-Étienne 502 811 144 · CPI 42022019 000 043 878.</div>
   </div>
@@ -387,8 +703,22 @@ class EspaceClientService:
 const POST={json.dumps(post_url)};
 const MSG={json.dumps(msg_post)};
 async function post(b){{try{{await fetch(POST,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(b)}});}}catch(e){{}}}}
+// Galerie photos : flèches, pastilles et compteur synchronisés au défilement.
+document.querySelectorAll('.gal[data-n]').forEach(g=>{{
+  const track=g.querySelector('.gal-track'); if(!track) return;
+  const n=parseInt(g.getAttribute('data-n'))||1; if(n<2) return;
+  const cur=g.querySelector('.gcur'); const dots=[].slice.call(g.querySelectorAll('.dot'));
+  const idx=()=>Math.round(track.scrollLeft/track.clientWidth);
+  const sync=()=>{{const i=idx(); if(cur)cur.textContent=(i+1); dots.forEach((d,k)=>d.classList.toggle('on',k===i));}};
+  track.addEventListener('scroll',()=>window.requestAnimationFrame(sync),{{passive:true}});
+  const go=d=>track.scrollTo({{left:Math.max(0,Math.min(n-1,idx()+d))*track.clientWidth,behavior:'smooth'}});
+  const p=g.querySelector('.prev'),nx=g.querySelector('.next');
+  if(p)p.addEventListener('click',()=>go(-1)); if(nx)nx.addEventListener('click',()=>go(1));
+  dots.forEach((d,k)=>d.addEventListener('click',()=>track.scrollTo({{left:k*track.clientWidth,behavior:'smooth'}})));
+}});
 document.querySelectorAll('.card').forEach(card=>{{
   const bien=card.getAttribute('data-bien');
+  const env=card.getAttribute('data-envoi');  // espace unifié : envoi qui a proposé ce bien
   const ack=card.querySelector('.ack');
   const reasons=card.querySelector('.reasons');
   card.querySelectorAll('button[data-action]').forEach(btn=>{{
@@ -396,23 +726,23 @@ document.querySelectorAll('.card').forEach(card=>{{
       const action=btn.getAttribute('data-action');
       card.querySelectorAll('button[data-action]').forEach(b=>{{b.disabled=true;b.classList.remove('on')}});
       btn.classList.add('on'); ack.hidden=false;
-      if(action==='like'){{ack.textContent='Merci ! Votre conseiller vous recontacte très vite.';}}
-      else{{ack.textContent='C\\'est noté.'; if(reasons) reasons.hidden=false;}}
-      post({{bien_id:bien,action}});
+      if(action==='like'){{ack.textContent='Avec plaisir ! Votre conseiller revient vers vous très vite.';}}
+      else{{ack.textContent='C\\'est noté, merci.'; if(reasons) reasons.hidden=false;}}
+      post({{bien_id:bien,action,envoi_id:env}});
     }});
   }});
   if(reasons){{reasons.querySelectorAll('.rchip').forEach(ch=>{{
     ch.addEventListener('click',()=>{{
       reasons.querySelectorAll('.rchip').forEach(x=>x.classList.remove('on')); ch.classList.add('on');
       ack.textContent='Merci, ça nous aide à affiner nos propositions.';
-      post({{bien_id:bien,action:'pass',reason:ch.getAttribute('data-reason')}});
+      post({{bien_id:bien,action:'pass',reason:ch.getAttribute('data-reason'),envoi_id:env}});
     }});
   }});}}
   const qs=card.querySelector('.qsend');
   if(qs){{qs.addEventListener('click',async()=>{{
     const ta=card.querySelector('.qtext'); const t=ta.value.trim(); if(!t)return;
     qs.disabled=true; const qa=card.querySelector('.qack'); qa.hidden=false; qa.textContent='Message envoyé à votre conseiller. Il vous répond directement.';
-    try{{await fetch(MSG,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{bien_id:bien,text:t}})}});}}catch(e){{}}
+    try{{await fetch(MSG,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{bien_id:bien,text:t,envoi_id:env}})}});}}catch(e){{}}
   }});}}
 }});
 const RECH={json.dumps(search_post)};

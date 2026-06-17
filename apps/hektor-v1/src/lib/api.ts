@@ -2334,6 +2334,13 @@ export type RapprochementSendResult = {
   dailyCount?: number
   dailyCap?: number
   capAlert?: boolean
+  // Envoi groupé (group_by_nego) : 1 email par négociateur de mandat.
+  grouped?: boolean
+  groupCount?: number
+  sentCount?: number
+  sentAnnonceIds?: number[]
+  filteredCount?: number
+  groups?: Array<RapprochementSendResult & { senderEmail?: string; annonceIds?: number[] }>
 }
 
 // Envoi de rapprochement via le chokepoint backend (opt-out + plafond + List-Unsubscribe + tracking).
@@ -2349,6 +2356,7 @@ export async function sendRapprochementEmail(input: {
   criteres?: string | null
   customIntro?: string | null
   dryRun?: boolean
+  groupByNego?: boolean
 }): Promise<RapprochementSendResult> {
   return invokeBackendApi<RapprochementSendResult>('/emails/rapprochement/send', {
     method: 'POST',
@@ -2364,6 +2372,7 @@ export async function sendRapprochementEmail(input: {
       criteres: input.criteres ?? null,
       custom_intro: input.customIntro ?? null,
       dry_run: input.dryRun ?? true,
+      group_by_nego: input.groupByNego ?? false,
     },
   })
 }

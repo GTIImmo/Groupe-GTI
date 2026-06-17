@@ -472,12 +472,18 @@ class RapprochementEmailService:
         base = getattr(self.settings, "email_tracking_base_url", None) or self.settings.app_base_url or ""
         return base.rstrip("/")
 
-    def _links_for_bien(self, envoi_id: str, bien_id: Any, annonce_id: int) -> dict[str, str]:
+    def _links_for_bien(self, envoi_id: str, bien_id: Any, annonce_id: int,
+                        hektor_contact_id: str | None = None) -> dict[str, str]:
         secret = getattr(self.settings, "email_tracking_secret", None) or self.settings.supabase_service_role_key
         base = self._track_base()
         like = email_tokens.make_feedback_token(envoi_id=envoi_id, bien_id=bien_id, action=email_tokens.ACTION_LIKE, secret=secret)
         passt = email_tokens.make_feedback_token(envoi_id=envoi_id, bien_id=bien_id, action=email_tokens.ACTION_PASS, secret=secret)
-        espace = email_tokens.make_espace_token(envoi_id=envoi_id, secret=secret)
+        # « Voir ce bien » ouvre l'espace UNIFIÉ du contact (un seul lien stable, tous négos)
+        # dès qu'on connaît le contact ; sinon repli sur l'espace lié à l'envoi (compat).
+        if hektor_contact_id:
+            espace = email_tokens.make_espace_contact_token(hektor_contact_id=str(hektor_contact_id), secret=secret)
+        else:
+            espace = email_tokens.make_espace_token(envoi_id=envoi_id, secret=secret)
         links = {
             "like": f"{base}/r/feedback/{like}" if base else f"#like-{bien_id}",
             "pass": f"{base}/r/feedback/{passt}" if base else f"#pass-{bien_id}",
@@ -500,6 +506,7 @@ class RapprochementEmailService:
         envoi_id: str = "preview",
         relance_type: str | None = None,
         custom_intro: str | None = None,
+        hektor_contact_id: str | None = None,
     ) -> dict[str, Any]:
         if not annonce_ids:
             raise HTTPException(status_code=400, detail="Au moins un annonce_id est requis")
@@ -511,7 +518,7 @@ class RapprochementEmailService:
         for aid in annonce_ids:
             dossier, detail = self._load_dossier(aid)
             view = build_bien_view(dossier, detail)
-            view["_links"] = self._links_for_bien(envoi_id, view["dossier_id"], aid)
+            view["_links"] = self._links_for_bien(envoi_id, view["dossier_id"], aid, hektor_contact_id)
             biens.append(view)
             # Signature dérivée du premier bien (négociateur du dossier).
             if signature["tel"] is None:

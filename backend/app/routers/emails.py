@@ -158,6 +158,7 @@ class RapprochementSendPayload(BaseModel):
     criteres: str | None = None
     custom_intro: str | None = None  # mot libre du négociateur (hybride), inséré en intro
     dry_run: bool = True  # réel uniquement si dry_run=false ET EMAIL_REAL_SEND_ENABLED=true
+    group_by_nego: bool = False  # True (côté acquéreur) : 1 email par négociateur de mandat
 
 
 @router.post("/emails/rapprochement/send")
@@ -168,9 +169,22 @@ def send_rapprochement_email(
 ):
     """Chokepoint d'envoi (manuel). Filtre opt-out -> plafond quotidien -> crée l'envoi ->
     template avec id d'envoi réel -> en-têtes List-Unsubscribe -> envoi réel ou dry-run.
-    L'envoi réel n'a lieu que si EMAIL_REAL_SEND_ENABLED=true et payload.dry_run=false."""
+    L'envoi réel n'a lieu que si EMAIL_REAL_SEND_ENABLED=true et payload.dry_run=false.
+
+    Si group_by_nego=true : on ne garde que les biens frais, on les regroupe par
+    négociateur du mandat, et on envoie 1 email par négociateur depuis SA boîte (send-as)."""
     user = get_authenticated_user(settings, authorization)
-    return RapprochementSender(settings).send(
+    sender = RapprochementSender(settings)
+    if payload.group_by_nego:
+        return sender.send_grouped(
+            recipient_email=payload.recipient_email, annonce_ids=payload.annonce_ids,
+            variante=payload.variante, contact_search_key=payload.contact_search_key,
+            hektor_contact_id=payload.hektor_contact_id, prenom=payload.prenom,
+            civilite=payload.civilite, criteres=payload.criteres,
+            custom_intro=payload.custom_intro, dry_run=payload.dry_run, created_by=user.id,
+            fallback_sender_email=payload.sender_email,
+        )
+    return sender.send(
         recipient_email=payload.recipient_email, sender_email=payload.sender_email,
         annonce_ids=payload.annonce_ids, variante=payload.variante,
         contact_search_key=payload.contact_search_key, hektor_contact_id=payload.hektor_contact_id,

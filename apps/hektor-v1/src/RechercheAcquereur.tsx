@@ -658,9 +658,11 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       if (!annonceIds.length) throw new Error("Aucune annonce identifiée pour l'envoi")
       // Envoi via le chokepoint backend : template Tinder + tracking + opt-out + List-Unsubscribe.
       // Le mot libre du négociateur (mailMsg) est inséré en intro du template (mode hybride).
+      // Côté acquéreur : group_by_nego => 1 email par négociateur de mandat, envoyé depuis
+      // SA boîte (send-as). Le serveur ne garde que les biens frais (jamais proposés/écartés).
       const res = await sendRapprochementEmail({
         recipientEmail: acquereurEmail,
-        senderEmail,
+        senderEmail, // sert de repli (accueil@) si un bien n'a pas de négociateur @gti
         annonceIds,
         variante: 'pull',
         contactSearchKey: searchKey ?? null,
@@ -669,14 +671,22 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
         civilite: contact?.civilite ?? null,
         customIntro: mailMsg,
         dryRun: false, // l'envoi réel reste gardé côté serveur par EMAIL_REAL_SEND_ENABLED
+        groupByNego: true,
       })
       if (res?.skipped === 'opt_out') { toast(`${acquereurEmail} est désinscrit — aucun envoi, aucun bien marqué proposé.`); return }
       if (res?.skipped === 'daily_cap') { toast('Plafond d’envois quotidien atteint — réessayez demain.'); return }
+      if (res?.skipped === 'no_fresh_bien') { toast('Tous ces biens ont déjà été proposés à cet acquéreur — rien de neuf à envoyer.'); return }
       if (!res?.ok) throw new Error('Envoi refusé par le serveur')
       setConfirmSend(false)
       setMailRefs(null)
-      propose(refs, 'email', { messageId: res?.messageId ?? null, threadId: null }) // succès uniquement → trace proposition + relance J+5
-      toast(res?.dryRun ? `Aperçu enregistré (mode test) pour ${acquereurEmail}.` : `Email envoyé à ${acquereurEmail}.`)
+      // On ne marque proposés que les biens réellement envoyés (les autres étaient déjà vus).
+      const sentRefs = res.grouped && Array.isArray(res.sentAnnonceIds)
+        ? biens.filter((b) => b.hektorAnnonceId != null && res.sentAnnonceIds!.includes(b.hektorAnnonceId)).map((b) => b.ref)
+        : refs
+      propose(sentRefs, 'email', { messageId: res?.messageId ?? null, threadId: null }) // succès uniquement → trace proposition + relance J+5
+      const nbMails = res.groupCount ?? 1
+      const suffixe = nbMails > 1 ? ` (${nbMails} emails, 1 par négociateur)` : ''
+      toast(res?.dryRun ? `Aperçu enregistré (mode test) pour ${acquereurEmail}.` : `Email envoyé à ${acquereurEmail}${suffixe}.`)
     } catch (e) {
       toast(`Échec de l'envoi : ${(e as Error)?.message ?? 'erreur'} — aucun bien marqué proposé.`)
     } finally {

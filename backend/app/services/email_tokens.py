@@ -25,9 +25,11 @@ ACTION_PASS = "pass"      # ✕ Pas pour moi
 ACTION_VISITE = "visite"  # Réserver une visite
 ACTION_OPEN = "open"      # pixel d'ouverture
 ACTION_UNSUB = "unsub"    # désinscription
-ACTION_ESPACE = "espace"  # accès à l'espace client (lien magique)
+ACTION_ESPACE = "espace"  # accès à l'espace client (lien magique, lié à un envoi)
+ACTION_ESPACE_CONTACT = "espc"  # espace client UNIFIÉ (lié au contact, tous négos confondus)
 
-VALID_ACTIONS = {ACTION_LIKE, ACTION_PASS, ACTION_VISITE, ACTION_OPEN, ACTION_UNSUB, ACTION_ESPACE}
+VALID_ACTIONS = {ACTION_LIKE, ACTION_PASS, ACTION_VISITE, ACTION_OPEN, ACTION_UNSUB,
+                 ACTION_ESPACE, ACTION_ESPACE_CONTACT}
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -109,5 +111,13 @@ def make_unsub_token(*, envoi_id: str, secret: str) -> str:
 
 
 def make_espace_token(*, envoi_id: str, secret: str, ttl_days: int | None = 30) -> str:
-    """Lien magique vers l'espace client (par défaut 30 jours)."""
+    """Lien magique vers l'espace client lié à un envoi (par défaut 30 jours)."""
     return sign_token({"v": 1, "e": str(envoi_id), "a": ACTION_ESPACE, "x": _exp_ts(ttl_days)}, secret)
+
+
+def make_espace_contact_token(*, hektor_contact_id: str, secret: str, ttl_days: int | None = 60) -> str:
+    """Lien magique vers l'espace client UNIFIÉ d'un contact (tous les biens, tous les négos).
+
+    Lié au contact (pas à un envoi) : un seul lien stable, même si plusieurs négociateurs
+    envoient des emails. Par défaut 60 jours."""
+    return sign_token({"v": 1, "c": str(hektor_contact_id), "a": ACTION_ESPACE_CONTACT, "x": _exp_ts(ttl_days)}, secret)
