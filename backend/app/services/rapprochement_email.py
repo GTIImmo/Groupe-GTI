@@ -45,7 +45,17 @@ BRAND = {
     "bg": "#f6f7f8",              # --ds-bg
     "surface": "#ffffff",         # --ds-surface
     "on_brand": "#ffffff",        # --ds-on-brand
+    # Palette éditoriale chaude (rendu « magazine immobilier »)
+    "paper": "#f6f1ea",           # ivoire chaud (fond)
+    "ink_warm": "#1f1c1a",        # encre chaude (titres)
+    "line_warm": "#e7e0d5",       # filets chauds
+    "muted_warm": "#8c8478",      # texte secondaire chaud
 }
+
+# Polices : serif éditoriale pour les titres (fallback Georgia, universel en mail),
+# sans-serif raffinée pour le corps. Pas d'Arial brut partout.
+FONT_DISPLAY = "'Playfair Display', Georgia, 'Times New Roman', serif"
+FONT_BODY = "'Helvetica Neue', Helvetica, Arial, sans-serif"
 
 LOGO_URL = "https://www.gti-immobilier.fr/images/logoSite.png"
 
@@ -198,13 +208,22 @@ def _button(href: str, label: str, *, bg: str, fg: str, border: str | None = Non
     border = border or bg
     href_e = _esc(href)
     return f"""<!--[if mso]>
-<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{href_e}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="14%" strokecolor="{border}" fillcolor="{bg}">
-<w:anchorlock/><center style="color:{fg};font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">{_esc(label)}</center>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{href_e}" style="height:46px;v-text-anchor:middle;width:210px;" arcsize="50%" strokecolor="{border}" fillcolor="{bg}">
+<w:anchorlock/><center style="color:{fg};font-family:Georgia,serif;font-size:14px;font-weight:bold;">{_esc(label)}</center>
 </v:roundrect>
 <![endif]-->
 <!--[if !mso]><!-- -->
-<a href="{href_e}" style="background:{bg};border:1px solid {border};border-radius:8px;color:{fg};display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:42px;text-align:center;text-decoration:none;width:200px;-webkit-text-size-adjust:none;mso-hide:all;">{_esc(label)}</a>
+<a href="{href_e}" style="background:{bg};border:1px solid {border};border-radius:26px;color:{fg};display:inline-block;font-family:{FONT_BODY};font-size:14px;font-weight:bold;letter-spacing:.3px;line-height:44px;text-align:center;text-decoration:none;width:210px;-webkit-text-size-adjust:none;mso-hide:all;">{_esc(label)}</a>
 <!--<![endif]-->"""
+
+
+def _specs_line(specs: list[str]) -> str:
+    if not specs:
+        return ""
+    sep = f'<span style="color:{BRAND["line_warm"]}">&nbsp;&nbsp;|&nbsp;&nbsp;</span>'
+    inner = sep.join(f'<span>{_esc(s)}</span>' for s in specs)
+    return (f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:13px;'
+            f'letter-spacing:.4px;margin-top:2px">{inner}</div>')
 
 
 def build_property_card_html(view: dict[str, Any], links: dict[str, str]) -> str:
@@ -214,38 +233,42 @@ def build_property_card_html(view: dict[str, Any], links: dict[str, str]) -> str
         photo_cell = (
             f'<tr><td style="padding:0;font-size:0;line-height:0">'
             f'<img src="{_esc(view["photo"])}" width="600" alt="{_esc(view["titre"])}" '
-            f'style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:12px 12px 0 0"></td></tr>'
+            f'style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>'
         )
-    sub = f'<div style="color:{BRAND["ink_mute"]};font-size:13px;margin-top:2px">{_esc(hono["sub"])}</div>' if hono.get("sub") else ""
-    net = f'<div style="color:{BRAND["ink_mute"]};font-size:12px;margin-top:1px">{_esc(hono["net"])}</div>' if hono.get("net") else ""
-    specs = _esc(" · ".join(view["specs"])) if view["specs"] else ""
-    secteur = _esc(view["secteur"])
+    sub = f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:13px;margin-top:4px">{_esc(hono["sub"])}</div>' if hono.get("sub") else ""
+    net = f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:12px;margin-top:1px">{_esc(hono["net"])}</div>' if hono.get("net") else ""
+    overline = _esc(view["secteur"] or view["ref"]).upper()
 
-    like = _button(links["like"], "❤️ Ça m'intéresse", bg=BRAND["magenta"], fg=BRAND["on_brand"])
-    passb = _button(links["pass"], "✕ Pas pour moi", bg=BRAND["surface"], fg=BRAND["ink_soft"], border=BRAND["neutral_line"])
-    visite = _button(links["visite"], "Réserver une visite", bg=BRAND["ink"], fg=BRAND["on_brand"]) if links.get("visite") else ""
-    visite_row = (
-        f'<tr><td align="center" style="padding:4px 20px 18px">{visite}</td></tr>' if visite else ""
-    )
+    # Deux boutons simples. Le positif emmène vers l'espace client (détails + actions) ;
+    # le clic vaut signal « ce bien peut correspondre ». Le négatif = « pas pour moi ».
+    like = _button(links["like"], "Voir ce bien", bg=BRAND["magenta"], fg=BRAND["on_brand"])
+    passb = _button(links["pass"], "Pas pour moi", bg=BRAND["surface"], fg=BRAND["ink_soft"], border=BRAND["line_warm"])
 
     return f"""
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-      style="background:{BRAND['surface']};border:1px solid {BRAND['neutral_line']};border-radius:12px;margin:0 0 20px;overflow:hidden">
+      style="background:{BRAND['surface']};border:1px solid {BRAND['line_warm']};margin:0 0 26px">
       {photo_cell}
-      <tr><td style="padding:16px 20px 4px;font-family:Arial,Helvetica,sans-serif">
-        <div style="color:{BRAND['neutral_400']};font-size:12px;letter-spacing:.3px">{_esc(view['ref'])}{(' · ' + secteur) if secteur else ''}</div>
-        <div style="color:{BRAND['ink']};font-size:18px;font-weight:bold;line-height:1.3;margin:4px 0">{_esc(view['titre'])}</div>
-        <div style="color:{BRAND['magenta']};font-size:20px;font-weight:bold;margin-top:6px">{_esc(hono['price_main'])}</div>
-        {sub}{net}
-        <div style="color:{BRAND['ink_soft']};font-size:14px;margin-top:8px">{specs}</div>
+      <tr><td style="padding:22px 26px 0">
+        <div style="color:{BRAND['magenta']};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2px">{overline}</div>
+        <div style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:23px;line-height:1.25;margin:8px 0 0">{_esc(view['titre'])}</div>
       </td></tr>
-      <tr><td style="padding:14px 20px 6px">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-          <td align="center" style="padding:0 5px 0 0;width:50%">{like}</td>
-          <td align="center" style="padding:0 0 0 5px;width:50%">{passb}</td>
+      <tr><td style="padding:14px 26px 0">
+        <div style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:25px;line-height:1.1">{_esc(hono['price_main'])}</div>
+        {sub}{net}
+      </td></tr>
+      <tr><td style="padding:12px 26px 0">
+        <div style="border-top:1px solid {BRAND['line_warm']};font-size:0;line-height:0">&nbsp;</div>
+      </td></tr>
+      <tr><td style="padding:12px 26px 0">{_specs_line(view['specs'])}</td></tr>
+      <tr><td style="padding:18px 26px 6px">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
+          <td style="padding:0 6px">{like}</td>
+          <td style="padding:0 6px">{passb}</td>
         </tr></table>
       </td></tr>
-      {visite_row}
+      <tr><td align="center" style="padding:4px 26px 22px">
+        <div style="color:{BRAND['muted_warm']};font-family:{FONT_BODY};font-size:12px">« Voir ce bien » ouvre votre espace : photos, détails et prise de rendez-vous.</div>
+      </td></tr>
     </table>"""
 
 
@@ -268,10 +291,11 @@ def build_email_html(ctx: dict[str, Any]) -> str:
     )
 
     sig_html = (
-        f'<div style="color:{BRAND["ink"]};font-size:14px;font-weight:bold">{_esc(signature["nom"])}</div>'
-        + (f'<div style="color:{BRAND["ink_mute"]};font-size:13px">{_esc(signature["agence"])}</div>' if signature.get("agence") else "")
-        + (f'<div style="color:{BRAND["ink_mute"]};font-size:13px">{_esc(signature["tel"])}</div>' if signature.get("tel") else "")
-        + (f'<div style="font-size:13px"><a href="mailto:{_esc(signature["email"])}" style="color:{BRAND["magenta"]};text-decoration:none">{_esc(signature["email"])}</a></div>' if signature.get("email") else "")
+        f'<div style="color:{BRAND["magenta"]};font-family:{FONT_BODY};font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Votre conseiller</div>'
+        f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:18px">{_esc(signature["nom"])}</div>'
+        + (f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:13px;margin-top:2px">{_esc(signature["agence"])}</div>' if signature.get("agence") else "")
+        + (f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:13px">{_esc(signature["tel"])}</div>' if signature.get("tel") else "")
+        + (f'<div style="font-family:{FONT_BODY};font-size:13px;margin-top:1px"><a href="mailto:{_esc(signature["email"])}" style="color:{BRAND["magenta"]};text-decoration:none">{_esc(signature["email"])}</a></div>' if signature.get("email") else "")
     )
 
     return f"""<!DOCTYPE html>
@@ -283,49 +307,60 @@ def build_email_html(ctx: dict[str, Any]) -> str:
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <title>{_esc(ctx['subject'])}</title>
+<!--[if !mso]><!-- --><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"><!--<![endif]-->
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <style>
-  body{{margin:0;padding:0;background:{BRAND['bg']};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}}
+  body{{margin:0;padding:0;background:{BRAND['paper']};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}}
   img{{-ms-interpolation-mode:bicubic}}
   a{{text-decoration:none}}
   @media only screen and (max-width:600px){{
     .gti-container{{width:100%!important}}
-    .gti-pad{{padding-left:16px!important;padding-right:16px!important}}
+    .gti-pad{{padding-left:18px!important;padding-right:18px!important}}
   }}
   @media (prefers-color-scheme:dark){{
-    body,.gti-bg{{background:#111111!important}}
-    .gti-card,.gti-shell{{background:#1c1c1d!important}}
-    .gti-ink{{color:#f3f3f3!important}}
-    .gti-mute{{color:#b9bbbb!important}}
+    body,.gti-bg{{background:#15130f!important}}
+    .gti-card{{background:#211e19!important;border-color:#322d25!important}}
+    .gti-ink{{color:#f5efe6!important}}
+    .gti-mute{{color:#c2b9aa!important}}
   }}
 </style>
 </head>
 <body class="gti-bg">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">{preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-bg" style="background:{BRAND['bg']}">
-  <tr><td align="center" style="padding:24px 12px">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="gti-container gti-shell" style="width:600px;max-width:600px;background:{BRAND['bg']}">
-      <!-- En-tête -->
-      <tr><td class="gti-pad" style="padding:4px 8px 18px" align="left">
-        <img src="{LOGO_URL}" width="120" alt="Groupe GTI" style="display:block;border:0;height:auto;max-width:120px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-bg" style="background:{BRAND['paper']}">
+  <tr><td align="center" style="padding:28px 14px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="gti-container" style="width:600px;max-width:600px">
+      <!-- En-tête : logo GTI réel sur bandeau foncé (le logo ressort, le « groupe » gris devient lisible) -->
+      <tr><td class="gti-pad" style="padding:2px 6px 18px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{BRAND['ink_warm']}" style="background:{BRAND['ink_warm']};border-radius:10px"><tr>
+          <td align="left" style="vertical-align:middle;padding:18px 24px">
+            <img src="{LOGO_URL}" height="50" alt="Groupe GTI" style="display:block;border:0;height:50px;width:auto">
+          </td>
+          <td align="right" style="vertical-align:middle;padding:18px 24px">
+            <span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;letter-spacing:2.5px;text-transform:uppercase">Sélection acquéreur</span>
+          </td>
+        </tr></table>
       </td></tr>
-      <!-- Accroche -->
-      <tr><td class="gti-pad gti-card" style="background:{BRAND['surface']};border-radius:12px 12px 0 0;padding:22px 24px 8px;font-family:Arial,Helvetica,sans-serif">
-        <div class="gti-ink" style="color:{BRAND['ink']};font-size:16px">{greeting}</div>
+      <!-- Accroche éditoriale -->
+      <tr><td class="gti-pad" style="padding:14px 6px 22px">
+        <div style="color:{BRAND['magenta']};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2.5px;text-transform:uppercase">Rien que pour vous</div>
+        <div class="gti-ink" style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:12px">{greeting}</div>
         {intro_html}
-        <div class="gti-mute" style="color:{BRAND['ink_soft']};font-size:15px;line-height:1.55;margin-top:6px">{accroche}</div>
+        <div class="gti-mute" style="color:{BRAND['ink_soft']};font-family:{FONT_BODY};font-size:15px;line-height:1.65;margin-top:10px">{accroche}</div>
       </td></tr>
-      <tr><td class="gti-pad gti-card" style="background:{BRAND['surface']};border-radius:0 0 12px 12px;padding:8px 16px 20px;margin-bottom:8px">
+      <!-- Cartes biens -->
+      <tr><td class="gti-pad" style="padding:0 6px">
         {cards}
       </td></tr>
       <!-- Signature -->
-      <tr><td class="gti-pad" style="padding:18px 24px 6px;font-family:Arial,Helvetica,sans-serif">{sig_html}</td></tr>
+      <tr><td class="gti-pad" style="padding:8px 6px 6px">{sig_html}</td></tr>
       <!-- Pied légal -->
-      <tr><td class="gti-pad" style="padding:14px 24px 24px;font-family:Arial,Helvetica,sans-serif">
-        <div class="gti-mute" style="color:{BRAND['neutral_400']};font-size:11px;line-height:1.5">{_esc(LEGAL_LINE)}</div>
-        <div style="margin-top:8px;font-size:11px;color:{BRAND['neutral_400']}">
+      <tr><td class="gti-pad" style="padding:22px 6px 26px">
+        <div style="border-top:1px solid {BRAND['line_warm']};margin-bottom:14px;font-size:0;line-height:0">&nbsp;</div>
+        <div class="gti-mute" style="color:{BRAND['muted_warm']};font-family:{FONT_BODY};font-size:11px;line-height:1.6">{_esc(LEGAL_LINE)}</div>
+        <div class="gti-mute" style="margin-top:8px;font-family:{FONT_BODY};font-size:11px;color:{BRAND['muted_warm']}">
           Vous recevez cet email car vous êtes en relation avec notre agence.
-          <a href="{unsub}" style="color:{BRAND['ink_mute']};text-decoration:underline">Se désinscrire</a>.
+          <a href="{unsub}" style="color:{BRAND['ink_soft']};text-decoration:underline">Se désinscrire</a>.
         </div>
       </td></tr>
     </table>
@@ -352,10 +387,8 @@ def build_email_text(ctx: dict[str, Any]) -> str:
             lines.append(f"  {hono['net']}")
         if v["specs"]:
             lines.append("  " + " · ".join(v["specs"]))
-        lines.append(f"  Ça m'intéresse : {v['_links']['like']}")
+        lines.append(f"  Voir ce bien (mon espace) : {v['_links']['like']}")
         lines.append(f"  Pas pour moi : {v['_links']['pass']}")
-        if v["_links"].get("visite"):
-            lines.append(f"  Réserver une visite : {v['_links']['visite']}")
         lines.append("")
     sig = ctx["signature"]
     lines.append("—")
@@ -486,26 +519,29 @@ class RapprochementEmailService:
                     "email": _clean_text(dossier.get("negociateur_email")) or None,
                 }
 
-        crit = criteres or "votre recherche"
+        # Textes chaleureux, écrits « comme un conseiller qui pense à son client ».
         if variante == "push":
-            accroche = f"Un bien vient de rentrer et correspond à {crit}. Découvrez-le ci-dessous et dites-nous s'il vous plaît :"
-            subject = "Un nouveau bien correspond à votre recherche"
+            subject = "Je crois avoir trouvé un bien pour vous"
+            accroche = "Un bien vient de rentrer, et je crois qu'il pourrait vraiment vous plaire."
         else:
-            accroche = f"Voici une sélection de biens pour {crit}. Indiquez-nous ceux qui vous plaisent :"
-            subject = "Une sélection de biens pour votre recherche"
-        if len(biens) > 1:
-            subject = f"{len(biens)} biens pour votre recherche" if variante == "pull" else subject
+            subject = "Un bien choisi pour votre projet"
+            accroche = "J'ai pensé à vous en le voyant. Dites-moi simplement s'il vous plaît."
+        if len(biens) > 1 and variante == "pull":
+            subject = f"{len(biens)} biens choisis pour votre projet"
+            accroche = "J'en ai retenu quelques-uns en pensant à votre projet. Dites-moi ceux qui vous plaisent."
 
-        # Relances : objet différent (no_open) ou angle plus doux (soft) — chaque relance apporte qqch.
+        # Relances : un autre angle, toujours avec délicatesse (jamais « relance n°2 » mécanique).
         if relance_type == "no_open":
-            subject = "Toujours à la recherche d'un bien ? Une proposition pour vous"
-            accroche = f"Nous pensons à {crit} : voici (à nouveau) un bien qui pourrait vous plaire."
+            subject = "Ce bien vous attend toujours"
+            accroche = ("Je me permets de revenir vers vous : ce bien est toujours disponible, "
+                        "et je crois sincèrement qu'il mérite votre coup d'œil.")
         elif relance_type == "soft":
-            subject = "Ce bien est toujours disponible — un mot de votre conseiller"
-            accroche = f"Petit rappel concernant {crit}. Ce bien est toujours disponible ; dites-nous ce que vous en pensez :"
+            subject = "Toujours disponible — et toujours pour vous"
+            accroche = ("Un petit mot pour vous redire que ce bien est encore là. "
+                        "Si vous avez la moindre question, je reste à votre écoute.")
 
-        greeting_name = " ".join(p for p in (civilite, prenom) if p) or "Bonjour"
-        greeting = f"Bonjour {prenom}," if (prenom and not civilite) else (f"{greeting_name}," if greeting_name != "Bonjour" else "Bonjour,")
+        name = " ".join(p for p in (civilite, prenom) if p).strip()
+        greeting = f"Bonjour {name}," if name else "Bonjour,"
 
         secret = getattr(self.settings, "email_tracking_secret", None) or self.settings.supabase_service_role_key
         base = self._track_base()

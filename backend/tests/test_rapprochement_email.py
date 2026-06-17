@@ -65,13 +65,13 @@ ctx = {
 html = build_email_html(ctx)
 text = build_email_text(ctx)
 size_kb = len(html.encode("utf-8")) / 1024
-assert "❤" in html and "intéresse" in html and "✕ Pas pour moi" in html  # apostrophe HTML-échappée
+assert "Voir ce bien" in html and "Pas pour moi" in html
 assert "v:roundrect" in html and "prefers-color-scheme:dark" in html
 assert "staticlbi.com" in html and "CPI 42022019" in html
 assert "Se désinscrire" in html
 assert "74 900 € FAI" in html and "Honoraires à la charge du vendeur" in html
-assert "Réserver une visite" in html
-assert "Ça m'intéresse :" in text and "Réserver une visite :" in text
+assert "Réserver une visite" not in html  # la visite passe dans l'espace client (Lot D)
+assert "Voir ce bien (mon espace) :" in text and "Pas pour moi :" in text
 print(f"3) HTML build OK — taille {size_kb:.1f} Ko (limite 100), version texte {len(text)} car.")
 assert size_kb < 100, "email trop lourd"
 print("\nTOUS LES TESTS PASSENT ✅")

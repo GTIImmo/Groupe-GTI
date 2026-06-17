@@ -14,9 +14,10 @@ Les tokens « preview » (id non-uuid) ne déclenchent aucune écriture : previe
 from __future__ import annotations
 
 import base64
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
@@ -81,6 +82,16 @@ def preview_rapprochement_email(
     return HTMLResponse(content=result["html"])
 
 
+_ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+
+
+@router.get("/assets/gti-mark.png")
+def gti_mark():
+    """Sert le cube GTI (logo email), public, mis en cache 30 jours."""
+    return FileResponse(_ASSETS_DIR / "gti-mark.png", media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=2592000"})
+
+
 @router.get("/r/o/{token}.png")
 def track_open(token: str, request: Request, settings: Settings = Depends(get_settings)):
     payload = email_tokens.verify_token(token, _secret(settings))
@@ -108,7 +119,11 @@ def track_feedback(token: str, request: Request, settings: Settings = Depends(ge
     except Exception:
         pass  # on confirme à l'utilisateur même si la persistance échoue
     if action == email_tokens.ACTION_LIKE:
-        return HTMLResponse(_page("C'est noté, merci !", "Votre intérêt a bien été transmis à votre conseiller, qui vous recontacte très vite."))
+        # Lot D : redirigera (302) vers l'espace client du bien. En attendant, page d'attente honnête.
+        return HTMLResponse(_page("Votre espace arrive",
+                                  "Nous préparons votre espace personnel : photos, détails complets du bien, "
+                                  "prise de rendez-vous et mise à jour de votre recherche. "
+                                  "Votre conseiller vous recontacte très vite."))
     if action == email_tokens.ACTION_PASS:
         return HTMLResponse(_page("Merci pour votre retour", "Ce bien ne vous correspond pas : nous affinerons nos prochaines propositions.", accent=BRAND["neutral_400"]))
     return HTMLResponse(_page("Merci", "Votre réponse a bien été prise en compte."))
