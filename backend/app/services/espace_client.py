@@ -24,7 +24,7 @@ from ..settings import Settings
 from . import contact_search_mapping as CSM
 from .email_tracking import EmailTrackingService
 from .rapprochement_email import BRAND, FONT_BODY, FONT_DISPLAY, build_bien_view, _clean_text, _esc, _specs_line
-from .rapprochement_email import RapprochementEmailService
+from .rapprochement_email import RapprochementEmailService, email_shell, email_eyebrow, email_title, email_lead
 
 
 class EspaceClientService:
@@ -736,21 +736,55 @@ class EspaceClientService:
                 }, prefer="return=minimal")
             except Exception:
                 pass
+        # Contexte bien (pour l'objet et l'en-tête de l'email).
+        bien_title = ""
+        if str(bien_id or "").isdigit():
+            try:
+                dossier, _ = self._load_dossier_by_id(int(bien_id))
+                bien_title = _clean_text(dossier.get("titre_bien")) or _clean_text(dossier.get("numero_mandat")) or ""
+            except Exception:
+                bien_title = ""
+        client_email = envoi.get("recipient_email") or ""
         email_sent = False
         if nego:
             try:
                 from .google_workspace_service import GoogleWorkspaceService
+                html_body = self._message_email_html(client_email=client_email, bien_title=bien_title, message=msg)
+                subj = (f"Question d'un client — {bien_title}" if bien_title
+                        else "Un client vous a écrit depuis son espace")
                 res = GoogleWorkspaceService(self.settings).send_gmail_message(
                     subject_email=(self.settings.google_workspace_subject_email or "accueil@gti-immobilier.fr"),
-                    to=[nego], subject="Un client vous a écrit depuis son espace",
-                    body_text=f"Message reçu depuis l'espace client (contact Hektor {cid}) :\n\n{msg}",
-                    reply_to=envoi.get("recipient_email"),
+                    to=[nego], subject=subj,
+                    body_html=html_body,
+                    body_text=(f"Message d'un client depuis son espace"
+                               + (f" à propos de « {bien_title} »" if bien_title else "")
+                               + (f" ({client_email})" if client_email else "") + " :\n\n" + msg
+                               + "\n\nRépondez directement à cet email pour lui écrire."),
+                    reply_to=client_email or None,
                     dry_run=not self.settings.email_real_send_enabled,
                     related_entity_type="contact", related_entity_id=cid)
                 email_sent = bool(res.get("ok")) and not res.get("dryRun")
             except Exception:
                 pass
         return {"ok": True, "emailSent": email_sent}
+
+    def _message_email_html(self, *, client_email: str, bien_title: str, message: str) -> str:
+        """Email HTML (coquille premium partagée) prévenant le négociateur d'une question client."""
+        ident = (f'<a href="mailto:{_esc(client_email)}" style="color:{BRAND["magenta"]};text-decoration:none">{_esc(client_email)}</a>'
+                 if client_email else "Un client")
+        bien_line = (f' à propos de <b>{_esc(bien_title)}</b>' if bien_title else "")
+        quote = (f'<tr><td class="gti-pad" style="padding:6px 6px 0"><table role="presentation" width="100%" class="gti-card" '
+                 f'style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-left:3px solid {BRAND["magenta"]};border-radius:10px">'
+                 f'<tr><td style="padding:16px 20px"><div class="gti-ink" style="color:{BRAND["ink_soft"]};font-family:{FONT_BODY};'
+                 f'font-size:15px;line-height:1.6;white-space:pre-line">{_esc(message)}</div></td></tr></table></td></tr>')
+        body = (f'<tr><td class="gti-pad" style="padding:8px 6px 6px">{email_eyebrow("Message client")}'
+                f'{email_title("Un client vous a écrit")}'
+                f'{email_lead(ident + " vous a posé une question depuis son espace" + bien_line + ".")}</td></tr>'
+                f'{quote}'
+                f'<tr><td class="gti-pad" style="padding:14px 6px 8px"><div class="gti-mute" style="color:{BRAND["muted_warm"]};'
+                f'font-family:{FONT_BODY};font-size:12px;line-height:1.5">Répondez directement à cet email&nbsp;: votre réponse part au client.</div></td></tr>')
+        return email_shell(title="Message client", preheader=("Question d'un client" + (f" — {bien_title}" if bien_title else "")),
+                           inner_rows=body, tag="Espace négociateur")
 
     def submit_visite_request(self, *, envoi_id: str, bien_id: Any = None, days: Any = None,
                               periods: Any = None, message: Any = None, phone: Any = None) -> dict[str, Any]:
@@ -769,7 +803,7 @@ class EspaceClientService:
             dossier, _ = self._load_dossier_by_id(int(bien_id))
             title = _clean_text(dossier.get("titre_bien")) or _clean_text(dossier.get("numero_mandat")) or f"bien #{bien_id}"
             annonce_id = dossier.get("hektor_annonce_id")
-        days = [str(d)[:40] for d in (days or []) if str(d).strip()][:10]
+        days = [str(d)[:40] for d in (days or []) if str(d).strip()][:15]
         periods = [str(p)[:20] for p in (periods or []) if str(p).strip()][:3]
         phone = str(phone or "").strip()[:30]
         msg = str(message or "").strip()[:1000]

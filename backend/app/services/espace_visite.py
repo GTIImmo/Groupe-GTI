@@ -22,7 +22,10 @@ from . import email_tokens
 from .email_tracking import EmailTrackingService
 from .google_calendar_event_link_service import GoogleCalendarEventLinkService
 from .google_workspace_service import GoogleWorkspaceService
-from .rapprochement_email import BRAND, FONT_BODY, FONT_DISPLAY, LOGO_URL, RapprochementEmailService, _esc
+from .rapprochement_email import (
+    BRAND, FONT_BODY, FONT_DISPLAY, LOGO_URL, RapprochementEmailService,
+    _button, _esc, email_eyebrow, email_lead, email_shell, email_title,
+)
 
 GTI_DOMAIN = "gti-immobilier.fr"
 _MONTHS = {"jan": 1, "fév": 2, "fev": 2, "mar": 3, "avr": 4, "mai": 5, "juin": 6,
@@ -75,7 +78,7 @@ class VisiteRequestService:
         days = req.get("requested_days") or []
         periods = req.get("requested_periods") or ["Matin", "Après-midi"]
         out: list[dict[str, Any]] = []
-        for dl in days[:6]:
+        for dl in days[:15]:
             d = self._parse_day(dl)
             if not d:
                 continue
@@ -197,6 +200,48 @@ class VisiteRequestService:
                 pass
         return {"ok": True, "googleEvent": bool(gev_id)}
 
+    # ── Niveau 2 : le négociateur PROPOSE des créneaux, le client en choisit un ─
+    def propose(self, *, request_id: str, slots: list) -> dict[str, Any]:
+        req = self.get(request_id)
+        if not req:
+            return {"ok": False, "error": "not_found"}
+        if req.get("status") == "confirmee":
+            return {"ok": True, "already": True}
+        clean: list[dict[str, str]] = []
+        for s in (slots or [])[:6]:
+            st = str((s or {}).get("start") or "").strip()
+            en = str((s or {}).get("end") or "").strip()
+            if not st or not en:
+                continue
+            clean.append({"start": st, "end": en,
+                          "label": str((s or {}).get("label") or self._fr_datetime(st))[:60]})
+        if not clean:
+            return {"ok": False, "error": "no_slots"}
+        try:
+            self.tracking._patch("app_espace_visite_request", {"id": f"eq.{request_id}"}, {
+                "status": "proposee", "proposed_slots": clean,
+                "updated_at": datetime.now().isoformat()})
+        except Exception:
+            pass
+        if req.get("contact_email"):
+            try:
+                self._email_client_proposee({**req, "proposed_slots": clean})
+            except Exception:
+                pass
+        return {"ok": True, "proposed": len(clean)}
+
+    def accept(self, *, request_id: str, start_iso: str, end_iso: str) -> dict[str, Any]:
+        """Le client accepte un créneau proposé : crée le vrai RDV (via confirm) et prévient le négo."""
+        res = self.confirm(request_id=request_id, start_iso=start_iso, end_iso=end_iso)
+        if res.get("ok") and not res.get("already"):
+            req = self.get(request_id)
+            if req:
+                try:
+                    self._notify_nego_confirmed(req, start_iso)
+                except Exception:
+                    pass
+        return res
+
     @staticmethod
     def _fr_datetime(iso: str) -> str:
         m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})", str(iso or ""))
@@ -206,24 +251,12 @@ class VisiteRequestService:
         mon = ["", "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
         return f"{int(d)} {mon[int(mo)]} à {h}h{mi if mi != '00' else ''}"
 
-    # ── Emails (HTML stylé GTI, simple bulletproof) ───────────────────────────
-    def _shell(self, *, title: str, body_html: str) -> str:
-        return f"""<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"><title>{_esc(title)}</title></head>
-<body style="margin:0;background:{BRAND['paper']};font-family:{FONT_BODY}">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{BRAND['paper']}"><tr><td align="center" style="padding:26px 14px">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px">
-<tr><td style="padding:2px 6px 16px"><table role="presentation" width="100%" bgcolor="{BRAND['ink_warm']}" style="background:{BRAND['ink_warm']};border-radius:10px"><tr><td style="padding:16px 22px"><img src="{LOGO_URL}" height="42" alt="Groupe GTI" style="height:42px;border:0"></td></tr></table></td></tr>
-{body_html}
-<tr><td style="padding:18px 8px"><div style="border-top:1px solid {BRAND['line_warm']};margin-bottom:10px"></div><div style="color:{BRAND['muted_warm']};font-size:11px;line-height:1.6">GROUPE GTI · 22 rue Jean Jaurès, 42700 Firminy · RCS Saint-Étienne 502 811 144 · CPI 42022019 000 043 878.</div></td></tr>
-</table></td></tr></table></body></html>"""
+    # ── Emails : coquille premium PARTAGÉE (en-tête/pied/dark-mode/preheader) ──
+    def _shell(self, *, title: str, body_html: str, preheader: str = "", tag: str | None = None) -> str:
+        return email_shell(title=title, preheader=preheader or title, inner_rows=body_html, tag=tag)
 
     def _btn(self, href: str, label: str, *, bg: str = None, fg: str = "#ffffff") -> str:
-        bg = bg or BRAND["magenta"]
-        return (f'<a href="{_esc(href)}" style="background:{bg};border-radius:26px;color:{fg};display:inline-block;'
-                f'font-family:{FONT_BODY};font-size:14px;font-weight:bold;line-height:44px;text-align:center;'
-                f'text-decoration:none;padding:0 26px">{_esc(label)}</a>')
+        return _button(href, label, bg=bg or BRAND["magenta"], fg=fg)
 
     def _email_nego(self, req: dict[str, Any]) -> None:
         base = self._base()
@@ -241,12 +274,13 @@ class VisiteRequestService:
                 f'<td style="padding:6px 0;color:{BRAND["ink_warm"]};font-size:14px">{_esc(self._dispo_text(req).replace("Dispos : ", ""))}</td></tr>'
                 + (f'<tr><td style="padding:6px 0;color:{BRAND["muted_warm"]};font-size:13px">Message</td>'
                    f'<td style="padding:6px 0;color:{BRAND["ink_warm"]};font-size:14px">{_esc(req.get("message"))}</td></tr>' if req.get("message") else ""))
-        body = (f'<tr><td style="padding:6px 8px 18px"><div style="color:{BRAND["magenta"]};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Demande de visite</div>'
-                f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:24px;margin-top:8px">Un client souhaite visiter ce bien</div></td></tr>'
-                f'<tr><td style="padding:0 8px"><table role="presentation" width="100%" style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-radius:12px;padding:14px 20px"><tr><td><table role="presentation" width="100%">{rows}</table></td></tr></table></td></tr>'
-                f'<tr><td align="center" style="padding:22px 8px 6px">{self._btn(url, "Voir et confirmer un créneau")}</td></tr>'
-                f'<tr><td align="center" style="padding:2px 8px 10px"><div style="color:{BRAND["muted_warm"]};font-size:12px">Vous choisissez l\'horaire ; la visite est ajoutée à votre agenda et le client est prévenu.</div></td></tr>')
-        html = self._shell(title="Demande de visite", body_html=body)
+        body = (f'<tr><td class="gti-pad" style="padding:8px 6px 18px">{email_eyebrow("Demande de visite")}'
+                f'{email_title("Un client souhaite visiter ce bien")}</td></tr>'
+                f'<tr><td class="gti-pad" style="padding:0 6px"><table role="presentation" width="100%" class="gti-card" style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-radius:12px"><tr><td style="padding:16px 22px"><table role="presentation" width="100%">{rows}</table></td></tr></table></td></tr>'
+                f'<tr><td align="center" class="gti-pad" style="padding:24px 6px 6px">{self._btn(url, "Voir et confirmer un créneau")}</td></tr>'
+                f'<tr><td align="center" class="gti-pad" style="padding:4px 6px 8px"><div class="gti-mute" style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:12px;line-height:1.5">Vous choisissez l\'horaire&nbsp;: la visite est ajoutée à votre agenda et le client est prévenu.</div></td></tr>')
+        html = self._shell(title="Demande de visite", body_html=body, tag="Espace négociateur",
+                           preheader=f"{client} souhaite visiter {req.get('bien_title')}")
         self.ws.send_gmail_message(
             subject_email=(self.settings.google_workspace_subject_email or f"accueil@{GTI_DOMAIN}"),
             to=[req.get("negociateur_email")], subject=f"Demande de visite — {req.get('bien_title')}",
@@ -255,30 +289,80 @@ class VisiteRequestService:
             related_entity_type="contact", related_entity_id=req.get("hektor_contact_id"))
 
     def _email_client_recue(self, req: dict[str, Any]) -> None:
-        body = (f'<tr><td style="padding:6px 8px 6px"><div style="color:{BRAND["magenta"]};font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Demande envoyée</div>'
-                f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:24px;margin-top:8px">Votre demande de visite est partie&nbsp;!</div>'
-                f'<div style="color:{BRAND["ink_soft"]};font-size:15px;line-height:1.6;margin-top:10px">Votre conseiller a bien reçu votre demande de visite pour <b>{_esc(req.get("bien_title"))}</b>.<br>'
-                f'{_esc(self._dispo_text(req))}<br>Il vous recontacte très vite pour fixer le créneau exact.</div></td></tr>')
+        body = (f'<tr><td class="gti-pad" style="padding:8px 6px 6px">{email_eyebrow("Demande envoyée")}'
+                f'{email_title("Votre demande de visite est partie !")}'
+                f'{email_lead("Votre conseiller a bien reçu votre demande de visite pour <b>" + _esc(req.get("bien_title")) + "</b>.<br>" + _esc(self._dispo_text(req)) + "<br>Il vous recontacte très vite pour fixer le créneau exact.")}</td></tr>')
         self.ws.send_gmail_message(
             subject_email=(self.settings.google_workspace_subject_email or f"accueil@{GTI_DOMAIN}"),
             to=[req.get("contact_email")], subject="Votre demande de visite est bien enregistrée",
-            body_html=self._shell(title="Demande envoyée", body_html=body),
+            body_html=self._shell(title="Demande envoyée", body_html=body, tag="Votre projet",
+                                  preheader=f"Demande reçue pour {req.get('bien_title')} — votre conseiller revient vers vous."),
             body_text=f"Votre demande de visite pour {req.get('bien_title')} est enregistrée. Votre conseiller vous recontacte.",
             reply_to=req.get("negociateur_email") or None, dry_run=not self.settings.email_real_send_enabled,
             related_entity_type="contact", related_entity_id=req.get("hektor_contact_id"))
 
     def _email_client_confirmee(self, req: dict[str, Any], start_iso: str) -> None:
         when = self._fr_datetime(start_iso)
-        body = (f'<tr><td style="padding:6px 8px 6px"><div style="color:{BRAND["green"] if BRAND.get("green") else "#1f8a5b"};font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Visite confirmée</div>'
-                f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:24px;margin-top:8px">C\'est confirmé&nbsp;: {_esc(when)}</div>'
-                f'<div style="color:{BRAND["ink_soft"]};font-size:15px;line-height:1.6;margin-top:10px">Votre visite de <b>{_esc(req.get("bien_title"))}</b> est fixée au <b>{_esc(when)}</b>.<br>'
-                f'Votre conseiller vous attend. À très bientôt&nbsp;!</div></td></tr>')
+        body = (f'<tr><td class="gti-pad" style="padding:8px 6px 6px">{email_eyebrow("Visite confirmée", color="#1f8a5b")}'
+                f'{email_title("C\'est confirmé : " + when)}'
+                f'{email_lead("Votre visite de <b>" + _esc(req.get("bien_title")) + "</b> est fixée au <b>" + _esc(when) + "</b>.<br>Votre conseiller vous attend. À très bientôt&nbsp;!")}</td></tr>')
         self.ws.send_gmail_message(
             subject_email=(self.settings.google_workspace_subject_email or f"accueil@{GTI_DOMAIN}"),
             to=[req.get("contact_email")], subject=f"Visite confirmée — {req.get('bien_title')}",
-            body_html=self._shell(title="Visite confirmée", body_html=body),
+            body_html=self._shell(title="Visite confirmée", body_html=body, tag="Votre projet",
+                                  preheader=f"Visite confirmée le {when} — {req.get('bien_title')}"),
             body_text=f"Votre visite de {req.get('bien_title')} est confirmée le {when}.",
             reply_to=req.get("negociateur_email") or None, dry_run=not self.settings.email_real_send_enabled,
+            related_entity_type="contact", related_entity_id=req.get("hektor_contact_id"))
+
+    def _email_client_proposee(self, req: dict[str, Any]) -> None:
+        base = self._base()
+        tok = email_tokens.make_visite_request_token(request_id=str(req["id"]), role="client", secret=self._secret())
+        url = f"{base}/visite/{tok}"
+        slots = req.get("proposed_slots") or []
+        lis = "".join(
+            f'<tr><td style="padding:7px 0"><span style="display:inline-block;background:{BRAND["surface"]};'
+            f'border:1px solid {BRAND["line_warm"]};border-radius:10px;padding:9px 16px;color:{BRAND["ink_warm"]};'
+            f'font-size:14px;font-weight:bold">{_esc(self._fr_datetime(s.get("start")) if not s.get("label") else s.get("label"))}</span></td></tr>'
+            for s in slots)
+        body = (f'<tr><td class="gti-pad" style="padding:8px 6px 6px">{email_eyebrow("Créneaux proposés")}'
+                f'{email_title("Votre conseiller vous propose ces horaires")}'
+                f'{email_lead("Pour visiter <b>" + _esc(req.get("bien_title")) + "</b>, choisissez le créneau qui vous arrange&nbsp;:")}</td></tr>'
+                f'<tr><td class="gti-pad" style="padding:10px 6px 0"><table role="presentation">{lis}</table></td></tr>'
+                f'<tr><td align="center" class="gti-pad" style="padding:22px 6px 6px">{self._btn(url, "Choisir mon créneau")}</td></tr>'
+                f'<tr><td align="center" class="gti-pad" style="padding:4px 6px 8px"><div class="gti-mute" style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:12px">Un clic suffit&nbsp;: votre visite sera confirmée immédiatement.</div></td></tr>')
+        self.ws.send_gmail_message(
+            subject_email=(self.settings.google_workspace_subject_email or f"accueil@{GTI_DOMAIN}"),
+            to=[req.get("contact_email")], subject=f"Choisissez votre créneau de visite — {req.get('bien_title')}",
+            body_html=self._shell(title="Créneaux proposés", body_html=body, tag="Votre projet",
+                                  preheader=f"Choisissez votre créneau pour visiter {req.get('bien_title')}"),
+            body_text=f"Votre conseiller vous propose des créneaux pour visiter {req.get('bien_title')}. Choisissez le vôtre : {url}",
+            reply_to=req.get("negociateur_email") or None, dry_run=not self.settings.email_real_send_enabled,
+            related_entity_type="contact", related_entity_id=req.get("hektor_contact_id"))
+
+    def _notify_nego_confirmed(self, req: dict[str, Any], start_iso: str) -> None:
+        when = self._fr_datetime(start_iso)
+        # Cloche : le client a choisi son créneau.
+        try:
+            self.tracking._insert("app_notification", {
+                "negociateur_email": req.get("negociateur_email"), "type": "visite_confirmee",
+                "title": "Visite confirmée par le client", "app_dossier_id": req.get("app_dossier_id"),
+                "body": f"{req.get('contact_email') or 'Le client'} a confirmé la visite de « {req.get('bien_title')} » : {when}.",
+                "contact_search_key": req.get("contact_search_key"),
+                "payload": {"source": "espace_visite", "request_id": str(req["id"])},
+            }, prefer="return=minimal")
+        except Exception:
+            pass
+        body = (f'<tr><td class="gti-pad" style="padding:8px 6px 6px">{email_eyebrow("Visite confirmée", color="#1f8a5b")}'
+                f'{email_title("Le client a choisi son créneau")}'
+                f'{email_lead("<b>" + _esc(req.get("contact_email")) + "</b> a confirmé la visite de <b>" + _esc(req.get("bien_title")) + "</b> le <b>" + _esc(when) + "</b>.<br>L\'évènement a été ajouté à votre agenda.")}</td></tr>')
+        self.ws.send_gmail_message(
+            subject_email=(self.settings.google_workspace_subject_email or f"accueil@{GTI_DOMAIN}"),
+            to=[req.get("negociateur_email")], subject=f"Visite confirmée par le client — {req.get('bien_title')}",
+            body_html=self._shell(title="Visite confirmée", body_html=body, tag="Espace négociateur",
+                                  preheader=f"{req.get('contact_email')} a confirmé la visite — {when}"),
+            body_text=f"{req.get('contact_email')} a confirmé la visite de {req.get('bien_title')} le {when}.",
+            reply_to=req.get("contact_email") or None, dry_run=not self.settings.email_real_send_enabled,
             related_entity_type="contact", related_entity_id=req.get("hektor_contact_id"))
 
     # ── Page d'action du négociateur (sans login, via jeton) ──────────────────
@@ -316,8 +400,11 @@ class VisiteRequestService:
  .h{{border:1.5px solid #e7e6e1;background:#fff;border-radius:11px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}}
  .h:hover{{border-color:#c5005f}} .h.on{{background:#c5005f;border-color:#c5005f;color:#fff}}
  .call{{display:inline-flex;align-items:center;gap:8px;border:1.5px solid #e7e6e1;border-radius:11px;padding:11px 16px;font-size:14px;font-weight:700;color:#181a1c;text-decoration:none;margin-top:6px}}
- .go{{width:100%;margin-top:20px;background:#c5005f;color:#fff;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:700;cursor:pointer}}
+ .go{{width:100%;margin-top:12px;background:#c5005f;color:#fff;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:700;cursor:pointer}}
  .go:disabled{{background:#e7e6e1;color:#8b9197;cursor:default}}
+ .go.alt{{background:#fff;color:#c5005f;border:1.5px solid #c5005f}}
+ .go.alt:disabled{{background:#fff;color:#cbb8c0;border-color:#ecd9e2}}
+ .hint{{color:#8b9197;font-size:13px;margin-top:18px}}
  .muted{{color:#8b9197;font-size:14px}} .ack{{margin-top:14px;color:#1f8a5b;font-weight:700;display:none}}
  .done{{background:#e8f6ef;color:#1f8a5b;border-radius:13px;padding:16px;font-weight:700;font-size:15px}} .done span{{font-weight:500;color:#3b6d11;font-size:13px}}
 </style></head>
@@ -331,23 +418,100 @@ class VisiteRequestService:
      Disponibilités : <b>{_html.escape(self._dispo_text(req).replace("Dispos : ", ""))}</b>
      {('<br>Message : '+_html.escape(req.get("message"))) if req.get("message") else ''}</div>
    {done if confirmed else f'''
-   <div class="lbl">Choisissez le créneau de la visite</div>
+   <div class="lbl">Sélectionnez le ou les créneaux</div>
    {chips}
    {('<a class="call" href="tel:'+_html.escape(phone)+'">📞 Appeler le client</a>') if phone else ''}
-   <button class="go" id="go" disabled>Confirmer la visite</button>
-   <div class="ack" id="ack">✓ Visite confirmée — le client est prévenu et l'évènement est dans votre agenda.</div>'''}
+   <div class="hint" id="hint">Un seul créneau → vous confirmez directement. Plusieurs → vous les proposez, le client choisit.</div>
+   <button class="go" id="propose" disabled>Proposer au client</button>
+   <button class="go alt" id="confirm" disabled>Confirmer directement</button>
+   <div class="ack" id="ack"></div>'''}
  </div></div>
 <script>
-const POST={{u:"{base}/visite/{_html.escape(token)}/confirmer"}};
-let sel=null;
+const BASE="{base}/visite/{_html.escape(token)}";
+const sel=new Map();
+function refresh(){{
+  const n=sel.size, p=document.getElementById('propose'), c=document.getElementById('confirm');
+  if(p)p.disabled=n<1; if(c)c.disabled=n!==1;
+}}
 document.querySelectorAll('.h').forEach(b=>b.addEventListener('click',()=>{{
-  document.querySelectorAll('.h').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  const k=b.dataset.start;
+  if(sel.has(k)){{sel.delete(k);b.classList.remove('on');}}
+  else{{const day=b.closest('.day').querySelector('.dl').textContent;
+        sel.set(k,{{start:b.dataset.start,end:b.dataset.end,label:day+' · '+b.textContent.trim()}});b.classList.add('on');}}
+  refresh();
+}}));
+async function send(url,payload,msg){{
+  document.querySelectorAll('.go').forEach(x=>{{x.disabled=true;}});
+  try{{await fetch(url,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(payload)}});}}catch(e){{}}
+  document.querySelectorAll('.go,.hint').forEach(x=>{{x.style.display='none';}});
+  const a=document.getElementById('ack'); if(a){{a.textContent=msg;a.style.display='block';}}
+}}
+const cf=document.getElementById('confirm');
+if(cf)cf.addEventListener('click',()=>{{const s=[...sel.values()][0]; if(!s)return;
+  send(BASE+'/confirmer',{{start:s.start,end:s.end}},'✓ Visite confirmée — le client est prévenu et l\\'évènement est dans votre agenda.');}});
+const pr=document.getElementById('propose');
+if(pr)pr.addEventListener('click',()=>{{const arr=[...sel.values()]; if(!arr.length)return;
+  send(BASE+'/proposer',{{slots:arr}},'✓ Créneaux envoyés au client — il choisit, et vous serez prévenu de sa confirmation.');}});
+</script>
+</body></html>"""
+
+    # ── Page d'acceptation du client (sans login, via jeton role=client) ──────
+    def render_client_page(self, *, req: dict[str, Any], token: str) -> str:
+        base = self._base()
+        confirmed = req.get("status") == "confirmee"
+        slots = req.get("proposed_slots") or []
+        btns = "".join(
+            f'<button class="slot" data-start="{_html.escape(s["start"])}" data-end="{_html.escape(s["end"])}">'
+            f'{_html.escape(s.get("label") or self._fr_datetime(s.get("start")))}</button>'
+            for s in slots if s.get("start") and s.get("end"))
+        if not btns:
+            btns = '<div class="muted">Aucun créneau proposé pour l\'instant. Votre conseiller revient vers vous.</div>'
+        done = ('<div class="done">✓ Votre visite est confirmée'
+                + (f' · {_html.escape(self._fr_datetime(req.get("confirmed_start")))}' if req.get("confirmed_start") else '')
+                + '<br><span>Vous recevez la confirmation par email. À très bientôt&nbsp;!</span></div>') if confirmed else ''
+        return f"""<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>Votre visite · Groupe GTI</title>
+<style>
+ *{{box-sizing:border-box}} body{{margin:0;background:#f4f3f0;color:#181a1c;font-family:Manrope,system-ui,sans-serif}}
+ .wrap{{max-width:520px;margin:0 auto;padding:0 16px 50px}}
+ .top{{background:#1f1c1a;border-radius:0 0 14px 14px;padding:16px 20px;color:#fff;font-weight:800}}
+ .card{{background:#fff;border:1px solid #e7e6e1;border-radius:18px;padding:24px;margin-top:18px;box-shadow:0 14px 34px -26px rgba(24,26,28,.5)}}
+ .eyebrow{{font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#8c0044}}
+ h1{{font-family:Fraunces,serif;font-size:24px;margin:8px 0 4px}}
+ .sub{{color:#8b9197;font-size:14px;line-height:1.5}}
+ .lbl{{font-size:12.5px;font-weight:700;margin:20px 0 10px}}
+ .slot{{display:block;width:100%;text-align:left;border:1.5px solid #e7e6e1;background:#fff;border-radius:13px;padding:15px 18px;margin-bottom:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;color:#181a1c}}
+ .slot:hover{{border-color:#c5005f}} .slot.on{{background:#c5005f;border-color:#c5005f;color:#fff}}
+ .go{{width:100%;margin-top:14px;background:#c5005f;color:#fff;border:none;border-radius:13px;padding:16px;font-size:15px;font-weight:700;cursor:pointer}}
+ .go:disabled{{background:#e7e6e1;color:#8b9197;cursor:default}}
+ .muted{{color:#8b9197;font-size:14px}} .ack{{margin-top:14px;color:#1f8a5b;font-weight:700;display:none}}
+ .done{{background:#e8f6ef;color:#1f8a5b;border-radius:13px;padding:16px;font-weight:700;font-size:15px}} .done span{{font-weight:500;color:#3b6d11;font-size:13px}}
+</style></head>
+<body>
+ <div class="top">Groupe GTI · Votre visite</div>
+ <div class="wrap"><div class="card">
+   <div class="eyebrow">Choisissez votre créneau</div>
+   <h1>{_html.escape(req.get("bien_title") or "Votre visite")}</h1>
+   <div class="sub">Votre conseiller vous propose ces horaires. Sélectionnez celui qui vous convient.</div>
+   {done if confirmed else f'''
+   <div class="lbl">Créneaux disponibles</div>
+   {btns}
+   <button class="go" id="go" disabled>J'accepte ce créneau</button>
+   <div class="ack" id="ack">✓ Visite confirmée — vous recevez la confirmation par email. À très bientôt&nbsp;!</div>'''}
+ </div></div>
+<script>
+const POST="{base}/visite/{_html.escape(token)}/accepter";
+let sel=null;
+document.querySelectorAll('.slot').forEach(b=>b.addEventListener('click',()=>{{
+  document.querySelectorAll('.slot').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   sel={{start:b.dataset.start,end:b.dataset.end}};const g=document.getElementById('go');if(g)g.disabled=false;
 }}));
 const go=document.getElementById('go');
 if(go)go.addEventListener('click',async()=>{{
   if(!sel)return; go.disabled=true; go.textContent='Confirmation…';
-  try{{await fetch(POST.u,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(sel)}});}}catch(e){{}}
+  try{{await fetch(POST,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(sel)}});}}catch(e){{}}
   go.style.display='none'; const a=document.getElementById('ack'); if(a)a.style.display='block';
 }});
 </script>

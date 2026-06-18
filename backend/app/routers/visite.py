@@ -40,6 +40,9 @@ def visite_page(token: str, settings: Settings = Depends(get_settings)):
     req = svc.get(str(payload.get("r") or ""))
     if not req:
         return HTMLResponse(_expired(), status_code=410)
+    # role client → page d'acceptation d'un créneau proposé ; sinon page d'action du négo.
+    if payload.get("role") == "client":
+        return HTMLResponse(svc.render_client_page(req=req, token=token))
     return HTMLResponse(svc.render_nego_page(req=req, token=token))
 
 
@@ -59,6 +62,49 @@ async def visite_confirmer(token: str, request: Request, settings: Settings = De
     svc = VisiteRequestService(settings)
     try:
         res = svc.confirm(request_id=str(payload.get("r") or ""), start_iso=start_iso, end_iso=end_iso)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
+    return JSONResponse(res)
+
+
+@router.post("/visite/{token}/proposer")
+async def visite_proposer(token: str, request: Request, settings: Settings = Depends(get_settings)):
+    """Le négociateur propose un ou plusieurs créneaux au client (statut proposee + email client)."""
+    payload = _verify(token, settings)
+    if not payload or payload.get("role") != "nego":
+        return JSONResponse({"ok": False, "error": "invalid_token"}, status_code=410)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    slots = (body or {}).get("slots")
+    if not isinstance(slots, list) or not slots:
+        return JSONResponse({"ok": False, "error": "missing_slots"}, status_code=400)
+    svc = VisiteRequestService(settings)
+    try:
+        res = svc.propose(request_id=str(payload.get("r") or ""), slots=slots)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
+    return JSONResponse(res)
+
+
+@router.post("/visite/{token}/accepter")
+async def visite_accepter(token: str, request: Request, settings: Settings = Depends(get_settings)):
+    """Le client accepte un créneau proposé : crée le vrai RDV Google et prévient le négociateur."""
+    payload = _verify(token, settings)
+    if not payload or payload.get("role") != "client":
+        return JSONResponse({"ok": False, "error": "invalid_token"}, status_code=410)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    start_iso = str((body or {}).get("start") or "").strip()
+    end_iso = str((body or {}).get("end") or "").strip()
+    if not start_iso or not end_iso:
+        return JSONResponse({"ok": False, "error": "missing_slot"}, status_code=400)
+    svc = VisiteRequestService(settings)
+    try:
+        res = svc.accept(request_id=str(payload.get("r") or ""), start_iso=start_iso, end_iso=end_iso)
     except Exception:
         return JSONResponse({"ok": False, "error": "server"}, status_code=500)
     return JSONResponse(res)

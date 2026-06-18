@@ -607,9 +607,9 @@ function openVisite(k){
   if(!vm)return; vmKey=k; const card=document.querySelector('[data-card="'+k+'"]'); vmEnvoi=card?card.dataset.envoi:'';
   const b=DATA[k]||{};
   const bn=$('#vm-bien'), lo=$('#vm-loc'); if(bn)bn.textContent=b.title||'Organiser une visite'; if(lo)lo.textContent=b.loc||'';
-  // Génère les 7 prochains jours (hors aujourd'hui)
+  // Génère les 15 prochains jours (hors aujourd'hui)
   const days=$('#vm-days'); if(days){days.innerHTML='';
-    for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()+i);
+    for(let i=1;i<=15;i++){const d=new Date();d.setDate(d.getDate()+i);
       const lab=VM_DJ[d.getDay()]+' '+d.getDate()+' '+VM_DM[d.getMonth()];
       const el=document.createElement('button');el.className='vm-day';el.dataset.day=lab;
       el.innerHTML='<div class="dd">'+VM_DJ[d.getDay()]+'</div><div class="dn">'+d.getDate()+'</div><div class="dm">'+VM_DM[d.getMonth()]+'</div>';

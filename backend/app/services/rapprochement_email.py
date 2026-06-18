@@ -217,6 +217,117 @@ def _button(href: str, label: str, *, bg: str, fg: str, border: str | None = Non
 <!--<![endif]-->"""
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Système de design email PARTAGÉ (en-tête / pied / coquille premium)
+# Réutilisé par TOUS les emails (rapprochement + transactionnels visite/message)
+# pour une identité unique : papier ivoire, encre chaude, filet magenta signature,
+# logo réel GTI + lockup domaine, titres Playfair, pied avec marque + mentions.
+# Bulletproof : tables + styles inline, dark-mode, preheader, MSO.
+# ─────────────────────────────────────────────────────────────────────────────
+EMAIL_TAGLINE = "GTI-IMMOBILIER.FR"
+
+# <head> commun (polices serif éditoriales, dark-mode, MSO) — classes gti-* pour le mode sombre.
+EMAIL_HEAD = (
+    '<meta charset="utf-8">'
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    '<meta http-equiv="X-UA-Compatible" content="IE=edge">'
+    '<meta name="color-scheme" content="light dark">'
+    '<meta name="supported-color-schemes" content="light dark">'
+    '<!--[if !mso]><!-- --><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"><!--<![endif]-->'
+    '<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->'
+    '<style>'
+    f'body{{margin:0;padding:0;background:{BRAND["paper"]};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}}'
+    'img{-ms-interpolation-mode:bicubic}a{text-decoration:none}'
+    '@media only screen and (max-width:600px){.gti-container{width:100%!important}.gti-pad{padding-left:18px!important;padding-right:18px!important}}'
+    '@media (prefers-color-scheme:dark){'
+    'body,.gti-bg{background:#15130f!important}'
+    '.gti-card{background:#211e19!important;border-color:#322d25!important}'
+    '.gti-ink{color:#f5efe6!important}.gti-mute{color:#c2b9aa!important}}'
+    '</style>'
+)
+
+
+def email_header(*, tag: str | None = None) -> str:
+    """En-tête premium : filet magenta signature + logo réel sur encre chaude + lockup domaine."""
+    tag_cell = (
+        f'<td align="right" style="vertical-align:middle;padding:18px 24px;white-space:nowrap">'
+        f'<span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;'
+        f'letter-spacing:2.5px;text-transform:uppercase">{_esc(tag)}</span></td>'
+    ) if tag else ''
+    return (
+        f'<tr><td class="gti-pad" style="padding:2px 6px 20px">'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        f'bgcolor="{BRAND["ink_warm"]}" style="background:{BRAND["ink_warm"]};border-radius:12px;overflow:hidden">'
+        f'<tr><td colspan="2" style="font-size:0;line-height:0;height:3px;background:{BRAND["magenta"]}">&nbsp;</td></tr>'
+        f'<tr><td align="left" style="vertical-align:middle;padding:20px 24px">'
+        f'<img src="{LOGO_URL}" height="46" alt="Groupe GTI" style="display:block;border:0;height:46px;width:auto">'
+        f'<div style="color:#8f877b;font-family:{FONT_BODY};font-size:9.5px;letter-spacing:3px;margin-top:9px">{EMAIL_TAGLINE}</div>'
+        f'</td>{tag_cell}</tr></table></td></tr>'
+    )
+
+
+def email_footer(*, unsub_url: str | None = None) -> str:
+    """Pied premium : marque (carré magenta + « Groupe GTI » Playfair) + mentions légales."""
+    unsub = (
+        f'<div class="gti-mute" style="margin-top:10px;font-family:{FONT_BODY};font-size:11px;'
+        f'color:{BRAND["muted_warm"]}">Vous recevez cet email car vous êtes en relation avec notre agence. '
+        f'<a href="{_esc(unsub_url)}" style="color:{BRAND["ink_soft"]};text-decoration:underline">Se désinscrire</a>.</div>'
+    ) if unsub_url else ''
+    return (
+        f'<tr><td class="gti-pad" style="padding:26px 6px 28px">'
+        f'<div style="border-top:1px solid {BRAND["line_warm"]};margin-bottom:16px;font-size:0;line-height:0">&nbsp;</div>'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        f'<td style="vertical-align:middle;padding-right:9px"><table role="presentation" cellpadding="0" cellspacing="0" border="0">'
+        f'<tr><td width="10" height="10" bgcolor="{BRAND["magenta"]}" style="font-size:0;line-height:0;background:{BRAND["magenta"]}">&nbsp;</td></tr></table></td>'
+        f'<td style="vertical-align:middle"><span class="gti-ink" style="font-family:{FONT_DISPLAY};color:{BRAND["ink_warm"]};font-size:15px;letter-spacing:.5px">Groupe GTI</span></td>'
+        f'</tr></table>'
+        f'<div class="gti-mute" style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:11px;line-height:1.6;margin-top:10px">{_esc(LEGAL_LINE)}</div>'
+        f'{unsub}</td></tr>'
+    )
+
+
+def email_eyebrow(text: str, *, color: str | None = None) -> str:
+    """Suréclat : petit tiret magenta + libellé capitales espacées."""
+    color = color or BRAND["magenta"]
+    return (
+        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        f'<td style="vertical-align:middle;padding-right:8px"><div style="width:22px;height:2px;background:{color};font-size:0;line-height:0">&nbsp;</div></td>'
+        f'<td style="vertical-align:middle"><span style="color:{color};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2.5px;text-transform:uppercase">{_esc(text)}</span></td>'
+        f'</tr></table>'
+    )
+
+
+def email_title(text: str) -> str:
+    return (f'<div class="gti-ink" style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};'
+            f'font-size:25px;line-height:1.22;margin-top:13px">{_esc(text)}</div>')
+
+
+def email_lead(html_text: str) -> str:
+    return (f'<div class="gti-mute" style="color:{BRAND["ink_soft"]};font-family:{FONT_BODY};'
+            f'font-size:15px;line-height:1.65;margin-top:11px">{html_text}</div>')
+
+
+def email_shell(*, title: str, preheader: str, inner_rows: str,
+                tag: str | None = None, unsub_url: str | None = None) -> str:
+    """Coquille email premium partagée : <head> commun + en-tête + corps + pied."""
+    return f"""<!DOCTYPE html>
+<html lang="fr" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>{EMAIL_HEAD}<title>{_esc(title)}</title></head>
+<body class="gti-bg">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">{_esc(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-bg" style="background:{BRAND['paper']}">
+  <tr><td align="center" style="padding:28px 14px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="gti-container" style="width:600px;max-width:600px">
+      {email_header(tag=tag)}
+      {inner_rows}
+      {email_footer(unsub_url=unsub_url)}
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>"""
+
+
 def _specs_line(specs: list[str]) -> str:
     if not specs:
         return ""
@@ -338,21 +449,12 @@ def build_email_html(ctx: dict[str, Any]) -> str:
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-bg" style="background:{BRAND['paper']}">
   <tr><td align="center" style="padding:28px 14px">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="gti-container" style="width:600px;max-width:600px">
-      <!-- En-tête : logo GTI réel sur bandeau foncé (le logo ressort, le « groupe » gris devient lisible) -->
-      <tr><td class="gti-pad" style="padding:2px 6px 18px">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{BRAND['ink_warm']}" style="background:{BRAND['ink_warm']};border-radius:10px"><tr>
-          <td align="left" style="vertical-align:middle;padding:18px 24px">
-            <img src="{LOGO_URL}" height="50" alt="Groupe GTI" style="display:block;border:0;height:50px;width:auto">
-          </td>
-          <td align="right" style="vertical-align:middle;padding:18px 24px">
-            <span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;letter-spacing:2.5px;text-transform:uppercase">Pour votre projet</span>
-          </td>
-        </tr></table>
-      </td></tr>
+      <!-- En-tête premium partagé (logo + filet magenta signature + lockup domaine) -->
+      {email_header(tag="Pour votre projet")}
       <!-- Accroche éditoriale -->
       <tr><td class="gti-pad" style="padding:14px 6px 22px">
-        <div style="color:{BRAND['magenta']};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2.5px;text-transform:uppercase">Rien que pour vous</div>
-        <div class="gti-ink" style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:12px">{greeting}</div>
+        {email_eyebrow("Rien que pour vous")}
+        <div class="gti-ink" style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:13px">{greeting}</div>
         {intro_html}
         <div class="gti-mute" style="color:{BRAND['ink_soft']};font-family:{FONT_BODY};font-size:15px;line-height:1.65;margin-top:10px">{accroche}</div>
       </td></tr>
@@ -364,15 +466,8 @@ def build_email_html(ctx: dict[str, Any]) -> str:
       {affiner_html}
       <!-- Signature -->
       <tr><td class="gti-pad" style="padding:8px 6px 6px">{sig_html}</td></tr>
-      <!-- Pied légal -->
-      <tr><td class="gti-pad" style="padding:22px 6px 26px">
-        <div style="border-top:1px solid {BRAND['line_warm']};margin-bottom:14px;font-size:0;line-height:0">&nbsp;</div>
-        <div class="gti-mute" style="color:{BRAND['muted_warm']};font-family:{FONT_BODY};font-size:11px;line-height:1.6">{_esc(LEGAL_LINE)}</div>
-        <div class="gti-mute" style="margin-top:8px;font-family:{FONT_BODY};font-size:11px;color:{BRAND['muted_warm']}">
-          Vous recevez cet email car vous êtes en relation avec notre agence.
-          <a href="{unsub}" style="color:{BRAND['ink_soft']};text-decoration:underline">Se désinscrire</a>.
-        </div>
-      </td></tr>
+      <!-- Pied premium partagé (marque + mentions + désinscription) -->
+      {email_footer(unsub_url=unsub)}
     </table>
     {pixel}
   </td></tr>
