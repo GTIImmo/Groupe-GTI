@@ -110,9 +110,13 @@ def _featured(v: dict[str, Any]) -> str:
              f'<path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round"></path></svg></a></div>'
              ) if v.get("matterport") else ""
     k = _e(v.get("key"))
+    label = _match_label(v.get("pourquoi"))
+    score = (f'<div class="feat-score"><span class="st"><small>Correspondance</small>'
+             f'<span>{_e(label)}</span></span></div>') if label else ""
     return f"""
     <article class="feat" data-card="{k}" data-envoi="{_e(v.get('envoi_id'))}">
       <div class="feat-media">
+        {score}
         <button class="feat-fav" data-fav="{k}" aria-label="Coup de cœur">♡</button>
         {_feat_gallery(v)}
       </div>
@@ -120,7 +124,6 @@ def _featured(v: dict[str, Any]) -> str:
         <div class="feat-loc">{IC['pin']}{_e(v.get('loc'))}</div>
         <div class="feat-title disp">{_e(v.get('title'))}</div>
         <div class="feat-priceline"><span class="feat-price">{_e(v.get('price'))}</span><span class="feat-fai">FAI</span></div>
-        {_pourquoi(v)}
         <div class="feat-specs">{_specs_html(v)}</div>
         {mport}
         <div class="feat-adv"><span class="fa-av">{_e(nego.get('initials'))}</span><div class="fa-i"><div class="fa-n">{_e(nego.get('name'))}</div><div class="fa-g">Votre conseiller · {_e(nego.get('agence'))}</div></div></div>
@@ -147,7 +150,6 @@ def _card(v: dict[str, Any]) -> str:
           <div class="pc-loc">{_e(v.get('loc'))}</div>
           <div class="pc-title">{_e(v.get('title'))}</div>
           <div class="pc-specs">{specs}</div>
-          {_pourquoi(v)}
           <div class="pc-adv"><span class="pca-av">{_e(nego.get('initials'))}</span><span class="pca-n">{_e(nego.get('name'))}</span></div>
           <div class="pc-foot"><div class="pc-price">{_e(v.get('price'))}</div></div>
           <div class="pc-actions"><button class="pca cta" data-detail="{k}">+ Détail</button>
@@ -165,6 +167,46 @@ def _stats(s: dict[str, Any]) -> str:
     for key, lbl, dark in cells:
         out.append(f'<div class="stat{" dark" if dark else ""}"><div class="v">{_e(s.get(key, 0))}</div><div class="l">{lbl}</div></div>')
     return f'<div class="stats">{"".join(out)}</div>'
+
+
+def _match_label(pourquoi: list) -> str:
+    n = len(pourquoi or [])
+    if n >= 4:
+        return "Coup de cœur probable"
+    if n >= 2:
+        return "Belle correspondance"
+    if n >= 1:
+        return "Correspond à votre recherche"
+    return ""
+
+
+def _ecartes_teaser(n: int) -> str:
+    if n:
+        title = f"{n} bien{'s' if n > 1 else ''} écarté{'s' if n > 1 else ''}"
+        txt = "Vous les avez retirés de votre sélection. Consultez-les ou restaurez-les à tout moment."
+    else:
+        title = "Aucun bien écarté"
+        txt = "Quand un bien ne vous convient pas, dites-le-nous : il rejoint vos écartés et affine nos propositions."
+    return (f'<article class="invite" id="ecTeaser"><span class="ic">{IC["x"]}</span>'
+            f'<h3 class="disp" id="ecTeaserTitle">{title}</h3>'
+            f'<p id="ecTeaserTxt">{txt}</p>'
+            '<button data-goto="ecartes">Voir mes écartés</button></article>')
+
+
+def _estimation_block() -> str:
+    pts = "".join(f'<li>{IC["check"]}{t}</li>' for t in
+                  ["Rapport détaillé sous 48 h", "Prix de marché actualisé", "Accompagnement de A à Z"])
+    return (
+        '<div class="adslot"><div class="adslot-media" style="background:#1d2a26"><div class="adslot-shade"></div></div>'
+        '<div class="adslot-body">'
+        f'<span class="adslot-tag">{IC["check"]}100% gratuit · sans engagement</span>'
+        '<h3 class="disp">Connaissez la vraie valeur de votre bien</h3>'
+        '<p>Votre conseiller GTI réalise une estimation <b>gratuite et sans engagement</b>, '
+        'fondée sur les ventes réelles de votre secteur.</p>'
+        f'<ul class="adslot-pts">{pts}</ul>'
+        '<div class="adslot-cta"><a class="adslot-btn" href="mailto:accueil@gti-immobilier.fr?subject=Estimation%20de%20mon%20bien">'
+        'Estimer mon bien gratuitement</a></div></div></div>'
+    )
 
 
 def _search_chips(chips: list) -> str:
@@ -214,7 +256,7 @@ def _bien_data(v: dict[str, Any]) -> dict[str, Any]:
         "specs": v.get("specs") or [], "honos": v.get("honos") or "",
         "matterport": v.get("matterport") or "", "dpe_img": v.get("dpe_img") or "", "ges_img": v.get("ges_img") or "",
         "desc": v.get("desc") or "", "details": v.get("details") or [], "feats": v.get("feats") or [],
-        "fin": v.get("fin") or [], "rdv": v.get("rdv_url") or "",
+        "fin": v.get("fin") or [], "rdv": v.get("rdv_url") or "", "pourquoi": v.get("pourquoi") or [],
         "nego": {"i": nego.get("initials"), "n": nego.get("name"), "a": nego.get("agence"),
                  "tel": nego.get("tel") or "", "mail": nego.get("email") or ""},
     }
@@ -251,7 +293,7 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
 
     nav = f"""
   <nav class="nav">
-    <div class="logo"><span class="mk"><img src="https://www.gti-immobilier.fr/images/logoSite.png" alt="GTI" style="filter:brightness(0) invert(1)"></span></div>
+    <div class="logo"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:21px;height:21px"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"></path><path d="M9.5 20v-5h5v5"></path></svg></span><span style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);white-space:nowrap">Groupe GTI</span></div>
     <div class="nlinks">
       <a class="nlink" data-tab="recherche">{IC['search']}Mon projet</a>
       <a class="nlink active" data-tab="biens">{IC['grid']}Ma sélection<span class="ct">{n_sel}</span></a>
@@ -273,11 +315,12 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
         </div>
         <div class="sd-form" id="dockForm">{_search_form(ctx.get('search_fields') or {})}</div>
       </div>
-      {_stats(stats)}
-      <div class="sectitle"><div><div class="eyebrow">Le bien qu'on vient de vous envoyer</div><h2 class="disp">Votre bien à la une</h2></div></div>
+      <div class="sectitle"><div><h2 class="disp">Votre bien à la une</h2></div></div>
       {_featured(featured)}
       <div class="sectitle"><div><h2 class="disp">Aussi pour vous</h2></div><a class="link" data-goto="recherche">Voir mes critères{IC['chev']}</a></div>
       <div class="grid">{selection_html}</div>
+      {_ecartes_teaser(len(ecartes))}
+      <div class="promos">{_estimation_block()}</div>
     </section>"""
 
     panel_favoris = f"""
@@ -478,7 +521,8 @@ function openDetail(k){
   const det=b.details.length?`<div class="ov-sec"><div class="ov-sl">Caractéristiques</div><div class="ov-grid">${b.details.map(d=>`<div class="ov-gi"><span class="k">${d[0]}</span><span class="v">${d[1]}</span></div>`).join('')}</div></div>`:'';
   const feats=b.feats.length?`<div class="ov-sec"><div class="ov-sl">Équipements</div><div class="ov-feats">${b.feats.map(f=>`<span class="f">${f}</span>`).join('')}</div></div>`:'';
   const fin=b.fin.length?`<div class="ov-sec"><div class="ov-sl">Informations financières</div><div class="ov-grid">${b.fin.map(d=>`<div class="ov-gi"><span class="k">${d[0]}</span><span class="v">${d[1]}</span></div>`).join('')}</div></div>`:'';
-  const visiteBtn=b.rdv?`<a class="ov-cic-btn visite" href="${b.rdv}" target="_blank" title="Planifier une visite">${'<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'1.9\'><rect x=\'3\' y=\'4\' width=\'18\' height=\'18\' rx=\'2.5\'/><path d=\'M3 9h18M8 2v4M16 2v4\' stroke-linecap=\'round\'/></svg>'}<span class="ov-lbl">Visiter</span></a>`:'';
+  const visiteBtn=`<button class="ov-cic-btn visite" data-ovvisite="${k}" title="Planifier une visite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="18" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4" stroke-linecap="round"/></svg><span class="ov-lbl">Visiter</span></button>`;
+  const pq=(b.pourquoi&&b.pourquoi.length)?`<div class="ov-sec"><div class="ov-sl">Pourquoi ce bien</div><div style="display:flex;flex-wrap:wrap;gap:7px">${b.pourquoi.map(t=>`<span class="pq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="width:13px;height:13px"><path d="M5 12.5 10 17 19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>${t}</span>`).join('')}</div></div>`:'';
   ovSheet.innerHTML=`<button class="ov-close" data-close>✕</button>
     <div class="ov-hero"><div class="ovg"><div class="ovg-track">${ph.map(p=>`<div class="ovg-s"><img src="${p}" alt=""></div>`).join('')}</div>${ph.length>1?`<button class="ovg-nav prev">‹</button><button class="ovg-nav next">›</button><span class="ovg-count"><span class="ovgc">1</span>/${ph.length}</span><div class="ovg-dots">${ph.map((_,i)=>`<span class="ovgd${i?'':' on'}"></span>`).join('')}</div>`:''}</div><div class="grad"></div>
       <span class="ov-ref">Réf. ${b.ref} · ${b.statut}</span>
@@ -487,9 +531,10 @@ function openDetail(k){
       <div class="ov-specs">${b.specs.map(s=>`<span class="s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${SPI[s[1]]||SPI['Habitable']}</svg><b>${s[0]}</b>${s[1]}</span>`).join('')}</div>
       <div class="ov-honos">${b.honos}</div>
       ${mport}
+      ${pq}
       ${b.desc?`<div class="ov-sec"><div class="ov-sl">Description</div><div class="ov-desc">${b.desc}</div></div>`:''}
       ${det}${feats}${dpe}${fin}
-      <div class="ov-adv"><span class="a">${b.nego.i}</span><div class="ov-adv-i"><div class="nm">${b.nego.n}</div><div class="ag">Votre conseiller · ${b.nego.a}</div></div><div class="ov-adv-acts">${b.nego.tel?`<a class="ov-cic" href="tel:${b.nego.tel}" title="Appeler"></a>`:''}${b.nego.mail?`<a class="ov-cic" href="mailto:${b.nego.mail}" title="Écrire"></a>`:''}</div></div>
+      <div class="ov-adv"><span class="a">${b.nego.i}</span><div class="ov-adv-i"><div class="nm">${b.nego.n}</div><div class="ag">Votre conseiller · ${b.nego.a}</div></div><div class="ov-adv-acts">${b.nego.tel?`<a class="ov-cic" href="tel:${b.nego.tel}" title="Appeler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 2.1 9.82 2 2 0 0 1 4.11 7.6h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 15.16a16 16 0 0 0 5.93 5.93l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>`:''}${b.nego.mail?`<a class="ov-cic" href="mailto:${b.nego.mail}" title="Écrire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m2 8 10 6 10-6"/></svg></a>`:''}</div></div>
       <div class="ov-act">${visiteBtn}
         <button class="ov-cic-btn fav" data-ovfav="${k}" title="Coup de cœur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 6 4.5 4.5 0 0 0 2 8.5C2 12 5 14 12 21c2.6-2.6 4.7-4.6 6-6z"/></svg><span class="ov-lbl">Coup de cœur</span></button>
         <button class="ov-cic-btn nope" data-ovnope="${k}" title="Pas pour moi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 2v11M22 11V4a1 1 0 0 0-1-1h-4v10h4a1 1 0 0 0 1-1z"/></svg><span class="ov-lbl">Pas pour moi</span></button>
@@ -503,6 +548,7 @@ if(ov)ov.addEventListener('click',e=>{
   if(e.target.closest('[data-close]')||e.target.classList.contains('ov-bg'))closeDetail();
   const f=e.target.closest('[data-ovfav]');if(f)toggleFav(f.dataset.ovfav,'');
   const n=e.target.closest('[data-ovnope]');if(n){pend=n.dataset.ovnope;pendEnvoi='';closeDetail();rm.classList.add('open');}
+  const vv=e.target.closest('[data-ovvisite]');if(vv){const bb=DATA[vv.dataset.ovvisite];closeDetail();if(bb&&bb.rdv)window.open(bb.rdv,'_blank');else show('visites');}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();if(rm)rm.classList.remove('open');}});
 
