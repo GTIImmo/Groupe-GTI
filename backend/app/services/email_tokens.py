@@ -27,9 +27,10 @@ ACTION_OPEN = "open"      # pixel d'ouverture
 ACTION_UNSUB = "unsub"    # désinscription
 ACTION_ESPACE = "espace"  # accès à l'espace client (lien magique, lié à un envoi)
 ACTION_ESPACE_CONTACT = "espc"  # espace client UNIFIÉ (lié au contact, tous négos confondus)
+ACTION_VISITE_REQ = "vreq"  # demande de visite : page d'action (négo confirme, ou client accepte)
 
 VALID_ACTIONS = {ACTION_LIKE, ACTION_PASS, ACTION_VISITE, ACTION_OPEN, ACTION_UNSUB,
-                 ACTION_ESPACE, ACTION_ESPACE_CONTACT}
+                 ACTION_ESPACE, ACTION_ESPACE_CONTACT, ACTION_VISITE_REQ}
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -113,6 +114,13 @@ def make_unsub_token(*, envoi_id: str, secret: str) -> str:
 def make_espace_token(*, envoi_id: str, secret: str, ttl_days: int | None = 30) -> str:
     """Lien magique vers l'espace client lié à un envoi (par défaut 30 jours)."""
     return sign_token({"v": 1, "e": str(envoi_id), "a": ACTION_ESPACE, "x": _exp_ts(ttl_days)}, secret)
+
+
+def make_visite_request_token(*, request_id: str, role: str, secret: str, ttl_days: int | None = 21) -> str:
+    """Lien d'action d'une demande de visite (sans login). role = 'nego' (confirme/propose) ou
+    'client' (accepte un créneau proposé). Porte l'id de la demande."""
+    return sign_token({"v": 1, "r": str(request_id), "role": str(role),
+                       "a": ACTION_VISITE_REQ, "x": _exp_ts(ttl_days)}, secret)
 
 
 def make_espace_contact_token(*, hektor_contact_id: str, secret: str, ttl_days: int | None = 60,

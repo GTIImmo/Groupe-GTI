@@ -11,6 +11,7 @@ from .routers.espace import router as espace_router
 from .routers.google_workspace import router as google_workspace_router
 from .routers.hektor_diffusion import router as hektor_diffusion_router
 from .routers.notifications import router as notifications_router
+from .routers.visite import router as visite_router
 
 
 app = FastAPI(title="GTI Backend", version="0.1.0")
@@ -41,3 +42,4 @@ app.include_router(espace_router)
 app.include_router(google_workspace_router)
 app.include_router(hektor_diffusion_router)
 app.include_router(notifications_router)
+app.include_router(visite_router)

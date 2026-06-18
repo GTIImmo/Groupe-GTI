@@ -73,6 +73,19 @@ export default function NotificationsBell({ negociateurEmail }: NotificationsBel
     markNotificationRead(n.id).catch(() => {})
   }, [])
 
+  // Notification actionnable (ex. demande de visite) : le backend a mis l'URL d'action
+  // dans payload.action_url → on l'ouvre (page sans login pour confirmer le créneau).
+  const actionUrl = (n: NotificationRow): string | null => {
+    const u = n.payload?.action_url
+    return typeof u === 'string' && /^https?:\/\//.test(u) ? u : null
+  }
+
+  const onItem = useCallback((n: NotificationRow) => {
+    markOne(n)
+    const url = actionUrl(n)
+    if (url) window.open(url, '_blank', 'noopener,noreferrer')
+  }, [markOne])
+
   const markAll = useCallback(() => {
     const unreadIds = items.filter((n) => !n.read_at).map((n) => n.id)
     if (!unreadIds.length) return
@@ -107,16 +120,27 @@ export default function NotificationsBell({ negociateurEmail }: NotificationsBel
           <div className="gti-notif-list">
             {loading && items.length === 0 && <div className="gti-notif-empty">Chargement…</div>}
             {!loading && items.length === 0 && <div className="gti-notif-empty">Aucune notification.</div>}
-            {items.map((n) => (
-              <button type="button" key={n.id} className={`gti-notif-item${n.read_at ? '' : ' is-unread'}`} onClick={() => markOne(n)}>
-                {!n.read_at && <span className="gti-notif-dot" aria-hidden="true" />}
-                <span className="gti-notif-it-bd">
-                  <span className="gti-notif-it-t">{n.title}</span>
-                  {n.body && <span className="gti-notif-it-s">{n.body}</span>}
-                  <span className="gti-notif-it-d">{timeAgo(n.created_at)}</span>
-                </span>
-              </button>
-            ))}
+            {items.map((n) => {
+              const url = actionUrl(n)
+              return (
+                <button type="button" key={n.id} className={`gti-notif-item${n.read_at ? '' : ' is-unread'}${url ? ' is-actionable' : ''}`} onClick={() => onItem(n)}>
+                  {!n.read_at && <span className="gti-notif-dot" aria-hidden="true" />}
+                  <span className="gti-notif-it-bd">
+                    <span className="gti-notif-it-t">{n.title}</span>
+                    {n.body && <span className="gti-notif-it-s">{n.body}</span>}
+                    <span className="gti-notif-it-d">{timeAgo(n.created_at)}</span>
+                    {url && (
+                      <span className="gti-notif-it-cta">
+                        Traiter la demande
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12h14" /><path d="m13 6 6 6-6 6" />
+                        </svg>
+                      </span>
+                    )}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

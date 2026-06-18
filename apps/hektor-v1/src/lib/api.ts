@@ -2253,13 +2253,14 @@ export type NotificationRow = {
   id: number; type: string; title: string; body: string | null
   contact_search_key: string | null; app_dossier_id: number | null
   read_at: string | null; created_at: string
+  payload: { action_url?: string; [k: string]: unknown } | null
 }
 
 export async function loadNotifications(negociateurEmail: string | null): Promise<NotificationRow[]> {
   if (!hasSupabaseEnv || !supabase || !negociateurEmail) return []
   const { data, error } = await supabase
     .from('app_notification')
-    .select('id,type,title,body,contact_search_key,app_dossier_id,read_at,created_at')
+    .select('id,type,title,body,contact_search_key,app_dossier_id,read_at,created_at,payload')
     .eq('negociateur_email', negociateurEmail)
     .order('read_at', { ascending: true, nullsFirst: true })
     .order('created_at', { ascending: false })

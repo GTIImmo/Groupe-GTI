@@ -435,9 +435,31 @@ class EspaceClientService:
 
     _MONTHS_FR = ["", "jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"]
 
-    def _portal_visites(self, dossier_ids: list[int], titles: dict[int, str]) -> list[dict[str, Any]]:
+    def _portal_visites(self, dossier_ids: list[int], titles: dict[int, str],
+                        contact_id: str | None = None) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        # 1) Demandes EN ATTENTE (statut demandee/proposee) — visibles tout de suite côté client.
+        if contact_id:
+            try:
+                pend = self.renderer._rest_get(
+                    "app_espace_visite_request",
+                    {"select": "bien_title,requested_days,requested_periods,status,created_at",
+                     "hektor_contact_id": f"eq.{contact_id}", "status": "in.(demandee,proposee)",
+                     "order": "created_at.desc", "limit": "10"})
+            except Exception:
+                pend = []
+            for r in pend:
+                days = r.get("requested_days") or []
+                dispo = " · ".join(str(d) for d in days[:3]) if days else "à convenir"
+                proposed = str(r.get("status")) == "proposee"
+                out.append({
+                    "d": "•", "m": "", "title": r.get("bien_title") or "Visite",
+                    "loc": "", "when": dispo,
+                    "status": "wait",
+                    "status_label": "Créneau proposé" if proposed else "En attente de confirmation",
+                })
         if not dossier_ids:
-            return []
+            return out
         ids = ",".join(str(d) for d in dossier_ids)
         try:
             rows = self.renderer._rest_get(
@@ -446,8 +468,7 @@ class EspaceClientService:
                  "app_dossier_id": f"in.({ids})", "event_type": "eq.visite",
                  "order": "starts_at.asc"})
         except Exception:
-            return []
-        out: list[dict[str, Any]] = []
+            return out
         for r in rows:
             if str(r.get("status") or "active") == "deleted":
                 continue
@@ -553,7 +574,7 @@ class EspaceClientService:
         if actives:
             actives[0]["badge"] = actives[0].get("badge") or "Nouveau"
 
-        visites = self._portal_visites(list(titles.keys()), titles)
+        visites = self._portal_visites(list(titles.keys()), titles, contact_id=contact_id)
 
         # Contact (client)
         crow = self.renderer._rest_get(
@@ -733,62 +754,41 @@ class EspaceClientService:
 
     def submit_visite_request(self, *, envoi_id: str, bien_id: Any = None, days: Any = None,
                               periods: Any = None, message: Any = None, phone: Any = None) -> dict[str, Any]:
-        """Demande de visite (option A) : NE TOUCHE PAS l'agenda Google, et N'UTILISE PAS la
-        vitrine simulée. Notifie le négociateur du MANDAT (cloche dans son app + email) avec les
-        disponibilités du client ; le négociateur cale ensuite le vrai RDV dans son agenda."""
+        """Demande de visite interactive (Lot 1) : persiste un objet à statut suivi, notifie le
+        négociateur du MANDAT (cloche + email ACTIONNABLE) et confirme la réception au client par
+        email. Ne touche pas la vitrine simulée ; la confirmation côté négo crée un VRAI RDV Google.
+        Le suivi du cycle de vie est délégué à VisiteRequestService."""
         envoi = self.tracking._envoi(envoi_id)
         if not envoi:
             return {"ok": False, "error": "no_envoi"}
         cid = envoi.get("hektor_contact_id")
         nego = self._bien_nego_email(bien_id) or envoi.get("sender_email") or self._negociateur_email(cid)
-        client = envoi.get("recipient_email") or ""
         title = ""
+        annonce_id = None
         if str(bien_id or "").isdigit():
             dossier, _ = self._load_dossier_by_id(int(bien_id))
             title = _clean_text(dossier.get("titre_bien")) or _clean_text(dossier.get("numero_mandat")) or f"bien #{bien_id}"
+            annonce_id = dossier.get("hektor_annonce_id")
         days = [str(d)[:40] for d in (days or []) if str(d).strip()][:10]
         periods = [str(p)[:20] for p in (periods or []) if str(p).strip()][:3]
         phone = str(phone or "").strip()[:30]
         msg = str(message or "").strip()[:1000]
-        dispo = " · ".join(days) + ((" — " + ", ".join(periods)) if periods else "")
-        body = (f"{client or 'Un client'} souhaite visiter « {title} ». "
-                f"Disponibilités : {dispo or 'à convenir avec le client'}."
-                + (f" Tél : {phone}." if phone else "")
-                + (f"\nMessage : {msg}" if msg else ""))
-        # Cloche dans l'app du négociateur du mandat.
-        if nego:
-            try:
-                self.tracking._insert("app_notification", {
-                    "negociateur_email": nego, "type": "demande_visite",
-                    "title": "Demande de visite", "body": body[:400],
-                    "contact_search_key": envoi.get("contact_search_key"),
-                    "app_dossier_id": int(bien_id) if str(bien_id or "").isdigit() else None,
-                    "payload": {"source": "espace_client", "days": days, "periods": periods,
-                                "phone": phone, "message": msg, "contact": client, "bien": title},
-                }, prefer="return=minimal")
-            except Exception:
-                pass
         # Signal d'engagement fort (score) : demande de visite.
         try:
             self.tracking.record_event(envoi_id=envoi_id, action="visite", bien_id=bien_id)
         except Exception:
             pass
-        # Email au négociateur du mandat (répondre-à = le client).
-        email_sent = False
-        if nego:
-            try:
-                from .google_workspace_service import GoogleWorkspaceService
-                res = GoogleWorkspaceService(self.settings).send_gmail_message(
-                    subject_email=(self.settings.google_workspace_subject_email or "accueil@gti-immobilier.fr"),
-                    to=[nego], subject=f"Demande de visite — {title}",
-                    body_text=body + "\n\nLe client attend que vous le recontactiez pour fixer le créneau.",
-                    reply_to=client or None,
-                    dry_run=not self.settings.email_real_send_enabled,
-                    related_entity_type="contact", related_entity_id=cid)
-                email_sent = bool(res.get("ok")) and not res.get("dryRun")
-            except Exception:
-                pass
-        return {"ok": True, "emailSent": email_sent, "nego": nego}
+        # Persistance + emails (négo actionnable, client « demande reçue ») + cloche.
+        from .espace_visite import VisiteRequestService
+        env = {**envoi, "hektor_annonce_id": annonce_id}
+        try:
+            res = VisiteRequestService(self.settings).create_request(
+                envoi=env, bien_id=bien_id, nego=nego, title=title,
+                days=days, periods=periods, phone=phone, message=msg)
+        except Exception:
+            return {"ok": False, "error": "server"}
+        res["nego"] = nego
+        return res
 
     # Requalification GUIDÉE (sûre) : la raison du ✕ -> piste pour le négociateur (pas d'écriture CRM auto).
     _REQUALIF_SUGGESTION = {
