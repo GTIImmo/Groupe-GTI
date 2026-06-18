@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from typing import Any
 
 import requests
@@ -22,7 +23,7 @@ import requests
 from ..settings import Settings
 from . import contact_search_mapping as CSM
 from .email_tracking import EmailTrackingService
-from .rapprochement_email import BRAND, FONT_BODY, FONT_DISPLAY, build_bien_view, _esc, _specs_line
+from .rapprochement_email import BRAND, FONT_BODY, FONT_DISPLAY, build_bien_view, _clean_text, _esc, _specs_line
 from .rapprochement_email import RapprochementEmailService
 
 
@@ -37,7 +38,7 @@ class EspaceClientService:
             "app_dossier_current",
             {"select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,"
                        "ville,code_postal,prix,type_bien,commercial_nom,negociateur_email,agence_nom,"
-                       "photo_url_listing,images_preview_json,statut_annonce",
+                       "photo_url_listing,images_preview_json,statut_annonce,mandat_type",
              "app_dossier_id": f"eq.{dossier_id}", "limit": "1"},
         )
         if not rows:
@@ -56,6 +57,10 @@ class EspaceClientService:
                     detail = parsed if isinstance(parsed, dict) else {}
                 except Exception:
                     detail = {}
+                # Lien Matterport : niché dans une valeur du payload -> extraction directe du brut.
+                m = re.search(r'https?://[^"\\\s]*matterport[^"\\\s]*', raw)
+                if m:
+                    detail["_matterport"] = m.group(0)
         return dossier, detail
 
     @staticmethod
@@ -281,6 +286,321 @@ class EspaceClientService:
         return {"contact_id": contact_id, "biens": active, "history": history[:24],
                 "search_row": search_row, "search_value": search_value,
                 "primary_envoi_id": (envois[0]["id"] if envois else None)}
+
+    # ── PORTAIL (refonte design) : vues riches + contexte + rendu ──────────────
+    @staticmethod
+    def _to_int(v: Any) -> int | None:
+        try:
+            return int(float(str(v).replace(" ", "").replace(",", ".")))
+        except Exception:
+            return None
+
+    def _portal_specs(self, detail: dict[str, Any]) -> list[list[str]]:
+        out: list[list[str]] = []
+        surf = self._to_int(detail.get("surface"))
+        if surf:
+            out.append([f"{surf} m²", "Habitable"])
+        p = self._to_int(detail.get("nb_pieces"))
+        if p:
+            out.append([str(p), "Pièces"])
+        c = self._to_int(detail.get("nb_chambres"))
+        if c:
+            out.append([str(c), "Chambres"])
+        t = self._to_int(detail.get("surface_terrain_detail"))
+        if t and t > 0:
+            out.append([f"{t} m²", "Terrain"])
+        return out
+
+    @staticmethod
+    def _portal_feats(detail: dict[str, Any]) -> list[str]:
+        raw = detail.get("equipements_json")
+        data = raw
+        if isinstance(raw, str):
+            try:
+                data = json.loads(raw)
+            except Exception:
+                return []
+        sections = data if isinstance(data, list) else [data]
+        feats: list[str] = []
+        for sec in sections:
+            props = sec.get("props") if isinstance(sec, dict) else None
+            if not isinstance(props, dict):
+                continue
+            for p in props.values():
+                if isinstance(p, dict) and str(p.get("value", "")).strip().upper() in ("OUI", "YES", "1", "TRUE"):
+                    lbl = str(p.get("label") or "").strip()
+                    if lbl:
+                        feats.append(lbl)
+        return feats[:12]
+
+    def _portal_details(self, dossier: dict[str, Any], detail: dict[str, Any]) -> list[list[str]]:
+        out: list[list[str]] = []
+        t = _clean_text(dossier.get("type_bien"))
+        if t:
+            out.append(["Type", t])
+        ter = self._to_int(detail.get("surface_terrain_detail"))
+        if ter and ter > 0:
+            out.append(["Terrain", f"{ter} m²"])
+        et = _clean_text(detail.get("etage_detail"))
+        if et:
+            out.append(["Étage", et])
+        gar = self._to_int(detail.get("garage_box_detail"))
+        if gar and gar > 0:
+            out.append(["Garage", str(gar)])
+        asc = _clean_text(detail.get("ascenseur_detail"))
+        if asc and asc.lower() not in ("non", "0", "false"):
+            out.append(["Ascenseur", "Oui"])
+        ter2 = _clean_text(detail.get("terrasse_detail"))
+        if ter2 and ter2.lower() not in ("non", "0", "false"):
+            out.append(["Terrasse", "Oui"])
+        return out
+
+    @staticmethod
+    def _portal_desc(detail: dict[str, Any]) -> str:
+        txt = detail.get("texte_principal_html") or ""
+        txt = re.sub(r"<[^>]+>", " ", str(txt))
+        txt = re.sub(r"\s+", " ", txt).strip()
+        return txt[:700]
+
+    def _portal_pourquoi(self, dossier: dict[str, Any], detail: dict[str, Any],
+                         sv: dict[str, Any] | None) -> list[str]:
+        if not sv:
+            return []
+        out: list[str] = []
+        prix = self._to_int(dossier.get("prix"))
+        pmin, pmax = self._to_int(sv.get("priceMin")), self._to_int(sv.get("priceMax"))
+        if prix and pmax and prix <= pmax and (not pmin or prix >= pmin * 0.9):
+            out.append("Budget")
+        # Secteur : ville/CP du bien dans les localités de la recherche
+        cp = str(dossier.get("code_postal") or "").strip()
+        ville = str(dossier.get("ville") or "").strip().lower()
+        for loc in (sv.get("localities") or []):
+            if (cp and cp == str(loc.get("postalCode") or "").strip()) or \
+               (ville and ville == str(loc.get("city") or "").strip().lower()):
+                out.append("Secteur")
+                break
+        surf, smin = self._to_int(detail.get("surface")), self._to_int(sv.get("surfaceMin"))
+        if surf and smin and surf >= smin:
+            out.append("Surface")
+        pieces, rmin = self._to_int(detail.get("nb_pieces")), self._to_int(sv.get("rooms"))
+        if pieces and rmin and pieces >= rmin:
+            out.append("Pièces")
+        ch, bmin = self._to_int(detail.get("nb_chambres")), self._to_int(sv.get("bedrooms"))
+        if ch and bmin and ch >= bmin:
+            out.append("Chambres")
+        return out
+
+    @staticmethod
+    def _initials(name: str | None) -> str:
+        parts = [p for p in re.split(r"[\s.-]+", str(name or "").strip()) if p]
+        return ("".join(p[0] for p in parts[:2]) or "?").upper()
+
+    def _portal_view(self, dossier: dict[str, Any], detail: dict[str, Any], *, envoi_id: Any,
+                     sv: dict[str, Any] | None, feedback: Any = None, feedback_reason: Any = None,
+                     badge: str | None = None) -> dict[str, Any]:
+        base = build_bien_view(dossier, detail)
+        did = dossier.get("app_dossier_id")
+        annonce = dossier.get("hektor_annonce_id")
+        hono = base["honoraires"]
+        prix = self._to_int(dossier.get("prix"))
+        surf = self._to_int(detail.get("surface"))
+        ppm = f"{round(prix / surf):,} €/m²".replace(",", " ") if (prix and surf) else ""
+        mandat = str(dossier.get("mandat_type") or "").lower()
+        statut = "Exclusif" if "xclusif" in mandat else (_clean_text(dossier.get("statut_annonce")) or "Disponible")
+        nego = {
+            "initials": self._initials(dossier.get("commercial_nom")),
+            "name": _clean_text(dossier.get("commercial_nom")) or "Votre conseiller Groupe GTI",
+            "agence": _clean_text(dossier.get("agence_nom")) or "Groupe GTI",
+            "tel": None,
+            "email": dossier.get("negociateur_email") or None,
+        }
+        fin = [["Prix de vente", hono["price_main"]]]
+        if hono.get("sub"):
+            fin.append(["Honoraires", hono["sub"]])
+        if hono.get("net"):
+            fin.append(["Net vendeur", hono["net"].replace("Net vendeur", "").strip() or hono["net"]])
+        return {
+            "key": str(did), "dossier_id": int(did) if did is not None else None, "envoi_id": envoi_id,
+            "ref": base["ref"], "statut": statut, "loc": base["secteur"],  # ville + CP (jamais la rue)
+            "title": base["titre"], "price": hono["price_main"], "ppm": ppm,
+            "specs": self._portal_specs(detail), "photos": self._photos(dossier),
+            "nego": nego, "matterport": detail.get("_matterport"),
+            "dpe_img": _clean_text(detail.get("dpe_image_url")), "ges_img": _clean_text(detail.get("ges_image_url")),
+            "desc": self._portal_desc(detail), "details": self._portal_details(dossier, detail),
+            "feats": self._portal_feats(detail), "honos": hono.get("sub") or "Honoraires à la charge du vendeur",
+            "fin": fin, "pourquoi": self._portal_pourquoi(dossier, detail, sv),
+            "rdv_url": self.renderer._appointment_url(annonce) if annonce else None,
+            "feedback": feedback, "feedback_reason": feedback_reason, "badge": badge,
+        }
+
+    _MONTHS_FR = ["", "jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"]
+
+    def _portal_visites(self, dossier_ids: list[int], titles: dict[int, str]) -> list[dict[str, Any]]:
+        if not dossier_ids:
+            return []
+        ids = ",".join(str(d) for d in dossier_ids)
+        try:
+            rows = self.renderer._rest_get(
+                "app_google_calendar_event_link",
+                {"select": "starts_at,status,metadata_json,app_dossier_id",
+                 "app_dossier_id": f"in.({ids})", "event_type": "eq.visite",
+                 "order": "starts_at.asc"})
+        except Exception:
+            return []
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            if str(r.get("status") or "active") == "deleted":
+                continue
+            sa = str(r.get("starts_at") or "")
+            m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})", sa)
+            if not m:
+                continue
+            _, mo, dd, hh, mi = m.groups()
+            cancelled = str(r.get("status") or "") == "cancelled"
+            meta = r.get("metadata_json") or {}
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = {}
+            did = r.get("app_dossier_id")
+            out.append({
+                "d": str(int(dd)), "m": self._MONTHS_FR[int(mo)] if 1 <= int(mo) <= 12 else mo,
+                "title": meta.get("titre_bien") or titles.get(int(did) if did is not None else -1) or "Visite",
+                "loc": meta.get("secteur") or "",
+                "when": f"{hh}h{mi}",
+                "status": "wait" if cancelled else "ok",
+                "status_label": "Annulée" if cancelled else "Confirmée",
+            })
+        return out
+
+    def build_portal_context(self, hektor_contact_id: str, featured_dossier_id: int | None = None) -> dict[str, Any] | None:
+        contact_id = str(hektor_contact_id or "").strip()
+        if not contact_id:
+            return None
+        envois = self._contact_envois(contact_id)
+        env_at = {e["id"]: (e.get("created_at") or "") for e in envois}
+        state: dict[int, dict[str, Any]] = {}
+        if envois:
+            ids = ",".join(e["id"] for e in envois)
+            rows = self.tracking._get(
+                "app_email_envoi_bien",
+                {"select": "app_dossier_id,feedback,feedback_reason,envoi_id", "envoi_id": f"in.({ids})"})
+            for r in rows:
+                did = r.get("app_dossier_id")
+                if did is None:
+                    continue
+                did = int(did)
+                at = env_at.get(r.get("envoi_id"), "")
+                cur = state.get(did)
+                if cur is None or at > cur["at"]:
+                    state[did] = {"envoi_id": r.get("envoi_id"), "at": at,
+                                  "feedback": cur["feedback"] if cur else None,
+                                  "reason": cur.get("reason") if cur else None}
+                fb = str(r.get("feedback") or "").strip().lower()
+                if fb:
+                    state[did]["feedback"] = fb
+                    if r.get("feedback_reason"):
+                        state[did]["reason"] = r.get("feedback_reason")
+                    if fb in ("refuse", "refusé"):
+                        state[did]["refused"] = True
+        statut: dict[int, str] = {}
+        try:
+            srows = self.renderer._rest_get(
+                "app_bien_acquereur_statut",
+                {"select": "app_dossier_id,status", "hektor_contact_id": f"eq.{contact_id}"})
+        except Exception:
+            srows = []
+        for r in srows:
+            d = r.get("app_dossier_id")
+            if d is not None:
+                statut[int(d)] = str(r.get("status") or "").strip().lower()
+
+        search_row = self._load_search_for_envoi(envois[0]) if envois else None
+        sv = CSM.search_to_value(search_row) if search_row else None
+
+        active: list[tuple[str, dict[str, Any]]] = []
+        ecartes: list[dict[str, Any]] = []
+        titles: dict[int, str] = {}
+        for did, st in state.items():
+            s = statut.get(did, "")
+            refused = bool(st.get("refused")) or s in ("refuse", "refusé")
+            ecarte = s in ("ecarte", "ecarté")
+            dossier, detail = self._load_dossier_by_id(did)
+            if not dossier:
+                continue  # bien vendu / archivé : sort de app_dossier_current -> non affiché
+            view = self._portal_view(dossier, detail, envoi_id=st.get("envoi_id"), sv=sv,
+                                     feedback=st.get("feedback"), feedback_reason=st.get("reason"))
+            titles[did] = view["title"]
+            if refused or ecarte:
+                view["feedback"] = "refuse"
+                ecartes.append(view)
+            else:
+                active.append((st.get("at") or "", view))
+        active.sort(key=lambda t: t[0], reverse=True)
+        actives = [v for _, v in active]
+
+        featured = None
+        if featured_dossier_id is not None:
+            featured = next((v for v in actives if v.get("dossier_id") == int(featured_dossier_id)), None)
+        if featured:
+            actives = [v for v in actives if v is not featured]
+        elif actives:
+            featured = actives.pop(0)
+        if featured and not featured.get("badge"):
+            featured["badge"] = None
+        # Marque « Nouveau » le 1er de la sélection (le plus récent)
+        if actives:
+            actives[0]["badge"] = actives[0].get("badge") or "Nouveau"
+
+        visites = self._portal_visites(list(titles.keys()), titles)
+
+        # Contact (client)
+        crow = self.renderer._rest_get(
+            "app_contacts_current",
+            {"select": "display_name,email", "hektor_contact_id": f"eq.{contact_id}", "limit": "1"})
+        cname = (crow[0].get("display_name") if crow else None) or "Votre espace"
+        cmail = (crow[0].get("email") if crow else None) or ""
+
+        # Chips + champs depuis la recherche
+        chips: list[tuple[str, str]] = []
+        fields: dict[str, Any] = {}
+        if sv:
+            pmin, pmax = self._to_int(sv.get("priceMin")), self._to_int(sv.get("priceMax"))
+            if pmin or pmax:
+                chips.append(("Budget", f"{(pmin or 0)//1000}–{(pmax or 0)//1000} k€"))
+            locs = [l.get("city") for l in (sv.get("localities") or []) if l.get("city")]
+            if locs:
+                chips.append(("Secteur", ", ".join(locs[:2])))
+            smin = self._to_int(sv.get("surfaceMin"))
+            if smin:
+                chips.append(("Surface", f"≥ {smin} m²"))
+            bmin = self._to_int(sv.get("bedrooms"))
+            if bmin:
+                chips.append(("Chambres", f"{bmin}+"))
+            fields = {"priceMin": pmin, "priceMax": pmax, "surfaceMin": smin,
+                      "rooms": self._to_int(sv.get("rooms")), "bedrooms": bmin}
+
+        n_fav = sum(1 for v in ([featured] if featured else []) + actives if v.get("feedback") == "interesse")
+        stats = {"proposes": len(actives) + (1 if featured else 0) + len(ecartes),
+                 "favoris": n_fav, "visites": len(visites), "ecartes": len(ecartes)}
+
+        return {
+            "client": {"name": cname, "email": cmail, "initials": self._initials(cname)},
+            "search_chips": chips, "search_fields": fields,
+            "featured": featured, "selection": actives, "ecartes": ecartes[:24],
+            "visites": visites, "stats": stats,
+        }
+
+    def render_contact_portal(self, *, hektor_contact_id: str, token: str,
+                              featured_dossier_id: int | None = None, from_email: bool = False) -> str:
+        from . import espace_portal
+        ctx = self.build_portal_context(hektor_contact_id, featured_dossier_id)
+        if ctx is None:
+            return self._page_message("Espace introuvable",
+                                      "Cet espace n'est plus disponible. Contactez votre conseiller.")
+        base = (getattr(self.settings, "email_tracking_base_url", None) or self.settings.app_base_url or "").rstrip("/")
+        return espace_portal.render_portal(ctx, token=token, base=base, from_email=from_email)
 
     def _load_search_for_envoi(self, envoi: dict[str, Any]) -> dict[str, Any] | None:
         """Identifie la recherche par (contact + index) STABLE ; repli sur la clé (ancien envoi)."""

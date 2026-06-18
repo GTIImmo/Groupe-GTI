@@ -115,9 +115,13 @@ def make_espace_token(*, envoi_id: str, secret: str, ttl_days: int | None = 30) 
     return sign_token({"v": 1, "e": str(envoi_id), "a": ACTION_ESPACE, "x": _exp_ts(ttl_days)}, secret)
 
 
-def make_espace_contact_token(*, hektor_contact_id: str, secret: str, ttl_days: int | None = 60) -> str:
+def make_espace_contact_token(*, hektor_contact_id: str, secret: str, ttl_days: int | None = 60,
+                              featured_dossier_id: int | str | None = None) -> str:
     """Lien magique vers l'espace client UNIFIÉ d'un contact (tous les biens, tous les négos).
 
     Lié au contact (pas à un envoi) : un seul lien stable, même si plusieurs négociateurs
-    envoient des emails. Par défaut 60 jours."""
-    return sign_token({"v": 1, "c": str(hektor_contact_id), "a": ACTION_ESPACE_CONTACT, "x": _exp_ts(ttl_days)}, secret)
+    envoient des emails. `featured_dossier_id` = bien à mettre EN VEDETTE (celui de cet email)."""
+    payload = {"v": 1, "c": str(hektor_contact_id), "a": ACTION_ESPACE_CONTACT, "x": _exp_ts(ttl_days)}
+    if featured_dossier_id is not None:
+        payload["f"] = str(featured_dossier_id)
+    return sign_token(payload, secret)

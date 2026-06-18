@@ -68,7 +68,12 @@ def espace_page(token: str, request: Request, settings: Settings = Depends(get_s
         except Exception:
             pass
     if payload.get("a") == email_tokens.ACTION_ESPACE_CONTACT:
-        return HTMLResponse(svc.render_contact_page(hektor_contact_id=str(payload.get("c") or ""), token=token))
+        featured = payload.get("f")
+        from_email = (request.query_params.get("from") or "").lower() == "email"
+        return HTMLResponse(svc.render_contact_portal(
+            hektor_contact_id=str(payload.get("c") or ""), token=token,
+            featured_dossier_id=int(featured) if str(featured or "").isdigit() else None,
+            from_email=from_email))
     return HTMLResponse(svc.render_page(envoi_id=str(payload.get("e") or ""), token=token))
 
 

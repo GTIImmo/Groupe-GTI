@@ -239,14 +239,13 @@ def build_property_card_html(view: dict[str, Any], links: dict[str, str]) -> str
     net = f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:12px;margin-top:1px">{_esc(hono["net"])}</div>' if hono.get("net") else ""
     overline = _esc(view["secteur"] or view["ref"]).upper()
 
-    # Deux boutons simples. Le positif emmène vers l'espace client (détails + actions) ;
-    # le clic vaut signal « ce bien peut correspondre ». Le négatif = « pas pour moi ».
-    like = _button(links.get("espace") or links["like"], "Voir ce bien", bg=BRAND["magenta"], fg=BRAND["on_brand"])
-    passb = _button(links["pass"], "Pas pour moi", bg=BRAND["surface"], fg=BRAND["ink_soft"], border=BRAND["line_warm"])
+    # Refonte : MONO-action. Un seul bouton fort « Voir ce bien » qui ouvre l'espace client
+    # (galerie, détails, ❤️/✕, RDV). Le refus se fait dans l'espace (avec raison), plus dans l'email.
+    cta = _button(links.get("espace") or links["like"], "Voir ce bien", bg=BRAND["magenta"], fg=BRAND["on_brand"])
 
     return f"""
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-      style="background:{BRAND['surface']};border:1px solid {BRAND['line_warm']};margin:0 0 26px">
+      style="background:{BRAND['surface']};border:1px solid {BRAND['line_warm']};border-radius:4px;margin:0 0 18px">
       {photo_cell}
       <tr><td style="padding:22px 26px 0">
         <div style="color:{BRAND['magenta']};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2px">{overline}</div>
@@ -260,15 +259,7 @@ def build_property_card_html(view: dict[str, Any], links: dict[str, str]) -> str
         <div style="border-top:1px solid {BRAND['line_warm']};font-size:0;line-height:0">&nbsp;</div>
       </td></tr>
       <tr><td style="padding:12px 26px 0">{_specs_line(view['specs'])}</td></tr>
-      <tr><td style="padding:18px 26px 6px">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
-          <td style="padding:0 6px">{like}</td>
-          <td style="padding:0 6px">{passb}</td>
-        </tr></table>
-      </td></tr>
-      <tr><td align="center" style="padding:4px 26px 22px">
-        <div style="color:{BRAND['muted_warm']};font-family:{FONT_BODY};font-size:12px">« Voir ce bien » ouvre votre espace : photos, détails et prise de rendez-vous.</div>
-      </td></tr>
+      <tr><td align="center" style="padding:22px 26px 22px">{cta}</td></tr>
     </table>"""
 
 
@@ -296,6 +287,23 @@ def build_email_html(ctx: dict[str, Any]) -> str:
         + (f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:13px;margin-top:2px">{_esc(signature["agence"])}</div>' if signature.get("agence") else "")
         + (f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:13px">{_esc(signature["tel"])}</div>' if signature.get("tel") else "")
         + (f'<div style="font-family:{FONT_BODY};font-size:13px;margin-top:1px"><a href="mailto:{_esc(signature["email"])}" style="color:{BRAND["magenta"]};text-decoration:none">{_esc(signature["email"])}</a></div>' if signature.get("email") else "")
+    )
+
+    # Bloc « Affiner ma recherche » : ouvre l'espace ancré sur le formulaire (#affiner).
+    affiner_url = _esc(ctx.get("affiner_url") or "#")
+    affiner_html = (
+        '<tr><td class="gti-pad" style="padding:0 6px 18px">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-card" '
+        'style="background:#fdf0f6;border:1px solid #f3cde0;border-radius:14px"><tr>'
+        '<td style="vertical-align:middle;padding:18px 14px 18px 22px">'
+        f'<div class="gti-ink" style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:17px;line-height:1.25">Pas tout à fait ça&nbsp;?</div>'
+        '<div style="color:#8c5a72;font-family:' + FONT_BODY + ';font-size:13px;line-height:1.5;margin-top:3px">'
+        'Dites-moi ce que vous cherchez vraiment&nbsp;— je vous envoie des biens plus justes.</div></td>'
+        '<td width="40" align="center" style="vertical-align:middle;padding:16px 20px 16px 6px">'
+        f'<a href="{affiner_url}" style="display:inline-block;width:34px;height:34px;border-radius:50%;'
+        f'background:{BRAND["magenta"]};text-align:center;line-height:34px;color:#ffffff;font-family:{FONT_BODY};'
+        'font-size:17px;font-weight:bold;text-decoration:none">&rsaquo;</a></td>'
+        '</tr></table></td></tr>'
     )
 
     return f"""<!DOCTYPE html>
@@ -337,7 +345,7 @@ def build_email_html(ctx: dict[str, Any]) -> str:
             <img src="{LOGO_URL}" height="50" alt="Groupe GTI" style="display:block;border:0;height:50px;width:auto">
           </td>
           <td align="right" style="vertical-align:middle;padding:18px 24px">
-            <span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;letter-spacing:2.5px;text-transform:uppercase">Sélection acquéreur</span>
+            <span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;letter-spacing:2.5px;text-transform:uppercase">Pour votre projet</span>
           </td>
         </tr></table>
       </td></tr>
@@ -352,6 +360,8 @@ def build_email_html(ctx: dict[str, Any]) -> str:
       <tr><td class="gti-pad" style="padding:0 6px">
         {cards}
       </td></tr>
+      <!-- Affiner ma recherche -->
+      {affiner_html}
       <!-- Signature -->
       <tr><td class="gti-pad" style="padding:8px 6px 6px">{sig_html}</td></tr>
       <!-- Pied légal -->
@@ -387,9 +397,10 @@ def build_email_text(ctx: dict[str, Any]) -> str:
             lines.append(f"  {hono['net']}")
         if v["specs"]:
             lines.append("  " + " · ".join(v["specs"]))
-        lines.append(f"  Voir ce bien (mon espace) : {v['_links']['like']}")
-        lines.append(f"  Pas pour moi : {v['_links']['pass']}")
+        lines.append(f"  Voir ce bien : {v['_links'].get('espace') or v['_links']['like']}")
         lines.append("")
+    if ctx.get("affiner_url"):
+        lines += ["Pas tout à fait ça ? Affinez votre recherche :", ctx["affiner_url"], ""]
     sig = ctx["signature"]
     lines.append("—")
     lines += [s for s in (sig.get("nom"), sig.get("agence"), sig.get("tel"), sig.get("email")) if s]
@@ -481,7 +492,8 @@ class RapprochementEmailService:
         # « Voir ce bien » ouvre l'espace UNIFIÉ du contact (un seul lien stable, tous négos)
         # dès qu'on connaît le contact ; sinon repli sur l'espace lié à l'envoi (compat).
         if hektor_contact_id:
-            espace = email_tokens.make_espace_contact_token(hektor_contact_id=str(hektor_contact_id), secret=secret)
+            espace = email_tokens.make_espace_contact_token(
+                hektor_contact_id=str(hektor_contact_id), secret=secret, featured_dossier_id=bien_id)
         else:
             espace = email_tokens.make_espace_token(envoi_id=envoi_id, secret=secret)
         links = {
@@ -555,6 +567,9 @@ class RapprochementEmailService:
 
         secret = getattr(self.settings, "email_tracking_secret", None) or self.settings.supabase_service_role_key
         base = self._track_base()
+        # « Affiner ma recherche » : lien espace ancré sur le formulaire (#affiner), depuis l'email.
+        espace_link = (biens[0].get("_links", {}).get("espace") if biens else None)
+        affiner_url = f"{espace_link}?from=email#affiner" if espace_link else None
         ctx = {
             "subject": subject,
             "preheader": accroche,
@@ -563,6 +578,7 @@ class RapprochementEmailService:
             "accroche": accroche,
             "biens": biens,
             "signature": signature,
+            "affiner_url": affiner_url,
             "pixel_url": f"{base}/r/o/{email_tokens.make_open_token(envoi_id=envoi_id, secret=secret)}.png" if base else None,
             "unsubscribe_url": f"{base}/r/u/{email_tokens.make_unsub_token(envoi_id=envoi_id, secret=secret)}" if base else None,
         }
