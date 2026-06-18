@@ -92,6 +92,13 @@ def gti_mark():
                         headers={"Cache-Control": "public, max-age=2592000"})
 
 
+@router.get("/assets/gti-brand-mark.png")
+def gti_brand_mark():
+    """Marque GTI (cube magenta, logo officiel) servie pour l'espace client."""
+    return FileResponse(_ASSETS_DIR / "gti-brand-mark.png", media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=2592000"})
+
+
 @router.get("/r/o/{token}.png")
 def track_open(token: str, request: Request, settings: Settings = Depends(get_settings)):
     payload = email_tokens.verify_token(token, _secret(settings))

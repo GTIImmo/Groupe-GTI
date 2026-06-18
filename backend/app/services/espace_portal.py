@@ -300,7 +300,7 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
 
     nav = f"""
   <nav class="nav">
-    <div class="logo"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:21px;height:21px"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"></path><path d="M9.5 20v-5h5v5"></path></svg></span></div>
+    <div class="logo"><span class="mk"><img src="{base}/assets/gti-brand-mark.png" alt="GTI" style="width:22px;height:22px;object-fit:contain;filter:brightness(0) invert(1)"></span></div>
     <div class="nlinks">
       <a class="nlink" data-tab="recherche">{IC['search']}Mon projet</a>
       <a class="nlink active" data-tab="biens">{IC['grid']}Ma sélection<span class="ct">{n_sel}</span></a>
