@@ -145,6 +145,32 @@ async def espace_message(token: str, request: Request, settings: Settings = Depe
     return JSONResponse(res)
 
 
+@router.post("/espace/{token}/visite")
+async def espace_visite(token: str, request: Request, settings: Settings = Depends(get_settings)):
+    """Demande de visite (option A) : notifie le négociateur du mandat (cloche app + email).
+    Ne touche pas l'agenda Google, n'utilise pas la vitrine simulée."""
+    payload = email_tokens.verify_token(token, _secret(settings))
+    if not payload or payload.get("a") not in _ESPACE_ACTIONS:
+        return JSONResponse({"ok": False, "error": "invalid_token"}, status_code=410)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    bien_id = (body or {}).get("bien_id")
+    svc = EspaceClientService(settings)
+    envoi_id = _resolve_envoi_id(svc, payload, bien_id=bien_id)
+    if not envoi_id:
+        return JSONResponse({"ok": False, "error": "no_envoi"}, status_code=403)
+    try:
+        res = svc.submit_visite_request(
+            envoi_id=envoi_id, bien_id=bien_id,
+            days=(body or {}).get("days"), periods=(body or {}).get("periods"),
+            message=(body or {}).get("message"), phone=(body or {}).get("phone"))
+    except Exception:
+        return JSONResponse({"ok": False, "error": "server"}, status_code=500)
+    return JSONResponse(res)
+
+
 @router.post("/espace/{token}/recherche")
 async def espace_recherche(token: str, request: Request, settings: Settings = Depends(get_settings)):
     payload = email_tokens.verify_token(token, _secret(settings))

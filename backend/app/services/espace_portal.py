@@ -274,6 +274,7 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
     tok = html.escape(token)
     post_fb = f"{base}/espace/{tok}/feedback"
     post_re = f"{base}/espace/{tok}/recherche"
+    post_vi = f"{base}/espace/{tok}/visite"
 
     client = ctx.get("client") or {}
     featured = ctx.get("featured")
@@ -377,6 +378,26 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
       <button class="rm-cancel" data-rmclose>Annuler</button>
     </div>
   </div>
+  <div class="rm vm" id="vm"><div class="rm-bg" data-vmclose></div>
+    <div class="rm-card vm-card">
+      <button class="vm-x" data-vmclose aria-label="Fermer">✕</button>
+      <div class="vm-eyebrow">{IC['cal']}<span>Demande de visite</span></div>
+      <h3 id="vm-bien">Organiser une visite</h3>
+      <p class="vm-loc" id="vm-loc"></p>
+      <div class="vm-lbl">Quels jours vous arrangent&nbsp;?</div>
+      <div class="vm-days" id="vm-days"></div>
+      <div class="vm-lbl">À quel moment&nbsp;?</div>
+      <div class="vm-chips">
+        <button class="vm-chip" data-period="Matin">Matin</button>
+        <button class="vm-chip" data-period="Après-midi">Après-midi</button>
+        <button class="vm-chip" data-period="Fin de journée">Fin de journée</button>
+      </div>
+      <input class="vm-phone" id="vm-phone" type="tel" inputmode="tel" placeholder="Votre téléphone (pour être rappelé)">
+      <textarea class="vm-msg" id="vm-msg" placeholder="Un mot pour votre conseiller (facultatif)…"></textarea>
+      <button class="vm-send" id="vm-send">Envoyer ma demande de visite</button>
+      <div class="vm-ack" id="vm-ack" hidden></div>
+    </div>
+  </div>
   <nav class="mobnav">
     <a data-tab="biens" class="active">{IC['grid']}<span>Sélection</span></a>
     <a data-tab="favoris">{IC['heart']}<span>Cœur</span></a>
@@ -386,6 +407,7 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
 
     js = _PORTAL_JS.replace("__POST_FB__", json.dumps(post_fb)) \
                    .replace("__POST_RE__", json.dumps(post_re)) \
+                   .replace("__POST_VI__", json.dumps(post_vi)) \
                    .replace("__DATA__", json.dumps(data_map, ensure_ascii=False)) \
                    .replace("__FAVS__", json.dumps(favs)) \
                    .replace("__FROM_EMAIL__", "true" if from_email else "false")
@@ -404,6 +426,26 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
 .pq svg{{color:var(--green)}}
 .ov-dpe{{display:flex;gap:12px;flex-wrap:wrap}} .ov-dpe a{{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}} .ov-dpe img{{height:120px;width:auto;display:block}}
 .eyebrow{{font-size:11.5px;font-weight:800;letter-spacing:.4px;color:var(--accent-d);margin-bottom:6px;text-transform:uppercase}}
+/* ── Modale demande de visite ── */
+.vm .rm-card{{max-width:460px;text-align:left}}
+.vm-x{{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--mute);font-size:14px}}
+.vm-eyebrow{{display:inline-flex;align-items:center;gap:7px;background:var(--accent-soft);color:var(--accent-d);font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:6px 11px;border-radius:20px;margin-bottom:12px}}
+.vm-eyebrow svg{{width:15px;height:15px}}
+.vm-card h3{{font-family:'Fraunces',serif;font-weight:600;font-size:21px;line-height:1.2}}
+.vm-loc{{font-size:13px;color:var(--mute);margin:4px 0 6px}}
+.vm-lbl{{font-size:12.5px;font-weight:700;color:var(--ink);margin:16px 0 8px}}
+.vm-days{{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}} .vm-days::-webkit-scrollbar{{display:none}}
+.vm-day{{flex:none;min-width:58px;border:1.5px solid var(--line);border-radius:13px;padding:9px 6px;text-align:center;cursor:pointer;transition:.13s;background:var(--surface)}}
+.vm-day:hover{{border-color:var(--accent)}} .vm-day.on{{background:var(--accent);border-color:var(--accent);color:#fff}}
+.vm-day .dd{{font-size:10.5px;font-weight:700;text-transform:uppercase;opacity:.75}} .vm-day .dn{{font-size:18px;font-weight:800;margin-top:1px}} .vm-day .dm{{font-size:10px;opacity:.75}}
+.vm-chips{{display:flex;gap:8px;flex-wrap:wrap}}
+.vm-chip{{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:11px;padding:9px 15px;font-size:13.5px;font-weight:600;cursor:pointer;transition:.13s}}
+.vm-chip:hover{{border-color:var(--accent)}} .vm-chip.on{{background:var(--accent);border-color:var(--accent);color:#fff}}
+.vm-phone,.vm-msg{{width:100%;margin-top:14px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:14.5px;font-family:inherit;color:var(--ink);background:var(--surface)}}
+.vm-phone:focus,.vm-msg:focus{{outline:none;border-color:var(--accent)}} .vm-msg{{min-height:70px;resize:vertical}}
+.vm-send{{width:100%;margin-top:16px;background:var(--accent);color:#fff;border-radius:13px;padding:14px;font-size:14.5px;font-weight:700;box-shadow:0 10px 24px -12px rgba(197,0,95,.8)}}
+.vm-send:hover{{background:var(--accent-d)}} .vm-send:disabled{{opacity:.6}}
+.vm-ack{{margin-top:14px;font-size:14px;color:var(--green);font-weight:700;text-align:center;line-height:1.5}}
 </style>
 </head>
 <body>
@@ -428,7 +470,7 @@ def _ecarte_row(v: dict[str, Any]) -> str:
 
 _PORTAL_JS = r"""
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
-const POST_FB=__POST_FB__, POST_RE=__POST_RE__, DATA=__DATA__;
+const POST_FB=__POST_FB__, POST_RE=__POST_RE__, POST_VI=__POST_VI__, DATA=__DATA__;
 async function postFb(b){try{await fetch(POST_FB,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});}catch(e){}}
 
 /* ── Onglets ── */
@@ -543,7 +585,7 @@ function openDetail(k){
       <div class="ov-adv"><span class="a">${b.nego.i}</span><div class="ov-adv-i"><div class="nm">${b.nego.n}</div><div class="ag">Votre conseiller · ${b.nego.a}</div></div><div class="ov-adv-acts">${b.nego.tel?`<a class="ov-cic" href="tel:${b.nego.tel}" title="Appeler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 2.1 9.82 2 2 0 0 1 4.11 7.6h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 15.16a16 16 0 0 0 5.93 5.93l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>`:''}${b.nego.mail?`<a class="ov-cic" href="mailto:${b.nego.mail}" title="Écrire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m2 8 10 6 10-6"/></svg></a>`:''}</div></div>
       <div class="ov-act">${visiteBtn}
         <button class="ov-cic-btn fav" data-ovfav="${k}" title="Coup de cœur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 6 4.5 4.5 0 0 0 2 8.5C2 12 5 14 12 21c2.6-2.6 4.7-4.6 6-6z"/></svg><span class="ov-lbl">Coup de cœur</span></button>
-        <button class="ov-cic-btn nope" data-ovnope="${k}" title="Pas pour moi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 2v11M22 11V4a1 1 0 0 0-1-1h-4v10h4a1 1 0 0 0 1-1z"/></svg><span class="ov-lbl">Pas pour moi</span></button>
+        <button class="ov-cic-btn nope" data-ovnope="${k}" title="Pas pour moi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 2v11M22 11V4a1 1 0 0 0-1-1h-4v10h4a1 1 0 0 0 1-1z"/><path d="M17 13l-4.5 8.5a2 2 0 0 1-2.8-2.6L11 13H5.5a2 2 0 0 1-2-2.4l1.4-7A2 2 0 0 1 7 3h10" stroke-linejoin="round"/></svg><span class="ov-lbl">Pas pour moi</span></button>
       </div>
     </div>`;
   ov.classList.add('open');document.body.style.overflow='hidden';initGals(ovSheet);syncFav();
@@ -554,12 +596,46 @@ if(ov)ov.addEventListener('click',e=>{
   if(e.target.closest('[data-close]')||e.target.classList.contains('ov-bg'))closeDetail();
   const f=e.target.closest('[data-ovfav]');if(f)toggleFav(f.dataset.ovfav,'');
   const n=e.target.closest('[data-ovnope]');if(n){pend=n.dataset.ovnope;pendEnvoi='';closeDetail();rm.classList.add('open');}
-  const vv=e.target.closest('[data-ovvisite]');if(vv){const bb=DATA[vv.dataset.ovvisite];closeDetail();if(bb&&bb.rdv)window.open(bb.rdv,'_blank');else show('visites');}
+  const vv=e.target.closest('[data-ovvisite]');if(vv){closeDetail();openVisite(vv.dataset.ovvisite);}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();if(rm)rm.classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();if(rm)rm.classList.remove('open');if(vm)vm.classList.remove('open');}});
 
-/* ── Visite (carte/vedette) -> vrai lien RDV Google, sinon onglet visites ── */
-document.addEventListener('click',e=>{const v=e.target.closest('[data-visite]');if(v){const k=v.dataset.visite;const b=DATA[k];if(b&&b.rdv){window.open(b.rdv,'_blank');}else{show('visites');}}});
+/* ── Demande de visite : modale moderne -> POST /visite (cloche + email au négo, JAMAIS la vitrine simulée) ── */
+const vm=$('#vm'); let vmKey=null, vmEnvoi=null;
+const VM_DJ=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'], VM_DM=['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+function openVisite(k){
+  if(!vm)return; vmKey=k; const card=document.querySelector('[data-card="'+k+'"]'); vmEnvoi=card?card.dataset.envoi:'';
+  const b=DATA[k]||{};
+  const bn=$('#vm-bien'), lo=$('#vm-loc'); if(bn)bn.textContent=b.title||'Organiser une visite'; if(lo)lo.textContent=b.loc||'';
+  // Génère les 7 prochains jours (hors aujourd'hui)
+  const days=$('#vm-days'); if(days){days.innerHTML='';
+    for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()+i);
+      const lab=VM_DJ[d.getDay()]+' '+d.getDate()+' '+VM_DM[d.getMonth()];
+      const el=document.createElement('button');el.className='vm-day';el.dataset.day=lab;
+      el.innerHTML='<div class="dd">'+VM_DJ[d.getDay()]+'</div><div class="dn">'+d.getDate()+'</div><div class="dm">'+VM_DM[d.getMonth()]+'</div>';
+      days.appendChild(el);}}
+  vm.querySelectorAll('.vm-chip,.vm-day').forEach(x=>x.classList.remove('on'));
+  const ph=$('#vm-phone'),ms=$('#vm-msg'),ak=$('#vm-ack'),sd=$('#vm-send');
+  if(ph)ph.value='';if(ms)ms.value='';if(ak){ak.hidden=true;ak.textContent='';}if(sd){sd.disabled=false;sd.textContent='Envoyer ma demande de visite';}
+  vm.classList.add('open');
+}
+if(vm)vm.addEventListener('click',e=>{
+  if(e.target.closest('[data-vmclose]')){vm.classList.remove('open');return;}
+  const d=e.target.closest('.vm-day'); if(d)d.classList.toggle('on');
+  const c=e.target.closest('.vm-chip'); if(c)c.classList.toggle('on');
+});
+const vmSend=$('#vm-send');
+if(vmSend)vmSend.addEventListener('click',async()=>{
+  const days=[...vm.querySelectorAll('.vm-day.on')].map(x=>x.dataset.day);
+  const periods=[...vm.querySelectorAll('.vm-chip.on')].map(x=>x.dataset.period);
+  const phone=($('#vm-phone')||{}).value||'', message=($('#vm-msg')||{}).value||'';
+  vmSend.disabled=true; vmSend.textContent='Envoi…';
+  try{await fetch(POST_VI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bien_id:vmKey,envoi_id:vmEnvoi,days,periods,phone,message})});}catch(e){}
+  const ak=$('#vm-ack'); if(ak){ak.hidden=false;ak.innerHTML='✓ Demande envoyée&nbsp;! Votre conseiller vous recontacte vite pour fixer le créneau.';}
+  vmSend.textContent='Demande envoyée';
+  setTimeout(()=>vm.classList.remove('open'),2600);
+});
+document.addEventListener('click',e=>{const v=e.target.closest('[data-visite]');if(v)openVisite(v.dataset.visite);});
 
 /* ── Arrivée depuis l'email (#affiner) : ouvrir le formulaire + surbrillance ── */
 if(__FROM_EMAIL__||location.hash==='#affiner'){

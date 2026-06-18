@@ -731,6 +731,65 @@ class EspaceClientService:
                 pass
         return {"ok": True, "emailSent": email_sent}
 
+    def submit_visite_request(self, *, envoi_id: str, bien_id: Any = None, days: Any = None,
+                              periods: Any = None, message: Any = None, phone: Any = None) -> dict[str, Any]:
+        """Demande de visite (option A) : NE TOUCHE PAS l'agenda Google, et N'UTILISE PAS la
+        vitrine simulée. Notifie le négociateur du MANDAT (cloche dans son app + email) avec les
+        disponibilités du client ; le négociateur cale ensuite le vrai RDV dans son agenda."""
+        envoi = self.tracking._envoi(envoi_id)
+        if not envoi:
+            return {"ok": False, "error": "no_envoi"}
+        cid = envoi.get("hektor_contact_id")
+        nego = self._bien_nego_email(bien_id) or envoi.get("sender_email") or self._negociateur_email(cid)
+        client = envoi.get("recipient_email") or ""
+        title = ""
+        if str(bien_id or "").isdigit():
+            dossier, _ = self._load_dossier_by_id(int(bien_id))
+            title = _clean_text(dossier.get("titre_bien")) or _clean_text(dossier.get("numero_mandat")) or f"bien #{bien_id}"
+        days = [str(d)[:40] for d in (days or []) if str(d).strip()][:10]
+        periods = [str(p)[:20] for p in (periods or []) if str(p).strip()][:3]
+        phone = str(phone or "").strip()[:30]
+        msg = str(message or "").strip()[:1000]
+        dispo = " · ".join(days) + ((" — " + ", ".join(periods)) if periods else "")
+        body = (f"{client or 'Un client'} souhaite visiter « {title} ». "
+                f"Disponibilités : {dispo or 'à convenir avec le client'}."
+                + (f" Tél : {phone}." if phone else "")
+                + (f"\nMessage : {msg}" if msg else ""))
+        # Cloche dans l'app du négociateur du mandat.
+        if nego:
+            try:
+                self.tracking._insert("app_notification", {
+                    "negociateur_email": nego, "type": "demande_visite",
+                    "title": "Demande de visite", "body": body[:400],
+                    "contact_search_key": envoi.get("contact_search_key"),
+                    "app_dossier_id": int(bien_id) if str(bien_id or "").isdigit() else None,
+                    "payload": {"source": "espace_client", "days": days, "periods": periods,
+                                "phone": phone, "message": msg, "contact": client, "bien": title},
+                }, prefer="return=minimal")
+            except Exception:
+                pass
+        # Signal d'engagement fort (score) : demande de visite.
+        try:
+            self.tracking.record_event(envoi_id=envoi_id, action="visite", bien_id=bien_id)
+        except Exception:
+            pass
+        # Email au négociateur du mandat (répondre-à = le client).
+        email_sent = False
+        if nego:
+            try:
+                from .google_workspace_service import GoogleWorkspaceService
+                res = GoogleWorkspaceService(self.settings).send_gmail_message(
+                    subject_email=(self.settings.google_workspace_subject_email or "accueil@gti-immobilier.fr"),
+                    to=[nego], subject=f"Demande de visite — {title}",
+                    body_text=body + "\n\nLe client attend que vous le recontactiez pour fixer le créneau.",
+                    reply_to=client or None,
+                    dry_run=not self.settings.email_real_send_enabled,
+                    related_entity_type="contact", related_entity_id=cid)
+                email_sent = bool(res.get("ok")) and not res.get("dryRun")
+            except Exception:
+                pass
+        return {"ok": True, "emailSent": email_sent, "nego": nego}
+
     # Requalification GUIDÉE (sûre) : la raison du ✕ -> piste pour le négociateur (pas d'écriture CRM auto).
     _REQUALIF_SUGGESTION = {
         "trop_cher": "Budget ressenti trop élevé — proposer moins cher ou ajuster le budget.",
