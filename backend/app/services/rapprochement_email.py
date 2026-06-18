@@ -449,12 +449,21 @@ def build_email_html(ctx: dict[str, Any]) -> str:
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-bg" style="background:{BRAND['paper']}">
   <tr><td align="center" style="padding:28px 14px">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="gti-container" style="width:600px;max-width:600px">
-      <!-- En-tête premium partagé (logo + filet magenta signature + lockup domaine) -->
-      {email_header(tag="Pour votre projet")}
+      <!-- En-tête : logo GTI réel sur bandeau foncé (le logo ressort, le « groupe » gris devient lisible) -->
+      <tr><td class="gti-pad" style="padding:2px 6px 18px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{BRAND['ink_warm']}" style="background:{BRAND['ink_warm']};border-radius:10px"><tr>
+          <td align="left" style="vertical-align:middle;padding:18px 24px">
+            <img src="{LOGO_URL}" height="50" alt="Groupe GTI" style="display:block;border:0;height:50px;width:auto">
+          </td>
+          <td align="right" style="vertical-align:middle;padding:18px 24px">
+            <span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;letter-spacing:2.5px;text-transform:uppercase">Pour votre projet</span>
+          </td>
+        </tr></table>
+      </td></tr>
       <!-- Accroche éditoriale -->
       <tr><td class="gti-pad" style="padding:14px 6px 22px">
-        {email_eyebrow("Rien que pour vous")}
-        <div class="gti-ink" style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:13px">{greeting}</div>
+        <div style="color:{BRAND['magenta']};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2.5px;text-transform:uppercase">Rien que pour vous</div>
+        <div class="gti-ink" style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:12px">{greeting}</div>
         {intro_html}
         <div class="gti-mute" style="color:{BRAND['ink_soft']};font-family:{FONT_BODY};font-size:15px;line-height:1.65;margin-top:10px">{accroche}</div>
       </td></tr>
@@ -466,8 +475,15 @@ def build_email_html(ctx: dict[str, Any]) -> str:
       {affiner_html}
       <!-- Signature -->
       <tr><td class="gti-pad" style="padding:8px 6px 6px">{sig_html}</td></tr>
-      <!-- Pied premium partagé (marque + mentions + désinscription) -->
-      {email_footer(unsub_url=unsub)}
+      <!-- Pied légal -->
+      <tr><td class="gti-pad" style="padding:22px 6px 26px">
+        <div style="border-top:1px solid {BRAND['line_warm']};margin-bottom:14px;font-size:0;line-height:0">&nbsp;</div>
+        <div class="gti-mute" style="color:{BRAND['muted_warm']};font-family:{FONT_BODY};font-size:11px;line-height:1.6">{_esc(LEGAL_LINE)}</div>
+        <div class="gti-mute" style="margin-top:8px;font-family:{FONT_BODY};font-size:11px;color:{BRAND['muted_warm']}">
+          Vous recevez cet email car vous êtes en relation avec notre agence.
+          <a href="{unsub}" style="color:{BRAND['ink_soft']};text-decoration:underline">Se désinscrire</a>.
+        </div>
+      </td></tr>
     </table>
     {pixel}
   </td></tr>
