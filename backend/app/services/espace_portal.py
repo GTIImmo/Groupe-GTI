@@ -141,7 +141,7 @@ def _card(v: dict[str, Any]) -> str:
     nego = v.get("nego") or {}
     k = _e(v.get("key"))
     badge = f'<span class="pc-badge">{_e(v.get("badge"))}</span>' if v.get("badge") else ""
-    specs = " · ".join(_e(s[0]) for s in (v.get("specs") or [])[:3])
+    specs = '<span>·</span>'.join(f'<span>{_e(s[0])}</span>' for s in (v.get("specs") or [])[:3])
     return f"""
       <article class="pc" data-card="{k}" data-envoi="{_e(v.get('envoi_id'))}">
         <div class="pc-media">{badge}<button class="pc-fav" data-fav="{k}" aria-label="Coup de cœur">♡</button>
@@ -193,11 +193,18 @@ def _ecartes_teaser(n: int) -> str:
             '<button data-goto="ecartes">Voir mes écartés</button></article>')
 
 
-def _estimation_block() -> str:
+# Image marketing du bloc estimation (photo réelle GTI, charge bien). Surchargée si besoin.
+ESTIMATION_IMG = ("https://groupe-gti-immobilier.staticlbi.com/original/images/biens/16/"
+                  "cbce175a4551d953a821702103579263/ee28aa8451ea7d0c6c35f278760f3fbd.jpg")
+
+
+def _estimation_block(img: str | None = None) -> str:
     pts = "".join(f'<li>{IC["check"]}{t}</li>' for t in
                   ["Rapport détaillé sous 48 h", "Prix de marché actualisé", "Accompagnement de A à Z"])
     return (
-        '<div class="adslot"><div class="adslot-media" style="background:#1d2a26"><div class="adslot-shade"></div></div>'
+        '<div class="adslot">'
+        f'<div class="adslot-media"><img src="{_e(img or ESTIMATION_IMG)}" alt="" '
+        'style="width:100%;height:100%;object-fit:cover;display:block"><div class="adslot-shade"></div></div>'
         '<div class="adslot-body">'
         f'<span class="adslot-tag">{IC["check"]}100% gratuit · sans engagement</span>'
         '<h3 class="disp">Connaissez la vraie valeur de votre bien</h3>'
@@ -293,7 +300,7 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
 
     nav = f"""
   <nav class="nav">
-    <div class="logo"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:21px;height:21px"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"></path><path d="M9.5 20v-5h5v5"></path></svg></span><span style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);white-space:nowrap">Groupe GTI</span></div>
+    <div class="logo"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:21px;height:21px"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"></path><path d="M9.5 20v-5h5v5"></path></svg></span></div>
     <div class="nlinks">
       <a class="nlink" data-tab="recherche">{IC['search']}Mon projet</a>
       <a class="nlink active" data-tab="biens">{IC['grid']}Ma sélection<span class="ct">{n_sel}</span></a>
@@ -318,8 +325,7 @@ def render_portal(ctx: dict[str, Any], *, token: str, base: str, from_email: boo
       <div class="sectitle"><div><h2 class="disp">Votre bien à la une</h2></div></div>
       {_featured(featured)}
       <div class="sectitle"><div><h2 class="disp">Aussi pour vous</h2></div><a class="link" data-goto="recherche">Voir mes critères{IC['chev']}</a></div>
-      <div class="grid">{selection_html}</div>
-      {_ecartes_teaser(len(ecartes))}
+      <div class="grid">{selection_html}{_ecartes_teaser(len(ecartes))}</div>
       <div class="promos">{_estimation_block()}</div>
     </section>"""
 
