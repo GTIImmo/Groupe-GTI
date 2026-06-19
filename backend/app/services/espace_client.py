@@ -701,9 +701,11 @@ class EspaceClientService:
 
         job_created = False
         if self.settings.espace_search_write_enabled and contact_id.isdigit():
-            # Même job que l'édition négociateur, via la fonction jumelle autorisée par le token espace.
-            self._rpc("app_espace_create_search_update_job", {
-                "target_contact_id": contact_id, "search_payload": payload, "job_priority": 16,
+            # Affinage Supabase-first : écriture OPTIMISTE (critères -> Supabase, rapprochement
+            # recalculé sur-le-champ) + push Hektor débouncé. Autorisé par le token espace
+            # (RPC service_role). Le client voit ses biens correspondants bouger tout de suite.
+            self._rpc("app_espace_edit_search_optimistic", {
+                "target_contact_id": contact_id, "search_payload": payload, "debounce_seconds": 600,
             })
             job_created = True
 
