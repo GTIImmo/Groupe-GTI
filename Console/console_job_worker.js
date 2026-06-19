@@ -7548,6 +7548,23 @@ async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
   }
 }
 
+// Affinage Supabase-first (E) : nettoyage du pending après push, ou marquage conflit.
+async function clearSearchPending(contactId, searchIndex) {
+  try {
+    await supabaseRequest(
+      `app_search_pending?hektor_contact_id=eq.${encodeURIComponent(String(contactId))}&search_index=eq.${Number(searchIndex)}`,
+      { method: "DELETE", prefer: "return=minimal" });
+  } catch (_) { /* best-effort */ }
+}
+async function markSearchPendingConflict(contactId, searchIndex) {
+  try {
+    await supabaseRequest(
+      `app_search_pending?hektor_contact_id=eq.${encodeURIComponent(String(contactId))}&search_index=eq.${Number(searchIndex)}`,
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
+  } catch (_) { /* best-effort */ }
+}
+
 // Retourne { blocked: false } si l'écriture est sûre, sinon { blocked: true, result }.
 async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
   const base = payload.base_snapshot;
@@ -7601,10 +7618,15 @@ async function handleUpdateHektorContactSearch(job) {
 
   const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
 
+  // Affinage Supabase-first (E) : ce job vient-il du balayage débounce d'un pending ?
+  const fromPending = payload.from_pending === true;
+  const pendingIndex = Number(payload.search_index);
+
   // Correctif n°1 — anti-écrasement : si la recherche a été modifiée dans Hektor
   // depuis l'édition (par un négociateur), on protège sa saisie et on n'écrit pas.
   const guard = await guardContactSearchOverwrite(job, contactId, payload, context.contact && context.contact.negociateur_email);
   if (guard.blocked) {
+    if (fromPending) await markSearchPendingConflict(contactId, pendingIndex);
     return { ...guard.result, idCritere };
   }
 
@@ -7621,6 +7643,10 @@ async function handleUpdateHektorContactSearch(job) {
   if (search && search.status === "skipped") {
     throw new Error(`Recherche contact non modifiee (${search.reason || "payload incomplet"})`);
   }
+
+  // Affinage Supabase-first (E) : push Hektor confirmé -> on efface le pending (avant
+  // l'after-refresh, pour qu'il resynchronise normalement).
+  if (fromPending) await clearSearchPending(contactId, pendingIndex);
 
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
