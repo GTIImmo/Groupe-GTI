@@ -8288,6 +8288,10 @@ export default function App() {
   const [rechercheAcquereurSearch, setRechercheAcquereurSearch] = useState<AppContactSearch | null>(null)
   const [visitBooking, setVisitBooking] = useState<VisitePlanInput | null>(null)
   const [visitRefreshKey, setVisitRefreshKey] = useState(0)
+  // Auto-refresh du rapprochement après modification de recherche (Niveau 1) :
+  // jobs 'update_hektor_contact_search' déjà rechargés + minuteurs en attente (resync + cron).
+  const refreshedSearchJobIdsRef = useRef<Set<string>>(new Set())
+  const searchRefreshTimersRef = useRef<number[]>([])
   const [editingVisitEvent, setEditingVisitEvent] = useState<GoogleCalendarEventLink | null>(null)
   const [affinerSearch, setAffinerSearch] = useState<AppContactSearch | null>(null)
   const [rapprochementMandat, setRapprochementMandat] = useState<MandatContext | null>(null)
@@ -8936,6 +8940,29 @@ export default function App() {
       window.clearInterval(interval)
     }
   }, [session])
+
+  // Niveau 1 — rechargement AUTO du rapprochement après une modification de recherche.
+  // Quand un job 'update_hektor_contact_search' se termine, la donnée n'est pas encore prête :
+  // il faut le resync (~30 s) puis le cron Postgres qui recalcule les recherches « dirty » (≤60 s).
+  // On recharge donc l'écran de rapprochement ouvert par paliers couvrant cette fenêtre, pour que
+  // l'utilisateur n'ait plus à rafraîchir à la main. Dé-doublonné par id de job ; minuteurs purgés
+  // au démontage (jamais à chaque poll, sinon ils seraient annulés avant de se déclencher).
+  useEffect(() => {
+    for (const job of hektorActionJobs) {
+      if (job.job_type !== 'update_hektor_contact_search') continue
+      if (isConsoleJobActive(job)) continue
+      if (refreshedSearchJobIdsRef.current.has(job.id)) continue
+      refreshedSearchJobIdsRef.current.add(job.id)
+      for (const delay of [25000, 55000, 90000]) {
+        searchRefreshTimersRef.current.push(
+          window.setTimeout(() => setVisitRefreshKey((value) => value + 1), delay))
+      }
+    }
+  }, [hektorActionJobs])
+
+  useEffect(() => () => {
+    for (const timer of searchRefreshTimersRef.current) window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
