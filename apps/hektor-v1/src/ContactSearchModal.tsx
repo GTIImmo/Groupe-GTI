@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { createHektorContactSearchJob, createUpdateHektorContactSearchJob } from './lib/api'
+import { createHektorContactSearchJob, editSearchOptimistic } from './lib/api'
 import type { AppContactSearch, ConsoleJob } from './types'
 import ContactSearchFields, {
   contactSearchValueFromSearch,
@@ -25,6 +25,9 @@ export type ContactSearchModalProps = {
   initialSearch?: AppContactSearch | null
   onClose: () => void
   onCreated?: (job: ConsoleJob) => void
+  // Affinage Supabase-first : appelé après une édition optimiste (pas de job) pour
+  // que l'écran recharge le rapprochement (déjà recalculé côté serveur).
+  onOptimisticSaved?: () => void
 }
 
 export default function ContactSearchModal(props: ContactSearchModalProps) {
@@ -57,28 +60,18 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
         city: props.defaultCity ?? null,
         postalCode: props.defaultPostalCode ?? null,
       }
-      // Photo des champs non éditables au moment du chargement (mêmes clés que le
-      // backend SNAPSHOT_KEYS) → le worker bloque l'écriture si un autre négociateur
-      // a modifié la recherche dans Hektor entre-temps (anti-écrasement).
-      const baseSnapshot = props.initialSearch
-        ? {
-            offre: props.initialSearch.offre ?? null,
-            types_json: props.initialSearch.types_json ?? null,
-            villes_json: props.initialSearch.villes_json ?? null,
-            surface_terrain_min: props.initialSearch.surface_terrain_min ?? null,
-            criteres_json: props.initialSearch.criteres_json ?? null,
-            prix_min: props.initialSearch.prix_min ?? null,
-            prix_max: props.initialSearch.prix_max ?? null,
-            surface_min: props.initialSearch.surface_min ?? null,
-            pieces_min: props.initialSearch.pieces_min ?? null,
-            chambre_min: props.initialSearch.chambre_min ?? null,
-          }
-        : null
-      const job = isEdit && props.initialSearch
-        ? await createUpdateHektorContactSearchJob({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context, baseSnapshot })
-        : await createHektorContactSearchJob({ contactId: props.contactId, search, context })
-      props.onCreated?.(job)
-      props.onClose()
+      if (isEdit && props.initialSearch) {
+        // Édition = optimiste : critères écrits direct dans Supabase (rapprochement
+        // recalculé sur-le-champ par le RPC), push Hektor débouncé. Pas de job.
+        // L'anti-écrasement (base_snapshot) est géré côté serveur via app_search_pending.
+        await editSearchOptimistic({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context })
+        props.onOptimisticSaved?.()
+        props.onClose()
+      } else {
+        const job = await createHektorContactSearchJob({ contactId: props.contactId, search, context })
+        props.onCreated?.(job)
+        props.onClose()
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Création de la recherche impossible.')
       setPending(false)

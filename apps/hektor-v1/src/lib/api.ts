@@ -5421,6 +5421,33 @@ export async function createUpdateHektorContactSearchJob(input: {
   return data as ConsoleJob
 }
 
+// Affinage Supabase-first : édition optimiste d'une recherche existante.
+// Écrit les critères direct dans Supabase (rapprochement recalculé sur-le-champ) et
+// arme un push Hektor débouncé (RPC app_edit_search_optimistic). Pas de job : instantané.
+export async function editSearchOptimistic(input: {
+  contactId: string
+  searchIndex: number
+  search: HektorContactSearchInput
+  context?: HektorContactSearchJobContext
+  debounceSeconds?: number
+}): Promise<{ ok: boolean }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const search = hContactSearchPayload(input.search)
+  if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
+  if (!search.priceMax) throw new Error('Budget maximum requis')
+  const contextPayload = hContactSearchContextPayload(input.context)
+  const { data, error } = await supabase.rpc('app_edit_search_optimistic', {
+    target_contact_id: cleanContactId,
+    search_payload: { ...contextPayload, search, search_index: input.searchIndex },
+    debounce_seconds: input.debounceSeconds ?? 600,
+  })
+  if (error) throw new Error(error.message ?? 'Édition de la recherche impossible')
+  return (data as { ok: boolean }) ?? { ok: true }
+}
+
 export async function createDeleteHektorContactSearchJob(input: {
   contactId: string
   searchIndex: number

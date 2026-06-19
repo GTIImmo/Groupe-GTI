@@ -13678,6 +13678,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             initialSearch={affinerSearch}
             onClose={() => setAffinerSearch(null)}
             onCreated={(job) => rememberHektorActionJob(job)}
+            onOptimisticSaved={() => setVisitRefreshKey((value) => value + 1)}
           />
         ) : null}
 
