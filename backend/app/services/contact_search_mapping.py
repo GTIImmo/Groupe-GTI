@@ -174,7 +174,10 @@ def apply_client_edits(value: dict[str, Any], edits: dict[str, Any]) -> dict[str
 # Le worker comparera cette photo à l'état Hektor frais AVANT d'écrire : si ces
 # champs ont bougé, on ne réécrit pas la recherche (anti-écrasement). Voir
 # handleUpdateHektorContactSearch côté worker.
-SNAPSHOT_KEYS = ("offre", "types_json", "villes_json", "surface_terrain_min", "criteres_json")
+SNAPSHOT_KEYS = ("offre", "types_json", "villes_json", "surface_terrain_min", "criteres_json",
+                 # Champs numériques : la photo porte la valeur AU CHARGEMENT (pré-édition) ;
+                 # le worker compare base vs frais → détecte aussi un conflit prix/surface seul.
+                 "prix_min", "prix_max", "surface_min", "pieces_min", "chambre_min")
 
 
 def base_snapshot(src: dict[str, Any]) -> dict[str, Any]:

@@ -7490,21 +7490,31 @@ function normSearchNum(raw) {
   return Number.isFinite(n) && n > 0 ? String(Math.trunc(n)) : "";
 }
 
-// Empreinte stable des champs NON éditables (ordre/casse/espaces neutralisés).
-function searchCoreFingerprint(snap) {
+// Empreinte stable des champs comparés (ordre/casse/espaces neutralisés).
+// includeNumeric : compare aussi prix/surface/pièces/chambres — activé uniquement
+// si la photo (base_snapshot) porte ces champs (rétro-compat avec les anciens jobs).
+function searchCoreFingerprint(snap, includeNumeric) {
   if (!snap || typeof snap !== "object") return null;
-  return JSON.stringify({
+  const fp = {
     offre: String(snap.offre == null ? "" : snap.offre).trim(),
     terrain: normSearchNum(snap.surface_terrain_min),
     types: normSearchList(snap.types_json),
     villes: normSearchList(snap.villes_json),
     criteres: normSearchCriteres(snap.criteres_json),
-  });
+  };
+  if (includeNumeric) {
+    fp.prixMin = normSearchNum(snap.prix_min);
+    fp.prixMax = normSearchNum(snap.prix_max);
+    fp.surfaceMin = normSearchNum(snap.surface_min);
+    fp.piecesMin = normSearchNum(snap.pieces_min);
+    fp.chambreMin = normSearchNum(snap.chambre_min);
+  }
+  return JSON.stringify(fp);
 }
 
 async function fetchFreshContactSearchSnapshot(contactId, searchIndex) {
   const params = new URLSearchParams({
-    select: "offre,types_json,villes_json,surface_terrain_min,criteres_json,search_index",
+    select: "offre,types_json,villes_json,surface_terrain_min,criteres_json,prix_min,prix_max,surface_min,pieces_min,chambre_min,search_index",
     hektor_contact_id: `eq.${contactId}`,
     search_index: `eq.${searchIndex}`,
     archive: "eq.false",
@@ -7540,7 +7550,10 @@ async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
 
 // Retourne { blocked: false } si l'écriture est sûre, sinon { blocked: true, result }.
 async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
-  const baseFp = searchCoreFingerprint(payload.base_snapshot);
+  const base = payload.base_snapshot;
+  // Comparer aussi les champs numériques seulement si la photo les porte (rétro-compat).
+  const includeNumeric = !!(base && typeof base === "object" && "prix_max" in base);
+  const baseFp = searchCoreFingerprint(base, includeNumeric);
   if (baseFp == null) {
     // Pas de photo (chemin app négociateur / ancien client) -> comportement historique.
     return { blocked: false };
@@ -7555,7 +7568,7 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
   await runContactRefreshPipeline(job, String(contactId), "search_overwrite_guard");
 
   const fresh = await fetchFreshContactSearchSnapshot(contactId, searchIndex);
-  const freshFp = fresh ? searchCoreFingerprint(fresh) : null;
+  const freshFp = fresh ? searchCoreFingerprint(fresh, includeNumeric) : null;
 
   if (fresh && freshFp === baseFp) {
     await logJob(job.id, "search_overwrite_guard", "done", "Base inchangée côté Hektor : écriture autorisée", {

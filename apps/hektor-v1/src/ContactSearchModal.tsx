@@ -67,6 +67,11 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
             villes_json: props.initialSearch.villes_json ?? null,
             surface_terrain_min: props.initialSearch.surface_terrain_min ?? null,
             criteres_json: props.initialSearch.criteres_json ?? null,
+            prix_min: props.initialSearch.prix_min ?? null,
+            prix_max: props.initialSearch.prix_max ?? null,
+            surface_min: props.initialSearch.surface_min ?? null,
+            pieces_min: props.initialSearch.pieces_min ?? null,
+            chambre_min: props.initialSearch.chambre_min ?? null,
           }
         : null
       const job = isEdit && props.initialSearch
