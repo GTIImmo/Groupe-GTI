@@ -181,7 +181,7 @@ class VisiteRequestService:
                             attendees=[client] if client else [],
                             metadata_json={"source": "espace_visite", "titre_bien": title,
                                            "contact_search_key": req.get("contact_search_key")},
-                            created_by="espace_visite", created_by_email=client or None)
+                            created_by=None, created_by_email=client or None)
                     except Exception:
                         pass
             except Exception:

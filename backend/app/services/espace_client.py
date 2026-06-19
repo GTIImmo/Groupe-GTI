@@ -624,15 +624,30 @@ class EspaceClientService:
         return espace_portal.render_portal(ctx, token=token, base=base, from_email=from_email)
 
     def _load_search_for_envoi(self, envoi: dict[str, Any]) -> dict[str, Any] | None:
-        """Identifie la recherche par (contact + index) STABLE ; repli sur la clé (ancien envoi)."""
+        """Charge la recherche du contact de façon ROBUSTE aux éditions.
+
+        La `contact_search_key` change à CHAQUE édition de recherche : on ne s'y fie donc qu'en
+        tout dernier recours. On privilégie l'identité STABLE (contact + search_index), puis la
+        recherche ACTIVE du contact si l'index n'est pas connu sur l'envoi (anciens envois /
+        certains flux app sans search_index)."""
         cid = str(envoi.get("hektor_contact_id") or "").strip()
         idx = envoi.get("search_index")
+        # ① Idéal : (contact + search_index) — l'index ne change pas à l'édition.
         if cid and idx is not None:
             rows = self.renderer._rest_get(
                 "app_contact_search_current",
                 {"select": "*", "hektor_contact_id": f"eq.{cid}", "search_index": f"eq.{int(idx)}", "limit": "1"})
             if rows:
                 return rows[0]
+        # ② Robuste : la recherche ACTIVE du contact (jamais via la clé périmée).
+        if cid:
+            rows = self.renderer._rest_get(
+                "app_contact_search_current",
+                {"select": "*", "hektor_contact_id": f"eq.{cid}", "archive": "eq.false",
+                 "order": "is_active.desc,search_index.asc", "limit": "1"})
+            if rows:
+                return rows[0]
+        # ③ Dernier repli (envoi legacy sans contact id) : par clé.
         key = envoi.get("contact_search_key")
         if key:
             rows = self.renderer._rest_get(
