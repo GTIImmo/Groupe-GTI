@@ -5396,6 +5396,10 @@ export async function createUpdateHektorContactSearchJob(input: {
   searchIndex: number
   search: HektorContactSearchInput
   context?: HektorContactSearchJobContext
+  // Photo des champs non éditables au moment du chargement : permet au worker de
+  // détecter qu'un autre négociateur a modifié la recherche dans Hektor entre-temps
+  // et d'éviter de l'écraser (garde-fou anti-écrasement, cf. backend SNAPSHOT_KEYS).
+  baseSnapshot?: Record<string, unknown> | null
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -5406,9 +5410,11 @@ export async function createUpdateHektorContactSearchJob(input: {
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
   const contextPayload = hContactSearchContextPayload(input.context)
+  const searchPayload: Record<string, unknown> = { ...contextPayload, search, search_index: input.searchIndex }
+  if (input.baseSnapshot) searchPayload.base_snapshot = input.baseSnapshot
   const { data, error } = await supabase.rpc('app_console_create_update_contact_search_job', {
     target_contact_id: cleanContactId,
-    search_payload: { ...contextPayload, search, search_index: input.searchIndex },
+    search_payload: searchPayload,
     job_priority: input.priority ?? 16,
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search update job')

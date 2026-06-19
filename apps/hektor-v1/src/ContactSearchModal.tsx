@@ -57,8 +57,20 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
         city: props.defaultCity ?? null,
         postalCode: props.defaultPostalCode ?? null,
       }
+      // Photo des champs non éditables au moment du chargement (mêmes clés que le
+      // backend SNAPSHOT_KEYS) → le worker bloque l'écriture si un autre négociateur
+      // a modifié la recherche dans Hektor entre-temps (anti-écrasement).
+      const baseSnapshot = props.initialSearch
+        ? {
+            offre: props.initialSearch.offre ?? null,
+            types_json: props.initialSearch.types_json ?? null,
+            villes_json: props.initialSearch.villes_json ?? null,
+            surface_terrain_min: props.initialSearch.surface_terrain_min ?? null,
+            criteres_json: props.initialSearch.criteres_json ?? null,
+          }
+        : null
       const job = isEdit && props.initialSearch
-        ? await createUpdateHektorContactSearchJob({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context })
+        ? await createUpdateHektorContactSearchJob({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context, baseSnapshot })
         : await createHektorContactSearchJob({ contactId: props.contactId, search, context })
       props.onCreated?.(job)
       props.onClose()
