@@ -391,6 +391,45 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def fetch_dirty_search_pairs(client: "SupabaseRestClient", contact_ids: list[str] | None) -> set[tuple[str, int]]:
+    """Recherches en cours d'édition app (table app_search_pending) à NE PAS écraser.
+
+    Affinage Supabase-first : tant qu'une recherche est "dirty" (éditée dans l'app/espace,
+    pas encore poussée vers Hektor), le pipeline doit conserver ses critères affinés dans
+    Supabase au lieu de les remplacer par l'ancienne version Hektor.
+    """
+    path = "app_search_pending?select=hektor_contact_id,search_index"
+    if contact_ids:
+        encoded = ",".join(urllib.parse.quote(str(value), safe="") for value in contact_ids)
+        path += f"&hektor_contact_id=in.({encoded})"
+    try:
+        rows = client.request(method="GET", path=path) or []
+    except Exception:
+        return set()
+    pairs: set[tuple[str, int]] = set()
+    for row in rows:
+        cid = row.get("hektor_contact_id")
+        idx = row.get("search_index")
+        if cid is not None and idx is not None:
+            pairs.add((str(cid), int(idx)))
+    return pairs
+
+
+def delete_searches_except_dirty(
+    client: "SupabaseRestClient", contact_ids: list[str], dirty_pairs: set[tuple[str, int]]
+) -> int:
+    """Supprime les recherches d'un contact SAUF celles "dirty" (édition app en attente)."""
+    count = 0
+    for contact_id in contact_ids:
+        dirty_idx = sorted({idx for (cid, idx) in dirty_pairs if cid == str(contact_id)})
+        path = f"app_contact_search_current?hektor_contact_id=eq.{urllib.parse.quote(str(contact_id), safe='')}"
+        if dirty_idx:
+            path += f"&search_index=not.in.({','.join(str(i) for i in dirty_idx)})"
+        client.request(method="DELETE", path=path, prefer="return=minimal")
+        count += 1
+    return count
+
+
 def main() -> int:
     args = parse_args()
     contact_ids = explicit_contact_ids(args.contact_id)
@@ -490,9 +529,29 @@ def main() -> int:
     results = {}
     deleted_results = {}
     deleted_state: dict[str, list[str]] = {}
+    # Affinage Supabase-first : recherches "dirty" (éditées dans l'app/espace, en attente de
+    # push Hektor) -> on NE LES écrase PAS (ni delete, ni upsert) pour conserver les critères
+    # affinés dans Supabase. Voir table app_search_pending.
+    dirty_search_pairs = fetch_dirty_search_pairs(client, contact_ids)
+    if dirty_search_pairs:
+        loaded = [
+            (
+                table,
+                [
+                    row
+                    for row in rows
+                    if table != "app_contact_search_current"
+                    or (str(row.get("hektor_contact_id")), int(row.get("search_index", -1))) not in dirty_search_pairs
+                ],
+            )
+            for table, rows in loaded
+        ]
     if contact_ids:
         for table in ["app_contact_current", "app_contact_relation_current", "app_contact_search_current"]:
-            deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", contact_ids, args.batch_size)
+            if table == "app_contact_search_current" and dirty_search_pairs:
+                deleted_results[table] = delete_searches_except_dirty(client, contact_ids, dirty_search_pairs)
+            else:
+                deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", contact_ids, args.batch_size)
     else:
         for table, stale_row_keys in stale_by_table.items():
             column = key_column(table)
