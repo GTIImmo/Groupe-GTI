@@ -46,6 +46,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
 
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const submit = async () => {
     setError(null)
@@ -66,7 +67,12 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
         // L'anti-écrasement (base_snapshot) est géré côté serveur via app_search_pending.
         await editSearchOptimistic({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context })
         props.onOptimisticSaved?.()
-        props.onClose()
+        // Événement global : recharge la fiche/le rapprochement où qu'on soit (sans drilling).
+        try { window.dispatchEvent(new CustomEvent('hektor:search-updated')) } catch { /* noop */ }
+        setPending(false)
+        setNotice('Recherche mise à jour — rapprochement actualisé')
+        window.setTimeout(() => props.onClose(), 1200)
+        return
       } else {
         const job = await createHektorContactSearchJob({ contactId: props.contactId, search, context })
         props.onCreated?.(job)
@@ -111,9 +117,11 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
           </div>
 
           <div className="edit-foot">
-            {error ? <span className="err">{error}</span> : <span className="spacer">Au moins 1 type, 1 commune et un budget max.</span>}
-            <button type="button" className="btn-neutral" onClick={props.onClose} disabled={pending}>Annuler</button>
-            <button type="button" className="btn-brand" onClick={submit} disabled={pending}>{pending ? (isEdit ? 'Enregistrement…' : 'Création…') : (isEdit ? 'Enregistrer la recherche' : 'Créer la recherche')}</button>
+            {notice
+              ? <span className="ok" style={{ color: '#1b8a4b', fontWeight: 700 }}>✓ {notice}</span>
+              : error ? <span className="err">{error}</span> : <span className="spacer">Au moins 1 type, 1 commune et un budget max.</span>}
+            <button type="button" className="btn-neutral" onClick={props.onClose} disabled={pending || !!notice}>Annuler</button>
+            <button type="button" className="btn-brand" onClick={submit} disabled={pending || !!notice}>{notice ? 'Enregistré ✓' : pending ? (isEdit ? 'Enregistrement…' : 'Création…') : (isEdit ? 'Enregistrer la recherche' : 'Créer la recherche')}</button>
           </div>
         </div>
       </div>

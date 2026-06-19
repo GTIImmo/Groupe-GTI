@@ -8964,6 +8964,17 @@ export default function App() {
     for (const timer of searchRefreshTimersRef.current) window.clearTimeout(timer)
   }, [])
 
+  // Affinage Supabase-first : édition optimiste de recherche (ContactSearchModal) ->
+  // recharge la fiche contact ET l'écran de rapprochement, où qu'on soit (sans drilling).
+  useEffect(() => {
+    const onSearchUpdated = () => {
+      setDataReloadKey((value) => value + 1)
+      setVisitRefreshKey((value) => value + 1)
+    }
+    window.addEventListener('hektor:search-updated', onSearchUpdated)
+    return () => window.removeEventListener('hektor:search-updated', onSearchUpdated)
+  }, [])
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     const jobsToResolve = visibleHektorActionPopupJobs
