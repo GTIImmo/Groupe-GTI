@@ -105,6 +105,7 @@ import {
   searchOwnerAnnonceOptions,
   searchMandantContactOptions,
   requestContactRefresh,
+  requestAnnonceRefresh,
   type AnnonceContactInviteeOption,
   type DraftAnnonceSheetScanPayload,
   type GoogleCalendarAvailability,
@@ -8964,6 +8965,11 @@ export default function App() {
         refreshedSearchJobIdsRef.current.add(job.id)
         setDataReloadKey((value) => value + 1)
         setVisitRefreshKey((value) => value + 1)
+      } else if (job.job_type === 'refresh_console_data') {
+        // Read-through bien : refresh annonce terminé -> recharge le détail bien + listes.
+        if (refreshedSearchJobIdsRef.current.has(job.id)) continue
+        refreshedSearchJobIdsRef.current.add(job.id)
+        setDataReloadKey((value) => value + 1)
       }
     }
   }, [hektorActionJobs])
@@ -9183,6 +9189,18 @@ export default function App() {
       .catch(() => { /* read-through best-effort */ })
     return () => { cancelled = true }
   }, [session, screen, selectedContactId])
+
+  // Read-through bien : à l'ouverture d'un bien (détail), refresh annonce depuis Hektor
+  // (paquet annonce + photos + DPE + mandats + propriétaires). Best-effort, TTL+dédup côté RPC.
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    if (selectedDossierId == null) return
+    let cancelled = false
+    requestAnnonceRefresh(selectedDossierId)
+      .then((job) => { if (!cancelled && job) rememberHektorActionJob(job) })
+      .catch(() => { /* read-through best-effort */ })
+    return () => { cancelled = true }
+  }, [session, selectedDossierId])
 
   useEffect(() => {
     if (screen !== 'contacts') return

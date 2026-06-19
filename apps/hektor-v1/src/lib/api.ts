@@ -5468,6 +5468,25 @@ export async function requestContactRefresh(contactId: string, ttlSeconds = 300)
   }
 }
 
+// Read-through bien : à l'ouverture d'un bien (détail), demande un refresh Hektor->Supabase
+// de l'annonce (annonce + photos + DPE + mandats + propriétaires). TTL + dédup côté RPC.
+// Best-effort : ne lève jamais.
+export async function requestAnnonceRefresh(dossierId: number, ttlSeconds = 300): Promise<ConsoleJob | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  if (!Number.isFinite(dossierId)) return null
+  try {
+    await requireSupabaseUserId()
+    const { data, error } = await supabase.rpc('app_console_request_annonce_refresh', {
+      target_dossier_id: dossierId,
+      ttl_seconds: ttlSeconds,
+    })
+    if (error || !data) return null
+    return data as ConsoleJob
+  } catch {
+    return null
+  }
+}
+
 export async function createDeleteHektorContactSearchJob(input: {
   contactId: string
   searchIndex: number
