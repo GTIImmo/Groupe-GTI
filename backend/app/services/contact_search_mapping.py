@@ -169,8 +169,23 @@ def apply_client_edits(value: dict[str, Any], edits: dict[str, Any]) -> dict[str
     return out
 
 
+# Champs NON éditables par le client : ils servent de "base" pour détecter qu'un
+# négociateur a modifié la recherche directement dans Hektor entre-temps.
+# Le worker comparera cette photo à l'état Hektor frais AVANT d'écrire : si ces
+# champs ont bougé, on ne réécrit pas la recherche (anti-écrasement). Voir
+# handleUpdateHektorContactSearch côté worker.
+SNAPSHOT_KEYS = ("offre", "types_json", "villes_json", "surface_terrain_min", "criteres_json")
+
+
+def base_snapshot(src: dict[str, Any]) -> dict[str, Any]:
+    """Photo des champs non éditables au moment de l'édition (base anti-écrasement)."""
+    return {k: src.get(k) for k in SNAPSHOT_KEYS}
+
+
 def build_job_search_payload(src: dict[str, Any], edits: dict[str, Any], *, search_index: int) -> dict[str, Any]:
     """Construit le `search_payload` du RPC app_console_create_update_contact_search_job."""
     value = apply_client_edits(search_to_value(src), edits)
     search = to_hektor_search(value_to_input(value))
-    return {"search": search, "search_index": search_index}
+    # `base_snapshot` est INERTE tant que le worker ne le lit pas : aucun changement
+    # de comportement tant que le garde-fou worker n'est pas déployé.
+    return {"search": search, "search_index": search_index, "base_snapshot": base_snapshot(src)}

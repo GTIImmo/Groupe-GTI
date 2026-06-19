@@ -2617,17 +2617,11 @@ async function handleRefreshConsoleData(job) {
   };
 }
 
-async function handleRefreshConsoleContactData(job) {
-  const payload = safeJsonParse(job.payload_json);
-  const hektorContactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(hektorContactId)) throw new Error("hektor_contact_id numerique requis pour refresh_console_contact_data");
-
-  await logJob(job.id, "refresh_console_contact_data", "running", "Synchronisation differee du contact", {
-    hektor_contact_id: hektorContactId,
-    reason: payload.reason || null,
-    parent_job_id: payload.parent_job_id || null,
-  });
-
+// Pipeline de rafraîchissement d'UN contact : Hektor -> local -> Supabase
+// (détail ContactById -> normalize -> build couche contacts -> push Supabase).
+// Extrait de handleRefreshConsoleContactData pour être réutilisé À L'IDENTIQUE par
+// le garde-fou anti-écrasement de update_hektor_contact_search (correctif n°1).
+async function runContactRefreshPipeline(job, hektorContactId, logCategory = "refresh_console_contact_data") {
   const detailOutput = await runProjectPythonScript([
     "phase2/sync/sync_contact_details.py",
     "--skip-listing-refresh",
@@ -2647,7 +2641,7 @@ async function handleRefreshConsoleContactData(job) {
     "1",
     "--no-normalize",
   ], { timeoutMs: 90000, previewSize: 3000 });
-  await logJob(job.id, "refresh_console_contact_data", "running", "Detail contact Hektor relu localement", {
+  await logJob(job.id, logCategory, "running", "Detail contact Hektor relu localement", {
     hektor_contact_id: hektorContactId,
     stdout: detailOutput.stdout,
     stderr: detailOutput.stderr,
@@ -2670,6 +2664,22 @@ async function handleRefreshConsoleContactData(job) {
     "active_or_eligible",
     "--skip-stats",
   ], { timeoutMs: 60000, previewSize: 3000 });
+
+  return { detailOutput, normalizeOutput, buildOutput, pushOutput };
+}
+
+async function handleRefreshConsoleContactData(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorContactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(hektorContactId)) throw new Error("hektor_contact_id numerique requis pour refresh_console_contact_data");
+
+  await logJob(job.id, "refresh_console_contact_data", "running", "Synchronisation differee du contact", {
+    hektor_contact_id: hektorContactId,
+    reason: payload.reason || null,
+    parent_job_id: payload.parent_job_id || null,
+  });
+
+  const { detailOutput, normalizeOutput, buildOutput, pushOutput } = await runContactRefreshPipeline(job, hektorContactId, "refresh_console_contact_data");
 
   await logJob(job.id, "refresh_console_contact_data", "done", "Contact reconstruit et pousse vers Supabase", {
     hektor_contact_id: hektorContactId,
@@ -7438,11 +7448,153 @@ async function resolveContactSearchTargetCritereId(job, contactId, payload) {
   return target.idCritere;
 }
 
+// --- Correctif n°1 : garde-fou anti-écrasement des recherches contact ---
+// La "photo" (base_snapshot) capture, AU MOMENT de l'édition, les champs NON
+// éditables par le client (villes, types, autres critères ; cf. backend
+// contact_search_mapping.SNAPSHOT_KEYS). Avant d'écrire, on rafraîchit le contact
+// depuis Hektor et on compare : si un négociateur a modifié la recherche dans
+// Hektor depuis l'édition, ces champs diffèrent -> on NE RÉÉCRIT PAS (sinon on
+// écraserait sa saisie). On le prévient à la place.
+function normSearchList(raw) {
+  let v = raw;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (!t) return [];
+    try { v = JSON.parse(t); } catch (_) { return [t]; }
+  }
+  if (Array.isArray(v)) return v.map((x) => String(x == null ? "" : x).trim()).filter(Boolean).sort();
+  if (v && typeof v === "object") return Object.keys(v).map((k) => String(k).trim()).filter(Boolean).sort();
+  return v == null || v === "" ? [] : [String(v).trim()];
+}
+
+function normSearchCriteres(raw) {
+  let v = raw;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (!t) return "";
+    try { v = JSON.parse(t); } catch (_) { return t; }
+  }
+  const items = Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
+  const map = {};
+  for (const it of items) {
+    if (it && typeof it === "object" && it.cle != null) {
+      map[String(it.cle)] = it.valeur == null ? "" : String(it.valeur).trim();
+    }
+  }
+  return Object.keys(map).sort().map((k) => `${k}=${map[k]}`).join("|");
+}
+
+function normSearchNum(raw) {
+  if (raw == null) return "";
+  const n = Number(String(raw).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) && n > 0 ? String(Math.trunc(n)) : "";
+}
+
+// Empreinte stable des champs NON éditables (ordre/casse/espaces neutralisés).
+function searchCoreFingerprint(snap) {
+  if (!snap || typeof snap !== "object") return null;
+  return JSON.stringify({
+    offre: String(snap.offre == null ? "" : snap.offre).trim(),
+    terrain: normSearchNum(snap.surface_terrain_min),
+    types: normSearchList(snap.types_json),
+    villes: normSearchList(snap.villes_json),
+    criteres: normSearchCriteres(snap.criteres_json),
+  });
+}
+
+async function fetchFreshContactSearchSnapshot(contactId, searchIndex) {
+  const params = new URLSearchParams({
+    select: "offre,types_json,villes_json,surface_terrain_min,criteres_json,search_index",
+    hektor_contact_id: `eq.${contactId}`,
+    search_index: `eq.${searchIndex}`,
+    archive: "eq.false",
+    limit: "1",
+  });
+  const rows = await supabaseRequest(`app_contact_search_current?${params.toString()}`, { method: "GET" }).catch(() => null);
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
+  try {
+    const negoEmail = cleanString(opts.negoEmail || payload.contact_negociateur_email || payload.hektor_user_email || payload.target_hektor_user_email);
+    if (!negoEmail) return;
+    const s = (payload.search && typeof payload.search === "object") ? payload.search : {};
+    const resume = `budget ${cleanString(s.priceMin) || "?"}–${cleanString(s.priceMax) || "?"} €`;
+    await supabaseRequest("app_notification", {
+      method: "POST",
+      prefer: "return=minimal",
+      body: JSON.stringify([{
+        negociateur_email: negoEmail,
+        type: "recherche_conflit_ecriture",
+        title: "Modification non appliquée (recherche déjà modifiée)",
+        body: opts.found === false
+          ? "La recherche n'a pas été retrouvée côté Hektor : la modification n'a pas été appliquée."
+          : `La recherche a été modifiée dans Hektor entre-temps : la modification (${resume}) n'a pas été appliquée pour ne pas écraser votre saisie.`,
+        payload: { source: "search_overwrite_guard", hektor_contact_id: String(contactId), edits: payload.edits || null },
+      }]),
+    });
+  } catch (_) {
+    // notification best-effort : ne doit jamais faire échouer le job
+  }
+}
+
+// Retourne { blocked: false } si l'écriture est sûre, sinon { blocked: true, result }.
+async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
+  const baseFp = searchCoreFingerprint(payload.base_snapshot);
+  if (baseFp == null) {
+    // Pas de photo (chemin app négociateur / ancien client) -> comportement historique.
+    return { blocked: false };
+  }
+  const rawIndex = cleanString(payload.search_index !== undefined ? payload.search_index : payload.searchIndex);
+  const searchIndex = /^\d+$/.test(rawIndex) ? Number(rawIndex) : 0;
+
+  await logJob(job.id, "search_overwrite_guard", "running", "Garde-fou : relecture Hektor avant écriture recherche", {
+    hektor_contact_id: String(contactId),
+    search_index: searchIndex,
+  });
+  await runContactRefreshPipeline(job, String(contactId), "search_overwrite_guard");
+
+  const fresh = await fetchFreshContactSearchSnapshot(contactId, searchIndex);
+  const freshFp = fresh ? searchCoreFingerprint(fresh) : null;
+
+  if (fresh && freshFp === baseFp) {
+    await logJob(job.id, "search_overwrite_guard", "done", "Base inchangée côté Hektor : écriture autorisée", {
+      hektor_contact_id: String(contactId),
+      search_index: searchIndex,
+    });
+    return { blocked: false };
+  }
+
+  await notifyNegoSearchConflict(job, contactId, payload, { found: Boolean(fresh), negoEmail });
+  await logJob(job.id, "search_overwrite_guard", "done", "Recherche modifiée côté Hektor : écriture bloquée (anti-écrasement)", {
+    hektor_contact_id: String(contactId),
+    search_index: searchIndex,
+    fresh_found: Boolean(fresh),
+  });
+  return {
+    blocked: true,
+    result: {
+      status: "held_conflict",
+      hektor_contact_id: String(contactId),
+      search_index: searchIndex,
+      reason: fresh ? "negociateur_a_modifie_la_recherche_dans_hektor" : "recherche_introuvable_cote_hektor",
+    },
+  };
+}
+
 async function handleUpdateHektorContactSearch(job) {
   const payload = safeJsonParse(job.payload_json);
   const { contactId, contextPayload, context } = await ensureContactSearchExecution(job, payload);
 
   const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
+
+  // Correctif n°1 — anti-écrasement : si la recherche a été modifiée dans Hektor
+  // depuis l'édition (par un négociateur), on protège sa saisie et on n'écrit pas.
+  const guard = await guardContactSearchOverwrite(job, contactId, payload, context.contact && context.contact.negociateur_email);
+  if (guard.blocked) {
+    return { ...guard.result, idCritere };
+  }
+
   const contact = contactSearchExecutionContact(payload, context.contact);
   const spec = contactSearchSpecFromPayload(payload);
   spec.criteresId = idCritere;
