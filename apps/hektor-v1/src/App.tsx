@@ -104,6 +104,7 @@ import {
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
   searchMandantContactOptions,
+  requestContactRefresh,
   type AnnonceContactInviteeOption,
   type DraftAnnonceSheetScanPayload,
   type GoogleCalendarAvailability,
@@ -8949,13 +8950,20 @@ export default function App() {
   // au démontage (jamais à chaque poll, sinon ils seraient annulés avant de se déclencher).
   useEffect(() => {
     for (const job of hektorActionJobs) {
-      if (job.job_type !== 'update_hektor_contact_search') continue
       if (isConsoleJobActive(job)) continue
-      if (refreshedSearchJobIdsRef.current.has(job.id)) continue
-      refreshedSearchJobIdsRef.current.add(job.id)
-      for (const delay of [25000, 55000, 90000]) {
-        searchRefreshTimersRef.current.push(
-          window.setTimeout(() => setVisitRefreshKey((value) => value + 1), delay))
+      if (job.job_type === 'update_hektor_contact_search') {
+        if (refreshedSearchJobIdsRef.current.has(job.id)) continue
+        refreshedSearchJobIdsRef.current.add(job.id)
+        for (const delay of [25000, 55000, 90000]) {
+          searchRefreshTimersRef.current.push(
+            window.setTimeout(() => setVisitRefreshKey((value) => value + 1), delay))
+        }
+      } else if (job.job_type === 'refresh_console_contact_data') {
+        // Read-through : refresh à l'ouverture terminé -> recharge fiche + rapprochement.
+        if (refreshedSearchJobIdsRef.current.has(job.id)) continue
+        refreshedSearchJobIdsRef.current.add(job.id)
+        setDataReloadKey((value) => value + 1)
+        setVisitRefreshKey((value) => value + 1)
       }
     }
   }, [hektorActionJobs])
@@ -9162,6 +9170,19 @@ export default function App() {
       cancelled = true
     }
   }, [session, screen, selectedContactId, dataReloadKey])
+
+  // Read-through : à l'ouverture d'une fiche contact, on demande un refresh Hektor->Supabase
+  // (best-effort ; TTL + dédup côté RPC). Le job est suivi ; à sa fin, l'effet d'auto-refresh
+  // recharge la fiche + le rapprochement. Déps SANS dataReloadKey -> ne fire qu'à l'ouverture.
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    if (screen !== 'contacts' || !selectedContactId) return
+    let cancelled = false
+    requestContactRefresh(selectedContactId)
+      .then((job) => { if (!cancelled && job) rememberHektorActionJob(job) })
+      .catch(() => { /* read-through best-effort */ })
+    return () => { cancelled = true }
+  }, [session, screen, selectedContactId])
 
   useEffect(() => {
     if (screen !== 'contacts') return

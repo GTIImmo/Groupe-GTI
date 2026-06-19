@@ -5448,6 +5448,26 @@ export async function editSearchOptimistic(input: {
   return (data as { ok: boolean }) ?? { ok: true }
 }
 
+// Read-through : à l'ouverture d'une fiche contact, demande un refresh Hektor->Supabase
+// (pour voir les éditions faites directement dans Hektor). TTL + dédup côté RPC.
+// Best-effort : ne lève jamais, renvoie le job (neuf, ou en cours / récent réutilisé) ou null.
+export async function requestContactRefresh(contactId: string, ttlSeconds = 300): Promise<ConsoleJob | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const cleanContactId = contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) return null
+  try {
+    await requireSupabaseUserId()
+    const { data, error } = await supabase.rpc('app_console_request_contact_refresh', {
+      target_contact_id: cleanContactId,
+      ttl_seconds: ttlSeconds,
+    })
+    if (error || !data) return null
+    return data as ConsoleJob
+  } catch {
+    return null
+  }
+}
+
 export async function createDeleteHektorContactSearchJob(input: {
   contactId: string
   searchIndex: number
