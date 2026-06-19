@@ -7524,6 +7524,22 @@ async function fetchFreshContactSearchSnapshot(contactId, searchIndex) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+// Affinage Supabase-first : pour un push from_pending, lit l'état Hektor FRAIS dans le
+// LOCAL (le push a sauté la recherche dirty dans Supabase, qui garde l'état optimiste).
+// Voir phase2/sync/read_local_search_snapshot.py.
+async function fetchLocalContactSearchSnapshot(job, contactId, searchIndex) {
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/read_local_search_snapshot.py", "--contact-id", String(contactId), "--search-index", String(searchIndex)],
+      { timeoutMs: 30000, previewSize: 2000 });
+    const last = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const parsed = safeJsonParse(last);
+    return parsed && typeof parsed === "object" && Object.keys(parsed).length ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
   try {
     const negoEmail = cleanString(opts.negoEmail || payload.contact_negociateur_email || payload.hektor_user_email || payload.target_hektor_user_email);
@@ -7575,16 +7591,22 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
     // Pas de photo (chemin app négociateur / ancien client) -> comportement historique.
     return { blocked: false };
   }
+  const fromPending = payload.from_pending === true;
   const rawIndex = cleanString(payload.search_index !== undefined ? payload.search_index : payload.searchIndex);
   const searchIndex = /^\d+$/.test(rawIndex) ? Number(rawIndex) : 0;
 
   await logJob(job.id, "search_overwrite_guard", "running", "Garde-fou : relecture Hektor avant écriture recherche", {
     hektor_contact_id: String(contactId),
     search_index: searchIndex,
+    from_pending: fromPending,
   });
   await runContactRefreshPipeline(job, String(contactId), "search_overwrite_guard");
 
-  const fresh = await fetchFreshContactSearchSnapshot(contactId, searchIndex);
+  // from_pending : la recherche dirty est sautée par le push (C) -> Supabase garde l'état
+  // optimiste. On compare donc à l'état Hektor FRAIS lu dans le local.
+  const fresh = fromPending
+    ? await fetchLocalContactSearchSnapshot(job, contactId, searchIndex)
+    : await fetchFreshContactSearchSnapshot(contactId, searchIndex);
   const freshFp = fresh ? searchCoreFingerprint(fresh, includeNumeric) : null;
 
   if (fresh && freshFp === baseFp) {
