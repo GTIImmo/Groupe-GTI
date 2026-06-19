@@ -2456,7 +2456,7 @@ async function runTargetedConsoleMissingFields(job, hektorAnnonceId, reason) {
   }
 }
 
-async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
+async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId, options = {}) {
   const id = String(hektorAnnonceId || "").trim();
   if (!id) return { status: "skipped", reason: "missing_hektor_annonce_id" };
 
@@ -2466,8 +2466,15 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId) {
     args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
     timeoutMs: 120000,
   }));
-  const consoleSummary = await runTargetedConsoleMissingFields(job, id, "refresh_console_data");
-  completed.push({ step: "console_missing_fields_targeted", summary: consoleSummary });
+  // Read-through LÉGER (options.light) : on saute l'extraction Console (champs statiques
+  // honoraires / copropriété / diagnostics détaillés). La vignette DPE/GES reste calculée
+  // depuis l'API par le push (build_dpe_image_urls_from_api_detail). Gain : ~40s -> ~10-15s.
+  if (options.light) {
+    completed.push({ step: "console_missing_fields_skipped", summary: { status: "skipped", reason: "light_read_through" } });
+  } else {
+    const consoleSummary = await runTargetedConsoleMissingFields(job, id, "refresh_console_data");
+    completed.push({ step: "console_missing_fields_targeted", summary: consoleSummary });
+  }
   completed.push(await runImmediateAnnonceSyncStep(job, id, {
     label: "phase2_push_single_annonce_direct",
     args: [
@@ -2606,7 +2613,7 @@ async function handleRefreshConsoleData(job) {
     reason: payload.reason || null,
     parent_job_id: payload.parent_job_id || null,
   });
-  const result = await runCreatedAnnonceImmediateSync(job, hektorAnnonceId);
+  const result = await runCreatedAnnonceImmediateSync(job, hektorAnnonceId, { light: payload.light === true });
   const cacheRefresh = await rebuildRequestedDetailCaches(job, hektorAnnonceId, payload);
   return {
     ...result,
