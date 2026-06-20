@@ -532,6 +532,7 @@ def sync_missing_negos_by_id(conn, run_id: int, client: HektorClient, settings: 
         return 0
 
     synced = 0
+    skipped: list[str] = []
     total = len(missing_ids)
     for index, nego_id in enumerate(missing_ids, start=1):
         update_sync_run_progress(
@@ -545,10 +546,31 @@ def sync_missing_negos_by_id(conn, run_id: int, client: HektorClient, settings: 
             progress_total=total,
             progress_unit="negos",
         )
-        payload = client.get_json(
-            "/Api/Negociateur/getNegoById",
-            params={"id": nego_id},
-        )
+        try:
+            payload = client.get_json(
+                "/Api/Negociateur/getNegoById",
+                params={"id": nego_id},
+            )
+        except Exception as exc:
+            # Négo supprimé/désactivé côté Hektor : getNegoById renvoie un corps
+            # vide (non-JSON). On le saute pour ne PAS casser tout le run, en
+            # traçant précisément lequel (stdout + table sync_error).
+            skipped.append(nego_id)
+            print(
+                f"[sync_missing_negos] négo {nego_id} ignoré "
+                f"(getNegoById réponse Hektor invalide): {exc}"
+            )
+            log_sync_error(
+                conn,
+                run_id=run_id,
+                stage="sync_raw",
+                endpoint_name="nego_by_id",
+                object_type="negociateur",
+                object_id=nego_id,
+                page=None,
+                error_message=str(exc),
+            )
+            continue
         upsert_raw_response(
             conn,
             run_id=run_id,
@@ -562,6 +584,12 @@ def sync_missing_negos_by_id(conn, run_id: int, client: HektorClient, settings: 
         )
         sleep_brief()
         synced += 1
+    if skipped:
+        print(
+            f"[sync_missing_negos] {len(skipped)} négo(s) introuvable(s) ignoré(s) "
+            f"sur {total} : {', '.join(skipped)} "
+            f"(tracés dans sync_error, run {run_id})"
+        )
     return synced
 
 

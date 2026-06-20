@@ -975,6 +975,24 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def fetch_dirty_annonce_ids(client) -> set[int]:
+    """Tier 2 dirty-skip : app_dossier_id ayant un pending d'edition optimiste
+    (table app_annonce_pending) -> a NE PAS reecraser lors du push (on preserve la
+    valeur optimiste affichee jusqu'a confirmation du push Hektor)."""
+    try:
+        rows = client.fetch_all_rows(
+            path="app_annonce_pending", select="app_dossier_id", order="app_dossier_id.asc")
+    except Exception:
+        return set()
+    out: set[int] = set()
+    for row in rows or []:
+        try:
+            out.add(int(row["app_dossier_id"]))
+        except (TypeError, ValueError, KeyError):
+            continue
+    return out
+
+
 def main() -> None:
     args = parse_args()
     load_env_files((args.env_file, *DEFAULT_ENV_FILES))
@@ -1137,6 +1155,19 @@ def main() -> None:
     current_work_items = build_current_work_items(payload["work_items"])
     current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
+
+    # Tier 2 dirty-skip : preserver les dossiers en cours d'edition optimiste (pending)
+    # -> on les retire de l'upsert pour ne pas reecraser la valeur affichee. stale_ids
+    # est deja calcule plus haut, donc aucun risque de suppression de ces dossiers.
+    dirty_annonce_ids = fetch_dirty_annonce_ids(client)
+    if dirty_annonce_ids:
+        _before = len(current_dossiers)
+        current_dossiers = [r for r in current_dossiers if int(r["app_dossier_id"]) not in dirty_annonce_ids]
+        current_details = [r for r in current_details if int(r["app_dossier_id"]) not in dirty_annonce_ids]
+        _skipped = _before - len(current_dossiers)
+        if _skipped:
+            print(f"[tier2-dirty-skip] {_skipped} dossier(s) en edition optimiste preserves (non reecrases)")
+
     archive_table_available = client.table_available("app_archive_annonce_index_current")
     historical_table_available = client.table_available("app_historical_annonce_index_current")
     current_archive_index_rows = build_current_archive_index_rows(build_archive_annonce_index(limit=None)) if archive_table_available else []

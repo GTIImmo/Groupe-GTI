@@ -2629,50 +2629,25 @@ async function handleRefreshConsoleData(job) {
 // Extrait de handleRefreshConsoleContactData pour être réutilisé À L'IDENTIQUE par
 // le garde-fou anti-écrasement de update_hektor_contact_search (correctif n°1).
 async function runContactRefreshPipeline(job, hektorContactId, logCategory = "refresh_console_contact_data") {
-  const detailOutput = await runProjectPythonScript([
-    "phase2/sync/sync_contact_details.py",
-    "--skip-listing-refresh",
+  // Read-through fusionné (optim n°8) : les 4 étapes (detail -> normalize -> build ->
+  // push) tournent dans UN SEUL process Python (refresh_contact_inproc.py) au lieu de
+  // 4 lancements séparés. Mêmes flags qu'avant, scripts d'origine inchangés (le chef
+  // d'orchestre les rejoue via runpy). Gain mesuré ~3-4 s (3 démarrages Python en moins).
+  // Échec d'une étape -> code non nul -> runProjectPythonScript rejette -> job en erreur
+  // (comportement identique à l'ancien enchaînement séquentiel).
+  const output = await runProjectPythonScript([
+    "phase2/sync/refresh_contact_inproc.py",
     "--contact-id",
     hektorContactId,
-    "--batch-size",
-    "1",
-    "--limit",
-    "0",
-    "--request-delay-seconds",
-    "0",
-    "--batch-pause-seconds",
-    "0",
-    "--max-hard-errors",
-    "1",
-    "--max-consecutive-hard-errors",
-    "1",
-    "--no-normalize",
-  ], { timeoutMs: 90000, previewSize: 3000 });
-  await logJob(job.id, logCategory, "running", "Detail contact Hektor relu localement", {
+  ], { timeoutMs: 180000, previewSize: 8000 });
+  await logJob(job.id, logCategory, "running", "Read-through contact fusionne (1 process)", {
     hektor_contact_id: hektorContactId,
-    stdout: detailOutput.stdout,
-    stderr: detailOutput.stderr,
+    stdout: output.stdout,
+    stderr: output.stderr,
   });
 
-  const normalizeOutput = await runProjectPythonScript(["normalize_source.py", "--contact-id", hektorContactId], { timeoutMs: 60000, previewSize: 2000 });
-  const buildOutput = await runProjectPythonScript([
-    "phase2/contacts/build_contacts_layer.py",
-    "--contact-id",
-    hektorContactId,
-    "--no-reports",
-  ], { timeoutMs: 60000, previewSize: 3000 });
-  const pushOutput = await runProjectPythonScript([
-    "phase2/sync/push_contacts_to_supabase.py",
-    "--contact-id",
-    hektorContactId,
-    "--push-mode",
-    "full",
-    "--contacts-scope",
-    "active_or_eligible",
-    "--skip-stats",
-  ], { timeoutMs: 60000, previewSize: 3000 });
-
-  return { detailOutput, normalizeOutput, buildOutput, pushOutput };
+  // Compat appelants : la sortie combinée est renvoyée sous les 4 clés historiques.
+  return { detailOutput: output, normalizeOutput: output, buildOutput: output, pushOutput: output };
 }
 
 async function handleRefreshConsoleContactData(job) {
@@ -5316,6 +5291,7 @@ async function applyCreatedAnnonceInitialFields(job, annonceId, payload, options
 
 async function handleUpdateHektorAnnonceFields(job) {
   const payload = safeJsonParse(job.payload_json);
+  const fromPending = payload.from_pending === true;  // Tier 2 : push optimiste débouncé
   let dossier = null;
   try {
     dossier = await loadDossier(job);
@@ -5330,9 +5306,39 @@ async function handleUpdateHektorAnnonceFields(job) {
   await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
 
   const annonceId = String(dossier.hektor_annonce_id);
+
+  // Tier 2 garde-fou anti-écrasement : pour un push from_pending, si le bien a été
+  // modifié dans Hektor DEPUIS l'édition optimiste (date_maj plus récente que la photo),
+  // on ne l'écrase pas -> conflit. Best-effort : si la relecture Hektor échoue, on écrit.
+  if (fromPending) {
+    const base = (payload.base_snapshot && typeof payload.base_snapshot === "object") ? payload.base_snapshot : {};
+    const baseDateMaj = base._date_maj ? String(base._date_maj) : null;
+    if (baseDateMaj) {
+      const keyData = await fetchHektorAnnonceDetailKeyDataBestEffort(job, annonceId, "annonce_overwrite_guard");
+      const freshDateMaj = keyData && keyData.datemaj ? String(keyData.datemaj) : null;
+      if (freshDateMaj && freshDateMaj > baseDateMaj) {
+        const conflictDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
+        await markAnnoncePendingConflict(conflictDossierId);
+        await logJob(job.id, "annonce_overwrite_guard", "done", "Bien modifié dans Hektor depuis l'édition : écriture bloquée (anti-écrasement)", {
+          hektor_annonce_id: annonceId,
+          base_date_maj: baseDateMaj,
+          fresh_date_maj: freshDateMaj,
+        });
+        return { status: "held_conflict", hektor_annonce_id: annonceId, reason: "bien_modifie_dans_hektor_depuis_edition" };
+      }
+    }
+  }
+
   const results = await applyHektorAnnonceFieldUpdates(job, annonceId, payload);
 
   if (!results.length) throw new Error("Aucun champ annonce modifiable fourni");
+
+  // Tier 2 : push from_pending réussi -> on efface le pending (avant l'after-refresh,
+  // pour qu'il resynchronise normalement). Clone du clearSearchPending des recherches.
+  if (fromPending) {
+    const appDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
+    await clearAnnoncePending(appDossierId);
+  }
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "update_hektor_annonce_fields",
@@ -7583,6 +7589,25 @@ async function markSearchPendingConflict(contactId, searchIndex) {
   try {
     await supabaseRequest(
       `app_search_pending?hektor_contact_id=eq.${encodeURIComponent(String(contactId))}&search_index=eq.${Number(searchIndex)}`,
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
+  } catch (_) { /* best-effort */ }
+}
+
+// Tier 2 (annonces) : nettoyage du pending annonce après push réussi, ou marquage conflit.
+async function clearAnnoncePending(appDossierId) {
+  if (appDossierId == null) return;
+  try {
+    await supabaseRequest(
+      `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
+      { method: "DELETE", prefer: "return=minimal" });
+  } catch (_) { /* best-effort */ }
+}
+async function markAnnoncePendingConflict(appDossierId) {
+  if (appDossierId == null) return;
+  try {
+    await supabaseRequest(
+      `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
       { method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
   } catch (_) { /* best-effort */ }

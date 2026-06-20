@@ -74,6 +74,7 @@ import {
   createHektorMandantContactJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
+  editAnnonceOptimistic,
   createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
   createArchiveHektorAnnonceJob,
@@ -2506,16 +2507,21 @@ function HektorAnnonceUpdateForm(props: {
     }
     setPending(true)
     try {
-      const job = await createUpdateHektorAnnonceFieldsJob({
-        dossier,
-        fields: {
-          propertyProfile: profileKind,
-          wizardFields: changedValues,
-          compositionPieces: changedCompositionPieces,
-        },
-        priority: 14,
-      })
-      props.onJobCreated?.(job)
+      // Édition OPTIMISTE Supabase-first : les champs simples partent direct dans Supabase
+      // (affichage instant + recompute rapprochement) puis vers Hektor en débouncé. Les pièces
+      // (structurées) restent en job classique pour l'instant.
+      if (Object.keys(changedValues).length > 0) {
+        await editAnnonceOptimistic({ dossier, fields: changedValues })
+        window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
+      }
+      if (changedCompositionPieces.length > 0) {
+        const job = await createUpdateHektorAnnonceFieldsJob({
+          dossier,
+          fields: { propertyProfile: profileKind, compositionPieces: changedCompositionPieces },
+          priority: 14,
+        })
+        props.onJobCreated?.(job)
+      }
       setMessage(null)
       props.onCancel?.()
     } catch (submitError) {
@@ -8987,6 +8993,17 @@ export default function App() {
     }
     window.addEventListener('hektor:search-updated', onSearchUpdated)
     return () => window.removeEventListener('hektor:search-updated', onSearchUpdated)
+  }, [])
+
+  // Tier 2 : édition optimiste d'un bien (HektorAnnonceUpdateForm) -> recharge la fiche
+  // bien ET le rapprochement, où qu'on soit.
+  useEffect(() => {
+    const onAnnonceUpdated = () => {
+      setDataReloadKey((value) => value + 1)
+      setVisitRefreshKey((value) => value + 1)
+    }
+    window.addEventListener('hektor:annonce-updated', onAnnonceUpdated)
+    return () => window.removeEventListener('hektor:annonce-updated', onAnnonceUpdated)
   }, [])
 
   useEffect(() => {

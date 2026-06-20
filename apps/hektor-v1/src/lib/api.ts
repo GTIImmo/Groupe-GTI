@@ -6162,6 +6162,34 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
   return data as ConsoleJob
 }
 
+// Tier 2 : édition OPTIMISTE d'un bien (Supabase-first), jumelle de editSearchOptimistic.
+// Écrit les champs direct dans Supabase (affichage instant + recompute rapprochement)
+// et pose un pending -> push Hektor débouncé de TOUS les champs via le worker existant
+// (update_hektor_annonce_fields). Clés acceptées : camelCase (price, surface, roomCount…)
+// que la RPC mappe pour l'affichage et que le worker normalize traduit pour Hektor.
+export async function editAnnonceOptimistic(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  fields: Record<string, string | number | null | undefined>
+  debounceSeconds?: number
+}): Promise<{ ok: boolean }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const editFields: Record<string, string> = {}
+  for (const [key, value] of Object.entries(input.fields)) {
+    if (value == null) continue
+    const s = String(value).trim()
+    if (s) editFields[key] = s
+  }
+  if (Object.keys(editFields).length === 0) throw new Error('Aucune modification a envoyer')
+  const { data, error } = await supabase.rpc('app_edit_annonce_optimistic', {
+    target_dossier_id: input.dossier.app_dossier_id,
+    edit_fields: editFields,
+    debounce_seconds: input.debounceSeconds ?? 600,
+  })
+  if (error) throw new Error(error.message)
+  return (data as { ok: boolean }) ?? { ok: true }
+}
+
 export async function createHektorMandatAutoNumberJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   mandat?: HektorMandatAutoNumberInput
