@@ -39,6 +39,7 @@ import {
   loadSuiviRequestStats,
   loadHektorAgencyOptions,
   loadHektorNegotiatorOptions,
+  loadNegotiatorOptionForContact,
   loadUserNegotiatorContext,
   loadUserProfile,
   loadGoogleWorkspaceIdentity,
@@ -25949,11 +25950,33 @@ function ContactEditModalV2(props: {
   onJobCreated?: (job: ConsoleJob) => void
 }) {
   const normalizedSessionEmail = normalizeEmail(props.sessionEmail)
+  // Négo réel du contact, résolu depuis l'annuaire COMPLET (la liste d'options
+  // globale filtre sur app_user_directory qui est incomplet → le négo du contact
+  // en est souvent absent et ne peut donc pas être pré-sélectionné). Fix ciblé fiche contact.
+  const [contactNego, setContactNego] = useState<HektorNegotiatorOption | null>(null)
+  const appliedContactNegoDefault = useRef(false)
+  useEffect(() => {
+    let cancelled = false
+    appliedContactNegoDefault.current = false
+    setContactNego(null)
+    const negId = String(props.contact.hektor_negociateur_id ?? '').trim()
+    const email = props.contact.negociateur_email ?? null
+    if (!negId && !email) return
+    loadNegotiatorOptionForContact({ hektorNegociateurId: negId, negociateurEmail: email, commercialNom: props.contact.commercial_nom })
+      .then((option) => { if (!cancelled) setContactNego(option) })
+      .catch(() => { if (!cancelled) setContactNego(null) })
+    return () => { cancelled = true }
+  }, [props.contact.hektor_contact_id, props.contact.hektor_negociateur_id, props.contact.negociateur_email, props.contact.commercial_nom])
   const availableHektorNegotiators = useMemo(() => {
-    const options = props.hektorNegotiators ?? []
-    if (props.profileRole === 'commercial') return options.filter((item) => normalizeEmail(item.email) === normalizedSessionEmail)
+    const base = props.hektorNegotiators ?? []
+    const options = props.profileRole === 'commercial'
+      ? base.filter((item) => normalizeEmail(item.email) === normalizedSessionEmail)
+      : base.slice()
+    if (contactNego && !options.some((item) => item.idUser === contactNego.idUser)) {
+      options.unshift(contactNego)
+    }
     return options
-  }, [normalizedSessionEmail, props.hektorNegotiators, props.profileRole])
+  }, [normalizedSessionEmail, props.hektorNegotiators, props.profileRole, contactNego])
   const defaultHektorOption = useMemo(() => (
     findContactHektorOption(availableHektorNegotiators, { email: props.contact.negociateur_email })
       ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
@@ -25994,6 +26017,14 @@ function ContactEditModalV2(props: {
   ), [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
   const selectedHektorEmail = selectedHektorUser?.email ?? props.contact.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
   const selectedHektorId = selectedHektorUser?.idUser ?? (availableHektorNegotiators.length === 0 ? (selectedHektorUserId.trim() || props.hektorUserId || null) : null)
+
+  // Quand le négo réel du contact est résolu (async), le pré-sélectionner par défaut,
+  // sauf si l'utilisateur a déjà choisi explicitement un autre négo que le fallback admin.
+  useEffect(() => {
+    if (!contactNego || appliedContactNegoDefault.current) return
+    appliedContactNegoDefault.current = true
+    setSelectedHektorUserId((current) => (current && current !== (props.hektorUserId ?? '') ? current : contactNego.idUser))
+  }, [contactNego, props.hektorUserId])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') props.onClose() }

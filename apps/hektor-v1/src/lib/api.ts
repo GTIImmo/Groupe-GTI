@@ -3365,6 +3365,55 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
     .filter((item): item is HektorNegotiatorOption => Boolean(item))
 }
 
+// Résout le négociateur réel d'un contact depuis l'annuaire COMPLET
+// (app_hektor_negotiator_agency_directory, sans le filtre app_user_directory qui
+// est incomplet — cf bug pré-sélection négo en fiche contact). Usage ciblé : la
+// modale d'édition contact, pour pouvoir afficher/pré-sélectionner le négo du
+// contact même s'il n'est pas dans la liste d'options "actifs".
+export async function loadNegotiatorOptionForContact(params: {
+  hektorNegociateurId?: string | null
+  negociateurEmail?: string | null
+  commercialNom?: string | null
+}): Promise<HektorNegotiatorOption | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const negId = String(params.hektorNegociateurId ?? '').trim()
+  const email = normalizeEmail(params.negociateurEmail)
+  if (!negId && !email) return null
+  const selectCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email'
+  let row: { hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null } | null = null
+  if (negId) {
+    const { data, error } = await supabase
+      .from('app_hektor_negotiator_agency_directory')
+      .select(selectCols)
+      .eq('hektor_negociateur_id', negId)
+      .limit(1)
+    if (error) throw new Error(error.message)
+    row = (data ?? [])[0] ?? null
+  }
+  if (!row && email) {
+    const { data, error } = await supabase
+      .from('app_hektor_negotiator_agency_directory')
+      .select(selectCols)
+      .ilike('email', email)
+      .limit(1)
+    if (error) throw new Error(error.message)
+    row = (data ?? [])[0] ?? null
+  }
+  if (!row) return null
+  const idUser = row.hektor_user_id == null ? '' : String(row.hektor_user_id).trim()
+  if (!idUser) return null
+  return {
+    idUser,
+    label: (row.display_name ?? params.commercialNom ?? row.email ?? idUser)?.trim() || idUser,
+    email: row.email ?? params.negociateurEmail ?? null,
+    agenceNom: row.agence_nom ?? null,
+    commercialId: row.hektor_negociateur_id == null ? null : String(row.hektor_negociateur_id),
+    hektorNegociateurId: row.hektor_negociateur_id == null ? null : String(row.hektor_negociateur_id),
+    hektorAgenceId: row.hektor_agence_id == null ? null : String(row.hektor_agence_id),
+    agenceIdUser: row.agence_id_user == null ? null : String(row.agence_id_user),
+  }
+}
+
 export async function loadHektorAgencyOptions(): Promise<HektorAgencyOption[]> {
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase
