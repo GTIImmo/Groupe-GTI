@@ -98,12 +98,22 @@ def main() -> int:
 
     start = time.time()
     done = 0
+    failed_batches = 0
     for i in range(0, total, max(args.batch_size, 1)):
         batch = ids[i : i + max(args.batch_size, 1)]
-        process_batch(batch)
+        # Robustesse : un lot en échec (hoquet Hektor/réseau) ne doit PAS arrêter
+        # tout le run — on log et on continue avec les lots suivants.
+        try:
+            process_batch(batch)
+        except Exception as exc:  # noqa: BLE001
+            failed_batches += 1
+            print(f"[recherches-actives] LOT EN ECHEC (contacts {i}-{i + len(batch)}): {exc} -- on continue")
         done += len(batch)
         print(f"[recherches-actives] {done}/{total} ({round(time.time() - start)}s)")
-    print(f"[recherches-actives] termine : {done} contacts en {round(time.time() - start)}s")
+    if failed_batches:
+        print(f"[recherches-actives] TERMINE AVEC {failed_batches} lot(s) en echec sur {((total - 1) // max(args.batch_size, 1)) + 1} -- {done} contacts traites en {round(time.time() - start)}s")
+        return 1  # code non nul -> la tache planifiee signale l'echec partiel
+    print(f"[recherches-actives] termine OK : {done} contacts en {round(time.time() - start)}s")
     return 0
 
 
