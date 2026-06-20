@@ -5451,7 +5451,8 @@ export async function editSearchOptimistic(input: {
 // Read-through : à l'ouverture d'une fiche contact, demande un refresh Hektor->Supabase
 // (pour voir les éditions faites directement dans Hektor). TTL + dédup côté RPC.
 // Best-effort : ne lève jamais, renvoie le job (neuf, ou en cours / récent réutilisé) ou null.
-export async function requestContactRefresh(contactId: string, ttlSeconds = 300): Promise<ConsoleJob | null> {
+export async function requestContactRefresh(contactId: string, ttlSeconds = 1800): Promise<ConsoleJob | null> {
+  // Anti-spam read-through = 30 min (1800 s) : on ne re-télécharge Hektor que toutes les 30 min à l'ouverture d'une fiche contact (couvre le contact + ses recherches).
   if (!hasSupabaseEnv || !supabase) return null
   const cleanContactId = contactId.trim()
   if (!/^\d+$/.test(cleanContactId)) return null
@@ -5471,7 +5472,7 @@ export async function requestContactRefresh(contactId: string, ttlSeconds = 300)
 // Read-through bien : à l'ouverture d'un bien (détail), demande un refresh Hektor->Supabase
 // de l'annonce (annonce + photos + DPE + mandats + propriétaires). TTL + dédup côté RPC.
 // Best-effort : ne lève jamais.
-export async function requestAnnonceRefresh(dossierId: number, ttlSeconds = 300): Promise<ConsoleJob | null> {
+export async function requestAnnonceRefresh(dossierId: number, ttlSeconds = 1800): Promise<ConsoleJob | null> {
   if (!hasSupabaseEnv || !supabase) return null
   if (!Number.isFinite(dossierId)) return null
   try {
