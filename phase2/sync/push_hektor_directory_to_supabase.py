@@ -147,25 +147,59 @@ def fetch_all_users(client: HektorClient, version: str) -> list[dict[str, Any]]:
     return [item for item in batch if isinstance(item, dict)]
 
 
-def fetch_active_nego_user_ids(client: HektorClient) -> set[str]:
+def fetch_active_negos(client: HektorClient) -> list[dict[str, Any]]:
     """Négociateurs ACTIFS via listNegos actif=1 (source de vérité de l'actif).
     UsersOfParent ne voit que les ~12 users directs du compte parent (2 NEGO),
-    alors que listNegos actif=1 renvoie les ~30 négociateurs réellement actifs."""
+    alors que listNegos actif=1 renvoie les ~30 négociateurs réellement actifs.
+    Renvoie les lignes brutes (id, idUser, nom, prenom, email, telephone, portable...)."""
     page = 0
-    ids: set[str] = set()
+    rows: list[dict[str, Any]] = []
     while page < 50:
         payload = client.get_json("/Api/Negociateur/listNegos/", params={"page": page, "actif": 1})
         batch = payload.get("res") if isinstance(payload, dict) else None
         batch = batch if isinstance(batch, list) else []
         if not batch:
             break
-        for row in batch:
-            if isinstance(row, dict):
-                uid = str(row.get("idUser") or "").strip()
-                if uid:
-                    ids.add(uid)
+        rows.extend(item for item in batch if isinstance(item, dict))
         page += 1
-    return ids
+    return rows
+
+
+def active_nego_user_ids_from_rows(rows: list[dict[str, Any]]) -> set[str]:
+    return {
+        str(row.get("idUser") or "").strip()
+        for row in rows
+        if str(row.get("idUser") or "").strip()
+    }
+
+
+def build_nego_user_rows(rows: list[dict[str, Any]]) -> list[dict[str, object]]:
+    """Transforme les négociateurs actifs (listNegos) en lignes app_user_directory
+    de type NEGO, pour qu'ils soient de VRAIS utilisateurs résolvables (worker + RPC
+    de résolution dépendent de app_user_directory user_type=NEGO). Même format que
+    build_user_rows (issu de UsersOfParent)."""
+    output: list[dict[str, object]] = []
+    for row in rows:
+        id_user = str(row.get("idUser") or "").strip()
+        if not id_user:
+            continue
+        prenom = str(row.get("prenom") or "").strip()
+        nom = str(row.get("nom") or "").strip()
+        payload = {
+            "id_user": id_user,
+            "user_type": "NEGO",
+            "prenom": prenom or None,
+            "nom": nom or None,
+            "display_name": " ".join(part for part in [prenom, nom] if part) or None,
+            "email": str(row.get("email") or "").strip() or None,
+            "tel": str(row.get("telephone") or "").strip() or None,
+            "portable": str(row.get("portable") or "").strip() or None,
+            "site": None,
+            "parent_id": None,
+        }
+        payload["source_hash"] = stable_hash(payload)
+        output.append(payload)
+    return output
 
 
 def fetch_all_agencies(client: HektorClient, version: str) -> list[dict[str, Any]]:
@@ -320,13 +354,20 @@ def main() -> None:
     agency_rows = dedupe_rows(build_agency_rows(raw_agencies), "id_agence")
     # Actif = listNegos actif=1 (source de vérité). Fallback sur le signal
     # UsersOfParent NEGO si l'appel échoue/0 (évite de tout marquer inactif).
-    active_nego_user_ids = fetch_active_nego_user_ids(hektor)
+    active_negos = fetch_active_negos(hektor)
+    active_nego_user_ids = active_nego_user_ids_from_rows(active_negos)
     if not active_nego_user_ids:
         active_nego_user_ids = {
             str(row["id_user"]).strip()
             for row in user_rows
             if str(row.get("user_type") or "").strip().upper() == "NEGO" and str(row.get("id_user") or "").strip()
         }
+    # Les négociateurs actifs deviennent de VRAIS utilisateurs (type NEGO) dans
+    # app_user_directory : la résolution worker+RPC en dépend, et comme ils font
+    # désormais partie de la liste source, le purge (delete_missing) les conserve.
+    # Parent prioritaire en cas de doublon d'id_user (négos d'abord -> parent garde la main).
+    if active_negos:
+        user_rows = dedupe_rows(build_nego_user_rows(active_negos) + user_rows, "id_user")
     negotiator_status_columns_supported = client.supports_columns(
         path="app_hektor_negotiator_agency_directory",
         columns=["is_active", "active_source", "active_refreshed_at"],
