@@ -275,6 +275,43 @@ def delete_target_remote(client: SupabaseRestClient, app_dossier_id: int) -> Non
         client.delete_rows_by_ids(path=table, column="app_dossier_id", ids=[app_dossier_id])
 
 
+def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: str, keep_app_dossier_id: int) -> int:
+    """Durcissement anti-fantome : si la MEME annonce a d'autres app_dossier dans
+    Supabase (l'id de dossier a change suite a une re-indexation), supprime ces
+    doublons. Cible UNIQUEMENT l'annonce traitee (par hektor_annonce_id) -> sur.
+    Le registre eventuellement sous le fantome est re-pointe vers le bon dossier
+    (on ne perd jamais une ligne de journal)."""
+    rows = client._request(
+        method="GET",
+        path="app_dossier_current",
+        query={"select": "app_dossier_id", "hektor_annonce_id": f"eq.{int(hektor_annonce_id)}"},
+    )
+    if not isinstance(rows, list):
+        return 0
+    ghost_ids = [
+        int(r["app_dossier_id"]) for r in rows
+        if isinstance(r, dict) and r.get("app_dossier_id") is not None
+        and int(r["app_dossier_id"]) != int(keep_app_dossier_id)
+    ]
+    if not ghost_ids:
+        return 0
+    for gid in ghost_ids:
+        client._request(
+            method="PATCH",
+            path="app_mandat_register_current",
+            query={"app_dossier_id": f"eq.{gid}"},
+            payload={"app_dossier_id": int(keep_app_dossier_id)},
+        )
+    for table in (
+        "app_mandat_broadcast_current",
+        "app_work_item_current",
+        "app_dossier_detail_current",
+        "app_dossier_current",
+    ):
+        client.delete_rows_by_ids(path=table, column="app_dossier_id", ids=ghost_ids)
+    return len(ghost_ids)
+
+
 def reconcile_lightweight_indexes(client: SupabaseRestClient, con: sqlite3.Connection, hektor_annonce_id: str) -> dict[str, int]:
     archive_table_available = client.table_available("app_archive_annonce_index_current")
     historical_table_available = client.table_available("app_historical_annonce_index_current")
@@ -387,6 +424,7 @@ def main() -> int:
                     connection=con,
                 )
                 counts = push_payload(client, payload, app_dossier_id)
+                counts["ghost_dossiers_removed"] = reconcile_annonce_dossiers(client, hektor_annonce_id, app_dossier_id)
                 counts.update(reconcile_lightweight_indexes(client, con, hektor_annonce_id))
             finally:
                 con.execute("DETACH DATABASE hektor")
