@@ -368,6 +368,13 @@ def main() -> None:
     # Parent prioritaire en cas de doublon d'id_user (négos d'abord -> parent garde la main).
     if active_negos:
         user_rows = dedupe_rows(build_nego_user_rows(active_negos) + user_rows, "id_user")
+        # Un négo actif doit RESTER résolvable comme NEGO même s'il est aussi ADMIN
+        # dans le compte parent : la résolution worker/RPC, l'identité Google et l'assign
+        # exigent user_type=NEGO. (Le rôle admin de l'app vient du profil, pas de cette table ;
+        # rien ne lit user_type=ADMIN dans app_user_directory.)
+        for row in user_rows:
+            if str(row.get("id_user") or "").strip() in active_nego_user_ids:
+                row["user_type"] = "NEGO"
     negotiator_status_columns_supported = client.supports_columns(
         path="app_hektor_negotiator_agency_directory",
         columns=["is_active", "active_source", "active_refreshed_at"],
