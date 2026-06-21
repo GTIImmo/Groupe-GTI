@@ -147,6 +147,27 @@ def fetch_all_users(client: HektorClient, version: str) -> list[dict[str, Any]]:
     return [item for item in batch if isinstance(item, dict)]
 
 
+def fetch_active_nego_user_ids(client: HektorClient) -> set[str]:
+    """Négociateurs ACTIFS via listNegos actif=1 (source de vérité de l'actif).
+    UsersOfParent ne voit que les ~12 users directs du compte parent (2 NEGO),
+    alors que listNegos actif=1 renvoie les ~30 négociateurs réellement actifs."""
+    page = 0
+    ids: set[str] = set()
+    while page < 50:
+        payload = client.get_json("/Api/Negociateur/listNegos/", params={"page": page, "actif": 1})
+        batch = payload.get("res") if isinstance(payload, dict) else None
+        batch = batch if isinstance(batch, list) else []
+        if not batch:
+            break
+        for row in batch:
+            if isinstance(row, dict):
+                uid = str(row.get("idUser") or "").strip()
+                if uid:
+                    ids.add(uid)
+        page += 1
+    return ids
+
+
 def fetch_all_agencies(client: HektorClient, version: str) -> list[dict[str, Any]]:
     page = 0
     rows: list[dict[str, Any]] = []
@@ -297,11 +318,15 @@ def main() -> None:
     raw_agencies = fetch_all_agencies(hektor, settings.api_version)
     user_rows = dedupe_rows(build_user_rows(raw_users), "id_user")
     agency_rows = dedupe_rows(build_agency_rows(raw_agencies), "id_agence")
-    active_nego_user_ids = {
-        str(row["id_user"]).strip()
-        for row in user_rows
-        if str(row.get("user_type") or "").strip().upper() == "NEGO" and str(row.get("id_user") or "").strip()
-    }
+    # Actif = listNegos actif=1 (source de vérité). Fallback sur le signal
+    # UsersOfParent NEGO si l'appel échoue/0 (évite de tout marquer inactif).
+    active_nego_user_ids = fetch_active_nego_user_ids(hektor)
+    if not active_nego_user_ids:
+        active_nego_user_ids = {
+            str(row["id_user"]).strip()
+            for row in user_rows
+            if str(row.get("user_type") or "").strip().upper() == "NEGO" and str(row.get("id_user") or "").strip()
+        }
     negotiator_status_columns_supported = client.supports_columns(
         path="app_hektor_negotiator_agency_directory",
         columns=["is_active", "active_source", "active_refreshed_at"],

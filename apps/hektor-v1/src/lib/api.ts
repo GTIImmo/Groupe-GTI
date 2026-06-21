@@ -3306,18 +3306,16 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
       .filter((item): item is HektorNegotiatorOption => Boolean(item))
   }
 
-  const [directoryResult, activeUsersResult, dossierResult] = await Promise.all([
+  // Actif = colonne is_active de l'annuaire (dérivée de listNegos actif=1 côté sync).
+  // On NE filtre PLUS sur app_user_directory : cette table ne couvre que les ~12 users
+  // directs du compte parent (2 NEGO) et excluait donc 99% des négociateurs réels.
+  const [directoryResult, dossierResult] = await Promise.all([
     supabase
       .from('app_hektor_negotiator_agency_directory')
-      .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email')
+      .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active')
       .order('agence_nom', { ascending: true })
       .order('display_name', { ascending: true })
       .limit(500),
-    supabase
-      .from('app_user_directory')
-      .select('id_user')
-      .eq('user_type', 'NEGO')
-      .limit(1000),
     supabase
       .from('app_dossiers_current')
       .select('commercial_id,commercial_nom,negociateur_email,agence_nom')
@@ -3325,14 +3323,7 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
   ])
 
   if (directoryResult.error) throw new Error(directoryResult.error.message)
-  if (activeUsersResult.error) throw new Error(activeUsersResult.error.message)
   if (dossierResult.error) throw new Error(dossierResult.error.message)
-
-  const activeHektorUserIds = new Set(
-    ((activeUsersResult.data ?? []) as Array<{ id_user?: string | number | null }>)
-      .map((row) => (row.id_user == null ? '' : String(row.id_user).trim()))
-      .filter(Boolean),
-  )
 
   const dossierByEmail = new Map<string, { commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>()
   for (const row of (dossierResult.data ?? []) as Array<{ commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>) {
@@ -3342,11 +3333,11 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
   }
 
   const wantedEmail = normalizeEmail(scope?.negotiatorEmail)
-  return ((directoryResult.data ?? []) as Array<{ hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null }>)
+  return ((directoryResult.data ?? []) as Array<{ hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null; is_active?: boolean | null }>)
     .map<HektorNegotiatorOption | null>((row) => {
       const idUser = row.hektor_user_id == null ? '' : String(row.hektor_user_id).trim()
       if (!idUser) return null
-      if (!activeHektorUserIds.has(idUser)) return null
+      if (row.is_active !== true) return null
       const email = normalizeEmail(row.email)
       if (wantedEmail && email !== wantedEmail) return null
       const dossier = email ? dossierByEmail.get(email) : undefined
