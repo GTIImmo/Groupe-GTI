@@ -327,7 +327,12 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
     if current_broadcasts:
         client.insert_rows(path="app_mandat_broadcast_current", rows=current_broadcasts, batch_size=20)
     if current_mandat_register_rows:
-        client.insert_rows(path="app_mandat_register_current", rows=current_mandat_register_rows, batch_size=20)
+        # UPSERT (pas INSERT) : la PK est register_row_id = "annonce:mandat" (sans
+        # app_dossier_id). Si la même annonce a un app_dossier en double (ré-indexation),
+        # la ligne register existe sous l'autre dossier et delete_target_remote (par
+        # app_dossier_id) ne la supprime pas -> un INSERT collisionne (409). L'upsert
+        # met simplement à jour la ligne (et rattache le bon app_dossier_id).
+        client.upsert_rows(path="app_mandat_register_current", rows=current_mandat_register_rows, batch_size=20)
 
     return {
         "dossiers_upserted": len(current_dossiers),
