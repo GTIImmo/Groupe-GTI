@@ -149,6 +149,10 @@ function Invoke-OptionalStepWithRetry {
 
 Set-Location $projectRoot
 
+# Panier Brouillon : active l'exclusion isDraft du scope actif + l'alimentation de
+# l'index brouillon (lu par phase2/sync/export_app_payload.py via le push).
+$env:APP_BROUILLON_BUCKET_ENABLED = "1"
+
 $hektorChauffageDailyMax = 50
 if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt $hektorChauffageDailyMax) {
     throw "Safety stop: le run quotidien chauffage est limite a $hektorChauffageDailyMax annonces. Utiliser phase2\sync\sync_hektor_chauffages.py directement pour un rattrapage."
@@ -171,6 +175,12 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
 
 Invoke-Step -Label "normalize_source" -Arguments @(
     "normalize_source.py"
+)
+
+# Panier Brouillon : rafraichit l'etat isDraft (GraphQL Console, lecture seule) dans
+# hektor_annonce_draft_state. Non bloquant : si la session est expiree, le run continue.
+Invoke-OptionalStepWithRetry -Label "hektor drafts sweep (isDraft)" -Arguments @(
+    "phase2\sync\sync_hektor_drafts.py"
 )
 
 if (-not $SkipContactDetails) {
