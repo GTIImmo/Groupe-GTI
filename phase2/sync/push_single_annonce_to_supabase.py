@@ -309,6 +309,19 @@ def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: st
         "app_dossier_current",
     ):
         client.delete_rows_by_ids(path=table, column="app_dossier_id", ids=ghost_ids)
+    # app_rapprochement est cle par app_dossier_id : les lignes sous le fantome
+    # deviennent orphelines (app_get_rapprochements fait un JOIN strict sur
+    # app_dossier_current -> l'annonce disparait du rapprochement). On nettoie les
+    # orphelines, puis on recompute sous le BON dossier pour que l'annonce reapparaisse.
+    client.delete_rows_by_ids(path="app_rapprochement", column="app_dossier_id", ids=ghost_ids)
+    try:
+        client._request(
+            method="POST",
+            path="rpc/app_refresh_rapprochements_for_dossier",
+            payload={"p_app_dossier_id": int(keep_app_dossier_id)},
+        )
+    except Exception:
+        pass
     return len(ghost_ids)
 
 
