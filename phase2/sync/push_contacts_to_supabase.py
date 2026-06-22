@@ -6,12 +6,13 @@ import json
 import os
 import sqlite3
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -50,9 +51,12 @@ def parse_json(value: Any, fallback: Any) -> Any:
     if not text:
         return fallback
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
     except json.JSONDecodeError:
         return fallback
+    # Un JSON littéral "null" (présent en local pour de rares contacts) donne None :
+    # les colonnes *_json sont NOT NULL côté Supabase -> on retombe sur le défaut ([]/{}).
+    return fallback if parsed is None else parsed
 
 
 def bool_value(value: Any) -> bool:
@@ -266,10 +270,11 @@ def mark_deleted_rows(db_path: Path, stale_by_table: dict[str, list[str]]) -> No
 
 
 class SupabaseRestClient:
-    def __init__(self, *, base_url: str, service_role_key: str, timeout: int = 300) -> None:
+    def __init__(self, *, base_url: str, service_role_key: str, timeout: int = 300, max_retries: int = 4) -> None:
         self.base_url = base_url.rstrip("/")
         self.service_role_key = service_role_key
         self.timeout = timeout
+        self.max_retries = max_retries
 
     def request(self, *, method: str, path: str, payload: object | None = None, prefer: str | None = None) -> object | None:
         url = f"{self.base_url}/rest/v1/{path.lstrip('/')}"
@@ -282,13 +287,29 @@ class SupabaseRestClient:
         if prefer:
             headers["Prefer"] = prefer
         request = urllib.request.Request(url, data=body, headers=headers, method=method)
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                raw = response.read().decode("utf-8")
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Supabase {method} {path} failed HTTP {exc.code}: {detail[:1000]}") from exc
-        return json.loads(raw) if raw else None
+        # Robustesse alignee sur push_upgrade_to_supabase : retry sur 5xx transitoires
+        # (500/502/503/504) et sur incidents reseau/timeout (URLError/TimeoutError), avec
+        # backoff lineaire. Sans ca, un seul aleas transitoire pendant les ~59 requetes
+        # d'upsert relations faisait echouer tout le push contacts (run nocturne du 22/06).
+        last_error: Exception | None = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    raw = response.read().decode("utf-8")
+                    return json.loads(raw) if raw else None
+            except HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")
+                if exc.code in (500, 502, 503, 504) and attempt < self.max_retries:
+                    last_error = RuntimeError(f"Supabase {method} {path} failed HTTP {exc.code}: {detail[:1000]}")
+                    time.sleep(1.5 * attempt)
+                    continue
+                raise RuntimeError(f"Supabase {method} {path} failed HTTP {exc.code}: {detail[:1000]}") from exc
+            except (TimeoutError, URLError) as exc:
+                last_error = exc
+                if attempt >= self.max_retries:
+                    break
+                time.sleep(1.5 * attempt)
+        raise RuntimeError(f"Supabase {method} {path} timeout/network error: {last_error}") from last_error
 
     def upsert_rows(self, table: str, rows: list[dict[str, Any]], batch_size: int) -> int:
         count = 0
