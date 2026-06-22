@@ -1185,6 +1185,7 @@ async function loadContactExecutionContext(contactId) {
     archive: Boolean(contact.archive),
     statut_annonce: null,
     agence_nom: contact.agence_nom || null,
+    hektor_agence_id: contact.hektor_agence_id || null,
     commercial_id: contact.hektor_negociateur_id || null,
     commercial_nom: contact.commercial_nom || contact.display_name || null,
     negociateur_email: contact.negociateur_email || null,
@@ -1647,6 +1648,31 @@ async function resolveAgencyContextForFallback(dossier, payload) {
     }).catch(() => null);
     if (ctx && ctx.agency_id_user) return ctx;
   }
+  // Cas CONTACT (pas d'annonce liée) ou annonce sans contexte agence : on résout l'agence
+  // depuis le négo PROPRIÉTAIRE via l'annuaire agence complet. includeInactive: true car le
+  // négo est justement inactif/orphelin -> il faut quand même retrouver SON agence.
+  const negotiatorId = (dossier && dossier.commercial_id)
+    || safePayload.hektor_negociateur_id || safePayload.target_hektor_negociateur_id || null;
+  const agencyId = (dossier && dossier.hektor_agence_id)
+    || safePayload.hektor_agence_id || safePayload.target_hektor_agence_id || null;
+  const email = (dossier && dossier.negociateur_email)
+    || safePayload.negociateur_email || safePayload.hektor_user_email || null;
+  const tryRows = (filters) =>
+    loadHektorNegotiatorAgencyRows({ ...filters, includeInactive: true, limit: 10 }).catch(() => []);
+  let rows = [];
+  if (negotiatorId) rows = await tryRows({ negotiatorId });
+  if (!rows.length && agencyId) rows = await tryRows({ agencyId });
+  if (!rows.length && email) rows = await tryRows({ email });
+  const row = (Array.isArray(rows) ? rows : []).find((r) => r && r.agence_id_user);
+  if (row && row.agence_id_user) {
+    return {
+      found: true,
+      agency_id_user: String(row.agence_id_user),
+      hektor_agence_id: row.hektor_agence_id || agencyId || null,
+      agency_label: row.agence_nom || safePayload.agence_nom || (dossier && dossier.agence_nom) || null,
+    };
+  }
+  // Dernier recours : agence fournie explicitement dans le payload.
   const agencyIdUser = cleanString(
     safePayload.target_agency_id_user || safePayload.agence_id_user || safePayload.agency_id_user
   );
@@ -1661,9 +1687,28 @@ async function resolveAgencyContextForFallback(dossier, payload) {
   return null;
 }
 
-// Le négo PROPRIÉTAIRE de l'entité est-il actif (= impersonnable, présent dans
-// app_user_directory NEGO) ? On teste le négo PROPRE (email/id de l'entité), PAS un
-// collègue substitué. Si non actif -> on écrira via l'agence.
+// Source de vérité actif/inactif : app_hektor_negotiator_agency_directory.is_active
+// (annuaire COMPLET des négos). On NE s'appuie PLUS sur la présence dans app_user_directory
+// (table décimée, qui ne "marchait" que via le hack de fusion des actifs).
+async function loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }) {
+  const select = "hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active";
+  const tryQuery = async (column, value, op) => {
+    if (value == null || String(value).trim() === "") return null;
+    const params = new URLSearchParams({ select, limit: "1" });
+    params.set(column, op === "ilike" ? `ilike.${normalizeEmail(value)}` : `eq.${String(value).trim()}`);
+    const rows = await supabaseRequest(
+      `app_hektor_negotiator_agency_directory?${params.toString()}`,
+      { method: "GET" }
+    ).catch(() => null);
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  };
+  return (await tryQuery("hektor_negociateur_id", negotiatorId, "eq"))
+    || (await tryQuery("email", email, "ilike"))
+    || (await tryQuery("hektor_user_id", userId, "eq"));
+}
+
+// Le négo PROPRIÉTAIRE de l'entité est-il actif ? On teste le négo PROPRE (email / id négo /
+// id user de l'entité), PAS un collègue substitué. Inactif, orphelin OU null -> écriture agence.
 async function isOwnerNegotiatorActive(dossier, payload) {
   const safePayload = payload && typeof payload === "object" ? payload : {};
   const email = (dossier && dossier.negociateur_email)
@@ -1671,16 +1716,15 @@ async function isOwnerNegotiatorActive(dossier, payload) {
     || safePayload.hektor_user_email
     || safePayload.target_hektor_user_email
     || null;
-  if (email) {
-    const u = await loadHektorDirectoryUserByEmail(email).catch(() => null);
-    if (u && u.id_user) return true;
-  }
-  const userId = safePayload.hektor_user_id || safePayload.hektor_id_user || safePayload.target_hektor_user_id;
-  if (userId) {
-    const u = await loadHektorDirectoryUserById(userId).catch(() => null);
-    if (u && u.id_user) return true;
-  }
-  return false;
+  const negotiatorId = (dossier && dossier.commercial_id)
+    || safePayload.hektor_negociateur_id
+    || safePayload.target_hektor_negociateur_id
+    || null;
+  const userId = safePayload.hektor_user_id || safePayload.hektor_id_user || safePayload.target_hektor_user_id || null;
+  // Aucun négo identifiable (null) -> traité comme inactif -> écriture via agence.
+  if (!email && !negotiatorId && !userId) return false;
+  const row = await loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }).catch(() => null);
+  return Boolean(row && row.is_active === true);
 }
 
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
