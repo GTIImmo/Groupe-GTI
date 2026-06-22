@@ -13932,7 +13932,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         options={[
                           { value: activeArchiveFilterValue, label: 'Actives' },
                           { value: archivedFilterValue, label: 'Archivées' },
-                          { value: brouillonFilterValue, label: 'Brouillons' },
+                          ...(screen === 'mandats' ? [{ value: brouillonFilterValue, label: 'Brouillons' }] : []),
                         ]}
                       />
                     ) : null}
@@ -14446,7 +14446,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   options={[
                     { value: activeArchiveFilterValue, label: 'Actives' },
                     { value: archivedFilterValue, label: 'Archivees' },
-                    { value: brouillonFilterValue, label: 'Brouillons' },
                   ]}
                 />
                 <FilterSelect
