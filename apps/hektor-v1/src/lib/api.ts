@@ -2612,7 +2612,14 @@ export async function loadDossiersPage({
     canUseLightweightIndexes &&
     (filters.archive === allFilterValue || filters.archive === activeArchiveFilterValue) &&
     (!statut || statut === annonceSearchListingsFilterValue)
-  const shouldMergeLightweightIndexes = shouldMergeArchiveIndex || shouldMergeHistoricalIndex
+  // Variante panier Brouillon : on fusionne l'index brouillon dans le listing Annonces
+  // (front-merge comme vendu/clos), badge "En Creation". Pas sur l'ecran Estimations
+  // (statut=Estimation), ni sur Archive.
+  const shouldMergeBrouillonIndex =
+    canUseLightweightIndexes &&
+    (filters.archive === allFilterValue || filters.archive === activeArchiveFilterValue) &&
+    (!statut || statut === annonceSearchListingsFilterValue)
+  const shouldMergeLightweightIndexes = shouldMergeArchiveIndex || shouldMergeHistoricalIndex || shouldMergeBrouillonIndex
   query = query.range(shouldMergeLightweightIndexes ? 0 : from, to)
 
   const { data, error, count } = await query
@@ -2670,6 +2677,31 @@ export async function loadDossiersPage({
           'app_historical_annonce_detail_cache',
         ),
         total: historicalCount ?? 0,
+        page,
+        pageSize,
+      })
+    }
+    if (shouldMergeBrouillonIndex) {
+      const brouillonQuery = applyBrouillonIndexFiltersToQuery(
+        supabase
+          .from('app_brouillon_annonce_index_current')
+          .select(brouillonIndexSelect, { count: countMode }),
+        filters,
+        scope,
+      )
+        .order('date_maj', { ascending: false, nullsFirst: false })
+        .order('hektor_annonce_id', { ascending: false })
+        .range(0, mixedRangeTo)
+
+      const { data: brouillonData, error: brouillonError, count: brouillonCount } = await brouillonQuery
+      if (brouillonError || !brouillonData) throw new Error(brouillonError?.message ?? 'Unable to load brouillon annonces')
+      const brouillonRows = (await attachLightweightDetailCacheState(
+        (brouillonData as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+        'app_brouillon_annonce_detail_cache',
+      )).map((row) => ({ ...row, is_brouillon: true }))
+      mergedResults.push({
+        rows: brouillonRows,
+        total: brouillonCount ?? 0,
         page,
         pageSize,
       })

@@ -198,6 +198,7 @@ export type Dossier = {
   local_detail_updated_at?: string | null
   has_detail_cache?: boolean | number | string | null
   detail_cache_expires_at?: string | null
+  is_brouillon?: boolean
 }
 
 export type DossierDetail = {
