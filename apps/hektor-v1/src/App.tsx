@@ -15848,6 +15848,8 @@ function StockScreen(props: {
                           >
                             {isPreparingArchiveDetail ? 'En attente' : hasLocalArchiveDetail ? 'Charger detail' : 'Demander detail'}
                           </button>
+                        ) : item.is_brouillon ? (
+                          <button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); openHektorAnnonce(item.hektor_annonce_id) }} title="Reprendre la saisie de ce brouillon dans Hektor">Reprendre la saisie</button>
                         ) : <small>-</small>}
                       </td>
                     </tr>

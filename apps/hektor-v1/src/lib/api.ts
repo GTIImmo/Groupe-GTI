@@ -1778,6 +1778,13 @@ function applyBrouillonIndexFiltersToQuery(baseQuery: any, filters: AppFilters, 
   if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
   if (diffusable === 'diffusable') query = query.eq('diffusable', '1')
   if (diffusable === 'non_diffusable') query = query.or('diffusable.is.null,diffusable.eq.0')
+  // Statut : un brouillon a un statut cible (Actif/Estimation/null). Si l'utilisateur
+  // choisit un statut precis (Actif, Vendu...), on filtre ; sinon (defaut / groupe
+  // "actifs" / recherche annonce) on garde TOUS les brouillons.
+  const statut = normalizeFilterValue(filters.statut)
+  if (statut && statut !== activeListingsFilterValue && statut !== annonceSearchListingsFilterValue) {
+    query = query.eq('statut_annonce', statut)
+  }
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
@@ -2494,10 +2501,10 @@ export async function loadDossiersPage({
 
     const { data, error, count } = await brouillonQuery
     if (error || !data) throw new Error(error?.message ?? 'Unable to load brouillon annonces')
-    const rows = await attachLightweightDetailCacheState(
+    const rows = (await attachLightweightDetailCacheState(
       (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
       'app_brouillon_annonce_detail_cache',
-    )
+    )).map((row) => ({ ...row, is_brouillon: true }))
     return {
       rows,
       total: count ?? 0,
