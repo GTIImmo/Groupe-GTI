@@ -15813,7 +15813,7 @@ function StockScreen(props: {
                       <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.numero_mandat ?? '-'}</span></td>
                       <td><strong>{item.titre_bien}</strong><span>{item.ville ?? '-'}</span></td>
                       <td>{commercialDisplay(item)}</td>
-                      <td><StatusPill value={item.statut_annonce} /><small>{isArchived ? 'Archivee' : 'Non archivee'}</small></td>
+                      <td><StatusPill value={item.statut_annonce} />{item.is_brouillon ? <StatusPill value="En création" /> : null}<small>{isArchived ? 'Archivee' : 'Non archivee'}</small></td>
                       <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
                       <td>{formatPrice(item.prix)}</td>
                       <td><button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); openHektorAnnonce(item.hektor_annonce_id) }}>Ouvrir</button></td>
@@ -22565,6 +22565,7 @@ function MobileDossierCards(props: {
             <div><span className="mobile-mini-label">Négociateur</span><strong>{commercialDisplay(item)}</strong></div>
           </div>
           <div className="mobile-status-row">
+            {item.is_brouillon ? <StatusPill value="En création" /> : null}
             <StatusPill value={item.statut_annonce} />
             <StatusPill value={diffusableLabel(item.diffusable)} />
           </div>
