@@ -16048,17 +16048,23 @@ function MandatsScreen(props: {
                 const isArchivedLightweight = !isEstimationMode && isArchivedAnnonceRecord(item)
                 const isHistoricalLightweight = !isEstimationMode && isHistoricalLightweightRecord(item)
                 const hasExportedDetail = isLightweight && hasDetailCacheAvailable(item)
-                const rowActionTitle = isArchivedLightweight
+                const rowActionTitle = item.is_brouillon
+                  ? 'Reprendre la saisie de ce brouillon dans Hektor'
+                  : isArchivedLightweight
                   ? 'Gerer le detail ou le desarchivage'
                   : hasExportedDetail
                     ? 'Ouvrir la fiche complete'
                     : 'Charger temporairement le detail complet'
-                const rowActionStrong = isArchivedLightweight
+                const rowActionStrong = item.is_brouillon
+                  ? 'Reprendre'
+                  : isArchivedLightweight
                   ? 'Desarchiver'
                   : hasExportedDetail
                     ? 'Ouvrir'
                     : 'Charger'
-                const rowActionSmall = isArchivedLightweight
+                const rowActionSmall = item.is_brouillon
+                  ? 'Brouillon'
+                  : isArchivedLightweight
                   ? 'Archive'
                   : hasExportedDetail
                     ? 'Fiche prete'
@@ -16146,7 +16152,7 @@ function MandatsScreen(props: {
                           </td>
                           <td>
                             <div className="av-statut">
-                              <span className={`av-pill ${avStatut.c}`}>{avStatut.l}</span>
+                              {item.is_brouillon ? <span className="av-pill av-pill-brouillon">En création</span> : <span className={`av-pill ${avStatut.c}`}>{avStatut.l}</span>}
                               {avAlerts.length ? <div className="av-al-row">{avAlerts.map((a, ai) => <span key={ai} className={`av-al ${a.cls}`}>{a.label}</span>)}</div> : null}
                             </div>
                           </td>
@@ -22478,8 +22484,9 @@ function MobileMandatCards(props: {
               <div><span className="mobile-mini-label">Négociateur</span><strong>{commercialDisplay(item)}</strong></div>
             </div>
             <div className="mobile-status-row">
+              {item.is_brouillon ? <StatusPill value="En création" /> : null}
               <StatusPill value={props.mode === 'estimation' ? listingProgressLabel(item) : item.statut_annonce} />
-              {props.mode === 'active' ? <StatusPill value={item.archive === '1' ? 'Archivé' : 'Actif'} /> : null}
+              {props.mode === 'active' && !item.is_brouillon ? <StatusPill value={item.archive === '1' ? 'Archivé' : 'Actif'} /> : null}
               {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'Détail prêt' : 'Détail à charger'}</span> : null}
               <span className="mobile-portal-chip">LBC <PortalStatusMark enabled={hasLeboncoin} /></span>
               <span className="mobile-portal-chip">BI <PortalStatusMark enabled={hasBienici} /></span>

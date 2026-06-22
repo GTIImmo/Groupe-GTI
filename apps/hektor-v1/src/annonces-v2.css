@@ -77,6 +77,8 @@
 .annonces-v2 .av-pill.compromis::before{background:var(--av-violet);}
 .annonces-v2 .av-pill.vendu{background:var(--av-warn-soft);border-color:rgba(182,106,22,.28);color:var(--av-warn);}
 .annonces-v2 .av-pill.vendu::before{background:var(--av-warn);}
+.annonces-v2 .av-pill.av-pill-brouillon{background:var(--av-info-soft);border-color:rgba(47,111,138,.28);color:var(--av-info);}
+.annonces-v2 .av-pill.av-pill-brouillon::before{background:var(--av-info);}
 /* alertes */
 .annonces-v2 .av-al-row{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
 .annonces-v2 .av-al{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;white-space:nowrap;}
