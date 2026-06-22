@@ -228,6 +228,7 @@ function usesLightweightAnnonceIndex(filters: AppFilters) {
   return (
     filters.archive === allFilterValue ||
     filters.archive === archivedFilterValue ||
+    filters.archive === brouillonFilterValue ||
     filters.statut === annonceSearchListingsFilterValue ||
     isHistoricalListingStatus(filters.statut) ||
     (filters.archive === activeArchiveFilterValue && filters.statut === allFilterValue)

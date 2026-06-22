@@ -3571,6 +3571,7 @@ export async function loadMandatsPage({
   const shouldUseMergedAnnonceListing =
     filters.archive === archivedFilterValue ||
     filters.archive === allFilterValue ||
+    filters.archive === brouillonFilterValue ||
     historicalListingStatuses.includes(statut) ||
     (filters.archive === activeArchiveFilterValue && (!statut || statut === annonceSearchListingsFilterValue))
   if (shouldUseMergedAnnonceListing) {
