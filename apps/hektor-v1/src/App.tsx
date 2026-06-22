@@ -22,6 +22,7 @@ import {
   loadDossierDetail,
   loadArchivedAnnonceDetailCache,
   loadHistoricalAnnonceDetailCache,
+  loadBrouillonAnnonceDetailCache,
   loadDossierByHektorAnnonceId,
   loadDossiersPage,
   loadFilterCatalog,
@@ -277,7 +278,11 @@ function resetAnnonceSearchScopeFilters(filters: AppFilters): AppFilters {
 
 function isLightweightAnnonceRecord(item: Pick<Dossier, 'archive' | 'statut_annonce'> | Pick<MandatRecord, 'archive' | 'statut_annonce'> | null | undefined) {
   if (!item) return false
-  return item.archive === '1' || isHistoricalListingStatus(item.statut_annonce)
+  return item.archive === '1' || isHistoricalListingStatus(item.statut_annonce) || (item as { is_brouillon?: boolean }).is_brouillon === true
+}
+
+function isBrouillonRecord(item: unknown): boolean {
+  return Boolean(item && (item as { is_brouillon?: boolean }).is_brouillon === true)
 }
 
 function isArchivedAnnonceRecord(item: Pick<Dossier, 'archive'> | Pick<MandatRecord, 'archive'> | null | undefined) {
@@ -299,6 +304,7 @@ function hasDetailCacheAvailable(item: Pick<Dossier, 'has_detail_cache'> | Pick<
 function isReadOnlyLightweightDetail(item: Pick<Dossier, 'archive' | 'statut_annonce' | 'has_detail_cache'> | Pick<MandatRecord, 'archive' | 'statut_annonce' | 'has_detail_cache'> | null | undefined) {
   if (!item) return false
   if (item.archive === '1') return true
+  if ((item as { is_brouillon?: boolean }).is_brouillon === true) return true
   return isHistoricalListingStatus(item.statut_annonce) && !hasDetailCacheAvailable(item)
 }
 
@@ -9623,7 +9629,9 @@ export default function App() {
     }
     setDetailLoading(true)
     try {
-      const detail = await loadHistoricalAnnonceDetailCache(target.hektor_annonce_id)
+      const detail = isBrouillonRecord(target)
+        ? await loadBrouillonAnnonceDetailCache(target.hektor_annonce_id)
+        : await loadHistoricalAnnonceDetailCache(target.hektor_annonce_id)
       if (detail) {
         setSelectedDossier(detail)
         setSelectedDossierId(detail.app_dossier_id)
@@ -9655,6 +9663,10 @@ export default function App() {
       await handlePrepareHistoricalAnnonceDetail(lightweightDetailTarget)
       return
     }
+    if (isBrouillonRecord(lightweightDetailTarget)) {
+      setNoticeMessage("Brouillon en création : reprenez la saisie directement dans Hektor via le bouton « Ouvrir ».")
+      return
+    }
     setErrorMessage("Cette ligne n'est pas eligible au chargement de detail leger.")
   }
 
@@ -9665,7 +9677,9 @@ export default function App() {
     try {
       const detail = lightweightDetailTarget.archive === '1'
         ? await loadArchivedAnnonceDetailCache(lightweightDetailTarget.hektor_annonce_id)
-        : await loadHistoricalAnnonceDetailCache(lightweightDetailTarget.hektor_annonce_id)
+        : isBrouillonRecord(lightweightDetailTarget)
+          ? await loadBrouillonAnnonceDetailCache(lightweightDetailTarget.hektor_annonce_id)
+          : await loadHistoricalAnnonceDetailCache(lightweightDetailTarget.hektor_annonce_id)
       if (!detail) {
         setErrorMessage("Le detail complet n'est pas encore disponible sur le serveur. Lancez la recuperation locale des details ou reessayez apres synchronisation.")
         return
