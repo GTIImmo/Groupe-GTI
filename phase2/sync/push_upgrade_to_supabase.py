@@ -18,8 +18,11 @@ from typing import Any, Iterable
 try:
     from phase2.sync.export_app_payload import (
         ANNONCES_SCOPE_WHERE,
+        BROUILLON_BUCKET_ENABLED,
         attach_hektor_read,
+        brouillon_active_exclusion_sql,
         build_archive_annonce_index,
+        build_brouillon_annonce_index,
         build_historical_annonce_index,
         build_payload,
         sqlite_read_connection,
@@ -32,8 +35,11 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(ROOT_DIR))
     from phase2.sync.export_app_payload import (
         ANNONCES_SCOPE_WHERE,
+        BROUILLON_BUCKET_ENABLED,
         attach_hektor_read,
+        brouillon_active_exclusion_sql,
         build_archive_annonce_index,
+        build_brouillon_annonce_index,
         build_historical_annonce_index,
         build_payload,
         sqlite_read_connection,
@@ -764,6 +770,48 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
     return current_rows
 
 
+def build_current_brouillon_index_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    current_rows: list[dict[str, object]] = []
+    for row in rows:
+        normalized = normalize_row(row, HISTORICAL_INDEX_NULLABLE_KEYS)
+        hektor_annonce_id = normalized.get("hektor_annonce_id")
+        if hektor_annonce_id is None:
+            continue
+        current_row = {
+            "hektor_annonce_id": int(hektor_annonce_id),
+            "app_brouillon_id": int(normalized.get("app_brouillon_id") or hektor_annonce_id),
+            "numero_dossier": normalized.get("numero_dossier"),
+            "numero_mandat": normalized.get("numero_mandat"),
+            "titre_bien": normalized.get("titre_bien") or "[Sans titre]",
+            "ville": normalized.get("ville"),
+            "code_postal": normalized.get("code_postal"),
+            "type_bien": normalized.get("type_bien"),
+            "prix": normalize_numeric(normalized.get("prix")),
+            "commercial_id": normalized.get("commercial_id"),
+            "commercial_nom": normalized.get("commercial_nom"),
+            "negociateur_email": normalized.get("negociateur_email"),
+            "agence_nom": normalized.get("agence_nom"),
+            "statut_annonce": normalized.get("statut_annonce"),
+            "archive": normalized.get("archive") or "0",
+            "diffusable": normalized.get("diffusable"),
+            "date_maj": normalize_timestamp(normalized.get("date_maj")),
+            "mandat_type": normalized.get("mandat_type"),
+            "mandat_date_debut": normalized.get("mandat_date_debut"),
+            "mandat_date_fin": normalized.get("mandat_date_fin"),
+            "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
+            "mandants_texte": normalized.get("mandants_texte"),
+            "search_text": None,
+            "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
+            "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
+            "photo_url_listing": normalized.get("photo_url_listing"),
+        }
+        current_row["search_text"] = build_search_text(current_row)
+        current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
+        current_row["source_hash"] = stable_upload_hash(current_row)
+        current_rows.append(current_row)
+    return current_rows
+
+
 def normalize_broadcast_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     normalized_by_key: dict[tuple[int, str, str], dict[str, object]] = {}
     for row in rows:
@@ -812,7 +860,7 @@ def fetch_local_app_dossier_identity() -> list[dict[str, int]]:
             f"""
             SELECT app_dossier_id, hektor_annonce_id
             FROM app_view_generale
-            WHERE {ANNONCES_SCOPE_WHERE}
+            WHERE {ANNONCES_SCOPE_WHERE}{brouillon_active_exclusion_sql()}
             ORDER BY app_dossier_id
             """
         ).fetchall()
@@ -1172,6 +1220,11 @@ def main() -> None:
     historical_table_available = client.table_available("app_historical_annonce_index_current")
     current_archive_index_rows = build_current_archive_index_rows(build_archive_annonce_index(limit=None)) if archive_table_available else []
     current_historical_index_rows = build_current_historical_index_rows(build_historical_annonce_index(limit=None)) if historical_table_available else []
+    brouillon_table_available = client.table_available("app_brouillon_annonce_index_current")
+    current_brouillon_index_rows = (
+        build_current_brouillon_index_rows(build_brouillon_annonce_index(limit=None))
+        if (BROUILLON_BUCKET_ENABLED and brouillon_table_available) else []
+    )
 
     dossier_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_dossiers})
     detail_upsert_ids = sorted({int(row["app_dossier_id"]) for row in current_details})
@@ -1182,6 +1235,8 @@ def main() -> None:
     archive_delete_ids: list[int] = []
     historical_upsert_ids: list[int] = []
     historical_delete_ids: list[int] = []
+    brouillon_upsert_ids: list[int] = []
+    brouillon_delete_ids: list[int] = []
 
     current_filter_catalog: list[dict[str, object]] = []
     filters_should_refresh = (
@@ -1275,11 +1330,23 @@ def main() -> None:
                 )
                 if row.get("hektor_annonce_id") is not None
             }
+        remote_brouillon_hashes: dict[int, str] = {}
+        if BROUILLON_BUCKET_ENABLED and brouillon_table_available:
+            remote_brouillon_hashes = {
+                int(row["hektor_annonce_id"]): str(row["source_hash"])
+                for row in client.fetch_all_rows(
+                    path="app_brouillon_annonce_index_current",
+                    select="hektor_annonce_id,source_hash",
+                    order="hektor_annonce_id.asc",
+                )
+                if row.get("hektor_annonce_id") is not None
+            }
 
         local_dossier_hashes = map_hashes(current_dossiers, id_key="app_dossier_id")
         local_detail_hashes = map_hashes(current_details, id_key="app_dossier_id")
         local_archive_hashes = map_hashes(current_archive_index_rows, id_key="hektor_annonce_id")
         local_historical_hashes = map_hashes(current_historical_index_rows, id_key="hektor_annonce_id")
+        local_brouillon_hashes = map_hashes(current_brouillon_index_rows, id_key="hektor_annonce_id")
 
         if args.full_rebuild:
             dossier_upsert_ids = sorted(local_dossier_hashes)
@@ -1328,9 +1395,17 @@ def main() -> None:
                 if remote_historical_hashes.get(hektor_annonce_id) != source_hash
             )
             historical_delete_ids = sorted(set(remote_historical_hashes) - set(local_historical_hashes))
+        if BROUILLON_BUCKET_ENABLED and brouillon_table_available:
+            brouillon_upsert_ids = sorted(
+                hektor_annonce_id
+                for hektor_annonce_id, source_hash in local_brouillon_hashes.items()
+                if remote_brouillon_hashes.get(hektor_annonce_id) != source_hash
+            )
+            brouillon_delete_ids = sorted(set(remote_brouillon_hashes) - set(local_brouillon_hashes))
         if args.skip_stale_deletes:
             archive_delete_ids = []
             historical_delete_ids = []
+            brouillon_delete_ids = []
 
         if stale_ids:
             client.delete_rows_by_ids(path="app_dossier_current", column="app_dossier_id", ids=stale_ids)
@@ -1409,6 +1484,17 @@ def main() -> None:
                 client.upsert_rows(
                     path="app_historical_annonce_index_current",
                     rows=[row for row in current_historical_index_rows if int(row["hektor_annonce_id"]) in historical_upsert_set],
+                    batch_size=args.dossier_batch_size,
+                )
+
+        if BROUILLON_BUCKET_ENABLED and brouillon_table_available:
+            if brouillon_delete_ids:
+                client.delete_rows_by_ids(path="app_brouillon_annonce_index_current", column="hektor_annonce_id", ids=brouillon_delete_ids)
+            if brouillon_upsert_ids:
+                brouillon_upsert_set = set(brouillon_upsert_ids)
+                client.upsert_rows(
+                    path="app_brouillon_annonce_index_current",
+                    rows=[row for row in current_brouillon_index_rows if int(row["hektor_annonce_id"]) in brouillon_upsert_set],
                     batch_size=args.dossier_batch_size,
                 )
 

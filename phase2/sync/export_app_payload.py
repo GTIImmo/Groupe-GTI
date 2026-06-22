@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime
@@ -288,6 +289,63 @@ SELECT
 FROM app_view_generale
 WHERE COALESCE(archive, '0') = '0'
   AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Vendu', 'Clos')
+ORDER BY
+    COALESCE(date_maj, '') DESC,
+    hektor_annonce_id DESC
+"""
+
+
+# --- Panier Brouillon (isDraft) : OFF par defaut, inerte tant que le drapeau n'est pas active ---
+BROUILLON_BUCKET_ENABLED = os.environ.get("APP_BROUILLON_BUCKET_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def brouillon_active_exclusion_sql() -> str:
+    """Clause SQL (a concatener au scope actif) qui exclut les brouillons isDraft.
+    Vide si le drapeau est OFF -> aucun changement. Suppose `hektor` attache."""
+    if not BROUILLON_BUCKET_ENABLED:
+        return ""
+    return (
+        " AND CAST(hektor_annonce_id AS TEXT) NOT IN "
+        "(SELECT CAST(hektor_annonce_id AS TEXT) FROM hektor.hektor_annonce_draft_state "
+        "WHERE COALESCE(is_draft, 0) = 1)"
+    )
+
+# Index brouillon = clone du patron Vendu/Clos, mais filtre par les ids presents dans
+# hektor.hektor_annonce_draft_state (is_draft=1), injectes en Python (pas de cross-db dans le SQL).
+SQL_BROUILLON_ANNONCE_INDEX_BASE = """
+SELECT
+    CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
+    CAST(app_dossier_id AS INTEGER) AS app_brouillon_id,
+    numero_dossier,
+    numero_mandat,
+    titre_bien,
+    ville,
+    code_postal,
+    type_bien,
+    prix,
+    commercial_id,
+    commercial_nom,
+    negociateur_email,
+    agence_nom,
+    COALESCE(detail_statut_name, statut_annonce) AS statut_annonce,
+    archive,
+    diffusable,
+    date_maj,
+    mandat_type,
+    mandat_date_debut,
+    mandat_date_fin,
+    mandat_montant,
+    CASE
+        WHEN mandants_texte IS NULL THEN NULL
+        WHEN length(mandants_texte) <= 240 THEN mandants_texte
+        ELSE substr(mandants_texte, 1, 240) || '...'
+    END AS mandants_texte,
+    CASE WHEN detail_statut_name IS NOT NULL THEN 1 ELSE 0 END AS has_local_detail,
+    NULL AS local_detail_updated_at,
+    photo_url_listing
+FROM app_view_generale
+WHERE COALESCE(archive, '0') = '0'
+  AND CAST(hektor_annonce_id AS INTEGER) IN (__BROUILLON_IDS__)
 ORDER BY
     COALESCE(date_maj, '') DESC,
     hektor_annonce_id DESC
@@ -1726,6 +1784,50 @@ def build_historical_annonce_index(
     owns_connection = connection is None
     try:
         return fetch_rows(con, build_limited_sql(SQL_HISTORICAL_ANNONCE_INDEX_BASE, limit))
+    finally:
+        if owns_connection:
+            con.close()
+
+
+def load_brouillon_draft_ids() -> list[int]:
+    """Ids Hektor des annonces brouillon (isDraft=1) depuis le store local hektor.hektor_annonce_draft_state.
+    Retourne [] si la table n'existe pas encore -> builder inerte."""
+    con = sqlite_read_connection(HEKTOR_DB)
+    try:
+        has_table = con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hektor_annonce_draft_state'"
+        ).fetchone()
+        if not has_table:
+            return []
+        rows = con.execute(
+            "SELECT hektor_annonce_id FROM hektor_annonce_draft_state WHERE COALESCE(is_draft, 0) = 1"
+        ).fetchall()
+        ids: list[int] = []
+        for row in rows:
+            value = str(row[0]).strip()
+            if value.isdigit():
+                ids.append(int(value))
+        return ids
+    finally:
+        con.close()
+
+
+def build_brouillon_annonce_index(
+    *,
+    limit: int | None = None,
+    connection: sqlite3.Connection | None = None,
+) -> list[dict[str, object]]:
+    if not BROUILLON_BUCKET_ENABLED:
+        return []
+    ids = load_brouillon_draft_ids()
+    if not ids:
+        return []
+    con = connection or sqlite_read_connection(PHASE2_DB)
+    owns_connection = connection is None
+    try:
+        in_list = ",".join(str(value) for value in ids)
+        sql = SQL_BROUILLON_ANNONCE_INDEX_BASE.replace("__BROUILLON_IDS__", in_list)
+        return fetch_rows(con, build_limited_sql(sql, limit))
     finally:
         if owns_connection:
             con.close()
