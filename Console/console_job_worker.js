@@ -1635,7 +1635,77 @@ async function returnHektorDefaultContext() {
   }
 }
 
+// Résout le contexte AGENCE d'une entité pour le fallback (négo inactif).
+// Annonce -> agence de l'annonce ; contact (pas d'annonce) -> agence du payload
+// (déjà résolue par resolveContactAgencyExecutionPayload).
+async function resolveAgencyContextForFallback(dossier, payload) {
+  const safePayload = payload && typeof payload === "object" ? payload : {};
+  const annonceId = dossier && dossier.hektor_annonce_id ? String(dossier.hektor_annonce_id) : null;
+  if (annonceId) {
+    const ctx = await resolveHektorAnnonceAgencyContext(annonceId, {
+      agencyId: safePayload.hektor_agence_id || safePayload.target_hektor_agence_id || null,
+    }).catch(() => null);
+    if (ctx && ctx.agency_id_user) return ctx;
+  }
+  const agencyIdUser = cleanString(
+    safePayload.target_agency_id_user || safePayload.agence_id_user || safePayload.agency_id_user
+  );
+  if (agencyIdUser) {
+    return {
+      found: true,
+      agency_id_user: agencyIdUser,
+      hektor_agence_id: cleanString(safePayload.hektor_agence_id || safePayload.target_hektor_agence_id) || null,
+      agency_label: safePayload.target_agency_label || safePayload.agence_nom || null,
+    };
+  }
+  return null;
+}
+
+// Le négo PROPRIÉTAIRE de l'entité est-il actif (= impersonnable, présent dans
+// app_user_directory NEGO) ? On teste le négo PROPRE (email/id de l'entité), PAS un
+// collègue substitué. Si non actif -> on écrira via l'agence.
+async function isOwnerNegotiatorActive(dossier, payload) {
+  const safePayload = payload && typeof payload === "object" ? payload : {};
+  const email = (dossier && dossier.negociateur_email)
+    || safePayload.negociateur_email
+    || safePayload.hektor_user_email
+    || safePayload.target_hektor_user_email
+    || null;
+  if (email) {
+    const u = await loadHektorDirectoryUserByEmail(email).catch(() => null);
+    if (u && u.id_user) return true;
+  }
+  const userId = safePayload.hektor_user_id || safePayload.hektor_id_user || safePayload.target_hektor_user_id;
+  if (userId) {
+    const u = await loadHektorDirectoryUserById(userId).catch(() => null);
+    if (u && u.id_user) return true;
+  }
+  return false;
+}
+
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
+  // RÈGLE FALLBACK AGENCE (additif, flag-gated) : si le négo PROPRIÉTAIRE de l'entité
+  // n'est pas actif, on écrit via l'AGENCE au lieu de laisser substituer un collègue
+  // (qui ne pourrait pas écrire une entité qui n'est pas la sienne). Couvre aussi le
+  // cas "aucun négo". Activé par CONSOLE_HEKTOR_AGENCY_FALLBACK=true OU write_via_agency.
+  // Sans flag : comportement 100% inchangé.
+  const agencyFallbackEnabled =
+    String(process.env.CONSOLE_HEKTOR_AGENCY_FALLBACK || "false").toLowerCase() === "true"
+    || (payload && payload.write_via_agency === true);
+  if (agencyFallbackEnabled && !(await isOwnerNegotiatorActive(dossier, payload))) {
+    const agencyContext = await resolveAgencyContextForFallback(dossier, payload).catch(() => null);
+    if (agencyContext && agencyContext.agency_id_user) {
+      await ensureAdminHektorWriteSession(job, "agency_fallback_admin_login");
+      await ensureHektorAgencySession(job, agencyContext, "execution_context_agency_fallback");
+      await logJob(job.id, "hektor_context", "done", "Negociateur proprietaire inactif -> ecriture via contexte AGENCE (fallback)", {
+        hektor_annonce_id: dossier && dossier.hektor_annonce_id ? String(dossier.hektor_annonce_id) : null,
+        agency_id_user: agencyContext.agency_id_user,
+        agency_label: agencyContext.agency_label || null,
+      });
+      return { agencyFallback: true, agencyContext };
+    }
+  }
+
   const target = await resolveHektorExecutionUser(job, dossier, payload, options);
   if (!target || !target.idUser) {
     if (options.required) {
