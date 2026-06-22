@@ -168,6 +168,7 @@ function hasHektorNegotiator(dossier: HektorNegotiatorRequiredDossier) {
 const allFilterValue = '__all__'
 const activeArchiveFilterValue = '__active__'
 const archivedFilterValue = '__archived__'
+const brouillonFilterValue = '__brouillon__'
 const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
@@ -13916,6 +13917,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         options={[
                           { value: activeArchiveFilterValue, label: 'Actives' },
                           { value: archivedFilterValue, label: 'Archivées' },
+                          { value: brouillonFilterValue, label: 'Brouillons' },
                         ]}
                       />
                     ) : null}
@@ -14429,6 +14431,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   options={[
                     { value: activeArchiveFilterValue, label: 'Actives' },
                     { value: archivedFilterValue, label: 'Archivees' },
+                    { value: brouillonFilterValue, label: 'Brouillons' },
                   ]}
                 />
                 <FilterSelect
