@@ -12,7 +12,7 @@ $log = Join-Path $logDir "quotidien_$stamp.log"
 Start-Transcript -Path $log -Append | Out-Null
 try {
     Write-Output "=== Run quotidien demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly
+    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes
     Write-Output "=== Run quotidien termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $LASTEXITCODE) ==="
 } catch {
     Write-Output "=== ERREUR run quotidien : $_ ==="
