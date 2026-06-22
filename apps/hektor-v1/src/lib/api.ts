@@ -132,6 +132,7 @@ type AppointmentSummaryResponse = {
 const allFilterValue = '__all__'
 const activeArchiveFilterValue = '__active__'
 const archivedFilterValue = '__archived__'
+const brouillonFilterValue = '__brouillon__'
 const withMandatFilterValue = '__with_mandat__'
 const withoutMandatFilterValue = '__without_mandat__'
 const withoutCommercialFilterValue = '__without_commercial__'
@@ -1548,6 +1549,7 @@ type LightweightAnnonceIndexRow = {
   hektor_annonce_id: number
   app_archive_id: number | null
   app_historical_id?: number | null
+  app_brouillon_id?: number | null
   numero_dossier: string | null
   numero_mandat: string | null
   titre_bien: string | null
@@ -1580,7 +1582,7 @@ type LightweightDetailCacheRow = {
 
 async function attachLightweightDetailCacheState<T extends Dossier>(
   rows: T[],
-  cacheTable: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache',
+  cacheTable: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache' | 'app_brouillon_annonce_detail_cache',
 ): Promise<T[]> {
   if (!hasSupabaseEnv || !supabase || rows.length === 0) return rows
   const ids = Array.from(new Set(rows.map((row) => String(row.hektor_annonce_id)).filter(Boolean)))
@@ -1606,7 +1608,7 @@ async function attachLightweightDetailCacheState<T extends Dossier>(
 
 function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier & { mandants_texte?: string | null } {
   return {
-    app_dossier_id: Number(row.app_archive_id ?? row.app_historical_id ?? row.hektor_annonce_id),
+    app_dossier_id: Number(row.app_archive_id ?? row.app_historical_id ?? row.app_brouillon_id ?? row.hektor_annonce_id),
     hektor_annonce_id: Number(row.hektor_annonce_id),
     photo_url_listing: row.photo_url_listing ?? null,
     images_preview_json: null,
@@ -1749,6 +1751,44 @@ function applyHistoricalIndexFiltersToQuery(baseQuery: any, filters: AppFilters,
   let query = applyArchiveIndexFiltersToQuery(baseQuery, filters, scope)
   const statut = normalizeFilterValue(filters.statut)
   if (historicalListingStatuses.includes(statut)) query = query.eq('statut_annonce', statut)
+  return query
+}
+
+// Filtre de l'index Brouillon : memes filtres communs que l'index archive, MAIS sans
+// l'exclusion par defaut du statut "Estimation" -> un brouillon de tout statut
+// (Actif / Estimation / null) reste visible dans le panier Brouillons.
+function applyBrouillonIndexFiltersToQuery(baseQuery: any, filters: AppFilters, scope?: DataScope | null) {
+  let query = applyNegotiatorScopeToQuery(baseQuery, scope)
+  const commercial = normalizeFilterValue(filters.commercial)
+  const agency = normalizeFilterValue(filters.agency)
+  const mandat = filters.mandat
+  const detailAvailability = normalizeFilterValue(filters.detailAvailability)
+  const diffusable = normalizeFilterValue(filters.diffusable)
+  const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
+  const mandantName = normalizeSearchTerm(filters.mandantName)
+
+  if (commercial) {
+    if (commercial === withoutCommercialFilterValue) query = query.or('commercial_nom.is.null,commercial_nom.eq.')
+    else query = query.eq('commercial_nom', commercial)
+  }
+  if (agency) query = query.eq('agence_nom', agency)
+  if (mandat === withMandatFilterValue) query = query.not('numero_mandat', 'is', null).neq('numero_mandat', '')
+  if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
+  if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
+  if (detailAvailability === 'to_load') query = query.or('has_local_detail.is.null,has_local_detail.eq.false,has_local_detail.eq.0')
+  if (diffusable === 'diffusable') query = query.eq('diffusable', '1')
+  if (diffusable === 'non_diffusable') query = query.or('diffusable.is.null,diffusable.eq.0')
+  if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
+  if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
+
+  const search = normalizeListingSearchTerm(filters.query)
+  if (search) {
+    const ilike = `%${search}%`
+    query = query.or(
+      listingSearchColumns(search).map((column) => `${column}.ilike.${ilike}`).join(','),
+    )
+  }
+
   return query
 }
 
@@ -2436,6 +2476,35 @@ export async function loadDossiersPage({
   const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
   const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
   const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
+  const brouillonIndexSelect = 'hektor_annonce_id,app_brouillon_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
+  if (filters.archive === brouillonFilterValue) {
+    if (!canUseLightweightIndexes) {
+      return { rows: [], total: 0, page, pageSize }
+    }
+    const brouillonQuery = applyBrouillonIndexFiltersToQuery(
+      supabase
+        .from('app_brouillon_annonce_index_current')
+        .select(brouillonIndexSelect, { count: countMode }),
+      filters,
+      scope,
+    )
+      .order('date_maj', { ascending: false, nullsFirst: false })
+      .order('hektor_annonce_id', { ascending: false })
+      .range(from, to)
+
+    const { data, error, count } = await brouillonQuery
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load brouillon annonces')
+    const rows = await attachLightweightDetailCacheState(
+      (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+      'app_brouillon_annonce_detail_cache',
+    )
+    return {
+      rows,
+      total: count ?? 0,
+      page,
+      pageSize,
+    }
+  }
   if (filters.archive === archivedFilterValue) {
     if (!canUseLightweightIndexes) {
       return { rows: [], total: 0, page, pageSize }
@@ -2710,10 +2779,10 @@ function stringifyJsonPayloadFields(source: Record<string, unknown>) {
 }
 
 async function loadLightweightAnnonceDetailCache(
-  table: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache',
-  indexTable: 'app_archive_annonce_index_current' | 'app_historical_annonce_index_current',
-  payloadIdKey: 'app_archive_id' | 'app_historical_id',
-  indexIdKey: 'app_archive_id' | 'app_historical_id',
+  table: 'app_archive_annonce_detail_cache' | 'app_historical_annonce_detail_cache' | 'app_brouillon_annonce_detail_cache',
+  indexTable: 'app_archive_annonce_index_current' | 'app_historical_annonce_index_current' | 'app_brouillon_annonce_index_current',
+  payloadIdKey: 'app_archive_id' | 'app_historical_id' | 'app_brouillon_id',
+  indexIdKey: 'app_archive_id' | 'app_historical_id' | 'app_brouillon_id',
   defaultArchive: '0' | '1',
   hektorAnnonceId: number | string,
 ): Promise<DetailedDossier | null> {
@@ -2837,6 +2906,10 @@ export async function loadArchivedAnnonceDetailCache(hektorAnnonceId: number | s
 
 export async function loadHistoricalAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
   return loadLightweightAnnonceDetailCache('app_historical_annonce_detail_cache', 'app_historical_annonce_index_current', 'app_historical_id', 'app_historical_id', '0', hektorAnnonceId)
+}
+
+export async function loadBrouillonAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
+  return loadLightweightAnnonceDetailCache('app_brouillon_annonce_detail_cache', 'app_brouillon_annonce_index_current', 'app_brouillon_id', 'app_brouillon_id', '0', hektorAnnonceId)
 }
 
 export async function loadDossierByHektorAnnonceId(hektorAnnonceId: string | number, scope?: DataScope | null): Promise<Dossier | null> {
