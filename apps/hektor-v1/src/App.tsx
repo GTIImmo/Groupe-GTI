@@ -8335,6 +8335,12 @@ export default function App() {
   const [editingVisitEvent, setEditingVisitEvent] = useState<GoogleCalendarEventLink | null>(null)
   const [affinerSearch, setAffinerSearch] = useState<AppContactSearch | null>(null)
   const [rapprochementMandat, setRapprochementMandat] = useState<MandatContext | null>(null)
+  // Actions rapides du listing Estimations (Appel / RDV / Envoyer dossier) : on résout
+  // le contact propriétaire de l'annonce à la volée (loadAnnonceContactInvitees), puis on
+  // réutilise les modales contact existantes. annonceOwnerActionBusy = app_dossier_id en
+  // cours de résolution (spinner sur la ligne), annonceOwnerModal = modale ouverte.
+  const [annonceOwnerModal, setAnnonceOwnerModal] = useState<{ kind: 'rdv' | 'email'; contact: AppContact; relations: AppContactRelation[]; appDossierId: number } | null>(null)
+  const [annonceOwnerActionBusy, setAnnonceOwnerActionBusy] = useState<number | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
   const [requestModalComment, setRequestModalComment] = useState('')
@@ -9862,6 +9868,71 @@ export default function App() {
   function closeDossierDetailPage() {
     setDetailOpen(false)
     setDetailImageModalUrl(null)
+  }
+
+  // --- Actions rapides Estimations : résout le contact propriétaire d'une annonce ---
+  // Priorité aux rôles vendeur/propriétaire/mandant, puis au contact ayant des coordonnées.
+  function annonceOwnerRoleRank(role?: string | null) {
+    const r = (role ?? '').toLowerCase()
+    if (/propri|vendeur|mandant|c[ée]dant/.test(r)) return 3
+    if (/acqu|achet|locataire/.test(r)) return 0
+    return 1
+  }
+
+  async function resolveAnnonceOwnerContact(appDossierId: number, hektorAnnonceId?: number | null): Promise<{ contact: AppContact; relations: AppContactRelation[] } | null> {
+    const invitees = await loadAnnonceContactInvitees({ appDossierId, hektorAnnonceId, limit: 24 })
+    if (invitees.length === 0) return null
+    const ranked = [...invitees].sort((a, b) => {
+      const roleDelta = annonceOwnerRoleRank(b.role_contact) - annonceOwnerRoleRank(a.role_contact)
+      if (roleDelta !== 0) return roleDelta
+      const aHas = a.phone_primary || a.phone_secondary || a.email ? 1 : 0
+      const bHas = b.phone_primary || b.phone_secondary || b.email ? 1 : 0
+      return bHas - aHas
+    })
+    const chosen = ranked[0]
+    const contact = await loadContactById(chosen.hektor_contact_id)
+    if (!contact) return null
+    const relations = await loadContactRelations(chosen.hektor_contact_id)
+    return { contact, relations }
+  }
+
+  // Appel : on récupère juste le téléphone du propriétaire et on déclenche tel:. Sans
+  // téléphone (ou en cas d'erreur), repli gracieux sur l'ouverture de la fiche détail.
+  async function handleCallAnnonceOwner(item: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>) {
+    setAnnonceOwnerActionBusy(item.app_dossier_id)
+    try {
+      const invitees = await loadAnnonceContactInvitees({ appDossierId: item.app_dossier_id, hektorAnnonceId: item.hektor_annonce_id, limit: 24 })
+      const ranked = [...invitees].sort((a, b) => annonceOwnerRoleRank(b.role_contact) - annonceOwnerRoleRank(a.role_contact))
+      const owner = ranked.find((c) => c.phone_primary || c.phone_secondary)
+      const phone = (owner?.phone_primary || owner?.phone_secondary || '').trim()
+      if (phone) {
+        window.location.href = `tel:${phone.replace(/\s+/g, '')}`
+      } else {
+        openDossierDetailPage(item.app_dossier_id)
+      }
+    } catch {
+      openDossierDetailPage(item.app_dossier_id)
+    } finally {
+      setAnnonceOwnerActionBusy(null)
+    }
+  }
+
+  // RDV : résout le contact propriétaire complet + relations, puis ouvre la modale Google
+  // Agenda existante. Repli sur la fiche détail si aucun contact exploitable.
+  async function handlePlanAnnonceOwnerRdv(item: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>) {
+    setAnnonceOwnerActionBusy(item.app_dossier_id)
+    try {
+      const resolved = await resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id)
+      if (resolved) {
+        setAnnonceOwnerModal({ kind: 'rdv', contact: resolved.contact, relations: resolved.relations, appDossierId: item.app_dossier_id })
+      } else {
+        openDossierDetailPage(item.app_dossier_id)
+      }
+    } catch {
+      openDossierDetailPage(item.app_dossier_id)
+    } finally {
+      setAnnonceOwnerActionBusy(null)
+    }
   }
 
 function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego', requestType?: BusinessRequestType) {
@@ -13708,6 +13779,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           }}
         />
 
+        {annonceOwnerModal?.kind === 'rdv' ? (
+          <GoogleAgendaContactModal
+            contact={annonceOwnerModal.contact}
+            relations={annonceOwnerModal.relations}
+            hektorNegotiators={hektorNegotiators}
+            sessionEmail={sessionEmail}
+            onClose={() => setAnnonceOwnerModal(null)}
+            onCreated={() => setVisitRefreshKey((k) => k + 1)}
+            onUpdated={() => setVisitRefreshKey((k) => k + 1)}
+          />
+        ) : null}
+
         {visitBooking ? (() => {
           const presetAnnonce = {
             app_dossier_id: visitBooking.appDossierId,
@@ -14997,6 +15080,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             images={images}
             linkedWorkItems={linkedWorkItems}
             detailLoading={detailLoading}
+            onCallOwner={(item) => { void handleCallAnnonceOwner(item) }}
+            onPlanRdv={(item) => { void handlePlanAnnonceOwnerRdv(item) }}
+            ownerActionBusyId={annonceOwnerActionBusy}
             eyebrow="Estimations"
             title="Futurs mandats potentiels"
             mode="estimation"
@@ -15996,6 +16082,11 @@ function MandatsScreen(props: {
   onSelectMandat: (id: number) => void
   onOpenLightweightDetail: (item: MandatRecord) => void
   onOpenRapprochement?: (item: MandatRecord) => void
+  // Actions rapides Estimations (résolution du contact propriétaire au niveau App).
+  onCallOwner?: (item: MandatRecord) => void
+  onPlanRdv?: (item: MandatRecord) => void
+  onSendDossier?: (item: MandatRecord) => void
+  ownerActionBusyId?: number | null
   loading: boolean
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
@@ -16099,8 +16190,8 @@ function MandatsScreen(props: {
                 <col style={{ width: '132px' }} />{/* photo (vignette 100px) */}
                 <col />{/* bien & propriétaire — flexible */}
                 <col style={{ width: '150px' }} />{/* valeur estimée */}
-                <col style={{ width: '190px' }} />{/* stade + prochaine action */}
-                <col style={{ width: '100px' }} />{/* actions */}
+                <col style={{ width: '178px' }} />{/* stade + prochaine action */}
+                <col style={{ width: '164px' }} />{/* actions (Appel · RDV · Envoyer · Ouvrir) */}
               </colgroup>
             )}
             <thead>
@@ -16230,11 +16321,29 @@ function MandatsScreen(props: {
                             })()}
                           </td>
                           <td>
-                            <div className="ev2-actions" onClick={(event) => event.stopPropagation()}>
-                              <button className="ev2-ia cta" type="button" title="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>
-                                <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-                              </button>
-                            </div>
+                            {/* Maquette GTI : Appel · RDV · Envoyer dossier · Ouvrir. Les 3 premières
+                               actions résolvent le contact propriétaire de l'annonce au niveau App
+                               (tél direct, modale RDV Google, PDF d'estimation). Spinner pendant la
+                               résolution ; repli sur la fiche détail si aucun contact exploitable. */}
+                            {(() => {
+                              const ownerBusy = props.ownerActionBusyId === item.app_dossier_id
+                              return (
+                                <div className={`ev2-actions ${ownerBusy ? 'is-busy' : ''}`} onClick={(event) => event.stopPropagation()}>
+                                  <button className="ev2-ia" type="button" disabled={ownerBusy} title="Appeler le propriétaire" aria-label="Appeler le propriétaire" onClick={(event) => { event.stopPropagation(); props.onCallOwner ? props.onCallOwner(item) : props.onOpenDetailPage(item.app_dossier_id) }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" strokeLinejoin="round" /></svg>
+                                  </button>
+                                  <button className="ev2-ia" type="button" disabled={ownerBusy} title="Planifier un RDV" aria-label="Planifier un rendez-vous" onClick={(event) => { event.stopPropagation(); props.onPlanRdv ? props.onPlanRdv(item) : props.onOpenDetailPage(item.app_dossier_id) }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" strokeLinecap="round" /></svg>
+                                  </button>
+                                  <button className="ev2-ia" type="button" disabled={ownerBusy} title="Envoyer le dossier d'estimation" aria-label="Envoyer le dossier d'estimation" onClick={(event) => { event.stopPropagation(); props.onSendDossier ? props.onSendDossier(item) : props.onOpenDetailPage(item.app_dossier_id) }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="m22 2-7 20-4-9-9-4Z" strokeLinejoin="round" /><path d="M22 2 11 13" strokeLinecap="round" /></svg>
+                                  </button>
+                                  <button className="ev2-ia cta" type="button" title="Ouvrir la fiche" aria-label="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>
+                                    <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                  </button>
+                                </div>
+                              )
+                            })()}
                           </td>
                         </>
                       ) : (
