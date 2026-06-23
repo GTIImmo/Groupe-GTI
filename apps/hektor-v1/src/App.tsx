@@ -9935,6 +9935,26 @@ export default function App() {
     }
   }
 
+  // Envoyer dossier : génère l'avis de valeur imprimable (fenêtre, comme le bon de visite),
+  // puis ouvre le composeur email Google pré-renseigné du propriétaire pour y joindre le PDF.
+  // La fenêtre est ouverte AVANT l'await (sinon bloquée par le navigateur).
+  async function handleSendDossierEstimation(item: MandatRecord) {
+    const printWindow = window.open('', '_blank')
+    writeVisitVoucherWindow(printWindow, estimationDossierLoadingHtml())
+    setAnnonceOwnerActionBusy(item.app_dossier_id)
+    try {
+      const resolved = await resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id)
+      openEstimationDossierPrint(item, resolved?.contact ?? null, printWindow)
+      if (resolved) {
+        setAnnonceOwnerModal({ kind: 'email', contact: resolved.contact, relations: resolved.relations, appDossierId: item.app_dossier_id })
+      }
+    } catch {
+      openEstimationDossierPrint(item, null, printWindow)
+    } finally {
+      setAnnonceOwnerActionBusy(null)
+    }
+  }
+
 function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego', requestType?: BusinessRequestType) {
     const currentRequest = latestDiffusionRequest(diffusionRequests, appDossierId, requestType)
     const nextType = requestType ?? normalizeRequestType(currentRequest?.request_type)
@@ -13791,6 +13811,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : null}
 
+        {annonceOwnerModal?.kind === 'email' ? (
+          <ContactEmailComposerModal
+            contact={annonceOwnerModal.contact}
+            relations={annonceOwnerModal.relations}
+            searches={[]}
+            hektorNegotiators={hektorNegotiators}
+            sessionEmail={sessionEmail}
+            onClose={() => setAnnonceOwnerModal(null)}
+          />
+        ) : null}
+
         {visitBooking ? (() => {
           const presetAnnonce = {
             app_dossier_id: visitBooking.appDossierId,
@@ -15082,6 +15113,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             detailLoading={detailLoading}
             onCallOwner={(item) => { void handleCallAnnonceOwner(item) }}
             onPlanRdv={(item) => { void handlePlanAnnonceOwnerRdv(item) }}
+            onSendDossier={(item) => { void handleSendDossierEstimation(item) }}
             ownerActionBusyId={annonceOwnerActionBusy}
             eyebrow="Estimations"
             title="Futurs mandats potentiels"
@@ -25512,6 +25544,167 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
 
 function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null, targetWindow?: Window | null) {
   const html = visitVoucherHtml(contact, event, relations, propertyPhotoUrl)
+  if (writeVisitVoucherWindow(targetWindow, html)) return
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
+// --- Dossier d'estimation / Avis de valeur (calqué sur le bon de visite) -----------
+// Document A4 imprimable et corrigeable (contenteditable), pré-rempli depuis l'annonce
+// et le contact propriétaire. L'agent l'imprime / enregistre en PDF puis le joint à
+// l'email (composeur Google ouvert en parallèle), même flux que le mandat de vente.
+function estimationDossierLoadingHtml() {
+  return `<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8" /><title>Preparation du dossier d'estimation</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;padding:24px;color:#222">
+  <strong>Preparation du dossier d'estimation...</strong>
+</body>
+</html>`
+}
+
+function estimationDossierHtml(item: Pick<MandatRecord, 'titre_bien' | 'ville' | 'code_postal' | 'type_bien' | 'prix' | 'numero_dossier' | 'numero_mandat' | 'mandants_texte' | 'commercial_nom' | 'agence_nom'>, owner: AppContact | null) {
+  const euro = (value: number) => `${new Intl.NumberFormat('fr-FR').format(Math.round(value))} EUR`
+  const prix = item.prix != null && Number.isFinite(Number(item.prix)) ? Number(item.prix) : null
+  const valeurEstimee = prix != null ? euro(prix) : 'A completer'
+  const valeurBasse = prix != null ? euro(prix * 0.95) : 'A completer'
+  const valeurHaute = prix != null ? euro(prix * 1.05) : 'A completer'
+  const ownerName = owner ? (safeText(owner.display_name) || [owner.prenom, owner.nom].filter(Boolean).join(' ')) : ''
+  const ownerLabel = ownerName || safeText(item.mandants_texte) || 'A completer'
+  const ownerAddress = owner ? [owner.code_postal, owner.ville].filter(Boolean).join(' ') : ''
+  const ownerPhone = owner ? (safeText(owner.phone_primary) || safeText(owner.phone_secondary)) : ''
+  const ownerEmail = owner ? safeText(owner.email) : ''
+  const propertyTitle = safeText(item.titre_bien) || '[Sans titre]'
+  const propertyLocalite = [item.code_postal, item.ville].filter(Boolean).join(' ')
+  const negotiatorName = safeText(item.commercial_nom) || 'A completer'
+  const agencyName = safeText(item.agence_nom) || 'Groupe GTI'
+  const reference = safeText(item.numero_dossier) || safeText(item.numero_mandat) || ''
+  const docNumber = `AV-${(reference || propertyTitle).slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'ESTIM'}`
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Avis de valeur ${escapeHtml(docNumber)}</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;background:#eef1f4;color:#2b2b2b;font-family:Arial,Helvetica,sans-serif}
+    .print-actions{display:flex;justify-content:center;gap:10px;padding:14px}
+    .print-actions button{border:1px solid #c2185b;background:#c2185b;color:#fff;border-radius:8px;padding:10px 16px;font-weight:800;cursor:pointer}
+    .print-actions .edit-toggle{background:#2c2c2c;border-color:#2c2c2c}
+    .print-actions .close-print{background:#fff;color:#2c2c2c;border-color:#d8dde6}
+    .sheet{width:210mm;min-height:297mm;margin:0 auto 18px;background:#fff;padding:12mm 13mm;box-shadow:0 18px 60px rgba(15,23,42,.18);font-size:12px;line-height:1.4}
+    .head{display:grid;grid-template-columns:55% 45%;gap:10px;align-items:center;margin-bottom:12px}
+    .title-box{background:linear-gradient(135deg,#f7f2f5 0%,#efe6eb 100%);border:1px solid #e3d5dd;border-left:4px solid #c2185b;padding:10px 14px;border-radius:8px}
+    .title-box h1{margin:0;color:#1f1f1f;font-size:24px;line-height:1.05;letter-spacing:1px;text-transform:uppercase}
+    .title-box p{margin:4px 0 0;color:#7a6a72;font-size:10px}
+    .head-meta{text-align:right;color:#4a4a52;font-size:11px}
+    .head-meta strong{display:block;color:#c2185b}
+    .identity-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
+    .card{border:1px solid #ead7e0;border-radius:10px;padding:12px;background:#fffafb;min-height:95px}
+    .card.is-agency{background:#f7f7f9;border-color:#e4e4e8}
+    .label{display:block;margin-bottom:6px;color:#c2185b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    .name{font-size:14px;font-weight:800;margin-bottom:6px}
+    .row{margin:2px 0;color:#3a3a42}
+    .property-table{width:100%;border-collapse:collapse;border:1px solid #23232a;margin-bottom:12px}
+    .property-table th{width:30%;background:#2c2c2c;color:#fff;text-align:left;padding:9px;font-size:11px;text-transform:uppercase}
+    .property-table td{padding:9px;background:#fff}
+    .value-box{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+    .value-cell{border:1px solid #ead7e0;border-radius:10px;padding:12px;text-align:center;background:#fffafb}
+    .value-cell.is-main{background:linear-gradient(135deg,#fff0f6,#fde7f0);border-color:#f0c7d9}
+    .value-cell .label{justify-self:center}
+    .value-cell .amount{font-size:20px;font-weight:800;color:#c2185b}
+    .value-cell.is-range .amount{font-size:15px;color:#2c2c2c}
+    .notice{padding:12px;background:#fff6fa;border:1px solid #f0d4e2;border-left:4px solid #c2185b;border-radius:10px;margin-bottom:12px;text-align:justify}
+    .signature{margin-top:14px;padding:18px;border:2px solid #e7d2dc;border-radius:14px;text-align:center}
+    .signature-chip{display:inline-block;margin-bottom:8px;padding:6px 14px;border:1px solid #f0c7d9;border-radius:20px;background:#fff0f6;color:#c2185b;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+    .signature-area{height:90px;border:2px dashed #d8b8c6;border-radius:10px;margin:10px 20px;background:#fff}
+    .editable-field{display:inline;min-width:24px;border-radius:4px}
+    .property-table .editable-field{display:block;min-height:17px}
+    .value-cell .editable-field{display:block}
+    body.is-editing .editable-field{outline:1px dashed #c2185b;background:#fff5fa;padding:1px 3px}
+    body.is-editing .sheet{box-shadow:0 18px 60px rgba(194,24,91,.2)}
+    @page{size:A4;margin:10mm}
+    @media print{
+      html,body{background:#fff}
+      .print-actions{display:none}
+      .sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+      .editable-field{outline:0!important;background:transparent!important;padding:0!important}
+    }
+  </style>
+  <script>
+    function toggleEstimationDossierEdition() {
+      var editing = !document.body.classList.contains('is-editing');
+      document.body.classList.toggle('is-editing', editing);
+      document.querySelectorAll('[data-editable="true"]').forEach(function (node) {
+        node.setAttribute('contenteditable', editing ? 'true' : 'false');
+      });
+      var button = document.getElementById('estimation-dossier-edit-toggle');
+      if (button) button.textContent = editing ? 'Verrouiller edition' : 'Modifier avant impression';
+    }
+  </script>
+</head>
+<body>
+  <div class="print-actions">
+    <button id="estimation-dossier-edit-toggle" class="edit-toggle" type="button" onclick="toggleEstimationDossierEdition()">Modifier avant impression</button>
+    <button type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <button class="close-print" type="button" onclick="window.close()">Fermer</button>
+  </div>
+  <main class="sheet">
+    <section class="head">
+      <div class="title-box">
+        <h1>Avis de valeur</h1>
+        <p>Estimation indicative de la valeur venale d'un bien immobilier</p>
+      </div>
+      <div class="head-meta">
+        <strong>${escapeHtml(docNumber)}</strong>
+        <span>Etabli le ${escapeHtml(today)}</span>
+      </div>
+    </section>
+    <section class="identity-grid">
+      <div class="card">
+        <span class="label">Proprietaire</span>
+        <div class="name">${visitVoucherEditableHtml(ownerLabel)}</div>
+        <div class="row">${visitVoucherEditableHtml(ownerAddress, 'Adresse a completer')}</div>
+        <div class="row">Tel : ${visitVoucherEditableHtml(ownerPhone, 'a completer')}</div>
+        <div class="row">Email : ${visitVoucherEditableHtml(ownerEmail, 'a completer')}</div>
+      </div>
+      <div class="card is-agency">
+        <span class="label">Negociateur</span>
+        <div class="name">${escapeHtml(negotiatorName)}</div>
+        <div class="row">${escapeHtml(agencyName)}</div>
+      </div>
+    </section>
+    <table class="property-table">
+      <tbody>
+        <tr><th>Bien</th><td>${visitVoucherEditableHtml(propertyTitle)}</td></tr>
+        <tr><th>Type</th><td>${visitVoucherEditableHtml(safeText(item.type_bien), 'a completer')}</td></tr>
+        <tr><th>Localite</th><td>${visitVoucherEditableHtml(propertyLocalite, 'a completer')}</td></tr>
+        ${reference ? `<tr><th>Reference</th><td>${escapeHtml(reference)}</td></tr>` : ''}
+      </tbody>
+    </table>
+    <section class="value-box">
+      <div class="value-cell is-range"><span class="label">Fourchette basse</span><span class="amount">${visitVoucherEditableHtml(valeurBasse)}</span></div>
+      <div class="value-cell is-main"><span class="label">Valeur estimee</span><span class="amount">${visitVoucherEditableHtml(valeurEstimee)}</span></div>
+      <div class="value-cell is-range"><span class="label">Fourchette haute</span><span class="amount">${visitVoucherEditableHtml(valeurHaute)}</span></div>
+    </section>
+    <section class="notice">
+      <strong>Avis de valeur.</strong> Le present document constitue une estimation indicative de la valeur venale du bien, etablie a partir des elements communiques et de la connaissance du marche local. Il ne constitue ni une expertise au sens reglementaire, ni un engagement de prix de vente. ${visitVoucherEditableHtml('', 'Commentaire libre du negociateur a completer.')}
+    </section>
+    <section class="signature">
+      <span class="signature-chip">Cachet et signature du negociateur</span>
+      <div class="signature-area"></div>
+      <div class="row">${escapeHtml(agencyName)} - ${escapeHtml(negotiatorName)}</div>
+    </section>
+  </main>
+</body>
+</html>`
+}
+
+function openEstimationDossierPrint(item: Pick<MandatRecord, 'titre_bien' | 'ville' | 'code_postal' | 'type_bien' | 'prix' | 'numero_dossier' | 'numero_mandat' | 'mandants_texte' | 'commercial_nom' | 'agence_nom'>, owner: AppContact | null, targetWindow?: Window | null) {
+  const html = estimationDossierHtml(item, owner)
   if (writeVisitVoucherWindow(targetWindow, html)) return
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)
