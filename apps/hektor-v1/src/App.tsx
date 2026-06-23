@@ -14649,6 +14649,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   options={[
                     { value: activeArchiveFilterValue, label: 'Actifs' },
                     { value: archivedFilterValue, label: 'Archives' },
+                    { value: brouillonFilterValue, label: 'Brouillons' },
                   ]}
                 />
                 <FilterSelect
