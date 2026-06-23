@@ -436,6 +436,28 @@ def fetch_dirty_search_pairs(client: "SupabaseRestClient", contact_ids: list[str
     return pairs
 
 
+def fetch_dirty_contact_ids(client: "SupabaseRestClient", contact_ids: list[str] | None) -> set[str]:
+    """Contacts en cours d'édition app (table app_contact_pending) à NE PAS écraser au sync.
+
+    Miroir contact de fetch_dirty_search_pairs : tant qu'un contact est "dirty" (identité
+    éditée dans l'app, pas encore poussée vers Hektor), on conserve la valeur optimiste de
+    Supabase au lieu de la remplacer par l'ancienne version locale.
+    """
+    path = "app_contact_pending?select=hektor_contact_id"
+    if contact_ids:
+        encoded = ",".join(urllib.parse.quote(str(value), safe="") for value in contact_ids)
+        path += f"&hektor_contact_id=in.({encoded})"
+    try:
+        rows = client.request(method="GET", path=path) or []
+    except Exception:
+        return set()
+    return {
+        str(row.get("hektor_contact_id"))
+        for row in rows
+        if isinstance(row, dict) and row.get("hektor_contact_id") is not None
+    }
+
+
 def delete_searches_except_dirty(
     client: "SupabaseRestClient", contact_ids: list[str], dirty_pairs: set[tuple[str, int]]
 ) -> int:
@@ -563,6 +585,22 @@ def main() -> int:
                     for row in rows
                     if table != "app_contact_search_current"
                     or (str(row.get("hektor_contact_id")), int(row.get("search_index", -1))) not in dirty_search_pairs
+                ],
+            )
+            for table, rows in loaded
+        ]
+    # Idem pour les CONTACTS "dirty" (identité éditée dans l'app, en attente de push Hektor)
+    # -> on ne réécrase pas app_contact_current avec l'ancienne valeur. Voir app_contact_pending.
+    dirty_contact_ids = fetch_dirty_contact_ids(client, contact_ids)
+    if dirty_contact_ids:
+        loaded = [
+            (
+                table,
+                [
+                    row
+                    for row in rows
+                    if table != "app_contact_current"
+                    or str(row.get("hektor_contact_id")) not in dirty_contact_ids
                 ],
             )
             for table, rows in loaded
