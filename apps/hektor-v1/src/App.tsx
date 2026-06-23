@@ -23464,11 +23464,17 @@ function HektorContactIdentityForm(props: {
         }
       }
       const contactInput = buildInput()
-      const job = props.mode === 'update' && props.contact
-        ? await createUpdateHektorContactJob({ contactId: props.contact.hektor_contact_id, contact: contactInput, priority: 16 })
-        : await createHektorContactJob({ contact: contactInput, priority: 18 })
-      props.onJobCreated?.(job)
-      if (props.mode === 'create') props.onContactInputCreated?.(contactInput, job)
+      if (props.mode === 'update' && props.contact) {
+        // Édition optimiste (miroir Lot C / ContactEditModalV2) : écriture instantanée
+        // Supabase (app_contact_current) + push Hektor débouncé via app_contact_pending +
+        // garde-fou anti-écrasement, au lieu du job direct createUpdateHektorContactJob.
+        await editContactOptimistic({ contactId: props.contact.hektor_contact_id, contact: contactInput })
+        window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: props.contact.hektor_contact_id } }))
+      } else {
+        const job = await createHektorContactJob({ contact: contactInput, priority: 18 })
+        props.onJobCreated?.(job)
+        props.onContactInputCreated?.(contactInput, job)
+      }
       if (props.mode === 'create') {
         setCivility('')
         setLastName('')
