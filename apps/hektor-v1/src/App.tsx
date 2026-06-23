@@ -71,6 +71,7 @@ import {
   createUploadHektorPhotoJob,
   createHektorContactJob,
   createUpdateHektorContactJob,
+  editContactOptimistic,
   createDeleteHektorContactJob,
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
@@ -9013,6 +9014,17 @@ export default function App() {
     }
     window.addEventListener('hektor:annonce-updated', onAnnonceUpdated)
     return () => window.removeEventListener('hektor:annonce-updated', onAnnonceUpdated)
+  }, [])
+
+  // Contact optimiste : édition optimiste d'un contact (ContactEditModalV2) -> recharge la
+  // fiche contact ET le rapprochement, où qu'on soit.
+  useEffect(() => {
+    const onContactUpdated = () => {
+      setDataReloadKey((value) => value + 1)
+      setVisitRefreshKey((value) => value + 1)
+    }
+    window.addEventListener('hektor:contact-updated', onContactUpdated)
+    return () => window.removeEventListener('hektor:contact-updated', onContactUpdated)
   }, [])
 
   useEffect(() => {
@@ -26157,10 +26169,11 @@ function ContactEditModalV2(props: {
         hektorAgencyLabel: selectedHektorUser?.agenceNom ?? null,
         contactNextStep: null,
       }
-      const job = await createUpdateHektorContactJob({ contactId: props.contact.hektor_contact_id, contact: input, priority: 16 })
-      props.onJobCreated?.(job)
-      // Les champs override sont ecrits par le worker APRES confirmation Hektor (comme les champs normaux),
-      // pour garder la fiche coherente et ne persister que ce que Hektor a reellement accepte.
+      // Édition optimiste (miroir annonce/recherche) : écriture instantanée dans Supabase
+      // (app_contact_current) + push Hektor débouncé via app_contact_pending. On notifie la
+      // fiche pour recharger l'affichage immédiat. Le worker écrit ensuite dans Hektor.
+      await editContactOptimistic({ contactId: props.contact.hektor_contact_id, contact: input })
+      window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: props.contact.hektor_contact_id } }))
       props.onClose()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Modification du contact impossible.')

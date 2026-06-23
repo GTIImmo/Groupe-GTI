@@ -6023,6 +6023,34 @@ export async function createUpdateHektorContactJob(input: {
   return data as ConsoleJob
 }
 
+// Édition CONTACT optimiste (miroir editAnnonceOptimistic / editSearchOptimistic) :
+// écriture instantanée dans Supabase (app_contact_current) + push Hektor débouncé via
+// app_contact_pending. Mêmes champs que le job direct, le sweep résout le négo.
+export async function editContactOptimistic(input: {
+  contactId: string
+  contact: HektorContactIdentityInput
+  debounceSeconds?: number
+}): Promise<{ ok: boolean }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const payload = hContactPayload(input.contact)
+  if (!payload.last_name) throw new Error('Nom contact requis')
+  const editFields: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === null || value === undefined) continue
+    editFields[key] = value
+  }
+  const { data, error } = await supabase.rpc('app_edit_contact_optimistic', {
+    target_contact_id: cleanContactId,
+    edit_fields: editFields,
+    debounce_seconds: input.debounceSeconds ?? 600,
+  })
+  if (error) throw new Error(error.message)
+  return (data as { ok: boolean }) ?? { ok: true }
+}
+
 export async function createDeleteHektorContactJob(input: {
   contactId: string
   reason?: string
