@@ -15922,6 +15922,37 @@ function StockScreen(props: {
   )
 }
 
+// Picto designé pour l'action des lignes d'index léger (listing annonces).
+// Bouton « icône seule + tooltip » : même famille graphique que l'icône
+// rapprochement (.av-acq-ico). Stroke 24x24 / 1.9 round. Logique INCHANGÉE :
+// 'import' = Charger (Vendu/Clos non chargé), 'ready' = Ouvrir (déjà exporté),
+// 'archived' = Désarchiver, 'brouillon' = Reprendre.
+function LightweightActionGlyph({ kind }: { kind: 'import' | 'ready' | 'archived' | 'brouillon' }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+  if (kind === 'ready') {
+    // fiche prête / déjà exportée -> ouvrir (lien externe)
+    return (<svg {...common}><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>)
+  }
+  if (kind === 'archived') {
+    // annonce archivée -> désarchiver (carton d'archive + flèche)
+    return (<svg {...common}><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M12 17v-5" /><path d="m9.5 14 2.5-2.5 2.5 2.5" /></svg>)
+  }
+  if (kind === 'brouillon') {
+    // brouillon -> reprendre la saisie (crayon)
+    return (<svg {...common}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>)
+  }
+  // import par défaut -> charger le détail complet (téléchargement)
+  return (<svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" /></svg>)
+}
+
 function MandatsScreen(props: {
   mandats: MandatRecord[]
   mandatsTotal: number
@@ -16059,29 +16090,31 @@ function MandatsScreen(props: {
                 const project = projectIdentityLines(item)
                 const isLightweight = !isEstimationMode && isLightweightAnnonceRecord(item)
                 const isArchivedLightweight = !isEstimationMode && isArchivedAnnonceRecord(item)
-                const isHistoricalLightweight = !isEstimationMode && isHistoricalLightweightRecord(item)
                 const hasExportedDetail = isLightweight && hasDetailCacheAvailable(item)
+                // Index archivé : même traitement que Vendu/Clos non chargé
+                // (picto download + libellé « Charger »). Le clic ouvre la même
+                // fenêtre « charger le détail » qu'avant — comportement inchangé.
                 const rowActionTitle = item.is_brouillon
                   ? 'Reprendre la saisie de ce brouillon dans Hektor'
                   : isArchivedLightweight
-                  ? 'Gerer le detail ou le desarchivage'
+                  ? 'Charger temporairement le detail complet'
                   : hasExportedDetail
                     ? 'Ouvrir la fiche complete'
                     : 'Charger temporairement le detail complet'
                 const rowActionStrong = item.is_brouillon
                   ? 'Reprendre'
                   : isArchivedLightweight
-                  ? 'Desarchiver'
+                  ? 'Charger'
                   : hasExportedDetail
                     ? 'Ouvrir'
                     : 'Charger'
-                const rowActionSmall = item.is_brouillon
-                  ? 'Brouillon'
+                const rowActionKind: 'import' | 'ready' | 'archived' | 'brouillon' = item.is_brouillon
+                  ? 'brouillon'
                   : isArchivedLightweight
-                  ? 'Archive'
-                  : hasExportedDetail
-                    ? 'Fiche prete'
-                    : 'Detail'
+                    ? 'import'
+                    : hasExportedDetail
+                      ? 'ready'
+                      : 'import'
                 // ── valeurs dérivées pour le rendu « liste premium » (mode actif) ──
                 const avStatut = item.vente_id
                   ? { c: 'vendu', l: 'Vendu' }
@@ -16186,16 +16219,14 @@ function MandatsScreen(props: {
                             <div className="row-actions">
                               {isLightweight ? (
                                 <button
-                                  className={`lightweight-row-action ${hasExportedDetail ? 'is-ready' : 'is-import'}`}
+                                  className="lightweight-row-action"
+                                  data-kind={rowActionKind}
                                   type="button"
                                   onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }}
                                   title={rowActionTitle}
+                                  aria-label={rowActionStrong}
                                 >
-                                  <span className="lightweight-row-action-icon" aria-hidden="true">{hasExportedDetail && isHistoricalLightweight ? 'O' : isArchivedLightweight ? 'D' : 'C'}</span>
-                                  <span className="lightweight-row-action-label">
-                                    <strong>{rowActionStrong}</strong>
-                                    <small>{rowActionSmall}</small>
-                                  </span>
+                                  <LightweightActionGlyph kind={rowActionKind} />
                                 </button>
                               ) : (
                                 <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />

@@ -6473,34 +6473,79 @@
   animation: none !important;
 }
 
+/* Bouton d'action des lignes d'index léger : ICÔNE SEULE + tooltip.
+   Même gabarit que l'icône rapprochement « .av-acq-ico » qui vit déjà dans cette
+   cellule (tuile 34px arrondie, SVG ~16px) et même hauteur que le bouton ACTION
+   -> colonne « Actions » homogène. Plus de libellé 2 lignes, donc plus de
+   troncature. La logique d'affichage (4 états) reste inchangée. */
 .app-shell-modern table td > .row-actions .lightweight-row-action {
-  width: 112px !important;
-  min-width: 112px !important;
-  max-width: 112px !important;
-  min-height: 38px !important;
-  padding: 5px 8px !important;
-  border-radius: 8px !important;
-  gap: 7px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #cfd3d4 !important;
+  background: #f1f2f3 !important;
+  color: #5c6163 !important;
   box-shadow: none !important;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease !important;
+}
+.app-shell-modern table td > .row-actions .lightweight-row-action svg {
+  width: 19px !important;
+  height: 19px !important;
+  display: block;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+.app-shell-modern table td > .row-actions .lightweight-row-action:hover {
+  transform: translateY(-1px) !important;
+}
+.app-shell-modern table td > .row-actions .lightweight-row-action:focus-visible {
+  outline: 3px solid rgba(15, 76, 92, 0.16) !important;
+  outline-offset: 2px !important;
 }
 
-.app-shell-modern table td > .row-actions .lightweight-row-action-icon {
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  border-radius: 7px !important;
-  font-size: 11px !important;
+/* Teintes par état — alignées sur les pastilles .av-pill de la même liste. */
+/* Charger (Vendu/Clos non chargé) -> ambre, comme la pastille "Vendu". */
+.app-shell-modern table td > .row-actions .lightweight-row-action[data-kind="import"] {
+  border-color: rgba(182, 106, 22, 0.34) !important;
+  background: #fdf3e7 !important;
+  color: #b6680a !important;
 }
-
-.app-shell-modern table td > .row-actions .lightweight-row-action-label {
-  min-width: 0 !important;
+.app-shell-modern table td > .row-actions .lightweight-row-action[data-kind="import"]:hover {
+  border-color: #b6680a !important;
+  background: #fbe9d2 !important;
+  box-shadow: 0 6px 14px -8px rgba(182, 106, 22, 0.6) !important;
 }
-
-.app-shell-modern table td > .row-actions .lightweight-row-action-label strong,
-.app-shell-modern table td > .row-actions .lightweight-row-action-label small {
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+/* Ouvrir (déjà exporté, prêt) -> vert, comme la pastille "Actif". */
+.app-shell-modern table td > .row-actions .lightweight-row-action[data-kind="ready"] {
+  border-color: rgba(31, 138, 91, 0.34) !important;
+  background: #ecf7f1 !important;
+  color: #1f8a5b !important;
+}
+.app-shell-modern table td > .row-actions .lightweight-row-action[data-kind="ready"]:hover {
+  border-color: #1f8a5b !important;
+  background: #ddf0e6 !important;
+  box-shadow: 0 6px 14px -8px rgba(31, 138, 91, 0.6) !important;
+}
+/* (Index archivé : même traitement que "Charger" / data-kind="import" ci-dessus.) */
+/* Reprendre (brouillon) -> info, comme le badge "En création". */
+.app-shell-modern table td > .row-actions .lightweight-row-action[data-kind="brouillon"] {
+  border-color: rgba(47, 111, 138, 0.34) !important;
+  background: #e6eff3 !important;
+  color: #2f6f8a !important;
+}
+.app-shell-modern table td > .row-actions .lightweight-row-action[data-kind="brouillon"]:hover {
+  border-color: #2f6f8a !important;
+  background: #d6e7ee !important;
+  box-shadow: 0 6px 14px -8px rgba(47, 111, 138, 0.6) !important;
 }
 
 @media (max-width: 980px) {
@@ -6514,11 +6559,16 @@
   }
 
   .app-shell-modern table td > .row-actions .action-menu-trigger,
-  .app-shell-modern table td > .row-actions .estimation-action-button,
-  .app-shell-modern table td > .row-actions .lightweight-row-action {
+  .app-shell-modern table td > .row-actions .estimation-action-button {
     width: 104px !important;
     min-width: 104px !important;
     max-width: 104px !important;
+  }
+  /* L'icône seule garde son gabarit carré 34px même en colonne resserrée. */
+  .app-shell-modern table td > .row-actions .lightweight-row-action {
+    width: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
   }
 }
 
