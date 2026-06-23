@@ -2156,6 +2156,29 @@ async function fetchContactDateMajFromApi(job, contactId, step) {
   }
 }
 
+// date_maj FRAÎCHE d'une annonce via le Python (porte 2 / AnnonceById, qui a le JWT OAuth),
+// comme le run quotidien. Le worker n'a PAS de JWT -> son appel Node direct
+// (fetchHektorAnnonceDetailKeyDataBestEffort) faisait 403 et le garde-fou ne bloquait jamais.
+// Léger : juste l'appel API, AUCUN re-sync. Best-effort (null sur erreur -> on laisse écrire).
+async function fetchAnnonceDateMajFromApi(job, annonceId, step) {
+  const id = String(annonceId || "").trim();
+  if (!id) return null;
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/annonce_datemaj_from_api.py", "--annonce-id", id],
+      { timeoutMs: 30000, previewSize: 1000 });
+    const last = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const parsed = safeJsonParse(last);
+    return parsed && typeof parsed === "object" && parsed.datemaj ? String(parsed.datemaj) : null;
+  } catch (error) {
+    await logJob(job.id, step, "error", "Lecture date_maj annonce (API) ignoree apres erreur", {
+      hektor_annonce_id: id,
+      error: error && error.message ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 async function ensureAdminHektorSession(job, reason, options = {}) {
   const requireRootAdmin = options.requireRootAdmin !== false;
   const isExpectedAdmin = (identity) => requireRootAdmin
@@ -5450,8 +5473,9 @@ async function handleUpdateHektorAnnonceFields(job) {
     const base = (payload.base_snapshot && typeof payload.base_snapshot === "object") ? payload.base_snapshot : {};
     const baseDateMaj = base._date_maj ? String(base._date_maj) : null;
     if (baseDateMaj) {
-      const keyData = await fetchHektorAnnonceDetailKeyDataBestEffort(job, annonceId, "annonce_overwrite_guard");
-      const freshDateMaj = keyData && keyData.datemaj ? String(keyData.datemaj) : null;
+      // Porte 2 / AnnonceById via Python (le worker n'a pas de JWT -> l'appel Node direct
+      // faisait 403 et ne bloquait jamais). Miroir du garde-fou contact (Lot B).
+      const freshDateMaj = await fetchAnnonceDateMajFromApi(job, annonceId, "annonce_overwrite_guard");
       if (freshDateMaj && freshDateMaj > baseDateMaj) {
         const conflictDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
         await markAnnoncePendingConflict(conflictDossierId);
