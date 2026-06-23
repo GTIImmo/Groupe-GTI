@@ -5395,6 +5395,28 @@ function projectIdentityLines(item: Pick<MandatRecord, 'numero_dossier' | 'numer
   }
 }
 
+// ── Présentation listing estimation v2 (maquette GTI · Estimations) ──
+// Helpers purs : dérivent l'affichage de données déjà chargées (mandants_texte,
+// statut, mandat). Aucune logique métier ni appel réseau.
+function estimationOwnerIdentity(mandantsTexte?: string | null): { name: string | null; initials: string } {
+  const raw = (mandantsTexte ?? '').trim()
+  if (!raw) return { name: null, initials: '?' }
+  // Premier mandant si plusieurs (séparateurs courants : | ; / , et « et »).
+  const first = raw.split(/\s*(?:\||;|\/|,| et )\s*/i).map((s) => s.trim()).filter(Boolean)[0] ?? ''
+  const cleaned = first.replace(/^(m\.|mme|mr|mlle|m|monsieur|madame)\s+/i, '').trim()
+  const words = cleaned.split(/\s+/).filter(Boolean)
+  const initials = words.length
+    ? words.slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
+    : '?'
+  return { name: first || null, initials: initials || '?' }
+}
+
+function estimationStade(item: Pick<MandatRecord, 'numero_mandat' | 'offre_id' | 'compromis_id' | 'vente_id'>): { cls: string; label: string; next: string } {
+  if (item.vente_id || item.numero_mandat) return { cls: 's4', label: 'Mandat signé', next: "Créer l'annonce" }
+  if (item.compromis_id || item.offre_id) return { cls: 's3', label: 'Avant-mandat', next: 'Finaliser la signature' }
+  return { cls: 's1', label: 'Estimation remise', next: 'Relancer le propriétaire' }
+}
+
 function listingProgressLabel(item: Pick<MandatRecord, 'statut_annonce' | 'numero_mandat' | 'validation_diffusion_state' | 'diffusable' | 'nb_portails_actifs' | 'offre_id' | 'compromis_id' | 'vente_id'>) {
   if ((item.statut_annonce ?? '').trim() === 'Estimation') return 'Estimation en cours'
   if (item.vente_id) return 'Vendu'
@@ -14274,7 +14296,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       <div className="workspace-shell">
         <main className="content">
         {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' ? (
-        <section className="hero">
+        <section className={`hero ${screen === 'estimations' ? 'estim-toolbar' : ''}`.trim()}>
           <div className="hero-stack">
               <div className="hero-top-row">
                 <label className="search-box">
@@ -14284,7 +14306,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <div className="hero-actions">
                   {screen === 'contacts'
                     ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
-                    : canCreateHektorDraftAnnonce ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={openDraftAnnonceModal}>Nouvelle annonce</button> : null}
+                    : canCreateHektorDraftAnnonce ? <button className={`ghost-button button-primary draft-annonce-open-button ${screen === 'estimations' ? 'estim-new-btn' : ''}`.trim()} type="button" onClick={openDraftAnnonceModal}>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Reinitialiser</button>
                 </div>
@@ -16014,14 +16036,14 @@ function MandatsScreen(props: {
     return () => { cancelled = true }
   }, [isEstimationMode, eligibleIdsKey])
   return (
-    <section className={`panel-grid ${isEstimationMode ? 'panel-grid-estimation' : 'panel-grid-active-listing annonces-v2'}`}>
+    <section className={`panel-grid ${isEstimationMode ? 'estim-v2' : 'panel-grid-active-listing annonces-v2'}`}>
       {rapproNotice ? (
         <div className="av-notice" role="status" onClick={() => setRapproNotice(null)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
           <span>{rapproNotice}</span>
         </div>
       ) : null}
-      <section className={`panel panel-wide ${isEstimationMode ? 'panel-estimation-listing' : 'panel-active-listing'}`}>
+      <section className={`panel panel-wide ${isEstimationMode ? 'estim-v2-card' : 'panel-active-listing'}`}>
         <div className="panel-head">
           <div className="listing-title-stack">
             <h3>{props.title ?? 'Liste des annonces'}</h3>
@@ -16059,7 +16081,7 @@ function MandatsScreen(props: {
             ) : null}
           </div>
         ) : null}
-        <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'listing-table-estimation' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
+        <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'estim-v2-tablewrap' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
           <table>
             {!isEstimationMode ? (
@@ -16072,10 +16094,18 @@ function MandatsScreen(props: {
                 <col style={{ width: '78px' }} />{/* vues */}
                 <col style={{ width: '120px' }} />{/* actions */}
               </colgroup>
-            ) : null}
+            ) : (
+              <colgroup>
+                <col style={{ width: '132px' }} />{/* photo (vignette 100px) */}
+                <col />{/* bien & propriétaire — flexible */}
+                <col style={{ width: '150px' }} />{/* valeur estimée */}
+                <col style={{ width: '190px' }} />{/* stade + prochaine action */}
+                <col style={{ width: '100px' }} />{/* actions */}
+              </colgroup>
+            )}
             <thead>
               {isEstimationMode ? (
-                <tr><th>Projet</th><th>Bien</th><th>Negociateur</th><th>Avancement</th><th>Photo</th><th>Actions</th></tr>
+                <tr><th>Photo</th><th>Bien &amp; propriétaire <span className="si">↕</span></th><th>Valeur estimée <span className="si">↕</span></th><th>Stade <span className="si">↕</span></th><th>Actions</th></tr>
               ) : (
                 <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-right">Vues 30 j</th><th className="av-pad-r av-right">Actions</th></tr>
               )}
@@ -16161,14 +16191,49 @@ function MandatsScreen(props: {
                     >
                       {isEstimationMode ? (
                         <>
-                          <td className="estimation-project-cell"><strong>{project.title}</strong><span>{project.mandate}</span><span>{project.context}</span></td>
-                          <td className="estimation-property-cell"><strong>{item.titre_bien}</strong><span>{propertyTypeLabel(item.type_bien)}</span><span>{item.numero_dossier ?? '-'}</span></td>
-                          <td className="estimation-negotiator-cell"><strong>{commercialDisplay(item)}</strong><span>{item.agence_nom ?? '-'}</span></td>
-                          <td className="estimation-progress-cell"><StatusPill value={listingProgressLabel(item)} /><small>{item.statut_annonce ?? '-'}</small></td>
-                          <td className="estimation-photo-cell"><ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} /></td>
                           <td>
-                            <div className="row-actions">
-                              <button className="ghost-button estimation-action-button" type="button" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>Voir le projet</button>
+                            <div className="ev2-thumb">
+                              <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
+                            </div>
+                          </td>
+                          <td>
+                            <div className="ev2-ref">{item.numero_dossier ?? '—'}{item.numero_mandat ? <> · <span className="ev2-mandat">Mandat {item.numero_mandat}</span></> : null}</div>
+                            <div className="ev2-titre">{project.context !== '-' ? project.context : item.titre_bien}</div>
+                            {(() => {
+                              const owner = estimationOwnerIdentity(item.mandants_texte)
+                              return (
+                                <div className={`ev2-prop ${owner.name ? '' : 'is-none'}`}>
+                                  <div className="ev2-prop-av">{owner.initials}</div>
+                                  <div className="ev2-prop-name">{owner.name ?? 'Propriétaire non renseigné'}</div>
+                                </div>
+                              )
+                            })()}
+                            {(() => {
+                              const nego = commercialDisplay(item)
+                              return nego && nego !== '-' ? <div className="ev2-nego"><span className="ev2-nego-k">Négo</span>{nego}</div> : null
+                            })()}
+                          </td>
+                          <td>
+                            {item.prix != null
+                              ? <div className="ev2-estim-val">{new Intl.NumberFormat('fr-FR').format(Number(item.prix))} €</div>
+                              : <div className="ev2-estim-val none">Non estimé</div>}
+                          </td>
+                          <td>
+                            {(() => {
+                              const st = estimationStade(item)
+                              return (
+                                <>
+                                  <span className={`ev2-stade ${st.cls}`}><span className="dot" />{st.label}</span>
+                                  <div className="ev2-stade-next"><svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></svg>{st.next}</div>
+                                </>
+                              )
+                            })()}
+                          </td>
+                          <td>
+                            <div className="ev2-actions" onClick={(event) => event.stopPropagation()}>
+                              <button className="ev2-ia cta" type="button" title="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); props.onOpenDetailPage(item.app_dossier_id) }}>
+                                <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                              </button>
                             </div>
                           </td>
                         </>

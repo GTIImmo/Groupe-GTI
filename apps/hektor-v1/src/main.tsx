@@ -9,6 +9,7 @@ import '@fontsource/hanken-grotesk/700.css'
 import '@fontsource/hanken-grotesk/800.css'
 import '@fontsource/spectral/500.css'
 import '@fontsource/spectral/600.css'
+import '@fontsource/spectral/700.css'
 import './design-system.css'
 import './styles.css'
 import './layout-overrides.css'
@@ -25,6 +26,7 @@ import './registre-v2.css'
 import './notifications-bell.css'
 import './rapprochement-stats.css'
 import './nav-icons-v2.css'
+import './estimation-listing-v2.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

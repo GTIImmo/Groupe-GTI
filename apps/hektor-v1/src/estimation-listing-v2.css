@@ -1,0 +1,469 @@
+/* =========================================================================
+   Listing ESTIMATIONS — refonte graphique v2
+   Porté fidèlement depuis la maquette Claude Design « GTI · Estimations »
+   (ui_kits/console/estimations-listing.html).
+
+   Règles :
+   - 100 % additif. Aucune réécriture de styles.css.
+   - Tout est scopé sous .estim-v2 → aucune collision possible avec les
+     31k lignes de styles.css ni avec annonces-v2 / registre-v2.
+   - Les tokens --gti-* de la maquette sont redéfinis LOCALEMENT (scopés)
+     et mappés sur la charte Pantone GTI déjà en place (#c5005f, #222323…).
+   - Police : on hérite de --ds-font-sans (Inter) déjà chargée par l'app.
+   ========================================================================= */
+
+.estim-v2 {
+  /* Marque */
+  --gti-brand: #c5005f;
+  --gti-brand-700: #a8004f;
+  --gti-brand-100: #f3cfe0;
+  --gti-brand-50: #fdeef5;
+  /* Encres / textes */
+  --gti-ink: #222323;
+  --gti-ink-soft: #343838;
+  --gti-text: #2b2d2d;
+  --gti-text-muted: #5f6666;
+  --gti-text-subtle: #8b9090;
+  /* Surfaces / bordures */
+  --gti-surface: #ffffff;
+  --gti-surface-2: #f6f7f7;
+  --gti-border: rgba(34, 35, 35, 0.12);
+  --gti-border-soft: rgba(34, 35, 35, 0.08);
+  --gti-border-strong: rgba(34, 35, 35, 0.16);
+  /* Rayons / ombres */
+  --gti-radius-md: 9px;
+  --gti-radius-lg: 11px;
+  --gti-radius-xl: 16px;
+  --gti-shadow-sm: 0 1px 2px rgba(34, 35, 35, 0.06), 0 8px 24px rgba(34, 35, 35, 0.05);
+  --gti-focus-ring: 0 0 0 3px rgba(197, 0, 95, 0.16);
+  --gti-font-mono: 'JetBrains Mono', 'SFMono-Regular', monospace;
+}
+
+/* La grille listing : on neutralise l'éventuelle grille héritée pour rester
+   en pleine largeur comme la maquette. */
+.estim-v2.panel-grid { display: block; }
+
+/* ---- Carte liste (listcard) -------------------------------------------- */
+.estim-v2 .estim-v2-card {
+  background: var(--gti-surface);
+  border: 1px solid var(--gti-border);
+  border-radius: var(--gti-radius-xl);
+  box-shadow: var(--gti-shadow-sm);
+  overflow: hidden;
+  padding: 0;
+}
+
+/* En-tête de la carte (titre + comptage + pager) */
+.estim-v2 .estim-v2-card .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px 14px;
+  border: 0;
+  background: transparent;
+}
+.estim-v2 .listing-title-stack { display: flex; flex-direction: column; gap: 8px; }
+.estim-v2 .listing-title-stack h3 {
+  margin: 0;
+  font-family: 'Spectral', Georgia, serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: var(--gti-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.estim-v2 .listing-total-label {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gti-brand-700);
+  background: var(--gti-brand-50);
+  border: 1px solid var(--gti-brand-100);
+  padding: 4px 11px;
+  border-radius: 99px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.estim-v2 .page-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gti-ink-soft);
+}
+.estim-v2 .page-controls .ghost-button {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--gti-radius-md);
+  border: 1px solid var(--gti-border-strong);
+  background: #fff;
+  color: var(--gti-ink-soft);
+  transition: 0.13s;
+}
+.estim-v2 .page-controls .ghost-button:not(:disabled):hover {
+  border-color: var(--gti-brand);
+  color: var(--gti-brand-700);
+}
+
+/* ---- Table -------------------------------------------------------------- */
+.estim-v2 .estim-v2-tablewrap { overflow: visible; padding: 0; }
+.estim-v2 .estim-v2-tablewrap table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 0;
+}
+.estim-v2 .estim-v2-tablewrap .ev2-titre,
+.estim-v2 .estim-v2-tablewrap .ev2-prop-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.estim-v2 .estim-v2-tablewrap thead th {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gti-text-subtle);
+  padding: 10px 14px;
+  background: var(--gti-surface-2);
+  border-top: 1px solid var(--gti-border);
+  border-bottom: 1px solid var(--gti-border);
+  text-align: left;
+  white-space: nowrap;
+}
+.estim-v2 .estim-v2-tablewrap thead th:first-child { padding-left: 22px; width: 124px; }
+.estim-v2 .estim-v2-tablewrap thead th:nth-child(3) { width: 150px; }   /* Valeur estimée */
+.estim-v2 .estim-v2-tablewrap thead th:nth-child(4) { width: 186px; }   /* Stade (badge + prochaine action) */
+.estim-v2 .estim-v2-tablewrap thead th:last-child { padding-right: 22px; text-align: right; width: 92px; }
+.estim-v2 .estim-v2-tablewrap thead th .si { opacity: 0.3; font-size: 9px; margin-left: 3px; }
+
+.estim-v2 .estim-v2-tablewrap tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.estim-v2 .estim-v2-tablewrap tbody tr:hover { background: rgba(197, 0, 95, 0.025); }
+.estim-v2 .estim-v2-tablewrap tbody tr.is-selected { background: rgba(197, 0, 95, 0.045); }
+.estim-v2 .estim-v2-tablewrap tbody td {
+  padding: 14px;
+  border-bottom: 1px solid var(--gti-border-soft);
+  vertical-align: middle;
+  background: transparent;
+}
+.estim-v2 .estim-v2-tablewrap tbody td:first-child { padding-left: 20px; }
+.estim-v2 .estim-v2-tablewrap tbody td:last-child { padding-right: 20px; }
+.estim-v2 .estim-v2-tablewrap tbody tr:last-child td { border-bottom: none; }
+
+/* Photo */
+.estim-v2 .ev2-thumb {
+  width: 100px;
+  height: 78px;
+  border-radius: 10px;
+  background: linear-gradient(150deg, #efe7df, #e2d4c4);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gti-border);
+  overflow: hidden;
+  flex: none;
+}
+.estim-v2 .ev2-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.estim-v2 .ev2-thumb .listing-thumb,
+.estim-v2 .ev2-thumb .listing-thumb-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+.estim-v2 .ev2-thumb.noimg {
+  background: repeating-linear-gradient(135deg, #f5f3f1, #f5f3f1 5px, #eae7e4 5px, #eae7e4 10px);
+}
+.estim-v2 .ev2-thumb .ev2-house svg { width: 24px; height: 24px; color: rgba(120, 90, 60, 0.34); }
+
+/* Bien + propriétaire */
+.estim-v2 .ev2-ref {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gti-text-subtle);
+  font-family: var(--gti-font-mono);
+  margin-bottom: 4px;
+}
+.estim-v2 .ev2-ref .ev2-mandat { color: var(--gti-brand-700); }
+.estim-v2 .ev2-titre {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--gti-ink);
+  line-height: 1.3;
+}
+.estim-v2 .ev2-prop {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+}
+.estim-v2 .ev2-prop-av {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--gti-brand), #a8004f);
+  display: grid;
+  place-items: center;
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #fff;
+  flex: none;
+  letter-spacing: 0.02em;
+}
+.estim-v2 .ev2-prop-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gti-text-muted);
+}
+.estim-v2 .ev2-prop.is-none .ev2-prop-av {
+  background: repeating-linear-gradient(45deg, #efe7dd, #efe7dd 3px, #e7ddd0 3px, #e7ddd0 6px);
+  color: var(--gti-text-subtle);
+}
+.estim-v2 .ev2-prop.is-none .ev2-prop-name { font-style: italic; color: var(--gti-text-subtle); }
+/* Négociateur — sous-ligne discrète (préservation fonctionnelle vs ancienne vue) */
+.estim-v2 .ev2-nego {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gti-text-subtle);
+}
+.estim-v2 .ev2-nego-k {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gti-text-subtle);
+  background: var(--gti-surface-2);
+  border: 1px solid var(--gti-border);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Valeur estimée */
+.estim-v2 .ev2-estim-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gti-ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.estim-v2 .ev2-estim-val.none {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gti-text-subtle);
+  font-style: italic;
+}
+
+/* Stade */
+.estim-v2 .ev2-stade {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 99px;
+  border: 1px solid;
+  white-space: nowrap;
+  overflow: visible;
+  max-width: none;
+}
+.estim-v2 .ev2-stade .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.estim-v2 .ev2-stade.s1 { background: #eef3f8; border-color: #d4e0ec; color: #3a5a80; }
+.estim-v2 .ev2-stade.s1 .dot { background: #5a82b0; }
+.estim-v2 .ev2-stade.s2 { background: #fff3df; border-color: #f3dcb0; color: #9a6516; }
+.estim-v2 .ev2-stade.s2 .dot { background: #c8951f; }
+.estim-v2 .ev2-stade.s3 { background: #f3eeff; border-color: #d9c8f5; color: #6b3ec2; }
+.estim-v2 .ev2-stade.s3 .dot { background: #8c5de0; }
+.estim-v2 .ev2-stade.s4 { background: #ecf7f1; border-color: #bfe4d2; color: #1f7a52; }
+.estim-v2 .ev2-stade.s4 .dot { background: #1f8a5b; }
+.estim-v2 .ev2-stade-next {
+  font-size: 11.5px;
+  color: var(--gti-text-muted);
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.estim-v2 .ev2-stade-next svg { width: 11px; height: 11px; color: var(--gti-text-subtle); flex: none; }
+
+/* Actions */
+.estim-v2 .ev2-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+.estim-v2 .ev2-ia {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--gti-border-strong);
+  background: #fff;
+  color: var(--gti-text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: 0.13s;
+  flex: none;
+}
+.estim-v2 .ev2-ia svg { width: 14px; height: 14px; }
+.estim-v2 .ev2-ia:hover {
+  border-color: var(--gti-brand);
+  color: var(--gti-brand-700);
+  background: var(--gti-brand-50);
+}
+.estim-v2 .ev2-ia.cta {
+  background: linear-gradient(135deg, var(--gti-brand), #a8004f);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(197, 0, 95, 0.3);
+}
+.estim-v2 .ev2-ia.cta:hover {
+  box-shadow: 0 4px 14px rgba(197, 0, 95, 0.45);
+  transform: translateY(-1px);
+}
+
+/* =========================================================================
+   Toolbar estimations (chrome partagé .hero, scopé .estim-toolbar)
+   Reproduit la barre de la maquette : recherche à icône + boutons pilule +
+   « Nouvelle estimation » en bouton marque. Les éléments non câblés de la
+   maquette (« À relancer », funnel) ne sont pas ajoutés.
+   ========================================================================= */
+.hero.estim-toolbar {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.hero.estim-toolbar .hero-stack { gap: 10px; padding: 0; }
+
+/* La barre principale */
+.hero.estim-toolbar .hero-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(34, 35, 35, 0.06), 0 8px 24px rgba(34, 35, 35, 0.05);
+  padding: 10px 12px;
+}
+
+/* Recherche : icône loupe + champ épuré, label masqué visuellement */
+.hero.estim-toolbar .search-box {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f6f7f7;
+  border: 1px solid rgba(34, 35, 35, 0.12);
+  border-radius: 11px;
+  padding: 0 14px 0 38px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.hero.estim-toolbar .search-box > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.hero.estim-toolbar .search-box::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  opacity: 0.5;
+  background: no-repeat center / contain
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><circle cx='11' cy='11' r='7' stroke='%23222' stroke-width='2'/><path d='m20 20-3.2-3.2' stroke='%23222' stroke-width='2' stroke-linecap='round'/></svg>");
+}
+.hero.estim-toolbar .search-box input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: #222323;
+  padding: 11px 0;
+  outline: none;
+}
+.hero.estim-toolbar .search-box:focus-within {
+  border-color: #c5005f;
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.16);
+}
+
+/* Boutons de la barre — préfixe haute spécificité pour battre les règles
+   de base `.app-shell-modern .content > .hero …` (spécificité 50, !important). */
+.hero.estim-toolbar .hero-actions { display: flex; align-items: center; gap: 8px; }
+.app-shell-modern .content > .hero.estim-toolbar .hero-actions .ghost-button {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px !important;
+  border-radius: 11px !important;
+  border: 1px solid rgba(34, 35, 35, 0.16) !important;
+  background: #fff !important;
+  color: #343838 !important;
+  transition: 0.15s;
+}
+.app-shell-modern .content > .hero.estim-toolbar .hero-actions .ghost-button:hover {
+  border-color: #c5005f !important;
+  color: #a8004f !important;
+}
+.app-shell-modern .content > .hero.estim-toolbar .hero-actions .estim-new-btn {
+  background: linear-gradient(135deg, #c5005f, #a8004f) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(197, 0, 95, 0.3);
+}
+.app-shell-modern .content > .hero.estim-toolbar .hero-actions .estim-new-btn:hover {
+  background: linear-gradient(135deg, #a8004f, #8c0044) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+/* Ligne de contrôle (Stats / Priorités) — pilules assorties, sous la barre */
+.hero.estim-toolbar .header-control-row { gap: 8px; }
+.hero.estim-toolbar .header-control-row .ghost-button {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 13px;
+  border-radius: 11px;
+  border: 1px solid rgba(34, 35, 35, 0.16);
+  background: #fff;
+  color: #343838;
+}
+.hero.estim-toolbar .header-control-row .ghost-button.is-open {
+  border-color: #c5005f;
+  color: #a8004f;
+  background: #fdeef5;
+}
+
+/* Responsive : scroll horizontal sous 1100px pour préserver la mise en page */
+@media (max-width: 1100px) {
+  .estim-v2 .estim-v2-tablewrap { overflow-x: auto; }
+  .estim-v2 .estim-v2-tablewrap table { min-width: 860px; }
+}
