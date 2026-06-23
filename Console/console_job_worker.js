@@ -2134,6 +2134,28 @@ async function fetchHektorAnnonceDetailKeyDataBestEffort(job, hektorAnnonceId, s
   }
 }
 
+// date_maj FRAÎCHE d'un contact via le Python (porte 2 / ContactById, qui a le JWT OAuth),
+// comme le run quotidien. Léger : juste l'appel API, AUCUN re-sync destructif. Best-effort
+// (retourne null sur erreur -> le garde-fou laisse écrire). Renvoie la date_maj (string) ou null.
+async function fetchContactDateMajFromApi(job, contactId, step) {
+  const id = String(contactId || "").trim();
+  if (!id) return null;
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/contact_datemaj_from_api.py", "--contact-id", id],
+      { timeoutMs: 30000, previewSize: 1000 });
+    const last = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const parsed = safeJsonParse(last);
+    return parsed && typeof parsed === "object" && parsed.datemaj ? String(parsed.datemaj) : null;
+  } catch (error) {
+    await logJob(job.id, step, "error", "Lecture date_maj contact (API) ignoree apres erreur", {
+      hektor_contact_id: id,
+      error: error && error.message ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 async function ensureAdminHektorSession(job, reason, options = {}) {
   const requireRootAdmin = options.requireRootAdmin !== false;
   const isExpectedAdmin = (identity) => requireRootAdmin
@@ -7418,8 +7440,31 @@ async function handleUpdateHektorContact(job) {
   const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
   await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
 
+  // Lot B garde-fou anti-écrasement (miroir annonce) : pour un push from_pending, si le
+  // contact a été modifié dans Hektor DEPUIS l'édition optimiste (date_maj plus récente que
+  // la photo), on ne l'écrase pas -> conflit. Best-effort : si la relecture API échoue, on écrit.
+  if (payload.from_pending === true) {
+    const base = (payload.base_snapshot && typeof payload.base_snapshot === "object") ? payload.base_snapshot : {};
+    const baseDateMaj = base._date_maj ? String(base._date_maj) : null;
+    if (baseDateMaj) {
+      const freshDateMaj = await fetchContactDateMajFromApi(job, contactId, "contact_overwrite_guard");
+      if (freshDateMaj && freshDateMaj > baseDateMaj) {
+        await markContactPendingConflict(contactId);
+        await notifyNegoContactConflict(job, contactId, contextPayload);
+        await logJob(job.id, "contact_overwrite_guard", "done", "Contact modifié dans Hektor depuis l'édition : écriture bloquée (anti-écrasement)", {
+          hektor_contact_id: contactId,
+          base_date_maj: baseDateMaj,
+          fresh_date_maj: freshDateMaj,
+        });
+        return { status: "held_conflict", hektor_contact_id: contactId, reason: "contact_modifie_dans_hektor_depuis_edition" };
+      }
+    }
+  }
+
   const updated = await updateHektorContactIdentity(job, contactId, contextPayload);
   const crmSettings = await updateHektorContactCrmSettings(job, contactId, contextPayload);
+  // Lot B : push from_pending réussi -> on efface le pending (avant l'after-refresh).
+  if (payload.from_pending === true) await clearContactPending(contactId);
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "update_hektor_contact",
@@ -7724,6 +7769,46 @@ async function markAnnoncePendingConflict(appDossierId) {
       `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
       { method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
+  } catch (_) { /* best-effort */ }
+}
+
+// Lot B (contacts) : nettoyage du pending contact après push réussi, ou marquage conflit.
+async function clearContactPending(contactId) {
+  const id = String(contactId || "").trim();
+  if (!id) return;
+  try {
+    await supabaseRequest(
+      `app_contact_pending?hektor_contact_id=eq.${encodeURIComponent(id)}`,
+      { method: "DELETE", prefer: "return=minimal" });
+  } catch (_) { /* best-effort */ }
+}
+async function markContactPendingConflict(contactId) {
+  const id = String(contactId || "").trim();
+  if (!id) return;
+  try {
+    await supabaseRequest(
+      `app_contact_pending?hektor_contact_id=eq.${encodeURIComponent(id)}`,
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
+  } catch (_) { /* best-effort */ }
+}
+// Notif négo en cas de conflit contact (miroir notifyNegoSearchConflict).
+async function notifyNegoContactConflict(job, contactId, payload) {
+  try {
+    const safe = payload && typeof payload === "object" ? payload : {};
+    const negoEmail = cleanString(safe.contact_negociateur_email || safe.hektor_user_email || safe.target_hektor_user_email);
+    if (!negoEmail) return;
+    await supabaseRequest("app_notification", {
+      method: "POST",
+      prefer: "return=minimal",
+      body: JSON.stringify([{
+        negociateur_email: negoEmail,
+        type: "contact_conflit_ecriture",
+        title: "Modification non appliquée (contact déjà modifié)",
+        body: "Le contact a été modifié dans Hektor entre-temps : votre modification n'a pas été appliquée pour ne pas écraser le changement. Re-faites-la si nécessaire.",
+        payload: { source: "contact_overwrite_guard", hektor_contact_id: String(contactId) },
+      }]),
+    });
   } catch (_) { /* best-effort */ }
 }
 
