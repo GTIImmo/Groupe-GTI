@@ -473,6 +473,20 @@ def delete_searches_except_dirty(
     return count
 
 
+def delete_contacts_except_dirty(
+    client: "SupabaseRestClient", contact_ids: list[str], dirty_contact_ids: set[str], batch_size: int
+) -> int:
+    """Supprime les contacts cibles SAUF ceux en édition optimiste."""
+    safe_contact_ids = [
+        str(contact_id)
+        for contact_id in contact_ids
+        if str(contact_id) not in dirty_contact_ids
+    ]
+    if not safe_contact_ids:
+        return 0
+    return client.delete_rows_by_filter("app_contact_current", "hektor_contact_id", safe_contact_ids, batch_size)
+
+
 def main() -> int:
     args = parse_args()
     contact_ids = explicit_contact_ids(args.contact_id)
@@ -609,6 +623,10 @@ def main() -> int:
         for table in ["app_contact_current", "app_contact_relation_current", "app_contact_search_current"]:
             if table == "app_contact_search_current" and dirty_search_pairs:
                 deleted_results[table] = delete_searches_except_dirty(client, contact_ids, dirty_search_pairs)
+            elif table == "app_contact_current" and dirty_contact_ids:
+                deleted_results[table] = delete_contacts_except_dirty(
+                    client, contact_ids, dirty_contact_ids, args.batch_size
+                )
             else:
                 deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", contact_ids, args.batch_size)
     else:

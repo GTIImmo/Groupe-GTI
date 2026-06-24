@@ -275,6 +275,20 @@ def delete_target_remote(client: SupabaseRestClient, app_dossier_id: int) -> Non
         client.delete_rows_by_ids(path=table, column="app_dossier_id", ids=[app_dossier_id])
 
 
+def is_annonce_pending(client: SupabaseRestClient, app_dossier_id: int) -> bool:
+    """Retourne True si l'annonce a une édition optimiste en attente."""
+    rows = client._request(
+        method="GET",
+        path="app_annonce_pending",
+        query={
+            "select": "app_dossier_id",
+            "app_dossier_id": f"eq.{int(app_dossier_id)}",
+            "limit": "1",
+        },
+    )
+    return isinstance(rows, list) and bool(rows)
+
+
 def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: str, keep_app_dossier_id: int) -> int:
     """Durcissement anti-fantome : si la MEME annonce a d'autres app_dossier dans
     Supabase (l'id de dossier a change suite a une re-indexation), supprime ces
@@ -423,24 +437,35 @@ def main() -> int:
             if app_dossier_id is None:
                 raise RuntimeError(f"app_dossier introuvable pour annonce Hektor {hektor_annonce_id}")
             seed_target_work_items(con, app_dossier_id)
-            con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
-            try:
-                create_temp_view_table(con, "app_view_demandes_mandat_diffusion", SQL_REFRESH_DEMANDES_MANDAT_DIFFUSION, app_dossier_id)
-                create_temp_view_table(con, "app_view_generale", SQL_REFRESH_VUE_GENERALE, app_dossier_id)
-                persist_temp_view_table(con, "app_view_demandes_mandat_diffusion", app_dossier_id)
-                persist_temp_view_table(con, "app_view_generale", app_dossier_id)
-                con.commit()
-                payload = build_payload(
-                    limit=None,
-                    dossier_ids=[app_dossier_id],
-                    include_filter_catalog=False,
-                    connection=con,
-                )
-                counts = push_payload(client, payload, app_dossier_id)
-                counts["ghost_dossiers_removed"] = reconcile_annonce_dossiers(client, hektor_annonce_id, app_dossier_id)
-                counts.update(reconcile_lightweight_indexes(client, con, hektor_annonce_id))
-            finally:
-                con.execute("DETACH DATABASE hektor")
+            if is_annonce_pending(client, app_dossier_id):
+                counts = {
+                    "dossiers_upserted": 0,
+                    "details_upserted": 0,
+                    "work_items_replaced": 0,
+                    "broadcasts_replaced": 0,
+                    "mandat_register_replaced": 0,
+                    "dirty_annonce_skipped": 1,
+                    "ghost_dossiers_removed": 0,
+                }
+            else:
+                con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
+                try:
+                    create_temp_view_table(con, "app_view_demandes_mandat_diffusion", SQL_REFRESH_DEMANDES_MANDAT_DIFFUSION, app_dossier_id)
+                    create_temp_view_table(con, "app_view_generale", SQL_REFRESH_VUE_GENERALE, app_dossier_id)
+                    persist_temp_view_table(con, "app_view_demandes_mandat_diffusion", app_dossier_id)
+                    persist_temp_view_table(con, "app_view_generale", app_dossier_id)
+                    con.commit()
+                    payload = build_payload(
+                        limit=None,
+                        dossier_ids=[app_dossier_id],
+                        include_filter_catalog=False,
+                        connection=con,
+                    )
+                    counts = push_payload(client, payload, app_dossier_id)
+                    counts["ghost_dossiers_removed"] = reconcile_annonce_dossiers(client, hektor_annonce_id, app_dossier_id)
+                    counts.update(reconcile_lightweight_indexes(client, con, hektor_annonce_id))
+                finally:
+                    con.execute("DETACH DATABASE hektor")
         finally:
             con.close()
 

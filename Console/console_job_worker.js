@@ -4165,6 +4165,8 @@ function normalizeHektorFrenchDateValue(key, rawValue) {
   if (text === "00-00-0000") return text;
   const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+  const compactFr = text.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (compactFr) return `${compactFr[1]}-${compactFr[2]}-${compactFr[3]}`;
   const fr = text.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
   if (fr) return `${fr[1]}-${fr[2]}-${fr[3]}`;
   throw new Error(`Date Hektor invalide pour ${key}: format attendu jj-mm-aaaa`);
@@ -6131,6 +6133,8 @@ function normalizeOptionalFrenchDate(value) {
   if (!text || text === "00-00-0000") return text ? "00-00-0000" : "";
   const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+  const compactFr = text.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (compactFr) return `${compactFr[1]}-${compactFr[2]}-${compactFr[3]}`;
   const fr = text.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
   if (fr) return `${fr[1]}-${fr[2]}-${fr[3]}`;
   throw new Error("date_naissance contact invalide, format attendu jj-mm-aaaa");
