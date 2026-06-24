@@ -18560,6 +18560,7 @@ function DossierDetailLayout(props: {
                         })()}</span></div>
                       </div>
                     </div>
+                    {!isLightweightDetail ? <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} /> : null}
                   </section>
                   <section className="fa-section">
                     <div className="fa-sec-label">Biens comparables · Suivi commercial</div>
