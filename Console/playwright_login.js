@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const { chromium } = require("playwright");
+const crypto = require("crypto");
 
 function browserLaunchOptions(options = {}) {
   const executablePath = [
@@ -44,6 +45,37 @@ async function safeClick(page, locator) {
     }
   } catch (_) {}
   throw new Error("Could not click element");
+}
+
+function base32Decode(input) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0, value = 0;
+  const out = [];
+  for (const ch of String(input || "").replace(/=+$/g, "").replace(/\s+/g, "").toUpperCase()) {
+    const idx = alphabet.indexOf(ch);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(out);
+}
+
+// Code TOTP (RFC 6238, HMAC-SHA1, 6 chiffres, fenetre 30s) depuis un secret base32.
+function totpCode(secretBase32, timeStepSeconds = 30) {
+  const key = base32Decode(secretBase32);
+  if (!key.length) throw new Error("Secret TOTP invalide");
+  const counter = Math.floor(Date.now() / 1000 / timeStepSeconds);
+  const buf = Buffer.alloc(8);
+  buf.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  buf.writeUInt32BE(counter >>> 0, 4);
+  const hmac = crypto.createHmac("sha1", key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const bin = ((hmac[offset] & 0x7f) << 24) | (hmac[offset + 1] << 16) | (hmac[offset + 2] << 8) | hmac[offset + 3];
+  return String(bin % 1000000).padStart(6, "0");
 }
 
 async function saveDebug(page, baseDir) {
@@ -245,6 +277,29 @@ async function gotoWithRetry(page, url, opts = {}) {
 
     await page.waitForLoadState("networkidle", { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(1200);
+
+    // A.2) 2FA TOTP : Ma Boite Immo impose desormais le 2FA. Apres le login, si l'ecran
+    // de code s'affiche, on genere le code depuis HEKTOR_TOTP_SECRET et on le saisit.
+    const TOTP_SECRET = (process.env.HEKTOR_TOTP_SECRET || "").trim();
+    if (TOTP_SECRET) {
+      const otpInput = page.locator(
+        'input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[placeholder="123456"], input[inputmode="numeric"]'
+      ).first();
+      if (await waitVisible(otpInput, 8000)) {
+        const code = totpCode(TOTP_SECRET);
+        console.log("🔐 2FA detecte -> saisie du code TOTP genere");
+        await otpInput.fill(code);
+        const otpSubmit = page.locator(
+          'button[type="submit"], button:has-text("Valider"), button:has-text("Vérifier"), button:has-text("Confirmer"), button:has-text("Continuer"), button:has-text("Se connecter")'
+        ).first();
+        if (await otpSubmit.count()) { await safeClick(page, otpSubmit); }
+        else { await page.keyboard.press("Enter"); }
+        await page.waitForLoadState("networkidle", { timeout: 60000 }).catch(() => {});
+        await page.waitForTimeout(1200);
+      } else {
+        console.log("ℹ️ Pas d'ecran 2FA detecte (session deja validee ou flux different).");
+      }
+    }
 
     let landed = await tryOpenAdminDirect(context, ADMIN_URL, EXPECT_DOMAIN);
 
