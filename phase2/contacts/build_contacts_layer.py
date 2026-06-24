@@ -53,6 +53,7 @@ class ContactRow:
     fixe: str | None
     ville: str | None
     code_postal: str | None
+    adresse: str | None
     typologie_json: str | None
     raw_json: str | None
     synced_at: str | None
@@ -218,6 +219,7 @@ def contact_from_row(row: sqlite3.Row) -> ContactRow:
         fixe=clean_text(row["fixe"]) or None,
         ville=clean_text(row["ville"]) or None,
         code_postal=clean_text(row["code_postal"]) or None,
+        adresse=clean_text(row["adresse"]) or None,
         typologie_json=clean_text(row["typologie_json"]) or None,
         raw_json=clean_text(row["raw_json"]) or None,
         synced_at=clean_text(row["synced_at"]) or None,
@@ -259,6 +261,7 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
             phone_secondary TEXT,
             ville TEXT,
             code_postal TEXT,
+            adresse TEXT,
             typologies_json TEXT NOT NULL DEFAULT '[]',
             relation_roles_json TEXT NOT NULL DEFAULT '[]',
             linked_annonce_count INTEGER NOT NULL DEFAULT 0,
@@ -407,6 +410,7 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
         ("contact_detail_synced_at", "TEXT"),
         ("supabase_sync_eligible", "INTEGER NOT NULL DEFAULT 0"),
         ("eligibility_reasons_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("adresse", "TEXT"),
     ):
         if column_name not in existing_columns:
             conn.execute(f"ALTER TABLE app_contact_current ADD COLUMN {column_name} {column_type}")
@@ -422,7 +426,7 @@ def load_contacts(
     params: list[Any] = []
     sql = """
         SELECT hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom,
-               archive, date_enregistrement, date_maj, email, portable, fixe, ville, code_postal,
+               archive, date_enregistrement, date_maj, email, portable, fixe, ville, code_postal, adresse,
                typologie_json, raw_json, synced_at
         FROM hektor_contact
         WHERE NULLIF(TRIM(hektor_contact_id), '') IS NOT NULL
@@ -1110,6 +1114,7 @@ def build_contact_rows(
             "phone_secondary": contact.fixe if contact.portable and contact.fixe else None,
             "ville": contact.ville,
             "code_postal": contact.code_postal,
+            "adresse": contact.adresse,
             "typologies_json": contact.typologie_json or "[]",
             "relation_roles_json": json_array(roles),
             "linked_annonce_count": len({row["hektor_annonce_id"] for row in relations}),

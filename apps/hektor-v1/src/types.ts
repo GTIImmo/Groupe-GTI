@@ -405,6 +405,7 @@ export type AppContact = {
   phone_secondary?: string | null
   ville?: string | null
   code_postal?: string | null
+  adresse?: string | null
   typologies_json?: string[] | string | null
   relation_roles_json?: string[] | string | null
   linked_annonce_count: number | null

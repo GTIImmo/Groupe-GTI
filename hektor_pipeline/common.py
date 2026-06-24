@@ -411,6 +411,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             fixe TEXT,
             ville TEXT,
             code_postal TEXT,
+            adresse TEXT,
             typologie_json TEXT,
             raw_json TEXT NOT NULL,
             synced_at TEXT NOT NULL
@@ -601,6 +602,9 @@ def init_db(conn: sqlite3.Connection) -> None:
     existing_annonce_columns = {row["name"] for row in conn.execute("PRAGMA table_info(hektor_annonce)")}
     if "date_maj" not in existing_annonce_columns:
         conn.execute("ALTER TABLE hektor_annonce ADD COLUMN date_maj TEXT")
+    existing_hcontact_columns = {row["name"] for row in conn.execute("PRAGMA table_info(hektor_contact)")}
+    if "adresse" not in existing_hcontact_columns:
+        conn.execute("ALTER TABLE hektor_contact ADD COLUMN adresse TEXT")
     existing_contact_state_columns = {row["name"] for row in conn.execute("PRAGMA table_info(sync_contact_state)")}
     if "last_detail_sync_at" not in existing_contact_state_columns:
         conn.execute("ALTER TABLE sync_contact_state ADD COLUMN last_detail_sync_at TEXT")

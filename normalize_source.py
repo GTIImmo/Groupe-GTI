@@ -854,8 +854,8 @@ def upsert_contact_from_sources(
         """
         INSERT INTO hektor_contact(
             hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom, archive, date_enregistrement,
-            date_maj, email, portable, fixe, ville, code_postal, typologie_json, raw_json, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            date_maj, email, portable, fixe, ville, code_postal, adresse, typologie_json, raw_json, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(hektor_contact_id) DO UPDATE SET
             hektor_agence_id = excluded.hektor_agence_id,
             hektor_negociateur_id = excluded.hektor_negociateur_id,
@@ -868,8 +868,9 @@ def upsert_contact_from_sources(
             email = excluded.email,
             portable = excluded.portable,
             fixe = excluded.fixe,
-            ville = excluded.ville,
-            code_postal = excluded.code_postal,
+            ville = CASE WHEN NULLIF(TRIM(excluded.ville),'') IS NULL THEN ville ELSE excluded.ville END,
+            code_postal = CASE WHEN NULLIF(TRIM(excluded.code_postal),'') IS NULL THEN code_postal ELSE excluded.code_postal END,
+            adresse = CASE WHEN NULLIF(TRIM(excluded.adresse),'') IS NULL THEN adresse ELSE excluded.adresse END,
             typologie_json = excluded.typologie_json,
             raw_json = excluded.raw_json,
             synced_at = excluded.synced_at
@@ -889,6 +890,7 @@ def upsert_contact_from_sources(
             coords.get("fixe") if isinstance(coords, dict) else None,
             inner.get("ville") if isinstance(inner, dict) else None,
             inner.get("code") if isinstance(inner, dict) else None,
+            inner.get("adresse") if isinstance(inner, dict) else None,
             json_dumps(source.get("typologie")),
             json_dumps(source),
             now_utc_iso(),

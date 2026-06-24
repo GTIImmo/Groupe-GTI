@@ -23073,6 +23073,7 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
     phoneSecondary: contact.phone_secondary ?? '',
     postalCode: contact.code_postal ?? '',
     city: contact.ville ?? '',
+    address: contact.adresse ?? '',
     birthDate: '',
     birthPlace: '',
     maritalStatus: '',

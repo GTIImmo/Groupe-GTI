@@ -166,6 +166,7 @@ const contactsListingSelect = [
   'phone_secondary',
   'ville',
   'code_postal',
+  'adresse',
   'typologies_json',
   'relation_roles_json',
   'linked_annonce_count',
@@ -2389,6 +2390,35 @@ export type RapprochementSendResult = {
   sentAnnonceIds?: number[]
   filteredCount?: number
   groups?: Array<RapprochementSendResult & { senderEmail?: string; annonceIds?: number[] }>
+}
+
+// Aperçu FIDÈLE de l'email de rapprochement : rend le VRAI template backend (render_preview,
+// dry-run, aucune écriture) au lieu d'une maquette locale. Retourne le HTML brut à afficher.
+export async function fetchRapprochementEmailPreviewHtml(input: {
+  annonceIds: number[]
+  variante?: 'push' | 'pull'
+  prenom?: string | null
+  civilite?: string | null
+  customIntro?: string | null
+}): Promise<string> {
+  if (!backendApiBaseUrl) throw new Error('Backend Python non configuré — aperçu indisponible.')
+  if (!input.annonceIds.length) throw new Error('Aucune annonce à prévisualiser.')
+  const params = new URLSearchParams()
+  params.set('annonce_ids', input.annonceIds.join(','))
+  params.set('variante', input.variante ?? 'pull')
+  if (input.prenom) params.set('prenom', input.prenom)
+  if (input.civilite) params.set('civilite', input.civilite)
+  const intro = (input.customIntro ?? '').trim()
+  if (intro) params.set('custom_intro', intro)
+  const headers: Record<string, string> = {}
+  if (hasSupabaseEnv && supabase) {
+    const accessToken = await getFreshSupabaseAccessToken()
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+  const response = await fetch(`${backendApiBaseUrl}/emails/rapprochement/preview?${params.toString()}`, { method: 'GET', headers })
+  const html = await response.text()
+  if (!response.ok) throw new Error((html || '').trim() || `Aperçu indisponible (${response.status})`)
+  return html
 }
 
 // Envoi de rapprochement via le chokepoint backend (opt-out + plafond + List-Unsubscribe + tracking).
