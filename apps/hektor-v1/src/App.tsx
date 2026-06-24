@@ -4289,6 +4289,157 @@ function MandatDocumentEditor(props: {
     </div>
   )
 }
+// Éditeur « Avis de valeur » sur la fiche estimation (calqué sur MandatDocumentEditor :
+// bloc + onglets + actions). Self-contained : appelle createGenerateEstimationPdfJob +
+// sendEstimationEmail. Réutilise les classes CSS mandat-document-* pour un look cohérent.
+function EstimationDocumentEditor(props: {
+  dossier: Dossier
+  detail: DossierDetailPayload
+  contacts: DetailContact[]
+  compact?: boolean
+}) {
+  const { dossier } = props
+  const prix = dossier.prix != null && Number.isFinite(Number(dossier.prix)) ? Number(dossier.prix) : null
+  const ownerContact = props.contacts.find((c) => /mandant|propri|owner|vendeur|c[ée]dant/i.test(c.role || '')) ?? props.contacts[0] ?? null
+  const ownerIdentity = estimationOwnerIdentity(dossier.mandants_texte)
+  const initialDraft = useMemo(() => ({
+    ownerName: (ownerContact?.name || ownerIdentity.name || '').trim(),
+    recipient: (ownerContact?.email || '').trim(),
+    basse: prix != null ? String(Math.round(prix * 0.95)) : '',
+    estimee: prix != null ? String(prix) : '',
+    haute: prix != null ? String(Math.round(prix * 1.05)) : '',
+    commentaire: '',
+    dpe: '', ges: '', etatNote: '', etatLabel: '',
+    chauffage: '', exposition: '', toiture: '', menuiseries: '',
+    pointsForts: '', pointsVigilance: '',
+    taxeFonciere: '', energie: '', eau: '', assurance: '',
+  }), [dossier.app_dossier_id, dossier.prix, ownerContact?.email, ownerContact?.name, ownerIdentity.name, prix])
+
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(initialDraft)
+  const [tab, setTab] = useState<'valeur' | 'etat' | 'points' | 'charges'>('valeur')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  useEffect(() => { setDraft(initialDraft); setOpen(false); setMessage(null) }, [initialDraft])
+
+  const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
+  const numStr = (v: string) => v.replace(/[^\d]/g, '')
+
+  function buildPayload() {
+    const negoName = (dossier.commercial_nom || '').trim()
+    const lines = (v: string) => v.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+    const numOrNull = (v: string) => { const n = Number(v); return v.trim() && Number.isFinite(n) ? n : null }
+    return {
+      bien: {
+        titre: dossier.titre_bien, type: dossier.type_bien, ville: dossier.ville, code_postal: dossier.code_postal,
+        dpe: draft.dpe.trim() || null, ges: draft.ges.trim() || null,
+        reference: dossier.numero_dossier ?? dossier.numero_mandat ?? null,
+      },
+      proprietaire: { nom: draft.ownerName || null },
+      negociateur: { nom: negoName && negoName !== '-' ? negoName : null, agence: dossier.agence_nom, email: dossier.negociateur_email ?? null },
+      valeurs: { basse: draft.basse ? Number(draft.basse) : null, estimee: draft.estimee ? Number(draft.estimee) : null, haute: draft.haute ? Number(draft.haute) : null },
+      etat: { note: draft.etatNote ? Number(draft.etatNote) : null, label: draft.etatLabel.trim() || null, chauffage: draft.chauffage.trim() || null, exposition: draft.exposition.trim() || null, toiture: draft.toiture.trim() || null, menuiseries: draft.menuiseries.trim() || null },
+      pointsForts: lines(draft.pointsForts),
+      pointsVigilance: lines(draft.pointsVigilance),
+      charges: { taxe_fonciere: numOrNull(draft.taxeFonciere), energie: numOrNull(draft.energie), eau: numOrNull(draft.eau), assurance: numOrNull(draft.assurance) },
+    }
+  }
+
+  async function submit(sendEmail: boolean) {
+    if (busy) return
+    if (sendEmail && !draft.recipient.trim()) { setMessage("Renseigne l'email du propriétaire pour l'envoi."); setTab('valeur'); return }
+    const p = buildPayload()
+    setBusy(true); setMessage(null)
+    try {
+      await createGenerateEstimationPdfJob({
+        dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
+        bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
+        commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
+      })
+      if (sendEmail) {
+        const res = await sendEstimationEmail({
+          recipientEmail: draft.recipient.trim(), senderEmail: (dossier.negociateur_email ?? '').trim() || 'accueil@gti-immobilier.fr',
+          appDossierId: dossier.app_dossier_id, bien: p.bien, valeurs: p.valeurs, proprietaireNom: p.proprietaire.nom,
+          negociateur: p.negociateur, customIntro: draft.commentaire || null, dryRun: true,
+        })
+        setMessage(res?.dryRun ? "Avis de valeur en génération + email préparé (mode test, aucun envoi réel — envoi réel au Lot 3)." : "Avis de valeur en génération + email envoyé au propriétaire.")
+      } else {
+        setMessage("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants.")
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Génération de l'avis de valeur impossible.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={`mandat-document-editor ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
+      <div className="mandat-document-editor-head">
+        <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="content" /></span>
+        <div>
+          <strong>Avis de valeur</strong>
+          <small>{open ? 'Complétez le dossier, puis générez le PDF' : 'Préparer et envoyer l’avis de valeur au propriétaire'}</small>
+        </div>
+        <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button>
+      </div>
+      {open ? (
+        <div className="mandat-document-editor-body">
+          <div className="mandat-document-form" style={{ width: '100%' }}>
+            <div className="mandat-document-tabs" role="tablist" aria-label="Sections de l'avis de valeur">
+              {[['valeur', 'Bien & valeur'], ['etat', 'État'], ['points', 'Points forts'], ['charges', 'Charges & DPE']].map(([v, label]) => (
+                <button key={v} className={tab === v ? 'is-active' : ''} type="button" onClick={() => setTab(v as typeof tab)}>{label}</button>
+              ))}
+            </div>
+            {tab === 'valeur' ? (
+              <div className="mandat-document-panel">
+                <div className="mandat-document-form-grid">
+                  <label><span>Fourchette basse</span><input inputMode="numeric" value={draft.basse} onChange={(e) => upd('basse', numStr(e.target.value))} /></label>
+                  <label><span>Valeur estimée</span><input inputMode="numeric" value={draft.estimee} onChange={(e) => upd('estimee', numStr(e.target.value))} /></label>
+                  <label><span>Fourchette haute</span><input inputMode="numeric" value={draft.haute} onChange={(e) => upd('haute', numStr(e.target.value))} /></label>
+                  <label><span>DPE</span><select value={draft.dpe} onChange={(e) => upd('dpe', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+                  <label><span>GES</span><select value={draft.ges} onChange={(e) => upd('ges', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+                  <label><span>Email du propriétaire</span><input type="email" value={draft.recipient} onChange={(e) => upd('recipient', e.target.value)} /></label>
+                </div>
+                <label className="is-wide"><span>Avis du négociateur</span><textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
+              </div>
+            ) : null}
+            {tab === 'etat' ? (
+              <div className="mandat-document-panel mandat-document-form-grid">
+                <label><span>État (étoiles)</span><select value={draft.etatNote} onChange={(e) => upd('etatNote', e.target.value)}><option value="">—</option>{[1,2,3,4,5].map((x) => <option key={x} value={x}>{x}/5</option>)}</select></label>
+                <label className="is-wide"><span>Libellé d'état</span><input placeholder="ex. Bon état général" value={draft.etatLabel} onChange={(e) => upd('etatLabel', e.target.value)} /></label>
+                <label><span>Chauffage</span><input value={draft.chauffage} onChange={(e) => upd('chauffage', e.target.value)} /></label>
+                <label><span>Exposition</span><input value={draft.exposition} onChange={(e) => upd('exposition', e.target.value)} /></label>
+                <label><span>Toiture</span><input value={draft.toiture} onChange={(e) => upd('toiture', e.target.value)} /></label>
+                <label><span>Menuiseries</span><input value={draft.menuiseries} onChange={(e) => upd('menuiseries', e.target.value)} /></label>
+              </div>
+            ) : null}
+            {tab === 'points' ? (
+              <div className="mandat-document-panel">
+                <label className="is-wide"><span>Points forts (un par ligne)</span><textarea rows={5} value={draft.pointsForts} onChange={(e) => upd('pointsForts', e.target.value)} /></label>
+                <label className="is-wide"><span>Points de vigilance (un par ligne)</span><textarea rows={4} value={draft.pointsVigilance} onChange={(e) => upd('pointsVigilance', e.target.value)} /></label>
+              </div>
+            ) : null}
+            {tab === 'charges' ? (
+              <div className="mandat-document-panel mandat-document-form-grid">
+                <label><span>Taxe foncière €/an</span><input inputMode="numeric" value={draft.taxeFonciere} onChange={(e) => upd('taxeFonciere', numStr(e.target.value))} /></label>
+                <label><span>Énergie €/an</span><input inputMode="numeric" value={draft.energie} onChange={(e) => upd('energie', numStr(e.target.value))} /></label>
+                <label><span>Eau €/an</span><input inputMode="numeric" value={draft.eau} onChange={(e) => upd('eau', numStr(e.target.value))} /></label>
+                <label><span>Assurance €/an</span><input inputMode="numeric" value={draft.assurance} onChange={(e) => upd('assurance', numStr(e.target.value))} /></label>
+              </div>
+            ) : null}
+            {message ? <p className="mandat-document-message">{message}</p> : null}
+            <div className="mandat-document-actions">
+              <button className="ghost-button" type="button" disabled={busy} onClick={() => { void submit(false) }}>{busy ? '…' : 'Générer le PDF'}</button>
+              <button className="ghost-button button-primary" type="button" disabled={busy} onClick={() => { void submit(true) }}>{busy ? 'Envoi…' : 'Générer + envoyer au propriétaire'}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 type UpdateDiffusionRequestAction = {
   requestId: string
   requestType?: BusinessRequestType
@@ -18516,9 +18667,9 @@ function DossierDetailLayout(props: {
                       <div className="fa-mandate-hist">
                         <span className="fa-mh-label">Document d&apos;estimation</span>
                         <span className="fa-mh-point"><span className="fa-mh-dot" style={{ background: 'var(--fa-gold)' }} /><span className="fa-mh-price" style={{ fontSize: '14px' }}>À générer</span></span>
-                        <span className="fa-mh-empty">Avis de valeur à éditer et présenter au vendeur.</span>
                       </div>
                     </div>
+                    {!isLightweightDetail ? <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} /> : null}
                   </section>
                   ) : (
                   <section className="fa-section">
