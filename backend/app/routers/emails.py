@@ -17,14 +17,17 @@ import base64
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
 from ..services import email_tokens
 from ..services.email_tracking import EmailTrackingService
+from ..services.estimation_email import render_estimation_email
+from ..services.estimation_sender import EstimationSender
 from ..services.rapprochement_email import BRAND, RapprochementEmailService
 from ..services.rapprochement_sender import RapprochementSender
+from ..services.supabase_storage import signed_url_for_estimation_pdf
 from ..settings import Settings, get_settings
 
 router = APIRouter(tags=["emails"])
@@ -68,6 +71,7 @@ def preview_rapprochement_email(
     prenom: str | None = None,
     civilite: str | None = None,
     criteres: str | None = Query(None, description="Texte d'accroche critères, ex. 'votre recherche maison · Firminy · 80 000 €'"),
+    custom_intro: str | None = Query(None, description="Mot personnel du négociateur, inséré en intro (mode hybride)"),
     format: str = Query("html", pattern="^(html|text)$"),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
@@ -76,6 +80,7 @@ def preview_rapprochement_email(
     ids = [int(x) for x in (annonce_ids or "").replace(" ", "").split(",") if x.strip().isdigit()]
     result = RapprochementEmailService(settings).render_preview(
         annonce_ids=ids, variante=variante, prenom=prenom, civilite=civilite, criteres=criteres,
+        custom_intro=custom_intro,
     )
     if format == "text":
         return Response(content=result["text"], media_type="text/plain; charset=utf-8")
@@ -134,6 +139,33 @@ def track_feedback(token: str, request: Request, settings: Settings = Depends(ge
     if action == email_tokens.ACTION_PASS:
         return HTMLResponse(_page("Merci pour votre retour", "Ce bien ne vous correspond pas : nous affinerons nos prochaines propositions.", accent=BRAND["neutral_400"]))
     return HTMLResponse(_page("Merci", "Votre réponse a bien été prise en compte."))
+
+
+@router.get("/r/download/{token}")
+def download_estimation(token: str, request: Request, settings: Settings = Depends(get_settings)):
+    """Téléchargement de l'avis de valeur : log le clic (signal fort) puis redirige (302)
+    vers l'URL signée du PDF archivé. Token 'estim' porte l'envoi + l'app_dossier_id."""
+    payload = email_tokens.verify_token(token, _secret(settings))
+    if not payload or payload.get("a") != email_tokens.ACTION_ESTIMATION:
+        return HTMLResponse(_page("Lien expiré", "Ce lien de téléchargement n'est plus valide. Contactez votre conseiller Groupe GTI."), status_code=410)
+    try:
+        EmailTrackingService(settings).record_event(
+            envoi_id=str(payload.get("e") or ""), action=email_tokens.ACTION_ESTIMATION,
+            ip=_client_ip(request), user_agent=request.headers.get("user-agent"))
+    except Exception:
+        pass  # le tracking ne doit jamais empêcher le téléchargement
+    app_dossier_id = payload.get("d")
+    signed = None
+    if app_dossier_id:
+        try:
+            signed = signed_url_for_estimation_pdf(settings, int(app_dossier_id))
+        except Exception:
+            signed = None
+    if signed:
+        return RedirectResponse(url=signed, status_code=302)
+    return HTMLResponse(_page("Estimation indisponible",
+                              "Votre estimation n'est pas encore disponible. Votre conseiller Groupe GTI vous l'envoie très vite."),
+                        status_code=404)
 
 
 @router.get("/r/u/{token}", response_class=HTMLResponse)
@@ -197,6 +229,70 @@ def send_rapprochement_email(
         contact_search_key=payload.contact_search_key, hektor_contact_id=payload.hektor_contact_id,
         prenom=payload.prenom, civilite=payload.civilite, criteres=payload.criteres,
         custom_intro=payload.custom_intro, dry_run=payload.dry_run, created_by=user.id,
+    )
+
+
+# --- Email estimation (Lot 2) : « votre estimation est disponible » + bouton PDF ----
+class EstimationSendPayload(BaseModel):
+    recipient_email: str
+    app_dossier_id: int
+    sender_email: str
+    bien: dict = Field(default_factory=dict)
+    valeurs: dict = Field(default_factory=dict)
+    proprietaire_nom: str | None = None
+    negociateur: dict | None = None
+    prenom: str | None = None
+    civilite: str | None = None
+    custom_intro: str | None = None
+    hektor_contact_id: str | None = None
+    dry_run: bool = True  # réel uniquement si dry_run=false ET EMAIL_REAL_SEND_ENABLED=true
+
+
+@router.get("/emails/estimation/preview", response_class=HTMLResponse)
+def preview_estimation_email(
+    app_dossier_id: int = Query(...),
+    titre: str | None = None,
+    type: str | None = None,
+    ville: str | None = None,
+    code_postal: str | None = None,
+    basse: float | None = None,
+    estimee: float | None = None,
+    haute: float | None = None,
+    proprietaire: str | None = None,
+    nego: str | None = None,
+    agence: str | None = None,
+    format: str = Query("html", pattern="^(html|text)$"),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    get_authenticated_user(settings, authorization)  # 401 si non authentifié (preview interne)
+    result = render_estimation_email(
+        settings=settings, envoi_id="preview", app_dossier_id=app_dossier_id,
+        bien={"titre": titre, "type": type, "ville": ville, "code_postal": code_postal},
+        valeurs={"basse": basse, "estimee": estimee, "haute": haute},
+        proprietaire_nom=proprietaire, negociateur={"nom": nego, "agence": agence},
+    )
+    if format == "text":
+        return Response(content=result["text"], media_type="text/plain; charset=utf-8")
+    return HTMLResponse(content=result["html"])
+
+
+@router.post("/emails/estimation/send")
+def send_estimation_email(
+    payload: EstimationSendPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """Chokepoint d'envoi de l'email estimation (dry-run par défaut). Filtre opt-out ->
+    plafond -> crée l'envoi -> rend l'email (liens pixel + download trackés) -> envoi
+    réel ou dry-run. Réel seulement si EMAIL_REAL_SEND_ENABLED=true et dry_run=false."""
+    user = get_authenticated_user(settings, authorization)
+    return EstimationSender(settings).send(
+        recipient_email=payload.recipient_email, sender_email=payload.sender_email,
+        app_dossier_id=payload.app_dossier_id, bien=payload.bien, valeurs=payload.valeurs,
+        proprietaire_nom=payload.proprietaire_nom, negociateur=payload.negociateur,
+        prenom=payload.prenom, civilite=payload.civilite, custom_intro=payload.custom_intro,
+        hektor_contact_id=payload.hektor_contact_id, dry_run=payload.dry_run, created_by=user.id,
     )
 
 

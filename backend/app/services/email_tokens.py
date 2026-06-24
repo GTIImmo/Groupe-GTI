@@ -28,9 +28,10 @@ ACTION_UNSUB = "unsub"    # désinscription
 ACTION_ESPACE = "espace"  # accès à l'espace client (lien magique, lié à un envoi)
 ACTION_ESPACE_CONTACT = "espc"  # espace client UNIFIÉ (lié au contact, tous négos confondus)
 ACTION_VISITE_REQ = "vreq"  # demande de visite : page d'action (négo confirme, ou client accepte)
+ACTION_ESTIMATION = "estim"  # téléchargement de l'avis de valeur (PDF) d'un dossier d'estimation
 
 VALID_ACTIONS = {ACTION_LIKE, ACTION_PASS, ACTION_VISITE, ACTION_OPEN, ACTION_UNSUB,
-                 ACTION_ESPACE, ACTION_ESPACE_CONTACT, ACTION_VISITE_REQ}
+                 ACTION_ESPACE, ACTION_ESPACE_CONTACT, ACTION_VISITE_REQ, ACTION_ESTIMATION}
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -121,6 +122,15 @@ def make_visite_request_token(*, request_id: str, role: str, secret: str, ttl_da
     'client' (accepte un créneau proposé). Porte l'id de la demande."""
     return sign_token({"v": 1, "r": str(request_id), "role": str(role),
                        "a": ACTION_VISITE_REQ, "x": _exp_ts(ttl_days)}, secret)
+
+
+def make_estimation_token(*, envoi_id: str, app_dossier_id: int | str, secret: str, ttl_days: int | None = 60) -> str:
+    """Lien tracké de téléchargement de l'avis de valeur (PDF) d'un dossier d'estimation.
+    Porte l'envoi (pour tracer le clic) + l'app_dossier_id (pour retrouver le PDF). 60 j."""
+    return sign_token(
+        {"v": 1, "e": str(envoi_id), "d": str(app_dossier_id), "a": ACTION_ESTIMATION, "x": _exp_ts(ttl_days)},
+        secret,
+    )
 
 
 def make_espace_contact_token(*, hektor_contact_id: str, secret: str, ttl_days: int | None = 60,

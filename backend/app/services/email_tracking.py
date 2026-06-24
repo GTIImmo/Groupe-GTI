@@ -44,6 +44,7 @@ _ACTION_TO_EVENT = {
     email_tokens.ACTION_VISITE: "visite",
     email_tokens.ACTION_OPEN: "open",
     email_tokens.ACTION_UNSUB: "unsub",
+    email_tokens.ACTION_ESTIMATION: "download",  # téléchargement de l'avis de valeur (signal fort)
 }
 _ACTION_TO_FEEDBACK = {email_tokens.ACTION_LIKE: "interesse", email_tokens.ACTION_PASS: "refuse"}
 
@@ -157,6 +158,8 @@ class EmailTrackingService:
             self._touch_open(envoi_id, now)
         elif evt_type in ("like", "pass", "visite"):
             self._touch_click(envoi_id, now, action, bien_id, reason=reason)
+        elif evt_type == "download":
+            self._touch_download(envoi_id, now)
         elif evt_type == "unsub":
             self._touch_unsub(envoi_id, now, ip)
         self._recompute_score(envoi_id)
@@ -198,6 +201,17 @@ class EmailTrackingService:
             self._insert("app_email_envoi_bien", row,
                          on_conflict="envoi_id,app_dossier_id", prefer="resolution=merge-duplicates,return=minimal")
 
+    def _touch_download(self, envoi_id: str, now: str) -> None:
+        """Téléchargement de l'avis de valeur : signal fort (le propriétaire a récupéré son
+        estimation). Compté comme un clic, statut « cliqué » si pas déjà plus avancé."""
+        env = self._envoi(envoi_id) or {}
+        patch: dict[str, Any] = {"click_count": int(env.get("click_count") or 0) + 1}
+        if not env.get("first_clicked_at"):
+            patch["first_clicked_at"] = now
+        if env.get("statut") in (None, "brouillon", "envoye", "ouvert"):
+            patch["statut"] = "clique"
+        self._patch("app_email_envoi", {"id": f"eq.{envoi_id}"}, patch)
+
     def _touch_unsub(self, envoi_id: str, now: str, ip: str | None) -> None:
         env = self._envoi(envoi_id) or {}
         self._patch("app_email_envoi", {"id": f"eq.{envoi_id}"}, {"statut": "desinscrit", "unsubscribed_at": now})
@@ -212,7 +226,8 @@ class EmailTrackingService:
         froid  : aucun événement.
         """
         types = {e.get("type") for e in events}
-        if "like" in types or "visite" in types:
+        # « download » (récupération de l'avis de valeur) = intention forte du propriétaire.
+        if "like" in types or "visite" in types or "download" in types:
             return "chaud"
         if "open" in types or "pass" in types:
             return "tiede"
