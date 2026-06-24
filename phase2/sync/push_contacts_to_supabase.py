@@ -458,6 +458,34 @@ def fetch_dirty_contact_ids(client: "SupabaseRestClient", contact_ids: list[str]
     }
 
 
+APP_OWNED_CONTACT_FIELDS = ("birth_date", "birth_place", "marital_status")
+
+
+def fetch_app_owned_contact_fields(client: "SupabaseRestClient", contact_ids: list[str] | None) -> dict[str, dict[str, Any]]:
+    """Champs 'app-owned' (naissance/lieu/matrimonial) : Hektor ne les renvoie jamais, seule
+    l'app les écrit (RPC app_edit_contact_optimistic). Le pipeline local ne les porte pas.
+    On relit la valeur Supabase existante pour la RÉINJECTER lors d'un push ciblé
+    (delete+reinsert) afin de ne pas la perdre. Le push bulk (upsert merge) les préserve déjà.
+    """
+    select = "hektor_contact_id," + ",".join(APP_OWNED_CONTACT_FIELDS)
+    path = f"app_contact_current?select={select}"
+    if contact_ids:
+        encoded = ",".join(urllib.parse.quote(str(value), safe="") for value in contact_ids)
+        path += f"&hektor_contact_id=in.({encoded})"
+    try:
+        rows = client.request(method="GET", path=path) or []
+    except Exception:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        cid = str(row.get("hektor_contact_id") or "")
+        if cid:
+            out[cid] = {field: row.get(field) for field in APP_OWNED_CONTACT_FIELDS}
+    return out
+
+
 def delete_searches_except_dirty(
     client: "SupabaseRestClient", contact_ids: list[str], dirty_pairs: set[tuple[str, int]]
 ) -> int:
@@ -619,6 +647,22 @@ def main() -> int:
             )
             for table, rows in loaded
         ]
+    # Lot 3 : champs app-owned (naissance/lieu/matrimonial). Au push CIBLE (delete+reinsert),
+    # on relit la valeur Supabase existante et on la réinjecte dans la ligne pour ne pas la
+    # perdre (le pipeline local ne porte pas ces colonnes). Le push bulk les préserve déjà.
+    if contact_ids:
+        app_owned = fetch_app_owned_contact_fields(client, contact_ids)
+        if app_owned:
+            for table, rows in loaded:
+                if table != "app_contact_current":
+                    continue
+                for row in rows:
+                    prev = app_owned.get(str(row.get("hektor_contact_id")))
+                    if not prev:
+                        continue
+                    for field, value in prev.items():
+                        if value is not None and value != "":
+                            row[field] = value
     if contact_ids:
         for table in ["app_contact_current", "app_contact_relation_current", "app_contact_search_current"]:
             if table == "app_contact_search_current" and dirty_search_pairs:

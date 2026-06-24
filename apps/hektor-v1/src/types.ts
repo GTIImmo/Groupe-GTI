@@ -406,6 +406,9 @@ export type AppContact = {
   ville?: string | null
   code_postal?: string | null
   adresse?: string | null
+  birth_date?: string | null
+  birth_place?: string | null
+  marital_status?: string | null
   typologies_json?: string[] | string | null
   relation_roles_json?: string[] | string | null
   linked_annonce_count: number | null
@@ -611,6 +614,7 @@ export type ConsoleJobStatus = 'pending' | 'running' | 'done' | 'error'
 export type ConsoleJobType =
   | 'sync_console_documents'
   | 'prepare_document_cloud'
+  | 'generate_estimation_pdf'
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
   | 'sync_hektor_photos'

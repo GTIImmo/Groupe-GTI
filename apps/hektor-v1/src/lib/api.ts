@@ -167,6 +167,9 @@ const contactsListingSelect = [
   'ville',
   'code_postal',
   'adresse',
+  'birth_date',
+  'birth_place',
+  'marital_status',
   'typologies_json',
   'relation_roles_json',
   'linked_annonce_count',
@@ -5288,6 +5291,48 @@ export async function createUploadDocumentToHektorJob(input: {
     .single()
   if (updateError || !updatedJob) throw new Error(updateError?.message ?? 'Unable to reload Hektor upload job')
   return updatedJob as ConsoleJob
+}
+
+// Avis de valeur : crée un job worker qui génère le PDF (Playwright) et l'archive comme
+// document du dossier (local + Supabase + push Hektor). Aucun fichier uploadé ici : tout le
+// contenu de l'avis de valeur passe dans le payload, le worker se charge du rendu.
+export async function createGenerateEstimationPdfJob(input: {
+  dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
+  bien: { titre?: string | null; type?: string | null; ville?: string | null; code_postal?: string | null; surface?: string | number | null; pieces?: string | number | null; terrain?: string | number | null; dpe?: string | null; reference?: string | null }
+  proprietaire: { nom?: string | null }
+  negociateur: { nom?: string | null; agence?: string | null; telephone?: string | null; email?: string | null }
+  valeurs: { basse?: number | null; estimee?: number | null; haute?: number | null }
+  commentaire?: string | null
+  documentLabel?: string | null
+  visibility?: 'private' | 'shared'
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const jobId = crypto.randomUUID()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      id: jobId,
+      job_type: 'generate_estimation_pdf',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        document_label: input.documentLabel ?? 'Avis de valeur',
+        visibility: input.visibility ?? 'private',
+        bien: input.bien,
+        proprietaire: input.proprietaire,
+        negociateur: input.negociateur,
+        valeurs: input.valeurs,
+        commentaire: input.commentaire ?? '',
+      },
+      priority: input.priority ?? 40,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create estimation PDF job')
+  return data as ConsoleJob
 }
 
 export async function createDeleteDocumentFromHektorJob(input: {
