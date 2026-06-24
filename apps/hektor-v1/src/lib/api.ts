@@ -5328,11 +5328,18 @@ export async function createUploadDocumentToHektorJob(input: {
 // contenu de l'avis de valeur passe dans le payload, le worker se charge du rendu.
 export async function createGenerateEstimationPdfJob(input: {
   dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
-  bien: { titre?: string | null; type?: string | null; ville?: string | null; code_postal?: string | null; surface?: string | number | null; pieces?: string | number | null; terrain?: string | number | null; dpe?: string | null; reference?: string | null }
+  bien: { titre?: string | null; type?: string | null; ville?: string | null; code_postal?: string | null; surface?: string | number | null; pieces?: string | number | null; terrain?: string | number | null; dpe?: string | null; ges?: string | null; reference?: string | null }
   proprietaire: { nom?: string | null }
   negociateur: { nom?: string | null; agence?: string | null; telephone?: string | null; email?: string | null }
   valeurs: { basse?: number | null; estimee?: number | null; haute?: number | null }
   commentaire?: string | null
+  // Lot B — champs éditoriaux saisis par le négociateur (sinon placeholders dans le PDF).
+  etat?: { note?: number | null; label?: string | null; chauffage?: string | null; exposition?: string | null; toiture?: string | null; menuiseries?: string | null }
+  pointsForts?: string[]
+  pointsVigilance?: string[]
+  charges?: { taxe_fonciere?: number | null; energie?: number | null; eau?: number | null; assurance?: number | null }
+  methode?: string | null
+  validite?: string | null
   documentLabel?: string | null
   visibility?: 'private' | 'shared'
   priority?: number
@@ -5355,6 +5362,12 @@ export async function createGenerateEstimationPdfJob(input: {
         negociateur: input.negociateur,
         valeurs: input.valeurs,
         commentaire: input.commentaire ?? '',
+        etat: input.etat ?? null,
+        pointsForts: input.pointsForts ?? null,
+        pointsVigilance: input.pointsVigilance ?? null,
+        charges: input.charges ?? null,
+        methode: input.methode ?? null,
+        validite: input.validite ?? null,
       },
       priority: input.priority ?? 40,
       requested_by: userId,

@@ -356,7 +356,14 @@
    Modale « Avis de valeur » (saisie fourchette avant génération du PDF worker)
    ========================================================================= */
 .estim-pdf-overlay { position: fixed; inset: 0; z-index: 1200; background: rgba(34, 35, 35, 0.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.estim-pdf-modal { width: 100%; max-width: 460px; background: #fff; border-radius: 16px; padding: 20px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+.estim-pdf-modal { width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; background: #fff; border-radius: 16px; padding: 20px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+.estim-pdf-modal select { width: 100%; border: 1px solid #e3dfe2; border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; color: #222323; background: #fff; box-sizing: border-box; }
+.estim-pdf-modal select:focus { outline: none; border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.12); }
+.estim-pdf-toggle { width: 100%; margin-top: 14px; display: flex; align-items: center; gap: 8px; background: #faf7f9; border: 1px solid #ece6ea; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13px; font-weight: 600; color: #6b6560; cursor: pointer; text-align: left; }
+.estim-pdf-toggle:hover { border-color: #c5005f; color: #c5005f; }
+.estim-pdf-toggle svg { width: 15px; height: 15px; flex: none; transition: transform 0.15s; }
+.estim-pdf-details { margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.estim-pdf-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .estim-pdf-head { display: flex; align-items: center; justify-content: space-between; }
 .estim-pdf-head h3 { margin: 0; font-family: 'Spectral', Georgia, serif; font-size: 20px; font-weight: 700; color: #222323; }
 .estim-pdf-head button { width: 30px; height: 30px; border: 1px solid #e3dfe2; border-radius: 8px; background: #fff; color: #6b6560; display: grid; place-items: center; cursor: pointer; }

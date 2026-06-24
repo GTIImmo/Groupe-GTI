@@ -3499,6 +3499,29 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
 
+  // --- Champs éditoriaux saisis par le négociateur (Lot B) : état, points, charges, DPE/GES.
+  const etat = payload.etat || {};
+  const note = Math.max(0, Math.min(5, Number(etat.note) || 0));
+  const stars = Array.from({ length: 5 }, (_, i) =>
+    `<svg viewBox="0 0 24 24" fill="currentColor" class="${i < note ? "on" : "off"}"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"></path></svg>`).join("");
+  const etatLabel = String(etat.label || "").trim();
+  const etatMeta = (k, v) => `<div><div class="k">${k}</div><div class="v">${v ? estimText(v) : todo("—")}</div></div>`;
+  const toList = (v) => Array.isArray(v) ? v.filter(Boolean) : String(v || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  const forts = toList(payload.pointsForts);
+  const vigi = toList(payload.pointsVigilance);
+  const ptsItems = (arr, icon) => arr.length
+    ? arr.map((t) => `<li>${icon}${estimText(t)}</li>`).join("")
+    : `<li>${todo("À compléter par votre conseiller")}</li>`;
+  const checkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>`;
+  const warnIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>`;
+  const charges = payload.charges || {};
+  const chargeRow = (k, v) => { const e = estimEuro(v); return `<div class="diag-row"><span class="k">${k}</span><span class="v ${e ? "" : "na"}">${e ? e + "/an" : todo("à compléter")}</span></div>`; };
+  const dpe = String((bien.dpe || etat.dpe) || "").trim().toUpperCase();
+  const ges = String((bien.ges || etat.ges) || "").trim().toUpperCase();
+  const dpeColors = { A: "#2a9d3f", B: "#57b03a", C: "#a0cf3a", D: "#f5d800", E: "#f3a712", F: "#ec6c1f", G: "#d7191c" };
+  const validite = String(payload.validite || "3 mois").trim();
+  const methode = String(payload.methode || "").trim() || "Estimation par comparaison directe avec les transactions récentes du secteur, ajustées selon les caractéristiques du bien (surface, terrain, état, performance énergétique).";
+
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Avis de valeur ${docNumber}</title>
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${ESTIM_PREMIUM_CSS}</style></head><body>
@@ -3510,13 +3533,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="c-title serif">Avis de valeur</div>
     <div class="c-bien serif">${titre}</div>
     <div class="c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${estimText(localite || "—")}</div>
-    <div class="c-tags">${tags || '<span class="todo">Caractéristiques à compléter</span>'}</div>
+    <div class="c-tags">${[tags, dpe ? `<span>DPE ${dpe}</span>` : ""].filter(Boolean).join("") || '<span class="todo">Caractéristiques à compléter</span>'}</div>
   </div>
   <div class="c-info"><div class="c-info-row">
     <div class="c-info-cell accent"><span class="l">Valeur estimée</span><span class="v">${valEstimee}</span></div>
     <div class="c-info-cell"><span class="l">Établi pour</span><span class="v">${proprio}</span></div>
     <div class="c-info-cell"><span class="l">Conseiller</span><span class="v">${negoNom}</span></div>
-    <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · 3 mois</span></div>
+    <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · ${estimText(validite)}</span></div>
   </div></div>
 </div>
 <div class="page">${rh}<div class="content">
@@ -3534,8 +3557,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     ${cellSpec("Localité", estimText(localite), !!localite)}
   </div>
   <div class="energy">
-    <div class="epill"><div class="g" style="background:#e4ddd2">${estimText(bien.dpe || "—")}</div><div class="i"><div class="l">DPE</div><div class="d">${bien.dpe ? "" : todo("à compléter")}</div></div></div>
-    <div class="epill"><div class="g" style="background:#e4ddd2">${estimText(bien.ges || "—")}</div><div class="i"><div class="l">GES</div><div class="d">${bien.ges ? "" : todo("à compléter")}</div></div></div>
+    <div class="epill"><div class="g" style="background:${dpe && dpeColors[dpe] ? dpeColors[dpe] : "#e4ddd2"}">${estimText(dpe || "—")}</div><div class="i"><div class="l">DPE</div><div class="d">${dpe ? "Diagnostic de performance" : todo("à compléter")}</div></div></div>
+    <div class="epill"><div class="g" style="background:${ges && dpeColors[ges] ? dpeColors[ges] : "#e4ddd2"}">${estimText(ges || "—")}</div><div class="i"><div class="l">GES</div><div class="d">${ges ? "Gaz à effet de serre" : todo("à compléter")}</div></div></div>
   </div>
   <div class="h mt">Descriptif</div>
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
@@ -3543,29 +3566,29 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
 <div class="page">${rh}<div class="content">
   <div class="h">État du logement &amp; prestations</div>
   <div class="etat-top">
-    <div class="etat-stars">${'<svg viewBox="0 0 24 24" fill="currentColor" class="off"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"></path></svg>'.repeat(5)}</div>
-    <div><div class="etat-rl serif">${todo("État à évaluer")}</div><div class="etat-rs">À renseigner par votre conseiller</div></div>
+    <div class="etat-stars">${stars}</div>
+    <div><div class="etat-rl serif">${etatLabel ? estimText(etatLabel) : todo("État à évaluer")}</div><div class="etat-rs">${etatLabel ? "Évaluation du conseiller" : "À renseigner par votre conseiller"}</div></div>
     <div class="etat-sep"></div>
-    <div class="etat-meta"><div><div class="k">Chauffage</div><div class="v">${todo("—")}</div></div><div><div class="k">Exposition</div><div class="v">${todo("—")}</div></div><div><div class="k">Toiture</div><div class="v">${todo("—")}</div></div></div>
+    <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage)}${etatMeta("Exposition", etat.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries)}</div>
   </div>
   <div class="pts-grid">
-    <div class="pts forts"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>Points forts</div><ul><li>${todo("À compléter par votre conseiller")}</li></ul></div>
-    <div class="pts vigi"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>Points de vigilance</div><ul><li>${todo("À compléter par votre conseiller")}</li></ul></div>
+    <div class="pts forts"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>Points forts</div><ul>${ptsItems(forts, checkIcon)}</ul></div>
+    <div class="pts vigi"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>Points de vigilance</div><ul>${ptsItems(vigi, warnIcon)}</ul></div>
   </div>
-  <div class="method"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">Méthode d'estimation</div><div class="d">Estimation par comparaison directe avec les transactions récentes du secteur, ajustées selon les caractéristiques du bien (surface, terrain, état, performance énergétique).</div></div></div>
+  <div class="method"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">Méthode d'estimation</div><div class="d">${estimText(methode)}</div></div></div>
   <div class="h" style="margin-top:22px">Diagnostics &amp; charges</div>
   <div class="diag-grid">
     <div class="diag"><div class="diag-h">Diagnostics obligatoires</div>
-      <div class="diag-row"><span class="k">DPE &amp; GES</span><span class="v na">À actualiser</span></div>
+      <div class="diag-row"><span class="k">DPE &amp; GES</span><span class="v ${dpe ? "ok" : "na"}">${dpe ? "Réalisé · " + dpe + (ges ? " / " + ges : "") : "À actualiser"}</span></div>
       <div class="diag-row"><span class="k">Électricité</span><span class="v na">À actualiser</span></div>
       <div class="diag-row"><span class="k">Amiante / Plomb</span><span class="v na">À actualiser</span></div>
       <div class="diag-row"><span class="k">Assainissement</span><span class="v na">À actualiser</span></div>
     </div>
     <div class="diag"><div class="diag-h">Charges annuelles estimées</div>
-      <div class="diag-row"><span class="k">Taxe foncière</span><span class="v na">${todo("à compléter")}</span></div>
-      <div class="diag-row"><span class="k">Énergie</span><span class="v na">${todo("à compléter")}</span></div>
-      <div class="diag-row"><span class="k">Eau</span><span class="v na">${todo("à compléter")}</span></div>
-      <div class="diag-row"><span class="k">Assurance</span><span class="v na">${todo("à compléter")}</span></div>
+      ${chargeRow("Taxe foncière", charges.taxe_fonciere)}
+      ${chargeRow("Énergie", charges.energie)}
+      ${chargeRow("Eau", charges.eau)}
+      ${chargeRow("Assurance", charges.assurance)}
     </div>
   </div>
 </div>${rf(3)}</div>

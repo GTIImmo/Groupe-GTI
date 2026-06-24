@@ -8345,7 +8345,16 @@ export default function App() {
   const [annonceOwnerActionBusy, setAnnonceOwnerActionBusy] = useState<number | null>(null)
   // Brouillon de saisie de l'avis de valeur (fourchette + commentaire) avant génération du PDF.
   // recipient/hektorContactId sont pré-remplis en arrière-plan depuis le contact propriétaire.
-  const [estimationPdfDraft, setEstimationPdfDraft] = useState<{ item: MandatRecord; ownerName: string; recipient: string; hektorContactId: string | null; basse: string; estimee: string; haute: string; commentaire: string } | null>(null)
+  const [estimationPdfDraft, setEstimationPdfDraft] = useState<{
+    item: MandatRecord; ownerName: string; recipient: string; hektorContactId: string | null
+    basse: string; estimee: string; haute: string; commentaire: string
+    // Lot B — champs éditoriaux (optionnels) : remplissent les sections du PDF, sinon placeholders.
+    dpe: string; ges: string; etatNote: string; etatLabel: string
+    chauffage: string; exposition: string; toiture: string; menuiseries: string
+    pointsForts: string; pointsVigilance: string
+    taxeFonciere: string; energie: string; eau: string; assurance: string
+  } | null>(null)
+  const [estimationPdfDetailsOpen, setEstimationPdfDetailsOpen] = useState(false)
   const [estimationPdfBusy, setEstimationPdfBusy] = useState(false)
   const [estimationPdfMsg, setEstimationPdfMsg] = useState<string | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
@@ -9953,6 +9962,7 @@ export default function App() {
     const prix = item.prix != null && Number.isFinite(Number(item.prix)) ? Number(item.prix) : null
     const owner = estimationOwnerIdentity(item.mandants_texte)
     setEstimationPdfMsg(null)
+    setEstimationPdfDetailsOpen(false)
     setEstimationPdfDraft({
       item,
       ownerName: owner.name ?? '',
@@ -9962,6 +9972,10 @@ export default function App() {
       estimee: prix != null ? String(prix) : '',
       haute: prix != null ? String(Math.round(prix * 1.05)) : '',
       commentaire: '',
+      dpe: '', ges: '', etatNote: '', etatLabel: '',
+      chauffage: '', exposition: '', toiture: '', menuiseries: '',
+      pointsForts: '', pointsVigilance: '',
+      taxeFonciere: '', energie: '', eau: '', assurance: '',
     })
     // Résolution best-effort du contact propriétaire pour pré-remplir l'email destinataire.
     void resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id).then((resolved) => {
@@ -9976,12 +9990,16 @@ export default function App() {
 
   function estimationPdfPayload(d: NonNullable<typeof estimationPdfDraft>) {
     const negoName = commercialDisplay(d.item)
+    const lines = (v: string) => v.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+    const numOrNull = (v: string) => { const n = Number(v); return v.trim() && Number.isFinite(n) ? n : null }
     return {
       bien: {
         titre: d.item.titre_bien,
         type: d.item.type_bien,
         ville: d.item.ville,
         code_postal: d.item.code_postal,
+        dpe: d.dpe.trim() || null,
+        ges: d.ges.trim() || null,
         reference: d.item.numero_dossier ?? d.item.numero_mandat ?? null,
       },
       proprietaire: { nom: d.ownerName || null },
@@ -9994,6 +10012,22 @@ export default function App() {
         basse: d.basse ? Number(d.basse) : null,
         estimee: d.estimee ? Number(d.estimee) : null,
         haute: d.haute ? Number(d.haute) : null,
+      },
+      etat: {
+        note: d.etatNote ? Number(d.etatNote) : null,
+        label: d.etatLabel.trim() || null,
+        chauffage: d.chauffage.trim() || null,
+        exposition: d.exposition.trim() || null,
+        toiture: d.toiture.trim() || null,
+        menuiseries: d.menuiseries.trim() || null,
+      },
+      pointsForts: lines(d.pointsForts),
+      pointsVigilance: lines(d.pointsVigilance),
+      charges: {
+        taxe_fonciere: numOrNull(d.taxeFonciere),
+        energie: numOrNull(d.energie),
+        eau: numOrNull(d.eau),
+        assurance: numOrNull(d.assurance),
       },
     }
   }
@@ -10014,6 +10048,7 @@ export default function App() {
         dossier: { app_dossier_id: d.item.app_dossier_id, hektor_annonce_id: d.item.hektor_annonce_id },
         bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: d.commentaire,
+        etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
       })
       if (sendEmail) {
         const res = await sendEstimationEmail({
@@ -13927,6 +13962,35 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
               <label className="estim-pdf-wide"><span>Avis du négociateur (optionnel)</span><textarea rows={4} value={estimationPdfDraft.commentaire} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, commentaire: e.target.value } : d)} /></label>
               <label className="estim-pdf-wide"><span>Email du propriétaire (pour l'envoi)</span><input type="email" inputMode="email" placeholder="résolu depuis la fiche…" value={estimationPdfDraft.recipient} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, recipient: e.target.value } : d)} /></label>
+
+              <button type="button" className="estim-pdf-toggle" onClick={() => setEstimationPdfDetailsOpen((v) => !v)}>
+                <svg viewBox="0 0 24 24" fill="none" style={{ transform: estimationPdfDetailsOpen ? 'rotate(90deg)' : 'none' }}><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                Compléter le dossier (optionnel) — état, points forts, charges, DPE
+              </button>
+              {estimationPdfDetailsOpen ? (
+                <div className="estim-pdf-details">
+                  <div className="estim-pdf-grid">
+                    <label><span>DPE</span><select value={estimationPdfDraft.dpe} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, dpe: e.target.value } : d)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+                    <label><span>GES</span><select value={estimationPdfDraft.ges} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, ges: e.target.value } : d)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+                    <label><span>État (étoiles)</span><select value={estimationPdfDraft.etatNote} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, etatNote: e.target.value } : d)}><option value="">—</option>{[1,2,3,4,5].map((x) => <option key={x} value={x}>{x}/5</option>)}</select></label>
+                  </div>
+                  <label className="estim-pdf-wide"><span>État — libellé</span><input placeholder="ex. Bon état général" value={estimationPdfDraft.etatLabel} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, etatLabel: e.target.value } : d)} /></label>
+                  <div className="estim-pdf-grid">
+                    <label><span>Chauffage</span><input value={estimationPdfDraft.chauffage} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, chauffage: e.target.value } : d)} /></label>
+                    <label><span>Exposition</span><input value={estimationPdfDraft.exposition} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, exposition: e.target.value } : d)} /></label>
+                    <label><span>Toiture</span><input value={estimationPdfDraft.toiture} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, toiture: e.target.value } : d)} /></label>
+                    <label><span>Menuiseries</span><input value={estimationPdfDraft.menuiseries} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, menuiseries: e.target.value } : d)} /></label>
+                  </div>
+                  <label className="estim-pdf-wide"><span>Points forts (un par ligne)</span><textarea rows={3} value={estimationPdfDraft.pointsForts} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, pointsForts: e.target.value } : d)} /></label>
+                  <label className="estim-pdf-wide"><span>Points de vigilance (un par ligne)</span><textarea rows={2} value={estimationPdfDraft.pointsVigilance} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, pointsVigilance: e.target.value } : d)} /></label>
+                  <div className="estim-pdf-grid estim-pdf-grid-4">
+                    <label><span>Taxe foncière €/an</span><input inputMode="numeric" value={estimationPdfDraft.taxeFonciere} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, taxeFonciere: e.target.value.replace(/[^\d]/g, '') } : d)} /></label>
+                    <label><span>Énergie €/an</span><input inputMode="numeric" value={estimationPdfDraft.energie} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, energie: e.target.value.replace(/[^\d]/g, '') } : d)} /></label>
+                    <label><span>Eau €/an</span><input inputMode="numeric" value={estimationPdfDraft.eau} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, eau: e.target.value.replace(/[^\d]/g, '') } : d)} /></label>
+                    <label><span>Assurance €/an</span><input inputMode="numeric" value={estimationPdfDraft.assurance} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, assurance: e.target.value.replace(/[^\d]/g, '') } : d)} /></label>
+                  </div>
+                </div>
+              ) : null}
               {estimationPdfMsg ? <div className="estim-pdf-msg">{estimationPdfMsg}</div> : null}
               <div className="estim-pdf-actions">
                 <button type="button" className="ghost" disabled={estimationPdfBusy} onClick={() => setEstimationPdfDraft(null)}>Annuler</button>
