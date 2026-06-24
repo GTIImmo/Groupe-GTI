@@ -3329,6 +3329,279 @@ function estimEuro(value) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " €";
 }
 
+// Charge le détail annonce et en extrait les champs riches pour l'avis de valeur premium.
+async function loadEstimationDetail(appDossierId) {
+  try {
+    if (!appDossierId) return {};
+    const rows = await supabaseRequest(
+      `app_dossier_detail_current?app_dossier_id=eq.${encodeURIComponent(appDossierId)}&select=detail_payload_json&limit=1`,
+      { method: "GET" },
+    );
+    const raw = Array.isArray(rows) && rows[0] ? rows[0].detail_payload_json : null;
+    if (!raw) return {};
+    let j = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (typeof j === "string") j = JSON.parse(j);
+    const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
+    let photos = [];
+    try {
+      const imgs = j.images_preview_json ? JSON.parse(j.images_preview_json) : (j.images_json ? JSON.parse(j.images_json) : []);
+      if (Array.isArray(imgs)) photos = imgs.map((x) => (typeof x === "string" ? x : (x && (x.url || x.full)))).filter(Boolean);
+    } catch (_) { /* photos best-effort */ }
+    if (photos.length === 0 && j.photo_url_listing) photos = [j.photo_url_listing];
+    const descriptif = String(j.corps_listing_html || j.texte_principal_html || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+    return {
+      surface: num(j.surface_habitable_detail) || num(j.surface),
+      terrain: num(j.surface_terrain_detail),
+      pieces: num(j.nb_pieces),
+      chambres: num(j.nb_chambres),
+      garage: num(j.garage_box_detail) ? "Oui" : null,
+      etage: j.etage_detail || null,
+      type: j.mandat_type || null,
+      descriptif: descriptif || null,
+      photos: photos.slice(0, 6),
+      dpe_img: j.dpe_image_url || null,
+      ges_img: j.ges_image_url || null,
+    };
+  } catch (_) {
+    return {};
+  }
+}
+
+const ESTIM_PREMIUM_CSS = `
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--brand:#c5005f;--brand-d:#8c0044;--brand-50:#fbeaf2;--ink:#1d1e1f;--body:#42474a;--mute:#8b8f92;--faint:#b4b7b9;--cream:#f7f2ec;--line:#e4ddd2;--line2:#efe9df;--green:#1f8a5b;--mx:16mm}
+html,body{background:#fff;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);line-height:1.5}
+svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant-numeric:tabular-nums}
+.page{position:relative;width:210mm;height:297mm;background:#fff;margin:0 auto;padding:var(--mx);display:flex;flex-direction:column;overflow:hidden;page-break-after:always}
+.page:last-child{page-break-after:auto}
+.rh{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;border-bottom:1.5px solid var(--line);flex:none}
+.rh img{height:34px;width:auto}
+.rh .meta{text-align:right}.rh .meta .t{font-family:'Spectral',serif;font-size:13px;font-weight:700;line-height:1}.rh .meta .d{font-size:8.5px;color:var(--mute);margin-top:3px;letter-spacing:.04em}
+.rf{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--line);flex:none;font-size:8px;color:var(--faint);letter-spacing:.03em}
+.rf .pg{font-weight:700;color:var(--mute)}
+.content{flex:1;padding:18px 0;min-height:0}
+.h{font-size:9px;font-weight:800;color:var(--ink);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:11px;padding-bottom:6px;border-bottom:1.5px solid var(--ink)}
+.h::before{content:"";width:9px;height:9px;background:var(--brand);flex:none}.h.mt{margin-top:16px}
+.todo{color:var(--faint);font-style:italic;font-weight:500}
+.cover{padding:0;display:flex;flex-direction:column;color:#1a1614;overflow:hidden}
+.cover .c-head{display:flex;align-items:center;justify-content:space-between;padding:6mm var(--mx);background:linear-gradient(115deg,#160a10,#241019 45%,#3a1224)}
+.cover .c-head img{height:60px;width:auto;filter:brightness(0) invert(1)}
+.cover .c-head .ref{font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);text-align:right;line-height:1.8}
+.cover .c-head .ref b{display:block;color:#fff;font-size:9.5px;letter-spacing:2.4px}
+.cover .c-hero{position:relative;flex:none;height:112mm;overflow:hidden;background:linear-gradient(135deg,#2a2230,#3a1224)}
+.cover .c-hero>img{width:100%;height:100%;object-fit:cover}
+.cover .c-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(15,13,12,.45))}
+.cover .c-photo-tag{position:absolute;left:var(--mx);bottom:6mm;z-index:4;display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:700;color:#fff;background:rgba(15,13,12,.5);border:1px solid rgba(255,255,255,.22);padding:7px 13px;border-radius:2px}
+.cover .c-photo-tag svg{width:12px;height:12px;color:#ff9ec8}
+.cover .c-hero-foot{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 var(--mx)}
+.cover .c-kicker{display:flex;align-items:center;gap:11px;font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--brand)}
+.cover .c-kicker svg{width:13px;height:13px}.cover .c-kicker::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(26,22,20,.18),transparent)}
+.cover .c-title{font-family:'Spectral',serif;font-size:48px;font-weight:700;letter-spacing:-.025em;line-height:.96;margin-top:14px;color:#1a1614}
+.cover .c-bien{font-family:'Spectral',serif;font-size:18px;font-weight:500;font-style:italic;margin-top:11px;color:#4a4038}
+.cover .c-loc{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#6a5f56;margin-top:7px}.cover .c-loc svg{width:13px;height:13px;color:var(--brand)}
+.cover .c-tags{display:flex;gap:7px;margin-top:16px}.cover .c-tags span{font-size:9.5px;font-weight:700;border:1px solid rgba(26,22,20,.2);background:rgba(26,22,20,.03);padding:7px 13px;color:#3a322c;white-space:nowrap;border-radius:2px}
+.cover .c-info{flex:none;margin:9mm var(--mx) var(--mx)}.cover .c-info-row{display:flex}
+.cover .c-info-cell{flex:1;padding:13px 16px;border:1px solid rgba(26,22,20,.16);border-left:none;min-width:0}.cover .c-info-cell:first-child{border-left:1px solid transparent}
+.cover .c-info-cell.accent{background:var(--brand);border-color:var(--brand);flex:0 0 36%;display:flex;flex-direction:column;justify-content:center}
+.cover .c-info-cell .l{display:block;font-size:7.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--brand)}.cover .c-info-cell.accent .l{color:rgba(255,255,255,.85)}
+.cover .c-info-cell .v{display:block;font-size:11.5px;font-weight:600;margin-top:5px;color:#1a1614;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cover .c-info-cell.accent .v{color:#fff;font-family:'Spectral',serif;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.gal{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:34mm;gap:6px}
+.gal .g{border-radius:6px;overflow:hidden;background:linear-gradient(135deg,#efe9df,#e4ddd2);position:relative}
+.gal .g img{width:100%;height:100%;object-fit:cover}.gal .g.big{grid-column:span 2;grid-row:span 2}
+.specs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.spec{background:#fff;padding:11px 14px}.spec .k{font-size:8.5px;color:var(--mute);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.spec .v{font-family:'Spectral',serif;font-size:18px;font-weight:600;margin-top:6px}.spec .v small{font-size:11px;color:var(--mute);font-weight:400}
+.energy{display:flex;gap:10px;margin-top:12px}.epill{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.epill .g{width:40px;display:grid;place-items:center;font-family:'Spectral',serif;font-size:18px;font-weight:700;color:#1a1c1d}.epill .i{padding:8px 12px}
+.epill .i .l{font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute);font-weight:700}.epill .i .d{font-size:11px;margin-top:2px}
+.val{background:linear-gradient(160deg,#1d1e1f,#2c2228 72%,#3a1226);color:#fff;border-radius:12px;padding:26px 28px;position:relative;overflow:hidden}
+.val .grid{position:relative;display:grid;grid-template-columns:1.1fr 1fr;gap:30px;align-items:center}
+.val .lbl{font-size:9px;font-weight:800;color:#ff9ec8;letter-spacing:2.5px;text-transform:uppercase}
+.val .main{font-family:'Spectral',serif;font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:10px}
+.val .sub{font-size:11.5px;color:rgba(255,255,255,.62);margin-top:9px}
+.gauge-h{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:15px}
+.gbar{height:7px;border-radius:99px;background:linear-gradient(90deg,#5a82b0,#7fd1a8 45%,#e8c34a 72%,#d7674a);position:relative}
+.gpin{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:17px;height:17px;border-radius:50%;background:#fff;border:4px solid var(--brand)}
+.gends{display:flex;justify-content:space-between;margin-top:18px;position:relative}.gend .v{font-family:'Spectral',serif;font-size:15px;font-weight:600}
+.gend .k{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:700;margin-top:3px}
+.gend.mid{position:absolute;left:50%;transform:translateX(-50%);text-align:center}.gend.mid .v{color:#ff9ec8}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.scard{border:1px solid var(--line);border-radius:11px;padding:15px 16px}
+.scard .ic{width:30px;height:30px;border-radius:8px;background:var(--brand-50);color:var(--brand);display:grid;place-items:center}.scard .ic svg{width:15px;height:15px}
+.scard .v{font-family:'Spectral',serif;font-size:22px;font-weight:600;margin-top:11px}.scard .l{font-size:10.5px;color:var(--body);margin-top:2px}
+.etat-top{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);border-radius:3px;background:var(--cream);margin-bottom:12px}
+.etat-stars{display:flex;gap:2px}.etat-stars svg{width:15px;height:15px}.etat-stars .on{color:var(--brand)}.etat-stars .off{color:var(--line)}
+.etat-rl{font-family:'Spectral',serif;font-size:15px;font-weight:600}.etat-rs{font-size:9.5px;color:var(--mute)}
+.etat-sep{width:1px;align-self:stretch;background:var(--line)}.etat-meta{display:flex;gap:18px;flex-wrap:wrap}
+.etat-meta .k{font-size:8px;font-weight:700;color:var(--mute);text-transform:uppercase}.etat-meta .v{font-size:11.5px;font-weight:700;margin-top:2px}
+.pts-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.pts{border:1px solid var(--line);border-radius:3px;padding:13px 15px}
+.pts .ph{font-size:9px;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:7px;margin-bottom:9px}.pts .ph svg{width:13px;height:13px}
+.pts.forts .ph{color:var(--green)}.pts.vigi .ph{color:#b8860b}.pts ul{list-style:none;display:flex;flex-direction:column;gap:7px}.pts li{font-size:10.5px;color:var(--body);line-height:1.4}
+.method{display:flex;gap:10px;padding:12px 15px;background:var(--brand-50);border:1px solid #f3d4e3;border-radius:3px;margin-top:12px}.method svg{width:16px;height:16px;color:var(--brand);flex:none;margin-top:1px}
+.method .t{font-size:11px;font-weight:700}.method .d{font-size:10px;color:var(--body);line-height:1.5;margin-top:2px}
+.diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.diag{border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.diag-h{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--mute);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--cream)}
+.diag-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line2);font-size:10.5px}.diag-row:last-child{border-bottom:none}
+.diag-row .k{color:var(--body);font-weight:500}.diag-row .v{font-weight:700}.diag-row .v.ok{color:var(--green)}.diag-row .v.na{color:var(--mute);font-weight:600}
+.avis .lead{font-family:'Spectral',serif;font-size:15px;font-style:italic;font-weight:500;border-left:3px solid var(--brand);padding-left:15px;line-height:1.5}
+.avis p{font-size:11.5px;color:var(--body);line-height:1.7;margin-top:9px}
+.contact-fuse{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:4px;background:#fff}
+.cf-body{padding:15px 20px}.cf-nego{display:flex;align-items:center;gap:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.cf-nego .av{width:50px;height:50px;border-radius:50%;flex:none;background:linear-gradient(150deg,var(--brand),var(--brand-d));display:grid;place-items:center;color:#fff;font-family:'Spectral',serif;font-size:19px;font-weight:600}
+.cf-role{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:1.3px;text-transform:uppercase}.cf-nm{font-family:'Spectral',serif;font-size:18px;font-weight:600;margin-top:2px}
+.cf-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}.cf-contact span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--body);font-weight:500}.cf-contact svg{width:12px;height:12px;color:var(--brand)}
+.cf-agence-lbl{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:1.3px;text-transform:uppercase;margin-top:14px}
+.cf-rows{margin-top:9px;display:flex;flex-direction:column;gap:8px}.cf-row{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--body)}
+.cf-row .i{width:24px;height:24px;flex:none;border-radius:7px;background:var(--cream);display:grid;place-items:center;color:var(--brand)}.cf-row .i svg{width:12px;height:12px}
+.disc{font-size:9.5px;color:var(--body);line-height:1.5;padding:9px 13px;background:var(--cream);border-radius:9px;border-left:3px solid var(--brand);margin-top:10px}.disc b{color:var(--ink)}
+.legal{font-size:8px;color:var(--mute);line-height:1.55;margin-top:10px}
+`;
+
+function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
+  detail = detail || {};
+  const bien = payload.bien || {};
+  const prop = payload.proprietaire || {};
+  const nego = payload.negociateur || {};
+  const valeurs = payload.valeurs || {};
+  const now = new Date();
+  const dateLong = `${now.getDate()} ${ESTIM_MOIS_FR[now.getMonth()]} ${now.getFullYear()}`;
+  const ref = String(bien.reference || dossier.numero_dossier || dossier.hektor_annonce_id || "").trim();
+  const docNumber = "AV-" + (ref || "ESTIM").toString().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  const LOGO = "https://www.gti-immobilier.fr/images/logoSite.png";
+  const titre = estimText(bien.titre, "Votre bien");
+  const type = bien.type || null;
+  const ville = bien.ville || null;
+  const cp = bien.code_postal || null;
+  const localite = [cp, ville].filter(Boolean).join(" ");
+  const surface = detail.surface || (bien.surface ? Number(bien.surface) : null);
+  const terrain = detail.terrain || null;
+  const pieces = detail.pieces || (bien.pieces ? Number(bien.pieces) : null);
+  const chambres = detail.chambres || null;
+  const garage = detail.garage || null;
+  const photos = Array.isArray(detail.photos) ? detail.photos : [];
+  const descriptif = detail.descriptif || null;
+  const proprio = estimText(prop.nom, "Propriétaire");
+  const negoNom = estimText(nego.nom, "Votre conseiller Groupe GTI");
+  const agence = estimText(nego.agence, "Groupe GTI");
+  const tel = String(nego.telephone || "").trim();
+  const email = String(nego.email || "").trim();
+  const avis = String(payload.commentaire || "").trim();
+  const valEstimee = estimEuro(valeurs.estimee) || "À compléter";
+  const valBasse = estimEuro(valeurs.basse) || "—";
+  const valHaute = estimEuro(valeurs.haute) || "—";
+  const todo = (t) => `<span class="todo">${estimText(t)}</span>`;
+  const cellSpec = (k, v, has) => `<div class="spec"><div class="k">${k}</div><div class="v">${has ? v : '<span class="todo">—</span>'}</div></div>`;
+  const photoCell = (i, cls) => photos[i] ? `<div class="g ${cls || ""}"><img src="${estimText(photos[i])}" alt=""></div>` : `<div class="g ${cls || ""}"></div>`;
+  const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
+  const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
+  const rh = `<div class="rh"><img src="${LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
+  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 5</span></div>`;
+  const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
+  const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
+
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Avis de valeur ${docNumber}</title>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>${ESTIM_PREMIUM_CSS}</style></head><body>
+<div class="page cover">
+  <div class="c-head"><img src="${LOGO}" alt="GTI Immobilier"><div class="ref">Dossier confidentiel<b>N° ${docNumber}</b></div></div>
+  <div class="c-hero">${heroImg}<div class="c-photo-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Établi par un professionnel</div></div>
+  <div class="c-hero-foot">
+    <span class="c-kicker"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Estimation immobilière</span>
+    <div class="c-title serif">Avis de valeur</div>
+    <div class="c-bien serif">${titre}</div>
+    <div class="c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${estimText(localite || "—")}</div>
+    <div class="c-tags">${tags || '<span class="todo">Caractéristiques à compléter</span>'}</div>
+  </div>
+  <div class="c-info"><div class="c-info-row">
+    <div class="c-info-cell accent"><span class="l">Valeur estimée</span><span class="v">${valEstimee}</span></div>
+    <div class="c-info-cell"><span class="l">Établi pour</span><span class="v">${proprio}</span></div>
+    <div class="c-info-cell"><span class="l">Conseiller</span><span class="v">${negoNom}</span></div>
+    <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · 3 mois</span></div>
+  </div></div>
+</div>
+<div class="page">${rh}<div class="content">
+  <div class="h">Votre bien en images</div>
+  <div class="gal">${photoCell(0, "big")}${photoCell(1)}${photoCell(2)}${photoCell(3)}${photoCell(4)}</div>
+  <div class="h mt">Caractéristiques principales</div>
+  <div class="specs">
+    ${cellSpec("Type", estimText(type), !!type)}
+    ${cellSpec("Surface", `${surface} <small>m²</small>`, !!surface)}
+    ${cellSpec("Terrain", `${terrain} <small>m²</small>`, !!terrain)}
+    ${cellSpec("Pièces", estimText(pieces), !!pieces)}
+    ${cellSpec("Chambres", estimText(chambres), !!chambres)}
+    ${cellSpec("Garage", estimText(garage), !!garage)}
+    ${cellSpec("Étage", estimText(detail.etage), !!detail.etage)}
+    ${cellSpec("Localité", estimText(localite), !!localite)}
+  </div>
+  <div class="energy">
+    <div class="epill"><div class="g" style="background:#e4ddd2">${estimText(bien.dpe || "—")}</div><div class="i"><div class="l">DPE</div><div class="d">${bien.dpe ? "" : todo("à compléter")}</div></div></div>
+    <div class="epill"><div class="g" style="background:#e4ddd2">${estimText(bien.ges || "—")}</div><div class="i"><div class="l">GES</div><div class="d">${bien.ges ? "" : todo("à compléter")}</div></div></div>
+  </div>
+  <div class="h mt">Descriptif</div>
+  <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
+</div>${rf(2)}</div>
+<div class="page">${rh}<div class="content">
+  <div class="h">État du logement &amp; prestations</div>
+  <div class="etat-top">
+    <div class="etat-stars">${'<svg viewBox="0 0 24 24" fill="currentColor" class="off"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"></path></svg>'.repeat(5)}</div>
+    <div><div class="etat-rl serif">${todo("État à évaluer")}</div><div class="etat-rs">À renseigner par votre conseiller</div></div>
+    <div class="etat-sep"></div>
+    <div class="etat-meta"><div><div class="k">Chauffage</div><div class="v">${todo("—")}</div></div><div><div class="k">Exposition</div><div class="v">${todo("—")}</div></div><div><div class="k">Toiture</div><div class="v">${todo("—")}</div></div></div>
+  </div>
+  <div class="pts-grid">
+    <div class="pts forts"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>Points forts</div><ul><li>${todo("À compléter par votre conseiller")}</li></ul></div>
+    <div class="pts vigi"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>Points de vigilance</div><ul><li>${todo("À compléter par votre conseiller")}</li></ul></div>
+  </div>
+  <div class="method"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">Méthode d'estimation</div><div class="d">Estimation par comparaison directe avec les transactions récentes du secteur, ajustées selon les caractéristiques du bien (surface, terrain, état, performance énergétique).</div></div></div>
+  <div class="h" style="margin-top:22px">Diagnostics &amp; charges</div>
+  <div class="diag-grid">
+    <div class="diag"><div class="diag-h">Diagnostics obligatoires</div>
+      <div class="diag-row"><span class="k">DPE &amp; GES</span><span class="v na">À actualiser</span></div>
+      <div class="diag-row"><span class="k">Électricité</span><span class="v na">À actualiser</span></div>
+      <div class="diag-row"><span class="k">Amiante / Plomb</span><span class="v na">À actualiser</span></div>
+      <div class="diag-row"><span class="k">Assainissement</span><span class="v na">À actualiser</span></div>
+    </div>
+    <div class="diag"><div class="diag-h">Charges annuelles estimées</div>
+      <div class="diag-row"><span class="k">Taxe foncière</span><span class="v na">${todo("à compléter")}</span></div>
+      <div class="diag-row"><span class="k">Énergie</span><span class="v na">${todo("à compléter")}</span></div>
+      <div class="diag-row"><span class="k">Eau</span><span class="v na">${todo("à compléter")}</span></div>
+      <div class="diag-row"><span class="k">Assurance</span><span class="v na">${todo("à compléter")}</span></div>
+    </div>
+  </div>
+</div>${rf(3)}</div>
+<div class="page">${rh}<div class="content">
+  <div class="h">Valeur vénale estimée</div>
+  <div class="val"><div class="grid">
+    <div><div class="lbl">Notre estimation</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
+    <div><div class="gauge-h">Positionnement de marché</div><div class="gbar"><div class="gpin"></div></div>
+      <div class="gends"><div class="gend" style="text-align:left"><div class="v serif tnum">${valBasse}</div><div class="k">Bas</div></div><div class="gend mid"><div class="v serif tnum">${valEstimee}</div><div class="k">Conseillé</div></div><div class="gend" style="text-align:right"><div class="v serif tnum">${valHaute}</div><div class="k">Haut</div></div></div>
+    </div>
+  </div></div>
+  <p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>
+  <div class="h mt">Le marché en chiffres</div>
+  <div class="stats">
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v">${todo("—")}</div><div class="l">Prix moyen · secteur</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg></span><div class="v">${todo("—")}</div><div class="l">Délai de vente moyen</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></span><div class="v">${todo("—")}</div><div class="l">Acquéreurs en recherche</div></div>
+  </div>
+  <div class="disc"><b>Données de marché.</b> Les statistiques détaillées du secteur et l'analyse comparative seront intégrées prochainement (open data DVF).</div>
+</div>${rf(4)}</div>
+<div class="page">${rh}<div class="content">
+  <div class="h">L'avis de votre conseiller</div>
+  <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
+  <div class="h mt">Votre conseiller</div>
+  <div class="contact-fuse"><div class="cf-body">
+    <div class="cf-nego"><div class="av">${estimText(initials)}</div><div><div class="cf-role">Votre conseiller</div><div class="cf-nm serif">${negoNom}</div>
+      <div class="cf-contact">${tel ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg>${estimText(tel)}</span>` : ""}${email ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>${estimText(email)}</span>` : ""}</div></div></div>
+    <div class="cf-agence-lbl">Agence</div>
+    <div class="cf-rows"><div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path></svg></span>${agence}</div></div>
+  </div></div>
+  <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
+  <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
+</div>${rf(5)}</div>
+</body></html>`;
+}
+
 function estimationAvisValeurHtml(payload, dossier) {
   const bien = payload.bien || {};
   const prop = payload.proprietaire || {};
@@ -3434,7 +3707,8 @@ async function handleGenerateEstimationPdf(job) {
     hektor_annonce_id: String(dossier.hektor_annonce_id),
   });
 
-  const html = estimationAvisValeurHtml(payload, dossier);
+  const detail = await loadEstimationDetail(dossier.app_dossier_id || job.app_dossier_id);
+  const html = estimationAvisValeurHtmlPremium(payload, dossier, detail);
   const pdfBuffer = await renderHtmlToPdfBuffer(html);
 
   const label = (payload.document_label && String(payload.document_label).trim()) || "Avis de valeur";
