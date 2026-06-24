@@ -27,6 +27,10 @@ param(
     [switch]$HektorChauffageForce,
     [switch]$HektorChauffageSkipJobCheck,
     [bool]$HektorChauffageRefreshSession = $true,
+    [switch]$SkipContactMissing,
+    [int]$ContactMissingLimit = 50,
+    [int]$ContactMissingStaleDays = 30,
+    [bool]$ContactMissingRefreshSession = $true,
     [switch]$RunConsoleMissingFields,
     [switch]$SkipConsoleMissingFields,
     [ValidateSet("all", "current")]
@@ -267,6 +271,31 @@ if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0) {
 }
 else {
     Write-RunLog "SKIP hektor chauffage delta"
+}
+
+# Contact champs manquants (naissance/lieu/matrimonial) : Hektor ne les rend pas par l'API.
+# Scraper Console leger, cache local resumable, recents d'abord. Limite a un seul lot (50)
+# comme le chauffage ; les gros rattrapages passent par la commande dediee en vagues.
+if (-not $SkipContactMissing -and $ContactMissingLimit -gt 0) {
+    if ($ContactMissingLimit -gt 50) {
+        throw "Safety stop: le quotidien contact champs-manquants est limite a 50 (rattrapage via la commande dediee en vagues)."
+    }
+    $contactMissingArgs = @(
+        "phase2\sync\sync_console_contact_missing.py",
+        "--scope", "eligible",
+        "--limit", [string]$ContactMissingLimit,
+        "--stale-days", [string]$ContactMissingStaleDays,
+        "--batch-size", [string]$ContactMissingLimit,
+        "--batch-pause-seconds", "0",
+        "--delay-seconds", "0.4"
+    )
+    if ($ContactMissingRefreshSession) {
+        $contactMissingArgs += "--refresh-session-on-expired"
+    }
+    Invoke-Step -Label "contact champs manquants (naissance/lieu/matrimonial) delta" -Arguments $contactMissingArgs
+}
+else {
+    Write-RunLog "SKIP contact champs manquants delta"
 }
 
 if ($RunConsoleMissingFields -and -not $SkipConsoleMissingFields -and $ConsoleMissingFieldsLimit -gt 0) {
