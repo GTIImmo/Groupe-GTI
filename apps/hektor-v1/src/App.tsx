@@ -65,6 +65,7 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createGenerateEstimationPdfJob,
+  sendEstimationEmail,
   createDeleteDocumentFromHektorJob,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
@@ -8343,7 +8344,8 @@ export default function App() {
   const [annonceOwnerModal, setAnnonceOwnerModal] = useState<{ kind: 'rdv' | 'email'; contact: AppContact; relations: AppContactRelation[]; appDossierId: number } | null>(null)
   const [annonceOwnerActionBusy, setAnnonceOwnerActionBusy] = useState<number | null>(null)
   // Brouillon de saisie de l'avis de valeur (fourchette + commentaire) avant génération du PDF.
-  const [estimationPdfDraft, setEstimationPdfDraft] = useState<{ item: MandatRecord; ownerName: string; basse: string; estimee: string; haute: string; commentaire: string } | null>(null)
+  // recipient/hektorContactId sont pré-remplis en arrière-plan depuis le contact propriétaire.
+  const [estimationPdfDraft, setEstimationPdfDraft] = useState<{ item: MandatRecord; ownerName: string; recipient: string; hektorContactId: string | null; basse: string; estimee: string; haute: string; commentaire: string } | null>(null)
   const [estimationPdfBusy, setEstimationPdfBusy] = useState(false)
   const [estimationPdfMsg, setEstimationPdfMsg] = useState<string | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
@@ -9943,9 +9945,10 @@ export default function App() {
   // Envoyer dossier : génère l'avis de valeur imprimable (fenêtre, comme le bon de visite),
   // puis ouvre le composeur email Google pré-renseigné du propriétaire pour y joindre le PDF.
   // La fenêtre est ouverte AVANT l'await (sinon bloquée par le navigateur).
-  // Envoyer dossier (Lot 1) : ouvre la saisie de la fourchette (pré-remplie depuis le prix),
-  // le négo ajuste, puis on crée un job worker qui génère le PDF d'avis de valeur et l'archive
-  // (local + Supabase + Hektor). L'envoi email au propriétaire viendra au Lot 2.
+  // Envoyer dossier : ouvre la saisie de la fourchette (pré-remplie depuis le prix), le négo
+  // ajuste, puis génère le PDF (worker, archivé local+Supabase+Hektor) et, en option, envoie
+  // l'email d'avis de valeur au propriétaire (dry-run). L'email du proprio est résolu en
+  // arrière-plan depuis le contact lié à l'annonce.
   function handleSendDossierEstimation(item: MandatRecord) {
     const prix = item.prix != null && Number.isFinite(Number(item.prix)) ? Number(item.prix) : null
     const owner = estimationOwnerIdentity(item.mandants_texte)
@@ -9953,44 +9956,86 @@ export default function App() {
     setEstimationPdfDraft({
       item,
       ownerName: owner.name ?? '',
+      recipient: '',
+      hektorContactId: null,
       basse: prix != null ? String(Math.round(prix * 0.95)) : '',
       estimee: prix != null ? String(prix) : '',
       haute: prix != null ? String(Math.round(prix * 1.05)) : '',
       commentaire: '',
     })
+    // Résolution best-effort du contact propriétaire pour pré-remplir l'email destinataire.
+    void resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id).then((resolved) => {
+      if (!resolved) return
+      const email = (resolved.contact.email ?? '').trim()
+      const name = (resolved.contact.display_name ?? '').trim() || [resolved.contact.prenom, resolved.contact.nom].filter(Boolean).join(' ')
+      setEstimationPdfDraft((current) => (current && current.item.app_dossier_id === item.app_dossier_id
+        ? { ...current, recipient: current.recipient || email, ownerName: current.ownerName || name, hektorContactId: resolved.contact.hektor_contact_id ?? null }
+        : current))
+    }).catch(() => {})
   }
 
-  async function submitEstimationPdf() {
+  function estimationPdfPayload(d: NonNullable<typeof estimationPdfDraft>) {
+    const negoName = commercialDisplay(d.item)
+    return {
+      bien: {
+        titre: d.item.titre_bien,
+        type: d.item.type_bien,
+        ville: d.item.ville,
+        code_postal: d.item.code_postal,
+        reference: d.item.numero_dossier ?? d.item.numero_mandat ?? null,
+      },
+      proprietaire: { nom: d.ownerName || null },
+      negociateur: {
+        nom: negoName && negoName !== '-' ? negoName : (d.item.commercial_nom ?? null),
+        agence: d.item.agence_nom,
+        email: d.item.negociateur_email ?? null,
+      },
+      valeurs: {
+        basse: d.basse ? Number(d.basse) : null,
+        estimee: d.estimee ? Number(d.estimee) : null,
+        haute: d.haute ? Number(d.haute) : null,
+      },
+    }
+  }
+
+  // sendEmail=true : envoie aussi l'email d'avis de valeur au propriétaire (dry-run).
+  async function submitEstimationPdf(sendEmail = false) {
     if (!estimationPdfDraft || estimationPdfBusy) return
     const d = estimationPdfDraft
-    const negoName = commercialDisplay(d.item)
+    if (sendEmail && !d.recipient.trim()) {
+      setEstimationPdfMsg("Renseigne l'email du propriétaire pour l'envoi.")
+      return
+    }
+    const p = estimationPdfPayload(d)
     setEstimationPdfBusy(true)
     setEstimationPdfMsg(null)
     try {
       await createGenerateEstimationPdfJob({
         dossier: { app_dossier_id: d.item.app_dossier_id, hektor_annonce_id: d.item.hektor_annonce_id },
-        bien: {
-          titre: d.item.titre_bien,
-          type: d.item.type_bien,
-          ville: d.item.ville,
-          code_postal: d.item.code_postal,
-          reference: d.item.numero_dossier ?? d.item.numero_mandat ?? null,
-        },
-        proprietaire: { nom: d.ownerName || null },
-        negociateur: {
-          nom: negoName && negoName !== '-' ? negoName : (d.item.commercial_nom ?? null),
-          agence: d.item.agence_nom,
-          email: d.item.negociateur_email ?? null,
-        },
-        valeurs: {
-          basse: d.basse ? Number(d.basse) : null,
-          estimee: d.estimee ? Number(d.estimee) : null,
-          haute: d.haute ? Number(d.haute) : null,
-        },
+        bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: d.commentaire,
       })
-      setEstimationPdfDraft(null)
-      setEstimationPdfMsg("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants.")
+      if (sendEmail) {
+        const res = await sendEstimationEmail({
+          recipientEmail: d.recipient.trim(),
+          senderEmail: (d.item.negociateur_email ?? '').trim() || 'accueil@gti-immobilier.fr',
+          appDossierId: d.item.app_dossier_id,
+          bien: p.bien,
+          valeurs: p.valeurs,
+          proprietaireNom: p.proprietaire.nom,
+          negociateur: p.negociateur,
+          customIntro: d.commentaire || null,
+          hektorContactId: d.hektorContactId,
+          dryRun: true,
+        })
+        setEstimationPdfDraft(null)
+        setEstimationPdfMsg(res?.dryRun
+          ? "PDF en génération + email préparé (mode test, aucun envoi réel) — envoi réel à activer au Lot 3."
+          : "PDF en génération + email envoyé au propriétaire.")
+      } else {
+        setEstimationPdfDraft(null)
+        setEstimationPdfMsg("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants.")
+      }
     } catch (error) {
       setEstimationPdfMsg(error instanceof Error ? error.message : "Création de l'avis de valeur impossible.")
     } finally {
@@ -13881,10 +13926,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <label><span>Fourchette haute</span><input inputMode="numeric" value={estimationPdfDraft.haute} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, haute: e.target.value.replace(/[^\d]/g, '') } : d)} /></label>
               </div>
               <label className="estim-pdf-wide"><span>Avis du négociateur (optionnel)</span><textarea rows={4} value={estimationPdfDraft.commentaire} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, commentaire: e.target.value } : d)} /></label>
+              <label className="estim-pdf-wide"><span>Email du propriétaire (pour l'envoi)</span><input type="email" inputMode="email" placeholder="résolu depuis la fiche…" value={estimationPdfDraft.recipient} onChange={(e) => setEstimationPdfDraft((d) => d ? { ...d, recipient: e.target.value } : d)} /></label>
               {estimationPdfMsg ? <div className="estim-pdf-msg">{estimationPdfMsg}</div> : null}
               <div className="estim-pdf-actions">
                 <button type="button" className="ghost" disabled={estimationPdfBusy} onClick={() => setEstimationPdfDraft(null)}>Annuler</button>
-                <button type="button" className="primary" disabled={estimationPdfBusy} onClick={() => { void submitEstimationPdf() }}>{estimationPdfBusy ? 'Génération…' : "Générer & archiver le PDF"}</button>
+                <button type="button" className="ghost" disabled={estimationPdfBusy} onClick={() => { void submitEstimationPdf(false) }}>{estimationPdfBusy ? '…' : 'Générer le PDF'}</button>
+                <button type="button" className="primary" disabled={estimationPdfBusy} onClick={() => { void submitEstimationPdf(true) }}>{estimationPdfBusy ? 'Envoi…' : 'Générer + envoyer au propriétaire'}</button>
               </div>
             </div>
           </div>

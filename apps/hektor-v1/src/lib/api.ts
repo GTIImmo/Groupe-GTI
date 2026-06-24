@@ -2458,6 +2458,36 @@ export async function sendRapprochementEmail(input: {
   })
 }
 
+// Envoi de l'email d'estimation au propriétaire (chokepoint backend, dry-run par défaut).
+export async function sendEstimationEmail(input: {
+  recipientEmail: string
+  senderEmail: string
+  appDossierId: number
+  bien?: Record<string, unknown>
+  valeurs?: { basse?: number | null; estimee?: number | null; haute?: number | null }
+  proprietaireNom?: string | null
+  negociateur?: Record<string, unknown> | null
+  customIntro?: string | null
+  hektorContactId?: string | null
+  dryRun?: boolean
+}): Promise<{ ok: boolean; dryRun?: boolean; envoiId?: string; subject?: string; skipped?: string }> {
+  return invokeBackendApi('/emails/estimation/send', {
+    method: 'POST',
+    body: {
+      recipient_email: input.recipientEmail,
+      sender_email: input.senderEmail,
+      app_dossier_id: input.appDossierId,
+      bien: input.bien ?? {},
+      valeurs: input.valeurs ?? {},
+      proprietaire_nom: input.proprietaireNom ?? null,
+      negociateur: input.negociateur ?? null,
+      custom_intro: input.customIntro ?? null,
+      hektor_contact_id: input.hektorContactId ?? null,
+      dry_run: input.dryRun ?? true,
+    },
+  })
+}
+
 export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
   const params = new URLSearchParams()
   if (input.contactSearchKey?.trim()) params.set('contact_search_key', input.contactSearchKey.trim())
