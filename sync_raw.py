@@ -526,8 +526,35 @@ def extract_missing_nego_ids_from_annonces(conn) -> list[str]:
     return sorted(missing_ids, key=lambda value: (len(value), value))
 
 
+def recently_failed_nego_ids(conn, days: int = 30) -> set[str]:
+    """Négos déjà en échec getNegoById récemment (orphelins Hektor : réponse vide).
+    On les exclut des re-tentatives quotidiennes pour ne pas gaspiller 4 retries/négo
+    chaque jour. Auto-guérison : si Hektor recrée le négo, il est re-tenté après le délai.
+    """
+    cutoff = (date.today() - timedelta(days=max(days, 1))).isoformat()
+    rows = conn.execute(
+        "SELECT DISTINCT object_id FROM sync_error "
+        "WHERE endpoint_name = 'nego_by_id' AND created_at >= ?",
+        (cutoff,),
+    ).fetchall()
+    return {str(row[0]).strip() for row in rows if row[0]}
+
+
 def sync_missing_negos_by_id(conn, run_id: int, client: HektorClient, settings: Settings) -> int:
     missing_ids = extract_missing_nego_ids_from_annonces(conn)
+    if not missing_ids:
+        return 0
+
+    # Anti-retry orphelins : un négo absent de Hektor (getNegoById renvoie un corps vide)
+    # est inutile à re-tenter chaque jour. On saute ceux déjà en échec < 30j.
+    recently_failed = recently_failed_nego_ids(conn, days=30)
+    skipped_known = [nego_id for nego_id in missing_ids if nego_id in recently_failed]
+    if skipped_known:
+        missing_ids = [nego_id for nego_id in missing_ids if nego_id not in recently_failed]
+        print(
+            f"[sync_missing_negos] anti-retry : {len(skipped_known)} négo(s) orphelin(s) "
+            f"connu(s) NON re-tenté(s) (échec getNegoById < 30j) : {', '.join(skipped_known)}"
+        )
     if not missing_ids:
         return 0
 
