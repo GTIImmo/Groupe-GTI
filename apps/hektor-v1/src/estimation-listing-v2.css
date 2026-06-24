@@ -364,6 +364,13 @@
 .estim-pdf-toggle svg { width: 15px; height: 15px; flex: none; transition: transform 0.15s; }
 .estim-pdf-details { margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
 .estim-pdf-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.estim-marche-stats { display: flex; gap: 10px; margin-bottom: 12px; }
+.estim-marche-stats > div { flex: 1; background: #faf7f9; border: 1px solid #ece6ea; border-radius: 10px; padding: 10px 12px; }
+.estim-marche-stats .emk { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #9a948f; }
+.estim-marche-stats .emv { display: block; font-size: 16px; font-weight: 700; color: #222323; margin-top: 4px; }
+.estim-marche-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.estim-marche-table th { text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #9a948f; padding: 6px 8px; border-bottom: 1px solid #ece6ea; }
+.estim-marche-table td { padding: 7px 8px; border-bottom: 1px solid #f2eef1; color: #42474a; }
 .estim-pdf-head { display: flex; align-items: center; justify-content: space-between; }
 .estim-pdf-head h3 { margin: 0; font-family: 'Spectral', Georgia, serif; font-size: 20px; font-weight: 700; color: #222323; }
 .estim-pdf-head button { width: 30px; height: 30px; border: 1px solid #e3dfe2; border-radius: 8px; background: #fff; color: #6b6560; display: grid; place-items: center; cursor: pointer; }

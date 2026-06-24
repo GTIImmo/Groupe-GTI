@@ -2488,6 +2488,20 @@ export async function sendEstimationEmail(input: {
   })
 }
 
+export type DvfComparable = { commune: string; type: string; surface: number; pieces?: string | null; terrain?: number | null; valeur: number; prix_m2: number | null; date: string; distance_km: number }
+export type DvfComparablesResult = { ok: boolean; reason?: string; count: number; avg_prix_m2?: number | null; median_prix_m2?: number | null; radius_km?: number; months?: number; type?: string; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
+
+// Comparables de marché DVF (open data) autour d'un bien — via le backend (cache 24 h).
+export async function loadDvfComparables(input: {
+  lat: number; lon: number; dept: string; type?: 'Maison' | 'Appartement'; surface?: number | null; radiusKm?: number; months?: number
+}): Promise<DvfComparablesResult> {
+  const params = new URLSearchParams({ lat: String(input.lat), lon: String(input.lon), dept: input.dept, type: input.type ?? 'Maison' })
+  if (input.surface) params.set('surface', String(input.surface))
+  if (input.radiusKm) params.set('radius_km', String(input.radiusKm))
+  if (input.months) params.set('months', String(input.months))
+  return invokeBackendApi<DvfComparablesResult>(`/dvf/comparables?${params.toString()}`, { method: 'GET' })
+}
+
 export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
   const params = new URLSearchParams()
   if (input.contactSearchKey?.trim()) params.set('contact_search_key', input.contactSearchKey.trim())
@@ -5338,6 +5352,7 @@ export async function createGenerateEstimationPdfJob(input: {
   pointsForts?: string[]
   pointsVigilance?: string[]
   charges?: { taxe_fonciere?: number | null; energie?: number | null; eau?: number | null; assurance?: number | null }
+  marche?: DvfComparablesResult | null
   methode?: string | null
   validite?: string | null
   documentLabel?: string | null
@@ -5366,6 +5381,7 @@ export async function createGenerateEstimationPdfJob(input: {
         pointsForts: input.pointsForts ?? null,
         pointsVigilance: input.pointsVigilance ?? null,
         charges: input.charges ?? null,
+        marche: input.marche ?? null,
         methode: input.methode ?? null,
         validite: input.validite ?? null,
       },

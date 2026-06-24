@@ -3428,7 +3428,19 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .gend.mid{position:absolute;left:50%;transform:translateX(-50%);text-align:center}.gend.mid .v{color:#ff9ec8}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.scard{border:1px solid var(--line);border-radius:11px;padding:15px 16px}
 .scard .ic{width:30px;height:30px;border-radius:8px;background:var(--brand-50);color:var(--brand);display:grid;place-items:center}.scard .ic svg{width:15px;height:15px}
-.scard .v{font-family:'Spectral',serif;font-size:22px;font-weight:600;margin-top:11px}.scard .l{font-size:10.5px;color:var(--body);margin-top:2px}
+.scard .v{font-family:'Spectral',serif;font-size:22px;font-weight:600;margin-top:11px}.scard .v small{font-size:11px;color:var(--mute)}.scard .l{font-size:10.5px;color:var(--body);margin-top:2px}
+.chart{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-top:12px}
+.chart .ch{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+.chart .ch .t{font-size:12px;font-weight:700}.chart .ch .s{font-size:10.5px;color:var(--mute)}
+.bars{display:flex;align-items:flex-end;gap:12px;height:34mm}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end}
+.bcol .bv{font-size:10px;font-weight:700}.bcol .bar{flex:none;width:100%;max-width:42px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#c9c0b0,#b8ad99);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bcol .bar.hl{background:linear-gradient(180deg,var(--brand),var(--brand-d))}.bcol .bk{font-size:9.5px;color:var(--mute);font-weight:600}
+.comps{display:flex;flex-direction:column;gap:8px}
+.comp{display:flex;align-items:center;gap:13px;padding:10px 13px;border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:2px}
+.comp .info{flex:1;min-width:0}.comp .info .t{font-size:12.5px;font-weight:700}.comp .info .d{font-size:10px;color:var(--mute);margin-top:2px}
+.comp .stat{text-align:right}.comp .stat .p{font-family:'Spectral',serif;font-size:15px;font-weight:600}.comp .stat .pm{font-size:10px;color:var(--brand);font-weight:700;margin-top:1px}
+.comp .bdg{font-size:9px;font-weight:700;color:var(--green);background:#e9f6ef;border:1px solid #c3e6d4;padding:3px 8px;border-radius:99px}
 .etat-top{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);border-radius:3px;background:var(--cream);margin-bottom:12px}
 .etat-stars{display:flex;gap:2px}.etat-stars svg{width:15px;height:15px}.etat-stars .on{color:var(--brand)}.etat-stars .off{color:var(--line)}
 .etat-rl{font-family:'Spectral',serif;font-size:15px;font-weight:600}.etat-rs{font-size:9.5px;color:var(--mute)}
@@ -3522,6 +3534,17 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const validite = String(payload.validite || "3 mois").trim();
   const methode = String(payload.methode || "").trim() || "Estimation par comparaison directe avec les transactions récentes du secteur, ajustées selon les caractéristiques du bien (surface, terrain, état, performance énergétique).";
 
+  // --- Données marché DVF (Lot C) : passées par le front (payload.marche) ---
+  const marche = payload.marche && payload.marche.ok ? payload.marche : null;
+  const mEvo = marche && Array.isArray(marche.evolution) ? marche.evolution : [];
+  const mAvg = marche && marche.avg_prix_m2 ? marche.avg_prix_m2 : null;
+  const mTrend = mEvo.length >= 2 && mEvo[0].prix_m2 ? Math.round(((mEvo[mEvo.length - 1].prix_m2 - mEvo[0].prix_m2) / mEvo[0].prix_m2) * 1000) / 10 : null;
+  const mComps = marche && Array.isArray(marche.comparables) ? marche.comparables : [];
+  const mEvoMax = mEvo.length ? Math.max(...mEvo.map((e) => e.prix_m2 || 0)) : 0;
+  const dateCourt = (s) => { const p = String(s || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : s; };
+  const compRow = (c) => `<div class="comp"><div class="info"><div class="t">${estimText(c.type)} ${c.surface ? c.surface + " m²" : ""}${c.pieces ? " · " + estimText(c.pieces) + " p." : ""}</div><div class="d">${estimText(c.commune)}${c.terrain ? " · terrain " + c.terrain + " m²" : ""} · ${estimText(dateCourt(c.date))} · ${estimText(c.distance_km)} km</div></div><div class="stat"><div class="p tnum">${estimEuro(c.valeur) || "—"}</div><div class="pm tnum">${c.prix_m2 ? estimEuro(c.prix_m2) + "/m²" : ""}</div></div><span class="bdg">Vendu</span></div>`;
+  const evoBars = mEvo.map((e) => `<div class="bcol"><div class="bv tnum">${estimEuro(e.prix_m2) || "—"}</div><div class="bar${e === mEvo[mEvo.length - 1] ? " hl" : ""}" style="height:${mEvoMax ? Math.round((e.prix_m2 / mEvoMax) * 20) + 4 : 4}mm"></div><div class="bk">${estimText(e.annee)}</div></div>`).join("");
+
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Avis de valeur ${docNumber}</title>
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${ESTIM_PREMIUM_CSS}</style></head><body>
@@ -3601,13 +3624,15 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     </div>
   </div></div>
   <p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>
-  <div class="h mt">Le marché en chiffres</div>
+  <div class="h mt">Le marché en chiffres${marche ? ` · ${mComps.length ? marche.comparables[0].commune : "secteur"}` : ""}</div>
   <div class="stats">
-    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v">${todo("—")}</div><div class="l">Prix moyen · secteur</div></div>
-    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg></span><div class="v">${todo("—")}</div><div class="l">Délai de vente moyen</div></div>
-    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></span><div class="v">${todo("—")}</div><div class="l">Acquéreurs en recherche</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v tnum">${mAvg ? estimEuro(mAvg) + "<small>/m²</small>" : todo("—")}</div><div class="l">Prix moyen · ${estimText(marche ? marche.type : "secteur")}</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span><div class="v tnum">${mTrend != null ? (mTrend >= 0 ? "+" : "") + mTrend + " %" : todo("—")}</div><div class="l">Évolution prix/m²</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><rect x="7" y="10" width="3" height="8"></rect><rect x="14" y="6" width="3" height="12"></rect></svg></span><div class="v tnum">${marche ? marche.count : todo("—")}</div><div class="l">Ventes analysées (24 mois)</div></div>
   </div>
-  <div class="disc"><b>Données de marché.</b> Les statistiques détaillées du secteur et l'analyse comparative seront intégrées prochainement (open data DVF).</div>
+  ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
+  ${mComps.length ? `<div class="h mt">Biens comparables vendus</div><div class="comps">${mComps.map(compRow).join("")}</div>` : ""}
+  <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· ${marche.count} ventes ${estimText(marche.type)} comparables dans un rayon de ${marche.radius_km} km sur ${Math.round(marche.months / 12)} ans` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
 </div>${rf(4)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>

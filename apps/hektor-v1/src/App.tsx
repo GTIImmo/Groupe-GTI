@@ -66,6 +66,7 @@ import {
   createUploadDocumentToHektorJob,
   createGenerateEstimationPdfJob,
   sendEstimationEmail,
+  loadDvfComparables,
   createDeleteDocumentFromHektorJob,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
@@ -125,6 +126,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
+import type { DvfComparablesResult } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -4317,10 +4319,35 @@ function EstimationDocumentEditor(props: {
 
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(initialDraft)
-  const [tab, setTab] = useState<'valeur' | 'etat' | 'points' | 'charges'>('valeur')
+  const [tab, setTab] = useState<'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('valeur')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  useEffect(() => { setDraft(initialDraft); setOpen(false); setMessage(null) }, [initialDraft])
+  // Lot C — comparables DVF chargés à la demande (passés au worker pour la page Marché).
+  const [marche, setMarche] = useState<DvfComparablesResult | null>(null)
+  const [marcheBusy, setMarcheBusy] = useState(false)
+  const [marcheMsg, setMarcheMsg] = useState<string | null>(null)
+  useEffect(() => { setDraft(initialDraft); setOpen(false); setMessage(null); setMarche(null); setMarcheMsg(null) }, [initialDraft])
+
+  async function loadMarche() {
+    if (marcheBusy) return
+    const lat = Number(props.detail.latitude_detail)
+    const lon = Number(props.detail.longitude_detail)
+    const dept = String(dossier.code_postal || '').trim().slice(0, 2)
+    const surface = Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null
+    const type = /appart/i.test(dossier.type_bien || '') ? 'Appartement' as const : 'Maison' as const
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
+    setMarcheBusy(true); setMarcheMsg(null)
+    try {
+      const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24 })
+      setMarche(res)
+      setMarcheMsg(res.ok ? `${res.count} ventes comparables · ${res.avg_prix_m2 ? res.avg_prix_m2.toLocaleString('fr-FR') + ' €/m² moyen' : ''}` : 'Aucune donnée DVF trouvée pour ce secteur.')
+    } catch (error) {
+      setMarcheMsg(error instanceof Error ? error.message : 'Chargement des comparables impossible.')
+    } finally {
+      setMarcheBusy(false)
+    }
+  }
 
   const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
   const numStr = (v: string) => v.replace(/[^\d]/g, '')
@@ -4355,6 +4382,7 @@ function EstimationDocumentEditor(props: {
         dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
         bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
+        marche: marche && marche.ok ? marche : null,
       })
       if (sendEmail) {
         const res = await sendEstimationEmail({
@@ -4387,7 +4415,7 @@ function EstimationDocumentEditor(props: {
         <div className="mandat-document-editor-body">
           <div className="mandat-document-form" style={{ width: '100%' }}>
             <div className="mandat-document-tabs" role="tablist" aria-label="Sections de l'avis de valeur">
-              {[['valeur', 'Bien & valeur'], ['etat', 'État'], ['points', 'Points forts'], ['charges', 'Charges & DPE']].map(([v, label]) => (
+              {[['valeur', 'Bien & valeur'], ['etat', 'État'], ['points', 'Points forts'], ['charges', 'Charges & DPE'], ['marche', 'Marché (DVF)']].map(([v, label]) => (
                 <button key={v} className={tab === v ? 'is-active' : ''} type="button" onClick={() => setTab(v as typeof tab)}>{label}</button>
               ))}
             </div>
@@ -4426,6 +4454,34 @@ function EstimationDocumentEditor(props: {
                 <label><span>Énergie €/an</span><input inputMode="numeric" value={draft.energie} onChange={(e) => upd('energie', numStr(e.target.value))} /></label>
                 <label><span>Eau €/an</span><input inputMode="numeric" value={draft.eau} onChange={(e) => upd('eau', numStr(e.target.value))} /></label>
                 <label><span>Assurance €/an</span><input inputMode="numeric" value={draft.assurance} onChange={(e) => upd('assurance', numStr(e.target.value))} /></label>
+              </div>
+            ) : null}
+            {tab === 'marche' ? (
+              <div className="mandat-document-panel">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <button className="ghost-button" type="button" disabled={marcheBusy} onClick={() => { void loadMarche() }}>{marcheBusy ? 'Chargement…' : (marche ? 'Recharger les comparables DVF' : 'Charger les comparables DVF')}</button>
+                  {marcheMsg ? <span style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>{marcheMsg}</span> : null}
+                </div>
+                {marche && marche.ok ? (
+                  <>
+                    <div className="estim-marche-stats">
+                      <div><span className="emk">Prix moyen</span><span className="emv">{marche.avg_prix_m2 ? marche.avg_prix_m2.toLocaleString('fr-FR') + ' €/m²' : '—'}</span></div>
+                      <div><span className="emk">Médiane</span><span className="emv">{marche.median_prix_m2 ? marche.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : '—'}</span></div>
+                      <div><span className="emk">Ventes (24 mois)</span><span className="emv">{marche.count}</span></div>
+                    </div>
+                    <table className="estim-marche-table">
+                      <thead><tr><th>Bien</th><th>Commune</th><th>Date</th><th>Dist.</th><th style={{ textAlign: 'right' }}>Prix</th><th style={{ textAlign: 'right' }}>€/m²</th></tr></thead>
+                      <tbody>
+                        {marche.comparables.map((c, i) => (
+                          <tr key={i}><td>{c.type} {c.surface} m²{c.pieces ? ` · ${c.pieces} p.` : ''}</td><td>{c.commune}</td><td>{c.date}</td><td>{c.distance_km} km</td><td style={{ textAlign: 'right' }}>{c.valeur.toLocaleString('fr-FR')} €</td><td style={{ textAlign: 'right', color: 'var(--ds-brand-500, #c5005f)' }}>{c.prix_m2 ? c.prix_m2.toLocaleString('fr-FR') : '—'}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p style={{ fontSize: 11, color: 'var(--ds-ink-mute, #5c6163)', marginTop: 8 }}>Source : DVF (open data). Comparables {marche.type}, surface ±30 %, rayon {marche.radius_km} km. Ajoutés automatiquement au PDF (page Marché).</p>
+                  </>
+                ) : (
+                  <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Charge les ventes comparables récentes du secteur (open data DVF) — elles enrichiront la page Marché de l'avis de valeur.</p>
+                )}
               </div>
             ) : null}
             {message ? <p className="mandat-document-message">{message}</p> : null}
