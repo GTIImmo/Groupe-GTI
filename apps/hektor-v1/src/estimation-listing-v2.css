@@ -353,6 +353,32 @@
 @keyframes ev2-busy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* =========================================================================
+   Modale « Avis de valeur » (saisie fourchette avant génération du PDF worker)
+   ========================================================================= */
+.estim-pdf-overlay { position: fixed; inset: 0; z-index: 1200; background: rgba(34, 35, 35, 0.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.estim-pdf-modal { width: 100%; max-width: 460px; background: #fff; border-radius: 16px; padding: 20px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+.estim-pdf-head { display: flex; align-items: center; justify-content: space-between; }
+.estim-pdf-head h3 { margin: 0; font-family: 'Spectral', Georgia, serif; font-size: 20px; font-weight: 700; color: #222323; }
+.estim-pdf-head button { width: 30px; height: 30px; border: 1px solid #e3dfe2; border-radius: 8px; background: #fff; color: #6b6560; display: grid; place-items: center; cursor: pointer; }
+.estim-pdf-head button svg { width: 16px; height: 16px; }
+.estim-pdf-head button:disabled { opacity: 0.5; cursor: default; }
+.estim-pdf-sub { font-size: 13px; color: #6b6560; margin: 2px 0 16px; }
+.estim-pdf-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.estim-pdf-modal label { display: block; }
+.estim-pdf-modal label > span { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #9a948f; margin-bottom: 5px; }
+.estim-pdf-modal input, .estim-pdf-modal textarea { width: 100%; border: 1px solid #e3dfe2; border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; color: #222323; background: #fff; box-sizing: border-box; }
+.estim-pdf-modal input:focus, .estim-pdf-modal textarea:focus { outline: none; border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.12); }
+.estim-pdf-wide { margin-top: 14px; }
+.estim-pdf-wide textarea { resize: vertical; }
+.estim-pdf-msg { margin-top: 12px; font-size: 13px; color: #72243e; background: #fbeaf0; border: 1px solid #f0d4e2; border-radius: 9px; padding: 9px 11px; }
+.estim-pdf-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.estim-pdf-actions button { font: inherit; font-size: 14px; font-weight: 700; border-radius: 10px; padding: 9px 16px; cursor: pointer; border: 1px solid transparent; }
+.estim-pdf-actions .ghost { background: #fff; border-color: #e3dfe2; color: #6b6560; }
+.estim-pdf-actions .primary { background: linear-gradient(135deg, #c5005f, #a8004f); color: #fff; box-shadow: 0 2px 8px rgba(197, 0, 95, 0.3); }
+.estim-pdf-actions button:disabled { opacity: 0.6; cursor: default; }
+.estim-pdf-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 1200; max-width: 520px; background: #222323; color: #fff; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13.5px; padding: 12px 18px; border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28); cursor: pointer; }
+
+/* =========================================================================
    Toolbar estimations (chrome partagé .hero, scopé .estim-toolbar)
    Reproduit la barre de la maquette : recherche à icône + boutons pilule +
    « Nouvelle estimation » en bouton marque. Les éléments non câblés de la

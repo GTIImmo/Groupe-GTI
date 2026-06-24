@@ -40,6 +40,7 @@ const ACTION_JOB_TYPES = new Set([
 const DOCUMENT_JOB_TYPES = new Set([
   "sync_console_documents",
   "prepare_document_cloud",
+  "generate_estimation_pdf",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
   "sync_hektor_photos",
@@ -3297,6 +3298,188 @@ async function handlePrepareDocumentCloud(job) {
     local_path: result.local_path,
     bytes: result.bytes,
     sha256: result.sha256,
+  };
+}
+
+// =========================================================================
+// Avis de valeur (estimation) : génère un PDF pro à partir des données du
+// payload, l'upload en temp storage, puis réutilise le flux éprouvé
+// upload_document_to_hektor (push Hektor + archive locale + Supabase).
+// Rendu PDF via Playwright (déjà présent pour le login/upload Hektor).
+// =========================================================================
+const ESTIM_MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+function estimEscapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function estimText(value, fallback) {
+  const v = String(value == null ? "" : value).trim();
+  return estimEscapeHtml(v || fallback || "");
+}
+
+function estimEuro(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " €";
+}
+
+function estimationAvisValeurHtml(payload, dossier) {
+  const bien = payload.bien || {};
+  const prop = payload.proprietaire || {};
+  const nego = payload.negociateur || {};
+  const valeurs = payload.valeurs || {};
+  const now = new Date();
+  const dateLong = `${now.getDate()} ${ESTIM_MOIS_FR[now.getMonth()]} ${now.getFullYear()}`;
+  const reference = String(bien.reference || dossier.hektor_annonce_id || "").trim();
+  const docNumber = "AV-" + (reference || "ESTIM").toString().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+
+  const valEstimee = estimEuro(valeurs.estimee) || "À compléter";
+  const valBasse = estimEuro(valeurs.basse) || "À compléter";
+  const valHaute = estimEuro(valeurs.haute) || "À compléter";
+
+  const caracteristiques = [
+    ["Type", estimText(bien.type, "—")],
+    ["Surface", bien.surface ? estimText(bien.surface) + " m²" : "—"],
+    ["Pièces", estimText(bien.pieces, "—")],
+    ["Terrain", bien.terrain ? estimText(bien.terrain) + " m²" : "—"],
+    ["DPE", estimText(bien.dpe, "—")],
+    ["Localité", estimText([bien.code_postal, bien.ville].filter(Boolean).join(" "), "—")],
+  ].map(([k, v]) => `<div><div class="ck">${k}</div><div class="cv">${v}</div></div>`).join("");
+
+  const commentaire = String(payload.commentaire || "").trim();
+  const commentaireBlock = commentaire
+    ? `<section class="notice"><span class="lbl">L'avis du négociateur</span><p>${estimEscapeHtml(commentaire)}</p></section>`
+    : "";
+
+  return `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8" /><title>Avis de valeur ${docNumber}</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;color:#222323;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.45;background:#fff}
+  .sheet{padding:4mm 2mm}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #c5005f;padding-bottom:12px;margin-bottom:16px}
+  .brand{font-size:18px;font-weight:bold;letter-spacing:.5px}
+  .brand small{display:block;font-size:11px;font-weight:normal;color:#7a7570;letter-spacing:0}
+  .head-meta{text-align:right}
+  .head-meta .doc{font-size:20px;font-weight:bold;color:#c5005f}
+  .head-meta .sub{font-size:11px;color:#7a7570}
+  .to{margin-bottom:16px}
+  .to .lbl,.lbl{display:block;font-size:10px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#c5005f;margin-bottom:4px}
+  .to .nm{font-size:14px;font-weight:bold}
+  .to .ad{font-size:12px;color:#555}
+  .bien{border:1px solid #e6dde1;border-radius:8px;padding:12px 14px;margin-bottom:16px;background:#fffafb}
+  .bien .titre{font-size:14px;font-weight:bold;margin-bottom:10px}
+  .carac{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .ck{font-size:10px;color:#9a948f;text-transform:uppercase;letter-spacing:.04em}
+  .cv{font-size:13px;font-weight:bold}
+  .value{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:10px;align-items:end;text-align:center;background:#fbeaf0;border-radius:8px;padding:16px;margin-bottom:16px}
+  .value .vk{font-size:10px;color:#993556;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+  .value .vmain{font-size:26px;font-weight:bold;color:#c5005f}
+  .value .vside{font-size:15px;font-weight:bold;color:#72243e}
+  .notice{border:1px solid #f0d4e2;border-left:3px solid #c5005f;border-radius:8px;padding:12px 14px;margin-bottom:16px;background:#fff6fa}
+  .notice p{margin:6px 0 0;text-align:justify}
+  .nego{display:flex;align-items:center;gap:12px;border-top:1px solid #e6dde1;padding-top:14px;margin-bottom:14px}
+  .nego .av{width:44px;height:44px;border-radius:50%;background:#fbeaf0;color:#c5005f;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:15px;flex:none}
+  .nego .nm{font-size:14px;font-weight:bold}
+  .nego .co{font-size:12px;color:#555}
+  .legal{font-size:10px;color:#9a948f;text-align:justify;border-top:1px solid #eee;padding-top:10px}
+</style></head>
+<body><main class="sheet">
+  <section class="head">
+    <div class="brand">GTI Immobilier<small>${estimText(nego.agence, "Groupe GTI")} · Estimation immobilière</small></div>
+    <div class="head-meta"><div class="doc">Avis de valeur</div><div class="sub">Établi le ${dateLong} · réf. ${docNumber}</div></div>
+  </section>
+  <section class="to"><span class="lbl">À l'attention de</span><div class="nm">${estimText(prop.nom, "Propriétaire")}</div><div class="ad">${estimText([bien.code_postal, bien.ville].filter(Boolean).join(" "), "")}</div></section>
+  <section class="bien"><div class="titre">${estimText(bien.titre, "Le bien")}</div><div class="carac">${caracteristiques}</div></section>
+  <section class="value">
+    <div><div class="vk">Fourchette basse</div><div class="vside">${valBasse}</div></div>
+    <div><div class="vk">Valeur estimée</div><div class="vmain">${valEstimee}</div></div>
+    <div><div class="vk">Fourchette haute</div><div class="vside">${valHaute}</div></div>
+  </section>
+  ${commentaireBlock}
+  <section class="nego">
+    <div class="av">${estimText((String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase())}</div>
+    <div><div class="nm">${estimText(nego.nom, "Votre négociateur")}</div><div class="co">${estimText([nego.agence, nego.telephone, nego.email].filter(Boolean).join(" · "), "GTI Immobilier")}</div></div>
+  </section>
+  <section class="legal">Le présent avis de valeur constitue une estimation indicative de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</section>
+</main></body></html>`;
+}
+
+async function renderHtmlToPdfBuffer(html) {
+  let browser = null;
+  try {
+    browser = await chromium.launch(browserLaunchOptions({ headless: true }));
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle", timeout: 30000 });
+    return await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
+    });
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
+async function handleGenerateEstimationPdf(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await logJob(job.id, "estimation_pdf", "running", "Generation de l'avis de valeur", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+  });
+
+  const html = estimationAvisValeurHtml(payload, dossier);
+  const pdfBuffer = await renderHtmlToPdfBuffer(html);
+
+  const label = (payload.document_label && String(payload.document_label).trim()) || "Avis de valeur";
+  const filename = storageSafeFilename(`${label}.pdf`, "avis-de-valeur.pdf");
+  const tempPath = `temp/uploads/${job.id}/${filename}`;
+  await uploadStorageObject(tempPath, pdfBuffer, "application/pdf");
+
+  // Réutilise le flux éprouvé upload_document_to_hektor (push Hektor + archive local+cloud).
+  const rows = await supabaseRequest("app_console_job", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_type: "upload_document_to_hektor",
+      app_dossier_id: dossier.app_dossier_id || job.app_dossier_id || null,
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      payload_json: {
+        visibility: payload.visibility === "shared" ? "shared" : "private",
+        document_type: "Avis de valeur",
+        original_filename: filename,
+        source_filename: filename,
+        document_label: label,
+        mime_type: "application/pdf",
+        temp_storage_bucket: STORAGE_BUCKET,
+        temp_storage_path: tempPath,
+      },
+      status: "pending",
+      priority: 40,
+      requested_by: job.requested_by || null,
+      requested_at: new Date().toISOString(),
+    }]),
+  });
+  const uploadJob = Array.isArray(rows) ? rows[0] : null;
+
+  await logJob(job.id, "estimation_pdf", "done", "Avis de valeur genere, upload Hektor en file", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    upload_job_id: uploadJob ? uploadJob.id : null,
+  });
+
+  return {
+    ok: true,
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    temp_storage_path: tempPath,
+    upload_job_id: uploadJob ? uploadJob.id : null,
   };
 }
 
@@ -9052,6 +9235,8 @@ async function runHandler(job) {
       return handleSyncConsoleDocuments(job);
     case "prepare_document_cloud":
       return handlePrepareDocumentCloud(job);
+    case "generate_estimation_pdf":
+      return handleGenerateEstimationPdf(job);
     case "upload_document_to_hektor":
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
