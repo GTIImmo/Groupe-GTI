@@ -877,7 +877,7 @@ def upsert_contact_from_sources(
         (
             contact_id,
             normalized_id(source.get("agence") or item.get("agence")),
-            normalized_id(source.get("id_negociateur") or item.get("id_negociateur")),
+            normalized_id(item.get("id_negociateur")) or normalized_id(source.get("id_negociateur")),
             source.get("civilite") or item.get("civilite"),
             source.get("nom") or item.get("nom"),
             source.get("prenom") or item.get("prenom"),
