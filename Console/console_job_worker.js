@@ -3818,6 +3818,32 @@ async function resolveHektorPublicLocality(postalCode, city) {
   return candidate;
 }
 
+// Lot 2 : la localite du formulaire contact est TYPEE (champs caches idVille/idCode).
+// Pousser seulement le texte ville/code ne suffit pas -> Hektor les renvoie vides (miroir
+// annonce idVillepublique/idCodepublique). On resout la commune en identifiants Hektor et
+// on aligne texte + id dans `values`. Best-effort : si la resolution echoue, on garde le
+// comportement texte actuel (aucune regression).
+async function applyContactLocalityIds(values, contact, job, contactId) {
+  if (!contact || (!contact.city && !contact.postalCode)) return;
+  let locality = null;
+  try {
+    locality = await resolveHektorPublicLocality(contact.postalCode, contact.city);
+  } catch (_) {
+    locality = null;
+  }
+  if (!locality || (!locality.idVille && !locality.idCode)) return;
+  if (locality.idVille) values.set("idVille", locality.idVille);
+  if (locality.idCode) values.set("idCode", locality.idCode);
+  if (locality.name) values.set("ville", locality.name);
+  if (locality.code) values.set("code", locality.code);
+  if (job) {
+    await logJob(job.id, "contact_locality_resolved", "running", "Localite contact resolue en identifiants Hektor", {
+      hektor_contact_id: contactId ? String(contactId) : null,
+      ville: locality.name, code: locality.code, idVille: locality.idVille, idCode: locality.idCode,
+    });
+  }
+}
+
 function exactHektorWizardFields(payload) {
   let source = null;
   if (payload && typeof payload === "object") {
@@ -6903,6 +6929,7 @@ async function createHektorContact(job, payload) {
   values.delete("saveOrUpdate");
   values.delete("saveOrUpdateValue");
   applyHektorContactIdentityValues(values, contact);
+  await applyContactLocalityIds(values, contact, job, null);
 
   await logJob(job.id, "hektor_contact_create", "running", "Creation contact global dans Hektor", {
     nom: contact.lastName,
@@ -7354,6 +7381,8 @@ async function updateHektorContactIdentity(job, contactId, payload) {
     throw new Error(`Formulaire edition contact Hektor introuvable pour ${contactId}`);
   }
   applyHektorContactIdentityValues(values, contact);
+
+  await applyContactLocalityIds(values, contact, job, contactId);
 
   const body = new URLSearchParams();
   body.set("mode", "contacts-saveDataEditContact");
