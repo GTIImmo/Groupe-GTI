@@ -493,6 +493,7 @@ DOSSIER_KEEP_FIELDS = {
     "agence_nom",
     "negociateur_email",
     "diffusable",
+    "date_enregistrement_annonce",
     "adresse_privee_listing",
     "adresse_detail",
     "code_postal",

@@ -1978,7 +1978,7 @@ export async function loadContactsPage({
     filters,
   )
     .order('duplicate_group_count', { ascending: false, nullsFirst: false })
-    .order('date_maj', { ascending: false, nullsFirst: false })
+    .order('date_enregistrement', { ascending: false, nullsFirst: false })
     .order('display_name', { ascending: true })
     .range(from, to)
 
@@ -2704,7 +2704,8 @@ export async function loadDossiersPage({
   )
     .order('has_open_blocker', { ascending: false })
     .order('priority', { ascending: true })
-    .order('app_dossier_id', { ascending: true })
+    .order('date_enregistrement_annonce', { ascending: false, nullsFirst: false })
+    .order('app_dossier_id', { ascending: false })
   if (requestScopedIds) {
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }
@@ -3688,7 +3689,8 @@ export async function loadMandatsPage({
   )
     .order('has_diffusion_error', { ascending: false })
     .order('nb_portails_actifs', { ascending: false })
-    .order('app_dossier_id', { ascending: true })
+    .order('date_enregistrement_annonce', { ascending: false, nullsFirst: false })
+    .order('app_dossier_id', { ascending: false })
   if (requestScopedIds) {
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }

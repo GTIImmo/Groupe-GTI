@@ -551,6 +551,7 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             "dernier_event_type": normalized.get("dernier_event_type"),
             "dernier_work_status": normalized.get("dernier_work_status"),
             "source_updated_at": source_updated_at,
+            "date_enregistrement_annonce": normalize_timestamp(normalized.get("date_enregistrement_annonce")),
         }
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_hash"] = stable_upload_hash(current_row)
