@@ -4299,6 +4299,7 @@ function EstimationDocumentEditor(props: {
   detail: DossierDetailPayload
   contacts: DetailContact[]
   compact?: boolean
+  modal?: boolean  // rendu en modale (listing) : ouvert d'emblée, sans bouton toggle
 }) {
   const { dossier } = props
   const prix = dossier.prix != null && Number.isFinite(Number(dossier.prix)) ? Number(dossier.prix) : null
@@ -4318,7 +4319,7 @@ function EstimationDocumentEditor(props: {
     taxeFonciere: '', energie: '', eau: '', assurance: '',
   }), [dossier.app_dossier_id, dossier.prix, ownerContact?.email, ownerContact?.name, ownerIdentity.name, prix])
 
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(!!props.modal)
   const [draft, setDraft] = useState(initialDraft)
   const [tab, setTab] = useState<'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('valeur')
   const [busy, setBusy] = useState(false)
@@ -4327,7 +4328,7 @@ function EstimationDocumentEditor(props: {
   const [marche, setMarche] = useState<DvfComparablesResult | null>(null)
   const [marcheBusy, setMarcheBusy] = useState(false)
   const [marcheMsg, setMarcheMsg] = useState<string | null>(null)
-  useEffect(() => { setDraft(initialDraft); setOpen(false); setMessage(null); setMarche(null); setMarcheMsg(null) }, [initialDraft])
+  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null) }, [initialDraft, props.modal])
 
   async function loadMarche() {
     if (marcheBusy) return
@@ -4428,7 +4429,7 @@ function EstimationDocumentEditor(props: {
           <strong>Avis de valeur</strong>
           <small>{open ? 'Complétez le dossier, puis générez le PDF' : 'Préparer et envoyer l’avis de valeur au propriétaire'}</small>
         </div>
-        <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button>
+        {!props.modal ? <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button> : null}
       </div>
       {open ? (
         <div className="mandat-document-editor-body">
@@ -8598,6 +8599,9 @@ export default function App() {
   } | null>(null)
   const [estimationPdfDetailsOpen, setEstimationPdfDetailsOpen] = useState(false)
   const [estimationPdfBusy, setEstimationPdfBusy] = useState(false)
+  // Éditeur riche « Avis de valeur » ouvert depuis le listing (même composant que la fiche).
+  const [estimationEditorTarget, setEstimationEditorTarget] = useState<{ dossier: Dossier; detail: DossierDetailPayload; contacts: DetailContact[] } | null>(null)
+  const [estimationEditorLoading, setEstimationEditorLoading] = useState(false)
   const [estimationPdfMsg, setEstimationPdfMsg] = useState<string | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestModalMandatId, setRequestModalMandatId] = useState<number | null>(null)
@@ -10200,6 +10204,34 @@ export default function App() {
   // ajuste, puis génère le PDF (worker, archivé local+Supabase+Hektor) et, en option, envoie
   // l'email d'avis de valeur au propriétaire (dry-run). L'email du proprio est résolu en
   // arrière-plan depuis le contact lié à l'annonce.
+  // Ouvre l'éditeur riche « Avis de valeur » (même composant que la fiche) depuis le
+  // listing : charge le détail complet du dossier + résout le contact propriétaire.
+  async function openEstimationEditor(item: MandatRecord) {
+    if (estimationEditorLoading) return
+    setEstimationEditorLoading(true)
+    setEstimationPdfMsg(null)
+    try {
+      const detailed = await loadDossierDetail(item.app_dossier_id)
+      if (!detailed) { setEstimationPdfMsg("Impossible de charger le détail du bien."); return }
+      const detail = detailPayload(detailed)
+      let contacts: DetailContact[] = []
+      try {
+        const resolved = await resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id)
+        if (resolved) {
+          const c = resolved.contact
+          const name = (c.display_name ?? '').trim() || [c.prenom, c.nom].filter(Boolean).join(' ').trim()
+          contacts = [{ id: c.hektor_contact_id ?? '', name, role: 'mandant', phone: '', email: (c.email ?? '').trim(),
+            address: '', postalCode: '', city: '', civility: '', firstName: c.prenom ?? '', lastName: c.nom ?? '', comment: '' }]
+        }
+      } catch { /* contact best-effort */ }
+      setEstimationEditorTarget({ dossier: detailed, detail, contacts })
+    } catch (error) {
+      setEstimationPdfMsg(error instanceof Error ? error.message : "Ouverture de l'avis de valeur impossible.")
+    } finally {
+      setEstimationEditorLoading(false)
+    }
+  }
+
   function handleSendDossierEstimation(item: MandatRecord) {
     const prix = item.prix != null && Number.isFinite(Number(item.prix)) ? Number(item.prix) : null
     const owner = estimationOwnerIdentity(item.mandants_texte)
@@ -14187,6 +14219,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : null}
 
+        {estimationEditorLoading ? (
+          <div className="estim-pdf-overlay" role="status" aria-label="Chargement de l'avis de valeur">
+            <div className="estim-editor-loading">Chargement de l'avis de valeur…</div>
+          </div>
+        ) : null}
+        {estimationEditorTarget ? (
+          <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => setEstimationEditorTarget(null)}>
+            <div className="estim-editor-modal" onClick={(e) => e.stopPropagation()}>
+              <button type="button" className="estim-editor-close" aria-label="Fermer" onClick={() => setEstimationEditorTarget(null)}>×</button>
+              <EstimationDocumentEditor dossier={estimationEditorTarget.dossier} detail={estimationEditorTarget.detail} contacts={estimationEditorTarget.contacts} modal />
+            </div>
+          </div>
+        ) : null}
         {estimationPdfDraft ? (
           <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Préparer l'avis de valeur" onClick={() => { if (!estimationPdfBusy) setEstimationPdfDraft(null) }}>
             <div className="estim-pdf-modal" onClick={(event) => event.stopPropagation()}>
@@ -15537,7 +15582,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             detailLoading={detailLoading}
             onCallOwner={(item) => { void handleCallAnnonceOwner(item) }}
             onPlanRdv={(item) => { void handlePlanAnnonceOwnerRdv(item) }}
-            onSendDossier={(item) => { void handleSendDossierEstimation(item) }}
+            onSendDossier={(item) => { void openEstimationEditor(item) }}
             ownerActionBusyId={annonceOwnerActionBusy}
             eyebrow="Estimations"
             title="Futurs mandats potentiels"

@@ -357,6 +357,11 @@
    ========================================================================= */
 .estim-pdf-overlay { position: fixed; inset: 0; z-index: 1200; background: rgba(34, 35, 35, 0.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .estim-pdf-modal { width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; background: #fff; border-radius: 16px; padding: 20px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+/* Éditeur riche « Avis de valeur » ouvert depuis le listing (réutilise EstimationDocumentEditor). */
+.estim-editor-modal { position: relative; width: 100%; max-width: 760px; max-height: 92vh; overflow-y: auto; background: #fff; border-radius: 16px; padding: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); }
+.estim-editor-close { position: absolute; top: 12px; right: 14px; z-index: 2; width: 32px; height: 32px; border: 1px solid #e3dfe2; border-radius: 9px; background: #fff; color: #6b6560; font-size: 20px; line-height: 1; cursor: pointer; }
+.estim-editor-close:hover { border-color: #c5005f; color: #c5005f; }
+.estim-editor-loading { background: #fff; border-radius: 12px; padding: 16px 22px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; color: #222323; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); }
 .estim-pdf-modal select { width: 100%; border: 1px solid #e3dfe2; border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; color: #222323; background: #fff; box-sizing: border-box; }
 .estim-pdf-modal select:focus { outline: none; border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.12); }
 .estim-pdf-toggle { width: 100%; margin-top: 14px; display: flex; align-items: center; gap: 8px; background: #faf7f9; border: 1px solid #ece6ea; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13px; font-weight: 600; color: #6b6560; cursor: pointer; text-align: left; }
