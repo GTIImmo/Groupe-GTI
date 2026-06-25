@@ -378,6 +378,72 @@ def refresh_broadcast_state(conn: sqlite3.Connection, annonce_id: str, payload: 
     return sorted({value for value in enabled_portals if value})
 
 
+def rebuild_broadcast_state_from_listing(conn: sqlite3.Connection, annonce_id: str) -> list[str]:
+    """Reconstruit l'etat de diffusion d'UNE annonce depuis hektor_broadcast_listing
+    (source `list_broadcasts` du quotidien) — la SEULE source fiable du statut d'export
+    par bien. `ListPasserelles` ne renvoie que la config portails de l'agence (champ
+    `actif`/`nbAnnonces`), SANS le statut par annonce : l'utiliser remettait
+    nb_portails_actifs a 0 a chaque ouverture -> l'annonce coulait en bas de la liste
+    (triee par nb_portails) = "disparue". On copie la logique du quotidien
+    (derive_broadcast_state), scopee a cette annonce."""
+    enabled_portals: list[str] = []
+    conn.execute("DELETE FROM hektor_annonce_broadcast_state WHERE hektor_annonce_id = ?", (annonce_id,))
+    now_iso = now_utc_iso()
+    rows = conn.execute(
+        """
+        SELECT hektor_broadcast_id, hektor_annonce_id, passerelle, commercial_id,
+               commercial_type, commercial_nom, commercial_prenom, export_status, raw_json
+        FROM hektor_broadcast_listing WHERE hektor_annonce_id = ?
+        """,
+        (annonce_id,),
+    ).fetchall()
+    for row in rows:
+        status_text = str(row["export_status"] or "").strip()
+        if status_text.lower() == "exported":
+            current_state, is_success, is_error = "broadcasted", 1, 0
+        elif status_text:
+            current_state, is_success, is_error = "error", 0, 1
+        else:
+            current_state, is_success, is_error = "unknown", 0, 0
+        commercial_key = str(row["commercial_id"] or "").strip()
+        if current_state == "broadcasted":
+            enabled_portals.append(str(row["passerelle"] or "").strip() or str(row["hektor_broadcast_id"] or ""))
+        conn.execute(
+            """
+            INSERT INTO hektor_annonce_broadcast_state(
+                hektor_broadcast_id, hektor_annonce_id, commercial_key, passerelle_key, commercial_id,
+                commercial_type, commercial_nom, commercial_prenom, current_state, export_status,
+                is_success, is_error, raw_json, synced_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(hektor_broadcast_id, hektor_annonce_id, commercial_key) DO UPDATE SET
+                passerelle_key = excluded.passerelle_key,
+                current_state = excluded.current_state,
+                export_status = excluded.export_status,
+                is_success = excluded.is_success,
+                is_error = excluded.is_error,
+                raw_json = excluded.raw_json,
+                synced_at = excluded.synced_at
+            """,
+            (
+                row["hektor_broadcast_id"],
+                annonce_id,
+                commercial_key,
+                row["passerelle"],
+                row["commercial_id"],
+                row["commercial_type"],
+                row["commercial_nom"],
+                row["commercial_prenom"],
+                current_state,
+                row["export_status"],
+                is_success,
+                is_error,
+                row["raw_json"],
+                now_iso,
+            ),
+        )
+    return sorted({value for value in enabled_portals if value})
+
+
 def main() -> int:
     args = parse_args()
     annonce_id = str(args.id_annonce).strip()
@@ -437,11 +503,11 @@ def main() -> int:
                 mandats_payload = {"data": mandat_items}
         replace_mandats_for_annonce(conn, annonce_id, mandat_items)
 
-        passerelles_payload = client.get_json(
-            "/Api/Annonce/ListPasserelles/",
-            params={"idAnnonce": annonce_id, "version": settings.api_version},
-        )
-        enabled_portals = refresh_broadcast_state(conn, annonce_id, passerelles_payload)
+        # La diffusion PAR BIEN vient de hektor_broadcast_listing (source list_broadcasts
+        # du quotidien), PAS de ListPasserelles (= config portails de l'agence, sans le
+        # statut par annonce). On reconstruit depuis la bonne source pour ne plus remettre
+        # nb_portails_actifs a 0 a chaque ouverture (sinon l'annonce coule en bas de liste).
+        enabled_portals = rebuild_broadcast_state_from_listing(conn, annonce_id)
 
         conn.commit()
         finish_sync_run(conn, run_id, "success", notes=f"single annonce refreshed: {annonce_id}")
