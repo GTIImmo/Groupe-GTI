@@ -107,6 +107,8 @@ import {
   type DossierPropositionRow,
   loadRapprochementCounts,
   type RapprochementCount,
+  hasOffreAchatEnCours,
+  hasCompromisEnCours,
   setBienStatut,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
@@ -16802,11 +16804,15 @@ function MandatsScreen(props: {
                       ? 'ready'
                       : 'import'
                 // ── valeurs dérivées pour le rendu « liste premium » (mode actif) ──
+                // Vente : pas d'annulation possible -> id seul suffit. Offre/compromis
+                // sont annulables : on respecte offre_last_proposition_type (refus) et
+                // compromis_state (cancelled) via les helpers métier, sinon une offre
+                // refusée ou un compromis annulé resterait affiché « en cours » à tort.
                 const avStatut = item.vente_id
                   ? { c: 'vendu', l: 'Vendu' }
-                  : item.compromis_id
+                  : hasCompromisEnCours(item)
                     ? { c: 'compromis', l: 'Sous compromis' }
-                    : item.offre_id
+                    : hasOffreAchatEnCours(item)
                       ? { c: 'offre', l: 'Offre reçue' }
                       : { c: '', l: item.statut_annonce || 'Actif' }
                 const avFin = item.mandat_date_fin ? new Date(item.mandat_date_fin) : null
@@ -17729,7 +17735,7 @@ function SuiviMandatsScreen(props: {
                   <td>{commercialDisplay(item)}</td>
                   <td><StatusPill value={item.statut_annonce} /><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
                   <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
-                  <td><small>{item.offre_id ? 'Offre' : '-'}</small><small>{item.compromis_id ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
+                  <td><small>{hasOffreAchatEnCours(item) ? 'Offre' : '-'}</small><small>{hasCompromisEnCours(item) ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
                   <td><button className="ghost-button" type="button" onClick={() => openHektorAnnonce(item.hektor_annonce_id)}>Ouvrir</button></td>
                 </tr>
               ))}
@@ -17852,7 +17858,7 @@ function SuiviMandatsScreenV2Legacy(props: {
                       <td>{commercialDisplay(item)}</td>
                       <td><StatusPill value={item.statut_annonce} /><small>{item.archive === '1' ? 'Archive' : 'Actif'}</small></td>
                       <td><small>{diffusableLabel(item.diffusable)}</small><small>{item.portails_resume || 'Aucune passerelle active'}</small><small>{erreurDiffusionLabel(item.has_diffusion_error)}</small></td>
-                      <td><small>{item.offre_id ? 'Offre' : '-'}</small><small>{item.compromis_id ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
+                      <td><small>{hasOffreAchatEnCours(item) ? 'Offre' : '-'}</small><small>{hasCompromisEnCours(item) ? 'Compromis' : '-'}</small><small>{item.vente_id ? 'Vente' : '-'}</small></td>
                       <td>
                         <div className="row-actions">
                           <MandatActionMenu mandat={item} role="nego" requests={visibleRequests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} />

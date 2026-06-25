@@ -993,7 +993,7 @@ function getOfferLastPropositionType(item: { offre_last_proposition_type?: strin
   return normalizeOfferPropositionType(item.offre_state)
 }
 
-function hasOffreAchatEnCours(item: {
+export function hasOffreAchatEnCours(item: {
   offre_id?: string | number | null
   offre_last_proposition_type?: string | null
   offre_state?: string | null
@@ -1016,7 +1016,7 @@ function hasOffreAchatRefusee(item: {
   return item.offre_id != null && getOfferLastPropositionType(item) === 'refus'
 }
 
-function hasCompromisEnCours(item: { compromis_id?: string | number | null; compromis_state?: string | null }) {
+export function hasCompromisEnCours(item: { compromis_id?: string | number | null; compromis_state?: string | null }) {
   const hasCompromisState = Object.prototype.hasOwnProperty.call(item, 'compromis_state')
   return item.compromis_id != null && (hasCompromisState ? !isCompromisCancelledState(item.compromis_state) : true)
 }
