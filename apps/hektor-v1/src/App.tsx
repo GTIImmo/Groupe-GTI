@@ -9598,7 +9598,11 @@ export default function App() {
         setDossiersTotal(nextDossiersPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, [], [])))
         setSelectedDossierId((current) => {
-          if (current && detailOpen) return current
+          // Ne JAMAIS lâcher une fiche ouverte/chargée (ex. estimation hors de la page
+          // de `dossiers`) : on s'appuie sur la fiche réellement chargée (selectedDossierRef),
+          // pas seulement sur le timing de detailOpen, sinon la sélection bascule vers la
+          // 1re ligne au rechargement -> le détail se ferme tout seul.
+          if (current && (detailOpen || selectedDossierRef.current?.app_dossier_id === current)) return current
           if (current && nextDossiersPage.rows.some((item) => item.app_dossier_id === current)) return current
           return nextDossiersPage.rows[0]?.app_dossier_id ?? null
         })
