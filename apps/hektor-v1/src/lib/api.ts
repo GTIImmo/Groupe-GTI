@@ -2489,7 +2489,7 @@ export async function sendEstimationEmail(input: {
 }
 
 export type DvfComparable = { commune: string; type: string; surface: number; pieces?: string | null; terrain?: number | null; valeur: number; prix_m2: number | null; date: string; distance_km: number }
-export type DvfComparablesResult = { ok: boolean; reason?: string; scope?: 'commune' | 'secteur'; n_local?: number; commune?: string | null; count: number; avg_prix_m2?: number | null; median_prix_m2?: number | null; radius_km?: number; months?: number; type?: string; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
+export type DvfComparablesResult = { ok: boolean; reason?: string; scope?: 'commune' | 'secteur'; n_local?: number; commune?: string | null; count: number; count_clean?: number; fiable?: boolean; radius_used_m?: number; surface?: number | null; avg_prix_m2?: number | null; median_prix_m2?: number | null; p25_prix_m2?: number | null; p75_prix_m2?: number | null; prix_estime?: number | null; fourchette_basse?: number | null; fourchette_haute?: number | null; radius_km?: number; months?: number; type?: string; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
 
 // Comparables de marché DVF autour d'un bien — RPC Supabase `app_dvf_comparables`
 // (table `app_dvf_vente` pré-chargée, rafraîchie 2×/an). Haversine côté SQL ;

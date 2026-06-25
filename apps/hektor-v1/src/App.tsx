@@ -4341,10 +4341,10 @@ function EstimationDocumentEditor(props: {
     try {
       const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
       setMarche(res)
-      const base = res.scope === 'commune'
-        ? `commune${res.commune ? ' de ' + res.commune : ''}`
-        : `secteur élargi${typeof res.n_local === 'number' ? ` (échantillon commune insuffisant : ${res.n_local})` : ''}`
-      setMarcheMsg(res.ok ? `${res.count} ventes comparables · ${base}${res.avg_prix_m2 ? ' · ' + res.avg_prix_m2.toLocaleString('fr-FR') + ' €/m² moyen' : ''}` : 'Aucune donnée DVF trouvée pour ce secteur.')
+      const n = res.count_clean ?? res.count
+      setMarcheMsg(res.ok
+        ? `${n} comparable${n > 1 ? 's' : ''} · rayon ${res.radius_km ?? '—'} km${res.median_prix_m2 ? ' · médiane ' + res.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : ''}${res.fiable === false ? ' · ⚠ peu fiable' : ''}`
+        : 'Aucune donnée DVF trouvée pour ce secteur.')
     } catch (error) {
       setMarcheMsg(error instanceof Error ? error.message : 'Chargement des comparables impossible.')
     } finally {
@@ -4354,6 +4354,19 @@ function EstimationDocumentEditor(props: {
 
   const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
   const numStr = (v: string) => v.replace(/[^\d]/g, '')
+
+  // Reporte l'estimation DVF (médiane × surface + fourchette p25–p75) dans les
+  // champs de valeur — le négociateur reste libre de les ajuster ensuite.
+  function applyDvfEstimate() {
+    if (!marche || !marche.ok || marche.prix_estime == null) return
+    setDraft((d) => ({
+      ...d,
+      basse: marche.fourchette_basse != null ? String(marche.fourchette_basse) : d.basse,
+      estimee: String(marche.prix_estime),
+      haute: marche.fourchette_haute != null ? String(marche.fourchette_haute) : d.haute,
+    }))
+    setTab('valeur'); setMessage('Estimation DVF reportée dans la valeur (ajustable).')
+  }
 
   function buildPayload() {
     const negoName = (dossier.commercial_nom || '').trim()
@@ -4467,10 +4480,25 @@ function EstimationDocumentEditor(props: {
                 </div>
                 {marche && marche.ok ? (
                   <>
+                    {marche.fiable === false ? (
+                      <p style={{ fontSize: 12, color: '#9a3412', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 10px', marginBottom: 10 }}>
+                        ⚠ Estimation peu fiable : seulement {marche.count_clean ?? marche.count} comparable(s) trouvé(s) (rayon {marche.radius_km} km). À confirmer par le négociateur.
+                      </p>
+                    ) : null}
+                    {marche.prix_estime != null ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--ds-surface-2, #faf7f8)', border: '1px solid var(--ds-border, #ece7e9)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 11, color: 'var(--ds-ink-mute, #5c6163)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Estimation DVF (médiane × surface)</div>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ds-brand-500, #c5005f)' }}>{marche.prix_estime.toLocaleString('fr-FR')} €</div>
+                          <div style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>Fourchette {marche.fourchette_basse?.toLocaleString('fr-FR')} – {marche.fourchette_haute?.toLocaleString('fr-FR')} €</div>
+                        </div>
+                        <button className="ghost-button" type="button" onClick={applyDvfEstimate}>Appliquer à la valeur</button>
+                      </div>
+                    ) : null}
                     <div className="estim-marche-stats">
-                      <div><span className="emk">Prix moyen</span><span className="emv">{marche.avg_prix_m2 ? marche.avg_prix_m2.toLocaleString('fr-FR') + ' €/m²' : '—'}</span></div>
-                      <div><span className="emk">Médiane</span><span className="emv">{marche.median_prix_m2 ? marche.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : '—'}</span></div>
-                      <div><span className="emk">Ventes (24 mois)</span><span className="emv">{marche.count}</span></div>
+                      <div><span className="emk">Médiane €/m²</span><span className="emv">{marche.median_prix_m2 ? marche.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : '—'}</span></div>
+                      <div><span className="emk">Fourchette €/m²</span><span className="emv">{marche.p25_prix_m2 && marche.p75_prix_m2 ? `${marche.p25_prix_m2.toLocaleString('fr-FR')} – ${marche.p75_prix_m2.toLocaleString('fr-FR')}` : '—'}</span></div>
+                      <div><span className="emk">Comparables</span><span className="emv">{marche.count_clean ?? marche.count}</span></div>
                     </div>
                     <table className="estim-marche-table">
                       <thead><tr><th>Bien</th><th>Commune</th><th>Date</th><th>Dist.</th><th style={{ textAlign: 'right' }}>Prix</th><th style={{ textAlign: 'right' }}>€/m²</th></tr></thead>
@@ -4480,7 +4508,7 @@ function EstimationDocumentEditor(props: {
                         ))}
                       </tbody>
                     </table>
-                    <p style={{ fontSize: 11, color: 'var(--ds-ink-mute, #5c6163)', marginTop: 8 }}>Source : DVF (open data). Comparables {marche.type}, surface ±30 %, rayon {marche.radius_km} km. Ajoutés automatiquement au PDF (page Marché).</p>
+                    <p style={{ fontSize: 11, color: 'var(--ds-ink-mute, #5c6163)', marginTop: 8 }}>Source : DVF (open data), ventes en-bloc exclues. Comparables {marche.type}, surface ±25 %, rayon {marche.radius_km} km, médiane sur {marche.count_clean ?? marche.count} biens. Ajoutés automatiquement au PDF (page Marché).</p>
                   </>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Charge les ventes comparables récentes du secteur (open data DVF) — elles enrichiront la page Marché de l'avis de valeur.</p>
