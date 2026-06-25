@@ -6,6 +6,7 @@ import os
 import sqlite3
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -300,6 +301,45 @@ def is_annonce_pending(client: SupabaseRestClient, app_dossier_id: int) -> bool:
     return isinstance(rows, list) and bool(rows)
 
 
+def get_annonce_pending(client: SupabaseRestClient, app_dossier_id: int) -> dict[str, Any] | None:
+    """Retourne la ligne pending (source, push_after) ou None."""
+    rows = client._request(
+        method="GET",
+        path="app_annonce_pending",
+        query={
+            "select": "app_dossier_id,source,push_after",
+            "app_dossier_id": f"eq.{int(app_dossier_id)}",
+            "limit": "1",
+        },
+    )
+    if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+        return rows[0]
+    return None
+
+
+def clear_annonce_pending(client: SupabaseRestClient, app_dossier_id: int) -> None:
+    try:
+        client.delete_rows_by_ids(path="app_annonce_pending", column="app_dossier_id", ids=[int(app_dossier_id)])
+    except Exception:
+        pass
+
+
+def diffusion_lock_expired(pending: dict[str, Any]) -> bool:
+    """Verrou diffusion = pending source='diffusion' avec push_after (délai de grâce).
+    Expiré -> on lève le verrou et on resynchronise depuis Hektor. JAMAIS coincé :
+    si push_after manque/illisible, on considère expiré."""
+    raw = pending.get("push_after")
+    if not raw:
+        return True
+    try:
+        ts = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) >= ts
+    except Exception:
+        return True
+
+
 def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: str, keep_app_dossier_id: int) -> int:
     """Durcissement anti-fantome : si la MEME annonce a d'autres app_dossier dans
     Supabase (l'id de dossier a change suite a une re-indexation), supprime ces
@@ -453,7 +493,12 @@ def main() -> int:
             if app_dossier_id is None:
                 raise RuntimeError(f"app_dossier introuvable pour annonce Hektor {hektor_annonce_id}")
             seed_target_work_items(con, app_dossier_id)
-            if is_annonce_pending(client, app_dossier_id):
+            pending = get_annonce_pending(client, app_dossier_id)
+            if pending is not None and str(pending.get("source") or "") == "diffusion" and diffusion_lock_expired(pending):
+                # Verrou diffusion arrivé à expiration -> on le lève et on resynchronise depuis Hektor.
+                clear_annonce_pending(client, app_dossier_id)
+                pending = None
+            if pending is not None:
                 counts = {
                     "dossiers_upserted": 0,
                     "details_upserted": 0,

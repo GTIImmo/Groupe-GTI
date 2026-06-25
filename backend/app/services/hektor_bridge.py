@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote
@@ -130,6 +130,10 @@ class HektorBridgeService:
         if not rows:
             raise HTTPException(status_code=404, detail="app_dossier_current introuvable")
         row = rows[0]
+        # Verrou diffusion : protège la valeur optimiste (diffusable/validation) contre le
+        # revert du read-through tant qu'Hektor n'a pas rattrapé. Levé AUTOMATIQUEMENT par
+        # le read-through après le délai de grâce (jamais coincé).
+        self._arm_diffusion_lock(app_dossier_id, row.get("hektor_annonce_id"))
         return {
             "app_dossier_id": row.get("app_dossier_id", app_dossier_id),
             "validation_diffusion_state": row.get("validation_diffusion_state"),
@@ -138,6 +142,31 @@ class HektorBridgeService:
             "nb_portails_actifs": row.get("nb_portails_actifs"),
             "refreshed_at": row.get("refreshed_at"),
         }
+
+    def _arm_diffusion_lock(self, app_dossier_id: int, hektor_annonce_id: Any, grace_seconds: int = 600) -> None:
+        """Pose un verrou diffusion (app_annonce_pending source='diffusion') sur le dossier :
+        le read-through ne reverte plus la valeur optimiste avant que Hektor ait rattrapé. Levé
+        AUTOMATIQUEMENT par le read-through après push_after (jamais coincé). On n'écrase JAMAIS
+        un pending existant (ex. édition de champ) -> resolution=ignore-duplicates. Best-effort."""
+        try:
+            push_after = (datetime.now(timezone.utc) + timedelta(seconds=max(grace_seconds, 60))).isoformat()
+            requests.post(
+                f"{self.settings.supabase_url}/rest/v1/app_annonce_pending",
+                headers={**self._rest_headers(), "Prefer": "resolution=ignore-duplicates,return=minimal"},
+                json={
+                    "app_dossier_id": int(app_dossier_id),
+                    "hektor_annonce_id": str(hektor_annonce_id or ""),
+                    "base_snapshot": {},
+                    "push_fields": {},
+                    "push_after": push_after,
+                    "source": "diffusion",
+                    "dirty_by": "hektor_diffusion",
+                },
+                timeout=10,
+            )
+        except Exception:
+            # ne bloque jamais la persistance de l'état de diffusion
+            pass
 
     def _load_targets(self, app_dossier_id: int) -> list[dict[str, Any]]:
         response = requests.get(
