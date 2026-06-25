@@ -363,9 +363,14 @@ SELECT
     det.honoraires_resume,
     det.note_hektor_principale,
     CASE
+        -- Vente : pas d'annulation possible -> id seul suffit.
         WHEN src.vente_id IS NOT NULL THEN 'vente_en_cours'
-        WHEN src.compromis_id IS NOT NULL THEN 'compromis_en_cours'
-        WHEN src.offre_id IS NOT NULL THEN 'offre_en_cours'
+        -- Compromis annulable : compromis_state='cancelled' n'est PAS "en cours".
+        WHEN src.compromis_id IS NOT NULL
+             AND COALESCE(cmp.compromis_state, '') NOT IN ('cancelled', 'annule', 'annulee') THEN 'compromis_en_cours'
+        -- Offre annulable : offre refusee (offre_state='refused') n'est PAS "en cours".
+        WHEN src.offre_id IS NOT NULL
+             AND COALESCE(off.offre_state, '') <> 'refused' THEN 'offre_en_cours'
         ELSE 'sans_transaction'
     END AS etat_transaction,
     COALESCE(ist.internal_status, 'a_qualifier') AS internal_status,
