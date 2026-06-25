@@ -5367,7 +5367,7 @@ export async function createGenerateEstimationPdfJob(input: {
   valeurs: { basse?: number | null; estimee?: number | null; haute?: number | null }
   commentaire?: string | null
   // Lot B — champs éditoriaux saisis par le négociateur (sinon placeholders dans le PDF).
-  etat?: { note?: number | null; label?: string | null; chauffage?: string | null; exposition?: string | null; toiture?: string | null; menuiseries?: string | null; commentaire?: string | null }
+  etat?: { note?: number | null; label?: string | null; chauffage?: string | null; exposition?: string | null; toiture?: string | null; menuiseries?: string | null; commentaire?: string | null; postes?: Array<{ poste: string; niveau: string; label: string }> }
   pointsForts?: string[]
   pointsVigilance?: string[]
   charges?: { taxe_fonciere?: number | null; energie?: number | null; eau?: number | null; assurance?: number | null }

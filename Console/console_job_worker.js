@@ -3540,6 +3540,13 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .method .t{font-size:11px;font-weight:700}.method .d{font-size:10px;color:var(--body);line-height:1.5;margin-top:2px}
 .diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.diag{border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .diag-h{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--mute);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--cream)}
+.pst-leg{display:flex;flex-wrap:wrap;gap:6px 16px;background:var(--cream);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);margin:10px 0 12px}
+.pst-leg span{display:inline-flex;align-items:center;gap:6px}.pst-leg i{width:9px;height:9px;border-radius:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pst-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 26px}
+.pst-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+.pst-n{font-size:10.5px;font-weight:600;color:var(--ink)}.pst-v{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.pst-bar{display:block;height:5px;background:var(--line2);border-radius:3px;overflow:hidden}
+.pst-fill{display:block;height:100%;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
 .eqps{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
 .eqp{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:var(--body);border:1px solid var(--line);border-radius:20px;padding:5px 11px}
@@ -3669,6 +3676,11 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const equipList = equipDefs.filter(([, v]) => v).map(([k]) => `<span class="eqp">${checkIcon}${k}</span>`).join("");
   const hasDetailPage = !!(interieurRows || exterieurRows || confortRows || equipList || detail.particularites);
   const acquereursN = Math.max(0, parseInt(payload.acquereurs, 10) || 0);
+  // Barème d'état par poste (saisie négo) : barres colorées page État.
+  const POSTE_NIV = { neuf: { c: "#1f8a5b", f: 100, t: "Neuf / Refait" }, bon: { c: "#46a35a", f: 84, t: "Bon état" }, correct: { c: "#e0a800", f: 55, t: "Correct" }, aprevoir: { c: "#e0662a", f: 30, t: "À prévoir" } };
+  const postes = (etat.postes && Array.isArray(etat.postes)) ? etat.postes.filter((p) => p && POSTE_NIV[p.niveau]) : [];
+  const posteRow = (p) => { const n = POSTE_NIV[p.niveau]; const lbl = (p.label && String(p.label).trim()) ? String(p.label).trim() : n.t; return `<div class="pst"><div class="pst-top"><span class="pst-n">${estimText(p.poste)}</span><span class="pst-v" style="color:${n.c}">${estimText(lbl)}</span></div><span class="pst-bar"><span class="pst-fill" style="width:${n.f}%;background:${n.c}"></span></span></div>`; };
+  const postesBlock = postes.length ? `<div class="pst-leg"><span><i style="background:#1f8a5b"></i>Neuf / Refait</span><span><i style="background:#46a35a"></i>Bon état</span><span><i style="background:#e0a800"></i>Correct</span><span><i style="background:#e0662a"></i>À prévoir</span></div><div class="pst-grid">${postes.map(posteRow).join("")}</div>` : "";
   const diagOtherLines = Object.entries(detail.diagnostics || {}).filter(([label]) => label !== "DPE").map(([label, d]) =>
     `<div class="diag-row"><span class="k">${label}</span><span class="v ${d && d.done ? "ok" : "na"}">${d && d.done ? "Réalisé · " + estimText(dateCourt(d.date)) : "Non communiqué"}</span></div>`).join("");
 
@@ -3736,6 +3748,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage || [detail.chauffageType, detail.chauffageEnergie].filter(Boolean).join(" · "))}${etatMeta("Exposition", etat.exposition || detail.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries || (detail.doubleVitrage ? "Double vitrage" : detail.tripleVitrage ? "Triple vitrage" : ""))}</div>
   </div>
   ${etat.commentaire ? `<p style="font-size:11px;color:var(--body);line-height:1.65;margin-top:12px">${estimEscapeHtml(String(etat.commentaire))}</p>` : ""}
+  ${postesBlock}
   <div class="pts-grid">
     <div class="pts forts"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>Points forts</div><ul>${ptsItems(forts, checkIcon)}</ul></div>
     <div class="pts vigi"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>Points de vigilance</div><ul>${ptsItems(vigi, warnIcon)}</ul></div>

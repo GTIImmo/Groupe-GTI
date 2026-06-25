@@ -4291,6 +4291,19 @@ function MandatDocumentEditor(props: {
     </div>
   )
 }
+// État par poste (barème de la page État du PDF) — saisie négociateur.
+const ESTIM_POSTES: { key: string; label: string }[] = [
+  { key: 'grosoeuvre', label: 'Gros œuvre / structure' },
+  { key: 'facade', label: 'Façade / ravalement' },
+  { key: 'chauffage', label: 'Chauffage / production' },
+  { key: 'plomberie', label: 'Plomberie / sanitaires' },
+  { key: 'toiture', label: 'Toiture / charpente' },
+  { key: 'menuiseries', label: 'Menuiseries / vitrage' },
+  { key: 'electricite', label: 'Électricité' },
+  { key: 'interieur', label: 'Intérieur / finitions' },
+]
+const ESTIM_NIVEAUX: [string, string][] = [['neuf', 'Neuf / Refait'], ['bon', 'Bon état'], ['correct', 'Correct'], ['aprevoir', 'À prévoir']]
+
 // Éditeur « Avis de valeur » sur la fiche estimation (calqué sur MandatDocumentEditor :
 // bloc + onglets + actions). Self-contained : appelle createGenerateEstimationPdfJob +
 // sendEstimationEmail. Réutilise les classes CSS mandat-document-* pour un look cohérent.
@@ -4316,6 +4329,7 @@ function EstimationDocumentEditor(props: {
     commentaire: '',
     argumentaire: '',  // argumentaire commercial du prix (page Valeur du PDF)
     etatTexte: '',     // appréciation rédigée de l'état (page État du PDF)
+    etatPostes: {} as Record<string, { niveau: string; label: string }>,  // barème d'état par poste
     dpe: '', ges: '', etatNote: '', etatLabel: '',
     chauffage: '', exposition: '', toiture: '', menuiseries: '',
     pointsForts: '', pointsVigilance: '',
@@ -4368,6 +4382,11 @@ function EstimationDocumentEditor(props: {
 
   const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
   const numStr = (v: string) => v.replace(/[^\d]/g, '')
+  // Met à jour un poste du barème d'état (niveau ou libellé).
+  const setPoste = (key: string, field: 'niveau' | 'label', value: string) => {
+    setDraft((d) => ({ ...d, etatPostes: { ...d.etatPostes, [key]: { niveau: '', label: '', ...d.etatPostes[key], [field]: value } } }))
+    setMessage(null)
+  }
 
   // Reporte l'estimation DVF (médiane × surface + fourchette p25–p75) dans les
   // champs de valeur — le négociateur reste libre de les ajuster ensuite.
@@ -4397,7 +4416,8 @@ function EstimationDocumentEditor(props: {
       proprietaire: { nom: draft.ownerName || null },
       negociateur: { nom: negoName && negoName !== '-' ? negoName : null, agence: dossier.agence_nom, email: dossier.negociateur_email ?? null },
       valeurs: { basse: draft.basse ? Number(draft.basse) : null, estimee: draft.estimee ? Number(draft.estimee) : null, haute: draft.haute ? Number(draft.haute) : null },
-      etat: { note: draft.etatNote ? Number(draft.etatNote) : null, label: draft.etatLabel.trim() || null, chauffage: draft.chauffage.trim() || null, exposition: draft.exposition.trim() || null, toiture: draft.toiture.trim() || null, menuiseries: draft.menuiseries.trim() || null, commentaire: draft.etatTexte.trim() || null },
+      etat: { note: draft.etatNote ? Number(draft.etatNote) : null, label: draft.etatLabel.trim() || null, chauffage: draft.chauffage.trim() || null, exposition: draft.exposition.trim() || null, toiture: draft.toiture.trim() || null, menuiseries: draft.menuiseries.trim() || null, commentaire: draft.etatTexte.trim() || null,
+        postes: ESTIM_POSTES.map((p) => { const v = draft.etatPostes[p.key]; return { poste: p.label, niveau: v?.niveau || '', label: (v?.label || '').trim() } }).filter((x) => x.niveau) },
       pointsForts: lines(draft.pointsForts),
       pointsVigilance: lines(draft.pointsVigilance),
       charges: { taxe_fonciere: numOrNull(draft.taxeFonciere), energie: numOrNull(draft.energie), eau: numOrNull(draft.eau), assurance: numOrNull(draft.assurance) },
@@ -4484,6 +4504,19 @@ function EstimationDocumentEditor(props: {
                 <label className="is-wide"><span>Appréciation de l'état · optionnel</span>
                   <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Décrivez l'état réel du bien en quelques phrases (entretien, travaux récents, points à prévoir). S'affiche sur la page État du PDF.</small>
                   <textarea rows={3} placeholder="Ex. : Maison bien entretenue, toiture refaite en 2019. Intérieur à rafraîchir (peintures, sols)." value={draft.etatTexte} onChange={(e) => upd('etatTexte', e.target.value)} /></label>
+                <div className="is-wide">
+                  <span style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#9a948f', marginBottom: 4 }}>État par poste · optionnel</span>
+                  <small style={{ display: 'block', color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, marginBottom: 8 }}>Note l'état de chaque poste : la page État du PDF affiche une barre colorée par poste renseigné (laisse « — » pour masquer). Le libellé court (ex. « Refait 2019 », « Gaz ») s'affiche à droite ; vide = le niveau.</small>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 7 }}>
+                    {ESTIM_POSTES.map((p) => (
+                      <div key={p.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.1fr)', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, color: '#222323' }}>{p.label}</span>
+                        <select value={draft.etatPostes[p.key]?.niveau ?? ''} onChange={(e) => setPoste(p.key, 'niveau', e.target.value)}><option value="">—</option>{ESTIM_NIVEAUX.map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}</select>
+                        <input placeholder="libellé (optionnel)" value={draft.etatPostes[p.key]?.label ?? ''} onChange={(e) => setPoste(p.key, 'label', e.target.value)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : null}
             {tab === 'points' ? (
