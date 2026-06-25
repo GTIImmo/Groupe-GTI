@@ -5365,12 +5365,13 @@ export async function createGenerateEstimationPdfJob(input: {
   valeurs: { basse?: number | null; estimee?: number | null; haute?: number | null }
   commentaire?: string | null
   // Lot B — champs éditoriaux saisis par le négociateur (sinon placeholders dans le PDF).
-  etat?: { note?: number | null; label?: string | null; chauffage?: string | null; exposition?: string | null; toiture?: string | null; menuiseries?: string | null }
+  etat?: { note?: number | null; label?: string | null; chauffage?: string | null; exposition?: string | null; toiture?: string | null; menuiseries?: string | null; commentaire?: string | null }
   pointsForts?: string[]
   pointsVigilance?: string[]
   charges?: { taxe_fonciere?: number | null; energie?: number | null; eau?: number | null; assurance?: number | null }
   marche?: DvfComparablesResult | null
   acquereurs?: number | null  // acquéreurs en recherche correspondant au bien (moteur de rapprochement)
+  argumentaire?: string | null  // argumentaire commercial du prix (page Valeur du PDF)
   methode?: string | null
   validite?: string | null
   documentLabel?: string | null
@@ -5401,6 +5402,7 @@ export async function createGenerateEstimationPdfJob(input: {
         charges: input.charges ?? null,
         marche: input.marche ?? null,
         acquereurs: input.acquereurs ?? null,
+        argumentaire: input.argumentaire ?? null,
         methode: input.methode ?? null,
         validite: input.validite ?? null,
       },

@@ -3589,6 +3589,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const tel = String(nego.telephone || "").trim();
   const email = String(nego.email || "").trim();
   const avis = String(payload.commentaire || "").trim();
+  const argPrix = String(payload.argumentaire || "").trim();
   const valEstimee = estimEuro(valeurs.estimee) || "À compléter";
   const valBasse = estimEuro(valeurs.basse) || "—";
   const valHaute = estimEuro(valeurs.haute) || "—";
@@ -3734,6 +3735,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="etat-sep"></div>
     <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage || [detail.chauffageType, detail.chauffageEnergie].filter(Boolean).join(" · "))}${etatMeta("Exposition", etat.exposition || detail.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries || (detail.doubleVitrage ? "Double vitrage" : detail.tripleVitrage ? "Triple vitrage" : ""))}</div>
   </div>
+  ${etat.commentaire ? `<p style="font-size:11px;color:var(--body);line-height:1.65;margin-top:12px">${estimEscapeHtml(String(etat.commentaire))}</p>` : ""}
   <div class="pts-grid">
     <div class="pts forts"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>Points forts</div><ul>${ptsItems(forts, checkIcon)}</ul></div>
     <div class="pts vigi"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>Points de vigilance</div><ul>${ptsItems(vigi, warnIcon)}</ul></div>
@@ -3763,7 +3765,9 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
       <div class="gends"><div class="gend" style="text-align:left"><div class="v serif tnum">${valBasse}</div><div class="k">Bas</div></div><div class="gend mid"><div class="v serif tnum">${valEstimee}</div><div class="k">Conseillé</div></div><div class="gend" style="text-align:right"><div class="v serif tnum">${valHaute}</div><div class="k">Haut</div></div></div>
     </div>
   </div></div>
-  <p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>
+  ${argPrix
+    ? `<div class="method" style="margin-top:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">L'analyse de votre conseiller sur la valeur</div><div class="d">${estimEscapeHtml(argPrix)}</div></div></div>`
+    : `<p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>`}
   ${acquereursN > 0 ? `<div class="acq"><span class="acq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span><div><b>${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""}</b> de notre fichier recherche${acquereursN > 1 ? "nt" : ""} actuellement un bien correspondant au vôtre.</div></div>` : ""}
   <div class="h mt">Le marché en chiffres${marche && marche.commune ? ` · ${estimText(marche.commune)}` : ""}</div>
   <div class="stats">

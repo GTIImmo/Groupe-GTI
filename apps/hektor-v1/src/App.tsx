@@ -4314,6 +4314,8 @@ function EstimationDocumentEditor(props: {
     haute: prix != null ? String(Math.round(prix * 1.05)) : '',
     variante: 'vente' as 'vente' | 'succession',  // contexte de l'email (ton de l'intro)
     commentaire: '',
+    argumentaire: '',  // argumentaire commercial du prix (page Valeur du PDF)
+    etatTexte: '',     // appréciation rédigée de l'état (page État du PDF)
     dpe: '', ges: '', etatNote: '', etatLabel: '',
     chauffage: '', exposition: '', toiture: '', menuiseries: '',
     pointsForts: '', pointsVigilance: '',
@@ -4395,10 +4397,11 @@ function EstimationDocumentEditor(props: {
       proprietaire: { nom: draft.ownerName || null },
       negociateur: { nom: negoName && negoName !== '-' ? negoName : null, agence: dossier.agence_nom, email: dossier.negociateur_email ?? null },
       valeurs: { basse: draft.basse ? Number(draft.basse) : null, estimee: draft.estimee ? Number(draft.estimee) : null, haute: draft.haute ? Number(draft.haute) : null },
-      etat: { note: draft.etatNote ? Number(draft.etatNote) : null, label: draft.etatLabel.trim() || null, chauffage: draft.chauffage.trim() || null, exposition: draft.exposition.trim() || null, toiture: draft.toiture.trim() || null, menuiseries: draft.menuiseries.trim() || null },
+      etat: { note: draft.etatNote ? Number(draft.etatNote) : null, label: draft.etatLabel.trim() || null, chauffage: draft.chauffage.trim() || null, exposition: draft.exposition.trim() || null, toiture: draft.toiture.trim() || null, menuiseries: draft.menuiseries.trim() || null, commentaire: draft.etatTexte.trim() || null },
       pointsForts: lines(draft.pointsForts),
       pointsVigilance: lines(draft.pointsVigilance),
       charges: { taxe_fonciere: numOrNull(draft.taxeFonciere), energie: numOrNull(draft.energie), eau: numOrNull(draft.eau), assurance: numOrNull(draft.assurance) },
+      argumentaire: draft.argumentaire.trim() || null,
     }
   }
 
@@ -4412,7 +4415,7 @@ function EstimationDocumentEditor(props: {
         dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
         bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
-        marche: marche && marche.ok ? marche : null, acquereurs,
+        marche: marche && marche.ok ? marche : null, acquereurs, argumentaire: p.argumentaire,
       })
       if (sendEmail) {
         const res = await sendEstimationEmail({
@@ -4462,7 +4465,12 @@ function EstimationDocumentEditor(props: {
                   <label><span>Email du propriétaire</span><input type="email" value={draft.recipient} onChange={(e) => upd('recipient', e.target.value)} /></label>
                   <label><span>Contexte de l'email</span><select value={draft.variante} onChange={(e) => upd('variante', e.target.value as 'vente' | 'succession')}><option value="vente">Vente (suite à visite)</option><option value="succession">Succession (valeur pour le notaire)</option></select></label>
                 </div>
-                <label className="is-wide"><span>Avis du négociateur (PDF)</span><textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
+                <label className="is-wide"><span>Argumentaire de prix · optionnel</span>
+                  <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Pourquoi ce prix ? Atouts du bien, cohérence avec le marché, délai de vente. S'affiche sous l'estimation dans le PDF.</small>
+                  <textarea rows={3} placeholder="Ex. : Bien rare sur le secteur, proche écoles et commerces. Prix aligné sur les ventes récentes, pour une vente dans un délai raisonnable." value={draft.argumentaire} onChange={(e) => upd('argumentaire', e.target.value)} /></label>
+                <label className="is-wide"><span>Avis du conseiller · mot de conclusion · optionnel</span>
+                  <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Phrase personnelle de clôture, en dernière page du PDF.</small>
+                  <textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
               </div>
             ) : null}
             {tab === 'etat' ? (
@@ -4473,6 +4481,9 @@ function EstimationDocumentEditor(props: {
                 <label><span>Exposition</span><input value={draft.exposition} onChange={(e) => upd('exposition', e.target.value)} /></label>
                 <label><span>Toiture</span><input value={draft.toiture} onChange={(e) => upd('toiture', e.target.value)} /></label>
                 <label><span>Menuiseries</span><input value={draft.menuiseries} onChange={(e) => upd('menuiseries', e.target.value)} /></label>
+                <label className="is-wide"><span>Appréciation de l'état · optionnel</span>
+                  <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Décrivez l'état réel du bien en quelques phrases (entretien, travaux récents, points à prévoir). S'affiche sur la page État du PDF.</small>
+                  <textarea rows={3} placeholder="Ex. : Maison bien entretenue, toiture refaite en 2019. Intérieur à rafraîchir (peintures, sols)." value={draft.etatTexte} onChange={(e) => upd('etatTexte', e.target.value)} /></label>
               </div>
             ) : null}
             {tab === 'points' ? (
@@ -9598,11 +9609,7 @@ export default function App() {
         setDossiersTotal(nextDossiersPage.total)
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, [], [])))
         setSelectedDossierId((current) => {
-          // Ne JAMAIS lâcher une fiche ouverte/chargée (ex. estimation hors de la page
-          // de `dossiers`) : on s'appuie sur la fiche réellement chargée (selectedDossierRef),
-          // pas seulement sur le timing de detailOpen, sinon la sélection bascule vers la
-          // 1re ligne au rechargement -> le détail se ferme tout seul.
-          if (current && (detailOpen || selectedDossierRef.current?.app_dossier_id === current)) return current
+          if (current && detailOpen) return current
           if (current && nextDossiersPage.rows.some((item) => item.app_dossier_id === current)) return current
           return nextDossiersPage.rows[0]?.app_dossier_id ?? null
         })
