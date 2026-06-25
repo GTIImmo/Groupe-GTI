@@ -664,13 +664,26 @@ def main() -> int:
                         if value is not None and value != "":
                             row[field] = value
     if contact_ids:
+        # app_contact_current = 1 ligne par contact (PK hektor_contact_id), reinseree en
+        # upsert merge-duplicates -> elle se remplace EN PLACE. NE PAS la supprimer quand on
+        # s'apprete a la reposer, sinon fenetre transitoire ou le contact disparait du listing
+        # + sa fiche se ferme (meme bug que l'annonce). On ne supprime QUE les contacts absents
+        # de la repose (reellement retires/ineligibles), et jamais les dirty (deja exclus de loaded).
+        present_contact_ids = {
+            str(row.get("hektor_contact_id"))
+            for table, rows in loaded if table == "app_contact_current"
+            for row in rows
+        }
         for table in ["app_contact_current", "app_contact_relation_current", "app_contact_search_current"]:
             if table == "app_contact_search_current" and dirty_search_pairs:
                 deleted_results[table] = delete_searches_except_dirty(client, contact_ids, dirty_search_pairs)
-            elif table == "app_contact_current" and dirty_contact_ids:
-                deleted_results[table] = delete_contacts_except_dirty(
-                    client, contact_ids, dirty_contact_ids, args.batch_size
-                )
+            elif table == "app_contact_current":
+                to_delete = [
+                    cid for cid in contact_ids
+                    if str(cid) not in present_contact_ids and str(cid) not in dirty_contact_ids
+                ]
+                if to_delete:
+                    deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", to_delete, args.batch_size)
             else:
                 deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", contact_ids, args.batch_size)
     else:

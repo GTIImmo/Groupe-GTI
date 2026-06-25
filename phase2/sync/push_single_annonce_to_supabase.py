@@ -264,14 +264,25 @@ def persist_temp_view_table(con: sqlite3.Connection, table_name: str, app_dossie
     )
 
 
-def delete_target_remote(client: SupabaseRestClient, app_dossier_id: int) -> None:
-    for table in (
-        "app_dossier_current",
-        "app_dossier_detail_current",
-        "app_work_item_current",
-        "app_mandat_broadcast_current",
-        "app_mandat_register_current",
-    ):
+def delete_target_remote(
+    client: SupabaseRestClient,
+    app_dossier_id: int,
+    skip_dossier: bool = False,
+    skip_detail: bool = False,
+) -> None:
+    # app_dossier_current et app_dossier_detail_current sont reinseres en upsert
+    # ON CONFLICT (resolution=merge-duplicates) -> ils se remplacent EN PLACE. Les
+    # supprimer avant cree une fenetre transitoire ou la ligne n'existe plus : la fiche
+    # disparait du listing ET le detail se ferme (loadDossierDetail renvoie null). On ne
+    # les supprime donc QUE s'il n'y a rien a reposer (annonce reellement retiree).
+    # work_item/broadcast restent en delete (ils sont reinseres en INSERT, pas upsert).
+    tables: list[str] = []
+    if not skip_dossier:
+        tables.append("app_dossier_current")
+    if not skip_detail:
+        tables.append("app_dossier_detail_current")
+    tables += ["app_work_item_current", "app_mandat_broadcast_current", "app_mandat_register_current"]
+    for table in tables:
         client.delete_rows_by_ids(path=table, column="app_dossier_id", ids=[app_dossier_id])
 
 
@@ -381,7 +392,12 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
     current_mandat_register_rows = build_current_mandat_register_rows(payload.get("mandat_register_rows", []))
 
-    delete_target_remote(client, app_dossier_id)
+    delete_target_remote(
+        client,
+        app_dossier_id,
+        skip_dossier=bool(current_dossiers),
+        skip_detail=bool(current_details),
+    )
     if current_dossiers:
         client.upsert_rows(path="app_dossier_current", rows=current_dossiers, batch_size=10)
     if current_details:
