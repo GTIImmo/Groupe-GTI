@@ -249,21 +249,25 @@ def insert_price_change_event(
 def derive_offre_state_and_event_date(source: Dict[str, Any], item: Dict[str, Any]) -> tuple[str | None, str | None]:
     propositions = parse_json_list(source.get("propositions") or item.get("propositions"))
     latest_event_date = None
-    has_proposition = False
-    has_accepted = False
+    latest_type = None
+    latest_type_date = ""
     for proposition in propositions:
         proposition_type = str(proposition.get("type") or "").strip().lower()
         proposition_date = str(proposition.get("date") or "").strip() or None
         if proposition_date and (latest_event_date is None or proposition_date > latest_event_date):
             latest_event_date = proposition_date
-        if proposition_type == "accepte":
-            has_accepted = True
-        elif proposition_type == "proposition":
-            has_proposition = True
-    if has_accepted:
+        # On retient le TYPE de la proposition la PLUS RÉCENTE = état courant de l'offre.
+        # Avant : un "refus" postérieur à une "proposition" était ignoré (has_proposition
+        # restait vrai) -> l'offre restait "proposed"/Sous offre à tort (bug systémique).
+        if proposition_type and (proposition_date or "") >= latest_type_date:
+            latest_type = proposition_type
+            latest_type_date = proposition_date or ""
+    if latest_type == "accepte":
         return "accepted", latest_event_date
-    if has_proposition:
+    if latest_type == "proposition":
         return "proposed", latest_event_date
+    if latest_type in ("refus", "refuse", "refusee"):
+        return "refused", latest_event_date
     fallback_date = first_present(
         source.get("date"),
         source.get("date_creation"),
