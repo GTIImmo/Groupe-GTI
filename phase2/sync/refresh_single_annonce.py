@@ -202,6 +202,15 @@ def update_annonce_from_detail(conn: sqlite3.Connection, annonce_id: str, payloa
     key_data = data.get("keyData") if isinstance(data, dict) else {}
     localite = data.get("localite") if isinstance(data, dict) else {}
     publique = localite.get("publique") if isinstance(localite, dict) else {}
+    # idtype (type de bien) et offredem (type d'offre) sont ranges dans
+    # data.offre_type.props.{idtype,offredem}.value (PAS dans keyData). Si on lit keyData
+    # on recupere None -> le read-through ecrasait le type par du vide. On lit au bon endroit.
+    ot_props = ((data.get("offre_type") or {}).get("props") or {}) if isinstance(data, dict) else {}
+    def _ot_value(name: str):
+        node = ot_props.get(name)
+        return node.get("value") if isinstance(node, dict) else None
+    idtype_value = _ot_value("idtype") or key_data.get("idtype")
+    offredem_value = _ot_value("offredem") or key_data.get("offredem")
     valide_value = key_data.get("valide")
     if valide_value is None:
         valide_value = key_data.get("checkValid")
@@ -230,8 +239,8 @@ def update_annonce_from_detail(conn: sqlite3.Connection, annonce_id: str, payloa
             hektor_agence_id = excluded.hektor_agence_id,
             hektor_negociateur_id = excluded.hektor_negociateur_id,
             date_maj = excluded.date_maj,
-            offre_type = excluded.offre_type,
-            idtype = excluded.idtype,
+            offre_type = CASE WHEN NULLIF(TRIM(excluded.offre_type),'') IS NULL THEN offre_type ELSE excluded.offre_type END,
+            idtype = CASE WHEN NULLIF(TRIM(excluded.idtype),'') IS NULL THEN idtype ELSE excluded.idtype END,
             prix = excluded.prix,
             surface = excluded.surface,
             archive = excluded.archive,
@@ -251,8 +260,8 @@ def update_annonce_from_detail(conn: sqlite3.Connection, annonce_id: str, payloa
             normalized_id(key_data.get("agence")),
             normalized_id(key_data.get("NEGOCIATEUR")),
             key_data.get("datemaj"),
-            key_data.get("offredem"),
-            key_data.get("idtype"),
+            offredem_value,
+            idtype_value,
             key_data.get("prix"),
             key_data.get("surface"),
             key_data.get("archive"),
