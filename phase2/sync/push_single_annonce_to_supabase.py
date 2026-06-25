@@ -307,7 +307,7 @@ def get_annonce_pending(client: SupabaseRestClient, app_dossier_id: int) -> dict
         method="GET",
         path="app_annonce_pending",
         query={
-            "select": "app_dossier_id,source,push_after",
+            "select": "app_dossier_id,source,push_after,conflict",
             "app_dossier_id": f"eq.{int(app_dossier_id)}",
             "limit": "1",
         },
@@ -494,8 +494,14 @@ def main() -> int:
                 raise RuntimeError(f"app_dossier introuvable pour annonce Hektor {hektor_annonce_id}")
             seed_target_work_items(con, app_dossier_id)
             pending = get_annonce_pending(client, app_dossier_id)
-            if pending is not None and str(pending.get("source") or "") == "diffusion" and diffusion_lock_expired(pending):
-                # Verrou diffusion arrivé à expiration -> on le lève et on resynchronise depuis Hektor.
+            if pending is not None and (
+                bool(pending.get("conflict"))
+                or (str(pending.get("source") or "") == "diffusion" and diffusion_lock_expired(pending))
+            ):
+                # Édition en CONFLIT (échouée, ex. anti-écrasement) OU verrou diffusion expiré :
+                # on NE gèle PAS le bien -> on lève le pending et on resynchronise depuis Hektor
+                # (Hektor gagne ; l'édition optimiste échouée est abandonnée). Évite qu'un conflit
+                # fige le bien pour toutes les modifs suivantes.
                 clear_annonce_pending(client, app_dossier_id)
                 pending = None
             if pending is not None:

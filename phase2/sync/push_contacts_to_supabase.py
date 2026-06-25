@@ -443,7 +443,10 @@ def fetch_dirty_contact_ids(client: "SupabaseRestClient", contact_ids: list[str]
     éditée dans l'app, pas encore poussée vers Hektor), on conserve la valeur optimiste de
     Supabase au lieu de la remplacer par l'ancienne version locale.
     """
-    path = "app_contact_pending?select=hektor_contact_id"
+    # Un pending en CONFLIT (édition échouée, ex. anti-écrasement) ne doit PAS geler le
+    # contact pour les modifs suivantes : on l'exclut du dirty -> le read-through rafraîchit
+    # (Hektor gagne). Seuls les pendings en cours (non en conflit) restent protégés.
+    path = "app_contact_pending?select=hektor_contact_id&conflict=is.false"
     if contact_ids:
         encoded = ",".join(urllib.parse.quote(str(value), safe="") for value in contact_ids)
         path += f"&hektor_contact_id=in.({encoded})"
