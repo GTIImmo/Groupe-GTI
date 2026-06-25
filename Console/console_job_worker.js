@@ -3512,6 +3512,8 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .gend .k{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:700;margin-top:3px}
 .gend.mid{position:absolute;left:50%;transform:translateX(-50%);text-align:center}.gend.mid .v{color:#ff9ec8}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.scard{border:1px solid var(--line);border-radius:11px;padding:15px 16px}
+.acq{display:flex;align-items:center;gap:11px;margin-top:11px;padding:11px 14px;background:var(--brand-50);border:1px solid #f3c9dd;border-radius:11px;font-size:11px;color:var(--body);line-height:1.45}
+.acq b{color:var(--brand-d)}.acq-ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--brand);border-radius:50%;color:#fff}.acq-ic svg{width:15px;height:15px}
 .scard .ic{width:30px;height:30px;border-radius:8px;background:var(--brand-50);color:var(--brand);display:grid;place-items:center}.scard .ic svg{width:15px;height:15px}
 .scard .v{font-family:'Spectral',serif;font-size:22px;font-weight:600;margin-top:11px}.scard .v small{font-size:11px;color:var(--mute)}.scard .l{font-size:10.5px;color:var(--body);margin-top:2px}
 .chart{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-top:12px}
@@ -3665,6 +3667,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const equipDefs = [["Double vitrage", detail.doubleVitrage], ["Triple vitrage", detail.tripleVitrage], ["Volets électriques", detail.voletsElec], ["Cheminée", detail.cheminee], ["Climatisation", detail.climatisation], ["Porte blindée", detail.porteBlindee], ["Interphone", detail.interphone], ["Visiophone", detail.visiophone], ["Alarme", detail.alarme], ["Digicode", detail.digicode], ["Détecteur de fumée", detail.detecteurFumee], ["Accès handicapé", detail.accesHandi]];
   const equipList = equipDefs.filter(([, v]) => v).map(([k]) => `<span class="eqp">${checkIcon}${k}</span>`).join("");
   const hasDetailPage = !!(interieurRows || exterieurRows || confortRows || equipList || detail.particularites);
+  const acquereursN = Math.max(0, parseInt(payload.acquereurs, 10) || 0);
   const diagOtherLines = Object.entries(detail.diagnostics || {}).filter(([label]) => label !== "DPE").map(([label, d]) =>
     `<div class="diag-row"><span class="k">${label}</span><span class="v ${d && d.done ? "ok" : "na"}">${d && d.done ? "Réalisé · " + estimText(dateCourt(d.date)) : "Non communiqué"}</span></div>`).join("");
 
@@ -3761,6 +3764,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     </div>
   </div></div>
   <p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>
+  ${acquereursN > 0 ? `<div class="acq"><span class="acq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span><div><b>${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""}</b> de notre fichier recherche${acquereursN > 1 ? "nt" : ""} actuellement un bien correspondant au vôtre.</div></div>` : ""}
   <div class="h mt">Le marché en chiffres${marche && marche.commune ? ` · ${estimText(marche.commune)}` : ""}</div>
   <div class="stats">
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v tnum">${mMed ? estimEuro(mMed) + "<small>/m²</small>" : todo("—")}</div><div class="l">Prix médian · ${estimText(marche ? marche.type : "secteur")}</div></div>

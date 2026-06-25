@@ -4329,7 +4329,16 @@ function EstimationDocumentEditor(props: {
   const [marche, setMarche] = useState<DvfComparablesResult | null>(null)
   const [marcheBusy, setMarcheBusy] = useState(false)
   const [marcheMsg, setMarcheMsg] = useState<string | null>(null)
+  // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
+  const [acquereurs, setAcquereurs] = useState<number | null>(null)
   useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null) }, [initialDraft, props.modal])
+  useEffect(() => {
+    let cancelled = false
+    const id = dossier.app_dossier_id
+    if (id == null) { setAcquereurs(null); return }
+    loadRapprochementCounts([id]).then((m) => { if (!cancelled) setAcquereurs(m.get(id)?.n_total ?? null) }).catch(() => { if (!cancelled) setAcquereurs(null) })
+    return () => { cancelled = true }
+  }, [dossier.app_dossier_id])
 
   async function loadMarche() {
     if (marcheBusy) return
@@ -4403,7 +4412,7 @@ function EstimationDocumentEditor(props: {
         dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
         bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
-        marche: marche && marche.ok ? marche : null,
+        marche: marche && marche.ok ? marche : null, acquereurs,
       })
       if (sendEmail) {
         const res = await sendEstimationEmail({

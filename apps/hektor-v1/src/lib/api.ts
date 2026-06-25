@@ -5370,6 +5370,7 @@ export async function createGenerateEstimationPdfJob(input: {
   pointsVigilance?: string[]
   charges?: { taxe_fonciere?: number | null; energie?: number | null; eau?: number | null; assurance?: number | null }
   marche?: DvfComparablesResult | null
+  acquereurs?: number | null  // acquéreurs en recherche correspondant au bien (moteur de rapprochement)
   methode?: string | null
   validite?: string | null
   documentLabel?: string | null
@@ -5399,6 +5400,7 @@ export async function createGenerateEstimationPdfJob(input: {
         pointsVigilance: input.pointsVigilance ?? null,
         charges: input.charges ?? null,
         marche: input.marche ?? null,
+        acquereurs: input.acquereurs ?? null,
         methode: input.methode ?? null,
         validite: input.validite ?? null,
       },
