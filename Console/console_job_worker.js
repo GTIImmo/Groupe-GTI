@@ -3352,6 +3352,14 @@ function estimRawAny(raw, key) {
 const estimNum = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
 const estimYear = (v) => { const n = parseInt(String(v || ""), 10); return n >= 1700 && n <= 2100 ? String(n) : null; };
 const estimOui = (v) => String(v || "").trim().toUpperCase() === "OUI";
+// Libellés Hektor courants (codes sans accents -> affichage propre).
+const ESTIM_LABELS = {
+  "AMERICAINE": "Américaine", "EQUIPEE": "Équipée", "AMENAGEE": "Aménagée", "SEMI EQUIPEE": "Semi-équipée",
+  "INDEPENDANT": "Indépendant", "INDEPENDANTE": "Indépendante", "MITOYEN": "Mitoyen", "MITOYENNE": "Mitoyenne",
+  "TOUT A L EGOUT": "Tout à l'égout", "FOSSE SEPTIQUE": "Fosse septique", "ASSAINISSEMENT INDIVIDUEL": "Assainissement individuel",
+  "ELECTRIQUE": "Électrique", "GAZ": "Gaz", "FIOUL": "Fioul", "BOIS": "Bois", "POMPE A CHALEUR": "Pompe à chaleur",
+  "INDIVIDUEL": "Individuel", "COLLECTIF": "Collectif", "CENTRAL": "Central", "RADIATEUR": "Radiateur",
+};
 function estimHuman(v) {
   if (v == null) return null;
   const s = String(v).trim(); if (!s) return null;
@@ -3359,6 +3367,8 @@ function estimHuman(v) {
   if (up === "OUI") return "Oui";
   if (up === "NON") return "Non";
   if (up === "NON PRÉCISÉ" || up === "NON PRECISE" || up === "-" || up === "0") return null;
+  const key = up.replace(/[\s'_-]+/g, " ").trim();
+  if (ESTIM_LABELS[key]) return ESTIM_LABELS[key];
   return s.toLowerCase().replace(/(^|[\s\-'])([a-zàâäéèêëîïôöùûüç])/g, (m, p, c) => p + c.toUpperCase());
 }
 const estimDiagDone = (v) => { const s = String(v || "").trim(); if (!s || s === "0000-00-00") return false; const y = parseInt(s.slice(0, 4), 10); return y >= 2000 && y <= 2100; };
@@ -3523,11 +3533,15 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .etat-meta .k{font-size:8px;font-weight:700;color:var(--mute);text-transform:uppercase}.etat-meta .v{font-size:11.5px;font-weight:700;margin-top:2px}
 .pts-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.pts{border:1px solid var(--line);border-radius:3px;padding:13px 15px}
 .pts .ph{font-size:9px;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:7px;margin-bottom:9px}.pts .ph svg{width:13px;height:13px}
-.pts.forts .ph{color:var(--green)}.pts.vigi .ph{color:#b8860b}.pts ul{list-style:none;display:flex;flex-direction:column;gap:7px}.pts li{font-size:10.5px;color:var(--body);line-height:1.4}
+.pts.forts .ph{color:var(--green)}.pts.vigi .ph{color:#b8860b}.pts ul{list-style:none;display:flex;flex-direction:column;gap:7px}.pts li{font-size:10.5px;color:var(--body);line-height:1.4;display:flex;align-items:flex-start;gap:7px}.pts li svg{width:13px;height:13px;flex:none;margin-top:1px}.pts.forts li svg{color:var(--green)}.pts.vigi li svg{color:#b8860b}
 .method{display:flex;gap:10px;padding:12px 15px;background:var(--brand-50);border:1px solid #f3d4e3;border-radius:3px;margin-top:12px}.method svg{width:16px;height:16px;color:var(--brand);flex:none;margin-top:1px}
 .method .t{font-size:11px;font-weight:700}.method .d{font-size:10px;color:var(--body);line-height:1.5;margin-top:2px}
 .diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.diag{border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .diag-h{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--mute);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--cream)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.eqps{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.eqp{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:var(--body);border:1px solid var(--line);border-radius:20px;padding:5px 11px}
+.eqp svg{width:11px;height:11px;color:var(--green)}
 .diag-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line2);font-size:10.5px}.diag-row:last-child{border-bottom:none}
 .diag-row .k{color:var(--body);font-weight:500}.diag-row .v{font-weight:700}.diag-row .v.ok{color:var(--green)}.diag-row .v.na{color:var(--mute);font-weight:600}
 .avis .lead{font-family:'Spectral',serif;font-size:15px;font-style:italic;font-weight:500;border-left:3px solid var(--brand);padding-left:15px;line-height:1.5}
@@ -3582,7 +3596,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
   const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
   const rh = `<div class="rh"><img src="${LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
-  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 5</span></div>`;
+  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 6</span></div>`;
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
 
@@ -3626,6 +3640,34 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const compRow = (c) => `<div class="comp"><div class="info"><div class="t">${estimText(c.type)} ${c.surface ? c.surface + " m²" : ""}${c.pieces ? " · " + estimText(c.pieces) + " p." : ""}</div><div class="d">${estimText(c.commune)}${c.terrain ? " · terrain " + c.terrain + " m²" : ""} · ${estimText(dateCourt(c.date))} · ${estimText(c.distance_km)} km</div></div><div class="stat"><div class="p tnum">${estimEuro(c.valeur) || "—"}</div><div class="pm tnum">${c.prix_m2 ? estimEuro(c.prix_m2) + "/m²" : ""}</div></div><span class="bdg">Vendu</span></div>`;
   const evoBars = mEvo.map((e) => `<div class="bcol"><div class="bv tnum">${estimEuro(e.prix_m2) || "—"}</div><div class="bar${e === mEvo[mEvo.length - 1] ? " hl" : ""}" style="height:${mEvoMax ? Math.round((e.prix_m2 / mEvoMax) * 20) + 4 : 4}mm"></div><div class="bk">${estimText(e.annee)}</div></div>`).join("");
 
+  // --- Lot B : blocs détaillés (caractéristiques étendues, intérieur/extérieur/équipements, diagnostics réels) ---
+  const detRow = (k, v) => v != null && v !== "" ? `<div class="diag-row"><span class="k">${k}</span><span class="v">${estimText(v)}</span></div>` : "";
+  const ouiSurf = (oui, surf) => oui ? (surf ? `Oui · ${surf} m²` : "Oui") : null;
+  const interieurRows = [
+    detRow("Salles de bain", detail.sdb), detRow("Salles d'eau", detail.se), detRow("WC", detail.wc),
+    detRow("Surface séjour", detail.surfSejour ? detail.surfSejour + " m²" : null),
+    detRow("Surface Carrez", detail.surfCarrez ? detail.surfCarrez + " m²" : null),
+    detRow("Cuisine", detail.cuisine), detRow("Équipement cuisine", detail.cuisineEquip),
+    detRow("Exposition", detail.exposition), detRow("Vue", detail.vue),
+  ].join("");
+  const exterieurRows = [
+    detRow("Murs mitoyens", detail.mursMitoyens), detRow("Niveaux", detail.niveaux),
+    detRow("Jardin", ouiSurf(detail.jardin === "Oui", detail.surfJardin)), detRow("Piscine", detail.piscine),
+    detRow("Terrasse", ouiSurf(detail.terrasse === "Oui", detail.surfTerrasse)),
+    detRow("Cave", ouiSurf(detail.cave === "Oui", detail.surfCave)),
+    detRow("Garage", detail.surfGarage ? detail.surfGarage + " m²" : detail.garage),
+    detRow("Parking intérieur", detail.parkInt), detRow("Parking extérieur", detail.parkExt),
+  ].join("");
+  const confortRows = [
+    detRow("Chauffage", [detail.chauffageType, detail.chauffageEnergie].filter(Boolean).join(" · ") || null),
+    detRow("Eau", detail.eau), detRow("Assainissement", detail.assainissement),
+  ].join("");
+  const equipDefs = [["Double vitrage", detail.doubleVitrage], ["Triple vitrage", detail.tripleVitrage], ["Volets électriques", detail.voletsElec], ["Cheminée", detail.cheminee], ["Climatisation", detail.climatisation], ["Porte blindée", detail.porteBlindee], ["Interphone", detail.interphone], ["Visiophone", detail.visiophone], ["Alarme", detail.alarme], ["Digicode", detail.digicode], ["Détecteur de fumée", detail.detecteurFumee], ["Accès handicapé", detail.accesHandi]];
+  const equipList = equipDefs.filter(([, v]) => v).map(([k]) => `<span class="eqp">${checkIcon}${k}</span>`).join("");
+  const hasDetailPage = !!(interieurRows || exterieurRows || confortRows || equipList || detail.particularites);
+  const diagOtherLines = Object.entries(detail.diagnostics || {}).filter(([label]) => label !== "DPE").map(([label, d]) =>
+    `<div class="diag-row"><span class="k">${label}</span><span class="v ${d && d.done ? "ok" : "na"}">${d && d.done ? "Réalisé · " + estimText(dateCourt(d.date)) : "Non communiqué"}</span></div>`).join("");
+
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Avis de valeur ${docNumber}</title>
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${ESTIM_PREMIUM_CSS}</style></head><body>
@@ -3658,6 +3700,9 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     ${cellSpec("Chambres", estimText(chambres), !!chambres)}
     ${cellSpec("Garage", estimText(garage), !!garage)}
     ${cellSpec("Étage", estimText(detail.etage), !!detail.etage)}
+    ${detail.niveaux ? cellSpec("Niveaux", estimText(detail.niveaux), true) : ""}
+    ${detail.anneeConstruction ? cellSpec("Année constr.", estimText(detail.anneeConstruction), true) : ""}
+    ${detail.copropriete ? cellSpec("Copropriété", estimText(detail.copropriete) + (detail.coproprieteNbLots ? ` · ${detail.coproprieteNbLots} lots` : ""), true) : ""}
     ${cellSpec("Localité", estimText(localite), !!localite)}
   </div>
   <div class="energy">
@@ -3668,12 +3713,23 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
 </div>${rf(2)}</div>
 <div class="page">${rh}<div class="content">
+  <div class="h">Le bien en détail</div>
+  ${hasDetailPage ? `<div class="detail-grid">
+    ${interieurRows ? `<div class="diag"><div class="diag-h">Intérieur</div>${interieurRows}</div>` : ""}
+    ${exterieurRows ? `<div class="diag"><div class="diag-h">Extérieur</div>${exterieurRows}</div>` : ""}
+    ${confortRows ? `<div class="diag"><div class="diag-h">Confort &amp; énergie</div>${confortRows}</div>` : ""}
+  </div>
+  ${equipList ? `<div class="h mt">Équipements &amp; sécurité</div><div class="eqps">${equipList}</div>` : ""}
+  ${detail.particularites ? `<div class="h mt">Particularités</div><p style="font-size:11px;color:var(--body);line-height:1.6">${estimEscapeHtml(detail.particularites)}</p>` : ""}`
+  : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Caractéristiques détaillées non renseignées dans la fiche du bien.")}</p>`}
+</div>${rf(3)}</div>
+<div class="page">${rh}<div class="content">
   <div class="h">État du logement &amp; prestations</div>
   <div class="etat-top">
     <div class="etat-stars">${stars}</div>
     <div><div class="etat-rl serif">${etatLabel ? estimText(etatLabel) : todo("État à évaluer")}</div><div class="etat-rs">${etatLabel ? "Évaluation du conseiller" : "À renseigner par votre conseiller"}</div></div>
     <div class="etat-sep"></div>
-    <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage)}${etatMeta("Exposition", etat.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries)}</div>
+    <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage || [detail.chauffageType, detail.chauffageEnergie].filter(Boolean).join(" · "))}${etatMeta("Exposition", etat.exposition || detail.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries || (detail.doubleVitrage ? "Double vitrage" : detail.tripleVitrage ? "Triple vitrage" : ""))}</div>
   </div>
   <div class="pts-grid">
     <div class="pts forts"><div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>Points forts</div><ul>${ptsItems(forts, checkIcon)}</ul></div>
@@ -3684,18 +3740,18 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="diag-grid">
     <div class="diag"><div class="diag-h">Diagnostics obligatoires</div>
       <div class="diag-row"><span class="k">DPE &amp; GES</span><span class="v ${dpe ? "ok" : "na"}">${dpe ? "Réalisé · " + dpe + (ges ? " / " + ges : "") : "À actualiser"}</span></div>
-      <div class="diag-row"><span class="k">Électricité</span><span class="v na">À actualiser</span></div>
-      <div class="diag-row"><span class="k">Amiante / Plomb</span><span class="v na">À actualiser</span></div>
-      <div class="diag-row"><span class="k">Assainissement</span><span class="v na">À actualiser</span></div>
+      ${diagOtherLines}
     </div>
     <div class="diag"><div class="diag-h">Charges annuelles estimées</div>
-      ${chargeRow("Taxe foncière", charges.taxe_fonciere)}
-      ${chargeRow("Énergie", charges.energie)}
+      ${chargeRow("Taxe foncière", charges.taxe_fonciere || detail.taxeFonciere)}
+      ${detail.taxeHabitation ? chargeRow("Taxe d'habitation", detail.taxeHabitation) : ""}
+      ${chargeRow("Énergie", charges.energie || detail.coutMax)}
       ${chargeRow("Eau", charges.eau)}
       ${chargeRow("Assurance", charges.assurance)}
+      ${detail.charges ? chargeRow("Charges copro.", detail.charges) : ""}
     </div>
   </div>
-</div>${rf(3)}</div>
+</div>${rf(4)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Valeur vénale estimée</div>
   <div class="val"><div class="grid">
@@ -3714,7 +3770,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
   ${mComps.length ? `<div class="h mt">Biens comparables vendus</div><div class="comps">${mComps.map(compRow).join("")}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±25 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
-</div>${rf(4)}</div>
+</div>${rf(5)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
@@ -3727,7 +3783,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div></div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
-</div>${rf(5)}</div>
+</div>${rf(6)}</div>
 </body></html>`;
 }
 
