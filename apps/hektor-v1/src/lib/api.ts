@@ -2468,6 +2468,7 @@ export async function sendEstimationEmail(input: {
   proprietaireNom?: string | null
   negociateur?: Record<string, unknown> | null
   customIntro?: string | null
+  introVariante?: 'vente' | 'succession' | null
   hektorContactId?: string | null
   dryRun?: boolean
 }): Promise<{ ok: boolean; dryRun?: boolean; envoiId?: string; subject?: string; skipped?: string }> {
@@ -2482,6 +2483,7 @@ export async function sendEstimationEmail(input: {
       proprietaire_nom: input.proprietaireNom ?? null,
       negociateur: input.negociateur ?? null,
       custom_intro: input.customIntro ?? null,
+      intro_variante: input.introVariante ?? null,
       hektor_contact_id: input.hektorContactId ?? null,
       dry_run: input.dryRun ?? true,
     },

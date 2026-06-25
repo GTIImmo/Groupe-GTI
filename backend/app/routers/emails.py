@@ -244,6 +244,7 @@ class EstimationSendPayload(BaseModel):
     prenom: str | None = None
     civilite: str | None = None
     custom_intro: str | None = None
+    intro_variante: str | None = None  # 'vente' | 'succession' (ton de l'intro)
     hektor_contact_id: str | None = None
     dry_run: bool = True  # réel uniquement si dry_run=false ET EMAIL_REAL_SEND_ENABLED=true
 
@@ -255,12 +256,12 @@ def preview_estimation_email(
     type: str | None = None,
     ville: str | None = None,
     code_postal: str | None = None,
-    basse: float | None = None,
-    estimee: float | None = None,
-    haute: float | None = None,
+    surface: float | None = None,
+    pieces: int | None = None,
     proprietaire: str | None = None,
     nego: str | None = None,
     agence: str | None = None,
+    variante: str | None = Query(None, description="'vente' | 'succession' (ton de l'intro)"),
     format: str = Query("html", pattern="^(html|text)$"),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
@@ -268,9 +269,11 @@ def preview_estimation_email(
     get_authenticated_user(settings, authorization)  # 401 si non authentifié (preview interne)
     result = render_estimation_email(
         settings=settings, envoi_id="preview", app_dossier_id=app_dossier_id,
-        bien={"titre": titre, "type": type, "ville": ville, "code_postal": code_postal},
-        valeurs={"basse": basse, "estimee": estimee, "haute": haute},
+        bien={"titre": titre, "type": type, "ville": ville, "code_postal": code_postal,
+              "surface": surface, "pieces": pieces},
+        valeurs={},
         proprietaire_nom=proprietaire, negociateur={"nom": nego, "agence": agence},
+        variante=variante,
     )
     if format == "text":
         return Response(content=result["text"], media_type="text/plain; charset=utf-8")
@@ -292,6 +295,7 @@ def send_estimation_email(
         app_dossier_id=payload.app_dossier_id, bien=payload.bien, valeurs=payload.valeurs,
         proprietaire_nom=payload.proprietaire_nom, negociateur=payload.negociateur,
         prenom=payload.prenom, civilite=payload.civilite, custom_intro=payload.custom_intro,
+        intro_variante=payload.intro_variante,
         hektor_contact_id=payload.hektor_contact_id, dry_run=payload.dry_run, created_by=user.id,
     )
 

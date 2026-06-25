@@ -16,12 +16,10 @@ from ..settings import Settings
 from . import email_tokens
 from .rapprochement_email import (
     BRAND,
-    FONT_BODY,
     LEGAL_LINE,
     _button,
     _clean_text,
     _esc,
-    _fmt_eur,
     email_eyebrow,
     email_lead,
     email_shell,
@@ -32,25 +30,6 @@ from .rapprochement_email import (
 def _track_base(settings: Settings) -> str | None:
     base = (getattr(settings, "email_tracking_base_url", None) or getattr(settings, "app_base_url", None) or "").strip()
     return base.rstrip("/") if base else None
-
-
-def _value_block(val_basse: str, val_estimee: str, val_haute: str) -> str:
-    """Bloc de valeur : fourchette basse / valeur estimée (magenta) / fourchette haute."""
-    cell = (
-        '<td width="33%" align="center" valign="bottom" style="padding:6px 4px">'
-        '<div style="font-family:{font};font-size:10px;font-weight:bold;letter-spacing:1.2px;'
-        'text-transform:uppercase;color:{mute}">{k}</div>'
-        '<div style="font-family:{font};font-size:{size};font-weight:bold;color:{color};margin-top:5px">{v}</div></td>'
-    )
-    return (
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-        f'class="gti-card" style="background:{BRAND["magenta_soft"]};border:1px solid {BRAND["line_warm"]};'
-        f'border-radius:12px"><tr>'
-        + cell.format(font=FONT_BODY, mute=BRAND["muted_warm"], k="Fourchette basse", size="16px", color=BRAND["ink_warm"], v=_esc(val_basse))
-        + cell.format(font=FONT_BODY, mute=BRAND["muted_warm"], k="Valeur estimée", size="27px", color=BRAND["magenta"], v=_esc(val_estimee))
-        + cell.format(font=FONT_BODY, mute=BRAND["muted_warm"], k="Fourchette haute", size="16px", color=BRAND["ink_warm"], v=_esc(val_haute))
-        + '</tr></table>'
-    )
 
 
 def render_estimation_email(
@@ -65,8 +44,15 @@ def render_estimation_email(
     prenom: str | None = None,
     civilite: str | None = None,
     custom_intro: str | None = None,
+    variante: str | None = None,
 ) -> dict[str, str]:
-    """Rend l'email estimation. envoi_id = 'preview' en aperçu, uuid réel à l'envoi."""
+    """Rend l'email estimation. envoi_id = 'preview' en aperçu, uuid réel à l'envoi.
+
+    Le montant N'EST PAS affiché dans l'email : la valeur n'est visible qu'après
+    clic sur le bouton de téléchargement (le clic = vrai signal d'intérêt).
+    `variante` choisit le ton de l'intro : 'vente' (défaut) ou 'succession'.
+    `custom_intro` (texte libre du négociateur) prime sur la variante.
+    """
     negociateur = negociateur or {}
     secret = getattr(settings, "email_tracking_secret", None) or settings.supabase_service_role_key
     base = _track_base(settings)
@@ -87,21 +73,51 @@ def render_estimation_email(
     subject = "Votre estimation est disponible"
     preheader = "Le détail de la valeur de votre bien, à consulter en un clic."
 
-    titre_bien = _clean_text(bien.get("titre")) or "votre bien"
-    localite = " ".join(p for p in (str(bien.get("code_postal") or "").strip(), _clean_text(bien.get("ville"))) if p).strip()
-    intro = (custom_intro or "").strip() or (
-        f"J'ai le plaisir de vous transmettre l'estimation de « {titre_bien} »"
-        + (f" à {localite}" if localite else "")
-        + ". Vous trouverez ci-dessous une synthèse, et le document complet en téléchargement."
-    )
+    # Description naturelle du bien (caractéristiques injectées dans l'intro).
+    type_label = (_clean_text(bien.get("type")) or "bien").strip()
+    type_label = (type_label[:1].lower() + type_label[1:]) if type_label else "bien"
+    ville = _clean_text(bien.get("ville"))
+    desc = f"votre {type_label}"
+    try:
+        surf = int(float(bien.get("surface"))) if bien.get("surface") not in (None, "") else None
+    except (TypeError, ValueError):
+        surf = None
+    try:
+        pcs = int(float(bien.get("pieces"))) if bien.get("pieces") not in (None, "") else None
+    except (TypeError, ValueError):
+        pcs = None
+    if surf:
+        desc += f" de {surf} m²"
+    if pcs:
+        desc += f" ({pcs} pièces)"
+    if ville:
+        desc += f" à {ville}"
+
+    # Deux variantes (toutes deux après visite) — aucune ne révèle le prix.
+    if variante == "succession":
+        default_intro = (
+            "Je vous remercie de m'avoir reçu. Comme convenu, vous trouverez l'avis de valeur de "
+            f"{desc}, établi dans le cadre de votre succession. Fondé sur les caractéristiques du "
+            "bien et les transactions comparables récentes, ce document constitue une valeur vénale "
+            "que vous pourrez transmettre à votre notaire. Vous le découvrirez en détail en le téléchargeant."
+        )
+    else:  # 'vente' (défaut)
+        default_intro = (
+            "Je vous remercie de votre accueil lors de notre rendez-vous. Comme convenu, voici "
+            f"l'estimation de {desc}. Je l'ai établie d'après ses caractéristiques et les ventes "
+            "récentes du secteur ; vous en trouverez le détail complet dans le document à télécharger."
+        )
+    intro = (custom_intro or "").strip() or default_intro
 
     nego_nom = _clean_text(negociateur.get("nom")) or "Votre conseiller Groupe GTI"
     nego_agence = _clean_text(negociateur.get("agence")) or "Groupe GTI"
     nego_contact = " · ".join(p for p in (_clean_text(negociateur.get("tel")), _clean_text(negociateur.get("email"))) if p)
 
-    val_estimee = _fmt_eur(valeurs.get("estimee"))
-    val_basse = _fmt_eur(valeurs.get("basse"))
-    val_haute = _fmt_eur(valeurs.get("haute"))
+    # Le montant n'apparaît PAS : on incite à cliquer pour découvrir la valeur.
+    teaser = email_lead(
+        "Pour des raisons de confidentialité, le détail de la valeur figure uniquement "
+        "dans le document. Cliquez ci-dessous pour le découvrir."
+    )
 
     sign_html = (
         f"Une question sur cette estimation ? Répondez simplement à cet email, je vous rappelle.<br>"
@@ -117,10 +133,10 @@ def render_estimation_email(
         f'{email_eyebrow("Votre estimation")}'
         f'{email_title(subject)}'
         f'{email_lead(_esc(greeting) + "<br>" + _esc(intro))}'
+        f'{teaser}'
         f'</td></tr>'
-        f'<tr><td style="padding:16px 26px 4px">{_value_block(val_basse, val_estimee, val_haute)}</td></tr>'
-        f'<tr><td align="center" style="padding:20px 26px 6px">'
-        f'{_button(download_url, "Télécharger mon estimation (PDF)", bg=BRAND["magenta"], fg=BRAND["on_brand"])}'
+        f'<tr><td align="center" style="padding:18px 26px 6px">'
+        f'{_button(download_url, "Découvrir la valeur de mon bien (PDF)", bg=BRAND["magenta"], fg=BRAND["on_brand"])}'
         f'</td></tr>'
         f'<tr><td style="padding:6px 26px 26px">{email_lead(sign_html)}</td></tr>'
         f'</table></td></tr>'
@@ -134,11 +150,8 @@ def render_estimation_email(
         "",
         intro,
         "",
-        f"Fourchette basse : {val_basse}",
-        f"Valeur estimée : {val_estimee}",
-        f"Fourchette haute : {val_haute}",
-        "",
-        f"Télécharger mon estimation (PDF) : {download_url}",
+        "Le détail de la valeur figure dans le document à télécharger :",
+        f"Découvrir la valeur de mon bien (PDF) : {download_url}",
         "",
         f"{nego_nom} — {nego_agence}" + (f" — {nego_contact}" if nego_contact else ""),
         "",

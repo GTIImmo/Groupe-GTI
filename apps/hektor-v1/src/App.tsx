@@ -4310,6 +4310,7 @@ function EstimationDocumentEditor(props: {
     basse: prix != null ? String(Math.round(prix * 0.95)) : '',
     estimee: prix != null ? String(prix) : '',
     haute: prix != null ? String(Math.round(prix * 1.05)) : '',
+    variante: 'vente' as 'vente' | 'succession',  // contexte de l'email (ton de l'intro)
     commentaire: '',
     dpe: '', ges: '', etatNote: '', etatLabel: '',
     chauffage: '', exposition: '', toiture: '', menuiseries: '',
@@ -4375,6 +4376,8 @@ function EstimationDocumentEditor(props: {
     return {
       bien: {
         titre: dossier.titre_bien, type: dossier.type_bien, ville: dossier.ville, code_postal: dossier.code_postal,
+        surface: Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null,
+        pieces: Number(props.detail.nb_pieces) || null,
         dpe: draft.dpe.trim() || null, ges: draft.ges.trim() || null,
         reference: dossier.numero_dossier ?? dossier.numero_mandat ?? null,
       },
@@ -4404,7 +4407,7 @@ function EstimationDocumentEditor(props: {
         const res = await sendEstimationEmail({
           recipientEmail: draft.recipient.trim(), senderEmail: (dossier.negociateur_email ?? '').trim() || 'accueil@gti-immobilier.fr',
           appDossierId: dossier.app_dossier_id, bien: p.bien, valeurs: p.valeurs, proprietaireNom: p.proprietaire.nom,
-          negociateur: p.negociateur, customIntro: draft.commentaire || null, dryRun: true,
+          negociateur: p.negociateur, introVariante: draft.variante, dryRun: true,
         })
         setMessage(res?.dryRun ? "Avis de valeur en génération + email préparé (mode test, aucun envoi réel — envoi réel au Lot 3)." : "Avis de valeur en génération + email envoyé au propriétaire.")
       } else {
@@ -4444,8 +4447,9 @@ function EstimationDocumentEditor(props: {
                   <label><span>DPE</span><select value={draft.dpe} onChange={(e) => upd('dpe', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
                   <label><span>GES</span><select value={draft.ges} onChange={(e) => upd('ges', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
                   <label><span>Email du propriétaire</span><input type="email" value={draft.recipient} onChange={(e) => upd('recipient', e.target.value)} /></label>
+                  <label><span>Contexte de l'email</span><select value={draft.variante} onChange={(e) => upd('variante', e.target.value as 'vente' | 'succession')}><option value="vente">Vente (suite à visite)</option><option value="succession">Succession (valeur pour le notaire)</option></select></label>
                 </div>
-                <label className="is-wide"><span>Avis du négociateur</span><textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
+                <label className="is-wide"><span>Avis du négociateur (PDF)</span><textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
               </div>
             ) : null}
             {tab === 'etat' ? (

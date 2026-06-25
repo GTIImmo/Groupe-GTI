@@ -35,6 +35,7 @@ class EstimationSender:
         prenom: str | None = None,
         civilite: str | None = None,
         custom_intro: str | None = None,
+        intro_variante: str | None = None,
         hektor_contact_id: str | None = None,
         dry_run: bool = True,
         created_by: str | None = None,
@@ -74,6 +75,7 @@ class EstimationSender:
             settings=self.settings, envoi_id=envoi_id, app_dossier_id=int(app_dossier_id),
             bien=bien, valeurs=valeurs, proprietaire_nom=proprietaire_nom,
             negociateur=negociateur, prenom=prenom, civilite=civilite, custom_intro=custom_intro,
+            variante=intro_variante,
         )
 
         # 6) En-têtes de désinscription 1-clic.
