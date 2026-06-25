@@ -4299,7 +4299,8 @@ function EstimationDocumentEditor(props: {
   detail: DossierDetailPayload
   contacts: DetailContact[]
   compact?: boolean
-  modal?: boolean  // rendu en modale (listing) : ouvert d'emblée, sans bouton toggle
+  modal?: boolean  // rendu en modale (listing) : ouvert d'emblée, bouton « Retour » qui ferme
+  onClose?: () => void
 }) {
   const { dossier } = props
   const prix = dossier.prix != null && Number.isFinite(Number(dossier.prix)) ? Number(dossier.prix) : null
@@ -4429,7 +4430,9 @@ function EstimationDocumentEditor(props: {
           <strong>Avis de valeur</strong>
           <small>{open ? 'Complétez le dossier, puis générez le PDF' : 'Préparer et envoyer l’avis de valeur au propriétaire'}</small>
         </div>
-        {!props.modal ? <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button> : null}
+        {props.modal
+          ? <button className="ghost-button button-subtle" type="button" onClick={() => props.onClose?.()}>Retour</button>
+          : <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button>}
       </div>
       {open ? (
         <div className="mandat-document-editor-body">
@@ -14227,8 +14230,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {estimationEditorTarget ? (
           <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => setEstimationEditorTarget(null)}>
             <div className="estim-editor-modal" onClick={(e) => e.stopPropagation()}>
-              <button type="button" className="estim-editor-close" aria-label="Fermer" onClick={() => setEstimationEditorTarget(null)}>×</button>
-              <EstimationDocumentEditor dossier={estimationEditorTarget.dossier} detail={estimationEditorTarget.detail} contacts={estimationEditorTarget.contacts} modal />
+              <EstimationDocumentEditor dossier={estimationEditorTarget.dossier} detail={estimationEditorTarget.detail} contacts={estimationEditorTarget.contacts} modal onClose={() => setEstimationEditorTarget(null)} />
             </div>
           </div>
         ) : null}
