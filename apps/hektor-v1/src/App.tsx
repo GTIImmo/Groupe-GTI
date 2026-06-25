@@ -4384,7 +4384,10 @@ function EstimationDocumentEditor(props: {
   const numStr = (v: string) => v.replace(/[^\d]/g, '')
   // Met à jour un poste du barème d'état (niveau ou libellé).
   const setPoste = (key: string, field: 'niveau' | 'label', value: string) => {
-    setDraft((d) => ({ ...d, etatPostes: { ...d.etatPostes, [key]: { niveau: '', label: '', ...d.etatPostes[key], [field]: value } } }))
+    setDraft((d) => {
+      const prev = d.etatPostes[key] ?? { niveau: '', label: '' }
+      return { ...d, etatPostes: { ...d.etatPostes, [key]: { ...prev, [field]: value } } }
+    })
     setMessage(null)
   }
 
