@@ -3330,6 +3330,81 @@ function estimEuro(value) {
 }
 
 // Charge le détail annonce et en extrait les champs riches pour l'avis de valeur premium.
+// --- Extraction enrichie du détail (detail_raw_json) pour l'avis de valeur -----
+// Source = detail_raw_json : groupes (ag_interieur/ag_exterieur/equipements/secteur/
+// diagnostiques/copropriete/mandat_infofi…) avec props[KEY].value. Réplique la
+// logique du front (rawWizardDetailField) : on cherche une clé à travers les groupes.
+const ESTIM_RAW_GROUPS = ["mandat_infofi", "mandat_mandatdispo", "secteur", "ag_interieur",
+  "ag_exterieur", "terrain", "equipements", "diagnostiques", "copropriete", "organiser_visite"];
+function estimParseRaw(j) {
+  try { let r = j.detail_raw_json; if (typeof r === "string") r = JSON.parse(r); return r && typeof r === "object" ? r : {}; }
+  catch (_) { return {}; }
+}
+function estimRawAny(raw, key) {
+  const cands = key.endsWith("-") ? [key, key.slice(0, -1)] : [key, key + "-"];
+  for (const g of ESTIM_RAW_GROUPS) {
+    const gp = raw[g] && raw[g].props;
+    if (!gp) continue;
+    for (const c of cands) { const p = gp[c]; if (p && p.value != null) { const v = String(p.value).trim(); if (v !== "") return v; } }
+  }
+  return null;
+}
+const estimNum = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
+const estimYear = (v) => { const n = parseInt(String(v || ""), 10); return n >= 1700 && n <= 2100 ? String(n) : null; };
+const estimOui = (v) => String(v || "").trim().toUpperCase() === "OUI";
+function estimHuman(v) {
+  if (v == null) return null;
+  const s = String(v).trim(); if (!s) return null;
+  const up = s.toUpperCase();
+  if (up === "OUI") return "Oui";
+  if (up === "NON") return "Non";
+  if (up === "NON PRÉCISÉ" || up === "NON PRECISE" || up === "-" || up === "0") return null;
+  return s.toLowerCase().replace(/(^|[\s\-'])([a-zàâäéèêëîïôöùûüç])/g, (m, p, c) => p + c.toUpperCase());
+}
+const estimDiagDone = (v) => { const s = String(v || "").trim(); if (!s || s === "0000-00-00") return false; const y = parseInt(s.slice(0, 4), 10); return y >= 2000 && y <= 2100; };
+function estimEnrichDetail(j) {
+  const raw = estimParseRaw(j);
+  const diagKeys = { DPE: "dpe_date", Amiante: "diag_amiante_date", Plomb: "diag_plomb_date",
+    Gaz: "diag_gaz_date", "Électricité": "diag_electrique_date", Termites: "diag_termites_date",
+    "Loi Carrez": "diag_loi_carrez_date", Assainissement: "diag_assainissement_date",
+    "Risques nat. & tech.": "diag_risques_nat_tech_date" };
+  const diagnostics = {};
+  for (const [label, key] of Object.entries(diagKeys)) {
+    const d = estimRawAny(raw, key);
+    diagnostics[label] = { done: estimDiagDone(d), date: estimDiagDone(d) ? d : null };
+  }
+  return {
+    exposition: estimHuman(estimRawAny(raw, "EXPOSITION")), vue: estimHuman(estimRawAny(raw, "vuee")),
+    niveaux: estimNum(estimRawAny(raw, "NB_NIVEAUX")), etages: estimNum(estimRawAny(raw, "NB_ETAGES")),
+    anneeConstruction: estimYear(estimRawAny(raw, "ANNEE_CONS")), anneeRef: estimYear(estimRawAny(raw, "dpe_annee_reference")),
+    copropriete: estimHuman(estimRawAny(raw, "copropriete")), coproprieteNbLots: estimNum(estimRawAny(raw, "copropriete_nb_lot")),
+    mursMitoyens: estimHuman(estimRawAny(raw, "MURS_MITOYENS")), particularites: estimRawAny(raw, "Particularites"),
+    sdb: estimNum(estimRawAny(raw, "NB_SDB")), se: estimNum(estimRawAny(raw, "NB_SE")), wc: estimNum(estimRawAny(raw, "NB_WC")),
+    surfCarrez: estimNum(estimRawAny(raw, "SURF_CARREZ")), surfSejour: estimNum(estimRawAny(raw, "SURF_SEJOUR")),
+    cuisine: estimHuman(estimRawAny(raw, "CUISINE")), cuisineEquip: estimHuman(estimRawAny(raw, "CUISINE_EQUIPEMENT")),
+    jardin: estimHuman(estimRawAny(raw, "JARDIN")), surfJardin: estimNum(estimRawAny(raw, "SURFACE_JARDIN")),
+    piscine: estimHuman(estimRawAny(raw, "PISCINE")),
+    terrasse: estimHuman(estimRawAny(raw, "TERRASSE")), nbTerrasses: estimNum(estimRawAny(raw, "NB_TERRASSE")), surfTerrasse: estimNum(estimRawAny(raw, "SURFACE_TERRASSE")),
+    cave: estimHuman(estimRawAny(raw, "CAVE")), surfCave: estimNum(estimRawAny(raw, "SURFACE_CAVE")),
+    balcon: estimNum(estimRawAny(raw, "NB_BALCON")), surfBalcon: estimNum(estimRawAny(raw, "SURFACE_BALCON")),
+    surfGarage: estimNum(estimRawAny(raw, "SURFACE_GARAGE")), parkInt: estimNum(estimRawAny(raw, "NB_PARK_INT")), parkExt: estimNum(estimRawAny(raw, "NB_PARK_EXT")),
+    chauffageType: estimHuman(estimRawAny(raw, "typeChauff")), chauffageEnergie: estimHuman(estimRawAny(raw, "energieChauff")), chauffageFormat: estimHuman(estimRawAny(raw, "formatChauff")),
+    climatisation: estimOui(estimRawAny(raw, "climatisation")),
+    eau: estimHuman(estimRawAny(raw, "EAU")), assainissement: estimHuman(estimRawAny(raw, "ASSAINISSEMENT")),
+    cheminee: estimOui(estimRawAny(raw, "cheminee")), voletsElec: estimOui(estimRawAny(raw, "volets_elctriques")),
+    doubleVitrage: estimOui(estimRawAny(raw, "double_vitrage")), tripleVitrage: estimOui(estimRawAny(raw, "triple_vitrage")),
+    porteBlindee: estimOui(estimRawAny(raw, "porte_blindee")), interphone: estimOui(estimRawAny(raw, "interphone")),
+    visiophone: estimOui(estimRawAny(raw, "visiophone")), alarme: estimOui(estimRawAny(raw, "alarme")),
+    digicode: estimOui(estimRawAny(raw, "digicode")), detecteurFumee: estimOui(estimRawAny(raw, "detecteur_fumee")),
+    accesHandi: estimOui(estimRawAny(raw, "ACCES_HANDI")),
+    transport: estimRawAny(raw, "TRANSPORT"), proximite: estimRawAny(raw, "PROXIMITE"),
+    environnement: estimRawAny(raw, "ENVIRONNEMENT"), adresseCompl: estimRawAny(raw, "ADRESSE_COMPL"),
+    conso: estimNum(estimRawAny(raw, "dpe_cons")), gesVal: estimNum(estimRawAny(raw, "dpe_ges")),
+    coutMin: estimNum(estimRawAny(raw, "dpe_couts_min")), coutMax: estimNum(estimRawAny(raw, "dpe_couts_max")), diagnostics,
+    taxeFonciere: estimNum(estimRawAny(raw, "TAXE_FONCIERE")), taxeHabitation: estimNum(estimRawAny(raw, "TAXE_HABITATION")), charges: estimNum(estimRawAny(raw, "CHARGES")),
+  };
+}
+
 async function loadEstimationDetail(appDossierId) {
   try {
     if (!appDossierId) return {};
@@ -3356,11 +3431,11 @@ async function loadEstimationDetail(appDossierId) {
       chambres: num(j.nb_chambres),
       garage: num(j.garage_box_detail) ? "Oui" : null,
       etage: j.etage_detail || null,
-      type: j.mandat_type || null,
       descriptif: descriptif || null,
       photos: photos.slice(0, 6),
       dpe_img: j.dpe_image_url || null,
       ges_img: j.ges_image_url || null,
+      ...estimEnrichDetail(j),  // Lot A : caractéristiques étendues, intérieur/extérieur, équipements, diagnostics, charges
     };
   } catch (_) {
     return {};
