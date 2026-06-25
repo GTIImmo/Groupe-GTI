@@ -2489,17 +2489,27 @@ export async function sendEstimationEmail(input: {
 }
 
 export type DvfComparable = { commune: string; type: string; surface: number; pieces?: string | null; terrain?: number | null; valeur: number; prix_m2: number | null; date: string; distance_km: number }
-export type DvfComparablesResult = { ok: boolean; reason?: string; count: number; avg_prix_m2?: number | null; median_prix_m2?: number | null; radius_km?: number; months?: number; type?: string; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
+export type DvfComparablesResult = { ok: boolean; reason?: string; count: number; avg_prix_m2?: number | null; median_prix_m2?: number | null; radius_km?: number; months?: number; type?: string; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
 
-// Comparables de marché DVF (open data) autour d'un bien — via le backend (cache 24 h).
+// Comparables de marché DVF autour d'un bien — RPC Supabase `app_dvf_comparables`
+// (table `app_dvf_vente` pré-chargée, rafraîchie 2×/an). Haversine côté SQL ;
+// plus aucune dépendance data.gouv/Render au moment de la requête. `dept` reste
+// dans la signature pour les appelants mais n'est plus nécessaire (la table ne
+// contient que les départements GTI, le filtrage se fait par rayon).
 export async function loadDvfComparables(input: {
-  lat: number; lon: number; dept: string; type?: 'Maison' | 'Appartement'; surface?: number | null; radiusKm?: number; months?: number
+  lat: number; lon: number; dept?: string; type?: 'Maison' | 'Appartement'; surface?: number | null; radiusKm?: number; months?: number
 }): Promise<DvfComparablesResult> {
-  const params = new URLSearchParams({ lat: String(input.lat), lon: String(input.lon), dept: input.dept, type: input.type ?? 'Maison' })
-  if (input.surface) params.set('surface', String(input.surface))
-  if (input.radiusKm) params.set('radius_km', String(input.radiusKm))
-  if (input.months) params.set('months', String(input.months))
-  return invokeBackendApi<DvfComparablesResult>(`/dvf/comparables?${params.toString()}`, { method: 'GET' })
+  if (!hasSupabaseEnv || !supabase) return { ok: false, reason: 'no_supabase', count: 0, comparables: [] }
+  const { data, error } = await supabase.rpc('app_dvf_comparables', {
+    p_lat: input.lat,
+    p_lon: input.lon,
+    p_type: input.type ?? 'Maison',
+    p_surface: input.surface ?? null,
+    p_radius_km: input.radiusKm ?? 12,
+    p_months: input.months ?? 24,
+  })
+  if (error) throw new Error(error.message ?? 'Impossible de charger les comparables DVF')
+  return (data ?? { ok: false, count: 0, comparables: [] }) as DvfComparablesResult
 }
 
 export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
