@@ -2489,15 +2489,17 @@ export async function sendEstimationEmail(input: {
 }
 
 export type DvfComparable = { commune: string; type: string; surface: number; pieces?: string | null; terrain?: number | null; valeur: number; prix_m2: number | null; date: string; distance_km: number }
-export type DvfComparablesResult = { ok: boolean; reason?: string; count: number; avg_prix_m2?: number | null; median_prix_m2?: number | null; radius_km?: number; months?: number; type?: string; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
+export type DvfComparablesResult = { ok: boolean; reason?: string; scope?: 'commune' | 'secteur'; n_local?: number; commune?: string | null; count: number; avg_prix_m2?: number | null; median_prix_m2?: number | null; radius_km?: number; months?: number; type?: string; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
 
 // Comparables de marché DVF autour d'un bien — RPC Supabase `app_dvf_comparables`
 // (table `app_dvf_vente` pré-chargée, rafraîchie 2×/an). Haversine côté SQL ;
-// plus aucune dépendance data.gouv/Render au moment de la requête. `dept` reste
-// dans la signature pour les appelants mais n'est plus nécessaire (la table ne
-// contient que les départements GTI, le filtrage se fait par rayon).
+// plus aucune dépendance data.gouv/Render au moment de la requête.
+// « Commune d'abord » : on privilégie la commune du bien (codePostal + commune) ;
+// on n'élargit au secteur (rayon, communes limitrophes) que si l'échantillon
+// communal est < minLocal (défaut RPC = 10). `scope`/`n_local` indiquent la base.
 export async function loadDvfComparables(input: {
   lat: number; lon: number; dept?: string; type?: 'Maison' | 'Appartement'; surface?: number | null; radiusKm?: number; months?: number
+  codePostal?: string | null; commune?: string | null; minLocal?: number
 }): Promise<DvfComparablesResult> {
   if (!hasSupabaseEnv || !supabase) return { ok: false, reason: 'no_supabase', count: 0, comparables: [] }
   const { data, error } = await supabase.rpc('app_dvf_comparables', {
@@ -2507,6 +2509,9 @@ export async function loadDvfComparables(input: {
     p_surface: input.surface ?? null,
     p_radius_km: input.radiusKm ?? 12,
     p_months: input.months ?? 24,
+    p_code_postal: input.codePostal ?? null,
+    p_commune: input.commune ?? null,
+    ...(input.minLocal != null ? { p_min_local: input.minLocal } : {}),
   })
   if (error) throw new Error(error.message ?? 'Impossible de charger les comparables DVF')
   return (data ?? { ok: false, count: 0, comparables: [] }) as DvfComparablesResult

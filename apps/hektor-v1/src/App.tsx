@@ -4339,9 +4339,12 @@ function EstimationDocumentEditor(props: {
     if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
     setMarcheBusy(true); setMarcheMsg(null)
     try {
-      const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24 })
+      const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
       setMarche(res)
-      setMarcheMsg(res.ok ? `${res.count} ventes comparables · ${res.avg_prix_m2 ? res.avg_prix_m2.toLocaleString('fr-FR') + ' €/m² moyen' : ''}` : 'Aucune donnée DVF trouvée pour ce secteur.')
+      const base = res.scope === 'commune'
+        ? `commune${res.commune ? ' de ' + res.commune : ''}`
+        : `secteur élargi${typeof res.n_local === 'number' ? ` (échantillon commune insuffisant : ${res.n_local})` : ''}`
+      setMarcheMsg(res.ok ? `${res.count} ventes comparables · ${base}${res.avg_prix_m2 ? ' · ' + res.avg_prix_m2.toLocaleString('fr-FR') + ' €/m² moyen' : ''}` : 'Aucune donnée DVF trouvée pour ce secteur.')
     } catch (error) {
       setMarcheMsg(error instanceof Error ? error.message : 'Chargement des comparables impossible.')
     } finally {

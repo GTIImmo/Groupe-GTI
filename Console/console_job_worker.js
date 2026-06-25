@@ -3624,7 +3624,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     </div>
   </div></div>
   <p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>
-  <div class="h mt">Le marché en chiffres${marche ? ` · ${mComps.length ? marche.comparables[0].commune : "secteur"}` : ""}</div>
+  <div class="h mt">Le marché en chiffres${marche ? ` · ${marche.scope === "commune" ? estimText(marche.commune || (mComps.length ? marche.comparables[0].commune : "commune")) : "secteur élargi"}` : ""}</div>
   <div class="stats">
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v tnum">${mAvg ? estimEuro(mAvg) + "<small>/m²</small>" : todo("—")}</div><div class="l">Prix moyen · ${estimText(marche ? marche.type : "secteur")}</div></div>
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span><div class="v tnum">${mTrend != null ? (mTrend >= 0 ? "+" : "") + mTrend + " %" : todo("—")}</div><div class="l">Évolution prix/m²</div></div>
@@ -3632,7 +3632,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div>
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
   ${mComps.length ? `<div class="h mt">Biens comparables vendus</div><div class="comps">${mComps.map(compRow).join("")}</div>` : ""}
-  <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· ${marche.count} ventes ${estimText(marche.type)} comparables dans un rayon de ${marche.radius_km} km sur ${Math.round(marche.months / 12)} ans` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
+  <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· ${marche.count} ventes ${estimText(marche.type)} comparables ${marche.scope === "commune" ? `dans la commune${marche.commune ? " de " + estimText(marche.commune) : ""}` : `dans un rayon de ${marche.radius_km} km (échantillon communal insuffisant, élargi au secteur)`} sur ${Math.round(marche.months / 12)} ans` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
 </div>${rf(4)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
