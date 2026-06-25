@@ -4693,6 +4693,7 @@ const HEKTOR_UPDATE_COMMON_FIELDS = new Set([
   "title", "description", "address", "postal_code", "city", "building", "transport",
   "proximity", "environment", "latitude", "longitude", "price", "net_seller_price",
   "fees", "mandate_number", "mandate_type", "mandate_start_date", "mandate_end_date",
+  "terrace",
 ]);
 
 const HEKTOR_UPDATE_FIELDS_BY_PROFILE = {
@@ -5871,6 +5872,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["view", ["view", "vue", "vuee"]],
     ["garden", ["garden", "jardin", "JARDIN", "JARDIN-"]],
     ["pool", ["pool", "piscine", "PISCINE", "PISCINE-"]],
+    ["terrace", ["terrace", "terrasse", "TERRASSE"]],
     ["interior_state", ["interior_state", "interiorState", "etat_interieur", "ETAT_INTERIEUR"]],
     ["exterior_state", ["exterior_state", "exteriorState", "etat_exterieur", "ETAT_EXTERIEUR"]],
     ["dpe_value", ["dpe_value", "dpeValue", "DPE", "dpe_cons"]],
@@ -5895,7 +5897,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ["wc_count", ["wc_count", "wcCount", "NB_WC", "WC"]],
     ["land_surface", ["land_surface", "landSurface", "surfterrain"]],
     ["garden_surface", ["garden_surface", "gardenSurface", "SURFACE_JARDIN"]],
-    ["terrace_count", ["terrace_count", "terraceCount", "NB_TERRASSE", "TERRASSE"]],
+    ["terrace_count", ["terrace_count", "terraceCount", "NB_TERRASSE"]],
     ["garage_count", ["garage_count", "garageCount", "GARAGE_BOX"]],
     ["garage_surface", ["garage_surface", "garageSurface", "SURFACE_GARAGE"]],
     ["parking_inside_count", ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]],
@@ -5914,7 +5916,7 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     if (skippedFinancial.has(key)) continue;
     const raw = firstDefined(fields || {}, aliases);
     if (raw == null) continue;
-    const value = key === "garden" || key === "pool"
+    const value = key === "garden" || key === "pool" || key === "terrace"
       ? normalizeHektorOuiNonValue(raw)
       : String(raw).trim();
     if (value) clean[key] = value;
@@ -6044,7 +6046,8 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   }
   if (cleanFields.garden != null) agExterieur.garden = fieldSpec(cleanFields.garden, ["JARDIN", "JARDIN-"]);
   if (cleanFields.garden_surface != null) agExterieur.garden_surface = fieldSpec(cleanFields.garden_surface, ["SURFACE_JARDIN"]);
-  if (cleanFields.terrace_count != null) agExterieur.terrace_count = fieldSpec(cleanFields.terrace_count, ["NB_TERRASSE", "TERRASSE"]);
+  if (cleanFields.terrace_count != null) agExterieur.terrace_count = fieldSpec(cleanFields.terrace_count, ["NB_TERRASSE"]);
+  if (cleanFields.terrace != null) agExterieur.terrace = fieldSpec(cleanFields.terrace, ["TERRASSE"]);
   if (cleanFields.garage_count != null) agExterieur.garage_count = fieldSpec(cleanFields.garage_count, ["GARAGE_BOX"]);
   if (cleanFields.garage_surface != null) agExterieur.garage_surface = fieldSpec(cleanFields.garage_surface, ["SURFACE_GARAGE"]);
   if (cleanFields.parking_inside_count != null) agExterieur.parking_inside_count = fieldSpec(cleanFields.parking_inside_count, ["NB_PARK_INT"]);
