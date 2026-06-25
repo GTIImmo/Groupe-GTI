@@ -9661,7 +9661,13 @@ export default function App() {
     setDetailLoading(true)
     loadDossierDetail(selectedDossierId)
       .then((detail) => {
-        if (!cancelled) setSelectedDossier(detail)
+        if (cancelled) return
+        // Ne JAMAIS fermer une fiche ouverte sur un detail null TRANSITOIRE : juste apres le
+        // read-through (job ~5-10s), la lecture peut revenir vide (lag de replication Supabase /
+        // recharge concurrente via dataReloadKey) alors que la ligne EXISTE. Dans ce cas on garde
+        // la fiche affichee (on ne lache la selection que si elle ne correspond plus au dossier ouvert).
+        if (detail) setSelectedDossier(detail)
+        else setSelectedDossier((current) => current?.app_dossier_id === selectedDossierId ? current : null)
       })
       .catch((error) => {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement detail')
