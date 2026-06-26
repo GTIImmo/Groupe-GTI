@@ -4306,6 +4306,24 @@ const ESTIM_POSTES: { key: string; label: string }[] = [
 ]
 const ESTIM_NIVEAUX: [string, string][] = [['neuf', 'Neuf / Refait'], ['bon', 'Bon état'], ['correct', 'Correct'], ['aprevoir', 'À prévoir']]
 
+// Humanise un code Hektor pour l'affichage (récap « Le bien »). Mirror de estimHuman du worker.
+const ESTIM_LABEL_MAP: Record<string, string> = {
+  AMERICAINE: 'Américaine', EQUIPEE: 'Équipée', AMENAGEE: 'Aménagée', 'SEMI EQUIPEE': 'Semi-équipée',
+  INDEPENDANT: 'Indépendant', INDEPENDANTE: 'Indépendante', MITOYEN: 'Mitoyen', MITOYENNE: 'Mitoyenne',
+  'TOUT A L EGOUT': "Tout à l'égout", 'FOSSE SEPTIQUE': 'Fosse septique', ELECTRIQUE: 'Électrique',
+  GAZ: 'Gaz', FIOUL: 'Fioul', BOIS: 'Bois', 'POMPE A CHALEUR': 'Pompe à chaleur', INDIVIDUEL: 'Individuel', COLLECTIF: 'Collectif',
+}
+function humanizeHektor(v: string): string {
+  const s = (v ?? '').trim(); if (!s) return ''
+  const up = s.toUpperCase()
+  if (up === 'OUI') return 'Oui'
+  if (up === 'NON') return 'Non'
+  if (up === '-' || up === '0' || up === 'NON PRÉCISÉ' || up === 'NON PRECISE') return ''
+  const key = up.replace(/[\s'_-]+/g, ' ').trim()
+  if (ESTIM_LABEL_MAP[key]) return ESTIM_LABEL_MAP[key]
+  return s.toLowerCase().replace(/(^|[\s\-'])([a-zàâäéèêëîïôöùûüç])/g, (_m, p, c) => p + c.toUpperCase())
+}
+
 // Éditeur « Avis de valeur » sur la fiche estimation (calqué sur MandatDocumentEditor :
 // bloc + onglets + actions). Self-contained : appelle createGenerateEstimationPdfJob +
 // sendEstimationEmail. Réutilise les classes CSS mandat-document-* pour un look cohérent.
@@ -4340,7 +4358,7 @@ function EstimationDocumentEditor(props: {
 
   const [open, setOpen] = useState(!!props.modal)
   const [draft, setDraft] = useState(initialDraft)
-  const [tab, setTab] = useState<'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('valeur')
+  const [tab, setTab] = useState<'bien' | 'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('bien')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   // Lot C — comparables DVF chargés à la demande (passés au worker pour la page Marché).
@@ -4405,6 +4423,58 @@ function EstimationDocumentEditor(props: {
     }))
     setTab('valeur'); setMessage('Estimation DVF reportée dans la valeur (ajustable).')
   }
+
+  // Récap « Le bien » (lecture seule) : données factuelles déjà dans l'app qui alimentent
+  // le PDF. Source = detail_raw_json via rawWizardDetailField (comme le worker).
+  const recap = useMemo(() => {
+    const d = props.detail
+    const raw = (k: string) => rawWizardDetailField(d, k)
+    const numV = (k: string) => { const n = Number(raw(k)); return Number.isFinite(n) && n > 0 ? String(n) : '' }
+    const surfV = (k: string) => { const n = Number(raw(k)); return Number.isFinite(n) && n > 0 ? `${Math.round(n)} m²` : '' }
+    const ouiNon = (k: string) => { const u = (raw(k) || '').toUpperCase(); return u === 'OUI' ? 'Oui' : u === 'NON' ? 'Non' : '' }
+    const yearV = (k: string) => { const n = parseInt(raw(k), 10); return n >= 1700 && n <= 2100 ? String(n) : '' }
+    const surfFb = surfV('surfappart') || (Number(d.surface_habitable_detail ?? d.surface) > 0 ? `${Math.round(Number(d.surface_habitable_detail ?? d.surface))} m²` : '')
+    const copro = ouiNon('copropriete')
+    const carac: [string, string][] = [
+      ['Type de bien', dossier.type_bien || ''],
+      ['Surface habitable', surfFb],
+      ['Terrain', surfV('surfterrain')],
+      ['Pièces', numV('nbpieces')],
+      ['Chambres', numV('NB_CHAMBRES')],
+      ["Salles d'eau", numV('NB_SE')],
+      ['Salles de bain', numV('NB_SDB')],
+      ['WC', numV('NB_WC')],
+      ['Niveaux', numV('NB_NIVEAUX')],
+      ['Année de construction', yearV('ANNEE_CONS')],
+      ['Exposition', humanizeHektor(raw('EXPOSITION'))],
+      ['Vue', humanizeHektor(raw('vuee'))],
+      ['Copropriété', copro ? (copro === 'Oui' && numV('copropriete_nb_lot') ? `Oui · ${numV('copropriete_nb_lot')} lots` : copro) : ''],
+      ['Murs mitoyens', humanizeHektor(raw('MURS_MITOYENS'))],
+    ]
+    const energie: [string, string][] = [
+      ['DPE', draft.dpe || ''],
+      ['GES', draft.ges || ''],
+      ['Chauffage', [humanizeHektor(raw('typeChauff')), humanizeHektor(raw('energieChauff'))].filter(Boolean).join(' · ')],
+      ['Conso. énergie', numV('dpe_cons') ? `${numV('dpe_cons')} kWh/m²/an` : ''],
+      ['Assainissement', humanizeHektor(raw('ASSAINISSEMENT'))],
+    ]
+    const o: (a: string) => string = ouiNon
+    const annexes: [string, string][] = [
+      ['Cuisine', [humanizeHektor(raw('CUISINE')), humanizeHektor(raw('CUISINE_EQUIPEMENT'))].filter(Boolean).join(' · ')],
+      ['Jardin', o('JARDIN') === 'Oui' && surfV('SURFACE_JARDIN') ? `Oui · ${surfV('SURFACE_JARDIN')}` : o('JARDIN')],
+      ['Piscine', o('PISCINE')],
+      ['Terrasse', o('TERRASSE') === 'Oui' && surfV('SURFACE_TERRASSE') ? `Oui · ${surfV('SURFACE_TERRASSE')}` : o('TERRASSE')],
+      ['Cave', o('CAVE') === 'Oui' && surfV('SURFACE_CAVE') ? `Oui · ${surfV('SURFACE_CAVE')}` : o('CAVE')],
+      ['Garage', numV('GARAGE_BOX') || (surfV('SURFACE_GARAGE') ? surfV('SURFACE_GARAGE') : '')],
+      ['Parking intérieur', numV('NB_PARK_INT')],
+      ['Parking extérieur', numV('NB_PARK_EXT')],
+    ]
+    const equipDefs: [string, string][] = [['Double vitrage', 'double_vitrage'], ['Triple vitrage', 'triple_vitrage'], ['Volets électriques', 'volets_elctriques'], ['Cheminée', 'cheminee'], ['Climatisation', 'climatisation'], ['Porte blindée', 'porte_blindee'], ['Interphone', 'interphone'], ['Visiophone', 'visiophone'], ['Alarme', 'alarme'], ['Digicode', 'digicode'], ['Détecteur de fumée', 'detecteur_fumee'], ['Accès handicapé', 'ACCES_HANDI']]
+    const equips = equipDefs.filter(([, k]) => (raw(k) || '').toUpperCase() === 'OUI').map(([l]) => l)
+    const all = [...carac, ...energie, ...annexes]
+    const filled = all.filter(([, v]) => v).length
+    return { carac, energie, annexes, equips, filled, total: all.length }
+  }, [props.detail, dossier.type_bien, draft.dpe, draft.ges])
 
   function buildPayload() {
     const negoName = (dossier.commercial_nom || '').trim()
@@ -4477,6 +4547,7 @@ function EstimationDocumentEditor(props: {
           <div className="mandat-document-form" style={{ width: '100%' }}>
             <div className="mandat-document-tabs" role="tablist" aria-label="Sections de l'avis de valeur">
               {([
+                { v: 'bien', label: 'Le bien', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" /></svg>) },
                 { v: 'valeur', label: 'Bien & valeur', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) },
                 { v: 'etat', label: 'État', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 2 2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 21l1.4-6.8L2.2 9.6l6.9-.7z" /></svg>) },
                 { v: 'points', label: 'Points', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.5 10 17 19 7" /></svg>) },
@@ -4487,6 +4558,35 @@ function EstimationDocumentEditor(props: {
               ))}
             </div>
             <div className="avd-scroll">
+            {tab === 'bien' ? (
+              <div className="mandat-document-panel">
+                <div className="avd-recap-top">
+                  <div className="avd-recap-ring"><b>{recap.filled}</b><small>/{recap.total}</small></div>
+                  <div className="avd-recap-info">
+                    <div className="avd-recap-bar"><span style={{ width: `${recap.total ? Math.round((recap.filled / recap.total) * 100) : 0}%` }} /></div>
+                    <p>Données déjà synchronisées depuis Hektor — elles alimentent <b>automatiquement</b> le PDF. Pour les corriger, modifiez la fiche du bien.</p>
+                  </div>
+                </div>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Caractéristiques</div>
+                  <div className="avd-dl">{recap.carac.map(([k, v]) => <div className="row" key={k}><span className="k">{k}</span><span className={`v ${v ? '' : 'na'}`}>{v || 'non renseigné'}</span></div>)}</div>
+                </div>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Énergie &amp; diagnostics</div>
+                  <div className="avd-dl">{recap.energie.map(([k, v]) => <div className="row" key={k}><span className="k">{k}</span><span className={`v ${v ? '' : 'na'}`}>{v || 'non renseigné'}</span></div>)}</div>
+                </div>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Annexes &amp; extérieur</div>
+                  <div className="avd-dl">{recap.annexes.map(([k, v]) => <div className="row" key={k}><span className="k">{k}</span><span className={`v ${v ? '' : 'na'}`}>{v || 'non renseigné'}</span></div>)}</div>
+                </div>
+                {recap.equips.length ? (
+                  <div className="avd-sec">
+                    <div className="avd-sec-h">Équipements &amp; sécurité</div>
+                    <div className="avd-pills">{recap.equips.map((e) => <span className="avd-pill" key={e}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12.5 10 17 19 7" /></svg>{e}</span>)}</div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {tab === 'valeur' ? (
               <div className="mandat-document-panel">
                 <div className="avd-sec">

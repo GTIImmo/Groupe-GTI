@@ -419,6 +419,24 @@
 .avd-editor .mandat-document-actions button:hover { border-color: #cfc8cb; }
 .avd-editor .mandat-document-actions .button-primary { background: #c5005f; border-color: #c5005f; color: #fff; box-shadow: 0 6px 16px rgba(197, 0, 95, .28); }
 .avd-editor .mandat-document-actions .button-primary:hover { background: #9c0049; }
+/* Récap « Le bien » (lecture seule) */
+.avd-editor .avd-recap-top { display: flex; align-items: center; gap: 16px; background: linear-gradient(180deg, #fff, #faf8f9); border: 1px solid #e9e4e6; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; }
+.avd-editor .avd-recap-ring { flex: none; width: 58px; height: 58px; border-radius: 50%; background: #fff; border: 3px solid #fbeaf2; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.avd-editor .avd-recap-ring b { font-size: 20px; font-weight: 800; color: #c5005f; }
+.avd-editor .avd-recap-ring small { font-size: 10px; color: #8b8f92; font-weight: 600; margin-top: 1px; }
+.avd-editor .avd-recap-info { flex: 1; min-width: 0; }
+.avd-editor .avd-recap-bar { height: 6px; background: #f1edef; border-radius: 4px; overflow: hidden; }
+.avd-editor .avd-recap-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #c5005f, #e0468a); border-radius: 4px; }
+.avd-editor .avd-recap-info p { margin: 8px 0 0; font-size: 11.5px; color: #8b8f92; line-height: 1.5; }
+.avd-editor .avd-recap-info p b { color: #44494c; font-weight: 600; }
+.avd-editor .avd-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+.avd-editor .avd-dl .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f1edef; font-size: 13px; }
+.avd-editor .avd-dl .row .k { color: #8b8f92; white-space: nowrap; }
+.avd-editor .avd-dl .row .v { color: #1d1e1f; font-weight: 600; text-align: right; }
+.avd-editor .avd-dl .row .v.na { color: #c79a3a; font-weight: 500; font-style: italic; }
+.avd-editor .avd-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+.avd-editor .avd-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #44494c; background: #f4f1f2; border: 1px solid #e9e4e6; border-radius: 20px; padding: 6px 12px; }
+.avd-editor .avd-pill svg { width: 12px; height: 12px; color: #1f8a5b; }
 .estim-pdf-modal select { width: 100%; border: 1px solid #e3dfe2; border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; color: #222323; background: #fff; box-sizing: border-box; }
 .estim-pdf-modal select:focus { outline: none; border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.12); }
 .estim-pdf-toggle { width: 100%; margin-top: 14px; display: flex; align-items: center; gap: 8px; background: #faf7f9; border: 1px solid #ece6ea; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13px; font-weight: 600; color: #6b6560; cursor: pointer; text-align: left; }
