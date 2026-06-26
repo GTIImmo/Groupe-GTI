@@ -4839,7 +4839,12 @@ function filterMandatRowsForScreen(rows: MandatRecord[], screen: Screen, filters
   }
   if (screen === 'mandats' || screen === 'suivi') {
     if (filters && usesLightweightAnnonceIndex(filters)) return rows
-    return rows.filter((item) => activeListingStatusTokens.has(screenStatusToken(item.statut_annonce)))
+    // Calque création optimiste : une provisoire d'annonce (statut "En création") n'a pas encore
+    // de statut actif -> on la garde explicitement, sinon le filtre de statut la masquerait.
+    return rows.filter((item) =>
+      (item.is_provisional && screenStatusToken(item.statut_annonce) !== 'estimation')
+      || activeListingStatusTokens.has(screenStatusToken(item.statut_annonce)),
+    )
   }
   return rows
 }

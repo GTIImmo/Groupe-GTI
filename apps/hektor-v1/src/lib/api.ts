@@ -3771,6 +3771,19 @@ export async function dismissAnnonceProvisional(token: string): Promise<void> {
   await supabase.rpc('app_dismiss_annonce_provisional', { p_token: t })
 }
 
+// Préfixe les biens "en création" (provisoires) en tête de page 1, en dédupliquant ceux
+// dont la vraie annonce (hektor_annonce_id) est déjà présente. Appliqué dans les DEUX
+// branches de loadMandatsPage (fusionnée ET directe) -> visible sur le listing actif aussi.
+async function prependProvisionalRows(rows: MandatRecord[], page: number, filters: AppFilters): Promise<MandatRecord[]> {
+  if (!PROVISIONAL_CREATION_ENABLED || page !== 1 || filters.archive === archivedFilterValue) return rows
+  const provis = await loadAnnonceProvisionals()
+  if (!provis.length) return rows
+  const realIds = new Set(rows.map((r) => String(r.hektor_annonce_id ?? '')).filter(Boolean))
+  const pending = provis.filter((p) => !p.hektor_annonce_id || !realIds.has(String(p.hektor_annonce_id)))
+  if (!pending.length) return rows
+  return [...pending.map(provisionalToMandatRecord), ...rows]
+}
+
 export async function loadMandatsPage({
   filters,
   page,
@@ -3816,18 +3829,8 @@ export async function loadMandatsPage({
   if (shouldUseMergedAnnonceListing) {
     const listingPage = await loadDossiersPage({ filters, page, pageSize, scope })
     let rows = listingPage.rows.map(dossierToMandatRecord)
-    // Calque création optimiste : on préfixe les biens "en création" (provisoires) en page 1.
-    // Dédup : on masque une provisoire dès que sa vraie annonce (hektor_annonce_id rempli par
-    // le worker) est déjà présente -> jamais de doublon. Le filtre d'écran (annonce/estimation)
-    // est appliqué ensuite côté App via statut_annonce.
-    if (PROVISIONAL_CREATION_ENABLED && page === 1 && filters.archive !== archivedFilterValue) {
-      const provis = await loadAnnonceProvisionals()
-      if (provis.length) {
-        const realIds = new Set(rows.map((r) => String(r.hektor_annonce_id ?? '')).filter(Boolean))
-        const pending = provis.filter((p) => !p.hektor_annonce_id || !realIds.has(String(p.hektor_annonce_id)))
-        rows = [...pending.map(provisionalToMandatRecord), ...rows]
-      }
-    }
+    // Calque création optimiste : préfixe des provisoires (dédup par hektor_annonce_id).
+    rows = await prependProvisionalRows(rows, page, filters)
     return { ...listingPage, rows }
   }
   let query = applyDossierFiltersToQuery(
@@ -3845,8 +3848,11 @@ export async function loadMandatsPage({
 
   const { data, error, count } = await query
   if (error || !data) throw new Error(error?.message ?? 'Unable to load mandats')
+  // Calque création optimiste : le listing actif passe par ici (branche directe) -> on y
+  // préfixe aussi les provisoires, sinon la ligne "En création" n'apparaîtrait jamais.
+  const rows = await prependProvisionalRows(data as MandatRecord[], page, filters)
   return {
-    rows: data as MandatRecord[],
+    rows,
     total: count ?? 0,
     page,
     pageSize,
