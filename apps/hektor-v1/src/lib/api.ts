@@ -2519,6 +2519,87 @@ export async function loadDvfComparables(input: {
   return (data ?? { ok: false, count: 0, comparables: [] }) as DvfComparablesResult
 }
 
+// ---- Cadre de vie & risques (page premium de l'avis de valeur) ----
+// APIs publiques gratuites : carte IGN (URL), commodités Overpass (OSM), risques
+// (table app_commune_risques pré-chargée), distances aux pôles régionaux (calcul).
+export type CadreDeVie = {
+  ok: boolean
+  insee?: string | null
+  commune?: string | null
+  mapUrl?: string | null
+  commodites?: { ecoles: number; commerces: number; sante: number; gareNom?: string | null; gareKm?: number | null }
+  poles?: Array<{ nom: string; km: number }>
+  risques?: { risques: string[]; radon?: string | null; sismicite?: string | null; argiles?: string | null } | null
+}
+
+const CDV_POLES: Array<{ nom: string; lat: number; lon: number }> = [
+  { nom: 'Saint-Étienne', lat: 45.4397, lon: 4.3872 },
+  { nom: 'Le Puy-en-Velay', lat: 45.0430, lon: 3.8850 },
+  { nom: 'Lyon', lat: 45.7640, lon: 4.8357 },
+  { nom: 'Clermont-Ferrand', lat: 45.7772, lon: 3.0870 },
+]
+function cdvKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = 6371, d = Math.PI / 180
+  const a = Math.sin((lat2 - lat1) * d / 2) ** 2 + Math.cos(lat1 * d) * Math.cos(lat2 * d) * Math.sin((lon2 - lon1) * d / 2) ** 2
+  return r * 2 * Math.asin(Math.sqrt(a))
+}
+
+export async function loadCadreDeVie(input: { lat: number; lon: number }): Promise<CadreDeVie> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+
+  // 1) Carte IGN (WMS GetMap) — image centrée sur le bien, ratio 760x420.
+  const R = 20037508.34
+  const mx = lon * R / 180
+  const my = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * R / 180
+  const hy = 850, hx = hy * (760 / 420)
+  const bbox = `${mx - hx},${my - hy},${mx + hx},${my + hy}`
+  const mapUrl = `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLES=&CRS=EPSG:3857&BBOX=${bbox}&WIDTH=760&HEIGHT=420&FORMAT=image/png`
+
+  // 2) INSEE + commune via géocodage inverse BAN.
+  let insee: string | null = null, commune: string | null = null
+  try {
+    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`)
+    const j = await r.json()
+    const p = j?.features?.[0]?.properties
+    if (p) { insee = p.citycode ?? null; commune = p.city ?? null }
+  } catch { /* best effort */ }
+
+  // 3) Commodités via Overpass (OSM).
+  let commodites: CadreDeVie['commodites'] = { ecoles: 0, commerces: 0, sante: 0, gareNom: null, gareKm: null }
+  try {
+    const q = `[out:json][timeout:25];(nwr[amenity=school](around:1500,${lat},${lon});nwr[shop](around:1000,${lat},${lon});nwr[amenity~"pharmacy|doctors|hospital|clinic"](around:1500,${lat},${lon});nwr[railway=station](around:8000,${lat},${lon}););out center tags 200;`
+    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
+    const j = await r.json()
+    let ecoles = 0, commerces = 0, sante = 0, gareNom: string | null = null, gareKm: number | null = null
+    for (const el of (j?.elements ?? [])) {
+      const t = el.tags ?? {}
+      if (t.amenity === 'school') ecoles++
+      else if (t.shop) commerces++
+      else if (['pharmacy', 'doctors', 'hospital', 'clinic'].includes(t.amenity)) sante++
+      else if (t.railway === 'station') {
+        const elat = el.lat ?? el.center?.lat, elon = el.lon ?? el.center?.lon
+        if (elat && elon) { const km = cdvKm(lat, lon, elat, elon); if (gareKm == null || km < gareKm) { gareKm = Math.round(km * 10) / 10; gareNom = t.name ?? 'Gare' } }
+      }
+    }
+    commodites = { ecoles, commerces, sante, gareNom, gareKm }
+  } catch { /* best effort */ }
+
+  // 4) Risques (table pré-chargée par INSEE).
+  let risques: CadreDeVie['risques'] = null
+  if (insee && hasSupabaseEnv && supabase) {
+    try {
+      const { data } = await supabase.from('app_commune_risques').select('risques,radon,sismicite,argiles').eq('code_insee', insee).maybeSingle()
+      if (data) risques = data as CadreDeVie['risques']
+    } catch { /* best effort */ }
+  }
+
+  // 5) Distances aux pôles régionaux (calcul).
+  const poles = CDV_POLES.map((p) => ({ nom: p.nom, km: Math.round(cdvKm(lat, lon, p.lat, p.lon)) })).sort((a, b) => a.km - b.km).slice(0, 3)
+
+  return { ok: true, insee, commune, mapUrl, commodites, poles, risques }
+}
+
 export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
   const params = new URLSearchParams()
   if (input.contactSearchKey?.trim()) params.set('contact_search_key', input.contactSearchKey.trim())
@@ -5373,6 +5454,7 @@ export async function createGenerateEstimationPdfJob(input: {
   charges?: { taxe_fonciere?: number | null; energie?: number | null; eau?: number | null; assurance?: number | null }
   marche?: DvfComparablesResult | null
   acquereurs?: number | null  // acquéreurs en recherche correspondant au bien (moteur de rapprochement)
+  cadreDeVie?: CadreDeVie | null  // carte IGN + commodités + risques (page Cadre de vie)
   argumentaire?: string | null  // argumentaire commercial du prix (page Valeur du PDF)
   methode?: string | null
   validite?: string | null
@@ -5404,6 +5486,7 @@ export async function createGenerateEstimationPdfJob(input: {
         charges: input.charges ?? null,
         marche: input.marche ?? null,
         acquereurs: input.acquereurs ?? null,
+        cadreDeVie: input.cadreDeVie ?? null,
         argumentaire: input.argumentaire ?? null,
         methode: input.methode ?? null,
         validite: input.validite ?? null,

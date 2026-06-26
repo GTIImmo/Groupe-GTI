@@ -67,6 +67,7 @@ import {
   createGenerateEstimationPdfJob,
   sendEstimationEmail,
   loadDvfComparables,
+  loadCadreDeVie,
   createDeleteDocumentFromHektorJob,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
@@ -128,7 +129,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { DvfComparablesResult } from './lib/api'
+import type { CadreDeVie, DvfComparablesResult } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -4365,9 +4366,13 @@ function EstimationDocumentEditor(props: {
   const [marche, setMarche] = useState<DvfComparablesResult | null>(null)
   const [marcheBusy, setMarcheBusy] = useState(false)
   const [marcheMsg, setMarcheMsg] = useState<string | null>(null)
+  // Cadre de vie & risques (carte IGN + commodités + risques) chargé à la demande.
+  const [cadre, setCadre] = useState<CadreDeVie | null>(null)
+  const [cadreBusy, setCadreBusy] = useState(false)
+  const [cadreMsg, setCadreMsg] = useState<string | null>(null)
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
-  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null) }, [initialDraft, props.modal])
+  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null) }, [initialDraft, props.modal])
   useEffect(() => {
     let cancelled = false
     const id = dossier.app_dossier_id
@@ -4397,6 +4402,26 @@ function EstimationDocumentEditor(props: {
       setMarcheMsg(error instanceof Error ? error.message : 'Chargement des comparables impossible.')
     } finally {
       setMarcheBusy(false)
+    }
+  }
+
+  async function loadCadre() {
+    if (cadreBusy) return
+    const lat = Number(props.detail.latitude_detail)
+    const lon = Number(props.detail.longitude_detail)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadreMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    setCadreBusy(true); setCadreMsg(null)
+    try {
+      const res = await loadCadreDeVie({ lat, lon })
+      setCadre(res)
+      if (res.ok) {
+        const c = res.commodites
+        setCadreMsg(`${res.commune ?? ''} · ${c?.ecoles ?? 0} école(s), ${c?.commerces ?? 0} commerce(s)${c?.gareKm != null ? `, gare à ${c.gareKm} km` : ''}${res.risques ? ` · ${res.risques.risques.length} risque(s) recensé(s)` : ''}`)
+      } else setCadreMsg('Cadre de vie indisponible (coordonnées ?).')
+    } catch (error) {
+      setCadreMsg(error instanceof Error ? error.message : 'Chargement du cadre de vie impossible.')
+    } finally {
+      setCadreBusy(false)
     }
   }
 
@@ -4510,7 +4535,7 @@ function EstimationDocumentEditor(props: {
         dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
         bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
-        marche: marche && marche.ok ? marche : null, acquereurs, argumentaire: p.argumentaire,
+        marche: marche && marche.ok ? marche : null, acquereurs, cadreDeVie: cadre && cadre.ok ? cadre : null, argumentaire: p.argumentaire,
       })
       if (sendEmail) {
         const res = await sendEstimationEmail({
@@ -4701,6 +4726,21 @@ function EstimationDocumentEditor(props: {
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Charge les ventes comparables récentes du secteur (open data DVF) — elles enrichiront la page Marché de l'avis de valeur.</p>
                 )}
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--ds-border, #ece7e9)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <button className="ghost-button" type="button" disabled={cadreBusy} onClick={() => { void loadCadre() }}>{cadreBusy ? 'Chargement…' : (cadre ? 'Recharger le cadre de vie' : 'Charger le cadre de vie & risques')}</button>
+                    {cadreMsg ? <span style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>{cadreMsg}</span> : null}
+                  </div>
+                  {cadre && cadre.ok ? (
+                    <div className="estim-marche-stats">
+                      <div><span className="emk">Commodités</span><span className="emv">{cadre.commodites?.ecoles ?? 0} écoles · {cadre.commodites?.commerces ?? 0} commerces · {cadre.commodites?.sante ?? 0} santé</span></div>
+                      <div><span className="emk">Gare</span><span className="emv">{cadre.commodites?.gareKm != null ? `${cadre.commodites.gareNom} · ${cadre.commodites.gareKm} km` : '—'}</span></div>
+                      <div><span className="emk">Risques</span><span className="emv">{cadre.risques && cadre.risques.risques.length ? cadre.risques.risques.slice(0, 3).join(', ') + (cadre.risques.risques.length > 3 ? '…' : '') : '—'}</span></div>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Carte IGN + commodités (écoles/commerces/gare) + risques (Géorisques) — ajoutent une page « Cadre de vie » au PDF.</p>
+                  )}
+                </div>
               </div>
             ) : null}
             </div>
