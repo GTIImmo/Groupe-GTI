@@ -112,6 +112,10 @@ export type DossierDetailPayload = {
   ges_image_url?: string | null
   dpe_image_urls_json?: string | null
   detail_raw_json?: string | null
+  // Tier 2 — calque d'édition optimiste : valeurs éditées (clés Hektor brutes) écrites par
+  // le RPC app_edit_annonce_optimistic, lues EN PRIORITÉ par rawDetailProp pour un affichage
+  // instantané. Effacé automatiquement quand le read-through reconstruit detail_payload_json.
+  app_optimistic_overlay?: Record<string, unknown> | string | null
   annonce_list_raw_json?: string | null
   code_postal_detail?: string | null
   latitude_detail?: number | string | null

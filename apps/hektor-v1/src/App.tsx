@@ -2141,6 +2141,16 @@ const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: 
 }
 
 function rawDetailProp(detail: DossierDetailPayload, group: string, key: string) {
+  // Tier 2 — calque optimiste : si le champ vient d'être édité (RPC), on affiche
+  // sa valeur tout de suite, sans attendre le worker. Le read-through reconstruira
+  // detail_payload_json sans le calque -> il disparaît au retour Hektor.
+  const overlay = detail.app_optimistic_overlay
+    ? (typeof detail.app_optimistic_overlay === 'object'
+        ? (detail.app_optimistic_overlay as Record<string, unknown>)
+        : parseJson<Record<string, unknown>>(detail.app_optimistic_overlay as string, {}))
+    : null
+  const overlayValue = overlay?.[key]
+  if (overlayValue != null && String(overlayValue).trim() !== '') return String(overlayValue)
   const raw = parseJson<Record<string, unknown>>(detail.detail_raw_json, {})
   const groupValue = raw[group] as { props?: Record<string, { value?: unknown }> } | undefined
   const value = groupValue?.props?.[key]?.value
