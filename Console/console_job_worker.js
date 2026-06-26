@@ -3703,6 +3703,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const agence = estimText(nego.agence, "Groupe GTI");
   const tel = String(nego.telephone || "").trim();
   const email = String(nego.email || "").trim();
+  const agenceTel = String(nego.agenceTel || "").trim();
+  const agenceMail = String(nego.agenceMail || "").trim();
   const qrSvg = String(payload._vcardQrSvg || "").trim();
   const avis = String(payload.commentaire || "").trim();
   const argPrix = String(payload.argumentaire || "").trim();
@@ -3933,7 +3935,11 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="cf-nego"><div class="av">${estimText(initials)}</div><div><div class="cf-role">Votre conseiller</div><div class="cf-nm serif">${negoNom}</div>
       <div class="cf-contact">${tel ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg>${estimText(tel)}</span>` : ""}${email ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>${estimText(email)}</span>` : ""}</div></div></div>
     <div class="cf-agence-lbl">Agence</div>
-    <div class="cf-rows"><div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path></svg></span>${agence}</div></div>
+    <div class="cf-rows">
+      <div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path></svg></span><b>${agence}</b></div>
+      ${agenceTel ? `<div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg></span>${estimText(agenceTel)}</div>` : ""}
+      ${agenceMail ? `<div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg></span>${estimText(agenceMail)}</div>` : ""}
+    </div>
   </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
@@ -4090,16 +4096,23 @@ async function resolveEstimNegotiatorContact(payload, dossier, opts) {
       if (!out.nom) out.nom = cleanString(row.display_name);
     }
   }
-  // Repli agence si le négo n'a ni tél ni email exploitable.
-  if ((!out.telephone || !out.email) && out.agence) {
+  // Coordonnées agence : toujours résolues (pour le bloc « Agence » du PDF) + repli conseiller.
+  out.agenceTel = null;
+  out.agenceMail = null;
+  out.agenceResponsable = null;
+  if (out.agence) {
     const ar = await supabaseRequest(
-      `app_agence_directory?select=tel,mail&nom=ilike.${encodeURIComponent(out.agence)}&limit=1`,
+      `app_agence_directory?select=tel,mail,responsable&nom=ilike.${encodeURIComponent(out.agence)}&limit=1`,
       { method: "GET" }
     ).catch(() => null);
     const a = Array.isArray(ar) && ar.length ? ar[0] : null;
     if (a) {
-      if (!out.telephone) out.telephone = cleanString(a.tel);
-      if (!out.email) out.email = cleanString(a.mail);
+      out.agenceTel = cleanString(a.tel);
+      out.agenceMail = cleanString(a.mail);
+      out.agenceResponsable = cleanString(a.responsable);
+      // Repli conseiller : si le négo n'a ni tél ni email, on prend ceux de l'agence.
+      if (!out.telephone) out.telephone = out.agenceTel;
+      if (!out.email) out.email = out.agenceMail;
     }
   }
   return out;
@@ -4122,16 +4135,27 @@ async function handleGenerateEstimationPdf(job) {
       catch (_) { /* best effort */ }
     }
   }
-  // QR vCard (option B) : le QR porte le conseiller CONNECTÉ (repli négo dossier). Ne touche
-  // PAS payload.negociateur -> le bloc conseiller visible du PDF reste le négo du dossier.
+  // Bloc « Votre conseiller » + QR vCard (option B = conseiller CONNECTÉ, repli négo dossier).
+  // On enrichit le bloc visible avec le mobile résolu + les coordonnées agence (tél/mail).
   try {
-    const qrContact = await resolveEstimNegotiatorContact(payload, dossier, { preferConnected: true });
-    if (qrContact && (qrContact.nom || qrContact.telephone || qrContact.email)) {
-      const QRCode = require("qrcode");
-      payload._vcardQrSvg = await QRCode.toString(estimVCard(qrContact), {
-        type: "svg", margin: 0, errorCorrectionLevel: "M",
-        color: { dark: "#1c1c1c", light: "#00000000" },
-      }).catch(() => "");
+    const c = await resolveEstimNegotiatorContact(payload, dossier, { preferConnected: true });
+    if (c) {
+      payload.negociateur = Object.assign({}, payload.negociateur, {
+        nom: c.nom || (payload.negociateur && payload.negociateur.nom) || null,
+        agence: c.agence || (payload.negociateur && payload.negociateur.agence) || null,
+        email: c.email || (payload.negociateur && payload.negociateur.email) || null,
+        telephone: c.telephone || (payload.negociateur && payload.negociateur.telephone) || null,
+        agenceTel: c.agenceTel || null,
+        agenceMail: c.agenceMail || null,
+        agenceResponsable: c.agenceResponsable || null,
+      });
+      if (c.nom || c.telephone || c.email) {
+        const QRCode = require("qrcode");
+        payload._vcardQrSvg = await QRCode.toString(estimVCard(c), {
+          type: "svg", margin: 0, errorCorrectionLevel: "M",
+          color: { dark: "#1c1c1c", light: "#00000000" },
+        }).catch(() => "");
+      }
     }
   } catch (_) { /* le PDF se génère même sans QR */ }
   const html = estimationAvisValeurHtmlPremium(payload, dossier, detail);
