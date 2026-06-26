@@ -2565,24 +2565,12 @@ export async function loadCadreDeVie(input: { lat: number; lon: number }): Promi
     if (p) { insee = p.citycode ?? null; commune = p.city ?? null }
   } catch { /* best effort */ }
 
-  // 3) Commodités via Overpass (OSM).
+  // 3) Commodités via notre backend (proxy Overpass — Overpass refuse les requêtes
+  //    navigateur : pas de CORS + blocage selon User-Agent).
   let commodites: CadreDeVie['commodites'] = { ecoles: 0, commerces: 0, sante: 0, gareNom: null, gareKm: null }
   try {
-    const q = `[out:json][timeout:25];(nwr[amenity=school](around:1500,${lat},${lon});nwr[shop](around:1000,${lat},${lon});nwr[amenity~"pharmacy|doctors|hospital|clinic"](around:1500,${lat},${lon});nwr[railway=station](around:8000,${lat},${lon}););out center tags 200;`
-    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
-    const j = await r.json()
-    let ecoles = 0, commerces = 0, sante = 0, gareNom: string | null = null, gareKm: number | null = null
-    for (const el of (j?.elements ?? [])) {
-      const t = el.tags ?? {}
-      if (t.amenity === 'school') ecoles++
-      else if (t.shop) commerces++
-      else if (['pharmacy', 'doctors', 'hospital', 'clinic'].includes(t.amenity)) sante++
-      else if (t.railway === 'station') {
-        const elat = el.lat ?? el.center?.lat, elon = el.lon ?? el.center?.lon
-        if (elat && elon) { const km = cdvKm(lat, lon, elat, elon); if (gareKm == null || km < gareKm) { gareKm = Math.round(km * 10) / 10; gareNom = t.name ?? 'Gare' } }
-      }
-    }
-    commodites = { ecoles, commerces, sante, gareNom, gareKm }
+    const c = await invokeBackendApi<{ ok: boolean; ecoles: number; commerces: number; sante: number; gareNom: string | null; gareKm: number | null }>(`/geo/commodites?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    if (c && c.ok) commodites = { ecoles: c.ecoles, commerces: c.commerces, sante: c.sante, gareNom: c.gareNom, gareKm: c.gareKm }
   } catch { /* best effort */ }
 
   // 4) Risques (table pré-chargée par INSEE).
