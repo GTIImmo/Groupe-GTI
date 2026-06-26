@@ -3706,9 +3706,8 @@ export async function loadHektorAgencyOptions(): Promise<HektorAgencyOption[]> {
 }
 
 // ── Calque création optimiste (annonce/estimation) ──────────────────────────
-// FLAG : tant que le worker (③) ne relie/nettoie pas les provisoires, garder OFF
-// (sinon doublon provisoire + vraie). Passer à true quand ③ est déployé + worker restart.
-const PROVISIONAL_CREATION_ENABLED = false
+// FLAG calque création optimiste — ON (test E2E, personne n'utilise l'app).
+const PROVISIONAL_CREATION_ENABLED = true
 
 export function newCreationToken(): string {
   return (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `prov-${Date.now()}-${Math.random().toString(36).slice(2)}`
