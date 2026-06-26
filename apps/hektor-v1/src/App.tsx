@@ -92,6 +92,7 @@ import {
   type HektorAnnonceStatusTarget,
   createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
+  createHektorDraftAnnonceJobOptimistic,
   scanDraftAnnonceSheet,
   createMatterportActionJob,
   createConsoleDocumentSignedUrl,
@@ -11125,7 +11126,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setNoticeMessage(null)
     setErrorMessage(null)
     try {
-      const job = await createHektorDraftAnnonceJob({
+      const job = await createHektorDraftAnnonceJobOptimistic({
         title: draftAnnonceTitle,
         description: draftAnnonceAdvanced.description,
         agenceNom: draftAnnonceAgency,
@@ -17008,7 +17009,9 @@ function MandatsScreen(props: {
                 // sont annulables : on respecte offre_last_proposition_type (refus) et
                 // compromis_state (cancelled) via les helpers métier, sinon une offre
                 // refusée ou un compromis annulé resterait affiché « en cours » à tort.
-                const avStatut = item.vente_id
+                const avStatut = item.is_provisional
+                  ? { c: 'crea', l: item.provisional_status === 'error' ? 'Erreur de création' : 'En création…' }
+                  : item.vente_id
                   ? { c: 'vendu', l: 'Vendu' }
                   : hasCompromisEnCours(item)
                     ? { c: 'compromis', l: 'Sous compromis' }

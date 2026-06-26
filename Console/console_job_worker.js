@@ -813,6 +813,62 @@ async function supabaseRequest(pathname, options = {}) {
   return payload;
 }
 
+// --- Création optimiste : réconciliation de la ligne provisoire (app_annonce_provisional) ---
+// La provisoire est insérée par le front au moment du "Créer" (affichage instantané "En création").
+// Le worker la relie ensuite au vrai bien Hektor (link), ou la marque en erreur, et le read-through
+// la supprime une fois le vrai bien présent dans Supabase. Service role => bypass RLS. Best effort :
+// un échec ici ne doit JAMAIS faire échouer la création Hektor elle-même.
+async function linkProvisionalCreation(creationToken, hektorAnnonceId) {
+  const token = cleanString(creationToken);
+  const annonceId = cleanString(hektorAnnonceId);
+  if (!token || !annonceId) return;
+  try {
+    await supabaseRequest(`app_annonce_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        hektor_annonce_id: annonceId,
+        status: "linked",
+        error_message: null,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    console.warn(`[provisional] link echoue (token ${token}): ${error && error.message ? error.message : error}`);
+  }
+}
+
+async function markProvisionalCreationError(creationToken, message) {
+  const token = cleanString(creationToken);
+  if (!token) return;
+  try {
+    await supabaseRequest(`app_annonce_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        status: "error",
+        error_message: cleanString(message) || "Erreur de création",
+        updated_at: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    console.warn(`[provisional] mark error echoue (token ${token}): ${error && error.message ? error.message : error}`);
+  }
+}
+
+async function cleanupProvisionalForAnnonce(hektorAnnonceId) {
+  const annonceId = cleanString(hektorAnnonceId);
+  if (!annonceId) return;
+  try {
+    await supabaseRequest(`app_annonce_provisional?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`, {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+  } catch (error) {
+    console.warn(`[provisional] cleanup echoue (annonce ${annonceId}): ${error && error.message ? error.message : error}`);
+  }
+}
+
 async function storageRequest(objectPath, options = {}) {
   const baseUrl = requireEnv("SUPABASE_URL", SUPABASE_URL).replace(/\/+$/, "");
   const response = await fetch(`${baseUrl}/storage/v1/object/${STORAGE_BUCKET}/${storagePathEncode(objectPath)}`, {
@@ -1692,7 +1748,7 @@ async function resolveAgencyContextForFallback(dossier, payload) {
 // (annuaire COMPLET des négos). On NE s'appuie PLUS sur la présence dans app_user_directory
 // (table décimée, qui ne "marchait" que via le hack de fusion des actifs).
 async function loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }) {
-  const select = "hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active";
+  const select = "hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active,portable,telephone";
   const tryQuery = async (column, value, op) => {
     if (value == null || String(value).trim() === "") return null;
     const params = new URLSearchParams({ select, limit: "1" });
@@ -2774,6 +2830,9 @@ async function handleRefreshConsoleData(job) {
     parent_job_id: payload.parent_job_id || null,
   });
   const result = await runCreatedAnnonceImmediateSync(job, hektorAnnonceId, { light: payload.light === true });
+  // Création optimiste : le vrai bien est maintenant dans Supabase -> on retire la ligne provisoire
+  // correspondante (no-op pour les annonces normales : 0 ligne supprimée). Best effort.
+  await cleanupProvisionalForAnnonce(hektorAnnonceId);
   const cacheRefresh = await rebuildRequestedDetailCaches(job, hektorAnnonceId, payload);
   return {
     ...result,
@@ -3599,8 +3658,13 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .diag-row .k{color:var(--body);font-weight:500}.diag-row .v{font-weight:700}.diag-row .v.ok{color:var(--green)}.diag-row .v.na{color:var(--mute);font-weight:600}
 .avis .lead{font-family:'Spectral',serif;font-size:15px;font-style:italic;font-weight:500;border-left:3px solid var(--brand);padding-left:15px;line-height:1.5}
 .avis p{font-size:11.5px;color:var(--body);line-height:1.7;margin-top:9px}
-.contact-fuse{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:4px;background:#fff}
-.cf-body{padding:15px 20px}.cf-nego{display:flex;align-items:center;gap:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.contact-fuse{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:4px;background:#fff;display:flex;align-items:stretch}
+.cf-body{padding:15px 20px;flex:1;min-width:0}.cf-nego{display:flex;align-items:center;gap:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.cf-qr{flex:none;width:150px;border-left:1px solid var(--line);background:var(--cream);padding:14px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}
+.cf-qr .qr-box{width:112px;height:112px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px;display:grid;place-items:center}
+.cf-qr .qr-box svg{width:100%;height:100%;display:block}
+.cf-qr .qr-cap{font-size:9px;font-weight:800;color:var(--brand);letter-spacing:.4px;text-transform:uppercase;line-height:1.3}
+.cf-qr .qr-sub{font-size:8px;color:var(--mute);line-height:1.35}
 .cf-nego .av{width:50px;height:50px;border-radius:50%;flex:none;background:linear-gradient(150deg,var(--brand),var(--brand-d));display:grid;place-items:center;color:#fff;font-family:'Spectral',serif;font-size:19px;font-weight:600}
 .cf-role{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:1.3px;text-transform:uppercase}.cf-nm{font-family:'Spectral',serif;font-size:18px;font-weight:600;margin-top:2px}
 .cf-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}.cf-contact span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--body);font-weight:500}.cf-contact svg{width:12px;height:12px;color:var(--brand)}
@@ -3639,6 +3703,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const agence = estimText(nego.agence, "Groupe GTI");
   const tel = String(nego.telephone || "").trim();
   const email = String(nego.email || "").trim();
+  const qrSvg = String(payload._vcardQrSvg || "").trim();
   const avis = String(payload.commentaire || "").trim();
   const argPrix = String(payload.argumentaire || "").trim();
   const valEstimee = estimEuro(valeurs.estimee) || "À compléter";
@@ -3869,7 +3934,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
       <div class="cf-contact">${tel ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg>${estimText(tel)}</span>` : ""}${email ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>${estimText(email)}</span>` : ""}</div></div></div>
     <div class="cf-agence-lbl">Agence</div>
     <div class="cf-rows"><div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path></svg></span>${agence}</div></div>
-  </div></div>
+  </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
 </div>${rf(7)}</div>
@@ -3974,6 +4039,72 @@ async function renderHtmlToPdfBuffer(html) {
   }
 }
 
+// vCard 3.0 du conseiller pour le QR de l'avis de valeur.
+// IMPORTANT : code 100% séparé de buildVCard (apps/rdv-public/app.js, mini-sites vitrine).
+// Aucun import/partage : modifier l'un n'affecte JAMAIS l'autre. buildVCard reste intouché.
+function estimVCard(c) {
+  const tel = String((c && c.telephone) || "").replace(/[^\d+]/g, "");
+  const nom = String((c && c.nom) || "Conseiller Groupe GTI").trim();
+  return [
+    "BEGIN:VCARD", "VERSION:3.0",
+    `N:${nom};;;`,
+    `FN:${nom}`,
+    `ORG:${String((c && c.agence) || "Groupe GTI").trim()}`,
+    "TITLE:Conseiller immobilier",
+    tel ? `TEL;TYPE=CELL:${tel}` : "",
+    c && c.email ? `EMAIL;TYPE=WORK:${String(c.email).trim()}` : "",
+    "URL:https://www.gti-immobilier.fr",
+    "END:VCARD",
+  ].filter(Boolean).join("\r\n");
+}
+
+// Résout le contact du conseiller pour le QR (option B : négo CONNECTÉ passé par le front),
+// complète le portable depuis l'annuaire idnego (seul champ absent de la session front),
+// puis repli agence. Voir mémoire estimation-qr-vcard-source-nego.
+async function resolveEstimNegotiatorContact(payload, dossier, opts) {
+  const safe = payload && typeof payload === "object" ? payload : {};
+  const nego = safe.negociateur && typeof safe.negociateur === "object" ? safe.negociateur : {};
+  const connected = safe.negociateurConnecte && typeof safe.negociateurConnecte === "object" ? safe.negociateurConnecte : {};
+  const preferConnected = !!(opts && opts.preferConnected);
+  // Option B (QR) : on part de l'email du conseiller CONNECTÉ ; nom/agence/portable seront
+  // résolus depuis l'annuaire complet pour ne pas mélanger avec l'identité du dossier.
+  const connectedEmail = preferConnected ? cleanString(connected.email) : null;
+  const out = connectedEmail ? {
+    nom: null, agence: null, email: connectedEmail, telephone: null,
+  } : {
+    nom: cleanString(nego.nom) || cleanString(dossier && dossier.commercial_nom),
+    agence: cleanString(nego.agence) || cleanString(dossier && dossier.agence_nom),
+    email: cleanString(nego.email) || cleanString(dossier && dossier.negociateur_email),
+    telephone: cleanString(nego.telephone),
+  };
+  const negotiatorId = connectedEmail ? null : cleanString(nego.idnego || nego.hektor_negociateur_id
+    || safe.hektor_negociateur_id || (dossier && dossier.commercial_id));
+  const userId = cleanString(nego.hektor_user_id || safe.hektor_user_id);
+  if (!out.telephone || !out.email || !out.agence || !out.nom) {
+    const row = await loadAgencyDirectoryRowForOwner({ email: out.email, negotiatorId, userId }).catch(() => null);
+    if (row) {
+      const port = cleanString(row.portable) || cleanString(row.telephone);
+      if (!out.telephone && port && /\d{6,}/.test(port)) out.telephone = port;
+      if (!out.email) out.email = cleanString(row.email);
+      if (!out.agence) out.agence = cleanString(row.agence_nom);
+      if (!out.nom) out.nom = cleanString(row.display_name);
+    }
+  }
+  // Repli agence si le négo n'a ni tél ni email exploitable.
+  if ((!out.telephone || !out.email) && out.agence) {
+    const ar = await supabaseRequest(
+      `app_agence_directory?select=tel,mail&nom=ilike.${encodeURIComponent(out.agence)}&limit=1`,
+      { method: "GET" }
+    ).catch(() => null);
+    const a = Array.isArray(ar) && ar.length ? ar[0] : null;
+    if (a) {
+      if (!out.telephone) out.telephone = cleanString(a.tel);
+      if (!out.email) out.email = cleanString(a.mail);
+    }
+  }
+  return out;
+}
+
 async function handleGenerateEstimationPdf(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -3991,6 +4122,18 @@ async function handleGenerateEstimationPdf(job) {
       catch (_) { /* best effort */ }
     }
   }
+  // QR vCard (option B) : le QR porte le conseiller CONNECTÉ (repli négo dossier). Ne touche
+  // PAS payload.negociateur -> le bloc conseiller visible du PDF reste le négo du dossier.
+  try {
+    const qrContact = await resolveEstimNegotiatorContact(payload, dossier, { preferConnected: true });
+    if (qrContact && (qrContact.nom || qrContact.telephone || qrContact.email)) {
+      const QRCode = require("qrcode");
+      payload._vcardQrSvg = await QRCode.toString(estimVCard(qrContact), {
+        type: "svg", margin: 0, errorCorrectionLevel: "M",
+        color: { dark: "#1c1c1c", light: "#00000000" },
+      }).catch(() => "");
+    }
+  } catch (_) { /* le PDF se génère même sans QR */ }
   const html = estimationAvisValeurHtmlPremium(payload, dossier, detail);
   const pdfBuffer = await renderHtmlToPdfBuffer(html);
 
@@ -9627,6 +9770,7 @@ async function handleArchiveHektorAnnonce(job) {
 
 async function handleCreateHektorDraftAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
+  const creationToken = cleanString(payload.creation_token);
   const startedAtMs = Date.now();
   await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false, required: true });
 
@@ -9756,6 +9900,10 @@ async function handleCreateHektorDraftAnnonce(job) {
     priority: 80,
   });
 
+  // Création optimiste : relier la ligne provisoire au vrai bien Hektor. Le front cesse alors
+  // d'afficher le doublon (dédup par hektor_annonce_id) ; le read-through ci-dessus la supprimera.
+  await linkProvisionalCreation(creationToken, created.id);
+
   return {
     hektor_annonce_id: String(created.id),
     wizard_id: String(idannWizard),
@@ -9788,6 +9936,22 @@ async function handleCreateHektorDraftAnnonce(job) {
       } : null,
     },
   };
+}
+
+// Enveloppe création optimiste : si la création Hektor échoue, on marque la ligne provisoire
+// en "erreur" (le front affiche "Erreur de création") avant de relancer l'erreur au runner.
+async function handleCreateHektorDraftAnnonceWithProvisional(job) {
+  try {
+    return await handleCreateHektorDraftAnnonce(job);
+  } catch (error) {
+    try {
+      const payload = safeJsonParse(job.payload_json);
+      await markProvisionalCreationError(payload && payload.creation_token, error && error.message ? error.message : String(error));
+    } catch (_) {
+      /* best effort : ne jamais masquer l'erreur d'origine */
+    }
+    throw error;
+  }
 }
 
 async function handleMatterportAction(job) {
@@ -9890,7 +10054,7 @@ async function runHandler(job) {
     case "assign_hektor_annonce_negotiator":
       return handleAssignHektorAnnonceNegotiator(job);
     case "create_hektor_draft_annonce":
-      return handleCreateHektorDraftAnnonce(job);
+      return handleCreateHektorDraftAnnonceWithProvisional(job);
     case "matterport_online":
     case "matterport_offline":
     case "matterport_archive":

@@ -3705,6 +3705,65 @@ export async function loadHektorAgencyOptions(): Promise<HektorAgencyOption[]> {
     .filter((item): item is HektorAgencyOption => Boolean(item))
 }
 
+// ── Calque création optimiste (annonce/estimation) ──────────────────────────
+// FLAG : tant que le worker (③) ne relie/nettoie pas les provisoires, garder OFF
+// (sinon doublon provisoire + vraie). Passer à true quand ③ est déployé + worker restart.
+const PROVISIONAL_CREATION_ENABLED = false
+
+export function newCreationToken(): string {
+  return (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `prov-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+export async function createAnnonceProvisional(token: string, fields: {
+  titre_bien?: string | null; prix?: string | number | null; ville?: string | null
+  code_postal?: string | null; type_bien?: string | null; statut_annonce?: string | null
+  commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null
+}): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const p: Record<string, string> = {}
+  for (const [k, v] of Object.entries(fields)) { if (v != null && String(v).trim()) p[k] = String(v).trim() }
+  const { error } = await supabase.rpc('app_create_annonce_provisional', { p_token: token, p_fields: p })
+  if (error) throw new Error(error.message)
+}
+
+type AnnonceProvisionalRow = {
+  creation_token: string; titre_bien?: string | null; prix?: number | null; ville?: string | null
+  code_postal?: string | null; type_bien?: string | null; statut_annonce?: string | null
+  commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null
+  status?: string | null; hektor_annonce_id?: string | null; created_at?: string | null
+}
+
+async function loadAnnonceProvisionals(): Promise<AnnonceProvisionalRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_annonce_provisional')
+    .select('creation_token,titre_bien,prix,ville,code_postal,type_bien,statut_annonce,commercial_nom,negociateur_email,agence_nom,status,hektor_annonce_id,created_at')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (error) return []
+  return (data ?? []) as AnnonceProvisionalRow[]
+}
+
+function provisionalToMandatRecord(row: AnnonceProvisionalRow): MandatRecord {
+  return {
+    app_dossier_id: null as unknown as number,
+    hektor_annonce_id: null,
+    creation_token: row.creation_token,
+    is_provisional: true,
+    provisional_status: (row.status as 'creating' | 'error') ?? 'creating',
+    titre_bien: row.titre_bien ?? '',
+    prix: row.prix ?? null,
+    ville: row.ville ?? null,
+    code_postal: row.code_postal ?? null,
+    type_bien: row.type_bien ?? null,
+    statut_annonce: row.statut_annonce ?? 'En création',
+    commercial_nom: row.commercial_nom ?? null,
+    negociateur_email: row.negociateur_email ?? null,
+    agence_nom: row.agence_nom ?? null,
+    archive: '0',
+  } as unknown as MandatRecord
+}
+
 export async function loadMandatsPage({
   filters,
   page,
@@ -3749,10 +3808,20 @@ export async function loadMandatsPage({
     (filters.archive === activeArchiveFilterValue && (!statut || statut === annonceSearchListingsFilterValue))
   if (shouldUseMergedAnnonceListing) {
     const listingPage = await loadDossiersPage({ filters, page, pageSize, scope })
-    return {
-      ...listingPage,
-      rows: listingPage.rows.map(dossierToMandatRecord),
+    let rows = listingPage.rows.map(dossierToMandatRecord)
+    // Calque création optimiste : on préfixe les biens "en création" (provisoires) en page 1.
+    // Dédup : on masque une provisoire dès que sa vraie annonce (hektor_annonce_id rempli par
+    // le worker) est déjà présente -> jamais de doublon. Le filtre d'écran (annonce/estimation)
+    // est appliqué ensuite côté App via statut_annonce.
+    if (PROVISIONAL_CREATION_ENABLED && page === 1 && filters.archive !== archivedFilterValue) {
+      const provis = await loadAnnonceProvisionals()
+      if (provis.length) {
+        const realIds = new Set(rows.map((r) => String(r.hektor_annonce_id ?? '')).filter(Boolean))
+        const pending = provis.filter((p) => !p.hektor_annonce_id || !realIds.has(String(p.hektor_annonce_id)))
+        rows = [...pending.map(provisionalToMandatRecord), ...rows]
+      }
     }
+    return { ...listingPage, rows }
   }
   let query = applyDossierFiltersToQuery(
     applyNegotiatorScopeToQuery(supabase.from(dossiersCurrentView).select('*', { count: countMode }), scope),
@@ -5455,6 +5524,16 @@ export async function createGenerateEstimationPdfJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
   const jobId = crypto.randomUUID()
+  // Option B : on transmet l'email du conseiller CONNECTÉ pour que le worker source le
+  // contact du QR vCard (portable inclus) depuis l'annuaire idnego complet. Champ purement
+  // additif, consommé UNIQUEMENT par le QR de l'avis de valeur : n'altère ni le bloc
+  // conseiller visible, ni l'email d'estimation, ni quoi que ce soit d'autre.
+  let negociateurConnecte: { email: string | null } | null = null
+  try {
+    const { data: authData } = await supabase.auth.getUser()
+    const connectedEmail = authData?.user?.email ?? null
+    if (connectedEmail) negociateurConnecte = { email: connectedEmail }
+  } catch { /* QR best-effort : le PDF se génère sans */ }
   const { data, error } = await supabase
     .from('app_console_job')
     .insert({
@@ -5468,6 +5547,7 @@ export async function createGenerateEstimationPdfJob(input: {
         bien: input.bien,
         proprietaire: input.proprietaire,
         negociateur: input.negociateur,
+        negociateurConnecte,
         valeurs: input.valeurs,
         commentaire: input.commentaire ?? '',
         etat: input.etat ?? null,
@@ -6970,6 +7050,7 @@ export type HektorDraftAnnonceJobInput = {
   initialMandant?: HektorMandantContactInput | null
   initialMandantContactId?: string | null
   initialMandantContactLabel?: string | null
+  creationToken?: string | null
   priority?: number
 }
 
@@ -6989,6 +7070,8 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       creation_status: creationStatus,
       status_label: creationStatus === 'estimation' ? 'Estimation' : 'Actif',
       statut_annonce: creationStatus === 'estimation' ? '1' : '2',
+      // Calque création optimiste : jeton qui relie la ligne provisoire au vrai bien créé.
+      creation_token: input.creationToken?.trim() || null,
       property_type: input.propertyType?.trim() || 'Appartement',
       property_profile: input.propertyProfile?.trim() || null,
       hektor_id_type: input.hektorIdType == null ? '2' : String(input.hektorIdType).trim() || '2',
@@ -7049,6 +7132,30 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor draft annonce job')
   return data as ConsoleJob
+}
+
+// Création avec calque optimiste : insère une ligne provisoire (affichage instantané)
+// AVANT de créer dans Hektor, et relie les deux par un jeton. Flag OFF -> comportement
+// strictement identique à createHektorDraftAnnonceJob (la provisoire n'est jamais créée).
+export async function createHektorDraftAnnonceJobOptimistic(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
+  if (!PROVISIONAL_CREATION_ENABLED) return createHektorDraftAnnonceJob(input)
+  const token = newCreationToken()
+  try {
+    await createAnnonceProvisional(token, {
+      titre_bien: input.title,
+      prix: input.price,
+      ville: input.city,
+      code_postal: input.postalCode,
+      type_bien: input.propertyType,
+      statut_annonce: input.creationStatus === 'estimation' ? 'Estimation' : 'Actif',
+      commercial_nom: input.hektorUserLabel,
+      negociateur_email: input.hektorUserEmail,
+      agence_nom: input.agenceNom,
+    })
+  } catch {
+    // Best-effort : si la provisoire échoue, on crée quand même normalement (pas de blocage).
+  }
+  return createHektorDraftAnnonceJob({ ...input, creationToken: token })
 }
 
 export async function createConsoleDocumentSignedUrl(document: ConsoleDocument, expiresIn = 300): Promise<string> {

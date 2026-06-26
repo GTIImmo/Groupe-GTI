@@ -386,6 +386,10 @@ export type MandatRecord = {
   has_detail_cache?: boolean | number | string | null
   detail_cache_expires_at?: string | null
   is_brouillon?: boolean
+  // Calque création optimiste : ligne provisoire (bien pas encore créé dans Hektor)
+  is_provisional?: boolean
+  creation_token?: string | null
+  provisional_status?: 'creating' | 'error'
 }
 
 export type ContactDuplicateSeverity = 'low' | 'medium' | 'high' | 'critical'
