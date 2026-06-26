@@ -6014,6 +6014,7 @@ function synthesizeWizardFieldsForPending(payload) {
   const meta = new Set([
     "from_pending", "base_snapshot", "app_dossier_id", "hektor_annonce_id", "source",
     "push_after", "fields_json", "fields", "hektor_wizard_fields", "wizard_fields", "wizardFields",
+    "composition_pieces", "compositionPieces", "hektor_composition_pieces",
   ]);
   const wizard = {};
   for (const [k, v] of Object.entries(source)) {

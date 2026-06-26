@@ -6581,16 +6581,24 @@ export async function createUpdateHektorAnnonceFieldsJob(input: {
 export async function editAnnonceOptimistic(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
   fields: Record<string, string | number | null | undefined>
+  compositionPieces?: HektorCompositionPieceInput[]
   debounceSeconds?: number
 }): Promise<{ ok: boolean }> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
-  const editFields: Record<string, string> = {}
+  const editFields: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(input.fields)) {
     if (value == null) continue
     const s = String(value).trim()
     if (s) editFields[key] = s
   }
+  // Pièces de composition : on les fait passer par le MÊME flux optimiste (push_fields) que
+  // les champs, pour qu'UN SEUL job worker (from_pending) traite tout. Évite le conflit
+  // auto-infligé (l'ancien job pièces immédiat bumpait date_maj -> le job champs débouncé
+  // partait en conflit). Le worker lit `composition_pieces` dans le payload, et le RPC les met
+  // dans le calque optimiste -> aperçu instantané (buildHektorCompositionPiecesFromDetail).
+  const cleanedPieces = cleanHektorCompositionPieces(input.compositionPieces)
+  if (cleanedPieces) editFields.composition_pieces = cleanedPieces
   if (Object.keys(editFields).length === 0) throw new Error('Aucune modification a envoyer')
   const { data, error } = await supabase.rpc('app_edit_annonce_optimistic', {
     target_dossier_id: input.dossier.app_dossier_id,

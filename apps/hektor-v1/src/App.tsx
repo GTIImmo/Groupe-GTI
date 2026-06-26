@@ -2534,20 +2534,13 @@ function HektorAnnonceUpdateForm(props: {
     }
     setPending(true)
     try {
-      // Édition OPTIMISTE Supabase-first : les champs simples partent direct dans Supabase
-      // (affichage instant + recompute rapprochement) puis vers Hektor en débouncé. Les pièces
-      // (structurées) restent en job classique pour l'instant.
-      if (Object.keys(changedValues).length > 0) {
-        await editAnnonceOptimistic({ dossier, fields: changedValues })
+      // Édition OPTIMISTE Supabase-first : champs ET pièces partent par le MÊME flux
+      // (push_fields) -> UN SEUL job worker débouncé traite tout. Évite le conflit
+      // auto-infligé d'avant (job pièces immédiat qui bumpait date_maj -> job champs en
+      // conflit). Affichage instant via le calque optimiste (champs + pièces).
+      if (Object.keys(changedValues).length > 0 || changedCompositionPieces.length > 0) {
+        await editAnnonceOptimistic({ dossier, fields: changedValues, compositionPieces: changedCompositionPieces })
         window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
-      }
-      if (changedCompositionPieces.length > 0) {
-        const job = await createUpdateHektorAnnonceFieldsJob({
-          dossier,
-          fields: { propertyProfile: profileKind, compositionPieces: changedCompositionPieces },
-          priority: 14,
-        })
-        props.onJobCreated?.(job)
       }
       setMessage(null)
       props.onCancel?.()
@@ -3280,13 +3273,47 @@ function normalizeHektorCompositionPieceDraft(item: Record<string, unknown>, ind
   return hasData ? piece : null
 }
 
+function applyHektorCompositionOverlay(base: HektorCompositionPieceDraft[], overlayRows: Record<string, unknown>[]): HektorCompositionPieceDraft[] {
+  const result = base.slice()
+  overlayRows.forEach((row, index) => {
+    const idPiece = compositionPieceRecordText(row, ['idPiece', 'id_piece', 'id', 'ID', 'idpiece'])
+    const action = compositionPieceRecordText(row, ['action']).toLowerCase()
+    if (action === 'delete') {
+      if (idPiece) {
+        const i = result.findIndex((piece) => piece.idPiece === idPiece)
+        if (i >= 0) result.splice(i, 1)
+      }
+      return
+    }
+    const draft = normalizeHektorCompositionPieceDraft(row, index)
+    if (!draft) return
+    if (idPiece) {
+      const i = result.findIndex((piece) => piece.idPiece === idPiece)
+      if (i >= 0) result[i] = draft
+      else result.push(draft)
+    } else {
+      result.push(draft)
+    }
+  })
+  return result
+}
+
 function buildHektorCompositionPiecesFromDetail(detail: DossierDetailPayload): HektorCompositionPieceDraft[] {
   const fromDedicatedJson = compositionPieceRowsFromUnknown(parseJson<unknown>(detail.pieces_json, null))
   const raw = parseJson<Record<string, unknown>>(detail.detail_raw_json, {})
   const rows = fromDedicatedJson.length ? fromDedicatedJson : compositionPieceRowsFromUnknown(raw.pieces)
-  return rows
+  const pieces = rows
     .map((item, index) => normalizeHektorCompositionPieceDraft(item, index))
     .filter((item): item is HektorCompositionPieceDraft => Boolean(item))
+  // Tier 2 — aperçu instantané : applique le calque optimiste (diff pièces add/update/delete)
+  // par-dessus la liste Hektor. Effacé au retour du worker (read-through reconstruit le détail).
+  const overlay = detail.app_optimistic_overlay
+    ? (typeof detail.app_optimistic_overlay === 'object'
+        ? (detail.app_optimistic_overlay as Record<string, unknown>)
+        : parseJson<Record<string, unknown>>(detail.app_optimistic_overlay as string, {}))
+    : null
+  const overlayRows = overlay ? compositionPieceRowsFromUnknown(overlay.composition_pieces) : []
+  return overlayRows.length ? applyHektorCompositionOverlay(pieces, overlayRows) : pieces
 }
 
 function hektorCompositionPieceHasContent(piece: HektorCompositionPieceDraft) {
