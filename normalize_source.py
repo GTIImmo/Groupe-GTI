@@ -435,6 +435,20 @@ def upsert_annonces(conn: sqlite3.Connection) -> None:
             "SELECT prix, date_maj, no_mandat FROM hektor_annonce WHERE hektor_annonce_id = ?",
             (annonce_id,),
         ).fetchone()
+        # Garde-fou anti-regression : ne JAMAIS laisser un snapshot plus VIEUX ecraser un
+        # etat local plus recent. Cas reel : un delta archive perime (list_annonces_archived
+        # _update fige) rejoue chaque nuit repassait une annonce reactivee en archive. On
+        # compare les date_maj ; si l'item entrant est STRICTEMENT plus ancien que le local,
+        # on l'ignore entierement (ni event prix, ni upsert). NULL/vide d'un cote = pas de
+        # base pour bloquer -> on applique (comportement inchange).
+        incoming_datemaj = str(item.get("datemaj") or "").strip()
+        existing_datemaj = (
+            str(previous_row["date_maj"]).strip()
+            if previous_row and previous_row["date_maj"] is not None
+            else ""
+        )
+        if previous_row and incoming_datemaj and existing_datemaj and incoming_datemaj < existing_datemaj:
+            continue
         previous_price = parse_numeric_value(previous_row["prix"]) if previous_row else None
         next_price = parse_numeric_value(item.get("prix"))
         if values_differ(previous_price, next_price):
