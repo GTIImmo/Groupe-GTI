@@ -4459,13 +4459,14 @@ function EstimationDocumentEditor(props: {
     }
   }
 
+  const bienContext = [dossier.titre_bien || 'Bien', [dossier.code_postal, dossier.ville].filter(Boolean).join(' '), dossier.numero_dossier || dossier.numero_mandat].filter(Boolean).join(' · ')
   return (
-    <div className={`mandat-document-editor ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
+    <div className={`mandat-document-editor avd-editor ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
       <div className="mandat-document-editor-head">
         <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="content" /></span>
         <div>
           <strong>Avis de valeur</strong>
-          <small>{open ? 'Complétez le dossier, puis générez le PDF' : 'Préparer et envoyer l’avis de valeur au propriétaire'}</small>
+          <small>{open ? bienContext : 'Préparer et envoyer l’avis de valeur au propriétaire'}</small>
         </div>
         {props.modal
           ? <button className="ghost-button button-subtle" type="button" onClick={() => props.onClose?.()}>Retour</button>
@@ -4475,27 +4476,48 @@ function EstimationDocumentEditor(props: {
         <div className="mandat-document-editor-body">
           <div className="mandat-document-form" style={{ width: '100%' }}>
             <div className="mandat-document-tabs" role="tablist" aria-label="Sections de l'avis de valeur">
-              {[['valeur', 'Bien & valeur'], ['etat', 'État'], ['points', 'Points forts'], ['charges', 'Charges & DPE'], ['marche', 'Marché (DVF)']].map(([v, label]) => (
-                <button key={v} className={tab === v ? 'is-active' : ''} type="button" onClick={() => setTab(v as typeof tab)}>{label}</button>
+              {([
+                { v: 'valeur', label: 'Bien & valeur', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) },
+                { v: 'etat', label: 'État', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 2 2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 21l1.4-6.8L2.2 9.6l6.9-.7z" /></svg>) },
+                { v: 'points', label: 'Points', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.5 10 17 19 7" /></svg>) },
+                { v: 'charges', label: 'Charges', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18M7 14l3-3 3 2 4-5" /></svg>) },
+                { v: 'marche', label: 'Marché', badge: 'DVF', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>) },
+              ] as { v: typeof tab; label: string; icon: ReactNode; badge?: string }[]).map((t) => (
+                <button key={t.v} className={tab === t.v ? 'is-active' : ''} type="button" onClick={() => setTab(t.v)}>{t.icon}{t.label}{t.badge ? <span className="avd-badge">{t.badge}</span> : null}</button>
               ))}
             </div>
+            <div className="avd-scroll">
             {tab === 'valeur' ? (
               <div className="mandat-document-panel">
-                <div className="mandat-document-form-grid">
-                  <label><span>Fourchette basse</span><input inputMode="numeric" value={draft.basse} onChange={(e) => upd('basse', numStr(e.target.value))} /></label>
-                  <label><span>Valeur estimée</span><input inputMode="numeric" value={draft.estimee} onChange={(e) => upd('estimee', numStr(e.target.value))} /></label>
-                  <label><span>Fourchette haute</span><input inputMode="numeric" value={draft.haute} onChange={(e) => upd('haute', numStr(e.target.value))} /></label>
-                  <label><span>DPE</span><select value={draft.dpe} onChange={(e) => upd('dpe', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
-                  <label><span>GES</span><select value={draft.ges} onChange={(e) => upd('ges', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
-                  <label><span>Email du propriétaire</span><input type="email" value={draft.recipient} onChange={(e) => upd('recipient', e.target.value)} /></label>
-                  <label><span>Contexte de l'email</span><select value={draft.variante} onChange={(e) => upd('variante', e.target.value as 'vente' | 'succession')}><option value="vente">Vente (suite à visite)</option><option value="succession">Succession (valeur pour le notaire)</option></select></label>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Valeur proposée</div>
+                  <div className="avd-sec-d">Fourchette présentée au propriétaire — la valeur estimée est mise en avant dans le PDF.</div>
+                  <div className="avd-four"><div className="mandat-document-form-grid">
+                    <label><span>Fourchette basse</span><input inputMode="numeric" value={draft.basse} onChange={(e) => upd('basse', numStr(e.target.value))} /></label>
+                    <label className="avd-mid"><span>Valeur estimée</span><input inputMode="numeric" value={draft.estimee} onChange={(e) => upd('estimee', numStr(e.target.value))} /></label>
+                    <label><span>Fourchette haute</span><input inputMode="numeric" value={draft.haute} onChange={(e) => upd('haute', numStr(e.target.value))} /></label>
+                  </div></div>
                 </div>
-                <label className="is-wide"><span>Argumentaire de prix · optionnel</span>
-                  <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Pourquoi ce prix ? Atouts du bien, cohérence avec le marché, délai de vente. S'affiche sous l'estimation dans le PDF.</small>
-                  <textarea rows={3} placeholder="Ex. : Bien rare sur le secteur, proche écoles et commerces. Prix aligné sur les ventes récentes, pour une vente dans un délai raisonnable." value={draft.argumentaire} onChange={(e) => upd('argumentaire', e.target.value)} /></label>
-                <label className="is-wide"><span>Avis du conseiller · mot de conclusion · optionnel</span>
-                  <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Phrase personnelle de clôture, en dernière page du PDF.</small>
-                  <textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Performance &amp; destinataire</div>
+                  <div className="mandat-document-form-grid">
+                    <label><span>DPE</span><select value={draft.dpe} onChange={(e) => upd('dpe', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+                    <label><span>GES</span><select value={draft.ges} onChange={(e) => upd('ges', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+                    <label><span>Contexte de l'email</span><select value={draft.variante} onChange={(e) => upd('variante', e.target.value as 'vente' | 'succession')}><option value="vente">Vente (suite à visite)</option><option value="succession">Succession (valeur pour le notaire)</option></select></label>
+                    <label className="is-wide"><span>Email du propriétaire</span><input type="email" value={draft.recipient} onChange={(e) => upd('recipient', e.target.value)} /></label>
+                  </div>
+                  {acquereurs ? <div style={{ marginTop: 10 }}><span className="avd-acq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>{acquereurs} acquéreur{acquereurs > 1 ? 's' : ''} en recherche pour ce bien</span></div> : null}
+                </div>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Argumentaire de prix <span className="opt">· optionnel</span></div>
+                  <div className="avd-sec-d">Pourquoi ce prix ? Atouts du bien, cohérence avec le marché, délai de vente. S'affiche sous l'estimation dans le PDF.</div>
+                  <label className="is-wide"><textarea rows={3} placeholder="Ex. : Bien rare sur le secteur, proche écoles et commerces. Prix aligné sur les ventes récentes, pour une vente dans un délai raisonnable." value={draft.argumentaire} onChange={(e) => upd('argumentaire', e.target.value)} /></label>
+                </div>
+                <div className="avd-sec">
+                  <div className="avd-sec-h">Avis du conseiller <span className="opt">· mot de conclusion · optionnel</span></div>
+                  <div className="avd-sec-d">Phrase personnelle de clôture, en dernière page du PDF.</div>
+                  <label className="is-wide"><textarea rows={3} value={draft.commentaire} onChange={(e) => upd('commentaire', e.target.value)} /></label>
+                </div>
               </div>
             ) : null}
             {tab === 'etat' ? (
@@ -4581,6 +4603,7 @@ function EstimationDocumentEditor(props: {
                 )}
               </div>
             ) : null}
+            </div>
             {message ? <p className="mandat-document-message">{message}</p> : null}
             <div className="mandat-document-actions">
               <button className="ghost-button" type="button" disabled={busy} onClick={() => { void submit(false) }}>{busy ? '…' : 'Générer le PDF'}</button>

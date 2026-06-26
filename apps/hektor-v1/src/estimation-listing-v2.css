@@ -362,6 +362,63 @@
 .estim-editor-close { position: absolute; top: 12px; right: 14px; z-index: 2; width: 32px; height: 32px; border: 1px solid #e3dfe2; border-radius: 9px; background: #fff; color: #6b6560; font-size: 20px; line-height: 1; cursor: pointer; }
 .estim-editor-close:hover { border-color: #c5005f; color: #c5005f; }
 .estim-editor-loading { background: #fff; border-radius: 12px; padding: 16px 22px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; color: #222323; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); }
+
+/* ===================================================================== */
+/* Refonte éditeur « Avis de valeur » — SCOPÉE .avd-editor (n'affecte PAS */
+/* l'éditeur de mandat qui partage les classes mandat-document-*).        */
+/* ===================================================================== */
+.estim-editor-modal:has(.avd-editor) { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.avd-editor.mandat-document-editor { border: 0; border-radius: 16px; box-shadow: none; background: #fff; display: flex; flex-direction: column; min-height: 0; max-height: 92vh; font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+/* en-tête */
+.avd-editor .mandat-document-editor-head { flex: none; display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid #e9e4e6; background: linear-gradient(180deg, #fff, #faf8f9); border-radius: 0; }
+.avd-editor .mandat-document-editor-icon { flex: none; width: 40px; height: 40px; border-radius: 12px; background: #fbeaf2; color: #c5005f; display: flex; align-items: center; justify-content: center; }
+.avd-editor .mandat-document-editor-icon svg { width: 20px; height: 20px; }
+.avd-editor .mandat-document-editor-head > div { flex: 1; min-width: 0; }
+.avd-editor .mandat-document-editor-head strong { display: block; font-size: 15.5px; font-weight: 800; color: #1d1e1f; }
+.avd-editor .mandat-document-editor-head small { display: block; margin-top: 2px; font-size: 12.5px; color: #8b8f92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.avd-editor .mandat-document-editor-head small b { color: #44494c; font-weight: 600; }
+.avd-editor .mandat-document-editor-head > button { flex: none; border: 1px solid #e9e4e6; background: #fff; color: #44494c; border-radius: 10px; height: 36px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.avd-editor .mandat-document-editor-head > button:hover { border-color: #c5005f; color: #c5005f; }
+/* corps */
+.avd-editor .mandat-document-editor-body { flex: 1; min-height: 0; display: flex; padding: 0; }
+.avd-editor .mandat-document-form { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+/* onglets */
+.avd-editor .mandat-document-tabs { flex: none; display: flex; gap: 2px; padding: 8px 14px 0; margin: 0; border-bottom: 1px solid #e9e4e6; overflow-x: auto; background: #fff; }
+.avd-editor .mandat-document-tabs button { flex: none; border: 0; background: transparent; border-radius: 0; font: inherit; font-size: 13px; font-weight: 600; color: #8b8f92; padding: 9px 12px 12px; cursor: pointer; position: relative; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.avd-editor .mandat-document-tabs button svg { width: 15px; height: 15px; }
+.avd-editor .mandat-document-tabs button.is-active { color: #c5005f; background: transparent; box-shadow: none; }
+.avd-editor .mandat-document-tabs button.is-active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2.5px; background: #c5005f; border-radius: 3px; }
+.avd-editor .avd-badge { font-size: 10px; font-weight: 700; background: #fbeaf2; color: #c5005f; border-radius: 20px; padding: 1px 7px; }
+/* zone défilante */
+.avd-editor .avd-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px; }
+.avd-editor .mandat-document-panel { padding: 0; border: 0; background: transparent; display: block; }
+.avd-editor .avd-sec { margin-bottom: 18px; }
+.avd-editor .avd-sec:last-child { margin-bottom: 0; }
+.avd-editor .avd-sec-h { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #1d1e1f; margin-bottom: 3px; }
+.avd-editor .avd-sec-h .opt { font-weight: 600; color: #8b8f92; text-transform: none; letter-spacing: 0; }
+.avd-editor .avd-sec-d { font-size: 12px; color: #8b8f92; line-height: 1.5; margin-bottom: 10px; }
+/* champs */
+.avd-editor .mandat-document-form label { display: flex; flex-direction: column; gap: 5px; }
+.avd-editor .mandat-document-form label > span { font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: #8b8f92; }
+.avd-editor .mandat-document-form input, .avd-editor .mandat-document-form select, .avd-editor .mandat-document-form textarea { width: 100%; border: 1px solid #e9e4e6; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13.5px; color: #1d1e1f; background: #fff; box-sizing: border-box; }
+.avd-editor .mandat-document-form input:focus, .avd-editor .mandat-document-form select:focus, .avd-editor .mandat-document-form textarea:focus { outline: none; border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, .12); }
+.avd-editor .mandat-document-form textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+.avd-editor .mandat-document-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 11px; }
+.avd-editor .mandat-document-form-grid .is-wide { grid-column: 1 / -1; }
+/* bloc fourchette mis en valeur */
+.avd-editor .avd-four { background: #faf8f9; border: 1px solid #e9e4e6; border-radius: 14px; padding: 13px 14px; }
+.avd-editor .avd-four .mandat-document-form-grid { gap: 10px; }
+.avd-editor .avd-four .avd-mid input { border-color: #c5005f; font-weight: 700; color: #9c0049; }
+.avd-editor .avd-four .avd-mid > span { color: #c5005f; }
+.avd-editor .avd-acq { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: #9c0049; background: #fbeaf2; border-radius: 20px; padding: 5px 11px; }
+.avd-editor .avd-acq svg { width: 13px; height: 13px; }
+/* pied */
+.avd-editor .mandat-document-message { flex: none; margin: 0; padding: 10px 20px; font-size: 12.5px; color: #44494c; background: #fbeaf2; border-top: 1px solid #f3c9dd; }
+.avd-editor .mandat-document-actions { flex: none; display: flex; gap: 10px; padding: 14px 20px; margin: 0; border-top: 1px solid #e9e4e6; background: #faf8f9; }
+.avd-editor .mandat-document-actions button { border: 1px solid #e9e4e6; background: #fff; color: #44494c; border-radius: 11px; height: 42px; padding: 0 18px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.avd-editor .mandat-document-actions button:hover { border-color: #cfc8cb; }
+.avd-editor .mandat-document-actions .button-primary { background: #c5005f; border-color: #c5005f; color: #fff; box-shadow: 0 6px 16px rgba(197, 0, 95, .28); }
+.avd-editor .mandat-document-actions .button-primary:hover { background: #9c0049; }
 .estim-pdf-modal select { width: 100%; border: 1px solid #e3dfe2; border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; color: #222323; background: #fff; box-sizing: border-box; }
 .estim-pdf-modal select:focus { outline: none; border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.12); }
 .estim-pdf-toggle { width: 100%; margin-top: 14px; display: flex; align-items: center; gap: 8px; background: #faf7f9; border: 1px solid #ece6ea; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13px; font-weight: 600; color: #6b6560; cursor: pointer; text-align: left; }
