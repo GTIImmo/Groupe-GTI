@@ -6214,6 +6214,11 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
 }
 
 async function applyCreatedAnnonceInitialFields(job, annonceId, payload, options = {}) {
+  // Blindage (meme garde-fou que le chemin update, BUG A) : si un appelant envoie les
+  // champs A PLAT (sans hektor_wizard_fields), on reconstruit la boite pour ne PAS perdre
+  // les equipements a la creation. No-op aujourd'hui (le front niche deja la boite), mais
+  // protege tout futur appelant (autre client/script) qui enverrait a plat.
+  synthesizeWizardFieldsForPending(payload);
   const updateOptions = {
     ...options,
     skipInvalidNumbers: true,
