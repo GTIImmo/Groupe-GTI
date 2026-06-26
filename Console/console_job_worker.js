@@ -3514,6 +3514,18 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.scard{border:1px solid var(--line);border-radius:11px;padding:15px 16px}
 .acq{display:flex;align-items:center;gap:11px;margin-top:11px;padding:11px 14px;background:var(--brand-50);border:1px solid #f3c9dd;border-radius:11px;font-size:11px;color:var(--body);line-height:1.45}
 .acq b{color:var(--brand-d)}.acq-ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--brand);border-radius:50%;color:#fff}.acq-ic svg{width:15px;height:15px}
+.cdv-map{position:relative;width:100%;height:76mm;border-radius:11px;overflow:hidden;border:1px solid var(--line);background:var(--cream)}
+.cdv-map img{width:100%;height:100%;object-fit:cover;display:block}
+.cdv-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);color:var(--brand)}.cdv-pin svg{width:30px;height:30px}
+.cdv-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:13px}
+.cdv-card{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.cdv-card .ch{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--cream)}
+.cdv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10.5px;color:var(--body);padding:8px 14px;border-bottom:1px solid var(--line2)}
+.cdv-row:last-child{border-bottom:none}.cdv-row b{color:var(--ink);font-weight:700}
+.cdv-risks{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.cdv-risk{font-size:9.5px;font-weight:600;color:var(--body);background:var(--cream);border:1px solid var(--line);border-radius:20px;padding:5px 11px}
+.cdv-lvls{display:flex;gap:22px;margin-top:12px;flex-wrap:wrap}
+.cdv-lvl .k{font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--mute);letter-spacing:.04em}.cdv-lvl .v{font-weight:800;margin-top:2px;font-size:11px}
 .scard .ic{width:30px;height:30px;border-radius:8px;background:var(--brand-50);color:var(--brand);display:grid;place-items:center}.scard .ic svg{width:15px;height:15px}
 .scard .v{font-family:'Spectral',serif;font-size:22px;font-weight:600;margin-top:11px}.scard .v small{font-size:11px;color:var(--mute)}.scard .l{font-size:10.5px;color:var(--body);margin-top:2px}
 .chart{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-top:12px}
@@ -3606,7 +3618,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
   const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
   const rh = `<div class="rh"><img src="${LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
-  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 6</span></div>`;
+  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 7</span></div>`;
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
 
@@ -3676,6 +3688,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const equipList = equipDefs.filter(([, v]) => v).map(([k]) => `<span class="eqp">${checkIcon}${k}</span>`).join("");
   const hasDetailPage = !!(interieurRows || exterieurRows || confortRows || equipList || detail.particularites);
   const acquereursN = Math.max(0, parseInt(payload.acquereurs, 10) || 0);
+  // Cadre de vie & risques (carte IGN + commodités + risques), passé par le front.
+  const cdv = payload.cadreDeVie && payload.cadreDeVie.ok ? payload.cadreDeVie : null;
+  const cdvCom = cdv && cdv.commodites ? cdv.commodites : null;
+  const cdvRisk = cdv && cdv.risques ? cdv.risques : null;
+  const lvlColor = (v) => { const s = String(v || "").toLowerCase(); if (/élev|elev|fort/.test(s)) return "#d7191c"; if (/moyen/.test(s)) return "#f3a712"; if (/faible/.test(s)) return "#1f8a5b"; return "var(--mute)"; };
+  const cdvRow = (k, v) => `<div class="cdv-row"><span>${estimText(k)}</span><b>${estimText(v)}</b></div>`;
+  const cdvLvl = (k, v) => v ? `<div class="cdv-lvl"><div class="k">${k}</div><div class="v" style="color:${lvlColor(v)}">${estimText(v)}</div></div>` : "";
   // Barème d'état par poste (saisie négo) : barres colorées page État.
   const POSTE_NIV = { neuf: { c: "#1f8a5b", f: 100, t: "Neuf / Refait" }, bon: { c: "#46a35a", f: 84, t: "Bon état" }, correct: { c: "#e0a800", f: 55, t: "Correct" }, aprevoir: { c: "#e0662a", f: 30, t: "À prévoir" } };
   const postes = (etat.postes && Array.isArray(etat.postes)) ? etat.postes.filter((p) => p && POSTE_NIV[p.niveau]) : [];
@@ -3740,6 +3759,23 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Caractéristiques détaillées non renseignées dans la fiche du bien.")}</p>`}
 </div>${rf(3)}</div>
 <div class="page">${rh}<div class="content">
+  <div class="h">Cadre de vie &amp; localisation${cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : ""}</div>
+  ${cdv ? `${cdv.mapUrl ? `<div class="cdv-map"><img src="${estimText(cdv.mapUrl)}" alt="Carte du secteur"><span class="cdv-pin"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"></path></svg></span></div>` : ""}
+  <div class="cdv-grid">
+    <div class="cdv-card"><div class="ch">À proximité</div>
+      ${cdvCom ? cdvRow("Écoles", (cdvCom.ecoles || 0) + " à moins d'1,5 km") + cdvRow("Commerces", (cdvCom.commerces || 0) + " à moins d'1 km") + cdvRow("Santé", (cdvCom.sante || 0) + " (pharmacie, médecin…)") + (cdvCom.gareKm != null ? cdvRow("Gare", estimText(cdvCom.gareNom) + " · " + cdvCom.gareKm + " km") : "") : `<div class="cdv-row">${todo("Commodités à charger")}</div>`}
+    </div>
+    <div class="cdv-card"><div class="ch">Accès aux pôles</div>
+      ${cdv.poles && cdv.poles.length ? cdv.poles.map((p) => cdvRow(p.nom, p.km + " km")).join("") : `<div class="cdv-row">${todo("—")}</div>`}
+    </div>
+  </div>
+  <div class="h mt">Risques (état des risques)</div>
+  ${cdvRisk ? `${cdvRisk.risques && cdvRisk.risques.length ? `<div class="cdv-risks">${cdvRisk.risques.map((r) => `<span class="cdv-risk">${estimText(r)}</span>`).join("")}</div>` : ""}
+  <div class="cdv-lvls">${cdvLvl("Potentiel radon", cdvRisk.radon)}${cdvLvl("Sismicité", cdvRisk.sismicite)}${cdvLvl("Retrait-gonflement argiles", cdvRisk.argiles)}</div>` : `<p style="font-size:11px;color:var(--mute)">${todo("Risques à charger par votre conseiller.")}</p>`}
+  <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
+  : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
+</div>${rf(4)}</div>
+<div class="page">${rh}<div class="content">
   <div class="h">État du logement &amp; prestations</div>
   <div class="etat-top">
     <div class="etat-stars">${stars}</div>
@@ -3769,7 +3805,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
       ${detail.charges ? chargeRow("Charges copro.", detail.charges) : ""}
     </div>
   </div>
-</div>${rf(4)}</div>
+</div>${rf(5)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Valeur vénale estimée</div>
   <div class="val"><div class="grid">
@@ -3791,7 +3827,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
   ${mComps.length ? `<div class="h mt">Biens comparables vendus</div><div class="comps">${mComps.map(compRow).join("")}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±25 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
-</div>${rf(5)}</div>
+</div>${rf(6)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
@@ -3804,7 +3840,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div></div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
-</div>${rf(6)}</div>
+</div>${rf(7)}</div>
 </body></html>`;
 }
 
@@ -5859,6 +5895,96 @@ async function applyHektorCompositionPieces(job, annonceId, payload) {
   return results;
 }
 
+// Tier 2 — listes d'alias des champs "standards" (consommes par la voie cleanFields).
+// Extraites ici comme SOURCE UNIQUE : utilisees par normalizeHektorAnnonceUpdatePayload ET
+// par synthesizeWizardFieldsForPending (qui doit EXCLURE ces champs de hektor_wizard_fields
+// pour eviter le double-traitement). Ne pas dupliquer cette liste ailleurs.
+const HEKTOR_CLEANFIELD_TEXT_KEYS = [
+  ["title", ["title", "titre"]],
+  ["description", ["description", "corps"]],
+  ["address", ["address", "adresse", "ADRESSE_COMPL"]],
+  ["postal_code", ["postal_code", "postalCode", "code_postal", "codepublique"]],
+  ["city", ["city", "ville", "villepublique"]],
+  ["building", ["building", "immeuble"]],
+  ["transport", ["transport", "TRANSPORT"]],
+  ["proximity", ["proximity", "proximite", "PROXIMITE"]],
+  ["environment", ["environment", "environnement", "ENVIRONNEMENT"]],
+  ["kitchen", ["kitchen", "cuisine", "CUISINE"]],
+  ["exposure", ["exposure", "exposition", "EXPOSITION"]],
+  ["view", ["view", "vue", "vuee"]],
+  ["garden", ["garden", "jardin", "JARDIN", "JARDIN-"]],
+  ["pool", ["pool", "piscine", "PISCINE", "PISCINE-"]],
+  ["terrace", ["terrace", "terrasse", "TERRASSE"]],
+  ["interior_state", ["interior_state", "interiorState", "etat_interieur", "ETAT_INTERIEUR"]],
+  ["exterior_state", ["exterior_state", "exteriorState", "etat_exterieur", "ETAT_EXTERIEUR"]],
+  ["dpe_value", ["dpe_value", "dpeValue", "DPE", "dpe_cons"]],
+  ["ges_value", ["ges_value", "gesValue", "GES", "dpe_ges"]],
+  ["diagnostic_risk_comment", ["diagnostic_risk_comment", "diagnosticRiskComment", "diagnostic_note", "diagnosticNote", "diag_risques_nat_tech_commentaire"]],
+  ["mandate_number", ["mandate_number", "mandateNumber", "NO_MANDAT"]],
+  ["mandate_type", ["mandate_type", "mandateType"]],
+  ["mandate_start_date", ["mandate_start_date", "mandateStartDate"]],
+  ["mandate_end_date", ["mandate_end_date", "mandateEndDate"]],
+];
+const HEKTOR_CLEANFIELD_NUMBER_KEYS = [
+  ["price", ["price", "prix"]],
+  ["net_seller_price", ["net_seller_price", "netSellerPrice", "PRIXNETVENDEUR"]],
+  ["surface", ["surface", "surfappart", "surface_habitable"]],
+  ["carrez_surface", ["carrez_surface", "carrezSurface", "SURF_CARREZ"]],
+  ["room_count", ["room_count", "roomCount", "nbpieces"]],
+  ["bedroom_count", ["bedroom_count", "bedroomCount", "NB_CHAMBRES"]],
+  ["floor", ["floor", "etage", "ETAGE"]],
+  ["level_count", ["level_count", "levelCount", "NB_NIVEAUX"]],
+  ["bathroom_count", ["bathroom_count", "bathroomCount", "NB_SDB", "SDB"]],
+  ["shower_room_count", ["shower_room_count", "showerRoomCount", "NB_SE", "SE", "SDE"]],
+  ["wc_count", ["wc_count", "wcCount", "NB_WC", "WC"]],
+  ["land_surface", ["land_surface", "landSurface", "surfterrain"]],
+  ["garden_surface", ["garden_surface", "gardenSurface", "SURFACE_JARDIN"]],
+  ["terrace_count", ["terrace_count", "terraceCount", "NB_TERRASSE"]],
+  ["garage_count", ["garage_count", "garageCount", "GARAGE_BOX"]],
+  ["garage_surface", ["garage_surface", "garageSurface", "SURFACE_GARAGE"]],
+  ["parking_inside_count", ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]],
+  ["parking_outside_count", ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]],
+  ["construction_year", ["construction_year", "constructionYear", "ANNEE_CONS", "ANNEE_CONSTRUCTION"]],
+  ["copro_lots", ["copro_lots", "coproLots", "copropriete_nb_lot"]],
+  ["copro_charges", ["copro_charges", "coproCharges", "CHARGES"]],
+  ["copro_quote_part", ["copro_quote_part", "coproQuotePart", "copropriete_quote_part"]],
+  ["copro_works_fund", ["copro_works_fund", "coproWorksFund", "montant_fonds_travaux"]],
+  ["fees", ["fees", "HONORAIRES", "honoraires"]],
+  ["latitude", ["latitude", "lat"]],
+  ["longitude", ["longitude", "lng", "lon"]],
+];
+const HEKTOR_CLEANFIELD_ALIASES = new Set(
+  [...HEKTOR_CLEANFIELD_TEXT_KEYS, ...HEKTOR_CLEANFIELD_NUMBER_KEYS].flatMap(([, aliases]) => aliases),
+);
+
+// Tier 2 — edition optimiste : les champs arrivent A PLAT (pas de hektor_wizard_fields).
+// La voie standard lit le plat (champs typés OK) mais la voie wizard ne lit QUE
+// hektor_wizard_fields -> les equipements (EAU, CAVE, alarme, surfaces annexes...) etaient
+// PERDUS. On reconstruit hektor_wizard_fields = champs a plat NON consommes par cleanFields
+// (=> aucun double-traitement : un champ = une seule voie). Ne touche que le cas optimiste.
+function synthesizeWizardFieldsForPending(payload) {
+  if (!payload || typeof payload !== "object") return;
+  const existing = exactHektorWizardFields(payload);
+  if (existing && Object.keys(existing).length) return; // deja niche (chemin manuel/creation)
+  const source = payload.fields_json && typeof payload.fields_json === "object"
+    ? payload.fields_json
+    : (payload.fields && typeof payload.fields === "object" ? payload.fields : payload);
+  if (!source || typeof source !== "object") return;
+  const meta = new Set([
+    "from_pending", "base_snapshot", "app_dossier_id", "hektor_annonce_id", "source",
+    "push_after", "fields_json", "fields", "hektor_wizard_fields", "wizard_fields", "wizardFields",
+  ]);
+  const wizard = {};
+  for (const [k, v] of Object.entries(source)) {
+    if (meta.has(k)) continue;
+    if (HEKTOR_CLEANFIELD_ALIASES.has(k)) continue;   // gere par cleanFields -> reste au top-level
+    if (HEKTOR_CHAUFFAGE_FIELD_KEYS.has(k)) continue; // gere par hektorChauffageFromPayload
+    if (v === undefined || v === null) continue;
+    wizard[k] = v;
+  }
+  if (Object.keys(wizard).length) payload.hektor_wizard_fields = wizard;
+}
+
 function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
   const baseFields = payload && payload.fields_json && typeof payload.fields_json === "object" ? payload.fields_json : payload.fields || payload;
   const fields = {
@@ -5870,60 +5996,8 @@ function normalizeHektorAnnonceUpdatePayload(payload, options = {}) {
     ...fields,
   };
   const clean = {};
-  const textKeys = [
-    ["title", ["title", "titre"]],
-    ["description", ["description", "corps"]],
-    ["address", ["address", "adresse", "ADRESSE_COMPL"]],
-    ["postal_code", ["postal_code", "postalCode", "code_postal", "codepublique"]],
-    ["city", ["city", "ville", "villepublique"]],
-    ["building", ["building", "immeuble"]],
-    ["transport", ["transport", "TRANSPORT"]],
-    ["proximity", ["proximity", "proximite", "PROXIMITE"]],
-    ["environment", ["environment", "environnement", "ENVIRONNEMENT"]],
-    ["kitchen", ["kitchen", "cuisine", "CUISINE"]],
-    ["exposure", ["exposure", "exposition", "EXPOSITION"]],
-    ["view", ["view", "vue", "vuee"]],
-    ["garden", ["garden", "jardin", "JARDIN", "JARDIN-"]],
-    ["pool", ["pool", "piscine", "PISCINE", "PISCINE-"]],
-    ["terrace", ["terrace", "terrasse", "TERRASSE"]],
-    ["interior_state", ["interior_state", "interiorState", "etat_interieur", "ETAT_INTERIEUR"]],
-    ["exterior_state", ["exterior_state", "exteriorState", "etat_exterieur", "ETAT_EXTERIEUR"]],
-    ["dpe_value", ["dpe_value", "dpeValue", "DPE", "dpe_cons"]],
-    ["ges_value", ["ges_value", "gesValue", "GES", "dpe_ges"]],
-    ["diagnostic_risk_comment", ["diagnostic_risk_comment", "diagnosticRiskComment", "diagnostic_note", "diagnosticNote", "diag_risques_nat_tech_commentaire"]],
-    ["mandate_number", ["mandate_number", "mandateNumber", "NO_MANDAT"]],
-    ["mandate_type", ["mandate_type", "mandateType"]],
-    ["mandate_start_date", ["mandate_start_date", "mandateStartDate"]],
-    ["mandate_end_date", ["mandate_end_date", "mandateEndDate"]],
-  ];
-  const numberKeys = [
-    ["price", ["price", "prix"]],
-    ["net_seller_price", ["net_seller_price", "netSellerPrice", "PRIXNETVENDEUR"]],
-    ["surface", ["surface", "surfappart", "surface_habitable"]],
-    ["carrez_surface", ["carrez_surface", "carrezSurface", "SURF_CARREZ"]],
-    ["room_count", ["room_count", "roomCount", "nbpieces"]],
-    ["bedroom_count", ["bedroom_count", "bedroomCount", "NB_CHAMBRES"]],
-    ["floor", ["floor", "etage", "ETAGE"]],
-    ["level_count", ["level_count", "levelCount", "NB_NIVEAUX"]],
-    ["bathroom_count", ["bathroom_count", "bathroomCount", "NB_SDB", "SDB"]],
-    ["shower_room_count", ["shower_room_count", "showerRoomCount", "NB_SE", "SE", "SDE"]],
-    ["wc_count", ["wc_count", "wcCount", "NB_WC", "WC"]],
-    ["land_surface", ["land_surface", "landSurface", "surfterrain"]],
-    ["garden_surface", ["garden_surface", "gardenSurface", "SURFACE_JARDIN"]],
-    ["terrace_count", ["terrace_count", "terraceCount", "NB_TERRASSE"]],
-    ["garage_count", ["garage_count", "garageCount", "GARAGE_BOX"]],
-    ["garage_surface", ["garage_surface", "garageSurface", "SURFACE_GARAGE"]],
-    ["parking_inside_count", ["parking_inside_count", "parkingInsideCount", "NB_PARK_INT"]],
-    ["parking_outside_count", ["parking_outside_count", "parkingOutsideCount", "NB_PARK_EXT"]],
-    ["construction_year", ["construction_year", "constructionYear", "ANNEE_CONS", "ANNEE_CONSTRUCTION"]],
-    ["copro_lots", ["copro_lots", "coproLots", "copropriete_nb_lot"]],
-    ["copro_charges", ["copro_charges", "coproCharges", "CHARGES"]],
-    ["copro_quote_part", ["copro_quote_part", "coproQuotePart", "copropriete_quote_part"]],
-    ["copro_works_fund", ["copro_works_fund", "coproWorksFund", "montant_fonds_travaux"]],
-    ["fees", ["fees", "HONORAIRES", "honoraires"]],
-    ["latitude", ["latitude", "lat"]],
-    ["longitude", ["longitude", "lng", "lon"]],
-  ];
+  const textKeys = HEKTOR_CLEANFIELD_TEXT_KEYS;
+  const numberKeys = HEKTOR_CLEANFIELD_NUMBER_KEYS;
   const skippedFinancial = new Set(options.skipFinancial ? ["price", "net_seller_price", "copro_charges", "fees"] : []);
   for (const [key, aliases] of textKeys) {
     if (skippedFinancial.has(key)) continue;
@@ -6145,6 +6219,10 @@ async function applyCreatedAnnonceInitialFields(job, annonceId, payload, options
 async function handleUpdateHektorAnnonceFields(job) {
   const payload = safeJsonParse(job.payload_json);
   const fromPending = payload.from_pending === true;  // Tier 2 : push optimiste débouncé
+  // Tier 2 : l'edition optimiste envoie les champs A PLAT. On reconstruit la boite
+  // hektor_wizard_fields (equipements/surfaces annexes) pour que la voie wizard les voie,
+  // sinon ils sont silencieusement perdus. Sans recouvrement avec la voie standard.
+  if (fromPending) synthesizeWizardFieldsForPending(payload);
   let dossier = null;
   try {
     dossier = await loadDossier(job);
