@@ -3415,6 +3415,38 @@ function estimEnrichDetail(j) {
   };
 }
 
+// Commodités OSM via Overpass — appelé depuis le worker (IP fiable, contrairement
+// au navigateur (CORS) et à Render (souvent bloqué)). Renvoie counts + gare proche.
+function estimHaversineKm(lat1, lon1, lat2, lon2) {
+  const r = 6371, d = Math.PI / 180;
+  const a = Math.sin((lat2 - lat1) * d / 2) ** 2 + Math.cos(lat1 * d) * Math.cos(lat2 * d) * Math.sin((lon2 - lon1) * d / 2) ** 2;
+  return r * 2 * Math.asin(Math.sqrt(a));
+}
+async function fetchCommodites(lat, lon) {
+  const q = `[out:json][timeout:25];(nwr[amenity=school](around:1500,${lat},${lon});nwr[shop](around:1000,${lat},${lon});nwr[amenity~"pharmacy|doctors|hospital|clinic"](around:1500,${lat},${lon});nwr[railway=station](around:8000,${lat},${lon}););out center tags 250;`;
+  const hosts = ["https://overpass-api.de/api/interpreter", "https://lz4.overpass-api.de/api/interpreter"];
+  for (const host of hosts) {
+    try {
+      const r = await fetch(host, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "GTI-Immobilier-Estimation/1.0 (contact@gti-immobilier.fr)" }, body: "data=" + encodeURIComponent(q) });
+      if (!r.ok) continue;
+      const j = await r.json();
+      let ecoles = 0, commerces = 0, sante = 0, gareNom = null, gareKm = null;
+      for (const el of (j.elements || [])) {
+        const t = el.tags || {};
+        if (t.amenity === "school") ecoles++;
+        else if (t.shop) commerces++;
+        else if (["pharmacy", "doctors", "hospital", "clinic"].includes(t.amenity)) sante++;
+        else if (t.railway === "station") {
+          const elat = el.lat || (el.center && el.center.lat), elon = el.lon || (el.center && el.center.lon);
+          if (elat && elon) { const km = Math.round(estimHaversineKm(lat, lon, elat, elon) * 10) / 10; if (gareKm == null || km < gareKm) { gareKm = km; gareNom = t.name || "Gare"; } }
+        }
+      }
+      return { ecoles, commerces, sante, gareNom, gareKm };
+    } catch (_) { /* miroir suivant */ }
+  }
+  return null;
+}
+
 async function loadEstimationDetail(appDossierId) {
   try {
     if (!appDossierId) return {};
@@ -3950,6 +3982,15 @@ async function handleGenerateEstimationPdf(job) {
   });
 
   const detail = await loadEstimationDetail(dossier.app_dossier_id || job.app_dossier_id);
+  // Commodités : (re)calculées côté worker (IP fiable). Le proxy front/Render peut
+  // échouer (Overpass bloque souvent les datacenters) -> on garantit la donnée ici.
+  if (payload.cadreDeVie && payload.cadreDeVie.ok) {
+    const cdvLat = Number(payload.cadreDeVie.lat), cdvLon = Number(payload.cadreDeVie.lon);
+    if (Number.isFinite(cdvLat) && Number.isFinite(cdvLon) && cdvLat && cdvLon) {
+      try { const com = await fetchCommodites(cdvLat, cdvLon); if (com) payload.cadreDeVie.commodites = com; }
+      catch (_) { /* best effort */ }
+    }
+  }
   const html = estimationAvisValeurHtmlPremium(payload, dossier, detail);
   const pdfBuffer = await renderHtmlToPdfBuffer(html);
 

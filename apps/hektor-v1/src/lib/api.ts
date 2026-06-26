@@ -2524,6 +2524,8 @@ export async function loadDvfComparables(input: {
 // (table app_commune_risques pré-chargée), distances aux pôles régionaux (calcul).
 export type CadreDeVie = {
   ok: boolean
+  lat?: number
+  lon?: number
   insee?: string | null
   commune?: string | null
   mapUrl?: string | null
@@ -2585,7 +2587,7 @@ export async function loadCadreDeVie(input: { lat: number; lon: number }): Promi
   // 5) Distances aux pôles régionaux (calcul).
   const poles = CDV_POLES.map((p) => ({ nom: p.nom, km: Math.round(cdvKm(lat, lon, p.lat, p.lon)) })).sort((a, b) => a.km - b.km).slice(0, 3)
 
-  return { ok: true, insee, commune, mapUrl, commodites, poles, risques }
+  return { ok: true, lat, lon, insee, commune, mapUrl, commodites, poles, risques }
 }
 
 export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
