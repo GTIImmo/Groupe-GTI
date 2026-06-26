@@ -12,6 +12,12 @@
    - Police : on hérite de --ds-font-sans (Inter) déjà chargée par l'app.
    ========================================================================= */
 
+/* Calque création optimiste (mode estimation) : libellé d'attente + bouton retirer en erreur. */
+.estim-v2 .ev2-actions.is-provisional{display:flex;align-items:center;justify-content:flex-end;}
+.estim-v2 .ev2-prov-wait{font-size:12px;font-weight:600;color:var(--gti-brand,#c5005f);opacity:.85;white-space:nowrap;}
+.estim-v2 .av-prov-dismiss{font-size:11px;font-weight:700;padding:3px 11px;border-radius:99px;cursor:pointer;background:#fdecec;color:#b94a48;border:1px solid rgba(185,74,72,.3);}
+.estim-v2 .av-prov-dismiss:hover{background:#b94a48;color:#fff;}
+
 .estim-v2 {
   /* Marque */
   --gti-brand: #c5005f;

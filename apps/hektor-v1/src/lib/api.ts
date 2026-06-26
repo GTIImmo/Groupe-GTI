@@ -3764,6 +3764,14 @@ function provisionalToMandatRecord(row: AnnonceProvisionalRow): MandatRecord {
   } as unknown as MandatRecord
 }
 
+// Retire une provisoire en erreur du listing de l'utilisateur (RPC bornée à auth.uid()).
+export async function dismissAnnonceProvisional(token: string): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const t = (token || '').trim()
+  if (!t) return
+  await supabase.rpc('app_dismiss_annonce_provisional', { p_token: t })
+}
+
 export async function loadMandatsPage({
   filters,
   page,

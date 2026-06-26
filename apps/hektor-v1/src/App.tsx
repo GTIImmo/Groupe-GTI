@@ -93,6 +93,7 @@ import {
   createRestoreHektorAnnonceJob,
   createHektorDraftAnnonceJob,
   createHektorDraftAnnonceJobOptimistic,
+  dismissAnnonceProvisional,
   scanDraftAnnonceSheet,
   createMatterportActionJob,
   createConsoleDocumentSignedUrl,
@@ -16884,6 +16885,18 @@ function MandatsScreen(props: {
     const t = window.setTimeout(() => setRapproNotice(null), 4000)
     return () => window.clearTimeout(t)
   }, [rapproNotice])
+  // Calque création optimiste : provisoires en erreur retirées localement (dismiss),
+  // masquées instantanément en attendant le sweep serveur / le prochain rechargement.
+  const [dismissedProvisional, setDismissedProvisional] = useState<Set<string>>(new Set())
+  const handleDismissProvisional = (token: string | null | undefined) => {
+    const t = (token ?? '').trim()
+    if (!t) return
+    setDismissedProvisional((prev) => new Set(prev).add(t))
+    void dismissAnnonceProvisional(t).catch(() => {})
+  }
+  const visibleMandats = dismissedProvisional.size
+    ? props.mandats.filter((m) => !(m.is_provisional && m.creation_token && dismissedProvisional.has(m.creation_token)))
+    : props.mandats
   const eligibleIdsKey = isEstimationMode ? '' : props.mandats
     .filter((m) => m.statut_annonce === 'Actif' && m.diffusable === '1')
     .map((m) => m.app_dossier_id).join(',')
@@ -16970,7 +16983,7 @@ function MandatsScreen(props: {
               )}
             </thead>
             <tbody>
-              {props.mandats.map((item) => {
+              {visibleMandats.map((item) => {
                 const isSelected = item.app_dossier_id === props.selectedMandat?.app_dossier_id
                 const activeRequest = latestDiffusionRequest(props.requests, item.app_dossier_id)
                 const hasLeboncoin = hasPortalEnabled(item, ['leboncoin'])
@@ -17039,16 +17052,19 @@ function MandatsScreen(props: {
                 const avShowRappro = Boolean(props.onOpenRapprochement) && !isLightweight
                 const avEligible = item.statut_annonce === 'Actif' && item.diffusable === '1'
                 return (
-                  <Fragment key={item.app_dossier_id}>
+                  <Fragment key={item.is_provisional ? `prov-${item.creation_token}` : item.app_dossier_id}>
                     <tr
-                      className={`${isSelected ? 'is-selected' : ''} ${props.loading ? 'is-refreshing-row' : ''}`.trim()}
+                      className={`${isSelected ? 'is-selected' : ''} ${props.loading ? 'is-refreshing-row' : ''} ${item.is_provisional ? `is-provisional ${item.provisional_status === 'error' ? 'is-provisional-error' : ''}` : ''}`.trim()}
                       onClick={() => {
+                        // Provisoire (calque création) : pas de fiche détail tant que le vrai bien n'existe pas.
+                        if (item.is_provisional) return
                         props.onSelectMandat(item.app_dossier_id)
                         if (isLightweight) props.onOpenLightweightDetail(item)
                         else props.onOpenDetailPage(item.app_dossier_id)
                       }}
                       onDoubleClick={(event) => {
                         event.preventDefault()
+                        if (item.is_provisional) return
                         props.onSelectMandat(item.app_dossier_id)
                         if (isLightweight) props.onOpenLightweightDetail(item)
                         else props.onOpenDetailPage(item.app_dossier_id)
@@ -17099,7 +17115,13 @@ function MandatsScreen(props: {
                                actions résolvent le contact propriétaire de l'annonce au niveau App
                                (tél direct, modale RDV Google, PDF d'estimation). Spinner pendant la
                                résolution ; repli sur la fiche détail si aucun contact exploitable. */}
-                            {(() => {
+                            {item.is_provisional ? (
+                              <div className="ev2-actions is-provisional" onClick={(event) => event.stopPropagation()}>
+                                {item.provisional_status === 'error'
+                                  ? <button type="button" className="av-prov-dismiss" title="Retirer cette création échouée" onClick={(event) => { event.stopPropagation(); handleDismissProvisional(item.creation_token) }}>Retirer</button>
+                                  : <span className="ev2-prov-wait">En création…</span>}
+                              </div>
+                            ) : (() => {
                               const ownerBusy = props.ownerActionBusyId === item.app_dossier_id
                               return (
                                 <div className={`ev2-actions ${ownerBusy ? 'is-busy' : ''}`} onClick={(event) => event.stopPropagation()}>
@@ -17148,6 +17170,9 @@ function MandatsScreen(props: {
                             <div className="av-statut">
                               {item.is_brouillon ? <span className="av-pill av-pill-brouillon">En création</span> : <span className={`av-pill ${avStatut.c}`}>{avStatut.l}</span>}
                               {avAlerts.length ? <div className="av-al-row">{avAlerts.map((a, ai) => <span key={ai} className={`av-al ${a.cls}`}>{a.label}</span>)}</div> : null}
+                              {item.is_provisional && item.provisional_status === 'error' ? (
+                                <button type="button" className="av-prov-dismiss" title="Retirer cette création échouée" onClick={(event) => { event.stopPropagation(); handleDismissProvisional(item.creation_token) }}>Retirer</button>
+                              ) : null}
                             </div>
                           </td>
                           <td>
@@ -17361,7 +17386,8 @@ function MandatRegisterScreen(props: {
                   </tr>
                 </thead>
                 <tbody>
-                  {props.mandats.map((item) => {
+                  {/* Calque création optimiste : les provisoires n'ont pas leur place dans le registre légal. */}
+                  {props.mandats.filter((item) => !item.is_provisional).map((item) => {
                     const rowKey = mandateRegisterRowKey(item)
                     const isSelected = rowKey === (props.selectedMandat ? mandateRegisterRowKey(props.selectedMandat) : null)
                     const mandantsLabel = mandateRegisterMandantsLabel(item)
