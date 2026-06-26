@@ -13,6 +13,11 @@
    ========================================================================= */
 
 /* Calque création optimiste (mode estimation) : libellé d'attente + bouton retirer en erreur. */
+.estim-v2 .ev2-stade.crea{color:#2f6f8a;}
+.estim-v2 .ev2-stade.crea .dot{background:#2f6f8a;animation:ev2-prov-pulse 1.1s ease-in-out infinite;}
+.estim-v2 .ev2-stade.err{color:#b94a48;}
+.estim-v2 .ev2-stade.err .dot{background:#b94a48;}
+@keyframes ev2-prov-pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 .estim-v2 .ev2-actions.is-provisional{display:flex;align-items:center;justify-content:flex-end;}
 .estim-v2 .ev2-prov-wait{font-size:12px;font-weight:600;color:var(--gti-brand,#c5005f);opacity:.85;white-space:nowrap;}
 .estim-v2 .av-prov-dismiss{font-size:11px;font-weight:700;padding:3px 11px;border-radius:99px;cursor:pointer;background:#fdecec;color:#b94a48;border:1px solid rgba(185,74,72,.3);}

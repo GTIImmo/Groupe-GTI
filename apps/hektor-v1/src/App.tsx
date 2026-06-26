@@ -17105,7 +17105,9 @@ function MandatsScreen(props: {
                               : <div className="ev2-estim-val none">Non estimé</div>}
                           </td>
                           <td>
-                            {(() => {
+                            {item.is_provisional ? (
+                              <span className={`ev2-stade ${item.provisional_status === 'error' ? 'err' : 'crea'}`}><span className="dot" />{item.provisional_status === 'error' ? 'Erreur de création' : 'En création…'}</span>
+                            ) : (() => {
                               const st = estimationStade(item)
                               return (
                                 <>
