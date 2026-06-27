@@ -3490,20 +3490,67 @@ async function fetchCommodites(lat, lon) {
       if (!r.ok) continue;
       const j = await r.json();
       let ecoles = 0, commerces = 0, sante = 0, gareNom = null, gareKm = null;
+      const pois = [];  // coords des POI pour les pins sur la carte (visuel commodités)
       for (const el of (j.elements || [])) {
         const t = el.tags || {};
-        if (t.amenity === "school") ecoles++;
-        else if (t.shop) commerces++;
-        else if (["pharmacy", "doctors", "hospital", "clinic"].includes(t.amenity)) sante++;
+        const elat = el.lat || (el.center && el.center.lat), elon = el.lon || (el.center && el.center.lon);
+        let type = null;
+        if (t.amenity === "school") { ecoles++; type = "ecole"; }
+        else if (t.shop) { commerces++; type = "commerce"; }
+        else if (["pharmacy", "doctors", "hospital", "clinic"].includes(t.amenity)) { sante++; type = "sante"; }
         else if (t.railway === "station") {
-          const elat = el.lat || (el.center && el.center.lat), elon = el.lon || (el.center && el.center.lon);
           if (elat && elon) { const km = Math.round(estimHaversineKm(lat, lon, elat, elon) * 10) / 10; if (gareKm == null || km < gareKm) { gareKm = km; gareNom = t.name || "Gare"; } }
         }
+        if (type && elat && elon) pois.push({ lat: elat, lon: elon, type, km: estimHaversineKm(lat, lon, elat, elon) });
       }
-      return { ecoles, commerces, sante, gareNom, gareKm };
+      // Les plus proches d'abord, plafonnés (anti-saturation de la carte).
+      pois.sort((a, b) => a.km - b.km);
+      const cap = { ecole: 0, commerce: 0, sante: 0 };
+      const poisMap = pois.filter((p) => (cap[p.type] = (cap[p.type] || 0) + 1) <= 8)
+        .map((p) => ({ lat: p.lat, lon: p.lon, type: p.type }));
+      return { ecoles, commerces, sante, gareNom, gareKm, pois: poisMap };
     } catch (_) { /* miroir suivant */ }
   }
   return null;
+}
+
+// Profil commune INSEE (pré-chargé) : population + série + revenu médian, avec repères
+// département (médiane) et France. Lu à la génération, comme DVF/risques.
+const FRANCE_REVENU_MEDIAN = 22040; // niveau de vie médian France (INSEE FiLoSoFi, €/an)
+async function loadCommuneInsee(insee, dept) {
+  if (!insee) return null;
+  try {
+    const rows = await supabaseRequest(
+      `app_commune_insee?code_insee=eq.${encodeURIComponent(String(insee).trim())}&select=commune,population,population_annee,pop_evolution,pop_tendance,revenu_median,pop_series&limit=1`,
+      { method: "GET" }
+    ).catch(() => null);
+    const r = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    if (!r) return null;
+    let deptRevenu = null;
+    if (dept) {
+      const dr = await supabaseRequest(
+        `app_commune_insee?dept=eq.${encodeURIComponent(String(dept).trim())}&revenu_median=not.is.null&select=revenu_median`,
+        { method: "GET" }
+      ).catch(() => null);
+      if (Array.isArray(dr) && dr.length) {
+        const vals = dr.map((x) => Number(x.revenu_median)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+        if (vals.length) deptRevenu = vals[Math.floor(vals.length / 2)];
+      }
+    }
+    let series = null;
+    try { series = typeof r.pop_series === "string" ? JSON.parse(r.pop_series) : r.pop_series; } catch (_) { /* tolérant */ }
+    return {
+      commune: r.commune || null,
+      population: r.population != null ? Number(r.population) : null,
+      population_annee: r.population_annee != null ? Number(r.population_annee) : null,
+      pop_evolution: r.pop_evolution != null ? Number(r.pop_evolution) : null,
+      pop_tendance: r.pop_tendance || null,
+      revenu_median: r.revenu_median != null ? Number(r.revenu_median) : null,
+      pop_series: series && typeof series === "object" ? series : null,
+      dept_revenu_median: deptRevenu,
+      france_revenu_median: FRANCE_REVENU_MEDIAN,
+    };
+  } catch (_) { return null; }
 }
 
 async function loadEstimationDetail(appDossierId) {
@@ -3673,7 +3720,150 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cf-row .i{width:24px;height:24px;flex:none;border-radius:7px;background:var(--cream);display:grid;place-items:center;color:var(--brand)}.cf-row .i svg{width:12px;height:12px}
 .disc{font-size:9.5px;color:var(--body);line-height:1.5;padding:9px 13px;background:var(--cream);border-radius:9px;border-left:3px solid var(--brand);margin-top:10px}.disc b{color:var(--ink)}
 .legal{font-size:8px;color:var(--mute);line-height:1.55;margin-top:10px}
+/* ===== Visuels ===== */
+.energy2{display:flex;gap:24px;margin-top:6px}
+.rg,.rg-img{flex:1;min-width:0}.rg-h{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px}
+.rg-row{display:flex;align-items:center;gap:7px;height:18px;margin-bottom:3px}
+.rg-bar{display:inline-flex;align-items:center;padding-left:8px;color:#fff;font-weight:800;font-size:9.5px;height:14px;border-radius:0 7px 7px 0}
+.rg-row.on .rg-bar{height:18px;font-size:11px;box-shadow:0 2px 4px rgba(0,0,0,.22)}
+.rg-cur{font-size:11px;font-weight:800}.rg-na{font-size:10px;color:var(--mute);padding:8px 0}
+.rg-img img{width:100%;max-height:150px;object-fit:contain;display:block}
+.dn{display:flex;align-items:center;gap:22px}.dn-c1{font-family:'Spectral',serif;font-size:27px;font-weight:700;fill:var(--ink)}.dn-c2{font-size:10px;fill:var(--mute);text-transform:uppercase;letter-spacing:1px}
+.dn-side{flex:1}.dn-leg{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.dn-li{display:flex;align-items:center;gap:7px;font-size:10.5px}.dn-li b{margin-left:auto;font-size:12px;color:var(--ink)}.dn .dot{width:9px;height:9px;border-radius:3px}
+.pics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pic{display:flex;align-items:center;gap:8px}.pic-ic{width:28px;height:28px;border-radius:8px;background:var(--cream);display:grid;place-items:center;color:var(--brand);flex:none}.pic-ic svg{width:15px;height:15px}
+.pic b{font-size:12px;color:var(--ink);display:block;line-height:1.1}.pic small{font-size:9px;color:var(--mute)}
+.jgs{display:flex;flex-direction:column;gap:11px;margin-top:4px}
+.jg-top{display:flex;justify-content:space-between;margin-bottom:5px}.jg-l{font-size:11px;font-weight:600;color:var(--ink)}.jg-v{font-size:10.5px;font-weight:700}
+.jg-bar{display:flex;gap:4px}.jg-c{flex:1;height:8px;border-radius:4px;background:#ece5dd}
+.cdv-map .mp{position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--line);display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.35);transform:translate(-50%,-50%)}
+.cdv-map .mp svg{width:14px;height:14px}
+.cdv-map .mp.home{width:30px;height:30px;border:none;background:none;box-shadow:none;transform:translate(-50%,-100%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.cdv-map .mp.ecole{border-color:#1d4ed8}.cdv-map .mp.commerce{border-color:#0e7a4b}.cdv-map .mp.sante{border-color:var(--brand)}
+.cdv-leg{display:flex;gap:14px;margin-top:9px;font-size:9.5px;color:var(--body)}.cdv-leg span{display:inline-flex;align-items:center;gap:5px}.cdv-leg i{width:9px;height:9px;border-radius:50%}
+.commune-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.cm-h{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:.6px;text-transform:uppercase;margin:4px 0 11px}
+.pop{display:flex;flex-direction:column}.pop-main{display:flex;flex-direction:column;align-items:flex-start}
+.pop-v{font-family:'Spectral',serif;font-size:32px;font-weight:700;color:var(--ink);line-height:1}.pop-l{font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 9px}
+.pop-badge{font-size:10px;font-weight:700;padding:4px 9px;border-radius:18px;display:inline-block}
+.pop-chart{margin-top:12px}.pop-ax{display:flex;justify-content:space-between;font-size:9px;color:var(--mute);margin-top:2px}
+.rev-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}.rev-l{width:120px;font-size:10.5px;color:var(--body)}.rev-row.hl .rev-l{font-weight:700;color:var(--brand)}
+.rev-track{flex:1;height:15px;background:var(--cream);border-radius:8px;overflow:hidden}.rev-bar{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#d98cae,#c9c2bc)}
+.rev-row.hl .rev-bar{background:linear-gradient(90deg,var(--brand),var(--brand-d))}
+.rev-v{width:70px;text-align:right;font-size:11.5px;font-weight:700;color:var(--ink)}.rev-note{font-size:9px;color:var(--mute);margin-top:5px}
 `;
+
+// ============================ VISUELS PDF (avis de valeur) ============================
+const ESTIM_DPECOL = { A: "#2a9d3f", B: "#57b03a", C: "#a0cf3a", D: "#f5d800", E: "#f3a712", F: "#ec6c1f", G: "#d7191c" };
+const ESTIM_POI_ICO = {
+  ecole: '<svg viewBox="0 0 24 24" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"><path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11v4c0 1 5 3 5 3s5-2 5-3v-4"/></svg>',
+  commerce: '<svg viewBox="0 0 24 24" fill="#fff" stroke="#0e7a4b" stroke-width="1.5"><path d="M4 8h16l-1 11H5z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>',
+  sante: '<svg viewBox="0 0 24 24" fill="#fff" stroke="#c5005f" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8" stroke="#c5005f" stroke-width="2"/></svg>',
+};
+
+// ① Réglette DPE/GES : image officielle si dispo (et réalisée), sinon réglette CSS depuis la lettre.
+function estimReglette(kind, letter, imgUrl) {
+  const img = String(imgUrl || "").trim();
+  if (img && !/nonEffectue/i.test(img)) {
+    return `<div class="rg-img"><div class="rg-h">${kind === "dpe" ? "DPE · consommation énergie" : "GES · émissions CO₂"}</div><img src="${estimText(img)}" alt="${kind.toUpperCase()}"></div>`;
+  }
+  const cls = String(letter || "").trim().toUpperCase();
+  const rows = ["A", "B", "C", "D", "E", "F", "G"].map((l, i) => {
+    const w = 38 + i * 9, on = l === cls;
+    return `<div class="rg-row${on ? " on" : ""}"><span class="rg-bar" style="width:${w}%;background:${ESTIM_DPECOL[l]}">${l}</span>${on ? `<span class="rg-cur" style="color:${ESTIM_DPECOL[l]}">◀</span>` : ""}</div>`;
+  }).join("");
+  return `<div class="rg"><div class="rg-h">${kind === "dpe" ? "DPE · consommation énergie" : "GES · émissions CO₂"}</div>${cls && ESTIM_DPECOL[cls] ? rows : `<div class="rg-na">${kind.toUpperCase()} à compléter</div>`}</div>`;
+}
+
+// ② Donut composition du bien (répartition des pièces) + pictos chiffrés.
+function estimDonut(detail, pieces, surface) {
+  const ch = Math.max(0, parseInt(pieces, 10) || 0);
+  const cb = Math.max(0, parseInt(detail.chambres, 10) || 0);
+  const eau = (parseInt(detail.sdb, 10) || 0) + (parseInt(detail.se, 10) || 0);
+  const autres = Math.max(0, ch - cb);
+  const segs = [{ l: "Chambres", v: cb, c: "#c5005f" }, { l: "Pièces d'eau", v: Math.max(1, eau), c: "#e0662a" }, { l: "Séjour + autres", v: Math.max(1, autres), c: "#8a0042" }].filter((s) => s.v > 0);
+  const tot = segs.reduce((s, x) => s + x.v, 0) || 1;
+  const R = 52, C = 2 * Math.PI * R; let a0 = 0;
+  const arcs = segs.map((s) => { const frac = s.v / tot, len = frac * C, off = C * (a0 / 360); a0 += frac * 360; return `<circle r="${R}" cx="70" cy="70" fill="none" stroke="${s.c}" stroke-width="18" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"></circle>`; }).join("");
+  const legend = segs.map((s) => `<div class="dn-li"><span class="dot" style="background:${s.c}"></span>${s.l}<b>${s.v}</b></div>`).join("");
+  const pic = (ic, n, l) => `<div class="pic"><span class="pic-ic">${ic}</span><div><b>${n}</b><small>${l}</small></div></div>`;
+  const I = {
+    bed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18h18M3 14h18M7 10V8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path></svg>',
+    bath: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"></path><path d="M6 12V6a2 2 0 0 1 2-2"></path></svg>',
+    surf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M9 21V9"></path></svg>',
+    room: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>',
+  };
+  return `<div class="dn"><svg viewBox="0 0 140 140" width="124" height="124">${arcs}<text x="70" y="64" text-anchor="middle" class="dn-c1">${ch || "—"}</text><text x="70" y="82" text-anchor="middle" class="dn-c2">pièces</text></svg>
+    <div class="dn-side"><div class="dn-leg">${legend}</div><div class="pics">${pic(I.bed, cb || "—", "chambres")}${pic(I.bath, eau || "—", "salles de bain/eau")}${pic(I.surf, surface ? surface + " m²" : "—", "surface")}${pic(I.room, ch || "—", "pièces")}</div></div></div>`;
+}
+
+// ③ Jauge de risque (5 crans, niveau coloré)
+function estimJauge(label, level) {
+  const s = String(level || "").toLowerCase();
+  if (!s) return "";
+  let n = 1, col = "#1f8a5b";
+  if (/élev|elev|fort|catégorie 3|categorie 3|zone 4|zone 5/.test(s)) { n = 4; col = "#d7191c"; }
+  else if (/modér|moder|moyen|catégorie 2|categorie 2|zone 3/.test(s)) { n = 3; col = "#f3a712"; }
+  else if (/faible|catégorie 1|categorie 1|zone 1|zone 2/.test(s)) { n = 2; col = "#1f8a5b"; }
+  const cells = Array.from({ length: 5 }, (_, i) => `<span class="jg-c" style="${i < n ? `background:${col}` : ""}"></span>`).join("");
+  return `<div class="jg"><div class="jg-top"><span class="jg-l">${estimText(label)}</span><span class="jg-v" style="color:${col}">${estimText(level)}</span></div><div class="jg-bar">${cells}</div></div>`;
+}
+
+// ④ Carte IGN + pins (bien + commodités). Bbox parsée depuis l'URL WMS (EPSG:3857).
+function estimMapMerc(lat, lon) { return { x: lon * 20037508.34 / 180, y: Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180 }; }
+function estimMapWithPins(cdv) {
+  if (!cdv || !cdv.mapUrl) return "";
+  const homeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
+  const bb = (String(cdv.mapUrl).match(/[?&]BBOX=([^&]+)/i) || [])[1];
+  const parts = bb ? bb.split(",").map(Number) : null;
+  const pins = [];
+  if (parts && parts.length === 4 && parts.every(Number.isFinite)) {
+    const [minx, miny, maxx, maxy] = parts;
+    const pct = (lat, lon) => { const p = estimMapMerc(lat, lon); return { x: (p.x - minx) / (maxx - minx) * 100, y: (maxy - p.y) / (maxy - miny) * 100 }; };
+    if (Number.isFinite(+cdv.lat) && Number.isFinite(+cdv.lon)) { const c = pct(+cdv.lat, +cdv.lon); pins.push(`<span class="mp home" style="left:${c.x}%;top:${c.y}%">${homeSvg}</span>`); }
+    const pois = (cdv.commodites && Array.isArray(cdv.commodites.pois)) ? cdv.commodites.pois : [];
+    let n = 0;
+    for (const p of pois) { if (!Number.isFinite(+p.lat) || !Number.isFinite(+p.lon)) continue; const c = pct(+p.lat, +p.lon); if (c.x >= 2 && c.x <= 98 && c.y >= 2 && c.y <= 98) { pins.push(`<span class="mp ${p.type}">${ESTIM_POI_ICO[p.type] || ""}</span>`.replace("<span ", `<span style="left:${c.x}%;top:${c.y}%" `)); if (++n >= 14) break; } }
+  } else if (Number.isFinite(+cdv.lat)) {
+    pins.push(`<span class="mp home" style="left:50%;top:50%">${homeSvg}</span>`);
+  }
+  return `<div class="cdv-map"><img src="${estimText(cdv.mapUrl)}" alt="Carte du secteur">${pins.join("")}</div>`;
+}
+
+// ⑤ Courbe d'évolution de la population (série INSEE complète).
+function estimPopChart(prof) {
+  if (!prof || !prof.population) return "";
+  const evoCol = (prof.pop_evolution || 0) >= 4 ? "#1f8a5b" : (prof.pop_evolution || 0) <= -4 ? "#d7191c" : "#e0a800";
+  const fmt = (n) => Number(n).toLocaleString("fr-FR");
+  const badge = `<span class="pop-badge" style="background:${evoCol}1a;color:${evoCol}">${estimText(prof.pop_tendance || "—")}${prof.pop_evolution != null ? ` · ${prof.pop_evolution > 0 ? "+" : ""}${prof.pop_evolution}% / 15 ans` : ""}</span>`;
+  let chart = "";
+  const ser = prof.pop_series && typeof prof.pop_series === "object" ? Object.entries(prof.pop_series).map(([y, v]) => [parseInt(y, 10), Number(v)]).filter(([y, v]) => y && v).sort((a, b) => a[0] - b[0]) : [];
+  if (ser.length >= 3) {
+    const W = 380, H = 96, P = 6;
+    const ys = ser.map((s) => s[1]), x0 = ser[0][0], x1 = ser[ser.length - 1][0];
+    const vmin = Math.min(...ys), vmax = Math.max(...ys), span = (vmax - vmin) || vmax * 0.1;
+    const X = (y) => P + (y - x0) / ((x1 - x0) || 1) * (W - 2 * P);
+    const Y = (v) => P + (1 - (v - (vmin - span * 0.15)) / ((vmax + span * 0.15) - (vmin - span * 0.15))) * (H - 2 * P);
+    const pts = ser.map((s) => `${X(s[0]).toFixed(1)},${Y(s[1]).toFixed(1)}`).join(" ");
+    const area = `${P},${H - P} ${pts} ${W - P},${H - P}`;
+    chart = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><polygon points="${area}" fill="${evoCol}14"></polygon><polyline points="${pts}" fill="none" stroke="${evoCol}" stroke-width="2.2"></polyline><circle cx="${X(x1).toFixed(1)}" cy="${Y(ser[ser.length - 1][1]).toFixed(1)}" r="3.4" fill="${evoCol}"></circle></svg>
+      <div class="pop-ax"><span>${x0}</span><span>${x1}</span></div>`;
+  }
+  return `<div class="pop"><div class="pop-main"><div class="pop-v">${fmt(prof.population)}</div><div class="pop-l">habitants${prof.population_annee ? " · " + prof.population_annee : ""}</div>${badge}</div><div class="pop-chart">${chart}</div></div>`;
+}
+
+// ⑥ Revenu médian comparatif (commune / département / France).
+function estimRevenuChart(prof) {
+  if (!prof || !prof.revenu_median) return "";
+  const fmt = (n) => Number(n).toLocaleString("fr-FR") + " €";
+  const rows = [
+    { l: (prof.commune || "Commune"), v: prof.revenu_median, hl: true },
+    prof.dept_revenu_median ? { l: "Département (médiane)", v: prof.dept_revenu_median } : null,
+    prof.france_revenu_median ? { l: "France", v: prof.france_revenu_median } : null,
+  ].filter(Boolean);
+  const max = Math.max(...rows.map((r) => r.v));
+  return `<div class="rev">${rows.map((r) => `<div class="rev-row${r.hl ? " hl" : ""}"><span class="rev-l">${estimText(r.l)}</span><span class="rev-track"><span class="rev-bar" style="width:${Math.round(r.v / max * 100)}%"></span></span><span class="rev-v">${fmt(r.v)}</span></div>`).join("")}<div class="rev-note">Niveau de vie médian annuel — INSEE FiLoSoFi</div></div>`;
+}
 
 function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   detail = detail || {};
@@ -3717,7 +3907,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
   const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
   const rh = `<div class="rh"><img src="${LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
-  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 7</span></div>`;
+  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 8</span></div>`;
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
 
@@ -3789,6 +3979,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const acquereursN = Math.max(0, parseInt(payload.acquereurs, 10) || 0);
   // Cadre de vie & risques (carte IGN + commodités + risques), passé par le front.
   const cdv = payload.cadreDeVie && payload.cadreDeVie.ok ? payload.cadreDeVie : null;
+  const dpeImg = detail.dpe_img || null, gesImg = detail.ges_img || null;
+  const inseeProfil = cdv && cdv.insee_profil ? cdv.insee_profil : null;
   const cdvCom = cdv && cdv.commodites ? cdv.commodites : null;
   const cdvRisk = cdv && cdv.risques ? cdv.risques : null;
   const lvlColor = (v) => { const s = String(v || "").toLowerCase(); if (/élev|elev|fort/.test(s)) return "#d7191c"; if (/moyen/.test(s)) return "#f3a712"; if (/faible/.test(s)) return "#1f8a5b"; return "var(--mute)"; };
@@ -3839,10 +4031,10 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     ${detail.copropriete ? cellSpec("Copropriété", estimText(detail.copropriete) + (detail.coproprieteNbLots ? ` · ${detail.coproprieteNbLots} lots` : ""), true) : ""}
     ${cellSpec("Localité", estimText(localite), !!localite)}
   </div>
-  <div class="energy">
-    <div class="epill"><div class="g" style="background:${dpe && dpeColors[dpe] ? dpeColors[dpe] : "#e4ddd2"}">${estimText(dpe || "—")}</div><div class="i"><div class="l">DPE</div><div class="d">${dpe ? "Diagnostic de performance" : todo("à compléter")}</div></div></div>
-    <div class="epill"><div class="g" style="background:${ges && dpeColors[ges] ? dpeColors[ges] : "#e4ddd2"}">${estimText(ges || "—")}</div><div class="i"><div class="l">GES</div><div class="d">${ges ? "Gaz à effet de serre" : todo("à compléter")}</div></div></div>
-  </div>
+  <div class="h mt">Performance énergétique</div>
+  <div class="energy2">${estimReglette("dpe", dpe, dpeImg)}${estimReglette("ges", ges, gesImg)}</div>
+  <div class="h mt">Composition du bien</div>
+  ${estimDonut(detail, pieces, surface)}
   <div class="h mt">Descriptif</div>
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
 </div>${rf(2)}</div>
@@ -3859,7 +4051,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
 </div>${rf(3)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Cadre de vie &amp; localisation${cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : ""}</div>
-  ${cdv ? `${cdv.mapUrl ? `<div class="cdv-map"><img src="${estimText(cdv.mapUrl)}" alt="Carte du secteur"><span class="cdv-pin"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"></path></svg></span></div>` : ""}
+  ${cdv ? `${estimMapWithPins(cdv)}
+  ${cdvCom && Array.isArray(cdvCom.pois) && cdvCom.pois.length ? `<div class="cdv-leg"><span><i style="background:var(--brand)"></i>Le bien</span><span><i style="background:#1d4ed8"></i>Écoles</span><span><i style="background:#0e7a4b"></i>Commerces</span><span><i style="background:#c5005f"></i>Santé</span></div>` : ""}
   <div class="cdv-grid">
     <div class="cdv-card"><div class="ch">À proximité</div>
       ${cdvCom ? cdvRow("Écoles", (cdvCom.ecoles || 0) + " à moins d'1,5 km") + cdvRow("Commerces", (cdvCom.commerces || 0) + " à moins d'1 km") + cdvRow("Santé", (cdvCom.sante || 0) + " (pharmacie, médecin…)") + (cdvCom.gareKm != null ? cdvRow("Gare", estimText(cdvCom.gareNom) + " · " + cdvCom.gareKm + " km") : "") : `<div class="cdv-row">${todo("Commodités à charger")}</div>`}
@@ -3870,10 +4063,17 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div>
   <div class="h mt">Risques (état des risques)</div>
   ${cdvRisk ? `${cdvRisk.risques && cdvRisk.risques.length ? `<div class="cdv-risks">${cdvRisk.risques.map((r) => `<span class="cdv-risk">${estimText(r)}</span>`).join("")}</div>` : ""}
-  <div class="cdv-lvls">${cdvLvl("Potentiel radon", cdvRisk.radon)}${cdvLvl("Sismicité", cdvRisk.sismicite)}${cdvLvl("Retrait-gonflement argiles", cdvRisk.argiles)}</div>` : `<p style="font-size:11px;color:var(--mute)">${todo("Risques à charger par votre conseiller.")}</p>`}
+  <div class="jgs">${estimJauge("Potentiel radon", cdvRisk.radon)}${estimJauge("Sismicité", cdvRisk.sismicite)}${estimJauge("Retrait-gonflement argiles", cdvRisk.argiles)}</div>` : `<p style="font-size:11px;color:var(--mute)">${todo("Risques à charger par votre conseiller.")}</p>`}
   <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
 </div>${rf(4)}</div>
+<div class="page">${rh}<div class="content">
+  <div class="h">Profil de la commune${inseeProfil && inseeProfil.commune ? ` · ${estimText(inseeProfil.commune)}` : (cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : "")}</div>
+  ${inseeProfil ? `<div class="cm-h">Population</div>${estimPopChart(inseeProfil)}
+  <div class="cm-h" style="margin-top:22px">Revenu des ménages</div>${estimRevenuChart(inseeProfil)}
+  <div class="disc" style="margin-top:18px"><b>Source.</b> INSEE — recensements de la population (séries historiques) et dispositif FiLoSoFi (niveau de vie médian annuel). Données communales à titre informatif.</div>`
+  : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Profil INSEE de la commune à charger (population, revenu médian) — via le bouton « Charger le cadre de vie ».")}</p>`}
+</div>${rf(5)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">État du logement &amp; prestations</div>
   <div class="etat-top">
@@ -3904,7 +4104,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
       ${detail.charges ? chargeRow("Charges copro.", detail.charges) : ""}
     </div>
   </div>
-</div>${rf(5)}</div>
+</div>${rf(6)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Valeur vénale estimée</div>
   <div class="val"><div class="grid">
@@ -3926,7 +4126,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
   ${mComps.length ? `<div class="h mt">Biens comparables vendus</div><div class="comps">${mComps.map(compRow).join("")}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±25 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
-</div>${rf(6)}</div>
+</div>${rf(7)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
@@ -3943,7 +4143,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
-</div>${rf(7)}</div>
+</div>${rf(8)}</div>
 </body></html>`;
 }
 
@@ -4133,6 +4333,13 @@ async function handleGenerateEstimationPdf(job) {
     if (Number.isFinite(cdvLat) && Number.isFinite(cdvLon) && cdvLat && cdvLon) {
       try { const com = await fetchCommodites(cdvLat, cdvLon); if (com) payload.cadreDeVie.commodites = com; }
       catch (_) { /* best effort */ }
+    }
+    // Profil commune INSEE (population + série + revenu) résolu par code INSEE.
+    if (payload.cadreDeVie.insee) {
+      try {
+        const prof = await loadCommuneInsee(payload.cadreDeVie.insee, String(payload.cadreDeVie.insee).slice(0, 2));
+        if (prof) payload.cadreDeVie.insee_profil = prof;
+      } catch (_) { /* best effort */ }
     }
   }
   // Bloc « Votre conseiller » + QR vCard (option B = conseiller CONNECTÉ, repli négo dossier).
@@ -10182,7 +10389,12 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error && error.stack ? error.stack : error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exit(1);
+  });
+}
+
+// Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
+module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer };
