@@ -36,6 +36,12 @@
 
 /* ===== topbar (encre) ===== */
 .fa-v5 .fa-topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;background:linear-gradient(180deg,#241e1a 0%,#1b1613 100%);border-bottom:1px solid #38302a;border-radius:22px 22px 0 0;box-shadow:0 16px 30px -22px rgba(0,0,0,.7);position:relative;z-index:50}
+/* Correctif clics menus header : le z-index:50 du topbar piégeait le déroulant .ds-menu (z 1100)
+   SOUS le backdrop de fermeture (.ds-menu-backdrop, position:fixed z 1099) -> les clics sur les
+   sous-items (L'annonce / Les contacts / …) tombaient sur le backdrop (= fermeture) au lieu de
+   l'item. Quand un menu est ouvert (présence de .ds-menu), on élève le topbar au niveau du menu
+   pour qu'il repasse au-dessus du backdrop. Uniquement menu ouvert -> aucun effet sinon. */
+.fa-v5 .fa-topbar:has(.ds-menu){z-index:var(--ds-z-modal)}
 .fa-v5 .fa-tb-left{display:flex;align-items:center;gap:12px;min-width:0}
 .fa-v5 .fa-tb-badge{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,#d12a73,#9d0f4e);box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 6px 14px -7px rgba(194,18,95,.7)}
 .fa-v5 .fa-tb-badge svg{width:19px;height:19px}
