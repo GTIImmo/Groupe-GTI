@@ -3716,6 +3716,10 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cf-role{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:1.3px;text-transform:uppercase}.cf-nm{font-family:'Spectral',serif;font-size:18px;font-weight:600;margin-top:2px}
 .cf-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}.cf-contact span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--body);font-weight:500}.cf-contact svg{width:12px;height:12px;color:var(--brand)}
 .cf-agence-lbl{font-size:8.5px;font-weight:800;color:var(--brand);letter-spacing:1.3px;text-transform:uppercase;margin-top:14px}
+.cf-agence{display:flex;align-items:center;gap:14px;margin-top:9px}
+.cf-agence-photo{flex:none;width:72px;height:58px;border-radius:9px;background:var(--cream);border:1px dashed #d8cfc8;display:grid;place-items:center;color:var(--brand);overflow:hidden}
+.cf-agence-photo svg{width:30px;height:30px;opacity:.7}.cf-agence-photo img{width:100%;height:100%;object-fit:cover}
+.cf-agence .cf-rows{margin-top:0;flex:1;min-width:0}
 .cf-rows{margin-top:9px;display:flex;flex-direction:column;gap:8px}.cf-row{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--body)}
 .cf-row .i{width:24px;height:24px;flex:none;border-radius:7px;background:var(--cream);display:grid;place-items:center;color:var(--brand)}.cf-row .i svg{width:12px;height:12px}
 .disc{font-size:9.5px;color:var(--body);line-height:1.5;padding:9px 13px;background:var(--cream);border-radius:9px;border-left:3px solid var(--brand);margin-top:10px}.disc b{color:var(--ink)}
@@ -3895,6 +3899,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const email = String(nego.email || "").trim();
   const agenceTel = String(nego.agenceTel || "").trim();
   const agenceMail = String(nego.agenceMail || "").trim();
+  const agencePhoto = String(nego.agencePhoto || "").trim();
   const qrSvg = String(payload._vcardQrSvg || "").trim();
   const avis = String(payload.commentaire || "").trim();
   const argPrix = String(payload.argumentaire || "").trim();
@@ -4135,10 +4140,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="cf-nego"><div class="av">${estimText(initials)}</div><div><div class="cf-role">Votre conseiller</div><div class="cf-nm serif">${negoNom}</div>
       <div class="cf-contact">${tel ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg>${estimText(tel)}</span>` : ""}${email ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>${estimText(email)}</span>` : ""}</div></div></div>
     <div class="cf-agence-lbl">Agence</div>
-    <div class="cf-rows">
-      <div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path></svg></span><b>${agence}</b></div>
-      ${agenceTel ? `<div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg></span>${estimText(agenceTel)}</div>` : ""}
-      ${agenceMail ? `<div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg></span>${estimText(agenceMail)}</div>` : ""}
+    <div class="cf-agence">
+      <div class="cf-agence-photo">${agencePhoto ? `<img src="${estimText(agencePhoto)}" alt="${estimText(agence)}">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21V9l9-6 9 6v12"></path><path d="M3 21h18M9 21v-6h6v6"></path><path d="M9 11h.01M15 11h.01"></path></svg>`}</div>
+      <div class="cf-rows">
+        <div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path></svg></span><b>${agence}</b></div>
+        ${agenceTel ? `<div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg></span>${estimText(agenceTel)}</div>` : ""}
+        ${agenceMail ? `<div class="cf-row"><span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg></span>${estimText(agenceMail)}</div>` : ""}
+      </div>
     </div>
   </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
