@@ -4516,8 +4516,6 @@ function EstimationDocumentEditor(props: {
       ['Murs mitoyens', humanizeHektor(raw('MURS_MITOYENS'))],
     ]
     const energie: [string, string][] = [
-      ['DPE', draft.dpe || ''],
-      ['GES', draft.ges || ''],
       ['Chauffage', [humanizeHektor(raw('typeChauff')), humanizeHektor(raw('energieChauff'))].filter(Boolean).join(' · ')],
       ['Conso. énergie', numV('dpe_cons') ? `${numV('dpe_cons')} kWh/m²/an` : ''],
       ['Assainissement', humanizeHektor(raw('ASSAINISSEMENT'))],
@@ -4538,7 +4536,7 @@ function EstimationDocumentEditor(props: {
     const all = [...carac, ...energie, ...annexes]
     const filled = all.filter(([, v]) => v).length
     return { carac, energie, annexes, equips, filled, total: all.length }
-  }, [props.detail, dossier.type_bien, draft.dpe, draft.ges])
+  }, [props.detail, dossier.type_bien])
 
   function buildPayload() {
     const negoName = (dossier.commercial_nom || '').trim()
@@ -4638,6 +4636,14 @@ function EstimationDocumentEditor(props: {
                 <div className="avd-sec">
                   <div className="avd-sec-h">Énergie &amp; diagnostics</div>
                   <div className="avd-dl">{recap.energie.map(([k, v]) => <div className="row" key={k}><span className="k">{k}</span><span className={`v ${v ? '' : 'na'}`}>{v || 'non renseigné'}</span></div>)}</div>
+                  {((props.detail.dpe_image_url || '').trim() || (props.detail.ges_image_url || '').trim()) ? (
+                    <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+                      {(props.detail.dpe_image_url || '').trim() ? <figure style={{ margin: 0, flex: '1 1 200px' }}><figcaption style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#9a948f', marginBottom: 6 }}>DPE</figcaption><img src={(props.detail.dpe_image_url || '').trim()} alt="DPE" style={{ maxWidth: '100%', maxHeight: 150, objectFit: 'contain', display: 'block' }} /></figure> : null}
+                      {(props.detail.ges_image_url || '').trim() ? <figure style={{ margin: 0, flex: '1 1 200px' }}><figcaption style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#9a948f', marginBottom: 6 }}>GES</figcaption><img src={(props.detail.ges_image_url || '').trim()} alt="GES" style={{ maxWidth: '100%', maxHeight: 150, objectFit: 'contain', display: 'block' }} /></figure> : null}
+                    </div>
+                  ) : (
+                    <div className="avd-dl" style={{ marginTop: 8 }}><div className="row"><span className="k">DPE / GES</span><span className="v na">non communiqué dans la fiche</span></div></div>
+                  )}
                 </div>
                 <div className="avd-sec">
                   <div className="avd-sec-h">Annexes &amp; extérieur</div>
@@ -4663,10 +4669,9 @@ function EstimationDocumentEditor(props: {
                   </div></div>
                 </div>
                 <div className="avd-sec">
-                  <div className="avd-sec-h">Performance &amp; destinataire</div>
+                  <div className="avd-sec-h">Email au propriétaire</div>
+                  <div className="avd-sec-d">Le DPE/GES est repris automatiquement de la fiche (onglet « Le bien »).</div>
                   <div className="mandat-document-form-grid">
-                    <label><span>DPE</span><select value={draft.dpe} onChange={(e) => upd('dpe', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
-                    <label><span>GES</span><select value={draft.ges} onChange={(e) => upd('ges', e.target.value)}><option value="">—</option>{['A','B','C','D','E','F','G'].map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
                     <label><span>Contexte de l'email</span><select value={draft.variante} onChange={(e) => upd('variante', e.target.value as 'vente' | 'succession')}><option value="vente">Vente (suite à visite)</option><option value="succession">Succession (valeur pour le notaire)</option></select></label>
                     <label className="is-wide"><span>Email du propriétaire</span><input type="email" value={draft.recipient} onChange={(e) => upd('recipient', e.target.value)} /></label>
                   </div>
@@ -4688,8 +4693,6 @@ function EstimationDocumentEditor(props: {
               <div className="mandat-document-panel mandat-document-form-grid">
                 <label><span>État (étoiles)</span><select value={draft.etatNote} onChange={(e) => upd('etatNote', e.target.value)}><option value="">—</option>{[1,2,3,4,5].map((x) => <option key={x} value={x}>{x}/5</option>)}</select></label>
                 <label className="is-wide"><span>Libellé d'état</span><input placeholder="ex. Bon état général" value={draft.etatLabel} onChange={(e) => upd('etatLabel', e.target.value)} /></label>
-                <label><span>Chauffage</span><input value={draft.chauffage} onChange={(e) => upd('chauffage', e.target.value)} /></label>
-                <label><span>Exposition</span><input value={draft.exposition} onChange={(e) => upd('exposition', e.target.value)} /></label>
                 <label><span>Toiture</span><input value={draft.toiture} onChange={(e) => upd('toiture', e.target.value)} /></label>
                 <label><span>Menuiseries</span><input value={draft.menuiseries} onChange={(e) => upd('menuiseries', e.target.value)} /></label>
                 <label className="is-wide"><span>Appréciation de l'état · optionnel</span>
