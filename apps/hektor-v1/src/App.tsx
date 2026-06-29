@@ -3865,22 +3865,25 @@ function mandatMandantsHtml(mandants: MandatDocumentMandant[], fallback: string)
 
 function mandatSignatureBlocksHtml(mandants: MandatDocumentMandant[]) {
   const rows = mandants.length ? mandants : buildMandatDocumentMandants([], '')
+  // Une zone par signataire (mandants illimités + agence). data-sign = repère stable pour
+  // poser le tampon ImmoSign de façon déterministe (zone dimensionnée au format du tampon).
   const mandantBlocks = rows.map((mandant, index) => {
     const name = mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`
-    return `<div class="mandat-signature-box">
+    const key = `mandant-${index + 1}`
+    return `<div class="mandat-signature-box" data-sign="${key}">
       <div class="mandat-signature-title">Mandant ${index + 1}</div>
       <div class="mandat-signature-name">${escapeHtml(name)}</div>
       <div class="mandat-signature-note"><strong>Mention manuscrite :</strong> Bon pour mandat</div>
-      <div class="mandat-signature-area"><span>signature</span></div>
+      <div class="mandat-signature-area" data-sign-area="${key}"><span>signature</span></div>
     </div>`
   }).join('')
   return `<div class="mandat-signatures-grid">
     ${mandantBlocks}
-    <div class="mandat-signature-box mandat-signature-agency">
+    <div class="mandat-signature-box mandat-signature-agency" data-sign="mandataire">
       <div class="mandat-signature-title">Mandataire</div>
       <div class="mandat-signature-name">Groupe GTI</div>
       <div class="mandat-signature-note"><strong>Cachet et signature de l'agence</strong></div>
-      <div class="mandat-signature-area"><span>signature</span></div>
+      <div class="mandat-signature-area" data-sign-area="mandataire"><span>signature</span></div>
     </div>
   </div>`
 }
@@ -3993,12 +3996,12 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
     .mandat-mandants-table strong,.mandat-mandants-table span{display:block}
     .mandat-mandants-table span{color:#555;font-size:8px;margin-top:1px}
     .mandat-mandants-rank{width:16px;color:#c2185b;font-weight:800;text-align:center}
-    .mandat-signatures-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:7px;break-inside:auto;page-break-inside:auto}
+    .mandat-signatures-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:7px;break-inside:auto;page-break-inside:auto;align-items:start}
     .mandat-signature-box{border:1px solid #d8d8d8;padding:6px;break-inside:avoid;page-break-inside:avoid}
     .mandat-signature-title{border-bottom:2px solid #c2185b;font-size:8.7px;font-weight:800;margin-bottom:4px;padding-bottom:3px;text-align:center;text-transform:uppercase}
     .mandat-signature-name{font-size:8.9px;font-weight:800;margin-bottom:3px;min-height:10px;text-align:center}
     .mandat-signature-note{color:#555;font-size:8.2px;margin-bottom:4px}
-    .mandat-signature-area{border:1px dotted #bbb;height:54px;position:relative}
+    .mandat-signature-area{border:1.5px dashed #9aa;height:92px;min-width:210px;position:relative;border-radius:3px;background:#fafbfc}
     .mandat-signature-area span{position:absolute;right:6px;bottom:4px;color:#aaa;font-size:7px;letter-spacing:.05em;text-transform:uppercase}
     .mandat-signature-agency{border-color:#bfc6cb}
     img{max-width:100%}
