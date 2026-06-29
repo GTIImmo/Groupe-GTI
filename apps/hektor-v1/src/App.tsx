@@ -15900,6 +15900,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={handleOptimisticContactDeleted}
             onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
+            activeRole={filters.contactRole === allFilterValue ? '' : (filters.contactRole ?? '')}
+            searchActive={filters.contactSearchScope === activeContactSearchFilterValue}
+            onSelectRole={(role) => updateFilter('contactRole', role ? role : allFilterValue)}
+            onToggleSearchActive={() => updateFilter('contactSearchScope', filters.contactSearchScope === activeContactSearchFilterValue ? allFilterValue : activeContactSearchFilterValue)}
           />
         ) : screen === 'registre' ? (
           <MandatRegisterScreen
@@ -23668,6 +23672,45 @@ function contactToneFromRoles(roles: string[], contact?: Pick<AppContact, 'activ
   return 'default'
 }
 
+// ----- Annuaire des contacts (refonte maquette) : derivations visuelles -----
+// Categories metier NON exclusives : un contact peut cumuler un cote vente ET un
+// cote achat (max une par cote => 0, 1 ou 2 categories).
+//  - Cote vente  : Mandant (mandat actif) > Vendeur (role `proprietaire`, lie a une transaction)
+//  - Cote achat  : Acquereur (recherche active) > Acheteur (`acquereur_vente`, achat conclu)
+// NB : `proprietaire` est un VENDEUR (transaction), libelle "Vendeur" pour ne pas
+// le confondre avec Mandant ; le role technique et les filtres serveur restent inchanges.
+type ContactDirectoryType = 'vendeur' | 'mandant' | 'acquereur' | 'acheteur' | 'autre'
+const contactDirectoryTypeLabel: Record<ContactDirectoryType, string> = {
+  vendeur: 'Vendeur',
+  mandant: 'Mandant',
+  acquereur: 'Acquéreur',
+  acheteur: 'Acheteur',
+  autre: 'Contact',
+}
+function contactDirectoryCategories(roles: string[]): ContactDirectoryType[] {
+  const out: ContactDirectoryType[] = []
+  const sell: ContactDirectoryType | null = roles.includes('mandant') ? 'mandant' : roles.includes('proprietaire') ? 'vendeur' : null
+  const hasActiveBuyer = roles.some((role) => isBuyerRole(role) && role !== 'acquereur_vente')
+  const buy: ContactDirectoryType | null = hasActiveBuyer ? 'acquereur' : roles.includes('acquereur_vente') ? 'acheteur' : null
+  if (sell) out.push(sell)
+  if (buy) out.push(buy)
+  return out
+}
+// Badge "Qualite" = fiabilite de la fiche (completeness_score). Le score peut etre
+// exprime en 0-100 ou 0-1 : on normalise. 0/absent => N/D (neutre) plutot que rouge.
+function contactQualityTier(contact: Pick<AppContact, 'completeness_score'>): { tier: 'fort' | 'moyen' | 'critique' | 'nd'; label: string } {
+  let score = Number(contact.completeness_score ?? 0)
+  if (score > 0 && score <= 1) score = score * 100
+  if (!(score > 0)) return { tier: 'nd', label: 'N/D' }
+  if (score >= 70) return { tier: 'fort', label: 'Fort' }
+  if (score >= 40) return { tier: 'moyen', label: 'Moyen' }
+  return { tier: 'critique', label: 'Critique' }
+}
+function contactHasDuplicateRisk(contact: Pick<AppContact, 'duplicate_max_severity' | 'duplicate_group_count'>): boolean {
+  const severity = String(contact.duplicate_max_severity ?? '').toLowerCase()
+  return severity === 'high' || severity === 'critical' || Number(contact.duplicate_group_count ?? 0) > 0
+}
+
 function contactToneLabel(tone: ContactTone) {
   if (tone === 'buyer') return 'Acquereur'
   if (tone === 'owner') return 'Proprietaire'
@@ -28527,6 +28570,10 @@ function ContactsScreen(props: {
   onJobCreated?: (job: ConsoleJob) => void
   onContactDeleted?: (contact: AppContact) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
+  activeRole?: string
+  searchActive?: boolean
+  onSelectRole?: (role: string) => void
+  onToggleSearchActive?: () => void
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
@@ -28540,9 +28587,37 @@ function ContactsScreen(props: {
     props.onSelectContact(contactId)
     setDetailOpen(true)
   }
+  // "Sous mandat" est un filtre visuel doux (comme dans la maquette, ou il ne filtre pas) :
+  // on garde l'etat local d'affichage sans toucher au chargement serveur.
+  const [sousMandatOn, setSousMandatOn] = useState(false)
+  const activeRole = props.activeRole ?? ''
+  const selectRole = (role: string) => props.onSelectRole?.(activeRole === role ? '' : role)
+  const AV_ICONS = {
+    tel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" strokeLinejoin="round" /></svg>,
+    mail: <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="m2 8 10 7 10-7" stroke="currentColor" strokeWidth="1.8" /></svg>,
+    pin: <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" stroke="currentColor" strokeWidth="1.8" /><circle cx="12" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.8" /></svg>,
+    mandat: <svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" strokeWidth="1.9" /><path d="M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>,
+    search: <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>,
+    warn: <svg viewBox="0 0 24 24" fill="none"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" strokeWidth="1.9" /><path d="M12 9v4M12 17h.01" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>,
+    check: <svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 10 17 19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+    cross: <svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>,
+    edit: <svg viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="1.8" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" /></svg>,
+    rappro: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    arr: <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  }
+  const renderStatut = (cat: ContactDirectoryType, linked: number, activeSearch: number) => {
+    if (cat === 'mandant') return (<><span className="st-pill mandat">{AV_ICONS.mandat}Sous mandat</span><span className="st-detail">{linked} bien{linked > 1 ? 's' : ''} en portefeuille</span></>)
+    if (cat === 'vendeur') return (<><span className="st-pill vendu">{AV_ICONS.check}A vendu</span><span className="st-detail">Vente réalisée</span></>)
+    if (cat === 'acquereur') {
+      if (activeSearch > 0) return (<><span className="st-pill search">{AV_ICONS.search}Recherche active</span><span className="st-detail">{activeSearch} critère{activeSearch > 1 ? 's' : ''} enregistré{activeSearch > 1 ? 's' : ''}</span></>)
+      return (<><span className="st-pill nosearch">{AV_ICONS.cross}Sans recherche</span><span className="st-detail">À qualifier</span></>)
+    }
+    if (cat === 'acheteur') return (<><span className="st-pill achete">{AV_ICONS.check}A acheté</span><span className="st-detail">Acquisition réalisée</span></>)
+    return (<><span className="st-pill nosearch">{AV_ICONS.cross}À qualifier</span><span className="st-detail">Profil à qualifier</span></>)
+  }
   return (
     <section className="contacts-workspace contacts-workspace-full">
-      <section className="panel panel-wide contacts-list-panel">
+      <div className="annuaire-v2">
         {props.createOpen && props.canManageContacts ? (
           <ContactWorkflowModal
             title="Nouveau contact"
@@ -28563,77 +28638,107 @@ function ContactsScreen(props: {
             />
           </ContactWorkflowModal>
         ) : null}
-        <div className="panel-head contacts-list-head">
-          <div className="listing-title-stack">
-            <h3>Liste des contacts</h3>
-            <span className="listing-total-label">{listingTotalLabel}</span>
-          </div>
-          <div className="page-controls">
-            {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
-            <span>{pageLabel(props.contactsTotal, contactPageSize, props.contactPage)}</span>
-            <span>Page {props.contactPage} / {props.contactTotalPages}</span>
-            <button className="ghost-button" type="button" onClick={props.onPrevContact} disabled={props.contactPage === 1}>Prec</button>
-            <button className="ghost-button" type="button" onClick={props.onNextContact} disabled={props.contactPage * contactPageSize >= props.contactsTotal}>Suiv</button>
-            <label className="page-jump">
-              <span>Aller</span>
-              <input type="number" min={1} max={props.contactTotalPages} value={props.contactPage} onChange={(event) => props.onGoToContactPage(Number(event.target.value || 1))} />
-            </label>
-          </div>
+
+        <div className="segments">
+          <button type="button" className={`seg ${activeRole === '' ? 'active' : ''}`} onClick={() => selectRole('')}><span>Tous</span><span className="cnt">{formatNumber.format(props.contactsTotal)}</span></button>
+          <button type="button" className={`seg ${activeRole === 'proprietaire' ? 'active' : ''}`} onClick={() => selectRole('proprietaire')}><span className="dot" style={{ background: '#1a7a4a' }} /><span>Vendeurs</span></button>
+          <button type="button" className={`seg ${activeRole === 'mandant' ? 'active' : ''}`} onClick={() => selectRole('mandant')}><span className="dot" style={{ background: '#c5005f' }} /><span>Mandants</span></button>
+          <button type="button" className={`seg ${activeRole === 'acquereur' ? 'active' : ''}`} onClick={() => selectRole('acquereur')}><span className="dot" style={{ background: '#3a5fae' }} /><span>Acquéreurs</span></button>
+          <button type="button" className={`seg ${activeRole === 'acquereur_vente' ? 'active' : ''}`} onClick={() => selectRole('acquereur_vente')}><span className="dot" style={{ background: '#7c3aed' }} /><span>Acheteurs</span></button>
+          <div className="seg-sep" />
+          <button type="button" className={`seg-sub mandat ${sousMandatOn ? 'on' : ''}`} onClick={() => setSousMandatOn((value) => !value)}>{AV_ICONS.mandat}Sous mandat</button>
+          <button type="button" className={`seg-sub search ${props.searchActive ? 'on' : ''}`} onClick={() => props.onToggleSearchActive?.()}>{AV_ICONS.search}Recherche active</button>
         </div>
-        <div className={`table-wrap listing-table-wrap listing-table-active contacts-table-wrap ${props.loading ? 'is-refreshing' : ''}`}>
-          {props.loading ? <div className="listing-loading-banner">Chargement des contacts...</div> : null}
+
+        <div className="listcard">
+          <div className="lc-head">
+            <div className="lc-title">
+              <h1>Annuaire des contacts</h1>
+              <span className="lc-badge">{listingTotalLabel}</span>
+            </div>
+            <div className="pager">
+              {props.loading ? <span className="pg-load">Mise à jour…</span> : null}
+              <span className="pg-info"><b>{pageLabel(props.contactsTotal, contactPageSize, props.contactPage)}</b> · Page <b>{props.contactPage}</b> / {props.contactTotalPages}</span>
+              <button className="pg-btn" type="button" onClick={props.onPrevContact} disabled={props.contactPage === 1}>Préc</button>
+              <button className="pg-btn" type="button" onClick={props.onNextContact} disabled={props.contactPage * contactPageSize >= props.contactsTotal}>Suiv</button>
+              <label className="pg-jump"><span>Aller</span><input type="number" min={1} max={props.contactTotalPages} value={props.contactPage} onChange={(event) => props.onGoToContactPage(Number(event.target.value || 1))} /></label>
+            </div>
+          </div>
+          {props.loading ? <div className="av-loading">Chargement des contacts…</div> : null}
           {props.contacts.length > 0 ? (
-            <table>
-              <thead>
-                <tr><th>Contact</th><th>Typologie</th><th>Coordonnees</th><th>Portefeuille</th><th>Relations</th><th>Qualite</th></tr>
-              </thead>
-              <tbody>
+            <div className="av-table-wrap">
+              <div className="av-table">
+                <div className="col-head">
+                  <span>Contact</span>
+                  <span>Statut métier</span>
+                  <span>Coordonnées</span>
+                  <span>Négociateur</span>
+                  <span className="center">Qualité</span>
+                  <span className="right">Actions</span>
+                </div>
                 {props.contacts.map((contact) => {
                   const roles = contactJsonList(contact.relation_roles_json)
-                  const typologyBadges = contactTypologyBadges(contact).slice(0, 4)
+                  const categories = contactDirectoryCategories(roles)
+                  const shownCategories: ContactDirectoryType[] = categories.length ? categories : ['autre']
+                  const primaryType = shownCategories[0]
                   const isSelected = detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
-                  const tone = contactToneFromRoles(roles, contact)
+                  const initials = userInitials(contact.display_name, contact.email)
+                  const phone = (contact.phone_primary ?? '').trim()
+                  const email = (contact.email ?? '').trim()
+                  const ville = [contact.code_postal, contact.ville].filter(Boolean).join(' ')
+                  const activeSearch = Number(contact.active_search_count ?? 0)
+                  const linked = Number(contact.linked_annonce_count ?? 0)
+                  const quality = contactQualityTier(contact)
+                  const dupRisk = contactHasDuplicateRisk(contact)
+                  const avBadgeOk = categories.some((cat) => cat === 'mandant' || cat === 'vendeur' || cat === 'acheteur') || (categories.includes('acquereur') && activeSearch > 0)
+                  const canRappro = categories.includes('acquereur') && activeSearch > 0
+                  const negoInitials = contact.commercial_nom ? userInitials(contact.commercial_nom) : 'GTI'
                   return (
-                    <tr key={contact.hektor_contact_id} className={`contact-row is-${tone}${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)}>
-                      <td className="contact-identity-cell">
-                        <div className="contact-identity-content">
-                          <ContactTypeMark contact={contact} />
-                          <div>
-                            <strong>{contact.display_name}</strong>
-                            <span>ID {contact.hektor_contact_id} - {contactArchiveLabel(contact)}</span>
-                            <small>{contact.civilite ? `${contact.civilite} ` : ''}{[contact.prenom, contact.nom].filter(Boolean).join(' ') || 'Identite Hektor'}</small>
-                          </div>
+                    <div key={contact.hektor_contact_id} className={`contact-row${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact.hektor_contact_id) } }}>
+                      <div className="ci">
+                        <div className={`ci-av ${primaryType}`}>{initials}<span className={`ci-av-badge ${avBadgeOk ? 'ok' : 'off'}`}>{avBadgeOk ? AV_ICONS.check : AV_ICONS.cross}</span></div>
+                        <div className="ci-body">
+                          <div className="ci-name">{contact.display_name}</div>
+                          <div className="ci-roles">{shownCategories.map((cat, index) => <span key={`role-${cat}-${index}`} className={`ci-role ${cat}`}>{contactDirectoryTypeLabel[cat]}</span>)}</div>
+                          <div className="ci-id">ID {contact.hektor_contact_id}</div>
                         </div>
-                      </td>
-                      <td className="contact-taxonomy-cell">
-                        <div className="contact-chip-row">
-                          {typologyBadges.length > 0 ? typologyBadges.map((badge) => (
-                            <span key={`${contact.hektor_contact_id}-${badge}`} className={contactRoleChipClass(badge)}>{contactDirectoryRoleLabel(badge)}</span>
-                          )) : <span className="contact-role-chip is-muted">Sans relation</span>}
+                      </div>
+                      <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch)}</div>)}</div>
+                      <div className="coord-col">
+                        <div className="coord-tel">{AV_ICONS.tel}{phone || '—'}</div>
+                        <div className="coord-mail">{AV_ICONS.mail}{email || '—'}</div>
+                        <div className="coord-ville">{AV_ICONS.pin}{ville || '—'}</div>
+                      </div>
+                      <div className="nego-col">
+                        <div className="nego-av">{negoInitials}</div>
+                        <div className="nego-txt">
+                          <div className="nego-name">{contact.commercial_nom || 'Non affecté'}</div>
+                          <div className="nego-agence">{contact.agence_nom || 'Groupe GTI'}</div>
                         </div>
-                        <small>{roles.length > typologyBadges.length ? `+${roles.length - typologyBadges.length} role(s)` : contactBool(contact.has_contact_detail) ? 'Detail disponible' : 'Listing leger'}</small>
-                      </td>
-                      <td className="contact-coordinate-cell"><strong>{contact.phone_primary || '-'}</strong><span>{contact.email || '-'}</span><span>{[contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span></td>
-                      <td><strong>{contact.commercial_nom || '-'}</strong><span>{contact.agence_nom || '-'}</span><small>{contact.negociateur_email || '-'}</small></td>
-                      <td className="contact-activity-cell">
-                        <strong>{contact.linked_annonce_count ?? 0} annonce(s)</strong>
-                        <span className={contact.active_search_count ? 'is-important' : ''}>{contact.active_search_count ? `${contact.active_search_count} recherche(s) active(s)` : `${contact.total_search_count ?? 0} recherche(s)`}</span>
-                        <small>{contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'}</small>
-                      </td>
-                      <td className="contact-quality-cell"><span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span><small>{contact.duplicate_group_count ? `${contact.duplicate_group_count} groupe(s)` : 'Aucun groupe'}</small><small>Maj {formatDate(contact.date_maj)}</small></td>
-                    </tr>
+                      </div>
+                      <div className="qa-col">
+                        <span className={`qa-badge ${quality.tier}`}>{quality.label}</span>
+                        {dupRisk ? <span className="qa-dup" title="Risque de doublon détecté">{AV_ICONS.warn}Doublon</span> : null}
+                      </div>
+                      <div className="rc-actions">
+                        {phone ? <a className="ra" href={`tel:${phone}`} title="Appeler" onClick={(event) => event.stopPropagation()}>{AV_ICONS.tel}</a> : <span className="ra-spacer" />}
+                        <button className="ra" type="button" title="Ouvrir & modifier" onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.edit}</button>
+                        {canRappro ? <button className="ra rappro" type="button" title={`${activeSearch} recherche(s) active(s)`} onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.rappro}{activeSearch > 0 ? <span className="ra-badge">{activeSearch}</span> : null}</button> : <span className="ra-spacer" />}
+                        <button className="ra cta" type="button" title="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.arr}</button>
+                      </div>
+                    </div>
                   )
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           ) : (
-            <div className="empty-block">
+            <div className="av-empty">
               <strong>Aucun contact pour cette combinaison de filtres.</strong>
-              {props.hasActiveFilters ? <button className="ghost-button" type="button" onClick={props.onResetFilters}>Reinitialiser les filtres</button> : null}
+              {props.hasActiveFilters ? <button type="button" onClick={props.onResetFilters}>Réinitialiser les filtres</button> : null}
             </div>
           )}
         </div>
-      </section>
+      </div>
       {detailOpen && props.selectedContact ? (
         <ContactDetailPopup
           contact={props.selectedContact}

@@ -1,0 +1,171 @@
+/* =============================================================================
+   Annuaire des contacts — refonte fidele de la maquette "GTI · Annuaire des contacts".
+   TOUT est scope sous .annuaire-v2 pour ne RIEN heurter du CSS global de l'app
+   (.contact-row, .seg, .listcard, .ci... existent ou pourraient exister ailleurs).
+   Additif uniquement : importe en dernier, aucune regle ne sort de .annuaire-v2.
+   Donnees & logique = inchangees ; ce fichier ne fait que le visuel.
+   ============================================================================= */
+
+.annuaire-v2{
+  /* Tokens de la charte GTI (la maquette les attend ; design-system.css expose des --ds-*) */
+  --gti-brand-50:#fdf0f6;
+  --gti-brand-100:#fbdcec;
+  --gti-brand:#c5005f;
+  --gti-brand-700:#8c0044;
+  --gti-ink:#222323;
+  --gti-ink-soft:#3b4143;
+  --gti-font-sans:"Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+
+  display:flex;flex-direction:column;gap:14px;min-width:0;
+  color:var(--gti-ink);
+  font-family:var(--gti-font-sans);
+}
+.annuaire-v2 *{box-sizing:border-box;}
+.annuaire-v2 svg{display:block;}
+
+/* ---------- Barre de segments ---------- */
+.annuaire-v2 .segments{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid rgba(34,35,35,.1);border-radius:14px;box-shadow:0 1px 4px rgba(34,35,35,.05);padding:9px 12px;}
+.annuaire-v2 .seg{display:inline-flex;align-items:center;gap:9px;font:inherit;font-size:13.5px;font-weight:700;padding:9px 15px;border-radius:10px;border:1px solid transparent;background:transparent;color:#5a6263;cursor:pointer;transition:.13s;}
+.annuaire-v2 .seg .dot{width:9px;height:9px;border-radius:50%;flex:none;}
+.annuaire-v2 .seg .cnt{font-size:12px;font-weight:800;padding:2px 9px;border-radius:99px;background:rgba(34,35,35,.07);color:#5a6263;font-variant-numeric:tabular-nums;}
+.annuaire-v2 .seg:hover{background:#f4f5f6;color:var(--gti-ink);}
+.annuaire-v2 .seg.active{background:var(--gti-ink);color:#fff;}
+.annuaire-v2 .seg.active .cnt{background:rgba(255,255,255,.2);color:#fff;}
+.annuaire-v2 .seg-sep{width:1px;height:26px;background:rgba(34,35,35,.1);margin:0 2px;}
+.annuaire-v2 .seg-sub{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:99px;border:1px solid rgba(34,35,35,.14);background:#fff;color:#5a6263;cursor:pointer;transition:.13s;}
+.annuaire-v2 .seg-sub svg{width:13px;height:13px;flex:none;}
+.annuaire-v2 .seg-sub:hover{border-color:var(--gti-brand);color:var(--gti-brand-700);}
+.annuaire-v2 .seg-sub.on{border-color:transparent;}
+.annuaire-v2 .seg-sub.on.mandat{background:#e8f5ee;color:#1a7a4a;}
+.annuaire-v2 .seg-sub.on.search{background:#eaf1fb;color:#3a5fae;}
+
+/* ---------- Carte liste ---------- */
+.annuaire-v2 .listcard{background:#fff;border:1px solid rgba(34,35,35,.1);border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(34,35,35,.06);}
+.annuaire-v2 .lc-head{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 26px 16px;flex-wrap:wrap;}
+.annuaire-v2 .lc-title{display:flex;align-items:baseline;gap:12px;min-width:0;}
+.annuaire-v2 .lc-title h1{font-family:'Spectral',Georgia,serif;font-size:25px;font-weight:700;color:var(--gti-ink);letter-spacing:-.01em;line-height:1.1;}
+.annuaire-v2 .lc-badge{font-size:12.5px;font-weight:700;color:var(--gti-brand-700);background:var(--gti-brand-50);border:1px solid var(--gti-brand-100);padding:4px 12px;border-radius:99px;white-space:nowrap;}
+.annuaire-v2 .pager{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
+.annuaire-v2 .pg-load{font-size:12px;font-weight:700;color:var(--gti-brand-700);}
+.annuaire-v2 .pg-info{font-size:13px;font-weight:600;color:rgba(34,35,35,.5);white-space:nowrap;}
+.annuaire-v2 .pg-info b{color:var(--gti-ink);font-weight:700;font-variant-numeric:tabular-nums;}
+.annuaire-v2 .pg-btn{font:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9px;border:1px solid rgba(34,35,35,.15);background:#fff;color:var(--gti-ink);cursor:pointer;transition:.12s;}
+.annuaire-v2 .pg-btn:hover:not(:disabled){border-color:var(--gti-brand);color:var(--gti-brand-700);}
+.annuaire-v2 .pg-btn:disabled{opacity:.45;cursor:default;}
+.annuaire-v2 .pg-jump{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(34,35,35,.5);}
+.annuaire-v2 .pg-jump input{width:60px;font:inherit;font-size:13px;font-weight:700;color:var(--gti-ink);border:1px solid rgba(34,35,35,.15);border-radius:8px;padding:7px 9px;text-align:center;}
+.annuaire-v2 .pg-jump input:focus{outline:none;border-color:var(--gti-brand);box-shadow:0 0 0 3px rgba(197,0,95,.1);}
+
+/* Scroll horizontal aligne (en-tete + lignes partagent la meme grille) */
+.annuaire-v2 .av-table-wrap{overflow-x:auto;}
+.annuaire-v2 .av-table{min-width:1000px;}
+
+/* ---------- En-tete de colonnes ---------- */
+.annuaire-v2 .col-head{display:grid;grid-template-columns:212px 188px minmax(180px,1fr) 158px 76px 156px;gap:14px;align-items:center;padding:12px 22px;background:#fafbfb;border-top:1px solid rgba(34,35,35,.06);border-bottom:1px solid rgba(34,35,35,.08);}
+.annuaire-v2 .col-head span{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:rgba(34,35,35,.42);}
+.annuaire-v2 .col-head span.center{text-align:center;}
+.annuaire-v2 .col-head span.right{text-align:right;}
+
+/* ---------- Ligne contact ---------- */
+.annuaire-v2 .contact-row{display:grid;grid-template-columns:212px 188px minmax(180px,1fr) 158px 76px 156px;gap:14px;align-items:center;min-height:96px;padding:16px 22px;border-bottom:1px solid rgba(34,35,35,.055);cursor:pointer;transition:background .12s;position:relative;background:#fff;}
+.annuaire-v2 .contact-row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:.1s;}
+.annuaire-v2 .contact-row:hover{background:rgba(197,0,95,.022);}
+.annuaire-v2 .contact-row:hover::before{background:var(--gti-brand);}
+.annuaire-v2 .contact-row.is-selected{background:rgba(197,0,95,.045);}
+.annuaire-v2 .contact-row.is-selected::before{background:var(--gti-brand);}
+.annuaire-v2 .contact-row:last-child{border-bottom:none;}
+
+/* Identite */
+.annuaire-v2 .ci{display:flex;align-items:center;gap:14px;min-width:0;}
+.annuaire-v2 .ci-av{width:50px;height:50px;border-radius:15px;flex:none;display:grid;place-items:center;font-size:15px;font-weight:800;color:#fff;position:relative;box-shadow:0 4px 12px -3px rgba(34,35,35,.3);}
+.annuaire-v2 .ci-av::after{content:"";position:absolute;inset:0;border-radius:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.25);}
+.annuaire-v2 .ci-av.vendeur{background:linear-gradient(145deg,#22996a,#15784e);}
+.annuaire-v2 .ci-av.mandant{background:linear-gradient(145deg,#d12a73,#9d0f4e);}
+.annuaire-v2 .ci-av.acquereur{background:linear-gradient(145deg,#3a5fae,#2a4789);}
+.annuaire-v2 .ci-av.acheteur{background:linear-gradient(145deg,#7c3aed,#5b21b6);}
+.annuaire-v2 .ci-av.autre{background:linear-gradient(145deg,#6a7173,#474d4e);}
+.annuaire-v2 .ci-av-badge{position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;}
+.annuaire-v2 .ci-av-badge svg{width:9px;height:9px;color:#fff;}
+.annuaire-v2 .ci-av-badge.ok{background:#1f8a5b;}
+.annuaire-v2 .ci-av-badge.off{background:#b0b5b5;}
+.annuaire-v2 .ci-body{min-width:0;}
+.annuaire-v2 .ci-name{font-size:15.5px;font-weight:700;color:var(--gti-ink);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annuaire-v2 .ci-roles{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;margin-top:4px;}
+.annuaire-v2 .ci-roles .ci-role + .ci-role{position:relative;}
+.annuaire-v2 .ci-roles .ci-role + .ci-role::before{content:"";position:absolute;left:-6px;top:50%;width:3px;height:3px;border-radius:50%;background:rgba(34,35,35,.28);transform:translateY(-50%);}
+.annuaire-v2 .ci-role{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;}
+.annuaire-v2 .ci-role.vendeur{color:#1a7a4a;}
+.annuaire-v2 .ci-role.mandant{color:#a8004f;}
+.annuaire-v2 .ci-role.acquereur{color:#3a5fae;}
+.annuaire-v2 .ci-role.acheteur{color:#6d28d9;}
+.annuaire-v2 .ci-role.autre{color:#5c6163;}
+.annuaire-v2 .ci-id{font-size:11.5px;color:rgba(34,35,35,.4);margin-top:3px;font-variant-numeric:tabular-nums;}
+
+/* Statut metier */
+.annuaire-v2 .statut-col{display:flex;flex-direction:column;gap:10px;min-width:0;justify-content:center;}
+.annuaire-v2 .st-block{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.annuaire-v2 .st-pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:10px;width:fit-content;border:1px solid;}
+.annuaire-v2 .st-pill svg{width:13px;height:13px;flex:none;}
+.annuaire-v2 .st-pill.mandat{background:#e8f5ee;color:#1a7a4a;border-color:#bfe4d2;}
+.annuaire-v2 .st-pill.vendu{background:#e8f5ee;color:#1a7a4a;border-color:#bfe4d2;}
+.annuaire-v2 .st-pill.nomandat{background:#fdf3e6;color:#a86d18;border-color:#f0d9b0;}
+.annuaire-v2 .st-pill.search{background:#eaf1fb;color:#3a5fae;border-color:#cdddf5;}
+.annuaire-v2 .st-pill.achete{background:#f3edff;color:#6d28d9;border-color:#dac8f5;}
+.annuaire-v2 .st-pill.nosearch{background:#f2f3f3;color:#787e7e;border-color:rgba(34,35,35,.12);}
+.annuaire-v2 .st-detail{font-size:12px;color:rgba(34,35,35,.5);padding-left:2px;}
+
+/* Coordonnees */
+.annuaire-v2 .coord-col{min-width:0;}
+.annuaire-v2 .coord-tel{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:var(--gti-ink);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.annuaire-v2 .coord-tel svg{width:13px;height:13px;color:rgba(34,35,35,.35);flex:none;}
+.annuaire-v2 .coord-mail{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--gti-ink-soft);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annuaire-v2 .coord-mail svg{width:13px;height:13px;color:rgba(34,35,35,.35);flex:none;}
+.annuaire-v2 .coord-ville{display:flex;align-items:center;gap:7px;font-size:12.5px;color:rgba(34,35,35,.5);margin-top:5px;}
+.annuaire-v2 .coord-ville svg{width:13px;height:13px;color:rgba(34,35,35,.35);flex:none;}
+
+/* Negociateur */
+.annuaire-v2 .nego-col{display:flex;align-items:center;gap:10px;min-width:0;}
+.annuaire-v2 .nego-av{width:32px;height:32px;border-radius:9px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:linear-gradient(145deg,#6a7173,#474d4e);}
+.annuaire-v2 .nego-txt{min-width:0;}
+.annuaire-v2 .nego-name{font-size:12.5px;font-weight:700;color:var(--gti-ink);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.annuaire-v2 .nego-agence{font-size:11px;color:rgba(34,35,35,.45);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Qualite (fiabilite fiche + drapeau doublon) */
+.annuaire-v2 .qa-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;}
+.annuaire-v2 .qa-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;padding:5px 11px;border-radius:99px;border:1px solid;white-space:nowrap;}
+.annuaire-v2 .qa-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+.annuaire-v2 .qa-badge.critique{background:#fcecec;color:#b5182f;border-color:#f0c0c0;}
+.annuaire-v2 .qa-badge.fort{background:#e8f5ee;color:#1a7a4a;border-color:#bfe4d2;}
+.annuaire-v2 .qa-badge.moyen{background:#fdf3e6;color:#a86d18;border-color:#f0d9b0;}
+.annuaire-v2 .qa-badge.nd{background:#f2f3f3;color:#787e7e;border-color:rgba(34,35,35,.12);}
+.annuaire-v2 .qa-dup{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;color:#a86d18;background:#fdf3e6;border:1px solid #f0d9b0;padding:2px 7px;border-radius:99px;white-space:nowrap;}
+.annuaire-v2 .qa-dup svg{width:10px;height:10px;flex:none;}
+
+/* Actions */
+.annuaire-v2 .rc-actions{display:grid;grid-template-columns:repeat(4,34px);gap:6px;flex:none;justify-content:flex-end;}
+.annuaire-v2 .ra-spacer{width:34px;height:34px;flex:none;}
+.annuaire-v2 .ra{width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(34,35,35,.2);background:#f4f5f6;color:rgba(34,35,35,.7);display:grid;place-items:center;cursor:pointer;transition:.13s;flex:none;text-decoration:none;}
+.annuaire-v2 .ra svg{width:16px;height:16px;}
+.annuaire-v2 .ra:hover{border-color:var(--gti-brand);color:var(--gti-brand-700);background:var(--gti-brand-50);}
+.annuaire-v2 .ra.cta{background:var(--gti-brand);border-color:var(--gti-brand);color:#fff;box-shadow:0 2px 8px rgba(197,0,95,.28);}
+.annuaire-v2 .ra.cta:hover{background:#a8004f;color:#fff;}
+.annuaire-v2 .ra.rappro{position:relative;}
+.annuaire-v2 .ra.rappro:hover{border-color:#0f766e;color:#0f766e;background:#e6efee;}
+.annuaire-v2 .ra-badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;border-radius:99px;background:var(--gti-brand);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+
+/* Etats vides / chargement */
+.annuaire-v2 .av-loading{padding:11px 22px;font-size:12.5px;font-weight:700;color:var(--gti-brand-700);background:var(--gti-brand-50);border-bottom:1px solid var(--gti-brand-100);}
+.annuaire-v2 .av-empty{padding:44px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.annuaire-v2 .av-empty strong{font-size:15px;font-weight:700;color:var(--gti-ink);}
+.annuaire-v2 .av-empty button{font:inherit;font-size:13px;font-weight:700;padding:9px 16px;border-radius:9px;border:1px solid rgba(34,35,35,.15);background:#fff;color:var(--gti-ink);cursor:pointer;}
+.annuaire-v2 .av-empty button:hover{border-color:var(--gti-brand);color:var(--gti-brand-700);}
+
+/* ---------- Repli mobile : chaque ligne devient une carte empilee ---------- */
+@media (max-width:720px){
+  .annuaire-v2 .av-table{min-width:0;}
+  .annuaire-v2 .col-head{display:none;}
+  .annuaire-v2 .contact-row{grid-template-columns:1fr;gap:12px;min-height:0;padding:16px 16px 18px;}
+  .annuaire-v2 .rc-actions{grid-template-columns:repeat(4,38px);justify-content:flex-start;}
+  .annuaire-v2 .qa-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;}
+  .annuaire-v2 .lc-head{padding:16px 16px 12px;}
+}

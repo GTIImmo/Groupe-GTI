@@ -27,6 +27,7 @@ import './notifications-bell.css'
 import './rapprochement-stats.css'
 import './nav-icons-v2.css'
 import './estimation-listing-v2.css'
+import './annuaire-contacts-v2.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
