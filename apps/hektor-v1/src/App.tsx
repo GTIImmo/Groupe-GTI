@@ -4018,6 +4018,37 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
 </html>`
 }
 
+// Pop-up de validation « Faire signer ce document par Yousign ? » — réutilisée par
+// l'éditeur de mandat ET le bouton Signature du panneau Documents (même visuel).
+function SignaturePromptModal({ intro, items, onConfirm, onClose }: { intro: string; items: string[]; onConfirm: () => void; onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+    >
+      <div
+        className="mandat-sign-popup"
+        onClick={(event) => event.stopPropagation()}
+        style={{ background: '#fff', borderRadius: '14px', maxWidth: '440px', width: '100%', padding: '22px 24px', boxShadow: '0 24px 70px rgba(0,0,0,0.35)' }}
+      >
+        <strong style={{ display: 'block', fontSize: '17px', marginBottom: '12px' }}>Faire signer ce document par Yousign ?</strong>
+        <p style={{ margin: '0 0 8px', color: '#555', fontSize: '13px' }}>{intro}</p>
+        {items.length ? (
+          <ul style={{ margin: '0 0 18px', paddingLeft: '18px', fontSize: '13px', lineHeight: 1.5 }}>
+            {items.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        ) : <div style={{ height: '8px' }} />}
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <button className="ghost-button button-subtle" type="button" onClick={onClose}>Plus tard</button>
+          <button className="ghost-button button-primary" type="button" onClick={onConfirm}>Oui, ouvrir Hektor</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MandatDocumentEditor(props: {
   dossier: Dossier
   detail: DossierDetailPayload
@@ -4381,34 +4412,12 @@ function MandatDocumentEditor(props: {
               </button>
             </div>
             {signPromptOpen ? (
-              <div
-                role="dialog"
-                aria-modal="true"
-                onClick={() => setSignPromptOpen(false)}
-                style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-              >
-                <div
-                  className="mandat-sign-popup"
-                  onClick={(event) => event.stopPropagation()}
-                  style={{ background: '#fff', borderRadius: '14px', maxWidth: '440px', width: '100%', padding: '22px 24px', boxShadow: '0 24px 70px rgba(0,0,0,0.35)' }}
-                >
-                  <strong style={{ display: 'block', fontSize: '17px', marginBottom: '12px' }}>Faire signer ce document par Yousign ?</strong>
-                  <p style={{ margin: '0 0 8px', color: '#555', fontSize: '13px' }}>Dans la popin signature Hektor, ajoute ce{(selectedSignatureRecipients.length || 1) > 1 ? 's' : ''} signataire{(selectedSignatureRecipients.length || 1) > 1 ? 's' : ''} :</p>
-                  <ul style={{ margin: '0 0 18px', paddingLeft: '18px', fontSize: '13px', lineHeight: 1.5 }}>
-                    {(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient, index) => (
-                      <li key={recipient.id || index}>
-                        {signatureRecipientLabel(recipient)}
-                        {recipient.email ? ` · ${recipient.email}` : ''}
-                        {recipient.telephone ? ` · ${recipient.telephone}` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button button-subtle" type="button" onClick={() => setSignPromptOpen(false)}>Plus tard</button>
-                    <button className="ghost-button button-primary" type="button" onClick={openHektorForSignature}>Oui, ouvrir Hektor</button>
-                  </div>
-                </div>
-              </div>
+              <SignaturePromptModal
+                intro="Dans la popin signature Hektor, ajoute ces signataires :"
+                items={(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient) => `${signatureRecipientLabel(recipient)}${recipient.email ? ` · ${recipient.email}` : ''}${recipient.telephone ? ` · ${recipient.telephone}` : ''}`)}
+                onConfirm={openHektorForSignature}
+                onClose={() => setSignPromptOpen(false)}
+              />
             ) : null}
           </div>
           <aside className="mandat-document-preview" aria-label="Apercu mandat">
@@ -7904,6 +7913,7 @@ function consoleDocumentIconType(document: Pick<ConsoleDocument, 'mime_type' | '
 
 function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
+  const [signDoc, setSignDoc] = useState<ConsoleDocument | null>(null)
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
   const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -8041,13 +8051,11 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     }
   }
 
-  // Bouton « Signature » sur un document : ouvre Hektor (nouvel onglet) sur la fiche du bien
-  // pour la popin signature Yousign (même flux que l'encart de l'éditeur de mandat).
-  function handleSignDocument(document: ConsoleDocument) {
-    const ok = window.confirm(`Faire signer ce document par Yousign ?\n\n${document.document_name}\n\nHektor va s'ouvrir : clique le picto signature sur le document, ajoute les signataires puis Envoyer.`)
-    if (!ok) return
+  // Bouton « Signature » : ouvre la MÊME pop-up de validation que l'éditeur, puis Hektor.
+  function openHektorSignature() {
     const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
     window.open(`${base}/admin/?page=/mes-biens/mon-bien/documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`, '_blank', 'noopener')
+    setSignDoc(null)
   }
 
   async function handleDeleteDocument(document: ConsoleDocument) {
@@ -8195,7 +8203,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
                         {preparing ? 'En attente' : 'Preparer'}
                       </button>
                     )}
-                    <button className="ghost-button console-document-sign" type="button" onClick={() => handleSignDocument(document)}>
+                    <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
                       <span aria-hidden="true"><DetailIcon type="signature" /></span>
                       Signature
                     </button>
@@ -8208,6 +8216,14 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
               )
             })}
           </div>
+        ) : null}
+        {signDoc ? (
+          <SignaturePromptModal
+            intro={`Document : ${signDoc.document_name}`}
+            items={["Hektor va s'ouvrir sur l'onglet Documents : clique le picto signature sur le document, ajoute les signataires puis Envoyer."]}
+            onConfirm={openHektorSignature}
+            onClose={() => setSignDoc(null)}
+          />
         ) : null}
       </div>
     </details>
