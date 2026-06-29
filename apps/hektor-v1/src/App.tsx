@@ -4182,7 +4182,14 @@ function MandatDocumentEditor(props: {
   const generatePdf = async () => {
     if (pdfBusy) return
     setPdfBusy(true)
-    setMessage(null)
+    setSignPromptOpen(false)
+    setMessage('Generation du mandat en cours…')
+    // Snapshot des documents existants pour detecter l'arrivee du nouveau document.
+    let beforeIds = new Set<string>()
+    try {
+      const existing = await loadConsoleDocuments(props.dossier.app_dossier_id)
+      beforeIds = new Set(existing.map((doc) => doc.id))
+    } catch { /* on poursuit sans snapshot */ }
     try {
       await createGenerateMandatPdfJob({
         dossier: { app_dossier_id: props.dossier.app_dossier_id, hektor_annonce_id: props.dossier.hektor_annonce_id },
@@ -4190,13 +4197,33 @@ function MandatDocumentEditor(props: {
         payload,
         numeroMandat: draft.numeroMandat || null,
       })
-      setMessage('Mandat depose dans Hektor (pret sous ~1 min, dans les documents du bien).')
-      setSignPromptOpen(true)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Generation PDF impossible.')
-    } finally {
       setPdfBusy(false)
+      return
     }
+    setMessage('Mandat en cours de depot dans Hektor…')
+    // La pop-up de signature n'apparait QUE lorsque Hektor a reellement ajoute le document.
+    const deadline = Date.now() + 150000
+    const poll = async () => {
+      try {
+        const docs = await loadConsoleDocuments(props.dossier.app_dossier_id)
+        const fresh = docs.find((doc) => !beforeIds.has(doc.id) && /mandat/i.test(doc.document_name || ''))
+        if (fresh) {
+          setMessage('Mandat depose dans Hektor.')
+          setPdfBusy(false)
+          setSignPromptOpen(true)
+          return
+        }
+      } catch { /* on reessaie */ }
+      if (Date.now() < deadline) {
+        window.setTimeout(() => { void poll() }, 4000)
+      } else {
+        setMessage('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.')
+        setPdfBusy(false)
+      }
+    }
+    window.setTimeout(() => { void poll() }, 4000)
   }
 
   // Lot 1 signature : ouvre Hektor (nouvel onglet) sur la fiche du bien pour faire signer
