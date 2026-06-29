@@ -3419,10 +3419,23 @@ async function downloadSignedProcedureDocument(dossier, document) {
   // relit la ligne pour fusionner sur le metadata le plus recent
   const fresh = await loadConsoleDocumentById(document.id).catch(() => null);
   const md = (fresh && fresh.metadata_json) || metadata || {};
+  // IMPORTANT : on fait pointer la COLONNE storage_path vers le PDF signe (le signe remplace l'original).
+  // C'est requis pour la policy storage 'hektor_console_documents_read_scope' (lecture autorisee seulement
+  // si storage_path = nom de l'objet + cloud_available) -> sinon "Object not found" cote app.
   await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
     method: "PATCH",
     prefer: "return=minimal",
-    body: JSON.stringify({ metadata_json: { ...md, signed_document }, updated_at: new Date().toISOString() }),
+    body: JSON.stringify({
+      storage_bucket: STORAGE_BUCKET,
+      storage_path: storagePath,
+      storage_status: "cloud_available",
+      file_size: pdf.buffer.length,
+      sha256: signed_document.sha256,
+      mime_type: "application/pdf",
+      metadata_json: { ...md, signed_document },
+      synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }),
   });
   return signed_document;
 }
