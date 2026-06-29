@@ -162,15 +162,15 @@ const CHAN_CONFIG: Record<Channel, { status: Status; tagCls: Property['tagCls'];
 const MAIL_TEMPLATES = {
   contact: {
     subj: 'Une sélection de biens pour votre projet',
-    msg: "Bonjour M. MOREL,\n\nSuite à notre échange, voici une première sélection de biens correspondant à votre recherche (maison 4 pièces, secteur Craponne-sur-Arzon). Dites-moi ceux que vous souhaitez visiter, je m'occupe de l'organisation.\n\nBien à vous,",
+    msg: "Bonjour M. MOREL,\n\nSuite à notre échange, j'ai réuni pour vous une première sélection de biens qui correspondent à votre recherche{RECHERCHE}. Prenez le temps de les parcourir, puis dites-moi simplement ceux qui retiennent votre attention : je me charge d'organiser les visites.\n\nBien à vous,",
   },
   relance: {
     subj: 'De nouveaux biens correspondent à votre recherche',
-    msg: "Bonjour M. MOREL,\n\nDe nouveaux biens viennent d'arriver et correspondent à vos critères. Je vous les transmets en priorité, avant leur diffusion large. Un coup de cœur ? Je vous cale une visite cette semaine.\n\nBien à vous,",
+    msg: "Bonjour M. MOREL,\n\nDe nouveaux biens viennent d'arriver et collent à votre recherche{RECHERCHE}. Je vous les transmets en avant-première, avant leur diffusion plus large. Un coup de cœur ? Je vous organise une visite dès cette semaine.\n\nBien à vous,",
   },
   coup: {
     subj: 'Un bien à ne pas manquer',
-    msg: "Bonjour M. MOREL,\n\nJ'ai repéré un bien qui colle particulièrement à votre projet — à voir rapidement selon moi. Voici les détails, je reste à votre disposition pour une visite.\n\nBien à vous,",
+    msg: "Bonjour M. MOREL,\n\nJ'ai repéré un bien qui correspond vraiment à votre projet{RECHERCHE} — le genre de bien à découvrir rapidement avant qu'il ne parte. Je vous laisse regarder, et reste à votre disposition pour organiser une visite.\n\nBien à vous,",
   },
 } as const
 type TemplateKey = keyof typeof MAIL_TEMPLATES
@@ -413,6 +413,32 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const negoEmail = contact?.negociateur_email ?? null
   const mailName = contact?.display_name?.trim() || 'Madame, Monsieur'
 
+  // Libellé de la recherche RÉELLE (type · pièces · secteur · budget) pour personnaliser
+  // les modèles d'email — remplace le placeholder {RECHERCHE}. Vide si pas de recherche.
+  const searchCriteresLabel = useMemo(() => {
+    if (!search) return ''
+    const num = (v: unknown) => Number(String(v ?? '').replace(/[^0-9.]/g, '')) || 0
+    const parts: string[] = []
+    const t = raTypes(search.types_json)
+    if (t.length) parts.push(t.join(' ou ').toLowerCase())
+    const pmin = num(search.pieces_min), pmax = num(search.pieces_max)
+    if (pmin && pmax) parts.push(pmin === pmax ? `${pmin} pièce${pmin > 1 ? 's' : ''}` : `${pmin} à ${pmax} pièces`)
+    else if (pmin) parts.push(`${pmin} pièce${pmin > 1 ? 's' : ''} minimum`)
+    else if (pmax) parts.push(`jusqu'à ${pmax} pièce${pmax > 1 ? 's' : ''}`)
+    const villes = raList(search.villes_json)
+    if (villes.length) parts.push(`secteur ${villes.slice(0, 2).join(', ')}${villes.length > 2 ? '…' : ''}`)
+    const bmax = num(search.prix_max)
+    if (bmax) parts.push(`budget jusqu'à ${bmax.toLocaleString('fr-FR')} €`)
+    return parts.join(', ')
+  }, [search])
+
+  // Remplit un modèle : nom du contact + recherche réelle (placeholder {RECHERCHE}).
+  const fillTemplate = useCallback((msg: string) =>
+    msg
+      .replace(/M\. MOREL/g, mailName)
+      .replace(/\{RECHERCHE\}/g, searchCriteresLabel ? ` (${searchCriteresLabel})` : ''),
+    [mailName, searchCriteresLabel])
+
   useEffect(() => {
     if (!open) return
     if (!searchKey) { setProperties(INITIAL_PROPERTIES); setRelances(INITIAL_RELANCES); setTimeline([]); setNotifs([]); setLoadError(null); setLoading(false); return }
@@ -580,8 +606,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
     setMailRefs(refs)
     setMailTpl('contact')
     setMailSubj(MAIL_TEMPLATES.contact.subj)
-    setMailMsg(MAIL_TEMPLATES.contact.msg.replace(/M\. MOREL/g, mailName))
-  }, [mailName])
+    setMailMsg(fillTemplate(MAIL_TEMPLATES.contact.msg))
+  }, [fillTemplate])
 
   const chooseChannel = useCallback((chan: Channel) => {
     const refs = chanRefs ?? []
@@ -615,8 +641,8 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
   const applyTemplate = useCallback((t: TemplateKey) => {
     setMailTpl(t)
     setMailSubj(MAIL_TEMPLATES[t].subj)
-    setMailMsg(MAIL_TEMPLATES[t].msg.replace(/M\. MOREL/g, mailName))
-  }, [mailName])
+    setMailMsg(fillTemplate(MAIL_TEMPLATES[t].msg))
+  }, [fillTemplate])
 
   const senderValid = Boolean(senderEmail && senderEmail.toLowerCase().endsWith(`@${GTI_DOMAIN}`))
   const canSendEmail = senderValid && Boolean(acquereurEmail)

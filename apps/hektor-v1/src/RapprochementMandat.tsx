@@ -91,11 +91,11 @@ const STATUS_LABEL: Record<Status, string> = { todo: 'À contacter', propose: 'E
 const MAIL_TEMPLATES = {
   contact: {
     subj: 'Un bien correspond à votre recherche',
-    msg: "Bonjour,\n\nUn bien que je commercialise correspond à votre projet d'acquisition. Je vous le transmets en priorité — dites-moi s'il vous intéresse et je vous organise une visite.\n\nBien à vous,",
+    msg: "Bonjour,\n\nUn bien que je commercialise correspond à votre projet d'acquisition. Je vous le transmets en priorité : dites-moi simplement s'il vous intéresse, et je me charge d'organiser la visite.\n\nBien à vous,",
   },
   coup: {
     subj: 'Un bien à ne pas manquer',
-    msg: "Bonjour,\n\nJ'ai un bien qui colle particulièrement à vos critères — à voir rapidement selon moi. Voici les détails, je reste à votre disposition pour une visite.\n\nBien à vous,",
+    msg: "Bonjour,\n\nJ'ai un bien qui colle particulièrement à votre projet — le genre à découvrir rapidement avant qu'il ne parte. Je vous laisse regarder, et reste à votre disposition pour organiser une visite.\n\nBien à vous,",
   },
 } as const
 type TemplateKey = keyof typeof MAIL_TEMPLATES
