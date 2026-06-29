@@ -693,7 +693,11 @@ function parseSignatureFromRow(rowHtml) {
   const row = String(rowHtml || "");
   const text = stripHtml(row);
   const btn = row.match(/<button[^>]*id="docBtnSign_(\d+)_(\d+)[^"]*"[^>]*>/i);
-  const dlp = row.match(/downloadProcedureFiles\(\s*['"]?(\d+)['"]?\s*\)/i) || row.match(/downloadProofs\(\s*['"]?(\d+)['"]?\s*\)/i);
+  // procedure_id : present sous plusieurs formes selon l'etat (signe = download/proofs ; en attente = relance/ceremony).
+  const dlp = row.match(/downloadProcedureFiles\(\s*['"]?(\d+)['"]?\s*\)/i)
+    || row.match(/reminderProcedureSignatories\(\s*['"]?(\d+)['"]?\s*\)/i)
+    || row.match(/downloadProofs\(\s*['"]?(\d+)['"]?\s*\)/i)
+    || row.match(/docBtnPrintCeremony_(\d+)/i);
   const procedureId = dlp ? Number(dlp[1]) : null;
   let status = null, progress = null, signedAt = null, hektorDocId = null, docType = null;
   if (btn) {
@@ -709,8 +713,9 @@ function parseSignatureFromRow(rowHtml) {
       signedAt = m ? m[1].trim() : (title || null);
     } else {
       const st = parseSignatureStatus(text);
-      if (st && st.status === "pending") { status = "pending"; progress = st.progress; }
-      else if (st && st.status === "refused") { status = "refused"; progress = st.progress; }
+      if (st && st.status === "refused") { status = "refused"; progress = st.progress; }
+      else if (st && st.status === "pending") { status = "pending"; progress = st.progress; }
+      else if (procedureId) { status = "pending"; progress = st && st.progress ? st.progress : null; } // procedure existante + pas signe => envoye, en attente
       else if (/editProcedure\(/.test(onclick)) { status = "to_send"; }
     }
   } else {
