@@ -7917,8 +7917,143 @@ function consoleDocumentIconType(document: Pick<ConsoleDocument, 'mime_type' | '
   return 'content'
 }
 
+// Type de fichier pour la pastille coloree (PDF rouge, image bleu, etc.).
+function consoleFileType(document: Pick<ConsoleDocument, 'mime_type' | 'document_name'>): 'pdf' | 'image' | 'doc' | 'other' {
+  const text = `${document.mime_type ?? ''} ${document.document_name ?? ''}`.toLowerCase()
+  if (text.includes('pdf') || /\.pdf$/i.test(document.document_name ?? '')) return 'pdf'
+  if (text.includes('image/') || /\.(jpe?g|png|webp|gif|heic)$/i.test(document.document_name ?? '')) return 'image'
+  if (/\.(docx?|odt|rtf|txt)$/i.test(document.document_name ?? '')) return 'doc'
+  return 'other'
+}
+
+// Petite icone (inline SVG) pour la pastille d'etat de signature.
+function sigIcon(kind: 'check' | 'clock' | 'pen' | 'x') {
+  const common = { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
+  if (kind === 'check') return <svg {...common}><path d="M5 13l4 4L19 7" /></svg>
+  if (kind === 'clock') return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>
+  if (kind === 'x') return <svg {...common}><path d="M6 6l12 12M18 6L6 18" /></svg>
+  return <svg {...common}><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+}
+
+type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; procedure_id?: number | string | null }
+
+// Pastille d'etat de signature, partagee par le bloc Documents et le suivi mandat.
+function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
+  const st = signature?.status
+  if (!st) return null
+  const variants: Record<string, { bg: string; fg: string; icon: 'check' | 'clock' | 'pen' | 'x'; label: string }> = {
+    signed: { bg: '#e6f4ea', fg: '#1f7a3d', icon: 'check', label: `Signé${signature?.signed_at ? ` le ${signature.signed_at}` : ''}` },
+    pending: { bg: '#fff3e0', fg: '#b26a00', icon: 'clock', label: `En attente${signature?.progress ? ` · ${signature.progress}` : ''}` },
+    refused: { bg: '#fce8e6', fg: '#b3261e', icon: 'x', label: 'Signature refusée' },
+    to_send: { bg: '#f1f3f4', fg: '#5f6368', icon: 'pen', label: 'À envoyer en signature' },
+  }
+  const v = variants[st]
+  if (!v) return null
+  return (
+    <span className="cdoc-sig" style={{ background: v.bg, color: v.fg }}>
+      {sigIcon(v.icon)}
+      <span>{v.label}</span>
+    </span>
+  )
+}
+
 // Debounce de l'auto-synchro signature (read-through) par dossier, partage entre montages du panneau.
 const signatureAutoSyncByDossier = new Map<number, number>()
+
+// Bloc « Suivi de signature du mandat » : affiche, sous l'editeur de mandat (onglet Mandat & contacts),
+// les mandats avec leur etat (a envoyer / en attente / signe) + l'action utile. Reutilise les memes
+// donnees et actions que le bloc Documents. N'affiche rien s'il n'y a aucun mandat.
+function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; onJobCreated?: (job: ConsoleJob) => void }) {
+  const [documents, setDocuments] = useState<ConsoleDocument[]>([])
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = async (): Promise<ConsoleDocument[]> => {
+    try {
+      const rows = await loadConsoleDocuments(dossier.app_dossier_id)
+      const mandats = rows.filter((row) => /mandat/i.test(row.document_name || ''))
+      setDocuments(mandats)
+      return mandats
+    } catch {
+      return []
+    }
+  }
+
+  useEffect(() => {
+    setDocuments([]); setMessage(null); setError(null)
+    void refresh().then((rows) => {
+      const watchable = rows.some((row) => {
+        const sig = (row.metadata_json as { signature?: SignatureMeta } | null)?.signature
+        return sig?.status === 'pending' || sig?.status === 'to_send'
+      })
+      if (watchable) { window.setTimeout(() => void refresh(), 9000); window.setTimeout(() => void refresh(), 18000) }
+    })
+  }, [dossier.app_dossier_id])
+
+  function openHektorSignature() {
+    const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
+    window.open(`${base}/admin/?page=/mes-biens/mon-bien/documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`, '_blank', 'noopener')
+  }
+  async function openSigned(document: ConsoleDocument) {
+    setBusyId(document.id); setError(null)
+    try { const url = await createSignedProcedureDocumentUrl(document); window.open(url, '_blank', 'noopener') }
+    catch (err) { setError(err instanceof Error ? err.message : 'Document signe indisponible') }
+    finally { setBusyId(null) }
+  }
+  async function relance(document: ConsoleDocument, procedureId: number | string) {
+    if (!window.confirm(`Envoyer un rappel de signature aux signataires ?\n\n${document.document_name}`)) return
+    setBusyId(document.id); setError(null); setMessage(null)
+    try { const job = await createRelanceSignatureJob({ document, procedureId }); onJobCreated?.(job); setMessage('Rappel de signature demande.') }
+    catch (err) { setError(err instanceof Error ? err.message : 'Impossible de creer la demande de relance') }
+    finally { setBusyId(null) }
+  }
+
+  if (!documents.length) return null
+  return (
+    <section className="mandat-signature-tracker cdocs-v2">
+      <div className="mandat-signature-tracker-head">
+        <span className="mst-icon" aria-hidden="true"><DetailIcon type="signature" /></span>
+        <strong>Suivi de signature du mandat</strong>
+      </div>
+      {message ? <p className="console-documents-message">{message}</p> : null}
+      {error ? <p className="console-documents-error">{error}</p> : null}
+      <div className="console-documents-list">
+        {documents.map((document) => {
+          const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
+          const signedDocument = (document.metadata_json as { signed_document?: { storage_path?: string } } | null)?.signed_document ?? null
+          const hasSignedFile = Boolean(signedDocument?.storage_path)
+          return (
+            <article key={document.id} className="console-document-row">
+              <span className="console-document-icon" data-ftype={consoleFileType(document)} aria-hidden="true"><DetailIcon type="mandate" /></span>
+              <div className="console-document-main">
+                <strong>{document.document_name}</strong>
+                <SignatureBadge signature={signature} />
+              </div>
+              <div className="console-document-actions">
+                {hasSignedFile ? (
+                  <button className="ghost-button console-document-open console-document-signed" type="button" onClick={() => void openSigned(document)} disabled={busyId === document.id}>
+                    <span aria-hidden="true"><DetailIcon type="content" /></span>Ouvrir le signé
+                  </button>
+                ) : null}
+                {signature?.status === 'pending' && signature.procedure_id ? (
+                  <button className="ghost-button console-document-relance" type="button" onClick={() => void relance(document, signature.procedure_id!)} disabled={busyId === document.id}>
+                    <span aria-hidden="true"><DetailIcon type="hektor" /></span>Relancer
+                  </button>
+                ) : null}
+                {signature?.status !== 'signed' ? (
+                  <button className="ghost-button console-document-sign" type="button" onClick={openHektorSignature}>
+                    <span aria-hidden="true"><DetailIcon type="signature" /></span>Signature
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
 
 function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
@@ -8146,7 +8281,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
   }
 
   return (
-    <details className={`console-documents-panel ${compact ? 'is-compact' : ''}`}>
+    <details className={`console-documents-panel cdocs-v2 ${compact ? 'is-compact' : ''}`}>
       <summary className="console-documents-head">
         <span className="console-documents-title">
           <span className="console-documents-title-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
@@ -8248,38 +8383,21 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
               const deleting = deletingDocumentIds.has(document.id)
               const canOpen = document.storage_status === 'cloud_available'
               const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
-              const signature = (document.metadata_json as { signature?: { status?: string; progress?: string | null; signed_at?: string | null; procedure_id?: number | string | null } } | null)?.signature ?? null
+              const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
               const signedDocument = (document.metadata_json as { signed_document?: { storage_path?: string } } | null)?.signed_document ?? null
               const hasSignedFile = Boolean(signedDocument?.storage_path)
-              const signatureLabel = signature?.status === 'signed'
-                ? `✓ Signé${signature.signed_at ? ` le ${signature.signed_at}` : ''}`
-                : signature?.status === 'refused'
-                  ? 'Signature refusée'
-                  : signature?.status === 'pending'
-                    ? `En attente de signature${signature.progress ? ` (${signature.progress})` : ''}`
-                    : signature?.status === 'to_send'
-                      ? 'À envoyer en signature'
-                      : null
-              const signatureColor = signature?.status === 'signed' ? '#1f7a3d' : signature?.status === 'refused' ? '#b3261e' : signature?.status === 'to_send' ? '#5f6368' : '#b26a00'
-              const signatureBg = signature?.status === 'signed' ? '#e6f4ea' : signature?.status === 'refused' ? '#fce8e6' : signature?.status === 'to_send' ? '#f1f3f4' : '#fff3e0'
               return (
                 <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
-                  <span className="console-document-icon" aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
+                  <span className="console-document-icon" data-ftype={consoleFileType(document)} aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
                   <div className="console-document-main">
                     <strong>{document.document_name}</strong>
                     <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
-                    {signatureLabel ? (
-                      <span
-                        style={{ display: 'inline-block', marginTop: '4px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', whiteSpace: 'nowrap', color: signatureColor, background: signatureBg }}
-                      >
-                        {signatureLabel}
-                      </span>
-                    ) : null}
+                    <SignatureBadge signature={signature} />
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
                   <div className="console-document-actions">
                     {hasSignedFile ? (
-                      <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenSignedDocument(document)} disabled={busyDocumentId === document.id} title="Ouvrir le document signé">
+                      <button className="ghost-button console-document-open console-document-signed" type="button" onClick={() => void handleOpenSignedDocument(document)} disabled={busyDocumentId === document.id} title="Ouvrir le document signé">
                         <span aria-hidden="true"><DetailIcon type="content" /></span>
                         Ouvrir le signé
                       </button>
@@ -19470,6 +19588,9 @@ function DossierDetailLayout(props: {
                   ) : null}
                   {mandatSectionOpen ? (
                     isLightweightDetail ? null : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />
+                  ) : null}
+                  {mandatSectionOpen && !isLightweightDetail ? (
+                    <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} />
                   ) : null}
                   {mandatSectionOpen ? (props.mandats.length > 0 ? (
                     <div className="detail-entity-list detail-mandat-list">

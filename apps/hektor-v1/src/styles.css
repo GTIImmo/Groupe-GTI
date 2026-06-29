@@ -11400,6 +11400,103 @@ button.metric-card.is-active {
   border-color: rgba(197, 0, 95, 0.42);
   background: rgba(197, 0, 95, 0.08);
 }
+
+/* === Documents & signature v2 (relooking, scope .cdocs-v2) === */
+.cdocs-v2 .console-document-row {
+  border-radius: 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cdocs-v2 .console-document-row:hover {
+  border-color: rgba(197, 0, 95, 0.3);
+  box-shadow: 0 8px 20px rgba(34, 35, 35, 0.07);
+}
+.cdocs-v2 .console-document-cloud_available {
+  background: #ffffff;
+}
+.cdocs-v2 .console-document-icon[data-ftype='pdf'] {
+  background: rgba(226, 75, 74, 0.12);
+  color: #c0392b;
+}
+.cdocs-v2 .console-document-icon[data-ftype='image'] {
+  background: rgba(55, 138, 221, 0.13);
+  color: #1f6fbf;
+}
+.cdocs-v2 .console-document-icon[data-ftype='doc'] {
+  background: rgba(99, 86, 200, 0.13);
+  color: #574bb0;
+}
+.cdoc-sig {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.cdoc-sig span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdoc-sig svg {
+  flex: none;
+}
+.cdocs-v2 .console-document-actions .ghost-button {
+  font-weight: 750;
+  border-radius: 9px;
+}
+.cdocs-v2 .console-document-actions .console-document-signed {
+  border-color: rgba(31, 122, 61, 0.4);
+  background: rgba(31, 122, 61, 0.1);
+  color: #1f7a3d;
+}
+.cdocs-v2 .console-document-actions .console-document-signed:hover {
+  border-color: #1f7a3d;
+  background: rgba(31, 122, 61, 0.16);
+}
+.cdocs-v2 .console-document-actions .console-document-relance {
+  border-color: rgba(178, 106, 0, 0.42);
+  background: rgba(178, 106, 0, 0.1);
+  color: #9a5b00;
+}
+.cdocs-v2 .console-document-actions .console-document-relance:hover {
+  border-color: #b26a00;
+  background: rgba(178, 106, 0, 0.16);
+}
+.mandat-signature-tracker {
+  margin-top: 14px;
+}
+.mandat-signature-tracker-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+.mandat-signature-tracker-head strong {
+  color: var(--gti-final-ink);
+  font-size: 13.5px;
+}
+.mandat-signature-tracker .mst-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(197, 0, 95, 0.1);
+  color: var(--gti-final-magenta);
+}
+.mandat-signature-tracker .mst-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .mobile-console-documents {
   padding: 8px 0 14px;
 }
