@@ -3596,6 +3596,42 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
   return signedFetched;
 }
 
+// Purge des documents SUPPRIMES dans Hektor (le run quotidien etant additif, ils resteraient fantomes).
+// GARDE-FOUS stricts : ne purge QUE des docs indexes Hektor, absents A LA FOIS des entrees (force_transfert)
+// ET des empreintes (chargeannonce). Ne touche JAMAIS : lignes synthetiques signees, archives signees
+// (signed_document). Ne purge rien si la lecture est vide (anti-suppression massive sur erreur Hektor).
+async function pruneDeletedDocuments(job, dossier, entries) {
+  if (!Array.isArray(entries) || entries.length === 0) return 0;
+  let chargeHtml;
+  try {
+    chargeHtml = (await hektorFetch(`${XMLRPC_URL}?mode=chargeannonce_Documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}&lang=fr`)).text;
+  } catch (_e) {
+    return 0; // lecture empreintes KO -> on ne purge pas (securite)
+  }
+  const empreinteIds = new Set([...buildSignatureMapFromHtml(chargeHtml).keys()].map(String));
+  const presentHashes = new Set(entries.map((e) => e.hektor_document_id));
+  const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+  const toDelete = [];
+  for (const r of existing.rows) {
+    const src = String(r.source || "");
+    if (src === "hektor_immosign_signed") continue;                 // ligne synthetique signee
+    if (r.metadata_json && r.metadata_json.signed_document) continue; // archive signee conservee
+    if (!/^hektor_console/.test(src)) continue;                      // ne purge que les docs indexes Hektor
+    if (presentHashes.has(r.hektor_document_id)) continue;           // doc encore present (force_transfert)
+    const hid = r.metadata_json && r.metadata_json.signature && r.metadata_json.signature.hektor_doc_id;
+    if (hid && empreinteIds.has(String(hid))) continue;             // encore une empreinte (signe/en attente/annule)
+    toDelete.push(r.id);
+  }
+  if (!toDelete.length) return 0;
+  const ids = toDelete.map((id) => encodeURIComponent(id)).join(",");
+  await supabaseRequest(`app_console_document?id=in.(${ids})`, { method: "DELETE", prefer: "return=minimal" });
+  await logJob(job.id, "hektor", "running", "Docs supprimes dans Hektor retires de l'app", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    removed: toDelete.length,
+  });
+  return toDelete.length;
+}
+
 // Relance de signature ImmoSign : POST xmlrpc ImmoSign-remindProcedureSignatories (envoie les mails de rappel).
 async function handleRelanceSignature(job) {
   const payload = safeJsonParse(job.payload_json) || {};
@@ -3714,11 +3750,22 @@ async function handleSyncConsoleDocuments(job) {
       error: error && error.message ? error.message : String(error),
     });
   }
+  // Purge des docs supprimes dans Hektor (best-effort, garde-fous stricts -> ne casse jamais la sync).
+  let pruned = 0;
+  try {
+    pruned = await pruneDeletedDocuments(job, dossier, entries);
+  } catch (error) {
+    await logJob(job.id, "hektor", "running", "Purge docs supprimes ignoree (best-effort)", {
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      error: error && error.message ? error.message : String(error),
+    });
+  }
   return {
     indexed: rows.length,
     local_stored: localStored,
     cloud_stored: cloudStored,
     signed_fetched: signedFetched,
+    pruned,
     cloud_policy: cloud ? "daily_cloud_scope" : "local_archive_only",
     hektor_annonce_id: String(dossier.hektor_annonce_id),
   };
