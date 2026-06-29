@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   loadRapprochementsForDossier, loadDossierTimeline, loadRelancesForDossier, setRelanceStatus,
   loadNotificationsForDossier, markNotificationRead,
-  recordProposition, setBienStatut, sendRapprochementEmail, loadGoogleCalendarEventLinks,
+  recordProposition, setBienStatut, sendRapprochementEmail, fetchRapprochementEmailPreviewHtml, loadGoogleCalendarEventLinks,
   type RapprochementForDossierRow, type TimelineRow, type GoogleCalendarEventLink, type RelanceRow, type NotificationRow,
 } from './lib/api'
 import type { VisitePlanInput } from './RechercheAcquereur'
@@ -116,7 +116,6 @@ const IcPin = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const fmtEuro = (n: number | null | undefined) => (n != null && Number.isFinite(Number(n)) ? `${Math.round(Number(n)).toLocaleString('fr-FR')} €` : '—')
 const fmtDate = (iso: string): string => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleDateString('fr-FR') : '' }
 const initialsOf = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'AC'
-const htmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const isRecent = (iso: string | null) => { if (!iso) return false; const t = new Date(iso).getTime(); return Number.isFinite(t) && (Date.now() - t) < 7 * 86400000 }
 
 // Statut couple → modèle de carte
@@ -194,25 +193,6 @@ function rowToBuyer(r: RapprochementForDossierRow): Buyer {
   }
 }
 
-// Corps HTML de l'email : message + carte du bien (mandat) + signature.
-function buildEmailHtml(message: string, m: MandatContext, signature: string): string {
-  const intro = htmlEsc(message).replace(/\n/g, '<br>')
-  const ref = m.numeroMandat || m.numeroDossier || (m.hektorAnnonceId ? `V${m.hektorAnnonceId}` : `#${m.appDossierId}`)
-  const specs = [m.surface != null ? `${Math.round(Number(m.surface))} m²` : '', m.type ?? ''].filter(Boolean).join(' · ')
-  const card = `
-    <table role="presentation" style="width:100%;border-collapse:collapse;margin:10px 0;border:1px solid #e2e5e6;border-radius:8px;overflow:hidden">
-      <tr>
-        ${m.photo ? `<td style="width:150px;vertical-align:top"><img src="${m.photo}" width="150" style="display:block;width:150px;height:112px;object-fit:cover" alt=""></td>` : ''}
-        <td style="padding:10px 14px;vertical-align:top;font-family:Arial,Helvetica,sans-serif">
-          <div style="font-size:12px;color:#9da0a0">${htmlEsc(ref)}${m.ville ? ` · ${htmlEsc(m.ville)}` : ''}</div>
-          <div style="font-size:15px;font-weight:bold;color:#222323;margin:2px 0">${htmlEsc(m.titre)}</div>
-          <div style="font-size:15px;color:#c5005f;font-weight:bold">${fmtEuro(m.prix)}</div>
-          <div style="font-size:12px;color:#5c6163;margin-top:3px">${htmlEsc(specs)}</div>
-        </td>
-      </tr>
-    </table>`
-  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222323;line-height:1.5">${intro}<br><br>${card}<br><div style="color:#5c6163;font-size:13px;white-space:pre-line">${htmlEsc(signature)}</div></div>`
-}
 
 function MatchTags({ crit }: { crit: Crit[] }) {
   return (
@@ -943,10 +923,10 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
       {/* Email preview */}
       {mailKeys && (
         <div className="chan-back" onClick={(e) => { if (e.target === e.currentTarget) setMailKeys(null) }}>
-          <div className="chan-pop mail-pop" role="dialog" aria-label="Aperçu de l'email">
+          <div className="chan-pop mail-pop" role="dialog" aria-label="Proposer par email">
             <div className="chan-top">
               <span className="chan-top-ic"><IcMail /></span>
-              <div><div className="chan-top-t">Aperçu de l'email</div><div className="chan-top-s">{mailRecipients.length} destinataire{mailRecipients.length > 1 ? 's' : ''}{mailBuyers.length > mailRecipients.length ? ` · ${mailBuyers.length - mailRecipients.length} sans email` : ''}</div></div>
+              <div><div className="chan-top-t">Proposer par email</div><div className="chan-top-s">{mailRecipients.length} destinataire{mailRecipients.length > 1 ? 's' : ''}{mailBuyers.length > mailRecipients.length ? ` · ${mailBuyers.length - mailRecipients.length} sans email` : ''}</div></div>
               <button className="chan-x" aria-label="Fermer" onClick={() => setMailKeys(null)}><IcClose /></button>
             </div>
             <div className="mail-tpl">
@@ -956,8 +936,9 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
               ))}
             </div>
             <div className="mail-body">
-              <label className="mail-field"><span className="mail-flbl">Objet</span><input className="mail-subj" type="text" value={mailSubj} onChange={(e) => setMailSubj(e.target.value)} /></label>
-              <textarea className="mail-msg" rows={5} value={mailMsg} onChange={(e) => setMailMsg(e.target.value)} />
+              <label className="mail-field"><span className="mail-flbl">Votre mot personnel <span style={{ fontWeight: 400, opacity: 0.65 }}>· optionnel — inséré en haut de l'email, après la salutation</span></span>
+                <textarea className="mail-msg" rows={4} value={mailMsg} onChange={(e) => setMailMsg(e.target.value)} placeholder="Un mot pour personnaliser l'envoi. La salutation, la présentation du bien et la signature sont ajoutées automatiquement." />
+              </label>
               <div className="mb-card">
                 <div className="mb-photo">{mandat.photo ? <img src={mandat.photo} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m4 18 5-5 4 4 3-3 4 4" /></svg>}</div>
                 <div>
@@ -967,18 +948,31 @@ export default function RapprochementMandat({ open, onClose, mandat, senderEmail
                   <div className="mb-specs">{specs.join(' · ')}</div>
                 </div>
               </div>
+              <div style={{ background: 'rgba(16,122,127,0.07)', border: '1px solid rgba(16,122,127,0.18)', borderRadius: 10, padding: '11px 13px', margin: '4px 0 2px', fontSize: '12.7px', lineHeight: 1.5, color: 'var(--ink, #222)' }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>Email interactif — ce qui va se passer</div>
+                <div><strong>Chaque acquéreur reçoit</strong> un email soigné présentant ce bien, avec un bouton « Voir ce bien » qui ouvre son espace privé (photos, détails) où il répond directement.</div>
+                <div style={{ marginTop: 5 }}><strong>Vous récupérez automatiquement :</strong> l'ouverture (ou non) · ❤️ « Ça m'intéresse » → le bien passe en « Proposé · chaud » · ✕ « Pas pour moi » + la raison · et une relance est programmée sans réponse.</div>
+              </div>
               <div className="mail-sign" style={{ fontSize: '12.5px', color: 'var(--muted)', whiteSpace: 'pre-line' }}>{mandat.negociateurNom || 'Groupe GTI'}<br />{mandat.agence || 'Groupe GTI'}</div>
             </div>
             <div className="mail-foot">
               <span className="mail-foot-n">{mailRecipients.length} envoi(s) individuel(s)</span>
               <div className="mail-foot-btns">
                 <button className="btn-flat" onClick={() => setMailKeys(null)}>Annuler</button>
-                <button className="btn-flat" onClick={() => {
-                  const signature = `${mandat.negociateurNom || 'Groupe GTI'}\n${mandat.agence || 'Groupe GTI'}`
+                <button className="btn-flat" onClick={async () => {
+                  const annonceId = mandat.hektorAnnonceId
+                  if (annonceId == null) { toast('Annonce non identifiée pour l’aperçu.'); return }
                   const w = window.open('', '_blank')
                   if (!w) { toast('Autorise les pop-ups pour voir l’aperçu.'); return }
-                  w.document.open(); w.document.write(buildEmailHtml(mailMsg, mandat, signature)); w.document.close()
-                }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu</button>
+                  w.document.write('<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;padding:32px;color:#555">Chargement de l’aperçu réel…</body>')
+                  try {
+                    const html = await fetchRapprochementEmailPreviewHtml({ annonceIds: [annonceId], variante: 'push', customIntro: mailMsg })
+                    w.document.open(); w.document.write(html); w.document.close()
+                  } catch (err) {
+                    try { w.document.body.innerHTML = `<div style="font-family:system-ui,sans-serif;padding:32px;color:#b00020">Aperçu indisponible : ${(err as Error)?.message ?? 'erreur'}</div>` } catch { /* noop */ }
+                    toast(`Aperçu indisponible : ${(err as Error)?.message ?? 'erreur'}`)
+                  }
+                }} title="Aperçu réel de l'email tel qu'il sera reçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu</button>
                 <button className="btn-flat brand" onClick={requestSend} disabled={!canSendEmail} title={canSendEmail ? undefined : 'Adresse négociateur (@gti-immobilier.fr) ou email acquéreur manquant'}><IcSend />Envoyer</button>
               </div>
             </div>

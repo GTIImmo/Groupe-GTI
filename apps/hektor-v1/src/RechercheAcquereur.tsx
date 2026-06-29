@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppContact, AppContactSearch } from './types'
 import {
   loadRapprochements, loadSearchStatuts, loadRelances, loadSearchTimeline, loadDossierPhotos,
-  recordProposition, setBienStatut, setRelanceStatus, sendRapprochementEmail,
+  recordProposition, setBienStatut, setRelanceStatus, sendRapprochementEmail, fetchRapprochementEmailPreviewHtml,
   loadGoogleCalendarEventLinks, loadNotificationsForSearch, markNotificationRead,
   type RapprochementRow, type StatutRow, type RelanceRow, type TimelineRow, type GoogleCalendarEventLink,
   type NotificationRow,
@@ -251,25 +251,6 @@ const fmtDate = (iso: string): string => {
   return Number.isFinite(d.getTime()) ? d.toLocaleDateString('fr-FR') : ''
 }
 
-const htmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-// Corps HTML de l'email de proposition : message + cartes biens (photo, ref, prix, specs) + signature.
-function buildEmailHtml(message: string, biens: Property[], signature: string): string {
-  const intro = htmlEsc(message).replace(/\n/g, '<br>')
-  const cards = biens.map((b) => `
-    <table role="presentation" style="width:100%;border-collapse:collapse;margin:10px 0;border:1px solid #e7ddce;border-radius:8px;overflow:hidden">
-      <tr>
-        ${b.photo ? `<td style="width:150px;vertical-align:top"><img src="${b.photo}" width="150" style="display:block;width:150px;height:112px;object-fit:cover" alt=""></td>` : ''}
-        <td style="padding:10px 14px;vertical-align:top;font-family:Arial,Helvetica,sans-serif">
-          <div style="font-size:12px;color:#8a8278">${htmlEsc(b.ref)} · ${htmlEsc(b.type)}</div>
-          <div style="font-size:15px;font-weight:bold;color:#1c1815;margin:2px 0">${htmlEsc(b.title)}</div>
-          <div style="font-size:15px;color:#c2125f;font-weight:bold">${htmlEsc(b.price)}</div>
-          <div style="font-size:12px;color:#5a5249;margin-top:3px">${b.specs.map((s) => htmlEsc(s.label)).join(' · ')}</div>
-        </td>
-      </tr>
-    </table>`).join('')
-  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1c1815;line-height:1.5">${intro}<br><br>${cards}<br><div style="color:#5a5249;font-size:13px;white-space:pre-line">${htmlEsc(signature)}</div></div>`
-}
 
 // Map d'un rapprochement persisté (RPC) vers le modèle de carte Property de l'écran.
 function rapproToProperty(r: RapprochementRow, search?: AppContactSearch | null): Property {
@@ -1263,10 +1244,10 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
       {/* aperçu email */}
       {mailRefs && (
         <div className="mail-back" onClick={(e) => { if (e.target === e.currentTarget) setMailRefs(null) }}>
-          <div className="mail-pop" role="dialog" aria-label="Aperçu de l'email">
+          <div className="mail-pop" role="dialog" aria-label="Proposer par email">
             <div className="mail-head">
               <span className="mail-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>
-              <div className="mail-head-bd"><div className="mail-h-t">Aperçu de l'email</div><div className="mail-h-s">À : {mailName}{acquereurEmail ? ` <${acquereurEmail}>` : ' — aucune adresse email'}</div></div>
+              <div className="mail-head-bd"><div className="mail-h-t">Proposer par email</div><div className="mail-h-s">À : {mailName}{acquereurEmail ? ` <${acquereurEmail}>` : ' — aucune adresse email'}</div></div>
               <button className="x" aria-label="Fermer" onClick={() => setMailRefs(null)}><IcClose /></button>
             </div>
             <div className="mail-tpl">
@@ -1276,8 +1257,9 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               ))}
             </div>
             <div className="mail-body">
-              <label className="mail-field"><span className="mail-flbl">Objet</span><input className="mail-subj" type="text" value={mailSubj} onChange={(e) => setMailSubj(e.target.value)} /></label>
-              <textarea className="mail-msg" rows={5} value={mailMsg} onChange={(e) => setMailMsg(e.target.value)} />
+              <label className="mail-field"><span className="mail-flbl">Votre mot personnel <span style={{ fontWeight: 400, opacity: 0.65 }}>· optionnel — inséré en haut de l'email, après la salutation</span></span>
+                <textarea className="mail-msg" rows={4} value={mailMsg} onChange={(e) => setMailMsg(e.target.value)} placeholder="Un mot pour personnaliser l'envoi. La salutation, la présentation des biens et la signature sont ajoutées automatiquement." />
+              </label>
               <div className="mail-biens">
                 {mailBiens.map((b) => (
                   <div className="mb-card" key={b.ref}>
@@ -1295,8 +1277,9 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               <div className="mail-inter">
                 <span className="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span>
                 <div className="mi-bd">
-                  <div className="mi-t">Email interactif</div>
-                  <div className="mi-s">Le client répond directement : « Ça m'intéresse » / « Pas pour moi » pour chaque bien, et peut mettre à jour sa recherche. Ses réponses remontent dans votre liste.</div>
+                  <div className="mi-t">Email interactif — ce qui va se passer</div>
+                  <div className="mi-s"><strong>Le client reçoit</strong> un email soigné présentant {mailBiens.length > 1 ? 'les biens' : 'le bien'}, avec un bouton « Voir ce bien » qui ouvre son espace privé (photos, détails) où il répond bien par bien.</div>
+                  <div className="mi-s" style={{ marginTop: 6 }}><strong>Vous récupérez automatiquement :</strong> l'ouverture (ou non) · ❤️ « Ça m'intéresse » → le bien passe en « Proposé · chaud » dans votre liste · ✕ « Pas pour moi » + la raison (trop cher, secteur…) · et une relance est programmée s'il ne répond pas.</div>
                 </div>
               </div>
               <div className="mail-sign">{negoName || 'Groupe GTI'}<br />{agenceName}</div>
@@ -1305,12 +1288,20 @@ export default function RechercheAcquereur({ open, onClose, contact, search, sen
               <span className="mail-foot-n">{mailBiens.length}{mailBiens.length > 1 ? ' biens joints' : ' bien joint'}</span>
               <div className="mail-foot-btns">
                 <button className="btn ghost sm" onClick={() => setMailRefs(null)}>Annuler</button>
-                <button className="btn ghost sm" onClick={() => {
-                  const signature = `${contact?.commercial_nom || 'Groupe GTI'}\n${contact?.agence_nom || 'Groupe GTI'}`
+                <button className="btn ghost sm" onClick={async () => {
+                  const annonceIds = mailBiens.map((b) => b.hektorAnnonceId).filter((x): x is number => typeof x === 'number')
+                  if (!annonceIds.length) { toast('Aucune annonce identifiée pour l’aperçu.'); return }
                   const w = window.open('', '_blank')
                   if (!w) { toast('Autorise les pop-ups pour voir l’aperçu.'); return }
-                  w.document.open(); w.document.write(buildEmailHtml(mailMsg, mailBiens, signature)); w.document.close()
-                }} title="Aperçu de l'email tel qu'il sera reçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu</button>
+                  w.document.write('<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;padding:32px;color:#555">Chargement de l’aperçu réel…</body>')
+                  try {
+                    const html = await fetchRapprochementEmailPreviewHtml({ annonceIds, variante: 'pull', prenom: contact?.prenom ?? null, civilite: contact?.civilite ?? null, customIntro: mailMsg })
+                    w.document.open(); w.document.write(html); w.document.close()
+                  } catch (err) {
+                    try { w.document.body.innerHTML = `<div style="font-family:system-ui,sans-serif;padding:32px;color:#b00020">Aperçu indisponible : ${(err as Error)?.message ?? 'erreur'}</div>` } catch { /* noop */ }
+                    toast(`Aperçu indisponible : ${(err as Error)?.message ?? 'erreur'}`)
+                  }
+                }} title="Aperçu réel de l'email tel qu'il sera reçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>Aperçu</button>
                 <button className="btn brand sm" onClick={requestSend} disabled={!canSendEmail} title={canSendEmail ? undefined : 'Adresse négociateur ou acquéreur manquante'}><IcSend />Envoyer l'email</button>
               </div>
             </div>
