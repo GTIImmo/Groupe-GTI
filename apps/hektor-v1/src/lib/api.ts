@@ -5646,6 +5646,30 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+// Synchro documents a la demande (read-through) : le worker relit Hektor -> etat signature a jour
+// + recuperation auto du PDF signe, sans clic. Declenche en silence a l'ouverture de l'annonce.
+export async function createSyncConsoleDocumentsJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'sync_console_documents',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {},
+      priority: input.priority ?? 45,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create documents sync job')
+  return data as ConsoleJob
+}
+
 // Relance de signature ImmoSign : le worker POST ImmoSign-remindProcedureSignatories (mails de rappel).
 export async function createRelanceSignatureJob(input: {
   document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>

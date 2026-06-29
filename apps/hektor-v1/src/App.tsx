@@ -7917,6 +7917,9 @@ function consoleDocumentIconType(document: Pick<ConsoleDocument, 'mime_type' | '
   return 'content'
 }
 
+// Debounce de l'auto-synchro signature (read-through) par dossier, partage entre montages du panneau.
+const signatureAutoSyncByDossier = new Map<number, number>()
+
 function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   const [signDoc, setSignDoc] = useState<ConsoleDocument | null>(null)
@@ -7933,10 +7936,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refreshDocuments = async (silent = false) => {
+  const refreshDocuments = async (silent = false): Promise<ConsoleDocument[]> => {
     if (!silent) setLoading(true)
+    let result: ConsoleDocument[] = []
     try {
       const rows = await loadConsoleDocuments(dossier.app_dossier_id)
+      result = rows
       setDocuments(rows)
       setPendingDocumentIds((current) => {
         const next = new Set(current)
@@ -7959,6 +7964,27 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     } finally {
       if (!silent) setLoading(false)
     }
+    return result
+  }
+
+  // Pas de 2e job a l'ouverture : le read-through bien existant (requestAnnonceRefresh) reconcilie
+  // deja l'etat signature + recupere le PDF signe cote worker. Ici on relit juste la base un peu
+  // plus tard pour afficher le resultat, si un mandat est a envoyer/en attente (donc susceptible de
+  // changer). Debounce par dossier pour ne pas empiler de timers en cas d'ouvertures repetees.
+  const scheduleSignatureRefresh = (rows: ConsoleDocument[]) => {
+    // Si un mandat est en cours (a envoyer / en attente), le read-through peut le faire evoluer
+    // (jusqu'a signe -> recup auto du PDF). On relit alors la base un peu plus tard pour l'afficher.
+    const watchable = rows.some((row) => {
+      const sig = (row.metadata_json as { signature?: { status?: string } } | null)?.signature
+      return sig?.status === 'pending' || sig?.status === 'to_send'
+    })
+    if (!watchable) return
+    const now = Date.now()
+    const last = signatureAutoSyncByDossier.get(dossier.app_dossier_id) ?? 0
+    if (now - last < 60_000) return
+    signatureAutoSyncByDossier.set(dossier.app_dossier_id, now)
+    window.setTimeout(() => void refreshDocuments(true), 9000)
+    window.setTimeout(() => void refreshDocuments(true), 18000)
   }
 
   useEffect(() => {
@@ -7967,7 +7993,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     setDeletingDocumentIds(new Set())
     setMessage(null)
     setError(null)
-    void refreshDocuments()
+    void refreshDocuments().then((rows) => scheduleSignatureRefresh(rows))
   }, [dossier.app_dossier_id])
 
   useEffect(() => {

@@ -2893,6 +2893,19 @@ async function handleRefreshConsoleData(job) {
     parent_job_id: payload.parent_job_id || null,
   });
   const result = await runCreatedAnnonceImmediateSync(job, hektorAnnonceId, { light: payload.light === true });
+  // Read-through signature (sans 2e job côté app) : à l'ouverture de l'annonce, on rafraîchit l'état
+  // signature ET on récupère automatiquement le PDF signé. Best-effort, ne fait jamais échouer le refresh.
+  let signatureSync = null;
+  try {
+    const drow = await supabaseRequest(`app_dossier_current?select=app_dossier_id,hektor_annonce_id&hektor_annonce_id=eq.${encodeURIComponent(hektorAnnonceId)}&limit=1`, { method: "GET" });
+    const dossier = Array.isArray(drow) && drow[0]
+      ? { app_dossier_id: drow[0].app_dossier_id, hektor_annonce_id: hektorAnnonceId }
+      : { hektor_annonce_id: hektorAnnonceId };
+    const signedFetched = await reconcileSignatureStates(job, dossier, "refresh_console_data", "all");
+    signatureSync = { signed_fetched: signedFetched };
+  } catch (error) {
+    signatureSync = { error: error && error.message ? error.message : String(error) };
+  }
   // Création optimiste : le vrai bien est maintenant dans Supabase -> on retire la ligne provisoire
   // correspondante (no-op pour les annonces normales : 0 ligne supprimée). Best effort.
   await cleanupProvisionalForAnnonce(hektorAnnonceId);
@@ -2903,6 +2916,7 @@ async function handleRefreshConsoleData(job) {
     reason: payload.reason || null,
     parent_job_id: payload.parent_job_id || null,
     cache_refresh: cacheRefresh,
+    signature_sync: signatureSync,
   };
 }
 
@@ -3464,26 +3478,50 @@ async function upsertSyntheticSignedRow(dossier, sig) {
 }
 
 // Detecte les docs signes via la map empreintes, met a jour/ cree la ligne, et recupere le PDF signe.
-async function syncSignedProcedureDocuments(job, dossier) {
+// Réconcilie l'état signature de TOUS les docs (to_send/pending/signed) à partir de la map empreintes
+// (chargeannonce_Documents = liste complète, signés compris qui perdent leur force_transfert), met à jour
+// la ligne suivie (par hektor_doc_id) ou crée une ligne synthétique pour un signé, et récupère le PDF signé.
+// Utilisée par la sync documents ET par le read-through (1 passe légère : 1 fetch + map + quelques PATCH).
+// gateMode: "pending" = ne s'active QUE si un mandat est EN ATTENTE (read-through a l'ouverture) ;
+//           "all"     = aussi "a envoyer" + "signe pas encore recupere" (run quotidien, filet de securite
+//                       qui rattrape le cas a_envoyer->signe le meme jour, le signe perdant son force_transfert).
+async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMode = "all") {
   let signedFetched = 0;
+  if (!dossier || !dossier.hektor_annonce_id) return 0;
+  const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+  // GARDE-FOU : ne lit Hektor QUE s'il y a un mandat a traiter. Sinon on sort sans aucun appel Hektor.
+  const hasWork = existing.rows.some((r) => {
+    const sig = r.metadata_json && r.metadata_json.signature;
+    if (!sig) return false;
+    if (sig.status === "pending") return true;
+    if (gateMode === "all" && sig.status === "to_send") return true;
+    if (gateMode === "all" && sig.status === "signed" && !(r.metadata_json && r.metadata_json.signed_document)) return true;
+    return false;
+  });
+  if (!hasWork) return 0;
   let chargeHtml;
   try {
     chargeHtml = (await hektorFetch(`${XMLRPC_URL}?mode=chargeannonce_Documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}&lang=fr`)).text;
   } catch (error) {
-    await logJob(job.id, "hektor", "running", "Lecture empreintes signature indisponible", {
+    await logJob(job.id, logCat, "running", "Lecture empreintes signature indisponible", {
       hektor_annonce_id: String(dossier.hektor_annonce_id),
       error: error && error.message ? error.message : String(error),
     });
     return 0;
   }
   const sigMap = buildSignatureMapFromHtml(chargeHtml);
-  const signed = [...sigMap.values()].filter((s) => s.status === "signed" && s.procedure_id);
-  if (!signed.length) return 0;
-  const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
-  for (const sig of signed) {
-    let target = existing.rows.find((r) => r.metadata_json && r.metadata_json.signature && String(r.metadata_json.signature.hektor_doc_id) === String(sig.hektor_doc_id));
+  if (!sigMap.size) return 0;
+  const byDocId = new Map();
+  for (const r of existing.rows) {
+    const hid = r.metadata_json && r.metadata_json.signature && r.metadata_json.signature.hektor_doc_id;
+    if (hid) byDocId.set(String(hid), r);
+  }
+  for (const sig of sigMap.values()) {
+    if (!sig.status) continue;
+    let target = byDocId.get(String(sig.hektor_doc_id));
     if (target) {
-      if (!target.metadata_json.signature || target.metadata_json.signature.status !== "signed") {
+      const cur = (target.metadata_json && target.metadata_json.signature) || {};
+      if (cur.status !== sig.status || cur.procedure_id !== sig.procedure_id || cur.signed_at !== sig.signed_at) {
         const md = { ...(target.metadata_json || {}), signature: sig };
         await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(target.id)}`, {
           method: "PATCH",
@@ -3492,15 +3530,17 @@ async function syncSignedProcedureDocuments(job, dossier) {
         });
         target = { ...target, metadata_json: md };
       }
-    } else {
+    } else if (sig.status === "signed" && dossier.app_dossier_id) {
       target = await upsertSyntheticSignedRow(dossier, sig);
+    } else {
+      continue; // pending/to_send sans ligne suivie : sera créé par la prochaine sync documents complète
     }
-    if (target && !(target.metadata_json && target.metadata_json.signed_document)) {
+    if (sig.status === "signed" && sig.procedure_id && target && !(target.metadata_json && target.metadata_json.signed_document)) {
       try {
         await downloadSignedProcedureDocument(dossier, target);
         signedFetched += 1;
       } catch (error) {
-        await logJob(job.id, "hektor", "running", "Recup doc signe echouee", {
+        await logJob(job.id, logCat, "running", "Recup doc signe echouee", {
           hektor_annonce_id: String(dossier.hektor_annonce_id),
           procedure_id: sig.procedure_id,
           error: error && error.message ? error.message : String(error),
@@ -3574,9 +3614,8 @@ async function handleSyncConsoleDocuments(job) {
     localStored += result.local_path ? 1 : 0;
     cloudStored += result.cloud_available && cloud ? 1 : 0;
   }
-  // Docs SIGNES : Hektor retire leur lien force_transfert -> invisibles pour extractDocumentEntries.
-  // On les detecte via la map empreintes (chargeannonce) puis on recupere le PDF signe (idempotent, best-effort).
-  const signedFetched = await syncSignedProcedureDocuments(job, dossier);
+  // Réconcilie l'état signature (incl. signés qui perdent leur force_transfert) + récupère le PDF signé.
+  const signedFetched = await reconcileSignatureStates(job, dossier);
   return {
     indexed: rows.length,
     local_stored: localStored,
