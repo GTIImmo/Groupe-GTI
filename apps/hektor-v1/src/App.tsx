@@ -8183,12 +8183,22 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
               const deleting = deletingDocumentIds.has(document.id)
               const canOpen = document.storage_status === 'cloud_available'
               const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
+              const signature = (document.metadata_json as { signature?: { status?: string; progress?: string | null } } | null)?.signature ?? null
               return (
                 <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
                   <span className="console-document-icon" aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
                   <div className="console-document-main">
                     <strong>{document.document_name}</strong>
                     <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
+                    {signature?.status ? (
+                      <span
+                        style={{ display: 'inline-block', marginTop: '4px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', whiteSpace: 'nowrap',
+                          color: signature.status === 'signed' ? '#1f7a3d' : signature.status === 'refused' ? '#b3261e' : '#b26a00',
+                          background: signature.status === 'signed' ? '#e6f4ea' : signature.status === 'refused' ? '#fce8e6' : '#fff3e0' }}
+                      >
+                        {signature.status === 'signed' ? '✓ Signé' : signature.status === 'refused' ? 'Signature refusée' : `En attente de signature${signature.progress ? ` (${signature.progress})` : ''}`}
+                      </span>
+                    ) : null}
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
                   <div className="console-document-actions">

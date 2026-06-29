@@ -666,6 +666,21 @@ function extractInputValue(html, key) {
   return "";
 }
 
+// Statut de signature electronique lu dans la ligne document Hektor (ImmoSign/Yousign).
+// Ex: "SIGNATURE(S) EN ATTENTE : 1/1" -> { status:'pending', progress:'1/1' }.
+function parseSignatureStatus(text) {
+  const t = String(text || "").replace(/\s+/g, " ");
+  const m = t.match(/signature\(?s?\)?\s*[^.<]{0,70}/i);
+  if (!m) return null;
+  const seg = m[0].toLowerCase();
+  const prog = seg.match(/(\d+)\s*\/\s*(\d+)/);
+  const progress = prog ? `${prog[1]}/${prog[2]}` : null;
+  if (/en attente/.test(seg)) return { status: "pending", progress };
+  if (/refus/.test(seg)) return { status: "refused", progress };
+  if (/sign[ée]e?\b|termin|effectu|complet/.test(seg)) return { status: "signed", progress };
+  return null;
+}
+
 function extractDocumentEntries(html, source, visibility) {
   const entries = [];
   const re = /force_transfert\(([\s\S]*?)\)\s*;?\s*return false/gi;
@@ -694,6 +709,7 @@ function extractDocumentEntries(html, source, visibility) {
     const transferName = args[2] || "";
     const crmLabel = labels[labels.length - 1] || transferName || technicalName;
     const deleteMatch = rowHtml.match(/deleteUploadedDocument\(\s*['"]([^'"]+)['"]/i);
+    const signature = parseSignatureStatus(stripHtml(rowHtml));
     entries.push({
       hektor_document_id: sha1(url),
       document_name: safeFilename(crmLabel, technicalName),
@@ -704,6 +720,7 @@ function extractDocumentEntries(html, source, visibility) {
       technical_name: technicalName,
       transfer_name: transferName,
       hektor_uploaded_document_id: deleteMatch ? deleteMatch[1] : null,
+      signature,
     });
   }
 
@@ -3151,6 +3168,7 @@ async function upsertConsoleDocuments(dossier, entries) {
         technical_name: entry.technical_name,
         transfer_name: entry.transfer_name,
         hektor_uploaded_document_id: entry.hektor_uploaded_document_id,
+        signature: entry.signature || null,
       },
       updated_at: now,
     };
