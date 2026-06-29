@@ -624,6 +624,7 @@ export type ConsoleJobType =
   | 'prepare_document_cloud'
   | 'generate_estimation_pdf'
   | 'generate_mandat_document'
+  | 'relance_signature'
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
   | 'sync_hektor_photos'

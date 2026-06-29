@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const { spawn } = require("child_process");
 const { chromium } = require("playwright");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
@@ -42,6 +43,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "prepare_document_cloud",
   "generate_estimation_pdf",
   "generate_mandat_document",
+  "relance_signature",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
   "sync_hektor_photos",
@@ -681,6 +683,44 @@ function parseSignatureStatus(text) {
   return null;
 }
 
+// Etat de signature lu sur l'EMPREINTE (button#docBtnSign_{docId}_{type}) de la ligne document Hektor.
+// Source FIABLE du "signe" (le texte "SIGNATURE(S)..." disparait une fois signe) :
+//  - is__successed + title "Signe le {date}" => signed (+ date)
+//  - texte "SIGNATURE(S) EN ATTENTE : x/y"   => pending (x/y)
+//  - sinon onclick editProcedure(...)         => to_send (brouillon / pas encore envoye)
+// procedure_id (downloadProcedureFiles/downloadProofs) sert au telechargement du signe + relance.
+function parseSignatureFromRow(rowHtml) {
+  const row = String(rowHtml || "");
+  const text = stripHtml(row);
+  const btn = row.match(/<button[^>]*id="docBtnSign_(\d+)_(\d+)[^"]*"[^>]*>/i);
+  const dlp = row.match(/downloadProcedureFiles\(\s*['"]?(\d+)['"]?\s*\)/i) || row.match(/downloadProofs\(\s*['"]?(\d+)['"]?\s*\)/i);
+  const procedureId = dlp ? Number(dlp[1]) : null;
+  let status = null, progress = null, signedAt = null, hektorDocId = null, docType = null;
+  if (btn) {
+    hektorDocId = btn[1];
+    docType = btn[2];
+    const tag = btn[0];
+    const cls = (tag.match(/class="([^"]*)"/i) || [, ""])[1];
+    const title = decodeHtml((tag.match(/title="([^"]*)"/i) || [, ""])[1]);
+    const onclick = (tag.match(/onclick="([^"]*)"/i) || [, ""])[1];
+    if (/is__successed/.test(cls)) {
+      status = "signed";
+      const m = title.match(/Sign[ée]\s*le\s*(.+)/i);
+      signedAt = m ? m[1].trim() : (title || null);
+    } else {
+      const st = parseSignatureStatus(text);
+      if (st && st.status === "pending") { status = "pending"; progress = st.progress; }
+      else if (st && st.status === "refused") { status = "refused"; progress = st.progress; }
+      else if (/editProcedure\(/.test(onclick)) { status = "to_send"; }
+    }
+  } else {
+    const st = parseSignatureStatus(text);
+    if (st) { status = st.status; progress = st.progress; }
+  }
+  if (!status && !procedureId) return null;
+  return { status, progress, signed_at: signedAt, procedure_id: procedureId, hektor_doc_id: hektorDocId, doc_type: docType };
+}
+
 function extractDocumentEntries(html, source, visibility) {
   const entries = [];
   const re = /force_transfert\(([\s\S]*?)\)\s*;?\s*return false/gi;
@@ -709,7 +749,7 @@ function extractDocumentEntries(html, source, visibility) {
     const transferName = args[2] || "";
     const crmLabel = labels[labels.length - 1] || transferName || technicalName;
     const deleteMatch = rowHtml.match(/deleteUploadedDocument\(\s*['"]([^'"]+)['"]/i);
-    const signature = parseSignatureStatus(stripHtml(rowHtml));
+    const signature = parseSignatureFromRow(rowHtml);
     entries.push({
       hektor_document_id: sha1(url),
       document_name: safeFilename(crmLabel, technicalName),
@@ -3289,6 +3329,119 @@ async function persistProvidedDocumentFile(document, buffer, mimeType, options =
   return { local_path: localPath, storage_path: cloudWanted ? storagePath : document.storage_path, bytes: buffer.length, sha256: digest };
 }
 
+// Dezip minimal (sans dependance) : extrait le 1er PDF d'un buffer ZIP via la Central Directory + zlib.
+// Le ZIP du doc signe (ImmoSign-downloadProcedureZip) contient le PDF signe (deflate ou stored).
+function extractPdfFromZip(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 22) throw new Error("ZIP vide/invalide");
+  let eocd = -1;
+  const minEocd = Math.max(0, buf.length - 22 - 65536);
+  for (let i = buf.length - 22; i >= minEocd; i--) {
+    if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("ZIP EOCD introuvable");
+  const count = buf.readUInt16LE(eocd + 10);
+  let off = buf.readUInt32LE(eocd + 16);
+  const files = [];
+  for (let n = 0; n < count && off + 46 <= buf.length; n++) {
+    if (buf.readUInt32LE(off) !== 0x02014b50) break;
+    const method = buf.readUInt16LE(off + 10);
+    const compSize = buf.readUInt32LE(off + 20);
+    const nameLen = buf.readUInt16LE(off + 28);
+    const extraLen = buf.readUInt16LE(off + 30);
+    const commentLen = buf.readUInt16LE(off + 32);
+    const lhOff = buf.readUInt32LE(off + 42);
+    const name = buf.toString("utf8", off + 46, off + 46 + nameLen);
+    files.push({ name, method, compSize, lhOff });
+    off += 46 + nameLen + extraLen + commentLen;
+  }
+  if (!files.length) throw new Error("ZIP sans fichier");
+  const pick = files.find((f) => /\.pdf$/i.test(f.name)) || files[0];
+  const lh = pick.lhOff;
+  if (buf.readUInt32LE(lh) !== 0x04034b50) throw new Error("ZIP local header invalide");
+  const dataStart = lh + 30 + buf.readUInt16LE(lh + 26) + buf.readUInt16LE(lh + 28);
+  const data = buf.subarray(dataStart, dataStart + pick.compSize);
+  const out = pick.method === 0 ? Buffer.from(data) : zlib.inflateRawSync(data);
+  return { name: pick.name, buffer: out };
+}
+
+// Recupere le PDF SIGNE d'une procedure ImmoSign (ZIP -> PDF), l'archive (storage + local),
+// et l'enregistre dans metadata_json.signed_document SANS ecraser le reste (la sync ne touche pas cette cle).
+async function downloadSignedProcedureDocument(dossier, document) {
+  const metadata = document.metadata_json || {};
+  const sig = metadata.signature || {};
+  const procId = sig.procedure_id;
+  if (!procId) return null;
+  const url = `${XMLRPC_URL}?mode=ImmoSign-downloadProcedureZip&procedureId=${encodeURIComponent(procId)}`;
+  const res = await hektorFetch(url, { headers: { Accept: "*/*" } });
+  const zip = res.buffer;
+  if (!zip || zip.length < 4 || zip.readUInt32LE(0) !== 0x04034b50) {
+    throw new Error(`Reponse non-ZIP pour la procedure ${procId} (${(res.text || "").slice(0, 120)})`);
+  }
+  const pdf = extractPdfFromZip(zip);
+  const baseName = String(document.document_name || "document").replace(/\.pdf$/i, "");
+  const storageFilename = storageSafeFilename(`${baseName} - signe.pdf`, `signed-${document.id}.pdf`);
+  const storagePath = `annonces/${document.hektor_annonce_id}/documents/${document.id}/signed/${storageFilename}`;
+  await uploadStorageObject(storagePath, pdf.buffer, "application/pdf");
+  const localPath = localDocumentPath(document.hektor_annonce_id, document.id, `signed/${safeFilename(storageFilename, "signe.pdf")}`);
+  try { writeLocalArchiveFile(localPath, pdf.buffer); } catch (_e) { /* archive locale best-effort */ }
+  const signed_document = {
+    storage_bucket: STORAGE_BUCKET,
+    storage_path: storagePath,
+    filename: storageFilename,
+    size: pdf.buffer.length,
+    sha256: sha256Buffer(pdf.buffer),
+    mime_type: "application/pdf",
+    procedure_id: procId,
+    signed_at: sig.signed_at || null,
+    downloaded_at: new Date().toISOString(),
+    local_archive_path: localPath,
+  };
+  // relit la ligne pour fusionner sur le metadata le plus recent
+  const fresh = await loadConsoleDocumentById(document.id).catch(() => null);
+  const md = (fresh && fresh.metadata_json) || metadata || {};
+  await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ metadata_json: { ...md, signed_document }, updated_at: new Date().toISOString() }),
+  });
+  return signed_document;
+}
+
+// Relance de signature ImmoSign : POST xmlrpc ImmoSign-remindProcedureSignatories (envoie les mails de rappel).
+async function handleRelanceSignature(job) {
+  const payload = safeJsonParse(job.payload_json) || {};
+  const dossier = await loadDossier(job);
+  const procId = payload.procedure_id || payload.procedureId;
+  if (!procId) throw new Error("payload_json.procedure_id requis");
+  await logJob(job.id, "immosign", "running", "Relance signature", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    procedure_id: procId,
+  });
+  const doRemind = async () => {
+    const res = await hektorFetch(XMLRPC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", Accept: "application/json, text/plain, */*" },
+      body: new URLSearchParams({ mode: "ImmoSign-remindProcedureSignatories", procedureId: String(procId) }).toString(),
+    });
+    return res;
+  };
+  let res;
+  try {
+    res = await doRemind();
+  } catch (error) {
+    if (!isHektorForbiddenError(error)) throw error;
+    await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true });
+    res = await doRemind();
+  }
+  const okText = String(res.text || "");
+  await logJob(job.id, "immosign", "done", "Rappel signature envoye", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    procedure_id: procId,
+    response: okText.slice(0, 160),
+  });
+  return { status: "reminded", hektor_annonce_id: String(dossier.hektor_annonce_id), procedure_id: procId };
+}
+
 async function handleSyncConsoleDocuments(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -3317,10 +3470,30 @@ async function handleSyncConsoleDocuments(job) {
     localStored += result.local_path ? 1 : 0;
     cloudStored += result.cloud_available && cloud ? 1 : 0;
   }
+  // Recuperation auto du PDF signe : si un doc est SIGNE et pas encore telecharge -> ZIP -> PDF dans le storage.
+  // Idempotent (skip si metadata_json.signed_document deja present). Best-effort (n'echoue pas la sync).
+  let signedFetched = 0;
+  for (const row of rows) {
+    const md = row.metadata_json || {};
+    const sig = md.signature;
+    if (sig && sig.status === "signed" && sig.procedure_id && !md.signed_document) {
+      try {
+        await downloadSignedProcedureDocument(dossier, row);
+        signedFetched += 1;
+      } catch (error) {
+        await logJob(job.id, "hektor", "running", "Recup doc signe echouee", {
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          procedure_id: sig.procedure_id,
+          error: error && error.message ? error.message : String(error),
+        });
+      }
+    }
+  }
   return {
     indexed: rows.length,
     local_stored: localStored,
     cloud_stored: cloudStored,
+    signed_fetched: signedFetched,
     cloud_policy: cloud ? "daily_cloud_scope" : "local_archive_only",
     hektor_annonce_id: String(dossier.hektor_annonce_id),
   };
@@ -10344,6 +10517,8 @@ async function runHandler(job) {
       return handleGenerateEstimationPdf(job);
     case "generate_mandat_document":
       return handleGenerateMandatDocument(job);
+    case "relance_signature":
+      return handleRelanceSignature(job);
     case "upload_document_to_hektor":
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":

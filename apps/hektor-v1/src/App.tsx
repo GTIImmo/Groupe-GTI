@@ -98,6 +98,8 @@ import {
   scanDraftAnnonceSheet,
   createMatterportActionJob,
   createConsoleDocumentSignedUrl,
+  createSignedProcedureDocumentUrl,
+  createRelanceSignatureJob,
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
   loadContactRelations,
@@ -8084,6 +8086,39 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     }
   }
 
+  // Ouvre le PDF SIGNE (recupere par le worker) a la place de l'original.
+  async function handleOpenSignedDocument(document: ConsoleDocument) {
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      const url = await createSignedProcedureDocumentUrl(document)
+      window.open(url, '_blank', 'noopener')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Document signe indisponible')
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
+  // Relance de signature : envoie un job worker (mails de rappel aux signataires).
+  async function handleRelanceSignature(document: ConsoleDocument, procedureId: number | string) {
+    const confirmed = window.confirm(`Envoyer un rappel de signature aux signataires ?\n\n${document.document_name}`)
+    if (!confirmed) return
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      const job = await createRelanceSignatureJob({ document, procedureId })
+      onJobCreated?.(job)
+      setMessage('Rappel de signature demande.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de creer la demande de relance')
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
   return (
     <details className={`console-documents-panel ${compact ? 'is-compact' : ''}`}>
       <summary className="console-documents-head">
@@ -8187,26 +8222,42 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
               const deleting = deletingDocumentIds.has(document.id)
               const canOpen = document.storage_status === 'cloud_available'
               const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
-              const signature = (document.metadata_json as { signature?: { status?: string; progress?: string | null } } | null)?.signature ?? null
+              const signature = (document.metadata_json as { signature?: { status?: string; progress?: string | null; signed_at?: string | null; procedure_id?: number | string | null } } | null)?.signature ?? null
+              const signedDocument = (document.metadata_json as { signed_document?: { storage_path?: string } } | null)?.signed_document ?? null
+              const hasSignedFile = Boolean(signedDocument?.storage_path)
+              const signatureLabel = signature?.status === 'signed'
+                ? `✓ Signé${signature.signed_at ? ` le ${signature.signed_at}` : ''}`
+                : signature?.status === 'refused'
+                  ? 'Signature refusée'
+                  : signature?.status === 'pending'
+                    ? `En attente de signature${signature.progress ? ` (${signature.progress})` : ''}`
+                    : signature?.status === 'to_send'
+                      ? 'À envoyer en signature'
+                      : null
+              const signatureColor = signature?.status === 'signed' ? '#1f7a3d' : signature?.status === 'refused' ? '#b3261e' : signature?.status === 'to_send' ? '#5f6368' : '#b26a00'
+              const signatureBg = signature?.status === 'signed' ? '#e6f4ea' : signature?.status === 'refused' ? '#fce8e6' : signature?.status === 'to_send' ? '#f1f3f4' : '#fff3e0'
               return (
                 <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
                   <span className="console-document-icon" aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
                   <div className="console-document-main">
                     <strong>{document.document_name}</strong>
                     <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
-                    {signature?.status ? (
+                    {signatureLabel ? (
                       <span
-                        style={{ display: 'inline-block', marginTop: '4px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', whiteSpace: 'nowrap',
-                          color: signature.status === 'signed' ? '#1f7a3d' : signature.status === 'refused' ? '#b3261e' : '#b26a00',
-                          background: signature.status === 'signed' ? '#e6f4ea' : signature.status === 'refused' ? '#fce8e6' : '#fff3e0' }}
+                        style={{ display: 'inline-block', marginTop: '4px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', whiteSpace: 'nowrap', color: signatureColor, background: signatureBg }}
                       >
-                        {signature.status === 'signed' ? '✓ Signé' : signature.status === 'refused' ? 'Signature refusée' : `En attente de signature${signature.progress ? ` (${signature.progress})` : ''}`}
+                        {signatureLabel}
                       </span>
                     ) : null}
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
                   <div className="console-document-actions">
-                    {canOpen ? (
+                    {hasSignedFile ? (
+                      <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenSignedDocument(document)} disabled={busyDocumentId === document.id} title="Ouvrir le document signé">
+                        <span aria-hidden="true"><DetailIcon type="content" /></span>
+                        Ouvrir le signé
+                      </button>
+                    ) : canOpen ? (
                       <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>
                         <span aria-hidden="true"><DetailIcon type="content" /></span>
                         Ouvrir
@@ -8217,10 +8268,18 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
                         {preparing ? 'En attente' : 'Preparer'}
                       </button>
                     )}
-                    <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
-                      <span aria-hidden="true"><DetailIcon type="signature" /></span>
-                      Signature
-                    </button>
+                    {signature?.status === 'pending' && signature.procedure_id ? (
+                      <button className="ghost-button console-document-relance" type="button" onClick={() => void handleRelanceSignature(document, signature.procedure_id!)} disabled={busyDocumentId === document.id} title="Envoyer un rappel de signature">
+                        <span aria-hidden="true"><DetailIcon type="hektor" /></span>
+                        Relancer
+                      </button>
+                    ) : null}
+                    {signature?.status !== 'signed' ? (
+                      <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
+                        <span aria-hidden="true"><DetailIcon type="signature" /></span>
+                        Signature
+                      </button>
+                    ) : null}
                     <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
                       <span aria-hidden="true"><DetailIcon type="actions" /></span>
                       {deleting ? 'Suppression' : 'Supprimer'}

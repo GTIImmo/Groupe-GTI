@@ -5646,6 +5646,46 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+// Relance de signature ImmoSign : le worker POST ImmoSign-remindProcedureSignatories (mails de rappel).
+export async function createRelanceSignatureJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  procedureId: number | string
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'relance_signature',
+      app_dossier_id: input.document.app_dossier_id,
+      hektor_annonce_id: String(input.document.hektor_annonce_id),
+      payload_json: {
+        document_id: input.document.id,
+        document_name: input.document.document_name,
+        procedure_id: input.procedureId,
+      },
+      priority: input.priority ?? 30,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create signature reminder job')
+  return data as ConsoleJob
+}
+
+// URL signee du PDF SIGNE (metadata_json.signed_document) pour l'afficher a la place de l'original.
+export async function createSignedProcedureDocumentUrl(document: ConsoleDocument, expiresIn = 300): Promise<string> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const signed = (document.metadata_json as { signed_document?: { storage_bucket?: string; storage_path?: string } } | null)?.signed_document
+  if (!signed?.storage_path) throw new Error('Document signe indisponible')
+  const { data, error } = await supabase.storage
+    .from(signed.storage_bucket || consoleDocumentsBucket)
+    .createSignedUrl(signed.storage_path, expiresIn)
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'Unable to create signed URL')
+  return data.signedUrl
+}
+
 export async function createPrepareArchivedAnnonceDetailJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   priority?: number
