@@ -23696,14 +23696,14 @@ function contactDirectoryCategories(roles: string[]): ContactDirectoryType[] {
   if (buy) out.push(buy)
   return out
 }
-// Badge "Qualite" = fiabilite de la fiche (completeness_score). Le score peut etre
-// exprime en 0-100 ou 0-1 : on normalise. 0/absent => N/D (neutre) plutot que rouge.
+// Badge "Qualite" = fiabilite de la fiche (completeness_score). En prod c'est un
+// score ENTIER 0..8 (nb de champs cles renseignes), verifie sur app_contacts_current.
+// Seuils : Fort >=6, Moyen 4-5, Critique 1-3, N/D = 0/absent.
 function contactQualityTier(contact: Pick<AppContact, 'completeness_score'>): { tier: 'fort' | 'moyen' | 'critique' | 'nd'; label: string } {
-  let score = Number(contact.completeness_score ?? 0)
-  if (score > 0 && score <= 1) score = score * 100
+  const score = Number(contact.completeness_score ?? 0)
   if (!(score > 0)) return { tier: 'nd', label: 'N/D' }
-  if (score >= 70) return { tier: 'fort', label: 'Fort' }
-  if (score >= 40) return { tier: 'moyen', label: 'Moyen' }
+  if (score >= 6) return { tier: 'fort', label: 'Fort' }
+  if (score >= 4) return { tier: 'moyen', label: 'Moyen' }
   return { tier: 'critique', label: 'Critique' }
 }
 function contactHasDuplicateRisk(contact: Pick<AppContact, 'duplicate_max_severity' | 'duplicate_group_count'>): boolean {
