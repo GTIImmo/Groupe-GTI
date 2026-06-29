@@ -4578,9 +4578,9 @@ function EstimationDocumentEditor(props: {
         const res = await sendEstimationEmail({
           recipientEmail: draft.recipient.trim(), senderEmail: (dossier.negociateur_email ?? '').trim() || 'accueil@gti-immobilier.fr',
           appDossierId: dossier.app_dossier_id, bien: p.bien, valeurs: p.valeurs, proprietaireNom: p.proprietaire.nom,
-          negociateur: p.negociateur, introVariante: draft.variante, dryRun: true,
+          negociateur: p.negociateur, introVariante: draft.variante, dryRun: false,
         })
-        setMessage(res?.dryRun ? "Avis de valeur en génération + email préparé (mode test, aucun envoi réel — envoi réel au Lot 3)." : "Avis de valeur en génération + email envoyé au propriétaire.")
+        setMessage(res?.dryRun ? "Avis de valeur en génération + email préparé (mode test : envoi réel désactivé côté serveur)." : "Avis de valeur en génération + email envoyé au propriétaire.")
       } else {
         setMessage("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants.")
       }
@@ -10612,11 +10612,11 @@ export default function App() {
           negociateur: p.negociateur,
           customIntro: d.commentaire || null,
           hektorContactId: d.hektorContactId,
-          dryRun: true,
+          dryRun: false,
         })
         setEstimationPdfDraft(null)
         setEstimationPdfMsg(res?.dryRun
-          ? "PDF en génération + email préparé (mode test, aucun envoi réel) — envoi réel à activer au Lot 3."
+          ? "PDF en génération + email préparé (mode test : envoi réel désactivé côté serveur)."
           : "PDF en génération + email envoyé au propriétaire.")
       } else {
         setEstimationPdfDraft(null)
