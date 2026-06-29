@@ -3290,9 +3290,24 @@ async function persistProvidedDocumentFile(document, buffer, mimeType, options =
 }
 
 async function handleSyncConsoleDocuments(job) {
+  const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
   await logJob(job.id, "hektor", "running", "Lecture documents Console", { hektor_annonce_id: dossier.hektor_annonce_id });
-  const entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+  let entries;
+  try {
+    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+  } catch (error) {
+    if (!isHektorForbiddenError(error)) throw error;
+    // 403 = bien dans un contexte negociateur que la session de base ne voit pas
+    // (ex. compte separe). On bascule dans le contexte du proprietaire puis on reessaie.
+    // Les biens de l'agence ne declenchent pas le 403 -> aucun impact sur le run quotidien.
+    await logJob(job.id, "hektor", "running", "Lecture documents refusee (403), bascule contexte negociateur puis retry", {
+      hektor_annonce_id: dossier.hektor_annonce_id,
+      error: error.message || String(error),
+    });
+    await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true });
+    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+  }
   const rows = await upsertConsoleDocuments(dossier, entries);
   const cloud = shouldKeepCloud(dossier);
   let localStored = 0;
