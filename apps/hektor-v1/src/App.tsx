@@ -4203,7 +4203,7 @@ function MandatDocumentEditor(props: {
   // le mandat via la popin ImmoSign/Yousign. Le negociateur valide + envoie a la main.
   const openHektorForSignature = () => {
     const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
-    const url = `${base}/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(String(props.dossier.hektor_annonce_id))}`
+    const url = `${base}/admin/?page=/mes-biens/mon-bien/documents&id=${encodeURIComponent(String(props.dossier.hektor_annonce_id))}`
     window.open(url, '_blank', 'noopener')
     setSignPromptOpen(false)
   }
@@ -4354,21 +4354,32 @@ function MandatDocumentEditor(props: {
               </button>
             </div>
             {signPromptOpen ? (
-              <div className="mandat-document-checklist mandat-sign-prompt">
-                <strong>Faire signer ce document par Yousign ?</strong>
-                <p>Dans la popin signature Hektor, ajoute ces signataire{(selectedSignatureRecipients.length || 1) > 1 ? 's' : ''} :</p>
-                <ul>
-                  {(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient, index) => (
-                    <li key={recipient.id || index}>
-                      {signatureRecipientLabel(recipient)}
-                      {recipient.email ? ` · ${recipient.email}` : ''}
-                      {recipient.telephone ? ` · ${recipient.telephone}` : ''}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mandat-document-actions">
-                  <button className="ghost-button button-primary" type="button" onClick={openHektorForSignature}>Oui, ouvrir Hektor</button>
-                  <button className="ghost-button button-subtle" type="button" onClick={() => setSignPromptOpen(false)}>Plus tard</button>
+              <div
+                role="dialog"
+                aria-modal="true"
+                onClick={() => setSignPromptOpen(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+              >
+                <div
+                  className="mandat-sign-popup"
+                  onClick={(event) => event.stopPropagation()}
+                  style={{ background: '#fff', borderRadius: '14px', maxWidth: '440px', width: '100%', padding: '22px 24px', boxShadow: '0 24px 70px rgba(0,0,0,0.35)' }}
+                >
+                  <strong style={{ display: 'block', fontSize: '17px', marginBottom: '12px' }}>Faire signer ce document par Yousign ?</strong>
+                  <p style={{ margin: '0 0 8px', color: '#555', fontSize: '13px' }}>Dans la popin signature Hektor, ajoute ce{(selectedSignatureRecipients.length || 1) > 1 ? 's' : ''} signataire{(selectedSignatureRecipients.length || 1) > 1 ? 's' : ''} :</p>
+                  <ul style={{ margin: '0 0 18px', paddingLeft: '18px', fontSize: '13px', lineHeight: 1.5 }}>
+                    {(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient, index) => (
+                      <li key={recipient.id || index}>
+                        {signatureRecipientLabel(recipient)}
+                        {recipient.email ? ` · ${recipient.email}` : ''}
+                        {recipient.telephone ? ` · ${recipient.telephone}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <button className="ghost-button button-subtle" type="button" onClick={() => setSignPromptOpen(false)}>Plus tard</button>
+                    <button className="ghost-button button-primary" type="button" onClick={openHektorForSignature}>Oui, ouvrir Hektor</button>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -8009,7 +8020,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     const ok = window.confirm(`Faire signer ce document par Yousign ?\n\n${document.document_name}\n\nHektor va s'ouvrir : clique le picto signature sur le document, ajoute les signataires puis Envoyer.`)
     if (!ok) return
     const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
-    window.open(`${base}/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`, '_blank', 'noopener')
+    window.open(`${base}/admin/?page=/mes-biens/mon-bien/documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`, '_blank', 'noopener')
   }
 
   async function handleDeleteDocument(document: ConsoleDocument) {
