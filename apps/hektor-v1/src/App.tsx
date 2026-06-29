@@ -4035,6 +4035,7 @@ function MandatDocumentEditor(props: {
   const [message, setMessage] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [signPromptOpen, setSignPromptOpen] = useState(false)
 
   useEffect(() => {
     setDraft(initialDraft)
@@ -4189,12 +4190,22 @@ function MandatDocumentEditor(props: {
         payload,
         numeroMandat: draft.numeroMandat || null,
       })
-      setMessage('PDF en cours de generation : il apparaitra dans les documents Hektor du bien.')
+      setMessage('Mandat depose dans Hektor (pret sous ~1 min, dans les documents du bien).')
+      setSignPromptOpen(true)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Generation PDF impossible.')
     } finally {
       setPdfBusy(false)
     }
+  }
+
+  // Lot 1 signature : ouvre Hektor (nouvel onglet) sur la fiche du bien pour faire signer
+  // le mandat via la popin ImmoSign/Yousign. Le negociateur valide + envoie a la main.
+  const openHektorForSignature = () => {
+    const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
+    const url = `${base}/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(String(props.dossier.hektor_annonce_id))}`
+    window.open(url, '_blank', 'noopener')
+    setSignPromptOpen(false)
   }
 
   return (
@@ -4342,6 +4353,25 @@ function MandatDocumentEditor(props: {
                 {pdfBusy ? 'Generation…' : 'Generer PDF'}
               </button>
             </div>
+            {signPromptOpen ? (
+              <div className="mandat-document-checklist mandat-sign-prompt">
+                <strong>Faire signer ce document par Yousign ?</strong>
+                <p>Dans la popin signature Hektor, ajoute ces signataire{(selectedSignatureRecipients.length || 1) > 1 ? 's' : ''} :</p>
+                <ul>
+                  {(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient, index) => (
+                    <li key={recipient.id || index}>
+                      {signatureRecipientLabel(recipient)}
+                      {recipient.email ? ` · ${recipient.email}` : ''}
+                      {recipient.telephone ? ` · ${recipient.telephone}` : ''}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mandat-document-actions">
+                  <button className="ghost-button button-primary" type="button" onClick={openHektorForSignature}>Oui, ouvrir Hektor</button>
+                  <button className="ghost-button button-subtle" type="button" onClick={() => setSignPromptOpen(false)}>Plus tard</button>
+                </div>
+              </div>
+            ) : null}
           </div>
           <aside className="mandat-document-preview" aria-label="Apercu mandat">
             <div className="mandat-preview-head">
