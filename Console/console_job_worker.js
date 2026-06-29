@@ -41,6 +41,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "sync_console_documents",
   "prepare_document_cloud",
   "generate_estimation_pdf",
+  "generate_mandat_document",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
   "sync_hektor_photos",
@@ -4408,6 +4409,66 @@ async function handleGenerateEstimationPdf(job) {
   const uploadJob = Array.isArray(rows) ? rows[0] : null;
 
   await logJob(job.id, "estimation_pdf", "done", "Avis de valeur genere, upload Hektor en file", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    upload_job_id: uploadJob ? uploadJob.id : null,
+  });
+
+  return {
+    ok: true,
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    temp_storage_path: tempPath,
+    upload_job_id: uploadJob ? uploadJob.id : null,
+  };
+}
+
+// Genere le PDF du mandat a partir du HTML rendu cote front (payload.html), puis enchaine
+// upload_document_to_hektor pour le DEPOSER DANS HEKTOR (prerequis a la signature ImmoSign).
+// Calque 1:1 de handleGenerateEstimationPdf : meme moteur Puppeteer, meme flux de depot.
+async function handleGenerateMandatDocument(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await logJob(job.id, "mandat_pdf", "running", "Generation du mandat", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+  });
+
+  const html = String(payload && payload.html ? payload.html : "");
+  if (!html.trim()) throw new Error("payload_json.html requis (HTML du mandat rendu cote front)");
+  const pdfBuffer = await renderHtmlToPdfBuffer(html);
+
+  const label = (payload.document_label && String(payload.document_label).trim()) || "Mandat de vente";
+  const filename = storageSafeFilename(`${label}.pdf`, "mandat-de-vente.pdf");
+  const tempPath = `temp/uploads/${job.id}/${filename}`;
+  await uploadStorageObject(tempPath, pdfBuffer, "application/pdf");
+
+  // Reutilise le flux eprouve upload_document_to_hektor (push Hektor + archive local+cloud).
+  const rows = await supabaseRequest("app_console_job", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_type: "upload_document_to_hektor",
+      app_dossier_id: dossier.app_dossier_id || job.app_dossier_id || null,
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      payload_json: {
+        visibility: payload.visibility === "shared" ? "shared" : "private",
+        document_type: "Mandat",
+        original_filename: filename,
+        source_filename: filename,
+        document_label: label,
+        mime_type: "application/pdf",
+        temp_storage_bucket: STORAGE_BUCKET,
+        temp_storage_path: tempPath,
+      },
+      status: "pending",
+      priority: 40,
+      requested_by: job.requested_by || null,
+      requested_at: new Date().toISOString(),
+    }]),
+  });
+  const uploadJob = Array.isArray(rows) ? rows[0] : null;
+
+  await logJob(job.id, "mandat_pdf", "done", "Mandat genere, upload Hektor en file", {
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     pdf_bytes: pdfBuffer.length,
     upload_job_id: uploadJob ? uploadJob.id : null,
@@ -10248,6 +10309,8 @@ async function runHandler(job) {
       return handlePrepareDocumentCloud(job);
     case "generate_estimation_pdf":
       return handleGenerateEstimationPdf(job);
+    case "generate_mandat_document":
+      return handleGenerateMandatDocument(job);
     case "upload_document_to_hektor":
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":

@@ -623,6 +623,7 @@ export type ConsoleJobType =
   | 'sync_console_documents'
   | 'prepare_document_cloud'
   | 'generate_estimation_pdf'
+  | 'generate_mandat_document'
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
   | 'sync_hektor_photos'

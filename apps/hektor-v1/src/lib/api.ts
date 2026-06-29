@@ -5583,6 +5583,44 @@ export async function createGenerateEstimationPdfJob(input: {
   return data as ConsoleJob
 }
 
+export async function createGenerateMandatPdfJob(input: {
+  dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
+  // HTML du mandat deja rendu cote front (mandatPreviewHtml) : le worker le rend en PDF
+  // (Puppeteer) puis le depose dans Hektor via upload_document_to_hektor (prerequis ImmoSign).
+  html: string
+  payload?: Record<string, unknown> | null  // JSON de rendu (trace/hash), non utilise pour le rendu
+  numeroMandat?: string | null
+  documentLabel?: string | null
+  visibility?: 'private' | 'shared'
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const jobId = crypto.randomUUID()
+  const label = (input.documentLabel ?? (input.numeroMandat ? `Mandat de vente - ${input.numeroMandat}` : 'Mandat de vente')).trim()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      id: jobId,
+      job_type: 'generate_mandat_document',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        document_label: label,
+        visibility: input.visibility ?? 'private',
+        html: input.html,
+        numero_mandat: input.numeroMandat ?? null,
+        render_payload: input.payload ?? null,
+      },
+      priority: input.priority ?? 40,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create mandat PDF job')
+  return data as ConsoleJob
+}
+
 export async function createDeleteDocumentFromHektorJob(input: {
   document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
   priority?: number
