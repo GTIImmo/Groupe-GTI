@@ -363,10 +363,6 @@ def build_property_card_html(view: dict[str, Any], links: dict[str, str]) -> str
         <div style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:23px;line-height:1.25;margin:8px 0 0">{_esc(view['titre'])}</div>
       </td></tr>
       <tr><td style="padding:14px 26px 0">
-        <div style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:25px;line-height:1.1">{_esc(hono['price_main'])}</div>
-        {sub}{net}
-      </td></tr>
-      <tr><td style="padding:12px 26px 0">
         <div style="border-top:1px solid {BRAND['line_warm']};font-size:0;line-height:0">&nbsp;</div>
       </td></tr>
       <tr><td style="padding:12px 26px 0">{_specs_line(view['specs'])}</td></tr>
@@ -384,6 +380,16 @@ def build_email_html(ctx: dict[str, Any]) -> str:
         f'<div class="gti-mute" style="color:{BRAND["ink_soft"]};font-size:15px;line-height:1.55;margin-top:8px;white-space:pre-line">{_esc(ctx.get("intro"))}</div>'
         if ctx.get("intro") else ""
     )
+    # Un SEUL message dans l'email : si le négociateur a saisi un mot (modale), il est
+    # la seule source -> on n'ajoute NI salutation NI accroche auto (sinon doublon).
+    # Sans mot saisi, on garde la salutation + l'accroche chaleureuse par défaut.
+    if ctx.get("intro"):
+        message_block = intro_html
+    else:
+        message_block = (
+            f'<div class="gti-ink" style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:12px">{greeting}</div>'
+            f'<div class="gti-mute" style="color:{BRAND["ink_soft"]};font-family:{FONT_BODY};font-size:15px;line-height:1.65;margin-top:10px">{accroche}</div>'
+        )
     signature = ctx["signature"]
     unsub = _esc(ctx.get("unsubscribe_url") or "#")
     pixel = (
@@ -463,9 +469,7 @@ def build_email_html(ctx: dict[str, Any]) -> str:
       <!-- Accroche éditoriale -->
       <tr><td class="gti-pad" style="padding:14px 6px 22px">
         <div style="color:{BRAND['magenta']};font-family:{FONT_BODY};font-size:11px;font-weight:bold;letter-spacing:2.5px;text-transform:uppercase">Rien que pour vous</div>
-        <div class="gti-ink" style="color:{BRAND['ink_warm']};font-family:{FONT_DISPLAY};font-size:26px;line-height:1.2;margin-top:12px">{greeting}</div>
-        {intro_html}
-        <div class="gti-mute" style="color:{BRAND['ink_soft']};font-family:{FONT_BODY};font-size:15px;line-height:1.65;margin-top:10px">{accroche}</div>
+        {message_block}
       </td></tr>
       <!-- Cartes biens -->
       <tr><td class="gti-pad" style="padding:0 6px">
@@ -493,19 +497,16 @@ def build_email_html(ctx: dict[str, Any]) -> str:
 
 
 def build_email_text(ctx: dict[str, Any]) -> str:
-    lines = [ctx["greeting"], ""]
+    # Un seul message : le mot du négociateur prime (pas de salutation/accroche auto).
     if ctx.get("intro"):
-        lines += [ctx["intro"], ""]
-    lines += [ctx["accroche"], ""]
+        lines = [ctx["intro"], ""]
+    else:
+        lines = [ctx["greeting"], "", ctx["accroche"], ""]
     for v in ctx["biens"]:
-        hono = v["honoraires"]
         lines.append(f"• {v['titre']}" + (f" ({v['ref']})" if v["ref"] else ""))
         if v["secteur"]:
             lines.append(f"  Secteur : {v['secteur']}")
-        price = hono["price_main"] + (f" — {hono['sub']}" if hono.get("sub") else "")
-        lines.append(f"  Prix : {price}")
-        if hono.get("net"):
-            lines.append(f"  {hono['net']}")
+        # Prix retiré de l'email : visible uniquement dans l'espace rapprochement.
         if v["specs"]:
             lines.append("  " + " · ".join(v["specs"]))
         lines.append(f"  Voir ce bien : {v['_links'].get('espace') or v['_links']['like']}")
