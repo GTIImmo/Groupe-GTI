@@ -3615,7 +3615,16 @@ async function handleSyncConsoleDocuments(job) {
     cloudStored += result.cloud_available && cloud ? 1 : 0;
   }
   // Réconcilie l'état signature (incl. signés qui perdent leur force_transfert) + récupère le PDF signé.
-  const signedFetched = await reconcileSignatureStates(job, dossier);
+  // BEST-EFFORT : ne doit JAMAIS faire échouer la sync documents (donc le run quotidien). Try/catch.
+  let signedFetched = 0;
+  try {
+    signedFetched = await reconcileSignatureStates(job, dossier);
+  } catch (error) {
+    await logJob(job.id, "hektor", "running", "Reconciliation signature ignoree (best-effort)", {
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      error: error && error.message ? error.message : String(error),
+    });
+  }
   return {
     indexed: rows.length,
     local_stored: localStored,
