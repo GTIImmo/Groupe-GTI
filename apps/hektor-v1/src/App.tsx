@@ -7487,7 +7487,7 @@ function sortSummaryPortals(values: string[]) {
 }
 
 type DetailTabKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'reporting' | 'estimation'
-type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor'
+type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'content' | 'history' | 'virtual' | 'location' | 'visibility' | 'priority' | 'alert' | 'actions' | 'photo' | 'contact' | 'hektor' | 'signature'
 
 const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
   { key: 'summary', label: 'Synthèse', short: '01', icon: 'summary' },
@@ -7511,6 +7511,14 @@ const estimationTabs: Array<{ key: DetailTabKey; label: string; short: string; i
 ]
 
 function DetailIcon({ type }: { type: DetailIconKey }) {
+  if (type === 'signature') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 17c2.5-0.8 3.3-8 5-8s0.8 4.5 2.5 4.5S12.5 9 14.5 9" />
+        <path d="M4 21H20" />
+      </svg>
+    )
+  }
   if (type === 'commercial') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -7995,6 +8003,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     }
   }
 
+  // Bouton « Signature » sur un document : ouvre Hektor (nouvel onglet) sur la fiche du bien
+  // pour la popin signature Yousign (même flux que l'encart de l'éditeur de mandat).
+  function handleSignDocument(document: ConsoleDocument) {
+    const ok = window.confirm(`Faire signer ce document par Yousign ?\n\n${document.document_name}\n\nHektor va s'ouvrir : clique le picto signature sur le document, ajoute les signataires puis Envoyer.`)
+    if (!ok) return
+    const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
+    window.open(`${base}/admin/?page=/mes-biens/mon-bien&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`, '_blank', 'noopener')
+  }
+
   async function handleDeleteDocument(document: ConsoleDocument) {
     const confirmed = window.confirm(`Supprimer ce document dans Hektor ?\n\n${document.document_name}`)
     if (!confirmed) return
@@ -8140,6 +8157,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
                         {preparing ? 'En attente' : 'Preparer'}
                       </button>
                     )}
+                    <button className="ghost-button console-document-sign" type="button" onClick={() => handleSignDocument(document)}>
+                      <span aria-hidden="true"><DetailIcon type="signature" /></span>
+                      Signature
+                    </button>
                     <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
                       <span aria-hidden="true"><DetailIcon type="actions" /></span>
                       {deleting ? 'Suppression' : 'Supprimer'}
