@@ -709,8 +709,9 @@ function parseSignatureFromRow(rowHtml) {
     const onclick = (tag.match(/onclick="([^"]*)"/i) || [, ""])[1];
     if (/is__successed/.test(cls)) {
       status = "signed";
-      const m = title.match(/Sign[ée]\s*le\s*(.+)/i);
-      signedAt = m ? m[1].trim() : (title || null);
+      // Date apres "le " (robuste a l'entite &eacute; dans "Sign&eacute; le ...").
+      const m = title.match(/\ble\s+(.+)$/i);
+      signedAt = m ? m[1].trim() : (title ? title.replace(/&[a-z]+;/gi, "").trim() : null);
     } else {
       const st = parseSignatureStatus(text);
       if (st && st.status === "refused") { status = "refused"; progress = st.progress; }
@@ -3516,6 +3517,7 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
     const hid = r.metadata_json && r.metadata_json.signature && r.metadata_json.signature.hektor_doc_id;
     if (hid) byDocId.set(String(hid), r);
   }
+  const usedCandidateIds = new Set();
   for (const sig of sigMap.values()) {
     if (!sig.status) continue;
     let target = byDocId.get(String(sig.hektor_doc_id));
@@ -3530,8 +3532,32 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
         });
         target = { ...target, metadata_json: md };
       }
-    } else if (sig.status === "signed" && dossier.app_dossier_id) {
-      target = await upsertSyntheticSignedRow(dossier, sig);
+    } else if (sig.status === "signed") {
+      // Pas de ligne suivie par hektor_doc_id (mandat signe AVANT suivi, p.ex. deja signe a la 1re indexation
+      // -> il a perdu son force_transfert). Pour EVITER UN DOUBLON, on rattache une ligne "candidate"
+      // (meme nom, jamais finalisee, sans signed_document, non deja utilisee) ; sinon ligne synthetique.
+      const candidates = existing.rows.filter((r) => {
+        if (usedCandidateIds.has(r.id)) return false;
+        if (r.metadata_json && r.metadata_json.signed_document) return false;
+        const s = r.metadata_json && r.metadata_json.signature;
+        const untracked = !s || !s.hektor_doc_id;
+        return untracked && String(r.document_name || "") === String(sig.document_name || "");
+      });
+      if (candidates.length === 1) {
+        target = candidates[0];
+        usedCandidateIds.add(target.id);
+        const md = { ...(target.metadata_json || {}), signature: sig };
+        await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(target.id)}`, {
+          method: "PATCH",
+          prefer: "return=minimal",
+          body: JSON.stringify({ metadata_json: md, updated_at: new Date().toISOString() }),
+        });
+        target = { ...target, metadata_json: md };
+      } else if (dossier.app_dossier_id) {
+        target = await upsertSyntheticSignedRow(dossier, sig);
+      } else {
+        continue;
+      }
     } else {
       continue; // pending/to_send sans ligne suivie : sera créé par la prochaine sync documents complète
     }
