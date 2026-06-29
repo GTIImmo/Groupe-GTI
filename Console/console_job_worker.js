@@ -3407,6 +3407,105 @@ async function downloadSignedProcedureDocument(dossier, document) {
   return signed_document;
 }
 
+// Map des etats de signature par hektor_doc_id, lue sur chargeannonce_Documents (qui liste TOUS les docs,
+// y compris les SIGNES — qui perdent leur lien force_transfert et sont donc invisibles pour extractDocumentEntries).
+function buildSignatureMapFromHtml(html) {
+  const map = new Map();
+  const parts = String(html || "").split('<div class="tbodyContent tbodyContainer');
+  for (let i = 1; i < parts.length; i++) {
+    const row = '<div class="tbodyContent tbodyContainer' + parts[i];
+    if (!/docBtnSign_/.test(row)) continue;
+    const sig = parseSignatureFromRow(row);
+    if (!sig || !sig.hektor_doc_id) continue;
+    const nameMatch = row.match(/<div[^>]*tdContent[^>]*>\s*([^<]+\.pdf)\s*<\/div>/i) || row.match(/([^>\s][^<]*\.pdf)/i);
+    sig.document_name = nameMatch ? decodeHtml(nameMatch[1]).trim() : `Document ${sig.hektor_doc_id}`;
+    map.set(String(sig.hektor_doc_id), sig);
+  }
+  return map;
+}
+
+// Cree (ou retrouve) une ligne dediee pour un doc SIGNE non rattachable a une ligne existante.
+async function upsertSyntheticSignedRow(dossier, sig) {
+  const key = `immosign-signed-${sig.hektor_doc_id}-${sig.doc_type}`;
+  const params = new URLSearchParams({
+    select: "*",
+    hektor_annonce_id: `eq.${dossier.hektor_annonce_id}`,
+    hektor_document_id: `eq.${key}`,
+    limit: "1",
+  });
+  const found = await supabaseRequest(`app_console_document?${params.toString()}`, { method: "GET" });
+  if (Array.isArray(found) && found[0]) return found[0];
+  const now = new Date().toISOString();
+  const row = {
+    id: crypto.randomUUID(),
+    app_dossier_id: Number(dossier.app_dossier_id),
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    hektor_document_id: key,
+    document_type: "document",
+    document_name: sig.document_name || `Mandat signe ${sig.hektor_doc_id}`,
+    source: "hektor_immosign_signed",
+    visibility: "private",
+    storage_status: "local_only",
+    synced_at: now,
+    updated_at: now,
+    metadata_json: { signature: sig },
+  };
+  await supabaseRequest("app_console_document?on_conflict=hektor_annonce_id,source,hektor_document_id", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify([row]),
+  });
+  return row;
+}
+
+// Detecte les docs signes via la map empreintes, met a jour/ cree la ligne, et recupere le PDF signe.
+async function syncSignedProcedureDocuments(job, dossier) {
+  let signedFetched = 0;
+  let chargeHtml;
+  try {
+    chargeHtml = (await hektorFetch(`${XMLRPC_URL}?mode=chargeannonce_Documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}&lang=fr`)).text;
+  } catch (error) {
+    await logJob(job.id, "hektor", "running", "Lecture empreintes signature indisponible", {
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      error: error && error.message ? error.message : String(error),
+    });
+    return 0;
+  }
+  const sigMap = buildSignatureMapFromHtml(chargeHtml);
+  const signed = [...sigMap.values()].filter((s) => s.status === "signed" && s.procedure_id);
+  if (!signed.length) return 0;
+  const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+  for (const sig of signed) {
+    let target = existing.rows.find((r) => r.metadata_json && r.metadata_json.signature && String(r.metadata_json.signature.hektor_doc_id) === String(sig.hektor_doc_id));
+    if (target) {
+      if (!target.metadata_json.signature || target.metadata_json.signature.status !== "signed") {
+        const md = { ...(target.metadata_json || {}), signature: sig };
+        await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(target.id)}`, {
+          method: "PATCH",
+          prefer: "return=minimal",
+          body: JSON.stringify({ metadata_json: md, updated_at: new Date().toISOString() }),
+        });
+        target = { ...target, metadata_json: md };
+      }
+    } else {
+      target = await upsertSyntheticSignedRow(dossier, sig);
+    }
+    if (target && !(target.metadata_json && target.metadata_json.signed_document)) {
+      try {
+        await downloadSignedProcedureDocument(dossier, target);
+        signedFetched += 1;
+      } catch (error) {
+        await logJob(job.id, "hektor", "running", "Recup doc signe echouee", {
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          procedure_id: sig.procedure_id,
+          error: error && error.message ? error.message : String(error),
+        });
+      }
+    }
+  }
+  return signedFetched;
+}
+
 // Relance de signature ImmoSign : POST xmlrpc ImmoSign-remindProcedureSignatories (envoie les mails de rappel).
 async function handleRelanceSignature(job) {
   const payload = safeJsonParse(job.payload_json) || {};
@@ -3470,25 +3569,9 @@ async function handleSyncConsoleDocuments(job) {
     localStored += result.local_path ? 1 : 0;
     cloudStored += result.cloud_available && cloud ? 1 : 0;
   }
-  // Recuperation auto du PDF signe : si un doc est SIGNE et pas encore telecharge -> ZIP -> PDF dans le storage.
-  // Idempotent (skip si metadata_json.signed_document deja present). Best-effort (n'echoue pas la sync).
-  let signedFetched = 0;
-  for (const row of rows) {
-    const md = row.metadata_json || {};
-    const sig = md.signature;
-    if (sig && sig.status === "signed" && sig.procedure_id && !md.signed_document) {
-      try {
-        await downloadSignedProcedureDocument(dossier, row);
-        signedFetched += 1;
-      } catch (error) {
-        await logJob(job.id, "hektor", "running", "Recup doc signe echouee", {
-          hektor_annonce_id: String(dossier.hektor_annonce_id),
-          procedure_id: sig.procedure_id,
-          error: error && error.message ? error.message : String(error),
-        });
-      }
-    }
-  }
+  // Docs SIGNES : Hektor retire leur lien force_transfert -> invisibles pour extractDocumentEntries.
+  // On les detecte via la map empreintes (chargeannonce) puis on recupere le PDF signe (idempotent, best-effort).
+  const signedFetched = await syncSignedProcedureDocuments(job, dossier);
   return {
     indexed: rows.length,
     local_stored: localStored,
