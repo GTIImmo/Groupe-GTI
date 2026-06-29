@@ -5670,6 +5670,36 @@ export async function createSyncConsoleDocumentsJob(input: {
   return data as ConsoleJob
 }
 
+// Annulation de signature ImmoSign par le commercial : le worker POST ImmoSign-deleteProcedure.
+export async function createCancelSignatureJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  procedureId: number | string
+  hektorDocId?: number | string | null
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'cancel_signature_procedure',
+      app_dossier_id: input.document.app_dossier_id,
+      hektor_annonce_id: String(input.document.hektor_annonce_id),
+      payload_json: {
+        document_id: input.document.id,
+        document_name: input.document.document_name,
+        procedure_id: input.procedureId,
+        hektor_doc_id: input.hektorDocId ?? null,
+      },
+      priority: input.priority ?? 28,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create signature cancel job')
+  return data as ConsoleJob
+}
+
 // Relance de signature ImmoSign : le worker POST ImmoSign-remindProcedureSignatories (mails de rappel).
 export async function createRelanceSignatureJob(input: {
   document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>

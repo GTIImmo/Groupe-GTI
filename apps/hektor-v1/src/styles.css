@@ -11470,6 +11470,15 @@ button.metric-card.is-active {
   border-color: #b26a00;
   background: rgba(178, 106, 0, 0.16);
 }
+.cdocs-v2 .console-document-actions .console-document-cancel {
+  border-color: rgba(179, 38, 30, 0.35);
+  background: rgba(179, 38, 30, 0.08);
+  color: #b3261e;
+}
+.cdocs-v2 .console-document-actions .console-document-cancel:hover {
+  border-color: #b3261e;
+  background: rgba(179, 38, 30, 0.14);
+}
 .mandat-signature-tracker {
   margin-top: 14px;
 }

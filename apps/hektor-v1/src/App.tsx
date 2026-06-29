@@ -100,6 +100,7 @@ import {
   createConsoleDocumentSignedUrl,
   createSignedProcedureDocumentUrl,
   createRelanceSignatureJob,
+  createCancelSignatureJob,
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
   loadContactRelations,
@@ -7935,7 +7936,7 @@ function sigIcon(kind: 'check' | 'clock' | 'pen' | 'x') {
   return <svg {...common}><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
 }
 
-type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; procedure_id?: number | string | null }
+type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null }
 
 // Pastille d'etat de signature, partagee par le bloc Documents et le suivi mandat.
 function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
@@ -7944,7 +7945,7 @@ function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
   const variants: Record<string, { bg: string; fg: string; icon: 'check' | 'clock' | 'pen' | 'x'; label: string }> = {
     signed: { bg: '#e6f4ea', fg: '#1f7a3d', icon: 'check', label: `Signé${signature?.signed_at ? ` le ${signature.signed_at}` : ''}` },
     pending: { bg: '#fff3e0', fg: '#b26a00', icon: 'clock', label: `En attente${signature?.progress ? ` · ${signature.progress}` : ''}` },
-    refused: { bg: '#fce8e6', fg: '#b3261e', icon: 'x', label: 'Signature refusée' },
+    cancelled: { bg: '#f1f3f4', fg: '#5f6368', icon: 'x', label: `Signature annulée${signature?.cancelled_at ? ` le ${signature.cancelled_at}` : ''}` },
     to_send: { bg: '#f1f3f4', fg: '#5f6368', icon: 'pen', label: 'À envoyer en signature' },
   }
   const v = variants[st]
@@ -8008,6 +8009,13 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
     catch (err) { setError(err instanceof Error ? err.message : 'Impossible de creer la demande de relance') }
     finally { setBusyId(null) }
   }
+  async function cancel(document: ConsoleDocument, procedureId: number | string, hektorDocId?: number | string | null) {
+    if (!window.confirm(`Annuler la signature en cours de ce document ?\n\n${document.document_name}`)) return
+    setBusyId(document.id); setError(null); setMessage(null)
+    try { const job = await createCancelSignatureJob({ document, procedureId, hektorDocId }); onJobCreated?.(job); setMessage('Annulation de signature demandee.') }
+    catch (err) { setError(err instanceof Error ? err.message : "Impossible de creer la demande d'annulation") }
+    finally { setBusyId(null) }
+  }
 
   if (!documents.length) return null
   return (
@@ -8039,6 +8047,11 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
                 {signature?.status === 'pending' && signature.procedure_id ? (
                   <button className="ghost-button console-document-relance" type="button" onClick={() => void relance(document, signature.procedure_id!)} disabled={busyId === document.id}>
                     <span aria-hidden="true"><DetailIcon type="hektor" /></span>Relancer
+                  </button>
+                ) : null}
+                {signature?.status === 'pending' && signature.procedure_id ? (
+                  <button className="ghost-button console-document-cancel" type="button" onClick={() => void cancel(document, signature.procedure_id!, signature.hektor_doc_id)} disabled={busyId === document.id}>
+                    <span aria-hidden="true"><DetailIcon type="actions" /></span>Annuler
                   </button>
                 ) : null}
                 {signature?.status !== 'signed' ? (
@@ -8280,6 +8293,23 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     }
   }
 
+  // Annule la procedure de signature en attente (cote commercial) : le mandat redevient « à envoyer ».
+  async function handleCancelSignature(document: ConsoleDocument, procedureId: number | string, hektorDocId?: number | string | null) {
+    if (!window.confirm(`Annuler la signature en cours de ce document ?\n\n${document.document_name}`)) return
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      const job = await createCancelSignatureJob({ document, procedureId, hektorDocId })
+      onJobCreated?.(job)
+      setMessage('Annulation de signature demandee.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de creer la demande d'annulation")
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
   return (
     <details className={`console-documents-panel cdocs-v2 ${compact ? 'is-compact' : ''}`}>
       <summary className="console-documents-head">
@@ -8416,6 +8446,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
                       <button className="ghost-button console-document-relance" type="button" onClick={() => void handleRelanceSignature(document, signature.procedure_id!)} disabled={busyDocumentId === document.id} title="Envoyer un rappel de signature">
                         <span aria-hidden="true"><DetailIcon type="hektor" /></span>
                         Relancer
+                      </button>
+                    ) : null}
+                    {signature?.status === 'pending' && signature.procedure_id ? (
+                      <button className="ghost-button console-document-cancel" type="button" onClick={() => void handleCancelSignature(document, signature.procedure_id!, signature.hektor_doc_id)} disabled={busyDocumentId === document.id} title="Annuler la signature en cours">
+                        <span aria-hidden="true"><DetailIcon type="actions" /></span>
+                        Annuler
                       </button>
                     ) : null}
                     {signature?.status !== 'signed' ? (

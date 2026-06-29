@@ -625,6 +625,7 @@ export type ConsoleJobType =
   | 'generate_estimation_pdf'
   | 'generate_mandat_document'
   | 'relance_signature'
+  | 'cancel_signature_procedure'
   | 'upload_document_to_hektor'
   | 'delete_document_from_hektor'
   | 'sync_hektor_photos'

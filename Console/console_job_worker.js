@@ -44,6 +44,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "generate_estimation_pdf",
   "generate_mandat_document",
   "relance_signature",
+  "cancel_signature_procedure",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
   "sync_hektor_photos",
@@ -699,7 +700,7 @@ function parseSignatureFromRow(rowHtml) {
     || row.match(/downloadProofs\(\s*['"]?(\d+)['"]?\s*\)/i)
     || row.match(/docBtnPrintCeremony_(\d+)/i);
   const procedureId = dlp ? Number(dlp[1]) : null;
-  let status = null, progress = null, signedAt = null, hektorDocId = null, docType = null;
+  let status = null, progress = null, signedAt = null, cancelledAt = null, hektorDocId = null, docType = null;
   if (btn) {
     hektorDocId = btn[1];
     docType = btn[2];
@@ -712,6 +713,11 @@ function parseSignatureFromRow(rowHtml) {
       // Date apres "le " (robuste a l'entite &eacute; dans "Sign&eacute; le ...").
       const m = title.match(/\ble\s+(.+)$/i);
       signedAt = m ? m[1].trim() : (title ? title.replace(/&[a-z]+;/gi, "").trim() : null);
+    } else if (/annul/i.test(title)) {
+      // Procedure ANNULEE par le commercial : title "Annule le ...", redevient envoyable (editProcedure).
+      status = "cancelled";
+      const m = title.match(/\ble\s+(.+)$/i);
+      cancelledAt = m ? m[1].trim() : null;
     } else {
       const st = parseSignatureStatus(text);
       if (st && st.status === "refused") { status = "refused"; progress = st.progress; }
@@ -724,7 +730,7 @@ function parseSignatureFromRow(rowHtml) {
     if (st) { status = st.status; progress = st.progress; }
   }
   if (!status && !procedureId) return null;
-  return { status, progress, signed_at: signedAt, procedure_id: procedureId, hektor_doc_id: hektorDocId, doc_type: docType };
+  return { status, progress, signed_at: signedAt, cancelled_at: cancelledAt, procedure_id: procedureId, hektor_doc_id: hektorDocId, doc_type: docType };
 }
 
 function extractDocumentEntries(html, source, visibility) {
@@ -3623,6 +3629,50 @@ async function handleRelanceSignature(job) {
     response: okText.slice(0, 160),
   });
   return { status: "reminded", hektor_annonce_id: String(dossier.hektor_annonce_id), procedure_id: procId };
+}
+
+// Annulation de signature ImmoSign par le commercial : POST xmlrpc ImmoSign-deleteProcedure.
+// Le doc redevient envoyable (editProcedure) et porte "Annule le ...". Ne supprime PAS le document.
+async function handleCancelSignatureProcedure(job) {
+  const payload = safeJsonParse(job.payload_json) || {};
+  const dossier = await loadDossier(job);
+  const procId = payload.procedure_id || payload.procedureId;
+  if (!procId) throw new Error("payload_json.procedure_id requis");
+  await logJob(job.id, "immosign", "running", "Annulation signature", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    procedure_id: procId,
+  });
+  const doCancel = async () => hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", Accept: "application/json, text/plain, */*" },
+    body: new URLSearchParams({ mode: "ImmoSign-deleteProcedure", procedureId: String(procId) }).toString(),
+  });
+  let res;
+  try {
+    res = await doCancel();
+  } catch (error) {
+    if (!isHektorForbiddenError(error)) throw error;
+    await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true });
+    res = await doCancel();
+  }
+  // Met a jour la ligne suivie (par hektor_doc_id) en "cancelled" pour un affichage immediat (best-effort).
+  try {
+    const hid = payload.hektor_doc_id || payload.hektorDocId;
+    if (hid) {
+      const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+      const target = existing.rows.find((r) => r.metadata_json && r.metadata_json.signature && String(r.metadata_json.signature.hektor_doc_id) === String(hid));
+      if (target) {
+        const md = { ...(target.metadata_json || {}), signature: { ...(target.metadata_json.signature || {}), status: "cancelled", procedure_id: null } };
+        await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(target.id)}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify({ metadata_json: md, updated_at: new Date().toISOString() }) });
+      }
+    }
+  } catch (_e) { /* affichage best-effort, la prochaine sync corrige */ }
+  await logJob(job.id, "immosign", "done", "Signature annulee", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    procedure_id: procId,
+    response: String(res.text || "").slice(0, 160),
+  });
+  return { status: "cancelled", hektor_annonce_id: String(dossier.hektor_annonce_id), procedure_id: procId };
 }
 
 async function handleSyncConsoleDocuments(job) {
@@ -10694,6 +10744,8 @@ async function runHandler(job) {
       return handleGenerateMandatDocument(job);
     case "relance_signature":
       return handleRelanceSignature(job);
+    case "cancel_signature_procedure":
+      return handleCancelSignatureProcedure(job);
     case "upload_document_to_hektor":
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
