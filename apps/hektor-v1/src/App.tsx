@@ -65,6 +65,7 @@ import {
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
   createGenerateEstimationPdfJob,
+  createGenerateMandatPdfJob,
   sendEstimationEmail,
   loadDvfComparables,
   loadCadreDeVie,
@@ -4033,6 +4034,7 @@ function MandatDocumentEditor(props: {
   const [activeTab, setActiveTab] = useState<'mandants' | 'bien' | 'prix' | 'clauses' | 'signature' | 'apercu'>('mandants')
   const [message, setMessage] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
+  const [pdfBusy, setPdfBusy] = useState(false)
 
   useEffect(() => {
     setDraft(initialDraft)
@@ -4171,6 +4173,27 @@ function MandatDocumentEditor(props: {
       setMessage('JSON de rendu copie.')
     } catch {
       setMessage('Copie impossible dans ce navigateur.')
+    }
+  }
+
+  // Genere le PDF du mandat cote worker (Puppeteer) puis le depose dans Hektor
+  // (job generate_mandat_document -> upload_document_to_hektor). Prerequis ImmoSign.
+  const generatePdf = async () => {
+    if (pdfBusy) return
+    setPdfBusy(true)
+    setMessage(null)
+    try {
+      await createGenerateMandatPdfJob({
+        dossier: { app_dossier_id: props.dossier.app_dossier_id, hektor_annonce_id: props.dossier.hektor_annonce_id },
+        html: mandatPreviewHtml(draft, props.dossier, props.contacts),
+        payload,
+        numeroMandat: draft.numeroMandat || null,
+      })
+      setMessage('PDF en cours de generation : il apparaitra dans les documents Hektor du bien.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Generation PDF impossible.')
+    } finally {
+      setPdfBusy(false)
     }
   }
 
@@ -4315,8 +4338,8 @@ function MandatDocumentEditor(props: {
               <button className="ghost-button" type="button" onClick={() => void copyPayload()}>
                 Copier JSON
               </button>
-              <button className="ghost-button" type="button" disabled>
-                Generer PDF
+              <button className="ghost-button" type="button" onClick={() => void generatePdf()} disabled={pdfBusy}>
+                {pdfBusy ? 'Generation…' : 'Generer PDF'}
               </button>
             </div>
           </div>
@@ -27618,6 +27641,7 @@ function ContactDetailPopup(props: {
   onClose: () => void
   onOpenDossier: (id: number) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
+  initialEditing?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -27696,7 +27720,7 @@ function ContactDetailPopup(props: {
   const contactPhone = (props.contact.phone_primary ?? '').trim()
 
   useEffect(() => {
-    setEditing(false)
+    setEditing(Boolean(props.initialEditing) && Boolean(props.canManageContacts))
     setDeleteOpen(false)
     setDeleteReason('')
     setDeleteConfirmText('')
@@ -28578,6 +28602,7 @@ function ContactsScreen(props: {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
   const [detailOpen, setDetailOpen] = useState(false)
+  const [detailInitialEditing, setDetailInitialEditing] = useState(false)
   useEffect(() => {
     if (props.openContactId && props.selectedContact?.hektor_contact_id === props.openContactId) {
       setDetailOpen(true)
@@ -28585,6 +28610,13 @@ function ContactsScreen(props: {
   }, [props.openContactId, props.selectedContact?.hektor_contact_id])
   const openContactDetail = (contactId: string) => {
     props.onSelectContact(contactId)
+    setDetailInitialEditing(false)
+    setDetailOpen(true)
+  }
+  // Crayon de la ligne -> ouvre directement la modale "Modifier contact" (si droit).
+  const openContactEdit = (contactId: string) => {
+    props.onSelectContact(contactId)
+    setDetailInitialEditing(true)
     setDetailOpen(true)
   }
   // "Sous mandat" est un filtre visuel doux (comme dans la maquette, ou il ne filtre pas) :
@@ -28722,7 +28754,7 @@ function ContactsScreen(props: {
                       </div>
                       <div className="rc-actions">
                         {phone ? <a className="ra" href={`tel:${phone}`} title="Appeler" onClick={(event) => event.stopPropagation()}>{AV_ICONS.tel}</a> : <span className="ra-spacer" />}
-                        <button className="ra" type="button" title="Ouvrir & modifier" onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.edit}</button>
+                        <button className="ra" type="button" title="Modifier le contact" onClick={(event) => { event.stopPropagation(); props.canManageContacts ? openContactEdit(contact.hektor_contact_id) : openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.edit}</button>
                         {canRappro ? <button className="ra rappro" type="button" title={`${activeSearch} recherche(s) active(s)`} onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.rappro}{activeSearch > 0 ? <span className="ra-badge">{activeSearch}</span> : null}</button> : <span className="ra-spacer" />}
                         <button className="ra cta" type="button" title="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.arr}</button>
                       </div>
@@ -28744,6 +28776,7 @@ function ContactsScreen(props: {
           contact={props.selectedContact}
           relations={props.selectedRelations}
           searches={props.selectedSearches}
+          initialEditing={detailInitialEditing}
           canManageContacts={props.canManageContacts}
           canDeleteContacts={props.canDeleteContacts}
           hektorUserEmail={props.hektorUserEmail}
