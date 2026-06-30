@@ -4492,7 +4492,6 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="c-tags">${[tags, dpe ? `<span>DPE ${dpe}</span>` : ""].filter(Boolean).join("") || '<span class="todo">Caractéristiques à compléter</span>'}</div>
   </div>
   <div class="c-info"><div class="c-info-row">
-    <div class="c-info-cell accent"><span class="l">Valeur estimée</span><span class="v">${valEstimee}</span></div>
     <div class="c-info-cell"><span class="l">Établi pour</span><span class="v">${proprio}</span></div>
     <div class="c-info-cell"><span class="l">Conseiller</span><span class="v">${negoNom}</span></div>
     <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · ${estimText(validite)}</span></div>
@@ -4716,7 +4715,7 @@ function estimationAvisValeurHtml(payload, dossier) {
 </main></body></html>`;
 }
 
-async function renderHtmlToPdfBuffer(html) {
+async function renderHtmlToPdfBuffer(html, opts) {
   let browser = null;
   try {
     browser = await chromium.launch(browserLaunchOptions({ headless: true }));
@@ -4725,7 +4724,7 @@ async function renderHtmlToPdfBuffer(html) {
     return await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
+      margin: (opts && opts.margin) || { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
     });
   } finally {
     if (browser) await browser.close().catch(() => {});
@@ -4853,7 +4852,9 @@ async function handleGenerateEstimationPdf(job) {
     }
   } catch (_) { /* le PDF se génère même sans QR */ }
   const html = estimationAvisValeurHtmlPremium(payload, dossier, detail);
-  const pdfBuffer = await renderHtmlToPdfBuffer(html);
+  // Marges PDF à 0 : chaque .page fait déjà 210×297mm (marge interne via --mx) -> 1 page
+  // physique exacte. Sinon les marges 12mm font déborder la page de 297mm sur une 2e page.
+  const pdfBuffer = await renderHtmlToPdfBuffer(html, { margin: { top: "0", bottom: "0", left: "0", right: "0" } });
 
   const label = (payload.document_label && String(payload.document_label).trim()) || "Avis de valeur";
   const filename = storageSafeFilename(`${label}.pdf`, "avis-de-valeur.pdf");
