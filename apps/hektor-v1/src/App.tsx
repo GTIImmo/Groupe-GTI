@@ -69,6 +69,10 @@ import {
   sendEstimationEmail,
   loadDvfComparables,
   loadCadreDeVie,
+  loadCadastre,
+  loadDossierCadastre,
+  cadastreMapThumbUrl,
+  createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
@@ -135,7 +139,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, DvfComparablesResult } from './lib/api'
+import type { CadreDeVie, CadastreData, DvfComparablesResult } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -4667,9 +4671,13 @@ function EstimationDocumentEditor(props: {
   const [cadre, setCadre] = useState<CadreDeVie | null>(null)
   const [cadreBusy, setCadreBusy] = useState(false)
   const [cadreMsg, setCadreMsg] = useState<string | null>(null)
+  // Éléments cadastraux (parcelle(s) + contenance + PLU) via IGN apicarto, chargés à la demande.
+  const [cadastre, setCadastre] = useState<CadastreData | null>(null)
+  const [cadastreBusy, setCadastreBusy] = useState(false)
+  const [cadastreMsg, setCadastreMsg] = useState<string | null>(null)
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
-  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null) }, [initialDraft, props.modal])
+  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null) }, [initialDraft, props.modal])
   useEffect(() => {
     let cancelled = false
     const id = dossier.app_dossier_id
@@ -4719,6 +4727,27 @@ function EstimationDocumentEditor(props: {
       setCadreMsg(error instanceof Error ? error.message : 'Chargement du cadre de vie impossible.')
     } finally {
       setCadreBusy(false)
+    }
+  }
+
+  async function loadCadastreElements() {
+    if (cadastreBusy) return
+    const lat = Number(props.detail.latitude_detail)
+    const lon = Number(props.detail.longitude_detail)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadastreMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    setCadastreBusy(true); setCadastreMsg(null)
+    try {
+      const res = await loadCadastre({ lat, lon })
+      setCadastre(res)
+      if (res.ok) {
+        const n = res.parcelles?.length ?? 0
+        const ref = res.parcelles?.[0]?.reference ?? null
+        setCadastreMsg(`${n} parcelle${n > 1 ? 's' : ''}${ref ? ' · ' + ref + (n > 1 ? '…' : '') : ''}${res.contenance_totale ? ' · ' + res.contenance_totale.toLocaleString('fr-FR') + ' m²' : ''}${res.plu?.zone ? ' · PLU ' + res.plu.zone : ''}`)
+      } else setCadastreMsg('Aucune parcelle cadastrale trouvée pour ces coordonnées.')
+    } catch (error) {
+      setCadastreMsg(error instanceof Error ? error.message : 'Chargement des éléments cadastraux impossible.')
+    } finally {
+      setCadastreBusy(false)
     }
   }
 
@@ -4830,7 +4859,7 @@ function EstimationDocumentEditor(props: {
         dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
         bien: p.bien, proprietaire: p.proprietaire, negociateur: p.negociateur, valeurs: p.valeurs,
         commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
-        marche: marche && marche.ok ? marche : null, acquereurs, cadreDeVie: cadre && cadre.ok ? cadre : null, argumentaire: p.argumentaire,
+        marche: marche && marche.ok ? marche : null, acquereurs, cadreDeVie: cadre && cadre.ok ? cadre : null, cadastre: cadastre && cadastre.ok ? cadastre : null, argumentaire: p.argumentaire,
       })
       if (sendEmail) {
         const res = await sendEstimationEmail({
@@ -5039,6 +5068,21 @@ function EstimationDocumentEditor(props: {
                     </div>
                   ) : (
                     <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Carte IGN + commodités (écoles/commerces/gare) + risques (Géorisques) — ajoutent une page « Cadre de vie » au PDF.</p>
+                  )}
+                </div>
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--ds-border, #ece7e9)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <button className="ghost-button" type="button" disabled={cadastreBusy} onClick={() => { void loadCadastreElements() }}>{cadastreBusy ? 'Chargement…' : (cadastre ? 'Recharger les éléments cadastraux' : 'Charger les éléments cadastraux')}</button>
+                    {cadastreMsg ? <span style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>{cadastreMsg}</span> : null}
+                  </div>
+                  {cadastre && cadastre.ok ? (
+                    <div className="estim-marche-stats">
+                      <div><span className="emk">Parcelle{(cadastre.parcelles?.length ?? 0) > 1 ? 's' : ''}</span><span className="emv">{cadastre.parcelles && cadastre.parcelles.length ? cadastre.parcelles.map((p) => p.reference).filter(Boolean).join(', ') : '—'}</span></div>
+                      <div><span className="emk">Contenance cadastrale</span><span className="emv">{cadastre.contenance_totale ? `${cadastre.contenance_totale.toLocaleString('fr-FR')} m²` : '—'}</span></div>
+                      <div><span className="emk">Zone PLU</span><span className="emv">{cadastre.plu?.zone ? `${cadastre.plu.zone}${cadastre.plu.libelle ? ' · ' + cadastre.plu.libelle : ''}` : '—'}</span></div>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l'Urbanisme) — ajoutent le bloc « Éléments cadastraux » au PDF.</p>
                   )}
                 </div>
               </div>
@@ -8115,6 +8159,91 @@ const signatureAutoSyncByDossier = new Map<number, number>()
 // Bloc « Suivi de signature du mandat » : affiche, sous l'editeur de mandat (onglet Mandat & contacts),
 // les mandats avec leur etat (a envoyer / en attente / signe) + l'action utile. Reutilise les memes
 // donnees et actions que le bloc Documents. N'affiche rien s'il n'y a aucun mandat.
+// Onglet Commercialisation — bloc « Cadastre » : récupère les éléments cadastraux du bien
+// (parcelle(s) + contenance + PLU via IGN/Géoportail), les affiche, génère un PDF « Plan
+// cadastral » déposé dans Hektor (onglet Documents) et persiste les données par dossier.
+function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier: Dossier; detail: DossierDetailPayload; onJobCreated?: (job: ConsoleJob) => void }) {
+  const [cad, setCad] = useState<CadastreData | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  // Re-affiche les éléments déjà enregistrés (sans re-fetch) à l'ouverture de la fiche.
+  useEffect(() => {
+    let cancelled = false
+    setCad(null); setMessage(null)
+    loadDossierCadastre(dossier.app_dossier_id).then((row) => { if (!cancelled && row) setCad(row) }).catch(() => { /* best effort */ })
+    return () => { cancelled = true }
+  }, [dossier.app_dossier_id])
+
+  async function handleGenerate() {
+    if (busy) return
+    const lat = Number(detail.latitude_detail)
+    const lon = Number(detail.longitude_detail)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMessage('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    setBusy(true); setMessage('Récupération des éléments cadastraux…')
+    try {
+      const res = await loadCadastre({ lat, lon })
+      setCad(res)
+      if (!res.ok) { setMessage('Aucune parcelle cadastrale trouvée pour ces coordonnées.'); setBusy(false); return }
+      const job = await createGenerateCadastreDocumentJob({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, lat, lon })
+      onJobCreated?.(job)
+      setMessage('Plan cadastral en génération — il apparaîtra dans l’onglet Documents (Hektor) dans un instant.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Génération des éléments cadastraux impossible.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const parcelles = cad?.parcelles ?? []
+  const thumbUrl = cad && cad.ok ? cadastreMapThumbUrl(Number(detail.latitude_detail), Number(detail.longitude_detail)) : null
+  return (
+    <article className="detail-subsection detail-cadastre-section">
+      <div className="section-header">
+        <DetailSectionTitle icon="commercial" title="Cadastre" />
+        <div className="section-header-actions">
+          <button className="hektor-context-action-button" type="button" disabled={busy} onClick={() => { void handleGenerate() }}>
+            <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+            <strong>{busy ? 'Génération…' : (cad && cad.ok ? 'Régénérer et enregistrer' : 'Générer et enregistrer les éléments du cadastre')}</strong>
+          </button>
+        </div>
+      </div>
+      {cad && cad.ok ? (
+        <div className="cadastre-panel">
+          {thumbUrl ? (
+            <figure className="cadastre-plan">
+              <img src={thumbUrl} alt="Plan cadastral du bien" loading="lazy" />
+              <span className="cadastre-plan-mark" aria-hidden="true" />
+              <figcaption>Fond IGN · parcellaire PCI Express</figcaption>
+            </figure>
+          ) : null}
+          <div className="cadastre-data">
+            <div className="cadastre-rows">
+              <div className="cadastre-row">
+                <span className="ck">{parcelles.length > 1 ? 'Parcelles' : 'Parcelle'}</span>
+                <span className="cv">{parcelles.map((p) => p.reference).filter(Boolean).join(', ') || '—'}</span>
+              </div>
+              <div className="cadastre-row">
+                <span className="ck">Contenance cadastrale</span>
+                <span className="cv cv-accent">{cad.contenance_totale ? `${cad.contenance_totale.toLocaleString('fr-FR')} m²` : '—'}</span>
+              </div>
+            </div>
+            {cad.plu?.zone ? (
+              <div className="cadastre-plu">
+                <span className="cadastre-plu-zone">{cad.plu.zone}</span>
+                <span className="cadastre-plu-desc">{cad.plu.libelle || (cad.plu.type ? `Zone type ${cad.plu.type}` : 'Zonage PLU')}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <p className="cadastre-hint">Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l’Urbanisme). Le bouton génère un document « Plan cadastral » déposé dans Hektor.</p>
+      )}
+      {message ? <p className="cadastre-hint cadastre-msg">{message}</p> : null}
+    </article>
+  )
+}
+
 function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; onJobCreated?: (job: ConsoleJob) => void }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -19846,6 +19975,9 @@ function DossierDetailLayout(props: {
                     </>
                   ) : null}
                 </article>
+                ) : null}
+                {activeDetailTab === 'commercial' && !isLightweightDetail ? (
+                  <CadastreCommercialSection dossier={dossier} detail={props.detail} onJobCreated={props.onHektorActionJobCreated} />
                 ) : null}
                 {activeDetailTab === 'mandate' ? (
                 <article className="detail-subsection detail-contact-section">
