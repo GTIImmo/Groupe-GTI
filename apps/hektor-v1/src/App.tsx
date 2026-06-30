@@ -4025,6 +4025,89 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
 </html>`
 }
 
+// AVENANT AU MANDAT : modele HTML fourni par le client, REPRIS A L'IDENTIQUE. Les balises de fusion
+// Hektor (<img src="…fusions_v_2…">) sont remplacees par les vraies donnees de l'app + le nouveau prix saisi.
+// Toujours lie au n° de mandat existant (avenant = modification du mandat initial, sans novation).
+function avenantPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier) {
+  const p = buildMandatDocumentPayload(draft, dossier)
+  const numero = escapeHtml(draft.numeroMandat || 'A completer')
+  const ag = p.agence
+  const nego = escapeHtml(p.negociateur.nom_complet || dossier.commercial_nom || 'A completer')
+  const bienAdr = escapeHtml(draft.bienAdresse || dossier.titre_bien || '')
+  const dateAv = escapeHtml(formatDraftDate(draft.dateSignature) || '')
+  const prix = escapeHtml(draft.prixVente || '')
+  const hono = escapeHtml(draft.honorairesTtc || '')
+  const mandantsCoords = (draft.mandants.map((m) => {
+    const name = [m.civilite, m.prenom, m.nom].map((v) => String(v || '').trim()).filter(Boolean).join(' ').trim() || mandatMandantDisplayName(m)
+    const lines = [name ? `<strong>${escapeHtml(name)}</strong>` : '']
+    if (m.adresse) lines.push(escapeHtml(m.adresse))
+    const contact = [m.telephone, m.email].map((v) => String(v || '').trim()).filter(Boolean).join(' &middot; ')
+    if (contact) lines.push(escapeHtml(contact))
+    return lines.filter(Boolean).join('<br />')
+  }).filter(Boolean).join('<br /><br />')) || escapeHtml(draft.mandantsLibelle || 'A completer')
+  const priceBox = (value: string, suffix: string, strong: boolean, border: string, bg: string, color: string, size: string) =>
+    `<div style="border:2px solid ${border};border-radius:10px;padding:13px 14px;background:${bg};font-size:${size};color:${color};">${value ? `<span style="font-weight:bold">${value}</span>` : '<span style="border-bottom:2px dotted #6d6d76;display:inline-block;height:18px;vertical-align:middle;width:80%"></span>'} <span style="float:right">${strong ? `<strong>${suffix}</strong>` : suffix}</span></div>`
+  return `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8" /><title>Avenant au mandat ${numero}</title>
+<style>@page{size:A4;margin:13mm}*{box-sizing:border-box}html,body{margin:0;background:#fff}</style></head>
+<body>
+<div style="font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px;line-height:1.4;max-width:800px;margin:0 auto;">
+<table cellspacing="0" style="border-collapse:collapse; margin-bottom:10px; width:100%"><tbody><tr>
+<td style="vertical-align:middle; width:72%">
+<div style="font-size:24px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1f1f23;">AVENANT AU MANDAT DE VENTE</div>
+<div style="margin-top:4px;font-size:12px;color:#666;">Mandat n&deg; <strong>${numero}</strong></div></td>
+<td style="text-align:right; vertical-align:middle; width:28%"><div style="font-size:11px;color:#777;">Document contractuel</div></td>
+</tr></tbody></table>
+<div style="height:4px;background:linear-gradient(90deg,#1f1f23 0%,#c2185b 50%,#1f1f23 100%);border-radius:2px;margin-bottom:14px;">&nbsp;</div>
+<div style="padding:11px 14px;border:1px solid #e4e4ea;border-radius:8px;background:#f8f8fb;margin-bottom:14px;">
+<div style="font-size:11px;font-weight:bold;text-transform:uppercase;color:#b1164f;letter-spacing:0.4px;margin-bottom:4px;"><strong>Objet de l&rsquo;avenant</strong></div>
+Modification des conditions financi&egrave;res du mandat de vente initial relatives au prix de commercialisation du bien.</div>
+<table style="border-collapse:separate; border-spacing:0; margin-bottom:14px; width:100%"><tbody><tr>
+<td style="background:#fcfcfd; border-bottom-width:1px; border-radius:10px; border-style:solid; border-top-width:1px; border-color:#ececf0; padding:12px; vertical-align:top; width:48%">
+<div style="font-size:11px;font-weight:bold;text-transform:uppercase;color:#b1164f;letter-spacing:0.5px;margin-bottom:8px;">Le mandant</div>
+<div style="font-size:13px;">${mandantsCoords}</div></td>
+<td style="width:4%">&nbsp;</td>
+<td style="background:#fcfcfd; border-bottom-width:1px; border-radius:10px; border-style:solid; border-top-width:1px; border-color:#ececf0; padding:12px; vertical-align:top; width:48%">
+<div style="font-size:11px;font-weight:bold;text-transform:uppercase;color:#b1164f;letter-spacing:0.5px;margin-bottom:8px;">Le mandataire</div>
+<div style="font-weight:bold;font-size:13px;"><strong>${escapeHtml(ag.nom)}</strong></div>
+<div style="margin-top:7px;">${escapeHtml(ag.adresse)} ${escapeHtml(ag.code_postal)} ${escapeHtml(ag.ville)}</div>
+<div style="margin-top:4px;">T&eacute;l. : ${escapeHtml(ag.telephone)}</div>
+<div style="margin-top:3px;">Mail : ${escapeHtml(ag.email)}</div>
+<div style="margin-top:4px;">Repr&eacute;sent&eacute;e par : ${nego}</div></td>
+</tr></tbody></table>
+<div style="padding:12px 14px;background:#fbfbfc;border:1px solid #ececf0;border-left:5px solid #c2185b;border-radius:8px;margin-bottom:16px;text-align:justify;color:#333;">Il est rappel&eacute; que les parties ont sign&eacute; un mandat de vente n&deg; ${numero}, portant sur le bien situ&eacute; ${bienAdr}.<br /><br />
+Par le pr&eacute;sent avenant, les parties conviennent, d&rsquo;un commun accord, de modifier le prix de commercialisation du bien, sans novation, dans les conditions ci-apr&egrave;s d&eacute;finies.</div>
+<div style="border:1px solid #d9d9df;border-radius:12px;overflow:hidden;margin-bottom:16px;background:#ffffff;">
+<div style="background:linear-gradient(90deg,#232329 0%,#2d2d35 100%);color:#ffffff;padding:11px 14px;font-weight:bold;letter-spacing:0.3px;">Nouvelles conditions financi&egrave;res</div>
+<table cellspacing="0" style="border-collapse:collapse; width:100%"><tbody>
+<tr><td style="background:#f7f7fa; border-bottom:1px solid #e6e6ea; color:#1f1f23; font-size:13px; font-weight:bold; padding:18px 16px; vertical-align:middle; width:36%">Nouveau prix F.A.I
+<div style="font-size:11px;font-weight:normal;color:#777;margin-top:4px;line-height:1.35;">Prix de commercialisation honoraires inclus</div></td>
+<td style="border-bottom:1px solid #e6e6ea; padding:18px 16px; vertical-align:middle">${priceBox(prix, '&euro;', false, '#c2185b', '#fff8fb', '#7a1240', '18px')}</td></tr>
+<tr><td style="background:#f7f7fa; color:#1f1f23; font-size:13px; font-weight:bold; padding:18px 16px; vertical-align:middle">Honoraires TTC</td>
+<td style="padding:18px 16px; vertical-align:middle">${priceBox(hono, '&euro; TTC', true, '#d3d3da', '#ffffff', '#444', '16px')}</td></tr>
+</tbody></table></div>
+<div style="margin-bottom:8px;text-align:justify;color:#333;">Les nouvelles conditions ci-dessus remplacent celles pr&eacute;vues au mandat initial pour les seuls &eacute;l&eacute;ments express&eacute;ment modifi&eacute;s par le pr&eacute;sent avenant.</div>
+<div style="margin-bottom:14px;text-align:justify;color:#333;">Toutes les autres clauses, charges, conditions et stipulations du mandat initial demeurent inchang&eacute;es et continuent de produire leur plein et entier effet.</div>
+<table cellspacing="0" style="border-collapse:collapse; margin-bottom:10px; width:100%"><tbody><tr>
+<td style="line-height:1.45; vertical-align:top; width:58%">Fait &agrave; ${escapeHtml(ag.ville)}<br />Le&nbsp;${dateAv}</td>
+<td style="color:#7a7a82; font-style:italic; text-align:right; vertical-align:bottom; width:42%">En deux exemplaires originaux</td>
+</tr></tbody></table>
+<table style="border-collapse:separate; border-spacing:0; width:100%"><tbody><tr>
+<td style="padding:0 8px 0 0; text-align:center; vertical-align:top; width:48%">
+<div style="border-top:1px solid #d8d8de;padding-top:8px;">
+<div style="display:inline-block;padding:0 14px;position:relative;font-weight:bold;text-transform:uppercase;letter-spacing:0.7px;color:#1f1f23;font-size:12px;">Le mandant</div>
+<div style="margin-top:12px;line-height:1.45;color:#444;font-size:12px;min-height:54px;">Signature pr&eacute;c&eacute;d&eacute;e de la mention<br />&laquo; Bon pour accord &raquo;</div></div></td>
+<td style="width:4%">&nbsp;</td>
+<td style="padding:0 0 0 8px; text-align:center; vertical-align:top; width:48%">
+<div style="border-top:1px solid #d8d8de;padding-top:8px;">
+<div style="font-weight:bold;text-transform:uppercase;letter-spacing:0.7px;color:#1f1f23;font-size:12px;">Le mandataire</div>
+<div style="margin-top:12px;line-height:1.45;color:#444;font-size:12px;min-height:54px;">Signature et cachet</div></div></td>
+</tr></tbody></table>
+<div style="height:10px;">&nbsp;</div>
+</div>
+</body></html>`
+}
+
 // Pop-up de validation « Faire signer ce document par Yousign ? » — réutilisée par
 // l'éditeur de mandat ET le bouton Signature du panneau Documents (même visuel).
 function SignaturePromptModal({ intro, items, onConfirm, onClose }: { intro: string; items: string[]; onConfirm: () => void; onClose: () => void }) {
@@ -4074,6 +4157,16 @@ function MandatDocumentEditor(props: {
   const [previewUrl, setPreviewUrl] = useState('')
   const [pdfBusy, setPdfBusy] = useState(false)
   const [signPromptOpen, setSignPromptOpen] = useState(false)
+  // Type de document : mandat de vente OU avenant (modification d'un mandat actif). L'avenant n'est
+  // disponible que si un mandat est deja actif ; dans ce cas il est preselectionne.
+  const [docMode, setDocMode] = useState<'mandat' | 'avenant'>(() =>
+    hasActiveMandateForDocument({
+      statut_annonce: props.dossier.statut_annonce,
+      numero_mandat: props.dossier.numero_mandat,
+      mandat_date_fin: props.detail.mandat_date_fin,
+      mandat_numero_source: props.detail.mandat_numero_source,
+    }) ? 'avenant' : 'mandat',
+  )
 
   useEffect(() => {
     setDraft(initialDraft)
@@ -4098,8 +4191,9 @@ function MandatDocumentEditor(props: {
     mandat_date_fin: props.detail.mandat_date_fin,
     mandat_numero_source: props.detail.mandat_numero_source,
   })
-  const documentTitle = hasActiveMandate ? 'Avenant au mandat' : 'Mandat de vente'
-  const documentActionLabel = hasActiveMandate ? 'Preparer avenant' : 'Preparer le mandat'
+  const isAvenant = docMode === 'avenant'
+  const documentTitle = isAvenant ? 'Avenant au mandat' : 'Mandat de vente'
+  const documentActionLabel = isAvenant ? 'Preparer avenant' : 'Preparer le mandat'
   const missingFields = [
     !draft.numeroMandat ? 'numero mandat' : '',
     !draft.mandantsLibelle && draft.mandants.every((mandant) => !mandatMandantDisplayName(mandant)) ? 'mandant' : '',
@@ -4198,13 +4292,14 @@ function MandatDocumentEditor(props: {
       setPreviewUrl('')
       return
     }
-    const blob = new Blob([mandatPreviewHtml(draft, props.dossier, props.contacts)], { type: 'text/html;charset=utf-8' })
+    const html = docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier) : mandatPreviewHtml(draft, props.dossier, props.contacts)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     setPreviewUrl(url)
     return () => {
       URL.revokeObjectURL(url)
     }
-  }, [draft, open, props.contacts, props.dossier])
+  }, [draft, open, props.contacts, props.dossier, docMode])
 
   const copyPayload = async () => {
     try {
@@ -4231,9 +4326,11 @@ function MandatDocumentEditor(props: {
     try {
       await createGenerateMandatPdfJob({
         dossier: { app_dossier_id: props.dossier.app_dossier_id, hektor_annonce_id: props.dossier.hektor_annonce_id },
-        html: mandatPreviewHtml(draft, props.dossier, props.contacts),
+        html: docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier) : mandatPreviewHtml(draft, props.dossier, props.contacts),
         payload,
         numeroMandat: draft.numeroMandat || null,
+        // Avenant : nom de document dedie + lie au n° de mandat -> apparait ainsi dans Hektor + ImmoSign.
+        documentLabel: docMode === 'avenant' ? `Avenant au mandat - ${draft.numeroMandat || ''}`.trim().replace(/-\s*$/, '').trim() : null,
       })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Generation PDF impossible.')
@@ -4288,6 +4385,44 @@ function MandatDocumentEditor(props: {
       {open ? (
         <div className="mandat-document-editor-body">
           <div className="mandat-document-form">
+            {hasActiveMandate ? (
+              <div className="mandat-doc-type-switch" role="tablist" aria-label="Type de document">
+                <button type="button" className={!isAvenant ? 'is-active' : ''} onClick={() => setDocMode('mandat')}>Mandat de vente</button>
+                <button type="button" className={isAvenant ? 'is-active' : ''} onClick={() => setDocMode('avenant')}>Avenant au mandat</button>
+              </div>
+            ) : null}
+            {isAvenant ? (
+              <div className="mandat-document-panel avenant-form">
+                <div className="avenant-link"><span aria-hidden="true"><DetailIcon type="mandate" /></span> Avenant lié au mandat <strong>n° {draft.numeroMandat || 'à compléter'}</strong></div>
+                <div className="avenant-block">
+                  <strong className="avenant-block-title">Informations reprises du mandat (non modifiables)</strong>
+                  <div className="avenant-ro-grid">
+                    {([
+                      ['N° mandat', draft.numeroMandat],
+                      ['Mandant(s)', draft.mandants.map((m) => mandatMandantDisplayName(m)).filter(Boolean).join(', ') || draft.mandantsLibelle],
+                      ['Agence', payload.agence.nom],
+                      ['Négociateur', payload.negociateur.nom_complet],
+                      ['Bien', draft.bienAdresse || props.dossier.titre_bien || ''],
+                    ] as Array<[string, string]>).map(([label, value]) => (
+                      <div className="avenant-ro-field" key={label}>
+                        <span className="avenant-ro-label">{label}</span>
+                        <span className="avenant-ro-value">{value ? value : 'Manquant'} <em className={value ? 'ok' : 'ko'}>{value ? '✓' : '⚠'}</em></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="avenant-block">
+                  <strong className="avenant-block-title">À compléter pour l'avenant</strong>
+                  <p className="avenant-objet">Objet : modification des conditions financières — prix de commercialisation.</p>
+                  <div className="mandat-document-form-grid">
+                    <label><span>Nouveau prix FAI</span><input value={draft.prixVente} onChange={(event) => updateDraft('prixVente', event.target.value)} /></label>
+                    <label><span>Nouveaux honoraires TTC</span><input value={draft.honorairesTtc} onChange={(event) => updateDraft('honorairesTtc', event.target.value)} /></label>
+                    <label><span>Date de l'avenant</span><input type="date" value={draft.dateSignature} onChange={(event) => updateDraft('dateSignature', event.target.value)} /></label>
+                  </div>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="mandat-document-tabs" role="tablist" aria-label="Sections du mandat">
               {[
                 ['mandants', 'Mandants'],
@@ -4404,6 +4539,8 @@ function MandatDocumentEditor(props: {
                 </div>
               </div>
             ) : null}
+            </>
+            )}
             {missingFields.length ? <p className="mandat-document-warning">A completer : {missingFields.join(', ')}.</p> : null}
             {message ? <p className="mandat-document-message">{message}</p> : null}
             <div className="mandat-document-actions">
@@ -4420,20 +4557,20 @@ function MandatDocumentEditor(props: {
             </div>
             {signPromptOpen ? (
               <SignaturePromptModal
-                intro="Dans la popin signature Hektor, ajoute ces signataires :"
+                intro={`Dans la popin signature Hektor, fais signer ${isAvenant ? "l'avenant" : 'le mandat'} par ces signataires :`}
                 items={(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient) => `${signatureRecipientLabel(recipient)}${recipient.email ? ` · ${recipient.email}` : ''}${recipient.telephone ? ` · ${recipient.telephone}` : ''}`)}
                 onConfirm={openHektorForSignature}
                 onClose={() => setSignPromptOpen(false)}
               />
             ) : null}
           </div>
-          <aside className="mandat-document-preview" aria-label="Apercu mandat">
+          <aside className="mandat-document-preview" aria-label="Apercu document">
             <div className="mandat-preview-head">
               <span>GROUPE GTI</span>
-              <strong>MANDAT DE VENTE</strong>
+              <strong>{isAvenant ? 'AVENANT AU MANDAT' : 'MANDAT DE VENTE'}</strong>
               <small>N {draft.numeroMandat || 'a completer'}</small>
             </div>
-            {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du mandat" /> : null}
+            {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du document" /> : null}
           </aside>
         </div>
       ) : null}

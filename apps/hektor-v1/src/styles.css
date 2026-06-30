@@ -7641,6 +7641,91 @@ tbody tr.is-refreshing-row td {
   color: #1f1f23;
   box-shadow: 0 6px 18px rgba(21, 32, 43, 0.09);
 }
+/* Selecteur de type de document : Mandat de vente / Avenant au mandat */
+.mandat-doc-type-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(210, 218, 224, 0.95);
+  border-radius: 10px;
+  background: #eef4f6;
+  width: fit-content;
+}
+.mandat-doc-type-switch button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #526975;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.mandat-doc-type-switch button.is-active {
+  background: var(--gti-final-magenta);
+  color: #fff;
+}
+/* Formulaire avenant : infos reprises (lecture seule) + champs a completer */
+.avenant-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid rgba(197, 0, 95, 0.22);
+  border-radius: 10px;
+  background: rgba(197, 0, 95, 0.06);
+  color: var(--gti-final-ink);
+  font-size: 13px;
+}
+.avenant-link svg {
+  width: 16px;
+  height: 16px;
+}
+.avenant-block {
+  display: grid;
+  gap: 8px;
+}
+.avenant-block-title {
+  font-size: 12px;
+  color: #526975;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.avenant-ro-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.avenant-ro-field {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #fafbfc;
+}
+.avenant-ro-label {
+  font-size: 11px;
+  color: #8b8f92;
+}
+.avenant-ro-value {
+  font-size: 13px;
+  color: var(--gti-final-ink);
+}
+.avenant-ro-value em {
+  font-style: normal;
+}
+.avenant-ro-value em.ok {
+  color: #1f7a3d;
+}
+.avenant-ro-value em.ko {
+  color: #b26a00;
+}
+.avenant-objet {
+  margin: 0;
+  font-size: 12.5px;
+  color: #42474a;
+}
 .mandat-document-panel {
   display: grid;
   gap: 12px;
