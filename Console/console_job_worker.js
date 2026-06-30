@@ -4117,9 +4117,9 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .rh .meta{text-align:right}.rh .meta .t{font-family:'Spectral',serif;font-size:13px;font-weight:700;line-height:1}.rh .meta .d{font-size:8.5px;color:var(--mute);margin-top:3px;letter-spacing:.04em}
 .rf{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--line);flex:none;font-size:8px;color:var(--faint);letter-spacing:.03em}
 .rf .pg{font-weight:700;color:var(--mute)}
-.content{flex:1;padding:18px 0;min-height:0}
-.h{font-size:9px;font-weight:800;color:var(--ink);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:11px;padding-bottom:6px;border-bottom:1.5px solid var(--ink)}
-.h::before{content:"";width:9px;height:9px;background:var(--brand);flex:none}.h.mt{margin-top:16px}
+.content{flex:1;padding:11px 0;min-height:0}
+.h{font-size:9px;font-weight:800;color:var(--ink);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:11px;padding-bottom:5px;border-bottom:1.5px solid var(--ink)}
+.h::before{content:"";width:9px;height:9px;background:var(--brand);flex:none}.h.mt{margin-top:13px}
 .todo{color:var(--faint);font-style:italic;font-weight:500}
 .cover{padding:0;display:flex;flex-direction:column;color:#1a1614;overflow:hidden}
 .cover .c-head{display:flex;align-items:center;justify-content:space-between;padding:6mm var(--mx);background:linear-gradient(115deg,#160a10,#241019 45%,#3a1224)}
@@ -4143,7 +4143,7 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cover .c-info-cell.accent{background:var(--brand);border-color:var(--brand);flex:0 0 36%;display:flex;flex-direction:column;justify-content:center}
 .cover .c-info-cell .l{display:block;font-size:7.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--brand)}.cover .c-info-cell.accent .l{color:rgba(255,255,255,.85)}
 .cover .c-info-cell .v{display:block;font-size:11.5px;font-weight:600;margin-top:5px;color:#1a1614;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cover .c-info-cell.accent .v{color:#fff;font-family:'Spectral',serif;font-size:22px;font-weight:700;letter-spacing:-.02em}
-.gal{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:34mm;gap:6px}
+.gal{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:29mm;gap:6px}
 .gal .g{border-radius:6px;overflow:hidden;background:linear-gradient(135deg,#efe9df,#e4ddd2);position:relative}
 .gal .g img{width:100%;height:100%;object-fit:cover}.gal .g.big{grid-column:span 2;grid-row:span 2}
 .specs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -4164,7 +4164,7 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .gend .k{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:700;margin-top:3px}
 .gend.mid{position:absolute;left:50%;transform:translateX(-50%);text-align:center}.gend.mid .v{color:#ff9ec8}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.scard{border:1px solid var(--line);border-radius:11px;padding:15px 16px}
-.acq{display:flex;align-items:center;gap:11px;margin-top:11px;padding:11px 14px;background:var(--brand-50);border:1px solid #f3c9dd;border-radius:11px;font-size:11px;color:var(--body);line-height:1.45}
+.acq{display:flex;align-items:center;gap:11px;margin-top:8px;padding:9px 13px;background:var(--brand-50);border:1px solid #f3c9dd;border-radius:11px;font-size:11px;color:var(--body);line-height:1.4}
 .acq b{color:var(--brand-d)}.acq-ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--brand);border-radius:50%;color:#fff}.acq-ic svg{width:15px;height:15px}
 .cdv-map{position:relative;width:100%;height:76mm;border-radius:11px;overflow:hidden;border:1px solid var(--line);background:var(--cream)}
 .cdv-map img{width:100%;height:100%;object-fit:cover;display:block}
@@ -4180,10 +4180,10 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cdv-lvl .k{font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--mute);letter-spacing:.04em}.cdv-lvl .v{font-weight:800;margin-top:2px;font-size:11px}
 .scard .ic{width:30px;height:30px;border-radius:8px;background:var(--brand-50);color:var(--brand);display:grid;place-items:center}.scard .ic svg{width:15px;height:15px}
 .scard .v{font-family:'Spectral',serif;font-size:22px;font-weight:600;margin-top:11px}.scard .v small{font-size:11px;color:var(--mute)}.scard .l{font-size:10.5px;color:var(--body);margin-top:2px}
-.chart{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-top:12px}
+.chart{border:1px solid var(--line);border-radius:12px;padding:13px 18px;margin-top:9px}
 .chart .ch{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
 .chart .ch .t{font-size:12px;font-weight:700}.chart .ch .s{font-size:10.5px;color:var(--mute)}
-.bars{display:flex;align-items:flex-end;gap:12px;height:34mm}
+.bars{display:flex;align-items:flex-end;gap:12px;height:24mm}
 .bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end}
 .bcol .bv{font-size:10px;font-weight:700}.bcol .bar{flex:none;width:100%;max-width:42px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#c9c0b0,#b8ad99);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .bcol .bar.hl{background:linear-gradient(180deg,var(--brand),var(--brand-d))}.bcol .bk{font-size:9.5px;color:var(--mute);font-weight:600}
@@ -4192,6 +4192,13 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .comp .info{flex:1;min-width:0}.comp .info .t{font-size:12.5px;font-weight:700}.comp .info .d{font-size:10px;color:var(--mute);margin-top:2px}
 .comp .stat{text-align:right}.comp .stat .p{font-family:'Spectral',serif;font-size:15px;font-weight:600}.comp .stat .pm{font-size:10px;color:var(--brand);font-weight:700;margin-top:1px}
 .comp .bdg{font-size:9px;font-weight:700;color:var(--green);background:#e9f6ef;border:1px solid #c3e6d4;padding:3px 8px;border-radius:99px}
+.dvf-sub{font-size:10.5px;color:var(--body);line-height:1.5;margin:-2px 0 10px}
+.dvf-table{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dvf-head,.dvf-row{display:grid;grid-template-columns:minmax(0,1.8fr) 20mm 18mm 24mm 23mm 14mm;gap:7px;align-items:center}
+.dvf-head{background:var(--cream);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);padding:7px 8px}
+.dvf-row{padding:6px 8px;border-top:1px solid var(--line2);font-size:9.2px;color:var(--body)}
+.dvf-main{min-width:0}.dvf-main b{display:block;font-size:10px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dvf-main small{display:block;font-size:8.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.dvf-num{text-align:right;font-weight:700;color:var(--ink)}.dvf-muted{color:var(--mute)}
 .etat-top{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);border-radius:3px;background:var(--cream);margin-bottom:12px}
 .etat-stars{display:flex;gap:2px}.etat-stars svg{width:15px;height:15px}.etat-stars .on{color:var(--brand)}.etat-stars .off{color:var(--line)}
 .etat-rl{font-family:'Spectral',serif;font-size:15px;font-weight:600}.etat-rs{font-size:9.5px;color:var(--mute)}
@@ -4245,7 +4252,7 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .rg-bar{display:inline-flex;align-items:center;padding-left:8px;color:#fff;font-weight:800;font-size:9.5px;height:14px;border-radius:0 7px 7px 0}
 .rg-row.on .rg-bar{height:18px;font-size:11px;box-shadow:0 2px 4px rgba(0,0,0,.22)}
 .rg-cur{font-size:11px;font-weight:800}.rg-na{font-size:10px;color:var(--mute);padding:8px 0}
-.rg-img img{width:100%;max-height:150px;object-fit:contain;display:block}
+.rg-img img{width:100%;max-height:118px;object-fit:contain;display:block}
 .dn{display:flex;align-items:center;gap:22px}.dn-c1{font-family:'Spectral',serif;font-size:27px;font-weight:700;fill:var(--ink)}.dn-c2{font-size:10px;fill:var(--mute);text-transform:uppercase;letter-spacing:1px}
 .dn-side{flex:1}.dn-leg{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
 .dn-li{display:flex;align-items:center;gap:7px;font-size:10.5px}.dn-li b{margin-left:auto;font-size:12px;color:var(--ink)}.dn .dot{width:9px;height:9px;border-radius:3px}
@@ -4444,7 +4451,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
   const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
   const rh = `<div class="rh"><img src="${ESTIM_MARK || LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
-  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 8</span></div>`;
+  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / ${totalPages}</span></div>`;
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
 
@@ -4483,10 +4490,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const mFiable = marche ? marche.fiable !== false : true;
   const mTrend = mEvo.length >= 2 && mEvo[0].prix_m2 ? Math.round(((mEvo[mEvo.length - 1].prix_m2 - mEvo[0].prix_m2) / mEvo[0].prix_m2) * 1000) / 10 : null;
   const mComps = marche && Array.isArray(marche.comparables) ? marche.comparables : [];
+  const mCompsList = mComps.slice(0, 10);
+  const totalPages = mCompsList.length ? 9 : 8;
   const mEvoMax = mEvo.length ? Math.max(...mEvo.map((e) => e.prix_m2 || 0)) : 0;
   const dateCourt = (s) => { const p = String(s || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : s; };
   const compRow = (c) => `<div class="comp"><div class="info"><div class="t">${estimText(c.type)} ${c.surface ? c.surface + " m²" : ""}${c.pieces ? " · " + estimText(c.pieces) + " p." : ""}</div><div class="d">${estimText(c.commune)}${c.terrain ? " · terrain " + c.terrain + " m²" : ""} · ${estimText(dateCourt(c.date))} · ${estimText(c.distance_km)} km</div></div><div class="stat"><div class="p tnum">${estimEuro(c.valeur) || "—"}</div><div class="pm tnum">${c.prix_m2 ? estimEuro(c.prix_m2) + "/m²" : ""}</div></div><span class="bdg">Vendu</span></div>`;
-  const evoBars = mEvo.map((e) => `<div class="bcol"><div class="bv tnum">${estimEuro(e.prix_m2) || "—"}</div><div class="bar${e === mEvo[mEvo.length - 1] ? " hl" : ""}" style="height:${mEvoMax ? Math.round((e.prix_m2 / mEvoMax) * 20) + 4 : 4}mm"></div><div class="bk">${estimText(e.annee)}</div></div>`).join("");
+  const compTableRow = (c, i) => `<div class="dvf-row"><div class="dvf-main"><b>${i + 1}. ${estimText(c.type || "Bien")} ${c.surface ? c.surface + " m²" : ""}${c.pieces ? " · " + estimText(c.pieces) + " p." : ""}</b><small>${estimText(c.commune || "—")}${c.terrain ? " · terrain " + estimText(c.terrain) + " m²" : ""}</small></div><span class="dvf-muted">${estimText(dateCourt(c.date) || "—")}</span><span class="tnum">${c.surface ? estimText(c.surface) + " m²" : "—"}</span><span class="dvf-num tnum">${estimEuro(c.valeur) || "—"}</span><span class="dvf-num tnum">${c.prix_m2 ? estimEuro(c.prix_m2) + "/m²" : "—"}</span><span class="dvf-muted tnum">${c.distance_km != null ? estimText(c.distance_km) + " km" : "—"}</span></div>`;
+  const evoBars = mEvo.map((e) => `<div class="bcol"><div class="bv tnum">${estimEuro(e.prix_m2) || "—"}</div><div class="bar${e === mEvo[mEvo.length - 1] ? " hl" : ""}" style="height:${mEvoMax ? Math.round((e.prix_m2 / mEvoMax) * 11) + 4 : 4}mm"></div><div class="bk">${estimText(e.annee)}</div></div>`).join("");
 
   // --- Lot B : blocs détaillés (caractéristiques étendues, intérieur/extérieur/équipements, diagnostics réels) ---
   const detRow = (k, v) => v != null && v !== "" ? `<div class="diag-row"><span class="k">${k}</span><span class="v">${estimText(v)}</span></div>` : "";
@@ -4576,13 +4586,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div>
   <div class="h mt">Performance énergétique</div>
   <div class="energy2">${estimReglette("dpe", dpe, dpeImg)}${estimReglette("ges", ges, gesImg)}</div>
-  <div class="h mt">Composition du bien</div>
-  ${estimDonut(detail, pieces, surface)}
   <div class="h mt">Descriptif</div>
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
 </div>${rf(2)}</div>
 <div class="page">${rh}<div class="content">
-  <div class="h">Le bien en détail</div>
+  <div class="h">Composition du bien</div>
+  ${estimDonut(detail, pieces, surface)}
+  <div class="h mt">Le bien en détail</div>
   ${hasDetailPage ? `<div class="detail-grid">
     ${interieurRows ? `<div class="diag"><div class="diag-h">Intérieur</div>${interieurRows}</div>` : ""}
     ${exterieurRows ? `<div class="diag"><div class="diag-h">Extérieur</div>${exterieurRows}</div>` : ""}
@@ -4679,9 +4689,15 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><rect x="7" y="10" width="3" height="8"></rect><rect x="14" y="6" width="3" height="12"></rect></svg></span><div class="v tnum">${mCount != null ? mCount : todo("—")}</div><div class="l">Comparables${mRadius != null ? " · " + mRadius + " km" : ""}</div></div>
   </div>${marche && !mFiable ? `<p style="font-size:10px;color:#9a3412;margin-top:6px">Échantillon limité (${mCount} comparables) — valeurs de marché à confirmer par votre conseiller.</p>` : ""}
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
-  ${mComps.length ? `<div class="h mt">Biens comparables vendus</div><div class="comps">${mComps.map(compRow).join("")}</div>` : ""}
+  ${mCompsList.length ? `<div class="disc"><b>Comparables DVF.</b> ${mCompsList.length} ventes retenues sont listées page suivante${mComps.length > mCompsList.length ? ` (sur ${mComps.length} ventes reçues du moteur).` : "."}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±25 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
 </div>${rf(7)}</div>
+${mCompsList.length ? `<div class="page">${rh}<div class="content">
+  <div class="h">Biens comparables DVF vendus</div>
+  <p class="dvf-sub">Liste compacte des ${mCompsList.length} ventes comparables retenues pour documenter le prix au m² et la fourchette de valeur.</p>
+  <div class="dvf-table"><div class="dvf-head"><span>Bien</span><span>Date</span><span>Surface</span><span>Prix</span><span>Prix/m²</span><span>Dist.</span></div>${mCompsList.map(compTableRow).join("")}</div>
+  <div class="disc"><b>Source.</b> Demandes de Valeurs Foncières (DVF, open data publique)${marche ? ` · ${mCount} ventes ${estimText(marche.type)} analysées dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}` : ""}. Affichage : ${mCompsList.length} ventes listées dans le document.</div>
+</div>${rf(8)}</div>` : ""}
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
@@ -4701,7 +4717,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
-</div>${rf(8)}</div>
+</div>${rf(totalPages)}</div>
 </body></html>`;
 }
 
