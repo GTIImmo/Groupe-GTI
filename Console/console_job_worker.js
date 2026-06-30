@@ -43,6 +43,7 @@ const DOCUMENT_JOB_TYPES = new Set([
   "prepare_document_cloud",
   "generate_estimation_pdf",
   "generate_mandat_document",
+  "generate_cadastre_document",
   "relance_signature",
   "cancel_signature_procedure",
   "upload_document_to_hektor",
@@ -3993,6 +3994,40 @@ async function fetchCommodites(lat, lon) {
   return null;
 }
 
+// Éléments cadastraux (IGN apicarto) : parcelle(s) sous le point + zonage PLU (module GPU).
+// Données publiques gratuites, sans clé. Côté serveur (Node) : pas de souci CORS.
+// Pas de donnée nominative (propriétaire indisponible publiquement).
+async function fetchCadastre(lat, lon) {
+  if (!Number.isFinite(+lat) || !Number.isFinite(+lon)) return null;
+  const UA = { "User-Agent": "GTI-Immobilier-Estimation/1.0 (contact@gti-immobilier.fr)" };
+  const geom = encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [+lon, +lat] }));
+  const getFeatures = async (path) => {
+    try {
+      const r = await fetch(`https://apicarto.ign.fr/api${path}?geom=${geom}`, { headers: UA });
+      if (!r.ok) return [];
+      const j = await r.json();
+      return (j && j.features) || [];
+    } catch (_) { return []; }
+  };
+  const parcelles = [];
+  let contenanceTotale = 0;
+  for (const f of await getFeatures("/cadastre/parcelle")) {
+    const p = f.properties || {};
+    let c = p.contenance != null ? parseInt(p.contenance, 10) : null;
+    if (!Number.isFinite(c)) c = null;
+    if (c) contenanceTotale += c;
+    parcelles.push({
+      reference: [p.section, p.numero].filter(Boolean).join(" ") || null,
+      section: p.section || null, numero: p.numero || null, contenance: c,
+      commune: p.nom_com || null, code_insee: p.code_insee || null, idu: p.idu || null,
+    });
+  }
+  let plu = null;
+  const zf = await getFeatures("/gpu/zone-urba");
+  if (zf.length) { const p = zf[0].properties || {}; plu = { zone: p.libelle || null, libelle: p.libelong || null, type: p.typezone || null }; }
+  return { ok: parcelles.length > 0, lat: +lat, lon: +lon, parcelles, contenance_totale: contenanceTotale || null, plu };
+}
+
 // Profil commune INSEE (pré-chargé) : population + série + revenu médian, avec repères
 // département (médiane) et France. Lu à la génération, comme DVF/risques.
 const FRANCE_REVENU_MEDIAN = 22040; // niveau de vie médian France (INSEE FiLoSoFi, €/an)
@@ -4078,7 +4113,7 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .page{position:relative;width:210mm;height:297mm;background:#fff;margin:0 auto;padding:var(--mx);display:flex;flex-direction:column;overflow:hidden;page-break-after:always}
 .page:last-child{page-break-after:auto}
 .rh{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;border-bottom:1.5px solid var(--line);flex:none}
-.rh img{height:34px;width:auto}
+.rh img{height:68px;width:auto}
 .rh .meta{text-align:right}.rh .meta .t{font-family:'Spectral',serif;font-size:13px;font-weight:700;line-height:1}.rh .meta .d{font-size:8.5px;color:var(--mute);margin-top:3px;letter-spacing:.04em}
 .rf{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--line);flex:none;font-size:8px;color:var(--faint);letter-spacing:.03em}
 .rf .pg{font-weight:700;color:var(--mute)}
@@ -4088,7 +4123,7 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .todo{color:var(--faint);font-style:italic;font-weight:500}
 .cover{padding:0;display:flex;flex-direction:column;color:#1a1614;overflow:hidden}
 .cover .c-head{display:flex;align-items:center;justify-content:space-between;padding:6mm var(--mx);background:linear-gradient(115deg,#160a10,#241019 45%,#3a1224)}
-.cover .c-head img{height:60px;width:auto;filter:brightness(0) invert(1)}
+.cover .c-head img{height:128px;width:auto}
 .cover .c-head .ref{font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);text-align:right;line-height:1.8}
 .cover .c-head .ref b{display:block;color:#fff;font-size:9.5px;letter-spacing:2.4px}
 .cover .c-hero{position:relative;flex:none;height:112mm;overflow:hidden;background:linear-gradient(135deg,#2a2230,#3a1224)}
@@ -4294,6 +4329,16 @@ function estimJauge(label, level) {
 
 // ④ Carte IGN + pins (bien + commodités). Bbox parsée depuis l'URL WMS (EPSG:3857).
 function estimMapMerc(lat, lon) { return { x: lon * 20037508.34 / 180, y: Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180 }; }
+
+// Plan cadastral : fond Plan IGN v2 + surcouche parcellaire (PCI Express), centré sur le bien.
+// Zoom serré (parcelle visible). Réutilise le WMS data.geopf.fr déjà employé pour le cadre de vie.
+function estimCadastreMapUrl(lat, lon, half) {
+  if (!Number.isFinite(+lat) || !Number.isFinite(+lon)) return null;
+  const m = estimMapMerc(+lat, +lon);
+  const hy = half || 260, hx = hy * (760 / 460);
+  const bbox = `${m.x - hx},${m.y - hy},${m.x + hx},${m.y + hy}`;
+  return `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2,CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLES=,&CRS=EPSG:3857&BBOX=${bbox}&WIDTH=760&HEIGHT=460&FORMAT=image/png`;
+}
 function estimMapWithPins(cdv) {
   if (!cdv || !cdv.mapUrl) return "";
   const homeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
@@ -4348,6 +4393,14 @@ function estimRevenuChart(prof) {
   return `<div class="rev">${rows.map((r) => `<div class="rev-row${r.hl ? " hl" : ""}"><span class="rev-l">${estimText(r.l)}</span><span class="rev-track"><span class="rev-bar" style="width:${Math.round(r.v / max * 100)}%"></span></span><span class="rev-v">${fmt(r.v)}</span></div>`).join("")}<div class="rev-note">Niveau de vie médian annuel — INSEE FiLoSoFi</div></div>`;
 }
 
+// Logos officiels (design system) embarqués en base64 -> PDF self-contained.
+function estimAssetDataUri(file) {
+  try { return "data:image/png;base64," + fs.readFileSync(path.join(__dirname, "assets", file)).toString("base64"); }
+  catch (_) { return null; }
+}
+const ESTIM_LOGO_COVER = estimAssetDataUri("gti-logo-cover.png");  // logo complet fond foncé : couverture
+const ESTIM_MARK = estimAssetDataUri("gti-mark.png");              // carré magenta arrondi : autres pages
+
 function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   detail = detail || {};
   const bien = payload.bien || {};
@@ -4390,7 +4443,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const photoCell = (i, cls) => photos[i] ? `<div class="g ${cls || ""}"><img src="${estimText(photos[i])}" alt=""></div>` : `<div class="g ${cls || ""}"></div>`;
   const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
   const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
-  const rh = `<div class="rh"><img src="${LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
+  const rh = `<div class="rh"><img src="${ESTIM_MARK || LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
   const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / 8</span></div>`;
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
@@ -4467,6 +4520,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const inseeProfil = cdv && cdv.insee_profil ? cdv.insee_profil : null;
   const cdvCom = cdv && cdv.commodites ? cdv.commodites : null;
   const cdvRisk = cdv && cdv.risques ? cdv.risques : null;
+  // Éléments cadastraux (payload.cadastre, enrichi server-side si besoin) : parcelle(s) + PLU.
+  const cad = payload.cadastre && payload.cadastre.ok ? payload.cadastre : null;
+  const cadParcelles = cad && Array.isArray(cad.parcelles) ? cad.parcelles : [];
+  const cadPlu = cad && cad.plu ? cad.plu : null;
+  const cadLat = cad && Number.isFinite(+cad.lat) ? +cad.lat : (cdv && Number.isFinite(+cdv.lat) ? +cdv.lat : null);
+  const cadLon = cad && Number.isFinite(+cad.lon) ? +cad.lon : (cdv && Number.isFinite(+cdv.lon) ? +cdv.lon : null);
+  const cadMapUrl = cad && cadLat != null && cadLon != null ? estimCadastreMapUrl(cadLat, cadLon) : null;
   const lvlColor = (v) => { const s = String(v || "").toLowerCase(); if (/élev|elev|fort/.test(s)) return "#d7191c"; if (/moyen/.test(s)) return "#f3a712"; if (/faible/.test(s)) return "#1f8a5b"; return "var(--mute)"; };
   const cdvRow = (k, v) => `<div class="cdv-row"><span>${estimText(k)}</span><b>${estimText(v)}</b></div>`;
   const cdvLvl = (k, v) => v ? `<div class="cdv-lvl"><div class="k">${k}</div><div class="v" style="color:${lvlColor(v)}">${estimText(v)}</div></div>` : "";
@@ -4482,7 +4542,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${ESTIM_PREMIUM_CSS}</style></head><body>
 <div class="page cover">
-  <div class="c-head"><img src="${LOGO}" alt="GTI Immobilier"><div class="ref">Dossier confidentiel<b>N° ${docNumber}</b></div></div>
+  <div class="c-head"><img src="${ESTIM_LOGO_COVER || LOGO}" alt="GTI Immobilier"><div class="ref">Dossier confidentiel<b>N° ${docNumber}</b></div></div>
   <div class="c-hero">${heroImg}<div class="c-photo-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Établi par un professionnel</div></div>
   <div class="c-hero-foot">
     <span class="c-kicker"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Estimation immobilière</span>
@@ -4549,6 +4609,18 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="jgs">${estimJauge("Potentiel radon", cdvRisk.radon)}${estimJauge("Sismicité", cdvRisk.sismicite)}${estimJauge("Retrait-gonflement argiles", cdvRisk.argiles)}</div>` : `<p style="font-size:11px;color:var(--mute)">${todo("Risques à charger par votre conseiller.")}</p>`}
   <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
+  ${cad ? `<div class="h mt">Éléments cadastraux${cadPlu && cadPlu.zone ? ` · PLU ${estimText(cadPlu.zone)}` : ""}</div>
+  ${cadMapUrl ? `<div class="cdv-map"><img src="${estimText(cadMapUrl)}" alt="Plan cadastral"><span class="mp home" style="left:50%;top:50%">${homeSvg}</span></div>` : ""}
+  <div class="cdv-grid">
+    <div class="cdv-card"><div class="ch">Parcelle${cadParcelles.length > 1 ? "s" : ""} cadastrale${cadParcelles.length > 1 ? "s" : ""}</div>
+      ${cadParcelles.length ? cadParcelles.map((p) => cdvRow(estimText(p.reference || "—"), p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—")).join("") : `<div class="cdv-row">${todo("—")}</div>`}
+      ${cadParcelles.length > 1 && cad.contenance_totale ? cdvRow("Contenance totale", Number(cad.contenance_totale).toLocaleString("fr-FR") + " m²") : ""}
+    </div>
+    <div class="cdv-card"><div class="ch">Urbanisme</div>
+      ${cadPlu ? cdvRow("Zone PLU", estimText(cadPlu.zone || "—")) + (cadPlu.type ? cdvRow("Type de zone", estimText(cadPlu.type)) : "") + (cadPlu.libelle ? cdvRow("Libellé", estimText(cadPlu.libelle)) : "") : `<div class="cdv-row">${todo("Zonage PLU non disponible sur ce secteur")}</div>`}
+    </div>
+  </div>
+  <div class="disc" style="margin-top:12px"><b>Sources.</b> Parcellaire IGN (PCI Express) · zonage Géoportail de l'Urbanisme. Références à titre informatif ; le titre de propriété et le document d'arpentage font foi. Identité du propriétaire non communiquée (donnée nominative).</div>` : ""}
 </div>${rf(4)}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Profil de la commune${inseeProfil && inseeProfil.commune ? ` · ${estimText(inseeProfil.commune)}` : (cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : "")}</div>
@@ -4828,6 +4900,16 @@ async function handleGenerateEstimationPdf(job) {
       } catch (_) { /* best effort */ }
     }
   }
+  // Éléments cadastraux : si le front les a déjà passés (payload.cadastre.ok) on les garde,
+  // sinon on tente un fetch server-side à partir des coords du bien (cadastre ou cadre de vie).
+  if (!(payload.cadastre && payload.cadastre.ok)) {
+    const cLat = Number((payload.cadastre && payload.cadastre.lat) ?? (payload.cadreDeVie && payload.cadreDeVie.lat));
+    const cLon = Number((payload.cadastre && payload.cadastre.lon) ?? (payload.cadreDeVie && payload.cadreDeVie.lon));
+    if (Number.isFinite(cLat) && Number.isFinite(cLon) && cLat && cLon) {
+      try { const cad = await fetchCadastre(cLat, cLon); if (cad && cad.ok) payload.cadastre = cad; }
+      catch (_) { /* best effort : le PDF se génère sans le bloc cadastre */ }
+    }
+  }
   // Bloc « Votre conseiller » + QR vCard (option B = conseiller CONNECTÉ, repli négo dossier).
   // On enrichit le bloc visible avec le mobile résolu + les coordonnées agence (tél/mail).
   try {
@@ -4956,6 +5038,144 @@ async function handleGenerateMandatDocument(job) {
   return {
     ok: true,
     hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    temp_storage_path: tempPath,
+    upload_job_id: uploadJob ? uploadJob.id : null,
+  };
+}
+
+// Document « Plan cadastral » : page A4 designée (plan IGN + surcouche parcellaire,
+// tableau des parcelles + contenance, zonage PLU). Données IGN publiques.
+function cadastrePlanHtml(cad, dossier) {
+  const LOGO = "https://www.gti-immobilier.fr/images/logoSite.png";
+  const now = new Date();
+  const dateLong = `${now.getDate()} ${ESTIM_MOIS_FR[now.getMonth()]} ${now.getFullYear()}`;
+  const titre = estimText(dossier && (dossier.titre_bien || dossier.adresse) || "", "Le bien");
+  const ville = estimText(dossier && (dossier.ville || dossier.code_postal) || "", "");
+  const ref = estimText(dossier && (dossier.numero_dossier || dossier.numero_mandat || dossier.hektor_annonce_id) || "", "");
+  const parcelles = cad && Array.isArray(cad.parcelles) ? cad.parcelles : [];
+  const plu = cad && cad.plu ? cad.plu : null;
+  const mapUrl = cad ? estimCadastreMapUrl(cad.lat, cad.lon) : null;
+  const homeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5" style="width:26px;height:26px"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
+  const rows = parcelles.length
+    ? parcelles.map((p) => `<tr><td>${estimText(p.reference || "—")}</td><td>${estimText(p.commune || "—")}</td><td class="num">${p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—"}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="muted">Aucune parcelle trouvée.</td></tr>`;
+  const total = cad && cad.contenance_totale ? Number(cad.contenance_totale).toLocaleString("fr-FR") + " m²" : null;
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #1c1c1c; margin: 0; }
+  .page { width: 210mm; min-height: 297mm; padding: 18mm 16mm; }
+  .rh { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #c5005f; padding-bottom: 10px; }
+  .rh img { height: 34px; }
+  .rh .t { font-size: 18px; font-weight: 700; }
+  .rh .d { font-size: 11px; color: #5c6163; }
+  h1 { font-size: 15px; margin: 22px 0 8px; }
+  .map { position: relative; width: 100%; height: 110mm; border: 1px solid #ece7e9; border-radius: 8px; overflow: hidden; background: #f3f0f1; }
+  .map img { width: 100%; height: 100%; object-fit: cover; }
+  .map .pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #ece7e9; }
+  th { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #5c6163; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .muted { color: #9aa0a2; }
+  .tot { margin-top: 6px; font-size: 12px; text-align: right; }
+  .tot b { color: #c5005f; }
+  .plu { margin-top: 14px; padding: 12px 14px; background: #faf6f8; border: 1px solid #f0e3ea; border-radius: 8px; font-size: 12px; }
+  .plu .z { font-size: 16px; font-weight: 700; color: #c5005f; }
+  .disc { margin-top: 18px; font-size: 9.5px; color: #8a9092; line-height: 1.5; }
+  .rf { margin-top: 22px; padding-top: 8px; border-top: 1px solid #ece7e9; font-size: 9.5px; color: #8a9092; display: flex; justify-content: space-between; }
+  </style></head><body><div class="page">
+    <div class="rh"><img src="${ESTIM_MARK || LOGO}" alt=""><div><div class="t">Plan cadastral</div><div class="d">${titre}${ville ? " · " + ville : ""}${ref ? " · " + ref : ""}</div></div></div>
+    <h1>Plan parcellaire${plu && plu.zone ? ` · PLU ${estimText(plu.zone)}` : ""}</h1>
+    <div class="map">${mapUrl ? `<img src="${estimText(mapUrl)}" alt="Plan cadastral"><span class="pin">${homeSvg}</span>` : `<div style="padding:40px;text-align:center;color:#9aa0a2">Plan indisponible (coordonnées manquantes).</div>`}</div>
+    <h1>Références cadastrales</h1>
+    <table><thead><tr><th>Parcelle</th><th>Commune</th><th class="num">Contenance</th></tr></thead><tbody>${rows}</tbody></table>
+    ${total && parcelles.length > 1 ? `<div class="tot">Contenance totale : <b>${total}</b></div>` : ""}
+    ${plu ? `<div class="plu"><div class="z">${estimText(plu.zone || "—")}</div><div>${estimText(plu.libelle || "")}${plu.type ? " · type de zone " + estimText(plu.type) : ""}</div></div>` : ""}
+    <div class="disc"><b>Sources.</b> Parcellaire IGN (PCI Express) · fond Plan IGN v2 · zonage Géoportail de l'Urbanisme. Document établi le ${dateLong} à titre informatif ; le titre de propriété et le document d'arpentage font foi. Identité du propriétaire non communiquée (donnée nominative).</div>
+    <div class="rf"><span>GTI Immobilier · Plan cadastral</span><span>${dateLong}</span></div>
+  </div></body></html>`;
+}
+
+async function handleGenerateCadastreDocument(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await logJob(job.id, "cadastre_pdf", "running", "Generation du plan cadastral", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+  });
+
+  const lat = Number(payload && payload.lat);
+  const lon = Number(payload && payload.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) {
+    throw new Error("payload_json.lat/lon requis (geolocalisation du bien absente)");
+  }
+  const cad = await fetchCadastre(lat, lon);
+  if (!cad || !cad.ok) throw new Error("Aucune parcelle cadastrale trouvee pour ces coordonnees");
+
+  const html = cadastrePlanHtml(cad, dossier);
+  const pdfBuffer = await renderHtmlToPdfBuffer(html);
+
+  const label = "Plan cadastral";
+  const filename = storageSafeFilename(`${label}.pdf`, "plan-cadastral.pdf");
+  const tempPath = `temp/uploads/${job.id}/${filename}`;
+  await uploadStorageObject(tempPath, pdfBuffer, "application/pdf");
+
+  // Reutilise le flux eprouve upload_document_to_hektor (push Hektor + archive local+cloud).
+  const rows = await supabaseRequest("app_console_job", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_type: "upload_document_to_hektor",
+      app_dossier_id: dossier.app_dossier_id || job.app_dossier_id || null,
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      payload_json: {
+        visibility: payload.visibility === "shared" ? "shared" : "private",
+        document_type: "Plan",
+        original_filename: filename,
+        source_filename: filename,
+        document_label: label,
+        mime_type: "application/pdf",
+        temp_storage_bucket: STORAGE_BUCKET,
+        temp_storage_path: tempPath,
+      },
+      status: "pending",
+      priority: 40,
+      requested_by: job.requested_by || null,
+      requested_at: new Date().toISOString(),
+    }]),
+  });
+  const uploadJob = Array.isArray(rows) ? rows[0] : null;
+
+  // Persiste les elements cadastraux par dossier (re-affichage instant sans re-fetch).
+  // Best-effort : si la table n'existe pas encore (migration non appliquee), on n'echoue pas.
+  if (dossier.app_dossier_id != null) {
+    try {
+      await supabaseRequest("app_dossier_cadastre?on_conflict=app_dossier_id", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=minimal",
+        body: JSON.stringify([{
+          app_dossier_id: dossier.app_dossier_id,
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          parcelles: cad.parcelles || [],
+          contenance_totale: cad.contenance_totale || null,
+          plu: cad.plu || null,
+          updated_at: new Date().toISOString(),
+        }]),
+      });
+    } catch (_) { /* table absente / RLS : non bloquant */ }
+  }
+
+  await logJob(job.id, "cadastre_pdf", "done", "Plan cadastral genere, upload Hektor en file", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    upload_job_id: uploadJob ? uploadJob.id : null,
+  });
+
+  return {
+    ok: true,
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    parcelles: cad.parcelles ? cad.parcelles.length : 0,
     pdf_bytes: pdfBuffer.length,
     temp_storage_path: tempPath,
     upload_job_id: uploadJob ? uploadJob.id : null,
@@ -10790,6 +11010,8 @@ async function runHandler(job) {
       return handleGenerateEstimationPdf(job);
     case "generate_mandat_document":
       return handleGenerateMandatDocument(job);
+    case "generate_cadastre_document":
+      return handleGenerateCadastreDocument(job);
     case "relance_signature":
       return handleRelanceSignature(job);
     case "cancel_signature_procedure":
