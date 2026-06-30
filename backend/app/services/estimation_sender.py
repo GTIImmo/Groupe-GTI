@@ -52,6 +52,16 @@ class EstimationSender:
         real = bool(self.settings.email_real_send_enabled) and not dry_run
         effective_dry_run = not real
 
+        # Expéditeur : Google Workspace ne peut envoyer QU'au nom d'un compte du domaine
+        # (impersonation). Si le négociateur a une adresse hors domaine (ex. @gmail.com),
+        # on envoie depuis un compte du domaine et on garde son adresse en reply-to —
+        # sinon l'envoi échoue silencieusement (cas Franck @gmail.com).
+        domain = "@" + str(self.settings.google_workspace_domain or "gti-immobilier.fr").lstrip("@").lower()
+        fallback_sender = self.settings.google_workspace_subject_email or ("accueil" + domain)
+        raw_sender = (sender_email or "").strip()
+        send_as = raw_sender if raw_sender.lower().endswith(domain) else fallback_sender
+        reply_to = raw_sender or send_as
+
         # 3) Plafond quotidien (envois réels seulement).
         daily_count = 0
         cap_alert = False
@@ -64,7 +74,7 @@ class EstimationSender:
         # 4) Création de l'envoi (variante non-push/pull -> stockée NULL).
         envoi = self.tracking.create_envoi(
             contact_search_key=None, hektor_contact_id=hektor_contact_id,
-            recipient_email=recipient, sender_email=sender_email, variante="estimation",
+            recipient_email=recipient, sender_email=send_as, variante="estimation",
             subject="Votre estimation est disponible", dossier_ids=[int(app_dossier_id)],
             dry_run=effective_dry_run, created_by=created_by,
         )
@@ -83,8 +93,8 @@ class EstimationSender:
 
         # 7) Envoi via Google Workspace (réel ou dry-run loggé).
         result = self.workspace.send_gmail_message(
-            subject_email=sender_email, to=[recipient], subject=rendered["subject"],
-            body_text=rendered["text"], body_html=rendered["html"], reply_to=sender_email,
+            subject_email=send_as, to=[recipient], subject=rendered["subject"],
+            body_text=rendered["text"], body_html=rendered["html"], reply_to=reply_to,
             extra_headers=headers, dry_run=effective_dry_run,
             related_entity_type="contact", related_entity_id=hektor_contact_id,
         )
