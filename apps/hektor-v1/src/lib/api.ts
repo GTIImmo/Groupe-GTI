@@ -2534,6 +2534,69 @@ export type CadreDeVie = {
   risques?: { risques: string[]; radon?: string | null; sismicite?: string | null; argiles?: string | null } | null
 }
 
+// Éléments cadastraux du bien : parcelle(s) sous le point (IGN apicarto) + zonage PLU.
+// Données publiques gratuites, sans clé. Propriétaire non disponible (DGFiP nominatif).
+export type CadastreParcelle = {
+  reference?: string | null
+  section?: string | null
+  numero?: string | null
+  contenance?: number | null
+  commune?: string | null
+  code_insee?: string | null
+  idu?: string | null
+}
+export type CadastreData = {
+  ok: boolean
+  lat?: number
+  lon?: number
+  parcelles?: CadastreParcelle[]
+  contenance_totale?: number | null
+  plu?: { zone?: string | null; libelle?: string | null; type?: string | null } | null
+}
+
+// URL d'aperçu du plan cadastral (WMS Géoplateforme) : fond Plan IGN v2 + surcouche
+// parcellaire PCI Express, centré sur le bien. Même rendu que le PDF « Plan cadastral ».
+export function cadastreMapThumbUrl(lat: number, lon: number, w = 640, h = 360, halfMeters = 260): string | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return null
+  const R = 20037508.34
+  const mx = lon * R / 180
+  const my = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * R / 180
+  const hy = halfMeters, hx = hy * (w / h)
+  const bbox = `${mx - hx},${my - hy},${mx + hx},${my + hy}`
+  return `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2,CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLES=,&CRS=EPSG:3857&BBOX=${bbox}&WIDTH=${w}&HEIGHT=${h}&FORMAT=image/png`
+}
+
+export async function loadCadastre(input: { lat: number; lon: number }): Promise<CadastreData> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  try {
+    const r = await invokeBackendApi<CadastreData>(`/geo/cadastre?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    // On force lat/lon (le worker en a besoin pour générer le plan cadastral).
+    if (r && r.ok) return { ...r, lat, lon }
+    return { ok: false, lat, lon, parcelles: r?.parcelles ?? [], plu: r?.plu ?? null }
+  } catch {
+    return { ok: false }
+  }
+}
+
+// Éléments cadastraux persistés par dossier (générés via « Générer et enregistrer » dans
+// l'onglet Commercialisation). Best-effort : renvoie null si la table n'existe pas encore.
+export async function loadDossierCadastre(appDossierId: number | null | undefined): Promise<CadastreData | null> {
+  if (appDossierId == null || !hasSupabaseEnv || !supabase) return null
+  try {
+    const { data } = await supabase
+      .from('app_dossier_cadastre')
+      .select('parcelles,contenance_totale,plu')
+      .eq('app_dossier_id', appDossierId)
+      .maybeSingle()
+    if (!data) return null
+    const parcelles = (data.parcelles ?? []) as CadastreParcelle[]
+    return { ok: parcelles.length > 0, parcelles, contenance_totale: data.contenance_totale ?? null, plu: data.plu ?? null }
+  } catch {
+    return null
+  }
+}
+
 const CDV_POLES: Array<{ nom: string; lat: number; lon: number }> = [
   { nom: 'Saint-Étienne', lat: 45.4397, lon: 4.3872 },
   { nom: 'Le Puy-en-Velay', lat: 45.0430, lon: 3.8850 },
@@ -2558,10 +2621,12 @@ export async function loadCadreDeVie(input: { lat: number; lon: number }): Promi
   const bbox = `${mx - hx},${my - hy},${mx + hx},${my + hy}`
   const mapUrl = `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLES=&CRS=EPSG:3857&BBOX=${bbox}&WIDTH=760&HEIGHT=420&FORMAT=image/png`
 
-  // 2) INSEE + commune via géocodage inverse BAN.
+  // 2) INSEE + commune via géocodage inverse Géoplateforme (BAN).
+  //    L'ancienne API api-adresse.data.gouv.fr est décommissionnée depuis fin janv. 2026 ;
+  //    le service Géoplateforme renvoie le même schéma (properties.citycode = INSEE, .city).
   let insee: string | null = null, commune: string | null = null
   try {
-    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`)
+    const r = await fetch(`https://data.geopf.fr/geocodage/reverse?lon=${lon}&lat=${lat}&index=address`)
     const j = await r.json()
     const p = j?.features?.[0]?.properties
     if (p) { insee = p.citycode ?? null; commune = p.city ?? null }
@@ -5527,6 +5592,7 @@ export async function createGenerateEstimationPdfJob(input: {
   marche?: DvfComparablesResult | null
   acquereurs?: number | null  // acquéreurs en recherche correspondant au bien (moteur de rapprochement)
   cadreDeVie?: CadreDeVie | null  // carte IGN + commodités + risques (page Cadre de vie)
+  cadastre?: CadastreData | null  // parcelle(s) + contenance + PLU (bloc Éléments cadastraux)
   argumentaire?: string | null  // argumentaire commercial du prix (page Valeur du PDF)
   methode?: string | null
   validite?: string | null
@@ -5570,6 +5636,7 @@ export async function createGenerateEstimationPdfJob(input: {
         marche: input.marche ?? null,
         acquereurs: input.acquereurs ?? null,
         cadreDeVie: input.cadreDeVie ?? null,
+        cadastre: input.cadastre ?? null,
         argumentaire: input.argumentaire ?? null,
         methode: input.methode ?? null,
         validite: input.validite ?? null,
@@ -5618,6 +5685,41 @@ export async function createGenerateMandatPdfJob(input: {
     .select('*')
     .single()
   if (error || !data) throw new Error(error?.message ?? 'Unable to create mandat PDF job')
+  return data as ConsoleJob
+}
+
+// Génère le document « Plan cadastral » : le worker interroge l'IGN (parcelle + PLU) côté
+// serveur à partir des coordonnées du bien, rend un PDF designé (Puppeteer), le dépose dans
+// Hektor (upload_document_to_hektor, type « Plan ») et persiste les éléments dans app_dossier_cadastre.
+export async function createGenerateCadastreDocumentJob(input: {
+  dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
+  lat: number
+  lon: number
+  visibility?: 'private' | 'shared'
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const jobId = crypto.randomUUID()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      id: jobId,
+      job_type: 'generate_cadastre_document',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        document_label: 'Plan cadastral',
+        visibility: input.visibility ?? 'private',
+        lat: input.lat,
+        lon: input.lon,
+      },
+      priority: input.priority ?? 40,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create cadastre document job')
   return data as ConsoleJob
 }
 

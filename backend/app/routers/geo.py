@@ -1,12 +1,15 @@
-"""Commodités à proximité (OpenStreetMap / Overpass) — proxy serveur.
+"""Commodités à proximité (OpenStreetMap / Overpass) + cadastre (IGN apicarto) —
+proxy serveur.
 
 Overpass refuse les requêtes navigateur (pas de CORS + blocage selon User-Agent).
-On l'interroge donc côté serveur (UA correct), pour la page « Cadre de vie » de
-l'avis de valeur. Authentifié (interne).
+apicarto.ign.fr est interrogé côté serveur pour éviter les soucis CORS. Les deux
+servent la page « Cadre de vie » / « Éléments cadastraux » de l'avis de valeur.
+Authentifié (interne).
 """
 
 from __future__ import annotations
 
+import json
 import math
 
 import requests
@@ -81,3 +84,75 @@ def commodites(
                     gare_km, gare_nom = km, (t.get("name") or "Gare")
     return {"ok": True, "ecoles": ecoles, "commerces": commerces, "sante": sante,
             "gareNom": gare_nom, "gareKm": gare_km}
+
+
+_APICARTO = "https://apicarto.ign.fr/api"
+
+
+def _apicarto_point(path: str, lat: float, lon: float) -> list[dict]:
+    """Interroge un module apicarto avec un point GeoJSON ; renvoie les features."""
+    geom = json.dumps({"type": "Point", "coordinates": [lon, lat]})
+    r = requests.get(f"{_APICARTO}{path}", params={"geom": geom}, headers=_UA, timeout=20)
+    r.raise_for_status()
+    return (r.json() or {}).get("features", []) or []
+
+
+@router.get("/geo/cadastre")
+def cadastre(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """Éléments cadastraux du bien : parcelle(s) sous le point (référence,
+    section, numéro, contenance) + zonage PLU (API GPU). Données IGN publiques,
+    gratuites, sans clé. Pas de donnée nominative (propriétaire indisponible)."""
+    get_authenticated_user(settings, authorization)
+
+    parcelles: list[dict] = []
+    contenance_totale = 0
+    try:
+        for f in _apicarto_point("/cadastre/parcelle", lat, lon):
+            p = f.get("properties", {}) or {}
+            section = p.get("section")
+            numero = p.get("numero")
+            contenance = p.get("contenance")
+            try:
+                contenance = int(contenance) if contenance is not None else None
+            except (TypeError, ValueError):
+                contenance = None
+            if contenance:
+                contenance_totale += contenance
+            parcelles.append({
+                "reference": " ".join(x for x in (section, numero) if x).strip() or None,
+                "section": section,
+                "numero": numero,
+                "contenance": contenance,
+                "commune": p.get("nom_com"),
+                "code_insee": p.get("code_insee"),
+                "idu": p.get("idu"),
+            })
+    except Exception:  # noqa: BLE001
+        pass
+
+    plu = None
+    try:
+        feats = _apicarto_point("/gpu/zone-urba", lat, lon)
+        if feats:
+            p = feats[0].get("properties", {}) or {}
+            plu = {
+                "zone": p.get("libelle"),
+                "libelle": p.get("libelong"),
+                "type": p.get("typezone"),
+            }
+    except Exception:  # noqa: BLE001
+        pass
+
+    return {
+        "ok": bool(parcelles),
+        "lat": lat,
+        "lon": lon,
+        "parcelles": parcelles,
+        "contenance_totale": contenance_totale or None,
+        "plu": plu,
+    }

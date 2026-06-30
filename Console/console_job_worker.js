@@ -5092,45 +5092,124 @@ function cadastrePlanHtml(cad, dossier) {
   const parcelles = cad && Array.isArray(cad.parcelles) ? cad.parcelles : [];
   const plu = cad && cad.plu ? cad.plu : null;
   const mapUrl = cad ? estimCadastreMapUrl(cad.lat, cad.lon) : null;
-  const homeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5" style="width:26px;height:26px"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
   const rows = parcelles.length
     ? parcelles.map((p) => `<tr><td>${estimText(p.reference || "—")}</td><td>${estimText(p.commune || "—")}</td><td class="num">${p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—"}</td></tr>`).join("")
     : `<tr><td colspan="3" class="muted">Aucune parcelle trouvée.</td></tr>`;
   const total = cad && cad.contenance_totale ? Number(cad.contenance_totale).toLocaleString("fr-FR") + " m²" : null;
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
+  const insee = parcelles.find((p) => p.code_insee) ? estimText(parcelles.find((p) => p.code_insee).code_insee) : "";
+  const commune = parcelles.find((p) => p.commune) ? estimText(parcelles.find((p) => p.commune).commune) : (ville || "—");
+  const docNo = "PC-" + (ref || "CAD").toString().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  const corner = (cls) => `<span class="tick ${cls}"></span>`;
+  const statCard = (k, v, sub) => `<div class="scard"><div class="sv serif">${v}</div><div class="sk">${estimText(k)}</div>${sub ? `<div class="ss">${estimText(sub)}</div>` : ""}</div>`;
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
   @page { size: A4; margin: 0; }
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #1c1c1c; margin: 0; }
-  .page { width: 210mm; min-height: 297mm; padding: 18mm 16mm; }
-  .rh { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #c5005f; padding-bottom: 10px; }
-  .rh img { height: 34px; }
-  .rh .t { font-size: 18px; font-weight: 700; }
-  .rh .d { font-size: 11px; color: #5c6163; }
-  h1 { font-size: 15px; margin: 22px 0 8px; }
-  .map { position: relative; width: 100%; height: 110mm; border: 1px solid #ece7e9; border-radius: 8px; overflow: hidden; background: #f3f0f1; }
-  .map img { width: 100%; height: 100%; object-fit: cover; }
-  .map .pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); }
-  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #ece7e9; }
-  th { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #5c6163; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .muted { color: #9aa0a2; }
-  .tot { margin-top: 6px; font-size: 12px; text-align: right; }
-  .tot b { color: #c5005f; }
-  .plu { margin-top: 14px; padding: 12px 14px; background: #faf6f8; border: 1px solid #f0e3ea; border-radius: 8px; font-size: 12px; }
-  .plu .z { font-size: 16px; font-weight: 700; color: #c5005f; }
-  .disc { margin-top: 18px; font-size: 9.5px; color: #8a9092; line-height: 1.5; }
-  .rf { margin-top: 22px; padding-top: 8px; border-top: 1px solid #ece7e9; font-size: 9.5px; color: #8a9092; display: flex; justify-content: space-between; }
+  :root{--brand:#c5005f;--brand-d:#8c0044;--brand-50:#fbeaf2;--ink:#1d1e1f;--body:#42474a;--mute:#8b8f92;--faint:#b4b7b9;--cream:#f7f2ec;--line:#e4ddd2;--line2:#efe9df}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant-numeric:tabular-nums}
+  .page{position:relative;width:210mm;height:297mm;padding:15mm 16mm 13mm;overflow:hidden;background:#fff}
+  .page::before{content:"";position:absolute;top:0;left:0;right:0;height:6mm;background:linear-gradient(90deg,var(--brand),var(--brand-d))}
+  /* running header */
+  .rh{display:flex;align-items:center;justify-content:space-between;padding:4mm 0 9px;border-bottom:1px solid var(--line)}
+  .rh .bd{display:flex;align-items:center;gap:9px}.rh img{height:30px;width:30px;border-radius:7px}
+  .rh .wm{font-family:'Spectral',serif;font-size:13px;font-weight:700;letter-spacing:.01em;line-height:1}
+  .rh .wm small{display:block;font-family:'Inter',sans-serif;font-size:7.5px;font-weight:700;letter-spacing:.22em;color:var(--mute);text-transform:uppercase;margin-top:3px}
+  .rh .meta{text-align:right}.rh .meta .t{font-size:7.5px;font-weight:800;letter-spacing:.18em;color:var(--brand);text-transform:uppercase}
+  .rh .meta .d{font-size:8.5px;color:var(--mute);margin-top:3px;letter-spacing:.04em}
+  /* hero */
+  .hero{margin-top:13px}
+  .hero .ey{font-size:8.5px;font-weight:800;letter-spacing:.2em;color:var(--brand);text-transform:uppercase}
+  .hero h1{font-family:'Spectral',serif;font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1;margin-top:7px;color:#1a1614}
+  .hero .sub{font-family:'Spectral',serif;font-style:italic;font-weight:500;font-size:14px;color:#4a4038;margin-top:9px}
+  /* plan frame — survey sheet */
+  .plan{position:relative;margin-top:15px;height:104mm;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#eef0ec;box-shadow:0 1px 0 #fff inset,0 6px 18px rgba(20,14,18,.07)}
+  .plan img{width:100%;height:100%;object-fit:cover;display:block}
+  .plan .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(28,20,24,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(28,20,24,.05) 1px,transparent 1px);background-size:14mm 14mm;pointer-events:none}
+  .plan .tick{position:absolute;width:18px;height:18px}
+  .plan .tick::before,.plan .tick::after{content:"";position:absolute;background:var(--brand)}
+  .plan .tick::before{width:18px;height:2px}.plan .tick::after{width:2px;height:18px}
+  .plan .tl{top:9px;left:9px}.plan .tr{top:9px;right:9px}.plan .tr::before{right:0}.plan .tr::after{right:0}
+  .plan .bl{bottom:9px;left:9px}.plan .bl::before{bottom:0}.plan .bl::after{bottom:0}
+  .plan .br{bottom:9px;right:9px}.plan .br::before{right:0;bottom:0}.plan .br::after{right:0;bottom:0}
+  .plan .mk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;display:grid;place-items:center}
+  .plan .mk .halo{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(197,0,95,.22),rgba(197,0,95,0) 68%)}
+  .plan .mk .dot{position:relative;width:13px;height:13px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px #fff,0 2px 5px rgba(0,0,0,.35)}
+  .plan .mk .cx,.plan .mk .cy{position:absolute;background:rgba(197,0,95,.55)}
+  .plan .mk .cx{left:50%;top:-7px;width:1.4px;height:68px;transform:translateX(-50%)}
+  .plan .mk .cy{top:50%;left:-7px;height:1.4px;width:68px;transform:translateY(-50%)}
+  .plan .cap{position:absolute;left:0;bottom:0;right:0;display:flex;justify-content:space-between;padding:7px 12px;font-size:8px;font-weight:600;letter-spacing:.05em;color:#fff;background:linear-gradient(0deg,rgba(20,14,18,.62),rgba(20,14,18,0))}
+  .plan .empty{display:grid;place-items:center;height:100%;font-size:11px;color:var(--mute)}
+  /* lower split */
+  .split{display:grid;grid-template-columns:1.32fr .9fr;gap:14px;margin-top:16px}
+  .sh{font-size:8.5px;font-weight:800;letter-spacing:.16em;color:var(--brand);text-transform:uppercase;margin-bottom:8px}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);text-align:left;padding:0 9px 6px;border-bottom:1.5px solid var(--ink)}
+  thead th.num{text-align:right}
+  tbody td{padding:9px;border-bottom:1px solid var(--line2);font-size:11.5px}
+  tbody tr:last-child td{border-bottom:none}
+  td.ref{font-family:'Spectral',serif;font-weight:600;font-size:13px;letter-spacing:.02em}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  td.muted{color:var(--mute);font-style:italic}
+  .tot{display:flex;align-items:baseline;justify-content:space-between;margin-top:9px;padding:9px 11px;background:var(--cream);border-radius:8px}
+  .tot .k{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--body)}
+  .tot .v{font-family:'Spectral',serif;font-size:19px;font-weight:700;color:var(--brand)}
+  /* PLU accent */
+  .plu{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .plu .top{padding:13px 14px 12px;background:linear-gradient(135deg,#fff,var(--brand-50))}
+  .plu .lbl{font-size:8px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+  .plu .z{font-family:'Spectral',serif;font-size:30px;font-weight:700;letter-spacing:-.01em;color:#1a1614;line-height:1;margin-top:5px}
+  .plu .ty{display:inline-block;margin-top:8px;padding:3px 9px;border-radius:999px;background:var(--brand);color:#fff;font-size:8.5px;font-weight:700;letter-spacing:.05em}
+  .plu .desc{padding:11px 14px;font-size:10px;color:var(--body);line-height:1.5;border-top:1px solid var(--line2)}
+  .plu .na{padding:16px 14px;font-size:10.5px;color:var(--mute);font-style:italic}
+  /* stat row */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .scard{border:1px solid var(--line);border-radius:10px;padding:12px 13px;background:#fff}
+  .scard .sv{font-family:'Spectral',serif;font-size:21px;font-weight:700;color:var(--ink);line-height:1}
+  .scard .sk{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--body);margin-top:7px}
+  .scard .ss{font-size:9px;color:var(--mute);margin-top:2px}
+  /* footer */
+  .foot{position:absolute;left:16mm;right:16mm;bottom:8mm}
+  .disc{font-size:8px;color:var(--faint);line-height:1.55}.disc b{color:var(--mute)}
+  .rf{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:7px;border-top:1px solid var(--line);font-size:8px;letter-spacing:.05em;color:var(--mute)}
+  .rf .br{color:var(--brand);font-weight:700}
   </style></head><body><div class="page">
-    <div class="rh"><img src="${ESTIM_MARK || LOGO}" alt=""><div><div class="t">Plan cadastral</div><div class="d">${titre}${ville ? " · " + ville : ""}${ref ? " · " + ref : ""}</div></div></div>
-    <h1>Plan parcellaire${plu && plu.zone ? ` · PLU ${estimText(plu.zone)}` : ""}</h1>
-    <div class="map">${mapUrl ? `<img src="${estimText(mapUrl)}" alt="Plan cadastral"><span class="pin">${homeSvg}</span>` : `<div style="padding:40px;text-align:center;color:#9aa0a2">Plan indisponible (coordonnées manquantes).</div>`}</div>
-    <h1>Références cadastrales</h1>
-    <table><thead><tr><th>Parcelle</th><th>Commune</th><th class="num">Contenance</th></tr></thead><tbody>${rows}</tbody></table>
-    ${total && parcelles.length > 1 ? `<div class="tot">Contenance totale : <b>${total}</b></div>` : ""}
-    ${plu ? `<div class="plu"><div class="z">${estimText(plu.zone || "—")}</div><div>${estimText(plu.libelle || "")}${plu.type ? " · type de zone " + estimText(plu.type) : ""}</div></div>` : ""}
-    <div class="disc"><b>Sources.</b> Parcellaire IGN (PCI Express) · fond Plan IGN v2 · zonage Géoportail de l'Urbanisme. Document établi le ${dateLong} à titre informatif ; le titre de propriété et le document d'arpentage font foi. Identité du propriétaire non communiquée (donnée nominative).</div>
-    <div class="rf"><span>GTI Immobilier · Plan cadastral</span><span>${dateLong}</span></div>
+    <div class="rh">
+      <div class="bd"><img src="${ESTIM_MARK || LOGO}" alt=""><div class="wm">GTI Immobilier<small>Conseil &amp; transaction</small></div></div>
+      <div class="meta"><div class="t">Plan cadastral</div><div class="d">${docNo} · ${dateLong}</div></div>
+    </div>
+    <div class="hero">
+      <div class="ey">Document parcellaire</div>
+      <h1 class="serif">Plan cadastral</h1>
+      <div class="sub">${titre}${ville ? " · " + ville : ""}${ref ? " · réf. " + ref : ""}</div>
+    </div>
+    <div class="plan">${mapUrl
+      ? `<img src="${estimText(mapUrl)}" alt="Plan cadastral"><span class="grid"></span>${corner("tl")}${corner("tr")}${corner("bl")}${corner("br")}<span class="mk"><span class="halo"></span><span class="cx"></span><span class="cy"></span><span class="dot"></span></span><div class="cap"><span>Fond Plan IGN v2 · parcellaire PCI Express</span><span>Localisation indicative</span></div>`
+      : `<div class="empty">Plan indisponible — coordonnées du bien manquantes.</div>`}</div>
+    <div class="split">
+      <div>
+        <div class="sh">Références cadastrales</div>
+        <table><thead><tr><th>Parcelle</th><th>Commune</th><th class="num">Contenance</th></tr></thead><tbody>${rows}</tbody></table>
+        ${total ? `<div class="tot"><span class="k">Contenance ${parcelles.length > 1 ? "totale" : "cadastrale"}</span><span class="v tnum">${total}</span></div>` : ""}
+      </div>
+      <div>
+        <div class="sh">Urbanisme</div>
+        <div class="plu">${plu
+          ? `<div class="top"><div class="lbl">Zone PLU</div><div class="z">${estimText(plu.zone || "—")}</div>${plu.type ? `<span class="ty">Type ${estimText(plu.type)}</span>` : ""}</div>${plu.libelle ? `<div class="desc">${estimText(plu.libelle)}</div>` : ""}`
+          : `<div class="na">Zonage PLU non disponible sur ce secteur.</div>`}</div>
+      </div>
+    </div>
+    <div class="stats">
+      ${statCard(parcelles.length > 1 ? "Parcelles" : "Parcelle", parcelles.length || "—", parcelles.length > 1 ? "réunies" : "cadastrale")}
+      ${statCard("Contenance", total ? total.replace(" m²", "") : "—", "m² · surface officielle")}
+      ${statCard("Commune", commune, insee ? "INSEE " + insee : "")}
+    </div>
+    <div class="foot">
+      <div class="disc"><b>Sources.</b> Parcellaire IGN (PCI Express) · fond Plan IGN v2 · zonage Géoportail de l'Urbanisme. Document établi le ${dateLong} à titre informatif ; le titre de propriété et le document d'arpentage font foi. L'identité du propriétaire n'est pas communiquée (donnée nominative).</div>
+      <div class="rf"><span class="br">GTI Immobilier — Plan cadastral</span><span>${docNo}</span></div>
+    </div>
   </div></body></html>`;
 }
 
@@ -5150,7 +5229,8 @@ async function handleGenerateCadastreDocument(job) {
   if (!cad || !cad.ok) throw new Error("Aucune parcelle cadastrale trouvee pour ces coordonnees");
 
   const html = cadastrePlanHtml(cad, dossier);
-  const pdfBuffer = await renderHtmlToPdfBuffer(html);
+  // Document plein cadre (210×297, @page margin:0) : on rend sans marge Puppeteer, comme l'avis de valeur.
+  const pdfBuffer = await renderHtmlToPdfBuffer(html, { margin: { top: "0", bottom: "0", left: "0", right: "0" } });
 
   const label = "Plan cadastral";
   const filename = storageSafeFilename(`${label}.pdf`, "plan-cadastral.pdf");
@@ -11210,4 +11290,4 @@ if (require.main === module) {
 }
 
 // Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
-module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer };
+module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml };
