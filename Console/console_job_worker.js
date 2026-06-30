@@ -1835,6 +1835,16 @@ async function loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }) {
     || (await tryQuery("hektor_user_id", userId, "eq"));
 }
 
+// Normalise un nom d'agence pour comparaison tolérante (casse / accents / espaces).
+function normalizeAgencyName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Le négo PROPRIÉTAIRE de l'entité est-il actif ? On teste le négo PROPRE (email / id négo /
 // id user de l'entité), PAS un collègue substitué. Inactif, orphelin OU null -> écriture agence.
 async function isOwnerNegotiatorActive(dossier, payload) {
@@ -1852,7 +1862,17 @@ async function isOwnerNegotiatorActive(dossier, payload) {
   // Aucun négo identifiable (null) -> traité comme inactif -> écriture via agence.
   if (!email && !negotiatorId && !userId) return false;
   const row = await loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }).catch(() => null);
-  return Boolean(row && row.is_active === true);
+  if (!row || row.is_active !== true) return false;
+  // Garde-fou cohérence d'agence (négos multi-agences) : le négo résolu peut être ACTIF mais
+  // dans une AUTRE agence que le bien (ex. propriétaire à Saint-Étienne inactif, mais commercial_id
+  // pointant sur son identité Firminy active). Hektor refuse alors l'écriture ("Credential Error")
+  // car ce négo n'est pas propriétaire de CE bien. On le traite comme non-propriétaire-ici ->
+  // écriture via l'AGENCE du bien (resolveAgencyContextForFallback). Garde appliquée uniquement
+  // quand les DEUX agences sont connues et diffèrent -> aucun impact sur les biens cohérents.
+  const ownerAgence = normalizeAgencyName(dossier && dossier.agence_nom);
+  const rowAgence = normalizeAgencyName(row.agence_nom);
+  if (ownerAgence && rowAgence && ownerAgence !== rowAgence) return false;
+  return true;
 }
 
 async function ensureHektorExecutionContext(job, dossier, payload, options = {}) {
@@ -5259,6 +5279,7 @@ async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, 
   const headless = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
   const visible = payload.visible !== false;
   const selector = visible ? "#fileupload" : "#fileuploadHidden";
+  const fileInputSelector = `input[type="file"]${selector}:not([disabled])`;
   const pageUrl = `${ADMIN_URL}?page=/mes-biens/mon-bien/photos&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}`;
   let browser = null;
   try {
@@ -5279,9 +5300,9 @@ async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, 
     });
 
     await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForSelector(selector, { timeout: 45000 });
+    await page.waitForSelector(fileInputSelector, { state: "attached", timeout: 45000 });
     await page.waitForFunction(() => typeof window.uploadPhotoInit === "function" || document.querySelector("#fileupload"), null, { timeout: 30000 }).catch(() => {});
-    const input = page.locator(selector).first();
+    const input = page.locator(fileInputSelector).first();
     await input.setInputFiles(filePath);
 
     let entries = [];
