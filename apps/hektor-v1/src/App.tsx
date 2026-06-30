@@ -2206,6 +2206,20 @@ function wizardDetailValue(
   field: DraftAnnonceWizardField,
 ) {
   const name = field.name
+  // Calque optimiste EN PREMIER (Tier 2) : si le champ vient d'être édité dans la modale, le calque
+  // le contient avec sa clé HEKTOR (= field.name, ex. NB_CHAMBRES / surfappart / prix). On l'affiche
+  // tout de suite, AVANT la valeur brute "à plat" du dict `mapped` ci-dessous. Sans ça, les champs
+  // principaux court-circuitaient le calque (lus à plat) -> la modif ne s'affichait pas instantanément.
+  // Le read-through efface le calque au retour Hektor -> la vraie valeur reprend la main.
+  const overlay = detail.app_optimistic_overlay
+    ? (typeof detail.app_optimistic_overlay === 'object'
+        ? (detail.app_optimistic_overlay as Record<string, unknown>)
+        : parseJson<Record<string, unknown>>(detail.app_optimistic_overlay as string, {}))
+    : null
+  const overlayValue = overlay?.[name]
+  if (overlayValue != null && typeof overlayValue !== 'object' && String(overlayValue).trim() !== '') {
+    return String(overlayValue).trim()
+  }
   const mapped: Record<string, unknown> = {
     titre: firstNonEmpty(detail.texte_principal_titre, dossier.titre_bien),
     corps: firstNonEmpty(detail.texte_principal_html, detail.corps_listing_html),
