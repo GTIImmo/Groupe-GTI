@@ -31477,6 +31477,39 @@ body {
 .mobile-estim-body { display: flex; flex-direction: column; gap: 12px; }
 .mobile-estim-body .detail-estimation-data { gap: 12px; }
 
+/* « Reporter dans la fiche » (champ Hektor vide) + divergence (champ rempli ≠ API). */
+.estim-apply {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ds-brand-500, #c5005f) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-brand-500, #c5005f) 16%, transparent);
+  font-size: 12px;
+  color: var(--ds-ink, #1c1c1c);
+}
+.estim-apply-btn {
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ds-brand-500, #c5005f);
+  cursor: pointer;
+}
+.estim-apply-btn:disabled { opacity: .6; cursor: default; }
+.estim-apply.estim-apply-warn {
+  background: #fdf1e7;
+  border-color: #f6d5b8;
+  color: #9a3412;
+}
+
 /* ============================================================
    Sélecteur de parcelles cadastrales (modal) + lien « Ajuster »
    Ergonomie : une carte par parcelle voisine (plan IGN + contenance + distance),
