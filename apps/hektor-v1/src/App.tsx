@@ -4697,13 +4697,15 @@ function EstimationDocumentEditor(props: {
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
     if (!type) { setMarcheMsg(`Comparaison DVF non pertinente pour ce type de bien (${propertyTypeLabel(dossier.type_bien)}). La base DVF ne couvre que maisons et appartements.`); return }
+    // Maisons : on affine sur un terrain de taille comparable (repli auto si trop peu de ventes).
+    const terrain = type === 'Maison' ? (Number(props.detail.surface_terrain_detail) || null) : null
     setMarcheBusy(true); setMarcheMsg(null)
     try {
-      const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
+      const res = await loadDvfComparables({ lat, lon, dept, type, surface, terrain, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
       setMarche(res)
       const n = res.count_clean ?? res.count
       setMarcheMsg(res.ok
-        ? `${n} comparable${n > 1 ? 's' : ''} · rayon ${res.radius_km ?? '—'} km${res.median_prix_m2 ? ' · médiane ' + res.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : ''}${res.fiable === false ? ' · ⚠ peu fiable' : ''}`
+        ? `${n} comparable${n > 1 ? 's' : ''} · rayon ${res.radius_km ?? '—'} km${res.median_prix_m2 ? ' · médiane ' + res.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : ''}${res.terrain_applied ? ' · terrain similaire' : ''}${res.fiable === false ? ' · ⚠ peu fiable' : ''}`
         : 'Aucune donnée DVF trouvée pour ce secteur.')
     } catch (error) {
       setMarcheMsg(error instanceof Error ? error.message : 'Chargement des comparables impossible.')
