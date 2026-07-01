@@ -75,6 +75,7 @@ import {
   saveDossierEstimationSource,
   loadBdnb,
   loadDpe,
+  loadPatrimoine,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
@@ -143,7 +144,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData } from './lib/api'
+import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -8449,11 +8450,13 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
   const [bdnbMsg, setBdnbMsg] = useState<string | null>(null)
   const [dpeBusy, setDpeBusy] = useState(false)
   const [dpeMsg, setDpeMsg] = useState<string | null>(null)
+  const [patriBusy, setPatriBusy] = useState(false)
+  const [patriMsg, setPatriMsg] = useState<string | null>(null)
   const [applyBusy, setApplyBusy] = useState<string | null>(null)  // clé du bloc en cours d'application
   const [applyMsg, setApplyMsg] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
-    setDvfMsg(null); setCadreMsg(null); setBdnbMsg(null); setDpeMsg(null)
+    setDvfMsg(null); setCadreMsg(null); setBdnbMsg(null); setDpeMsg(null); setPatriMsg(null)
     loadDossierEstimation(dossier.app_dossier_id)
       .then((row) => { if (!cancelled) setEstim(row) })
       .catch(() => { /* best effort */ })
@@ -8534,10 +8537,27 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
     } finally { setDpeBusy(false) }
   }
 
+  // Génère + mémorise les servitudes PATRIMONIALES / ABF (monuments, sites, SPR).
+  async function generatePatrimoine() {
+    if (patriBusy) return
+    if (!hasCoords()) { setPatriMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setPatriBusy(true); setPatriMsg('Recherche des périmètres de protection…')
+    try {
+      const res = await loadPatrimoine({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'patrimoine', res.ok, res)
+      await reload()
+      setPatriMsg(res.ok ? null : 'Aucune servitude patrimoniale publiée sur ce point (GPU incomplet — à confirmer).')
+    } catch (error) {
+      setPatriMsg(error instanceof Error ? error.message : 'Recherche patrimoine impossible.')
+    } finally { setPatriBusy(false) }
+  }
+
   const dvf = estim?.sources?.dvf?.data as DvfComparablesResult | undefined
   const cadre = estim?.sources?.cadre?.data as CadreDeVie | undefined
   const bdnb = estim?.sources?.bdnb?.data as BdnbData | undefined
   const dpe = estim?.sources?.dpe?.data as DpeData | undefined
+  const patri = estim?.sources?.patrimoine?.data as PatrimoineData | undefined
   const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
 
   // Valeurs actuelles de la FICHE Hektor (calque optimiste + brut) pour ces 3 champs.
@@ -8711,6 +8731,27 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
         ) : (!dpeMsg ? <p className="cadastre-hint">DPE réel du bien depuis l’ADEME, retrouvé par l’adresse exacte (id BAN) et départagé par la surface. Étiquette énergie + GES, consommation, date.</p> : null)}
         {dpeMsg ? <p className="cadastre-hint cadastre-msg">{dpeMsg}</p> : null}
         {applyMsg ? <p className="cadastre-hint cadastre-msg">{applyMsg}</p> : null}
+      </div>
+
+      {/* Patrimoine & ABF — servitudes de protection (monuments, sites, SPR) via GPU. */}
+      <div className="estim-data-block">
+        <div className="estim-data-head">
+          <span className="estim-data-t">Patrimoine &amp; ABF</span>
+          <div className="estim-data-head-right">
+            {patri && patri.ok ? <span className="estim-data-badge">{patri.count} périmètre{(patri.count ?? 0) > 1 ? 's' : ''}</span> : null}
+            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={patriBusy} onClick={() => { void generatePatrimoine() }}>
+              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+              <strong>{patriBusy ? 'Recherche…' : (patri && patri.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
+            </button>
+          </div>
+        </div>
+        {patri && patri.ok ? (
+          <>
+            {patri.abf ? <div className="estim-apply estim-apply-warn"><span>Bien en périmètre de protection — travaux soumis à l&apos;avis de l&apos;Architecte des Bâtiments de France (ABF).</span></div> : null}
+            <div className="estim-data-tags">{(patri.items ?? []).map((it, i) => <span key={i} className="estim-data-tag">{it.type_label}{it.nom ? ` · ${it.nom}` : ''}</span>)}</div>
+          </>
+        ) : (!patriMsg ? <p className="cadastre-hint">Périmètres de protection du patrimoine (monument historique, site classé/inscrit, site patrimonial remarquable) via le Géoportail de l&apos;Urbanisme. Indique si les travaux sont soumis à l&apos;ABF. Couverture GPU partielle : absence ≠ garantie.</p> : null)}
+        {patriMsg ? <p className="cadastre-hint cadastre-msg">{patriMsg}</p> : null}
       </div>
 
       {/* Cadastre (déplacé de Commercialisation) : composant autonome, génère + persiste + ré-affiche. */}

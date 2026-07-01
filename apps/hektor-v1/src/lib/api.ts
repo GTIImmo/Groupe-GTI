@@ -2701,6 +2701,25 @@ export type DpeData = {
   surface?: number | null
 }
 
+// Patrimoine / ABF : servitudes AC1/AC2/AC4 sous le point (GPU) — le bien est-il en périmètre protégé ?
+export type PatrimoineData = {
+  ok: boolean
+  found?: boolean
+  abf?: boolean
+  count?: number
+  items?: Array<{ type?: string | null; type_label?: string | null; nom?: string | null }>
+}
+export async function loadPatrimoine(input: { lat: number; lon: number }): Promise<PatrimoineData> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  try {
+    const r = await invokeBackendApi<PatrimoineData & { found?: boolean }>(`/geo/patrimoine?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    return { ...r, ok: !!r?.found }
+  } catch {
+    return { ok: false }
+  }
+}
+
 export async function loadBdnb(input: { lat: number; lon: number }): Promise<BdnbData> {
   const { lat, lon } = input
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
