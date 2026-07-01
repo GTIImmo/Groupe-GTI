@@ -8449,6 +8449,8 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
   const [bdnbMsg, setBdnbMsg] = useState<string | null>(null)
   const [dpeBusy, setDpeBusy] = useState(false)
   const [dpeMsg, setDpeMsg] = useState<string | null>(null)
+  const [applyBusy, setApplyBusy] = useState<string | null>(null)  // clé du bloc en cours d'application
+  const [applyMsg, setApplyMsg] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
     setDvfMsg(null); setCadreMsg(null); setBdnbMsg(null); setDpeMsg(null)
@@ -8538,6 +8540,28 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
   const dpe = estim?.sources?.dpe?.data as DpeData | undefined
   const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
 
+  // Valeurs actuelles de la FICHE Hektor (calque optimiste + brut) pour ces 3 champs.
+  const curAnnee = rawWizardDetailField(detail, 'ANNEE_CONS')
+  const curConso = rawWizardDetailField(detail, 'dpe_cons')
+  const curGes = rawWizardDetailField(detail, 'dpe_ges')
+  const sameNum = (a: unknown, b: unknown) => Math.round(Number(a)) === Math.round(Number(b))
+
+  // « Reporter dans la fiche » : n'écrit QUE les champs Hektor vides (jamais d'écrasement) via
+  // l'édition optimiste (app d'abord → push Hektor différé). blockKey = bloc en cours (busy/msg).
+  async function applyToFiche(blockKey: string, fields: Record<string, string>, label: string) {
+    if (applyBusy) return
+    const clean = Object.fromEntries(Object.entries(fields).filter(([, v]) => String(v ?? '').trim() !== ''))
+    if (!Object.keys(clean).length) return
+    setApplyBusy(blockKey); setApplyMsg(null)
+    try {
+      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: clean })
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
+      setApplyMsg(`✓ ${label} reporté dans la fiche — mise à jour Hektor en cours.`)
+    } catch (error) {
+      setApplyMsg(error instanceof Error ? error.message : 'Report dans la fiche impossible.')
+    } finally { setApplyBusy(null) }
+  }
+
   return (
     <article className="detail-subsection detail-estimation-data">
       <div className="section-header">
@@ -8621,6 +8645,16 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
               <div className="estim-dg"><span className="edk">Aléa argile</span><span className="edv">{bdnb.alea_argile ?? '—'}</span></div>
             </div>
             {bdnb.rnb_id ? <div className="estim-data-tags"><span className="estim-data-tag">RNB {bdnb.rnb_id}</span></div> : null}
+            {bdnb.annee_construction != null ? (
+              !curAnnee ? (
+                <div className="estim-apply">
+                  <span>Année de construction absente de la fiche.</span>
+                  <button className="estim-apply-btn" type="button" disabled={applyBusy === 'bdnb'} onClick={() => applyToFiche('bdnb', { ANNEE_CONS: String(bdnb!.annee_construction) }, `Année ${bdnb!.annee_construction}`)}>{applyBusy === 'bdnb' ? 'Report…' : `Reporter ${bdnb!.annee_construction} dans la fiche`}</button>
+                </div>
+              ) : (!sameNum(curAnnee, bdnb.annee_construction) ? (
+                <div className="estim-apply estim-apply-warn"><span>Année — fiche : {curAnnee} · BDNB : {bdnb.annee_construction} (à vérifier).</span></div>
+              ) : null)
+            ) : null}
           </>
         ) : (!bdnbMsg ? <p className="cadastre-hint">Caractéristiques du bâtiment (année, type, matériaux mur/toit, niveaux, DPE théorique, aléa retrait-gonflement des argiles) depuis la Base de Données Nationale des Bâtiments.</p> : null)}
         {bdnbMsg ? <p className="cadastre-hint cadastre-msg">{bdnbMsg}</p> : null}
@@ -8652,9 +8686,31 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
             {dpe.matched_by === 'adresse'
               ? <p className="cadastre-hint">{dpe.nb_adresse && dpe.nb_adresse > 1 ? `${dpe.nb_adresse} DPE trouvés à cette adresse — retenu : celui dont la surface colle le mieux au bien.` : 'DPE de l’adresse exacte du bien.'}</p>
               : <p className="cadastre-hint">DPE le plus proche (adresse exacte introuvable) — à vérifier.</p>}
+            {(() => {
+              const fields: Record<string, string> = {}
+              if (dpe!.conso_ep_m2 != null && !curConso) fields.dpe_cons = String(Math.round(Number(dpe!.conso_ep_m2)))
+              if (dpe!.ges_emission != null && !curGes) fields.dpe_ges = String(Math.round(Number(dpe!.ges_emission)))
+              const nEmpty = Object.keys(fields).length
+              const divConso = dpe!.conso_ep_m2 != null && !!curConso && !sameNum(curConso, dpe!.conso_ep_m2)
+              const divGes = dpe!.ges_emission != null && !!curGes && !sameNum(curGes, dpe!.ges_emission)
+              return (
+                <>
+                  {nEmpty ? (
+                    <div className="estim-apply">
+                      <span>{nEmpty > 1 ? 'DPE conso & GES absents' : (fields.dpe_cons ? 'DPE conso absent' : 'GES absent')} de la fiche.</span>
+                      <button className="estim-apply-btn" type="button" disabled={applyBusy === 'dpe'} onClick={() => applyToFiche('dpe', fields, 'DPE/GES')}>{applyBusy === 'dpe' ? 'Report…' : 'Reporter dans la fiche'}</button>
+                    </div>
+                  ) : null}
+                  {divConso || divGes ? (
+                    <div className="estim-apply estim-apply-warn"><span>{divConso ? `Conso — fiche ${curConso} · ADEME ${Math.round(Number(dpe!.conso_ep_m2))} kWh` : ''}{divConso && divGes ? ' · ' : ''}{divGes ? `GES — fiche ${curGes} · ADEME ${Math.round(Number(dpe!.ges_emission))}` : ''} (à vérifier).</span></div>
+                  ) : null}
+                </>
+              )
+            })()}
           </>
         ) : (!dpeMsg ? <p className="cadastre-hint">DPE réel du bien depuis l’ADEME, retrouvé par l’adresse exacte (id BAN) et départagé par la surface. Étiquette énergie + GES, consommation, date.</p> : null)}
         {dpeMsg ? <p className="cadastre-hint cadastre-msg">{dpeMsg}</p> : null}
+        {applyMsg ? <p className="cadastre-hint cadastre-msg">{applyMsg}</p> : null}
       </div>
 
       {/* Cadastre (déplacé de Commercialisation) : composant autonome, génère + persiste + ré-affiche. */}

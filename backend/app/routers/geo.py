@@ -356,8 +356,8 @@ def bdnb(
     }
 
 
-_DPE_SELECT = ("etiquette_dpe,etiquette_ges,date_etablissement_dpe,adresse_ban,"
-               "type_batiment,conso_5_usages_par_m2_ep,surface_habitable_logement,identifiant_ban")
+_DPE_SELECT = ("etiquette_dpe,etiquette_ges,date_etablissement_dpe,adresse_ban,type_batiment,"
+               "conso_5_usages_par_m2_ep,emission_ges_5_usages_par_m2,surface_habitable_logement,identifiant_ban")
 
 
 def _dpe_lines(params: dict) -> list:
@@ -429,5 +429,6 @@ def dpe(
         "adresse": chosen.get("adresse_ban"),
         "type_batiment": chosen.get("type_batiment"),
         "conso_ep_m2": chosen.get("conso_5_usages_par_m2_ep"),
+        "ges_emission": chosen.get("emission_ges_5_usages_par_m2"),
         "surface": chosen.get("surface_habitable_logement"),
     }

@@ -2697,6 +2697,7 @@ export type DpeData = {
   adresse?: string | null
   type_batiment?: string | null
   conso_ep_m2?: number | null
+  ges_emission?: number | null                   // émissions GES kgCO₂/m²/an (pour dpe_ges Hektor)
   surface?: number | null
 }
 
