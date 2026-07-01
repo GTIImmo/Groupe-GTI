@@ -76,6 +76,7 @@ import {
   loadBdnb,
   loadDpe,
   loadPatrimoine,
+  loadCommuneLoyer,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
@@ -144,7 +145,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData } from './lib/api'
+import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -8452,11 +8453,13 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
   const [dpeMsg, setDpeMsg] = useState<string | null>(null)
   const [patriBusy, setPatriBusy] = useState(false)
   const [patriMsg, setPatriMsg] = useState<string | null>(null)
+  const [loyerBusy, setLoyerBusy] = useState(false)
+  const [loyerMsg, setLoyerMsg] = useState<string | null>(null)
   const [applyBusy, setApplyBusy] = useState<string | null>(null)  // clé du bloc en cours d'application
   const [applyMsg, setApplyMsg] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
-    setDvfMsg(null); setCadreMsg(null); setBdnbMsg(null); setDpeMsg(null); setPatriMsg(null)
+    setDvfMsg(null); setCadreMsg(null); setBdnbMsg(null); setDpeMsg(null); setPatriMsg(null); setLoyerMsg(null)
     loadDossierEstimation(dossier.app_dossier_id)
       .then((row) => { if (!cancelled) setEstim(row) })
       .catch(() => { /* best effort */ })
@@ -8553,12 +8556,38 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
     } finally { setPatriBusy(false) }
   }
 
+  // Génère + mémorise le POTENTIEL LOCATIF (loyer commune + zonage ABC).
+  async function generateLoyer() {
+    if (loyerBusy) return
+    if (!hasCoords()) { setLoyerMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setLoyerBusy(true); setLoyerMsg('Estimation du loyer de marché…')
+    try {
+      const res = await loadCommuneLoyer({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'loyers', res.ok, res)
+      await reload()
+      setLoyerMsg(res.ok ? null : 'Aucun indicateur de loyer pour cette commune.')
+    } catch (error) {
+      setLoyerMsg(error instanceof Error ? error.message : 'Estimation du loyer impossible.')
+    } finally { setLoyerBusy(false) }
+  }
+
   const dvf = estim?.sources?.dvf?.data as DvfComparablesResult | undefined
   const cadre = estim?.sources?.cadre?.data as CadreDeVie | undefined
   const bdnb = estim?.sources?.bdnb?.data as BdnbData | undefined
   const dpe = estim?.sources?.dpe?.data as DpeData | undefined
   const patri = estim?.sources?.patrimoine?.data as PatrimoineData | undefined
+  const loyer = estim?.sources?.loyers?.data as LoyerData | undefined
   const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
+
+  // Calculs « potentiel locatif » : loyer €/m² selon le type, loyer mensuel estimé, rendement brut.
+  const loyerType = dvfTypeForBien(dossier.type_bien)
+  const loyerM2 = loyer ? (loyerType === 'Maison' ? (loyer.loyer_maison ?? loyer.loyer_appart) : (loyer.loyer_appart ?? loyer.loyer_maison)) : null
+  const loyerSurface = Number(detail.surface_habitable_detail ?? detail.surface) || null
+  const loyerMensuel = loyerM2 && loyerSurface ? Math.round(loyerM2 * loyerSurface) : null
+  const loyerPrix = (() => { const n = Number(String(dossier.prix ?? '').replace(/[^\d.,]/g, '').replace(',', '.')); return Number.isFinite(n) && n > 0 ? n : null })()
+  const loyerRendement = loyerMensuel && loyerPrix ? Math.round((loyerMensuel * 12 / loyerPrix) * 1000) / 10 : null
+  const zoneTendue = loyer?.zone_abc ? /^(Abis|A|B1)$/i.test(loyer.zone_abc) : false
 
   // Valeurs actuelles de la FICHE Hektor (calque optimiste + brut) pour ces 3 champs.
   const curAnnee = rawWizardDetailField(detail, 'ANNEE_CONS')
@@ -8610,6 +8639,32 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
           </div>
         ) : (!dvfMsg ? <p className="cadastre-hint">Prix médian au m² + valeur estimée depuis les ventes DVF comparables (type, surface ±20 %, secteur). Enregistré ici et repris dans l’avis de valeur.</p> : null)}
         {dvfMsg ? <p className="cadastre-hint cadastre-msg">{dvfMsg}</p> : null}
+      </div>
+
+      {/* Potentiel locatif — loyer de marché commune + rendement + zonage ABC. */}
+      <div className="estim-data-block">
+        <div className="estim-data-head">
+          <span className="estim-data-t">Potentiel locatif</span>
+          <div className="estim-data-head-right">
+            {loyer && loyer.ok && loyerRendement != null ? <span className="estim-data-badge">Rendement brut {loyerRendement} %</span> : null}
+            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={loyerBusy} onClick={() => { void generateLoyer() }}>
+              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+              <strong>{loyerBusy ? 'Calcul…' : (loyer && loyer.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
+            </button>
+          </div>
+        </div>
+        {loyer && loyer.ok ? (
+          <>
+            <div className="estim-data-grid">
+              <div className="estim-dg"><span className="edk">Loyer estimé</span><span className="edv">{loyerM2 != null ? `${fmt(loyerM2)} €/m²` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Loyer mensuel</span><span className="edv edv-accent">{loyerMensuel != null ? `${fmt(loyerMensuel)} €/mois` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Rendement brut</span><span className="edv">{loyerRendement != null ? `${loyerRendement} %` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Zone ABC</span><span className="edv">{loyer.zone_abc ?? '—'}{loyer.zone_abc ? (zoneTendue ? ' · tendue' : ' · détendue') : ''}</span></div>
+            </div>
+            <p className="cadastre-hint">Loyer d&apos;annonce médian (ANIL{loyer.millesime ? ` ${loyer.millesime}` : ''}) pour {loyerType === 'Maison' ? 'une maison' : 'un appartement'}{loyer.commune ? ` · ${loyer.commune}` : ''}. Rendement = loyer annuel estimé / prix affiché{zoneTendue ? ' · zone tendue (dispositifs d’investissement possibles)' : ''}. À titre indicatif.</p>
+          </>
+        ) : (!loyerMsg ? <p className="cadastre-hint">Loyer de marché (€/m², ANIL « Carte des loyers »), loyer mensuel estimé, rendement locatif brut et zone fiscale ABC — un argument pour les acquéreurs investisseurs.</p> : null)}
+        {loyerMsg ? <p className="cadastre-hint cadastre-msg">{loyerMsg}</p> : null}
       </div>
 
       {/* Cadre de vie — génération directe. */}
