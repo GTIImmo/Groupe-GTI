@@ -45,7 +45,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 GEO_DVF_BASE = "https://files.data.gouv.fr/geo-dvf/latest/csv"
 DEPTS = ["42", "43", "63", "07"]            # périmètre GTI (mutuellement limitrophes)
-N_MILLESIMES = 3                            # année courante + 2 précédentes
+N_MILLESIMES = 5                            # année courante (souvent vide) + 4 précédentes
+                                            # => 4 années PLEINES de DVF, pour couvrir la fenêtre
+                                            #    d'estimation qui remonte jusqu'à 48 mois (RPC v4).
 TABLE = "app_dvf_vente"
 
 # Seuils de nettoyage (cf. cahier des charges) — ajustables.
