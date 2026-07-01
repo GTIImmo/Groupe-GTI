@@ -4559,6 +4559,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const cadLat = cad && Number.isFinite(+cad.lat) ? +cad.lat : (cdv && Number.isFinite(+cdv.lat) ? +cdv.lat : null);
   const cadLon = cad && Number.isFinite(+cad.lon) ? +cad.lon : (cdv && Number.isFinite(+cdv.lon) ? +cdv.lon : null);
   const cadMapUrl = cad && cadLat != null && cadLon != null ? estimCadastreMapUrl(cadLat, cadLon) : null;
+  const cadHomeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
   const lvlColor = (v) => { const s = String(v || "").toLowerCase(); if (/élev|elev|fort/.test(s)) return "#d7191c"; if (/moyen/.test(s)) return "#f3a712"; if (/faible/.test(s)) return "#1f8a5b"; return "var(--mute)"; };
   const cdvRow = (k, v) => `<div class="cdv-row"><span>${estimText(k)}</span><b>${estimText(v)}</b></div>`;
   const cdvLvl = (k, v) => v ? `<div class="cdv-lvl"><div class="k">${k}</div><div class="v" style="color:${lvlColor(v)}">${estimText(v)}</div></div>` : "";
@@ -4642,7 +4643,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
   ${cad ? `<div class="h mt">Éléments cadastraux${cadPlu && cadPlu.zone ? ` · PLU ${estimText(cadPlu.zone)}` : ""}</div>
-  ${cadMapUrl ? `<div class="cdv-map"><img src="${estimText(cadMapUrl)}" alt="Plan cadastral"><span class="mp home" style="left:50%;top:50%">${homeSvg}</span></div>` : ""}
+  ${cadMapUrl ? `<div class="cdv-map"><img src="${estimText(cadMapUrl)}" alt="Plan cadastral"><span class="mp home" style="left:50%;top:50%">${cadHomeSvg}</span></div>` : ""}
   <div class="cdv-grid">
     <div class="cdv-card"><div class="ch">Parcelle${cadParcelles.length > 1 ? "s" : ""} cadastrale${cadParcelles.length > 1 ? "s" : ""}</div>
       ${cadParcelles.length ? cadParcelles.map((p) => cdvRow(estimText(p.reference || "—"), p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—")).join("") : `<div class="cdv-row">${todo("—")}</div>`}
