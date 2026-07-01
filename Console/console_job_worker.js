@@ -4296,6 +4296,50 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .rev-track{flex:1;height:15px;background:var(--cream);border-radius:8px;overflow:hidden}.rev-bar{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#d98cae,#c9c2bc)}
 .rev-row.hl .rev-bar{background:linear-gradient(90deg,var(--brand),var(--brand-d))}
 .rev-v{width:70px;text-align:right;font-size:11.5px;font-weight:700;color:var(--ink)}.rev-note{font-size:9px;color:var(--mute);margin-top:5px}
+/* --- Section cadastre dédiée (page premium façon planche d'arpentage) --- */
+.cad-eyebrow{font-size:8.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--brand);margin-bottom:5px}
+.cad-frame{position:relative;height:96mm;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#eef0ec;box-shadow:0 1px 0 #fff inset,0 6px 16px rgba(20,14,18,.06);margin-top:6px}
+.cad-frame img{width:100%;height:100%;object-fit:cover;display:block}
+.cad-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(28,20,24,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(28,20,24,.045) 1px,transparent 1px);background-size:13mm 13mm;pointer-events:none}
+.cad-tick{position:absolute;width:16px;height:16px}
+.cad-tick::before,.cad-tick::after{content:"";position:absolute;background:var(--brand)}
+.cad-tick::before{width:16px;height:2px}.cad-tick::after{width:2px;height:16px}
+.cad-tick.tl{top:9px;left:9px}.cad-tick.tr{top:9px;right:9px}.cad-tick.tr::before{right:0}.cad-tick.tr::after{right:0}
+.cad-tick.bl{bottom:9px;left:9px}.cad-tick.bl::before{bottom:0}.cad-tick.bl::after{bottom:0}
+.cad-tick.br{bottom:9px;right:9px}.cad-tick.br::before{right:0;bottom:0}.cad-tick.br::after{right:0;bottom:0}
+.cad-mk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;display:grid;place-items:center}
+.cad-mk .halo{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(197,0,95,.22),rgba(197,0,95,0) 68%)}
+.cad-mk .dot{position:relative;width:12px;height:12px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px #fff,0 2px 5px rgba(0,0,0,.35)}
+.cad-mk .cx,.cad-mk .cy{position:absolute;background:rgba(197,0,95,.5)}
+.cad-mk .cx{left:50%;top:-6px;width:1.4px;height:60px;transform:translateX(-50%)}
+.cad-mk .cy{top:50%;left:-6px;height:1.4px;width:60px;transform:translateY(-50%)}
+.cad-cap{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;padding:7px 12px;font-size:8px;font-weight:600;letter-spacing:.05em;color:#fff;background:linear-gradient(0deg,rgba(20,14,18,.6),rgba(20,14,18,0))}
+.cad-empty{display:grid;place-items:center;height:100%;font-size:11px;color:var(--mute)}
+.cad-split{display:grid;grid-template-columns:1.32fr .9fr;gap:14px;margin-top:15px}
+.cad-sh{font-size:8.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);margin-bottom:7px}
+.cad-tbl{width:100%;border-collapse:collapse}
+.cad-tbl thead th{font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);text-align:left;padding:0 9px 6px;border-bottom:1.5px solid var(--ink)}
+.cad-tbl thead th.num{text-align:right}
+.cad-tbl tbody td{padding:8px 9px;border-bottom:1px solid var(--line2);font-size:11px}
+.cad-tbl tbody tr:last-child td{border-bottom:none}
+.cad-tbl td.ref{font-family:'Spectral',serif;font-weight:600;font-size:12.5px;letter-spacing:.02em}
+.cad-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.cad-tbl td.cad-muted{color:var(--mute);font-style:italic}
+.cad-tot{display:flex;align-items:baseline;justify-content:space-between;margin-top:9px;padding:8px 11px;background:var(--cream);border-radius:8px}
+.cad-tot span{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--body)}
+.cad-tot b{font-family:'Spectral',serif;font-size:17px;font-weight:700;color:var(--brand)}
+.cad-plu{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.cad-plu-top{padding:12px 14px 11px;background:linear-gradient(135deg,#fff,var(--brand-50))}
+.cad-plu .lbl{font-size:8px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--brand)}
+.cad-plu .z{font-size:28px;font-weight:700;letter-spacing:-.01em;color:#1a1614;line-height:1;margin-top:4px}
+.cad-plu .ty{display:inline-block;margin-top:8px;padding:3px 9px;border-radius:999px;background:var(--brand);color:#fff;font-size:8.5px;font-weight:700;letter-spacing:.05em}
+.cad-plu-desc{padding:10px 14px;font-size:9.5px;color:var(--body);line-height:1.5;border-top:1px solid var(--line2)}
+.cad-plu-na{padding:15px 14px;font-size:10px;color:var(--mute);font-style:italic}
+.cad-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.cad-stat{border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.cad-stat .v{font-size:20px;font-weight:700;color:var(--ink);line-height:1}
+.cad-stat .v.cad-com{font-size:16px}
+.cad-stat .k{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--body);margin-top:6px}
 `;
 
 // ============================ VISUELS PDF (avis de valeur) ============================
@@ -4473,7 +4517,10 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const heroImg = photos[0] ? `<img src="${estimText(photos[0])}" alt="">` : "";
   const tags = [surface ? surface + " m²" : null, pieces ? pieces + " pièces" : null, terrain ? "Terrain " + terrain + " m²" : null].filter(Boolean).map((t) => `<span>${estimText(t)}</span>`).join("");
   const rh = `<div class="rh"><img src="${ESTIM_MARK || LOGO}" alt=""><div class="meta"><div class="t serif">Avis de valeur</div><div class="d">${titre} · ${estimText(ville || "")} · ${docNumber}</div></div></div>`;
-  const rf = (n) => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${n} / ${totalPages}</span></div>`;
+  // Numérotation auto (page 1 = couverture, sans rf) : chaque appel rf() incrémente le compteur,
+  // ce qui gère proprement les pages conditionnelles (cadastre, comparables DVF).
+  let _pg = 1;
+  const rf = () => `<div class="rf"><span>GTI Immobilier · Avis de valeur ${docNumber}</span><span class="pg">Page ${++_pg} / ${totalPages}</span></div>`;
   const initials = (String(nego.nom || "GTI").trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2) || "GTI").toUpperCase();
   const pricePerM2 = (surface && Number(valeurs.estimee)) ? `soit ≈ ${estimEuro(Math.round(Number(valeurs.estimee) / surface))}/m² · net vendeur indicatif` : "net vendeur indicatif";
 
@@ -4513,7 +4560,6 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const mTrend = mEvo.length >= 2 && mEvo[0].prix_m2 ? Math.round(((mEvo[mEvo.length - 1].prix_m2 - mEvo[0].prix_m2) / mEvo[0].prix_m2) * 1000) / 10 : null;
   const mComps = marche && Array.isArray(marche.comparables) ? marche.comparables : [];
   const mCompsList = mComps.slice(0, 10);
-  const totalPages = mCompsList.length ? 9 : 8;
   const mEvoMax = mEvo.length ? Math.max(...mEvo.map((e) => e.prix_m2 || 0)) : 0;
   const dateCourt = (s) => { const p = String(s || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : s; };
   const compRow = (c) => `<div class="comp"><div class="info"><div class="t">${estimText(c.type)} ${c.surface ? c.surface + " m²" : ""}${c.pieces ? " · " + estimText(c.pieces) + " p." : ""}</div><div class="d">${estimText(c.commune)}${c.terrain ? " · terrain " + c.terrain + " m²" : ""} · ${estimText(dateCourt(c.date))} · ${estimText(c.distance_km)} km</div></div><div class="stat"><div class="p tnum">${estimEuro(c.valeur) || "—"}</div><div class="pm tnum">${c.prix_m2 ? estimEuro(c.prix_m2) + "/m²" : ""}</div></div><span class="bdg">Vendu</span></div>`;
@@ -4560,6 +4606,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const cadLon = cad && Number.isFinite(+cad.lon) ? +cad.lon : (cdv && Number.isFinite(+cdv.lon) ? +cdv.lon : null);
   const cadMapUrl = cad && cadLat != null && cadLon != null ? estimCadastreMapUrl(cadLat, cadLon) : null;
   const cadHomeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
+  // Nb de pages (page 1 = couverture) : +1 si comparables DVF, +1 si section cadastre.
+  const totalPages = 8 + (mCompsList.length ? 1 : 0) + (cad ? 1 : 0);
   const lvlColor = (v) => { const s = String(v || "").toLowerCase(); if (/élev|elev|fort/.test(s)) return "#d7191c"; if (/moyen/.test(s)) return "#f3a712"; if (/faible/.test(s)) return "#1f8a5b"; return "var(--mute)"; };
   const cdvRow = (k, v) => `<div class="cdv-row"><span>${estimText(k)}</span><b>${estimText(v)}</b></div>`;
   const cdvLvl = (k, v) => v ? `<div class="cdv-lvl"><div class="k">${k}</div><div class="v" style="color:${lvlColor(v)}">${estimText(v)}</div></div>` : "";
@@ -4611,7 +4659,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="energy2">${estimReglette("dpe", dpe, dpeImg)}${estimReglette("ges", ges, gesImg)}</div>
   <div class="h mt">Descriptif</div>
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
-</div>${rf(2)}</div>
+</div>${rf()}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Composition du bien</div>
   ${estimDonut(detail, pieces, surface)}
@@ -4624,7 +4672,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${equipList ? `<div class="h mt">Équipements &amp; sécurité</div><div class="eqps">${equipList}</div>` : ""}
   ${detail.particularites ? `<div class="h mt">Particularités</div><p style="font-size:11px;color:var(--body);line-height:1.6">${estimEscapeHtml(detail.particularites)}</p>` : ""}`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Caractéristiques détaillées non renseignées dans la fiche du bien.")}</p>`}
-</div>${rf(3)}</div>
+</div>${rf()}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Cadre de vie &amp; localisation${cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : ""}</div>
   ${cdv ? `${estimMapWithPins(cdv)}
@@ -4642,26 +4690,42 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="jgs">${estimJauge("Potentiel radon", cdvRisk.radon)}${estimJauge("Sismicité", cdvRisk.sismicite)}${estimJauge("Retrait-gonflement argiles", cdvRisk.argiles)}</div>` : `<p style="font-size:11px;color:var(--mute)">${todo("Risques à charger par votre conseiller.")}</p>`}
   <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
-  ${cad ? `<div class="h mt">Éléments cadastraux${cadPlu && cadPlu.zone ? ` · PLU ${estimText(cadPlu.zone)}` : ""}</div>
-  ${cadMapUrl ? `<div class="cdv-map"><img src="${estimText(cadMapUrl)}" alt="Plan cadastral"><span class="mp home" style="left:50%;top:50%">${cadHomeSvg}</span></div>` : ""}
-  <div class="cdv-grid">
-    <div class="cdv-card"><div class="ch">Parcelle${cadParcelles.length > 1 ? "s" : ""} cadastrale${cadParcelles.length > 1 ? "s" : ""}</div>
-      ${cadParcelles.length ? cadParcelles.map((p) => cdvRow(estimText(p.reference || "—"), p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—")).join("") : `<div class="cdv-row">${todo("—")}</div>`}
-      ${cadParcelles.length > 1 && cad.contenance_totale ? cdvRow("Contenance totale", Number(cad.contenance_totale).toLocaleString("fr-FR") + " m²") : ""}
+</div>${rf()}</div>
+${cad ? `<div class="page">${rh}<div class="content">
+  <div class="cad-eyebrow">Document parcellaire</div>
+  <div class="h">Éléments cadastraux${cadPlu && cadPlu.zone ? ` · zone PLU ${estimText(cadPlu.zone)}` : ""}</div>
+  <div class="cad-frame">${cadMapUrl
+    ? `<img src="${estimText(cadMapUrl)}" alt="Plan cadastral"><span class="cad-grid"></span><span class="cad-tick tl"></span><span class="cad-tick tr"></span><span class="cad-tick bl"></span><span class="cad-tick br"></span><span class="cad-mk"><span class="halo"></span><span class="cx"></span><span class="cy"></span><span class="dot"></span></span><div class="cad-cap"><span>Fond Plan IGN v2 · parcellaire PCI Express</span><span>Localisation indicative</span></div>`
+    : `<div class="cad-empty">${todo("Plan indisponible — coordonnées du bien manquantes.")}</div>`}</div>
+  <div class="cad-split">
+    <div>
+      <div class="cad-sh">Références cadastrales</div>
+      <table class="cad-tbl"><thead><tr><th>Parcelle</th><th>Commune</th><th class="num">Contenance</th></tr></thead><tbody>${cadParcelles.length
+        ? cadParcelles.map((p) => `<tr><td class="ref">${estimText(p.reference || "—")}</td><td>${estimText(p.commune || (cdv && cdv.commune) || "—")}</td><td class="num">${p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—"}</td></tr>`).join("")
+        : `<tr><td colspan="3" class="cad-muted">${todo("Aucune parcelle")}</td></tr>`}</tbody></table>
+      ${cad.contenance_totale ? `<div class="cad-tot"><span>Contenance ${cadParcelles.length > 1 ? "totale" : "cadastrale"}</span><b class="tnum">${Number(cad.contenance_totale).toLocaleString("fr-FR")} m²</b></div>` : ""}
     </div>
-    <div class="cdv-card"><div class="ch">Urbanisme</div>
-      ${cadPlu ? cdvRow("Zone PLU", estimText(cadPlu.zone || "—")) + (cadPlu.type ? cdvRow("Type de zone", estimText(cadPlu.type)) : "") + (cadPlu.libelle ? cdvRow("Libellé", estimText(cadPlu.libelle)) : "") : `<div class="cdv-row">${todo("Zonage PLU non disponible sur ce secteur")}</div>`}
+    <div>
+      <div class="cad-sh">Urbanisme</div>
+      <div class="cad-plu">${cadPlu
+        ? `<div class="cad-plu-top"><div class="lbl">Zone PLU</div><div class="z serif">${estimText(cadPlu.zone || "—")}</div>${cadPlu.type ? `<span class="ty">Type ${estimText(cadPlu.type)}</span>` : ""}</div>${cadPlu.libelle ? `<div class="cad-plu-desc">${estimText(cadPlu.libelle)}</div>` : ""}`
+        : `<div class="cad-plu-na">${todo("Zonage PLU non disponible sur ce secteur")}</div>`}</div>
     </div>
   </div>
-  <div class="disc" style="margin-top:12px"><b>Sources.</b> Parcellaire IGN (PCI Express) · zonage Géoportail de l'Urbanisme. Références à titre informatif ; le titre de propriété et le document d'arpentage font foi. Identité du propriétaire non communiquée (donnée nominative).</div>` : ""}
-</div>${rf(4)}</div>
+  <div class="cad-stats">
+    <div class="cad-stat"><div class="v serif">${cadParcelles.length || "—"}</div><div class="k">Parcelle${cadParcelles.length > 1 ? "s" : ""}</div></div>
+    <div class="cad-stat"><div class="v serif">${cad.contenance_totale ? Number(cad.contenance_totale).toLocaleString("fr-FR") : "—"}</div><div class="k">Contenance · m²</div></div>
+    <div class="cad-stat"><div class="v serif cad-com">${estimText((cadParcelles[0] && cadParcelles[0].commune) || (cdv && cdv.commune) || "—")}</div><div class="k">Commune</div></div>
+  </div>
+  <div class="disc" style="margin-top:16px"><b>Sources.</b> Parcellaire IGN (PCI Express) · fond Plan IGN v2 · zonage Géoportail de l'Urbanisme. Références à titre informatif ; le titre de propriété et le document d'arpentage font foi. L'identité du propriétaire n'est pas communiquée (donnée nominative).</div>
+</div>${rf()}</div>` : ""}
 <div class="page">${rh}<div class="content">
   <div class="h">Profil de la commune${inseeProfil && inseeProfil.commune ? ` · ${estimText(inseeProfil.commune)}` : (cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : "")}</div>
   ${inseeProfil ? `<div class="cm-h">Population</div>${estimPopChart(inseeProfil)}
   <div class="cm-h" style="margin-top:22px">Revenu des ménages</div>${estimRevenuChart(inseeProfil)}
   <div class="disc" style="margin-top:18px"><b>Source.</b> INSEE — recensements de la population (séries historiques) et dispositif FiLoSoFi (niveau de vie médian annuel). Données communales à titre informatif.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Profil INSEE de la commune à charger (population, revenu médian) — via le bouton « Charger le cadre de vie ».")}</p>`}
-</div>${rf(5)}</div>
+</div>${rf()}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">État du logement &amp; prestations</div>
   <div class="etat-top">
@@ -4692,7 +4756,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
       ${detail.charges ? chargeRow("Charges copro.", detail.charges) : ""}
     </div>
   </div>
-</div>${rf(6)}</div>
+</div>${rf()}</div>
 <div class="page">${rh}<div class="content">
   <div class="h">Valeur vénale estimée</div>
   <div class="val"><div class="grid">
@@ -4714,13 +4778,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
   ${mCompsList.length ? `<div class="disc"><b>Comparables DVF.</b> ${mCompsList.length} ventes retenues sont listées page suivante${mComps.length > mCompsList.length ? ` (sur ${mComps.length} ventes reçues du moteur).` : "."}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±25 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
-</div>${rf(7)}</div>
+</div>${rf()}</div>
 ${mCompsList.length ? `<div class="page">${rh}<div class="content">
   <div class="h">Biens comparables DVF vendus</div>
   <p class="dvf-sub">Liste compacte des ${mCompsList.length} ventes comparables retenues pour documenter le prix au m² et la fourchette de valeur.</p>
   <div class="dvf-table"><div class="dvf-head"><span>Bien</span><span>Date</span><span>Surface</span><span>Prix</span><span>Prix/m²</span><span>Dist.</span></div>${mCompsList.map(compTableRow).join("")}</div>
   <div class="disc"><b>Source.</b> Demandes de Valeurs Foncières (DVF, open data publique)${marche ? ` · ${mCount} ventes ${estimText(marche.type)} analysées dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}` : ""}. Affichage : ${mCompsList.length} ventes listées dans le document.</div>
-</div>${rf(8)}</div>` : ""}
+</div>${rf()}</div>` : ""}
 <div class="page">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
@@ -4740,7 +4804,7 @@ ${mCompsList.length ? `<div class="page">${rh}<div class="content">
   </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
-</div>${rf(totalPages)}</div>
+</div>${rf()}</div>
 </body></html>`;
 }
 

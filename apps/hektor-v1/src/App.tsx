@@ -8365,6 +8365,11 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
           {thumbUrl ? (
             <figure className="cadastre-plan">
               <img src={thumbUrl} alt="Plan cadastral du bien" loading="lazy" />
+              <span className="cadastre-plan-grid" aria-hidden="true" />
+              <span className="cadastre-plan-corner tl" aria-hidden="true" />
+              <span className="cadastre-plan-corner tr" aria-hidden="true" />
+              <span className="cadastre-plan-corner bl" aria-hidden="true" />
+              <span className="cadastre-plan-corner br" aria-hidden="true" />
               <span className="cadastre-plan-mark" aria-hidden="true" />
               <figcaption>Fond IGN · parcellaire PCI Express</figcaption>
             </figure>
