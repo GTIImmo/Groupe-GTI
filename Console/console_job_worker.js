@@ -4543,6 +4543,13 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const chargeRow = (k, v) => { const e = estimEuro(v); return `<div class="diag-row"><span class="k">${k}</span><span class="v ${e ? "" : "na"}">${e ? e + "/an" : todo("à compléter")}</span></div>`; };
   const dpe = String((bien.dpe || etat.dpe) || "").trim().toUpperCase();
   const ges = String((bien.ges || etat.ges) || "").trim().toUpperCase();
+  // Sources « bâti/bien » mémorisées dans l'onglet Estimation (BDNB + DPE réel ADEME),
+  // injectées server-side par handleGenerateEstimationPdf (lues depuis app_dossier_estimation).
+  const bdnb = payload.bdnb && (payload.bdnb.annee_construction != null || payload.bdnb.type_batiment || payload.bdnb.mat_mur || payload.bdnb.classe_dpe) ? payload.bdnb : null;
+  const dpeReal = payload.dpe && payload.dpe.etiquette_dpe ? payload.dpe : null;
+  // À défaut de DPE saisi par le négociateur, on affiche le DPE RÉEL de l'ADEME dans la réglette.
+  const dpeEff = dpe || (dpeReal ? String(dpeReal.etiquette_dpe).trim().toUpperCase() : "");
+  const gesEff = ges || (dpeReal ? String(dpeReal.etiquette_ges || "").trim().toUpperCase() : "");
   const dpeColors = { A: "#2a9d3f", B: "#57b03a", C: "#a0cf3a", D: "#f5d800", E: "#f3a712", F: "#ec6c1f", G: "#d7191c" };
   const validite = String(payload.validite || "3 mois").trim();
   const methode = String(payload.methode || "").trim() || "Estimation par comparaison directe avec les transactions récentes du secteur, ajustées selon les caractéristiques du bien (surface, terrain, état, performance énergétique).";
@@ -4630,7 +4637,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="c-title serif">Avis de valeur</div>
     <div class="c-bien serif">${titre}</div>
     <div class="c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${estimText(localite || "—")}</div>
-    <div class="c-tags">${[tags, dpe ? `<span>DPE ${dpe}</span>` : ""].filter(Boolean).join("") || '<span class="todo">Caractéristiques à compléter</span>'}</div>
+    <div class="c-tags">${[tags, dpeEff ? `<span>DPE ${dpeEff}</span>` : ""].filter(Boolean).join("") || '<span class="todo">Caractéristiques à compléter</span>'}</div>
   </div>
   <div class="c-info"><div class="c-info-row">
     <div class="c-info-cell"><span class="l">Établi pour</span><span class="v">${proprio}</span></div>
@@ -4655,8 +4662,21 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     ${detail.copropriete ? cellSpec("Copropriété", estimText(detail.copropriete) + (detail.coproprieteNbLots ? ` · ${detail.coproprieteNbLots} lots` : ""), true) : ""}
     ${cellSpec("Localité", estimText(localite), !!localite)}
   </div>
+  ${bdnb ? `<div class="h mt">Données bâtiment · BDNB</div>
+  <div class="specs">
+    ${bdnb.annee_construction != null ? cellSpec("Année constr.", estimText(bdnb.annee_construction), true) : ""}
+    ${bdnb.type_batiment ? cellSpec("Type (BDNB)", estimText(bdnb.type_batiment), true) : ""}
+    ${bdnb.mat_mur ? cellSpec("Murs", estimText(bdnb.mat_mur), true) : ""}
+    ${bdnb.mat_toit ? cellSpec("Toiture", estimText(bdnb.mat_toit), true) : ""}
+    ${bdnb.nb_niveau != null ? cellSpec("Niveaux", estimText(bdnb.nb_niveau), true) : ""}
+    ${bdnb.nb_logements != null ? cellSpec("Logements", estimText(bdnb.nb_logements), true) : ""}
+    ${bdnb.classe_dpe ? cellSpec("DPE théorique", estimText(bdnb.classe_dpe), true) : ""}
+    ${bdnb.alea_argile ? cellSpec("Aléa argile", estimText(bdnb.alea_argile), true) : ""}
+  </div>
+  <p style="font-size:10px;color:var(--mute);margin-top:4px">Source : Base de Données Nationale des Bâtiments (BDNB / CSTB).</p>` : ""}
   <div class="h mt">Performance énergétique</div>
-  <div class="energy2">${estimReglette("dpe", dpe, dpeImg)}${estimReglette("ges", ges, gesImg)}</div>
+  <div class="energy2">${estimReglette("dpe", dpeEff, dpeImg)}${estimReglette("ges", gesEff, gesImg)}</div>
+  ${dpeReal ? `<p style="font-size:10.5px;color:var(--mute);margin-top:6px">DPE réel enregistré à l'ADEME${dpeReal.date ? " le " + estimText(dateCourt(dpeReal.date)) : ""}${dpeReal.surface ? " · " + estimText(dpeReal.surface) + " m²" : ""}${dpeReal.adresse ? " · " + estimText(dpeReal.adresse) : ""} — à titre indicatif.</p>` : ""}
   <div class="h mt">Descriptif</div>
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
 </div>${rf()}</div>
@@ -4744,7 +4764,7 @@ ${cad ? `<div class="page">${rh}<div class="content">
   <div class="h" style="margin-top:22px">Diagnostics &amp; charges</div>
   <div class="diag-grid">
     <div class="diag"><div class="diag-h">Diagnostics obligatoires</div>
-      <div class="diag-row"><span class="k">DPE &amp; GES</span><span class="v ${dpe ? "ok" : "na"}">${dpe ? "Réalisé · " + dpe + (ges ? " / " + ges : "") : "À actualiser"}</span></div>
+      <div class="diag-row"><span class="k">DPE &amp; GES</span><span class="v ${dpeEff ? "ok" : "na"}">${dpeEff ? "Réalisé · " + dpeEff + (gesEff ? " / " + gesEff : "") : "À actualiser"}</span></div>
       ${diagOtherLines}
     </div>
     <div class="diag"><div class="diag-h">Charges annuelles estimées</div>
@@ -4987,6 +5007,19 @@ async function handleGenerateEstimationPdf(job) {
   });
 
   const detail = await loadEstimationDetail(dossier.app_dossier_id || job.app_dossier_id);
+  // Sources « bâti/bien » mémorisées dans l'onglet Estimation (BDNB + DPE réel) : générées
+  // hors éditeur -> on les LIT ici pour enrichir la page « Bien » du PDF (si non déjà au payload).
+  if (dossier.app_dossier_id != null && !(payload.bdnb && payload.dpe)) {
+    try {
+      const rows = await supabaseRequest(
+        "app_dossier_estimation?app_dossier_id=eq." + dossier.app_dossier_id + "&select=sources", { method: "GET" });
+      const src = Array.isArray(rows) && rows[0] ? rows[0].sources : null;
+      if (src) {
+        if (!payload.bdnb && src.bdnb && src.bdnb.data) payload.bdnb = src.bdnb.data;
+        if (!payload.dpe && src.dpe && src.dpe.data) payload.dpe = src.dpe.data;
+      }
+    } catch (_) { /* table absente / best-effort */ }
+  }
   // Commodités : (re)calculées côté worker (IP fiable). Le proxy front/Render peut
   // échouer (Overpass bloque souvent les datacenters) -> on garantit la donnée ici.
   if (payload.cadreDeVie && payload.cadreDeVie.ok) {
