@@ -2701,6 +2701,49 @@ export type DpeData = {
   surface?: number | null
 }
 
+// Potentiel locatif : loyer €/m² + zonage ABC de la commune (table app_commune_loyers pré-chargée).
+// INSEE résolu depuis lat/lon via geo.api.gouv, puis lecture Supabase par INSEE.
+export type LoyerData = {
+  ok: boolean
+  found?: boolean
+  insee?: string | null
+  commune?: string | null
+  loyer_maison?: number | null    // €/m²/mois (charges comprises)
+  loyer_appart?: number | null
+  zone_abc?: string | null        // Abis / A / B1 / B2 / C
+  millesime?: number | null
+}
+export async function loadCommuneLoyer(input: { lat: number; lon: number }): Promise<LoyerData> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  if (!hasSupabaseEnv || !supabase) return { ok: false }
+  try {
+    const geo = await fetch(`https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=code,nom&format=json`).then((r) => (r.ok ? r.json() : null))
+    const insee = Array.isArray(geo) && geo[0]?.code ? String(geo[0].code) : null
+    if (!insee) return { ok: false }
+    const { data } = await supabase
+      .from('app_commune_loyers')
+      .select('insee,libgeo,loyer_maison,loyer_appart,zone_abc,millesime')
+      .eq('insee', insee)
+      .maybeSingle()
+    if (!data) return { ok: false, insee }
+    const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && v != null && v !== '' ? n : null }
+    const lm = num(data.loyer_maison), la = num(data.loyer_appart)
+    return {
+      ok: lm != null || la != null || !!data.zone_abc,
+      found: true,
+      insee,
+      commune: data.libgeo ?? (Array.isArray(geo) ? geo[0]?.nom : null) ?? null,
+      loyer_maison: lm,
+      loyer_appart: la,
+      zone_abc: data.zone_abc ?? null,
+      millesime: data.millesime ?? null,
+    }
+  } catch {
+    return { ok: false }
+  }
+}
+
 // Patrimoine / ABF : servitudes AC1/AC2/AC4 sous le point (GPU) — le bien est-il en périmètre protégé ?
 export type PatrimoineData = {
   ok: boolean
