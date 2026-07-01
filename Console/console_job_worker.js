@@ -4609,6 +4609,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const cad = payload.cadastre && payload.cadastre.ok ? payload.cadastre : null;
   const cadParcelles = cad && Array.isArray(cad.parcelles) ? cad.parcelles : [];
   const cadPlu = cad && cad.plu ? cad.plu : null;
+  // Patrimoine / ABF (payload.patrimoine, lu server-side depuis les sources mémorisées).
+  const patri = payload.patrimoine && (payload.patrimoine.abf || (Array.isArray(payload.patrimoine.items) && payload.patrimoine.items.length)) ? payload.patrimoine : null;
   const cadLat = cad && Number.isFinite(+cad.lat) ? +cad.lat : (cdv && Number.isFinite(+cdv.lat) ? +cdv.lat : null);
   const cadLon = cad && Number.isFinite(+cad.lon) ? +cad.lon : (cdv && Number.isFinite(+cdv.lon) ? +cdv.lon : null);
   const cadMapUrl = cad && cadLat != null && cadLon != null ? estimCadastreMapUrl(cadLat, cadLon) : null;
@@ -4730,6 +4732,11 @@ ${cad ? `<div class="page">${rh}<div class="content">
       <div class="cad-plu">${cadPlu
         ? `<div class="cad-plu-top"><div class="lbl">Zone PLU</div><div class="z serif">${estimText(cadPlu.zone || "—")}</div>${cadPlu.type ? `<span class="ty">Type ${estimText(cadPlu.type)}</span>` : ""}</div>${cadPlu.libelle ? `<div class="cad-plu-desc">${estimText(cadPlu.libelle)}</div>` : ""}`
         : `<div class="cad-plu-na">${todo("Zonage PLU non disponible sur ce secteur")}</div>`}</div>
+      ${patri ? `<div style="margin-top:10px;border-top:1px solid #ece7df;padding-top:8px">
+        <div style="font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#9a8f7d;margin-bottom:5px">Patrimoine · ABF</div>
+        ${patri.abf ? `<div style="font-size:10px;color:#9a3412;background:#fdf1e7;border:1px solid #f6d5b8;border-radius:6px;padding:5px 8px;margin-bottom:5px;line-height:1.4">Périmètre de protection — travaux soumis à l'avis de l'Architecte des Bâtiments de France.</div>` : ""}
+        ${(patri.items || []).slice(0, 5).map((it) => `<div style="font-size:10px;color:#4a4a4a;margin-top:2px"><b>${estimText(it.type_label || "—")}</b>${it.nom ? " · " + estimText(it.nom) : ""}</div>`).join("")}
+      </div>` : ""}
     </div>
   </div>
   <div class="cad-stats">
@@ -5009,7 +5016,7 @@ async function handleGenerateEstimationPdf(job) {
   const detail = await loadEstimationDetail(dossier.app_dossier_id || job.app_dossier_id);
   // Sources « bâti/bien » mémorisées dans l'onglet Estimation (BDNB + DPE réel) : générées
   // hors éditeur -> on les LIT ici pour enrichir la page « Bien » du PDF (si non déjà au payload).
-  if (dossier.app_dossier_id != null && !(payload.bdnb && payload.dpe)) {
+  if (dossier.app_dossier_id != null && !(payload.bdnb && payload.dpe && payload.patrimoine)) {
     try {
       const rows = await supabaseRequest(
         "app_dossier_estimation?app_dossier_id=eq." + dossier.app_dossier_id + "&select=sources", { method: "GET" });
@@ -5017,6 +5024,7 @@ async function handleGenerateEstimationPdf(job) {
       if (src) {
         if (!payload.bdnb && src.bdnb && src.bdnb.data) payload.bdnb = src.bdnb.data;
         if (!payload.dpe && src.dpe && src.dpe.data) payload.dpe = src.dpe.data;
+        if (!payload.patrimoine && src.patrimoine && src.patrimoine.data) payload.patrimoine = src.patrimoine.data;
       }
     } catch (_) { /* table absente / best-effort */ }
   }
