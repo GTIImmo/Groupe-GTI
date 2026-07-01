@@ -31268,16 +31268,25 @@ body {
   min-height: 168px;
   object-fit: cover;
 }
-.detail-cadastre-section .cadastre-plan::before,
-.detail-cadastre-section .cadastre-plan::after {
-  content: "";
+.detail-cadastre-section .cadastre-plan-grid {
   position: absolute;
-  width: 16px; height: 16px;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(28,20,24,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28,20,24,0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+.detail-cadastre-section .cadastre-plan-corner {
+  position: absolute;
+  width: 15px; height: 15px;
   border: 2px solid var(--ds-brand-500, #c5005f);
   pointer-events: none;
 }
-.detail-cadastre-section .cadastre-plan::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
-.detail-cadastre-section .cadastre-plan::after { bottom: 30px; right: 10px; border-left: 0; border-top: 0; }
+.detail-cadastre-section .cadastre-plan-corner.tl { top: 9px; left: 9px; border-right: 0; border-bottom: 0; }
+.detail-cadastre-section .cadastre-plan-corner.tr { top: 9px; right: 9px; border-left: 0; border-bottom: 0; }
+.detail-cadastre-section .cadastre-plan-corner.bl { bottom: 30px; left: 9px; border-right: 0; border-top: 0; }
+.detail-cadastre-section .cadastre-plan-corner.br { bottom: 30px; right: 9px; border-left: 0; border-top: 0; }
 .detail-cadastre-section .cadastre-plan-mark {
   position: absolute;
   top: 50%; left: 50%;
