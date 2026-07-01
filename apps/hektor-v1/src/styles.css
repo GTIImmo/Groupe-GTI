@@ -31376,6 +31376,94 @@ body {
 .detail-cadastre-section .cadastre-msg { margin-top: 4px; font-size: 12px; }
 
 /* ============================================================
+   Onglet Estimation — CTA d'ouverture de l'éditeur + consultation
+   des données mémorisées (app_dossier_estimation). Scopé .estim-*.
+   Additif ; réutilise la charte (brand magenta, ink vars).
+   ============================================================ */
+.estim-open-cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+}
+.estim-open-hint {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ds-ink-mute, #5c6163);
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+.detail-estimation-data { display: flex; flex-direction: column; gap: 14px; }
+.detail-estimation-data .section-header-note {
+  font-size: 11.5px;
+  color: var(--ds-ink-mute, #5c6163);
+  font-variant-numeric: tabular-nums;
+}
+.estim-data-block {
+  border: 1px solid var(--ds-line, #e7e3dc);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--ds-surface, #fff);
+}
+.estim-data-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.estim-data-t {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ds-ink, #1c1c1c);
+}
+.estim-data-badge {
+  font-size: 11px;
+  color: var(--ds-brand-500, #c5005f);
+  background: color-mix(in srgb, var(--ds-brand-500, #c5005f) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-brand-500, #c5005f) 20%, transparent);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.estim-data-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 16px;
+}
+@media (max-width: 720px) { .estim-data-grid { grid-template-columns: repeat(2, 1fr); } }
+.estim-dg { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.estim-dg .edk {
+  font-size: 10.5px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--ds-ink-mute, #5c6163);
+}
+.estim-dg .edv {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ds-ink, #1c1c1c);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.estim-dg .edv-accent { color: var(--ds-brand-500, #c5005f); }
+.estim-data-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.estim-data-tag {
+  font-size: 11px;
+  color: var(--ds-ink-mute, #5c6163);
+  background: var(--ds-surface-soft, #f5f2ec);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+/* Section Estimation mobile : bouton d'ouverture + consultation empilés. */
+.mobile-estim-body { display: flex; flex-direction: column; gap: 12px; }
+.mobile-estim-body .detail-estimation-data { gap: 12px; }
+
+/* ============================================================
    Sélecteur de parcelles cadastrales (modal) + lien « Ajuster »
    Ergonomie : une carte par parcelle voisine (plan IGN + contenance + distance),
    multi-sélection, total. Scopé .cadastre-picker / .cpk-*. Additif.
