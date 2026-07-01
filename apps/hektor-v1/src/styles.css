@@ -31644,6 +31644,16 @@ body {
 .ev3-card-cadastre { padding: 0; overflow: hidden; }
 .ev3-card-cadastre .detail-cadastre-section { border: none; margin: 0; padding: 14px 16px; background: transparent; }
 
+/* Modale éditeur d'avis de valeur : bouton « tout générer » + sous-titres de section. */
+.estim-editor-genall {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--ds-border, #ece7e9);
+}
+.estim-editor-genall-hint { font-size: 12px; line-height: 1.45; color: var(--ds-ink-mute, #5c6163); flex: 1 1 220px; min-width: 180px; }
+.estim-editor-subhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.estim-editor-subhead-t { font-size: 13px; font-weight: 600; color: var(--ds-ink, #1c1c1c); }
+.estim-editor-subhead-msg { font-size: 12px; color: var(--ds-ink-mute, #5c6163); }
+
 /* ============================================================
    Sélecteur de parcelles cadastrales (modal) + lien « Ajuster »
    Ergonomie : une carte par parcelle voisine (plan IGN + contenance + distance),
