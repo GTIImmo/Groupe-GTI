@@ -4611,6 +4611,15 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const cadPlu = cad && cad.plu ? cad.plu : null;
   // Patrimoine / ABF (payload.patrimoine, lu server-side depuis les sources mémorisées).
   const patri = payload.patrimoine && (payload.patrimoine.abf || (Array.isArray(payload.patrimoine.items) && payload.patrimoine.items.length)) ? payload.patrimoine : null;
+  // Potentiel locatif (payload.loyers) : loyer €/m² selon le type, loyer mensuel, rendement brut.
+  const loyer = payload.loyers && (payload.loyers.loyer_maison != null || payload.loyers.loyer_appart != null || payload.loyers.zone_abc) ? payload.loyers : null;
+  const loyerIsMaison = /maison|villa|chalet|ferme|propri|mas\b|demeure/i.test(String(type || ""));
+  const loyerM2 = loyer ? (loyerIsMaison ? (loyer.loyer_maison != null ? loyer.loyer_maison : loyer.loyer_appart) : (loyer.loyer_appart != null ? loyer.loyer_appart : loyer.loyer_maison)) : null;
+  const loyerSurfNum = Number(surface) || null;
+  const loyerMensuel = (loyerM2 != null && loyerSurfNum) ? Math.round(loyerM2 * loyerSurfNum) : null;
+  const loyerPrixNum = Number(String((dossier && dossier.prix) || "").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
+  const loyerRdt = (loyerMensuel && loyerPrixNum) ? Math.round((loyerMensuel * 12 / loyerPrixNum) * 1000) / 10 : null;
+  const loyerTendue = loyer && loyer.zone_abc ? /^(Abis|A|B1)$/i.test(String(loyer.zone_abc)) : false;
   const cadLat = cad && Number.isFinite(+cad.lat) ? +cad.lat : (cdv && Number.isFinite(+cdv.lat) ? +cdv.lat : null);
   const cadLon = cad && Number.isFinite(+cad.lon) ? +cad.lon : (cdv && Number.isFinite(+cdv.lon) ? +cdv.lon : null);
   const cadMapUrl = cad && cadLat != null && cadLon != null ? estimCadastreMapUrl(cadLat, cadLon) : null;
@@ -4803,6 +4812,13 @@ ${cad ? `<div class="page">${rh}<div class="content">
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><rect x="7" y="10" width="3" height="8"></rect><rect x="14" y="6" width="3" height="12"></rect></svg></span><div class="v tnum">${mCount != null ? mCount : todo("—")}</div><div class="l">Comparables${mRadius != null ? " · " + mRadius + " km" : ""}</div></div>
   </div>${marche && !mFiable ? `<p style="font-size:10px;color:#9a3412;margin-top:6px">Échantillon limité (${mCount} comparables) — valeurs de marché à confirmer par votre conseiller.</p>` : ""}
   ${mEvo.length ? `<div class="chart"><div class="ch"><div class="t">Évolution du prix au m² · secteur</div><div class="s">${mEvo[0].annee} → ${mEvo[mEvo.length - 1].annee}</div></div><div class="bars">${evoBars}</div></div>` : ""}
+  ${loyer ? `<div class="h mt">Potentiel locatif${loyer.commune ? ` · ${estimText(loyer.commune)}` : ""}</div>
+  <div class="stats">
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 6V4M16 6V4"></path></svg></span><div class="v tnum">${loyerMensuel != null ? estimEuro(loyerMensuel) + "<small>/mois</small>" : (loyerM2 != null ? estimEuro(loyerM2) + "<small>/m²</small>" : todo("—"))}</div><div class="l">Loyer estimé${(loyerM2 != null && loyerMensuel != null) ? " · " + estimEuro(loyerM2) + "/m²" : ""}</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span><div class="v tnum">${loyerRdt != null ? loyerRdt + " %" : todo("—")}</div><div class="l">Rendement brut</div></div>
+    <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"></path><path d="M9 21v-6h6v6"></path></svg></span><div class="v tnum">${loyer.zone_abc ? estimText(loyer.zone_abc) : todo("—")}</div><div class="l">Zone ABC${loyer.zone_abc ? (loyerTendue ? " · tendue" : " · détendue") : ""}</div></div>
+  </div>
+  <p style="font-size:10px;color:var(--mute);margin-top:6px">Loyer d'annonce médian (ANIL${loyer.millesime ? " " + estimText(loyer.millesime) : ""}) pour ${loyerIsMaison ? "une maison" : "un appartement"}. Rendement brut = loyer annuel estimé / prix affiché ; hors charges, vacance et fiscalité. À titre indicatif.</p>` : ""}
   ${mCompsList.length ? `<div class="disc"><b>Comparables DVF.</b> ${mCompsList.length} ventes retenues sont listées page suivante${mComps.length > mCompsList.length ? ` (sur ${mComps.length} ventes reçues du moteur).` : "."}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±20 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
 </div>${rf()}</div>
@@ -5016,7 +5032,7 @@ async function handleGenerateEstimationPdf(job) {
   const detail = await loadEstimationDetail(dossier.app_dossier_id || job.app_dossier_id);
   // Sources « bâti/bien » mémorisées dans l'onglet Estimation (BDNB + DPE réel) : générées
   // hors éditeur -> on les LIT ici pour enrichir la page « Bien » du PDF (si non déjà au payload).
-  if (dossier.app_dossier_id != null && !(payload.bdnb && payload.dpe && payload.patrimoine)) {
+  if (dossier.app_dossier_id != null && !(payload.bdnb && payload.dpe && payload.patrimoine && payload.loyers)) {
     try {
       const rows = await supabaseRequest(
         "app_dossier_estimation?app_dossier_id=eq." + dossier.app_dossier_id + "&select=sources", { method: "GET" });
@@ -5025,6 +5041,7 @@ async function handleGenerateEstimationPdf(job) {
         if (!payload.bdnb && src.bdnb && src.bdnb.data) payload.bdnb = src.bdnb.data;
         if (!payload.dpe && src.dpe && src.dpe.data) payload.dpe = src.dpe.data;
         if (!payload.patrimoine && src.patrimoine && src.patrimoine.data) payload.patrimoine = src.patrimoine.data;
+        if (!payload.loyers && src.loyers && src.loyers.data) payload.loyers = src.loyers.data;
       }
     } catch (_) { /* table absente / best-effort */ }
   }
