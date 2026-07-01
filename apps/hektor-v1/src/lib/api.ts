@@ -2609,6 +2609,41 @@ export async function loadDossierCadastre(appDossierId: number | null | undefine
   }
 }
 
+// Snapshot d'estimation persisté par dossier (mémorisé au moment de « Générer le PDF » de l'avis
+// de valeur). Conteneur `sources` EXTENSIBLE : une clé par source de données, chacune
+// { ok, data, fetched_at }. Clés de départ : dvf / cadre / cadastre ; à venir : bdnb / dpe / rnb…
+// Miroir de loadDossierCadastre — best-effort (null si table absente).
+export type EstimationSourceEntry<T = unknown> = { ok?: boolean; data?: T; fetched_at?: string | null }
+export type EstimationSources = {
+  dvf?: EstimationSourceEntry<DvfComparablesResult>
+  cadre?: EstimationSourceEntry<CadreDeVie>
+  cadastre?: EstimationSourceEntry<CadastreData>
+  [key: string]: EstimationSourceEntry | undefined
+}
+export type DossierEstimation = {
+  valeurs: { basse?: number | null; estimee?: number | null; haute?: number | null } | null
+  sources: EstimationSources
+  updatedAt: string | null
+}
+export async function loadDossierEstimation(appDossierId: number | null | undefined): Promise<DossierEstimation | null> {
+  if (appDossierId == null || !hasSupabaseEnv || !supabase) return null
+  try {
+    const { data } = await supabase
+      .from('app_dossier_estimation')
+      .select('valeurs,sources,updated_at')
+      .eq('app_dossier_id', appDossierId)
+      .maybeSingle()
+    if (!data) return null
+    return {
+      valeurs: (data.valeurs ?? null) as DossierEstimation['valeurs'],
+      sources: (data.sources ?? {}) as EstimationSources,
+      updatedAt: data.updated_at ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
 const CDV_POLES: Array<{ nom: string; lat: number; lon: number }> = [
   { nom: 'Saint-Étienne', lat: 45.4397, lon: 4.3872 },
   { nom: 'Le Puy-en-Velay', lat: 45.0430, lon: 3.8850 },

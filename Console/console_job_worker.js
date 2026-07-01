@@ -5072,6 +5072,31 @@ async function handleGenerateEstimationPdf(job) {
   });
   const uploadJob = Array.isArray(rows) ? rows[0] : null;
 
+  // Persiste le SNAPSHOT d'estimation par dossier (re-consultation instant sans recalcul).
+  // Conteneur `sources` extensible : une cle par source (dvf/cadre/cadastre, puis bdnb/dpe/rnb…),
+  // chacune { ok, data, fetched_at }. On n'ecrit que les sources presentes dans le payload enrichi
+  // (l'editeur les genere ensemble). Best-effort : si la table n'existe pas encore, on n'echoue pas.
+  if (dossier.app_dossier_id != null) {
+    try {
+      const nowIso = new Date().toISOString();
+      const sources = {};
+      if (payload.marche) sources.dvf = { ok: payload.marche.ok !== false, data: payload.marche, fetched_at: nowIso };
+      if (payload.cadreDeVie) sources.cadre = { ok: payload.cadreDeVie.ok !== false, data: payload.cadreDeVie, fetched_at: nowIso };
+      if (payload.cadastre) sources.cadastre = { ok: payload.cadastre.ok !== false, data: payload.cadastre, fetched_at: nowIso };
+      await supabaseRequest("app_dossier_estimation?on_conflict=app_dossier_id", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=minimal",
+        body: JSON.stringify([{
+          app_dossier_id: dossier.app_dossier_id,
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          valeurs: payload.valeurs || null,
+          sources,
+          updated_at: nowIso,
+        }]),
+      });
+    } catch (_) { /* table absente / RLS : non bloquant */ }
+  }
+
   await logJob(job.id, "estimation_pdf", "done", "Avis de valeur genere, upload Hektor en file", {
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     pdf_bytes: pdfBuffer.length,

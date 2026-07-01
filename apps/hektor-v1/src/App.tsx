@@ -71,6 +71,7 @@ import {
   loadCadreDeVie,
   loadCadastre,
   loadDossierCadastre,
+  loadDossierEstimation,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
@@ -139,7 +140,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult } from './lib/api'
+import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -7787,11 +7788,12 @@ type DetailIconKey = 'summary' | 'commercial' | 'mandate' | 'diffusion' | 'conte
 const detailTabs: Array<{ key: DetailTabKey; label: string; short: string; icon: DetailIconKey }> = [
   { key: 'summary', label: 'Synthèse', short: '01', icon: 'summary' },
   { key: 'commercial', label: 'Commercialisation', short: '02', icon: 'commercial' },
-  { key: 'mandate', label: 'Mandat & contacts', short: '03', icon: 'mandate' },
-  { key: 'diffusion', label: 'Diffusion', short: '04', icon: 'diffusion' },
-  { key: 'content', label: 'Contenu annonce', short: '05', icon: 'content' },
-  { key: 'history', label: 'Historique', short: '06', icon: 'history' },
-  { key: 'reporting', label: 'Reporting', short: '07', icon: 'commercial' },
+  { key: 'estimation', label: 'Estimation', short: '03', icon: 'priority' },
+  { key: 'mandate', label: 'Mandat & contacts', short: '04', icon: 'mandate' },
+  { key: 'diffusion', label: 'Diffusion', short: '05', icon: 'diffusion' },
+  { key: 'content', label: 'Contenu annonce', short: '06', icon: 'content' },
+  { key: 'history', label: 'Historique', short: '07', icon: 'history' },
+  { key: 'reporting', label: 'Reporting', short: '08', icon: 'commercial' },
 ]
 
 // Onglets de l'état ESTIMATION : pas de Commercialisation ni Diffusion (avant mandat),
@@ -8426,6 +8428,76 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
           onCancel={() => { setPicker(null); setMessage(null) }}
         />
       ) : null}
+    </article>
+  )
+}
+
+// Consultation des données d'estimation MÉMORISÉES par dossier (générées via « Générer le PDF »
+// de l'avis de valeur). Lit app_dossier_estimation (conteneur `sources` extensible) et rend un bloc
+// par source présente : DVF (marché), cadre de vie, puis les sources ajoutées ; + le bloc Cadastre
+// (déplacé de Commercialisation). refreshKey force le rechargement après une génération.
+function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { dossier: Dossier; detail: DossierDetailPayload; refreshKey?: number; onJobCreated?: (job: ConsoleJob) => void }) {
+  const [estim, setEstim] = useState<DossierEstimation | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    setLoaded(false)
+    loadDossierEstimation(dossier.app_dossier_id)
+      .then((row) => { if (!cancelled) { setEstim(row); setLoaded(true) } })
+      .catch(() => { if (!cancelled) setLoaded(true) })
+    return () => { cancelled = true }
+  }, [dossier.app_dossier_id, refreshKey])
+
+  const dvf = estim?.sources?.dvf?.data as DvfComparablesResult | undefined
+  const cadre = estim?.sources?.cadre?.data as CadreDeVie | undefined
+  const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
+
+  return (
+    <article className="detail-subsection detail-estimation-data">
+      <div className="section-header">
+        <DetailSectionTitle icon="commercial" title="Données mémorisées" />
+        {estim?.updatedAt ? <span className="section-header-note">Générées le {formatDate(estim.updatedAt)}</span> : null}
+      </div>
+
+      {loaded && !dvf && !cadre ? (
+        <p className="cadastre-hint">Aucune donnée mémorisée pour l’instant. Ouvre l’éditeur d’avis de valeur, charge les blocs (DVF, cadre de vie, cadastre) et génère le PDF : les données seront enregistrées ici et consultables sans recalcul.</p>
+      ) : null}
+
+      {dvf && dvf.ok ? (
+        <div className="estim-data-block">
+          <div className="estim-data-head">
+            <span className="estim-data-t">Marché · DVF</span>
+            <span className="estim-data-badge">{fmt(dvf.count_clean ?? dvf.count)} comparables{dvf.terrain_applied ? ' · terrain similaire' : ''}</span>
+          </div>
+          <div className="estim-data-grid">
+            <div className="estim-dg"><span className="edk">Médiane €/m²</span><span className="edv">{dvf.median_prix_m2 ? `${fmt(dvf.median_prix_m2)} €/m²` : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Valeur estimée</span><span className="edv edv-accent">{dvf.prix_estime ? `${fmt(dvf.prix_estime)} €` : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Fourchette</span><span className="edv">{dvf.fourchette_basse && dvf.fourchette_haute ? `${fmt(dvf.fourchette_basse)} – ${fmt(dvf.fourchette_haute)} €` : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Périmètre</span><span className="edv">{dvf.radius_km != null ? `${dvf.radius_km} km` : '—'}{dvf.months ? ` · ${Math.round(dvf.months / 12)} ans` : ''}</span></div>
+          </div>
+        </div>
+      ) : null}
+
+      {cadre && cadre.ok ? (
+        <div className="estim-data-block">
+          <div className="estim-data-head">
+            <span className="estim-data-t">Cadre de vie</span>
+            {cadre.commune ? <span className="estim-data-badge">{cadre.commune}</span> : null}
+          </div>
+          <div className="estim-data-grid">
+            <div className="estim-dg"><span className="edk">Écoles</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.ecoles) : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Commerces</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.commerces) : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Santé</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.sante) : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Gare</span><span className="edv">{cadre.commodites?.gareNom ? `${cadre.commodites.gareNom}${cadre.commodites.gareKm != null ? ` · ${cadre.commodites.gareKm} km` : ''}` : '—'}</span></div>
+          </div>
+          {cadre.risques?.risques?.length ? (
+            <div className="estim-data-tags">{cadre.risques.risques.slice(0, 6).map((r, i) => <span key={i} className="estim-data-tag">{r}</span>)}</div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Cadastre (déplacé de Commercialisation) : composant autonome, génère + persiste + ré-affiche. */}
+      <CadastreCommercialSection dossier={dossier} detail={detail} onJobCreated={onJobCreated} />
     </article>
   )
 }
@@ -19409,12 +19481,20 @@ function DossierDetailLayout(props: {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
   const [historyView, setHistoryView] = useState<'all' | 'diffusion' | 'price_drop' | 'cancellation'>('all')
+  // Éditeur d'avis de valeur en MODALE (ouvert depuis l'onglet Estimation / la synthèse estimation).
+  // refreshKey : rechargé après fermeture pour rafraîchir la consultation des données mémorisées.
+  const [estimEditorOpen, setEstimEditorOpen] = useState(false)
+  const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const dossier = props.selectedDossier
   const detailVariant = props.detailVariant ?? 'annonce'
   // État ESTIMATION : annonce non encore sous mandat (statut « Estimation »).
   // Réoriente la fiche vers la transformation du lead (cf. maquette « Fiche estimation »).
   const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
-  const detailTabsForVariant = isEstimation ? estimationTabs : detailTabs
+  // Onglet Estimation : uniquement sur fiche ANNONCE (+ fiche estimation via estimationTabs).
+  // Masqué sur détail mandat (Registre) et suivi — mêmes onglets (detailTabs) mais autre contexte.
+  const detailTabsForVariant = isEstimation
+    ? estimationTabs
+    : ((props.detailVariant ?? 'annonce') === 'annonce' ? detailTabs : detailTabs.filter((tab) => tab.key !== 'estimation'))
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
@@ -19856,17 +19936,21 @@ function DossierDetailLayout(props: {
                         })()}</span></div>
                       </div>
                     </div>
-                    {!isLightweightDetail ? <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} /> : null}
+                    {!isLightweightDetail ? (
+                      <div className="estim-open-cta">
+                        <button className="hektor-context-action-button" type="button" onClick={() => setEstimEditorOpen(true)}>
+                          <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+                          <strong>Ouvrir l&apos;éditeur d&apos;avis de valeur</strong>
+                        </button>
+                        <span className="estim-open-hint">Charger DVF / cadre de vie / cadastre, puis générer le PDF — les données sont mémorisées et consultables ci-dessous.</span>
+                      </div>
+                    ) : null}
                   </section>
-                  <section className="fa-section">
-                    <div className="fa-sec-label">Biens comparables · Suivi commercial</div>
-                    <div className="fe-locked">
-                      <span className="fe-tl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true"><path d="M3 21h18M5 21V7l8-4 8 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" /></svg></span>
-                      <span className="fe-tl-badge">En construction</span>
-                      <div className="fe-tl-t">Biens comparables &amp; suivi commercial</div>
-                      <p className="fe-tl-s">La sélection de biens comparables, la méthode d&apos;estimation et le suivi des RDV/relances seront branchés sur les données Hektor.</p>
-                    </div>
-                  </section>
+                  {!isLightweightDetail ? (
+                    <section className="fa-section">
+                      <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} />
+                    </section>
+                  ) : null}
                 </div>
               ) : null}
               {activeDetailTab === 'reporting' ? (() => {
@@ -19966,7 +20050,15 @@ function DossierDetailLayout(props: {
                         <span className="fa-mh-point"><span className="fa-mh-dot" style={{ background: 'var(--fa-gold)' }} /><span className="fa-mh-price" style={{ fontSize: '14px' }}>À générer</span></span>
                       </div>
                     </div>
-                    {!isLightweightDetail ? <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} /> : null}
+                    {!isLightweightDetail ? (
+                      <div className="estim-open-cta">
+                        <button className="hektor-context-action-button" type="button" onClick={() => setEstimEditorOpen(true)}>
+                          <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+                          <strong>Ouvrir l&apos;éditeur d&apos;avis de valeur</strong>
+                        </button>
+                        <button type="button" className="fa-linkmini" onClick={() => setActiveDetailTab('estimation')}>Voir les données mémorisées →</button>
+                      </div>
+                    ) : null}
                   </section>
                   ) : (
                   <section className="fa-section">
@@ -20161,9 +20253,6 @@ function DossierDetailLayout(props: {
                     </>
                   ) : null}
                 </article>
-                ) : null}
-                {activeDetailTab === 'commercial' && !isLightweightDetail ? (
-                  <CadastreCommercialSection dossier={dossier} detail={props.detail} onJobCreated={props.onHektorActionJobCreated} />
                 ) : null}
                 {activeDetailTab === 'mandate' ? (
                 <article className="detail-subsection detail-contact-section">
@@ -20748,6 +20837,14 @@ function DossierDetailLayout(props: {
           </div>
         </div>
       </div>
+      {estimEditorOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
+        <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }}>
+          <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
+            <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
+          </div>
+        </div>,
+        document.body,
+      ) : null}
       {hektorEditModalOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
         <div className="modal-overlay detail-edit-popup-overlay" onClick={() => setHektorEditModalOpen(false)}>
           <section className="modal-panel detail-edit-popup" onClick={(event) => event.stopPropagation()}>
@@ -23753,9 +23850,13 @@ function MobileDossierDetail(props: {
 }) {
   const dossier = props.selectedDossier
   const [mobileHektorEditOpen, setMobileHektorEditOpen] = useState(false)
+  // Éditeur d'avis de valeur en modale (mobile) + rafraîchissement de la consultation.
+  const [estimEditorOpen, setEstimEditorOpen] = useState(false)
+  const [estimRefreshKey, setEstimRefreshKey] = useState(0)
 
   useEffect(() => {
     setMobileHektorEditOpen(false)
+    setEstimEditorOpen(false)
   }, [dossier?.app_dossier_id])
 
   if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
@@ -23767,6 +23868,9 @@ function MobileDossierDetail(props: {
   const matterportModels = matterportGroups.flatMap((group) => group.models.map((model) => ({ group, model })))
   const actionRole = props.actionRole ?? 'nego'
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
+  // Estimation (avis de valeur) : uniquement fiche annonce + fiche estimation (pas mandat/suivi).
+  const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
+  const showEstimation = isEstimation || (props.detailVariant ?? 'annonce') === 'annonce'
   const isArchivedLightweightDetail = isArchivedAnnonceRecord(dossier)
   const lightweightReadOnlyLabel = isArchivedLightweightDetail
     ? 'Cette fiche archivée est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes après désarchivage.'
@@ -23936,6 +24040,16 @@ function MobileDossierDetail(props: {
             </label>
           ) : null}
         </section>
+      ) : null}
+
+      {showEstimation && !isLightweightDetail ? (
+        <details className="mobile-detail-section mobile-detail-disclosure" open>
+          <summary>Estimation</summary>
+          <div className="mobile-detail-embedded mobile-estim-body">
+            <button className="mobile-primary-button" type="button" onClick={() => setEstimEditorOpen(true)}>Ouvrir l&apos;éditeur d&apos;avis de valeur</button>
+            <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} />
+          </div>
+        </details>
       ) : null}
 
       <details className="mobile-detail-section mobile-detail-disclosure">
@@ -24156,6 +24270,14 @@ function MobileDossierDetail(props: {
             </div>
           ))}
         </details>
+      ) : null}
+      {estimEditorOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
+        <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }}>
+          <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
+            <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
+          </div>
+        </div>,
+        document.body,
       ) : null}
     </article>
   )
