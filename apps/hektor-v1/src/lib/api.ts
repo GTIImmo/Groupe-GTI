@@ -2563,7 +2563,7 @@ export type CadastreData = {
 
 // URL d'aperçu du plan cadastral (WMS Géoplateforme) : fond Plan IGN v2 + surcouche
 // parcellaire PCI Express, centré sur le bien. Même rendu que le PDF « Plan cadastral ».
-export function cadastreMapThumbUrl(lat: number, lon: number, w = 640, h = 360, halfMeters = 260): string | null {
+export function cadastreMapThumbUrl(lat: number, lon: number, w = 640, h = 360, halfMeters = 130): string | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return null
   const R = 20037508.34
   const mx = lon * R / 180

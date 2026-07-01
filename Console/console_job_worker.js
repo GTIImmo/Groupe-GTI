@@ -4362,7 +4362,9 @@ function estimMapMerc(lat, lon) { return { x: lon * 20037508.34 / 180, y: Math.l
 function estimCadastreMapUrl(lat, lon, half) {
   if (!Number.isFinite(+lat) || !Number.isFinite(+lon)) return null;
   const m = estimMapMerc(+lat, +lon);
-  const hy = half || 260, hx = hy * (760 / 460);
+  // Zoom serré sur la parcelle (numéros lisibles). 160 = limite basse fiable du WMS à 760×460
+  // (PLANIGNV2 refuse en dessous de ~150 : erreur 400 / carte blanche).
+  const hy = half || 160, hx = hy * (760 / 460);
   const bbox = `${m.x - hx},${m.y - hy},${m.x + hx},${m.y + hy}`;
   return `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2,CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLES=,&CRS=EPSG:3857&BBOX=${bbox}&WIDTH=760&HEIGHT=460&FORMAT=image/png`;
 }
