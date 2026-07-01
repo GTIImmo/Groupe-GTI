@@ -2544,6 +2544,11 @@ export type CadastreParcelle = {
   commune?: string | null
   code_insee?: string | null
   idu?: string | null
+  // Renseignés uniquement pour les parcelles VOISINES (sélecteur) :
+  distance_m?: number | null
+  direction?: string | null
+  centroid_lat?: number | null
+  centroid_lon?: number | null
 }
 export type CadastreData = {
   ok: boolean
@@ -2551,6 +2556,7 @@ export type CadastreData = {
   lon?: number
   parcelles?: CadastreParcelle[]
   contenance_totale?: number | null
+  candidates?: CadastreParcelle[]  // parcelles voisines quand le point ne tombe sur rien
   plu?: { zone?: string | null; libelle?: string | null; type?: string | null } | null
 }
 
@@ -2566,14 +2572,15 @@ export function cadastreMapThumbUrl(lat: number, lon: number, w = 640, h = 360, 
   return `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2,CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLES=,&CRS=EPSG:3857&BBOX=${bbox}&WIDTH=${w}&HEIGHT=${h}&FORMAT=image/png`
 }
 
-export async function loadCadastre(input: { lat: number; lon: number }): Promise<CadastreData> {
+export async function loadCadastre(input: { lat: number; lon: number; withCandidates?: boolean }): Promise<CadastreData> {
   const { lat, lon } = input
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
   try {
-    const r = await invokeBackendApi<CadastreData>(`/geo/cadastre?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    const suffix = input.withCandidates ? '&candidates=1' : ''
+    const r = await invokeBackendApi<CadastreData>(`/geo/cadastre?lat=${lat}&lon=${lon}${suffix}`, { method: 'GET' })
     // On force lat/lon (le worker en a besoin pour générer le plan cadastral).
     if (r && r.ok) return { ...r, lat, lon }
-    return { ok: false, lat, lon, parcelles: r?.parcelles ?? [], plu: r?.plu ?? null }
+    return { ok: false, lat, lon, parcelles: r?.parcelles ?? [], candidates: r?.candidates ?? [], plu: r?.plu ?? null }
   } catch {
     return { ok: false }
   }
@@ -5695,6 +5702,12 @@ export async function createGenerateCadastreDocumentJob(input: {
   dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
   lat: number
   lon: number
+  // Parcelles explicitement choisies (sélecteur) : si fournies, le worker les utilise
+  // au lieu de re-chercher au point (cas « point sur la voie »). Le centre de carte
+  // (mapLat/mapLon) sert au plan quand le point ne tombe sur aucune parcelle.
+  parcelles?: CadastreParcelle[] | null
+  mapLat?: number | null
+  mapLon?: number | null
   visibility?: 'private' | 'shared'
   priority?: number
 }): Promise<ConsoleJob> {
@@ -5713,6 +5726,9 @@ export async function createGenerateCadastreDocumentJob(input: {
         visibility: input.visibility ?? 'private',
         lat: input.lat,
         lon: input.lon,
+        parcelles: input.parcelles && input.parcelles.length ? input.parcelles : null,
+        map_lat: input.mapLat ?? null,
+        map_lon: input.mapLon ?? null,
       },
       priority: input.priority ?? 40,
       requested_by: userId,

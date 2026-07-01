@@ -89,62 +89,132 @@ def commodites(
 _APICARTO = "https://apicarto.ign.fr/api"
 
 
-def _apicarto_point(path: str, lat: float, lon: float) -> list[dict]:
-    """Interroge un module apicarto avec un point GeoJSON ; renvoie les features."""
-    geom = json.dumps({"type": "Point", "coordinates": [lon, lat]})
-    r = requests.get(f"{_APICARTO}{path}", params={"geom": geom}, headers=_UA, timeout=20)
+def _apicarto_geom(path: str, geom: dict) -> list[dict]:
+    """Interroge un module apicarto avec une géométrie GeoJSON ; renvoie les features."""
+    r = requests.get(f"{_APICARTO}{path}", params={"geom": json.dumps(geom)}, headers=_UA, timeout=20)
     r.raise_for_status()
     return (r.json() or {}).get("features", []) or []
+
+
+def _apicarto_point(path: str, lat: float, lon: float) -> list[dict]:
+    return _apicarto_geom(path, {"type": "Point", "coordinates": [lon, lat]})
+
+
+def _geom_centroid(geom: dict | None) -> tuple[float, float] | None:
+    """Centroïde approximatif (moyenne des sommets) d'un Polygon/MultiPolygon → (lat, lon)."""
+    if not geom:
+        return None
+    pts: list[list[float]] = []
+
+    def walk(a):
+        if not a:
+            return
+        if isinstance(a[0], (int, float)):
+            pts.append(a)
+        else:
+            for x in a:
+                walk(x)
+
+    walk(geom.get("coordinates") or [])
+    if not pts:
+        return None
+    n = len(pts)
+    return (sum(p[1] for p in pts) / n, sum(p[0] for p in pts) / n)
+
+
+def _bearing_fr(lat0: float, lon0: float, lat1: float, lon1: float) -> str:
+    dlon = math.radians(lon1 - lon0)
+    y = math.sin(dlon) * math.cos(math.radians(lat1))
+    x = (math.cos(math.radians(lat0)) * math.sin(math.radians(lat1))
+         - math.sin(math.radians(lat0)) * math.cos(math.radians(lat1)) * math.cos(dlon))
+    brng = (math.degrees(math.atan2(y, x)) + 360) % 360
+    dirs = ["Nord", "Nord-Est", "Est", "Sud-Est", "Sud", "Sud-Ouest", "Ouest", "Nord-Ouest"]
+    return dirs[round(brng / 45) % 8]
+
+
+def _parcelle_from_props(p: dict) -> dict:
+    section = p.get("section")
+    numero = p.get("numero")
+    contenance = p.get("contenance")
+    try:
+        contenance = int(contenance) if contenance is not None else None
+    except (TypeError, ValueError):
+        contenance = None
+    return {
+        "reference": " ".join(x for x in (section, numero) if x).strip() or None,
+        "section": section,
+        "numero": numero,
+        "contenance": contenance,
+        "commune": p.get("nom_com"),
+        "code_insee": p.get("code_insee"),
+        "idu": p.get("idu"),
+    }
+
+
+def _square_polygon(lat: float, lon: float, meters: float) -> dict:
+    dlat = meters / 111000.0
+    dlon = meters / (111000.0 * max(0.1, math.cos(math.radians(lat))))
+    return {"type": "Polygon", "coordinates": [[
+        [lon - dlon, lat - dlat], [lon + dlon, lat - dlat],
+        [lon + dlon, lat + dlat], [lon - dlon, lat + dlat], [lon - dlon, lat - dlat],
+    ]]}
 
 
 @router.get("/geo/cadastre")
 def cadastre(
     lat: float = Query(...),
     lon: float = Query(...),
+    candidates: int = Query(0, description="1 = renvoyer aussi les parcelles voisines (sélecteur)"),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
 ):
     """Éléments cadastraux du bien : parcelle(s) sous le point (référence,
-    section, numéro, contenance) + zonage PLU (API GPU). Données IGN publiques,
-    gratuites, sans clé. Pas de donnée nominative (propriétaire indisponible)."""
+    section, numéro, contenance) + zonage PLU (API GPU). Si le point ne tombe sur
+    aucune parcelle (ex. sur la voie), renvoie aussi les parcelles VOISINES
+    (distance/direction/centroïde) pour laisser l'utilisateur choisir. Données IGN
+    publiques, gratuites, sans clé. Pas de donnée nominative (propriétaire indispo)."""
     get_authenticated_user(settings, authorization)
 
     parcelles: list[dict] = []
     contenance_totale = 0
+    seen_idu: set[str] = set()
     try:
         for f in _apicarto_point("/cadastre/parcelle", lat, lon):
-            p = f.get("properties", {}) or {}
-            section = p.get("section")
-            numero = p.get("numero")
-            contenance = p.get("contenance")
-            try:
-                contenance = int(contenance) if contenance is not None else None
-            except (TypeError, ValueError):
-                contenance = None
-            if contenance:
-                contenance_totale += contenance
-            parcelles.append({
-                "reference": " ".join(x for x in (section, numero) if x).strip() or None,
-                "section": section,
-                "numero": numero,
-                "contenance": contenance,
-                "commune": p.get("nom_com"),
-                "code_insee": p.get("code_insee"),
-                "idu": p.get("idu"),
-            })
+            item = _parcelle_from_props(f.get("properties", {}) or {})
+            if item.get("contenance"):
+                contenance_totale += item["contenance"]
+            if item.get("idu"):
+                seen_idu.add(item["idu"])
+            parcelles.append(item)
     except Exception:  # noqa: BLE001
         pass
+
+    # Parcelles voisines : quand rien au point (point sur la voie) ou sur demande.
+    nearby: list[dict] = []
+    if not parcelles or candidates:
+        try:
+            feats = _apicarto_geom("/cadastre/parcelle", _square_polygon(lat, lon, 60))
+            for f in feats:
+                item = _parcelle_from_props(f.get("properties", {}) or {})
+                if item.get("idu") and item["idu"] in seen_idu:
+                    continue
+                c = _geom_centroid(f.get("geometry"))
+                if c:
+                    item["centroid_lat"], item["centroid_lon"] = round(c[0], 8), round(c[1], 8)
+                    item["distance_m"] = round(_km(lat, lon, c[0], c[1]) * 1000)
+                    item["direction"] = _bearing_fr(lat, lon, c[0], c[1])
+                nearby.append(item)
+            nearby.sort(key=lambda x: x.get("distance_m") if x.get("distance_m") is not None else 1e9)
+            nearby = nearby[:8]
+        except Exception:  # noqa: BLE001
+            pass
 
     plu = None
     try:
         feats = _apicarto_point("/gpu/zone-urba", lat, lon)
         if feats:
             p = feats[0].get("properties", {}) or {}
-            plu = {
-                "zone": p.get("libelle"),
-                "libelle": p.get("libelong"),
-                "type": p.get("typezone"),
-            }
+            plu = {"zone": p.get("libelle"), "libelle": p.get("libelong"), "type": p.get("typezone")}
     except Exception:  # noqa: BLE001
         pass
 
@@ -154,5 +224,6 @@ def cadastre(
         "lon": lon,
         "parcelles": parcelles,
         "contenance_totale": contenance_totale or None,
+        "candidates": nearby,
         "plu": plu,
     }

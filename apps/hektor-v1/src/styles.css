@@ -31365,3 +31365,75 @@ body {
   color: var(--ds-ink-mute, #5c6163);
 }
 .detail-cadastre-section .cadastre-msg { margin-top: 4px; font-size: 12px; }
+
+/* ============================================================
+   Sélecteur de parcelles cadastrales (modal) + lien « Ajuster »
+   Ergonomie : une carte par parcelle voisine (plan IGN + contenance + distance),
+   multi-sélection, total. Scopé .cadastre-picker / .cpk-*. Additif.
+   ============================================================ */
+.cadastre-adjust {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--ds-ink-mute, #5c6163);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cadastre-adjust:hover { color: var(--ds-brand-500, #c5005f); }
+.cadastre-adjust:disabled { opacity: .5; cursor: default; }
+
+.cadastre-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 14, 18, 0.42);
+  backdrop-filter: blur(2px);
+}
+.cadastre-picker .cpk-dialog {
+  width: min(760px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--ds-neutral-0, #fff);
+  border-radius: 20px;
+  border: 1px solid rgba(213, 222, 228, 0.9);
+  box-shadow: 0 24px 60px rgba(21, 32, 43, 0.28);
+  padding: 20px 22px 18px;
+}
+.cadastre-picker .cpk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cadastre-picker .cpk-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--ds-brand-500, #c5005f); }
+.cadastre-picker h3 { font-size: 19px; font-weight: 750; margin: 5px 0 6px; letter-spacing: -.01em; color: var(--ds-ink, #222323); }
+.cadastre-picker .cpk-warn { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #9a6b00; background: #fdf3dc; border: 1px solid #f2e0b0; border-radius: 999px; padding: 3px 10px; }
+.cadastre-picker .cpk-lead { font-size: 12.5px; color: var(--ds-ink-soft, #3b4143); line-height: 1.45; margin: 8px 0 0; }
+.cadastre-picker .cpk-close { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(213,222,228,0.9); background: var(--ds-neutral-0, #fff); font-size: 20px; line-height: 1; color: var(--ds-ink-mute, #5c6163); cursor: pointer; }
+.cadastre-picker .cpk-close:hover { background: var(--ds-neutral-50, #f6f7f8); }
+
+.cadastre-picker .cpk-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+@media (max-width: 560px) { .cadastre-picker .cpk-grid { grid-template-columns: 1fr; } }
+.cadastre-picker .cpk-card { position: relative; text-align: left; padding: 0; border: 1.5px solid rgba(213,222,228,0.9); border-radius: 14px; overflow: hidden; background: var(--ds-neutral-0, #fff); cursor: pointer; transition: .15s; }
+.cadastre-picker .cpk-card:hover { border-color: #d9b8c8; }
+.cadastre-picker .cpk-card.sel { border-color: var(--ds-brand-500, #c5005f); box-shadow: 0 0 0 3px var(--ds-brand-50, #fbeaf2); }
+.cadastre-picker .cpk-map { position: relative; height: 108px; background: var(--ds-neutral-100, #eef0f1); }
+.cadastre-picker .cpk-map img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cadastre-picker .cpk-pin { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--ds-brand-500, #c5005f); box-shadow: 0 0 0 3px #fff, 0 0 0 7px rgba(197,0,95,.2); }
+.cadastre-picker .cpk-dist { position: absolute; left: 8px; bottom: 8px; font-size: 10px; font-weight: 700; color: #fff; background: rgba(20,14,18,.62); border-radius: 999px; padding: 2px 8px; letter-spacing: .02em; }
+.cadastre-picker .cpk-tick { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--ds-neutral-0, #fff); border: 1.5px solid rgba(213,222,228,0.9); display: grid; place-items: center; transition: .15s; }
+.cadastre-picker .cpk-card.sel .cpk-tick { background: var(--ds-brand-500, #c5005f); border-color: var(--ds-brand-500, #c5005f); }
+.cadastre-picker .cpk-tick svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 3; opacity: 0; }
+.cadastre-picker .cpk-card.sel .cpk-tick svg { opacity: 1; }
+.cadastre-picker .cpk-body { padding: 10px 12px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cadastre-picker .cpk-ref { font-size: 16px; font-weight: 750; letter-spacing: .01em; color: var(--ds-ink, #222323); }
+.cadastre-picker .cpk-sub { font-size: 10.5px; color: var(--ds-ink-mute, #5c6163); margin-top: 2px; }
+.cadastre-picker .cpk-cont { font-size: 16px; font-weight: 750; color: var(--ds-brand-500, #c5005f); font-variant-numeric: tabular-nums; text-align: right; }
+.cadastre-picker .cpk-cont small { display: block; font-size: 9.5px; color: var(--ds-ink-mute, #5c6163); font-weight: 600; letter-spacing: .04em; }
+.cadastre-picker .cpk-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 12px 14px; background: var(--ds-neutral-50, #f6f7f8); border-radius: 14px; }
+.cadastre-picker .cpk-sum { font-size: 12px; color: var(--ds-ink-soft, #3b4143); }
+.cadastre-picker .cpk-sum b { color: var(--ds-ink, #222323); font-size: 13px; }
+.cadastre-picker .cpk-tot { color: var(--ds-brand-500, #c5005f); font-weight: 750; font-variant-numeric: tabular-nums; }
+.cadastre-picker .cpk-btns { display: flex; align-items: center; gap: 10px; }
+.cadastre-picker .cpk-lnk { font-size: 11.5px; color: var(--ds-ink-mute, #5c6163); text-decoration: underline; cursor: pointer; background: none; border: none; }

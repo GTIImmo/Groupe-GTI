@@ -5225,8 +5225,23 @@ async function handleGenerateCadastreDocument(job) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) {
     throw new Error("payload_json.lat/lon requis (geolocalisation du bien absente)");
   }
-  const cad = await fetchCadastre(lat, lon);
-  if (!cad || !cad.ok) throw new Error("Aucune parcelle cadastrale trouvee pour ces coordonnees");
+
+  let cad;
+  const chosen = payload && Array.isArray(payload.parcelles) ? payload.parcelles.filter((p) => p && (p.reference || p.numero)) : null;
+  if (chosen && chosen.length) {
+    // Parcelles choisies par l'utilisateur (sélecteur — cas « point sur la voie »).
+    const mapLat = Number(payload.map_lat) || lat;
+    const mapLon = Number(payload.map_lon) || lon;
+    let contenance = 0;
+    for (const p of chosen) { const c = parseInt(p.contenance, 10); if (Number.isFinite(c)) contenance += c; }
+    let plu = null;
+    try { const at = await fetchCadastre(mapLat, mapLon); if (at) plu = at.plu; } catch (_) { /* PLU best-effort */ }
+    cad = { ok: true, lat: mapLat, lon: mapLon, parcelles: chosen, contenance_totale: contenance || null, plu };
+  } else {
+    // Sinon : recherche au point (comportement par défaut).
+    cad = await fetchCadastre(lat, lon);
+    if (!cad || !cad.ok) throw new Error("Aucune parcelle cadastrale trouvee pour ces coordonnees");
+  }
 
   const html = cadastrePlanHtml(cad, dossier);
   // Document plein cadre (210×297, @page margin:0) : on rend sans marge Puppeteer, comme l'avis de valeur.
