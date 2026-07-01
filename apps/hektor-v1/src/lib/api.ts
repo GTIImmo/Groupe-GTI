@@ -2644,6 +2644,29 @@ export async function loadDossierEstimation(appDossierId: number | null | undefi
   }
 }
 
+// Mémorise UNE source d'estimation (dvf / cadre / cadastre / bdnb / dpe / rnb…) directement
+// depuis l'onglet Estimation (bouton « Générer et enregistrer », comme le cadastre) — sans passer
+// par la modale/PDF. Fusionne la clé sans écraser les autres (RPC app_upsert_dossier_estimation_source,
+// SECURITY DEFINER). Best-effort : renvoie false si Supabase/table indisponible.
+export async function saveDossierEstimationSource(
+  appDossierId: number | null | undefined,
+  hektorAnnonceId: string | number | null | undefined,
+  key: string,
+  ok: boolean,
+  data: unknown,
+): Promise<boolean> {
+  if (appDossierId == null || !hasSupabaseEnv || !supabase) return false
+  const { error } = await supabase.rpc('app_upsert_dossier_estimation_source', {
+    p_app_dossier_id: appDossierId,
+    p_hektor_annonce_id: hektorAnnonceId == null ? null : String(hektorAnnonceId),
+    p_key: key,
+    p_ok: ok,
+    p_data: (data ?? null) as never,
+  })
+  if (error) throw new Error(error.message ?? 'Impossible d’enregistrer la source d’estimation')
+  return true
+}
+
 const CDV_POLES: Array<{ nom: string; lat: number; lon: number }> = [
   { nom: 'Saint-Étienne', lat: 45.4397, lon: 4.3872 },
   { nom: 'Le Puy-en-Velay', lat: 45.0430, lon: 3.8850 },
