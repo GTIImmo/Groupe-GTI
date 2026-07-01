@@ -31640,8 +31640,9 @@ body {
 
 .ev3-toast { font-size: 12px; color: #0f6e56; background: #eef8f3; border: 1px solid #bfe3d5; border-radius: 10px; padding: 8px 12px; margin: 0; }
 
-/* Cadastre inséré dans la grille : on neutralise son cadre propre pour l'harmoniser. */
-.ev3-card-cadastre { padding: 0; overflow: hidden; }
+/* Cadastre inséré dans la grille : on neutralise son cadre propre pour l'harmoniser.
+   Pas d'overflow:hidden — le sélecteur de parcelle est un overlay plein écran (position:fixed). */
+.ev3-card-cadastre { padding: 0; }
 .ev3-card-cadastre .detail-cadastre-section { border: none; margin: 0; padding: 14px 16px; background: transparent; }
 
 /* Modale éditeur d'avis de valeur : bouton « tout générer » + sous-titres de section. */
