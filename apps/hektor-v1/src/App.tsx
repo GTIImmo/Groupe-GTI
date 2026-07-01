@@ -4693,9 +4693,10 @@ function EstimationDocumentEditor(props: {
     const lon = Number(props.detail.longitude_detail)
     const dept = String(dossier.code_postal || '').trim().slice(0, 2)
     const surface = Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null
-    const type = /appart/i.test(dossier.type_bien || '') ? 'Appartement' as const : 'Maison' as const
+    const type = dvfTypeForBien(dossier.type_bien)  // Maison | Appartement | null (mappé depuis le code Hektor)
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
+    if (!type) { setMarcheMsg(`Comparaison DVF non pertinente pour ce type de bien (${propertyTypeLabel(dossier.type_bien)}). La base DVF ne couvre que maisons et appartements.`); return }
     setMarcheBusy(true); setMarcheMsg(null)
     try {
       const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
@@ -7678,6 +7679,20 @@ function propertyTypeLabel(value?: string | null) {
   if (!normalized) return '-'
   if (/^\d+$/.test(normalized)) return hektorPropertyTypeLabels[normalized] ?? `Type ${normalized}`
   return normalized
+}
+
+// Traduit le type de bien Hektor (code numérique OU libellé) vers l'un des deux types
+// présents dans la base DVF (Maison | Appartement), pour la comparaison de l'avis de valeur.
+// Renvoie null si le bien n'est pas comparable en DVF (terrain, local, immeuble, parking,
+// commerce, bureau…). IMPORTANT : type_bien est un CODE numérique ('1'=Maison, '2'=Appartement…),
+// donc un test /appart/ sur le code renvoie toujours faux -> tout finissait en "Maison".
+function dvfTypeForBien(typeBien: string | null | undefined): 'Maison' | 'Appartement' | null {
+  const raw = String(typeBien ?? '').trim()
+  if (!raw) return null
+  const label = (/^\d+$/.test(raw) ? (hektorPropertyTypeLabels[raw] ?? '') : raw).toLowerCase()
+  if (/appart|studio|duplex|triplex|loft/.test(label)) return 'Appartement'
+  if (/maison|villa|chalet|demeure|propri|\bmas\b|ferme|h[oô]tel/.test(label)) return 'Maison'
+  return null
 }
 
 function uniquePortalKeys(values: Array<string | null | undefined>) {
