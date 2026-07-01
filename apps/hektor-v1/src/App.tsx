@@ -4682,6 +4682,7 @@ function EstimationDocumentEditor(props: {
   const [cadastreBusy, setCadastreBusy] = useState(false)
   const [cadastreMsg, setCadastreMsg] = useState<string | null>(null)
   const [cadastrePicker, setCadastrePicker] = useState<CadastreParcelle[] | null>(null)  // parcelles voisines à choisir (point sur la voie)
+  const [allEditorBusy, setAllEditorBusy] = useState(false)  // orchestrateur « tout générer » de la modale
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
   useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null); setCadastrePicker(null) }, [initialDraft, props.modal])
@@ -4766,6 +4767,15 @@ function EstimationDocumentEditor(props: {
     } finally {
       setCadastreBusy(false)
     }
+  }
+
+  // « Tout générer » de la modale : charge marché + cadre de vie + cadastre en parallèle (remplace
+  // les 3 chargements manuels). Les données alimentent le PDF de l'avis de valeur.
+  async function loadAllEditor() {
+    if (allEditorBusy) return
+    setAllEditorBusy(true)
+    await Promise.allSettled([loadMarche(), loadCadre(), loadCadastreElements()])
+    setAllEditorBusy(false)
   }
 
   // Sélecteur estimation confirmé : construit les éléments cadastraux à partir des parcelles choisies
@@ -5046,10 +5056,14 @@ function EstimationDocumentEditor(props: {
             ) : null}
             {tab === 'marche' ? (
               <div className="mandat-document-panel">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                  <button className="ghost-button" type="button" disabled={marcheBusy} onClick={() => { void loadMarche() }}>{marcheBusy ? 'Chargement…' : (marche ? 'Recharger les comparables DVF' : 'Charger les comparables DVF')}</button>
-                  {marcheMsg ? <span style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>{marcheMsg}</span> : null}
+                <div className="estim-editor-genall">
+                  <button className="ev3-cta" type="button" disabled={allEditorBusy} onClick={() => { void loadAllEditor() }}>
+                    <span className={`ev3-cta-ic${allEditorBusy ? ' spin' : ''}`} aria-hidden="true"><EstimIcon name={allEditorBusy ? 'refresh' : 'spark'} /></span>
+                    {allEditorBusy ? 'Génération en cours…' : ((marche || cadre || cadastre) ? 'Tout régénérer' : 'Tout générer les données')}
+                  </button>
+                  <span className="estim-editor-genall-hint">Un clic charge le marché DVF, le cadre de vie et le cadastre — repris dans le PDF de l’avis de valeur.</span>
                 </div>
+                <div className="estim-editor-subhead"><span className="estim-editor-subhead-t">Marché · comparables DVF</span>{marcheMsg ? <span className="estim-editor-subhead-msg">{marcheMsg}</span> : null}</div>
                 {marche && marche.ok ? (
                   <>
                     {marche.fiable === false ? (
@@ -5086,10 +5100,7 @@ function EstimationDocumentEditor(props: {
                   <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Charge les ventes comparables récentes du secteur (open data DVF) — elles enrichiront la page Marché de l'avis de valeur.</p>
                 )}
                 <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--ds-border, #ece7e9)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                    <button className="ghost-button" type="button" disabled={cadreBusy} onClick={() => { void loadCadre() }}>{cadreBusy ? 'Chargement…' : (cadre ? 'Recharger le cadre de vie' : 'Charger le cadre de vie & risques')}</button>
-                    {cadreMsg ? <span style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>{cadreMsg}</span> : null}
-                  </div>
+                  <div className="estim-editor-subhead"><span className="estim-editor-subhead-t">Cadre de vie &amp; risques</span>{cadreMsg ? <span className="estim-editor-subhead-msg">{cadreMsg}</span> : null}</div>
                   {cadre && cadre.ok ? (
                     <div className="estim-marche-stats">
                       <div><span className="emk">Commodités</span><span className="emv">{cadre.commodites?.ecoles ?? 0} écoles · {cadre.commodites?.commerces ?? 0} commerces · {cadre.commodites?.sante ?? 0} santé</span></div>
@@ -5101,10 +5112,7 @@ function EstimationDocumentEditor(props: {
                   )}
                 </div>
                 <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--ds-border, #ece7e9)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                    <button className="ghost-button" type="button" disabled={cadastreBusy} onClick={() => { void loadCadastreElements() }}>{cadastreBusy ? 'Chargement…' : (cadastre ? 'Recharger les éléments cadastraux' : 'Charger les éléments cadastraux')}</button>
-                    {cadastreMsg ? <span style={{ fontSize: 12, color: 'var(--ds-ink-mute, #5c6163)' }}>{cadastreMsg}</span> : null}
-                  </div>
+                  <div className="estim-editor-subhead"><span className="estim-editor-subhead-t">Éléments cadastraux</span>{cadastreMsg ? <span className="estim-editor-subhead-msg">{cadastreMsg}</span> : null}</div>
                   {cadastre && cadastre.ok ? (
                     <div className="estim-marche-stats">
                       <div><span className="emk">Parcelle{(cadastre.parcelles?.length ?? 0) > 1 ? 's' : ''}</span><span className="emv">{cadastre.parcelles && cadastre.parcelles.length ? cadastre.parcelles.map((p) => p.reference).filter(Boolean).join(', ') : '—'}</span></div>
