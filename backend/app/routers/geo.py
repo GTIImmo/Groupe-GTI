@@ -432,3 +432,51 @@ def dpe(
         "ges_emission": chosen.get("emission_ges_5_usages_par_m2"),
         "surface": chosen.get("surface_habitable_logement"),
     }
+
+
+# Servitudes patrimoniales (Géoportail de l'Urbanisme) : catégorie = préfixe de l'idass.
+_SUP_PATRIMOINE = {
+    "AC1": "Monument historique",
+    "AC2": "Site classé ou inscrit",
+    "AC4": "Site patrimonial remarquable / AVAP",
+}
+
+
+@router.get("/geo/patrimoine")
+def patrimoine(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """Servitudes patrimoniales sous le point (API GPU, SUP AC1/AC2/AC4) : le bien est-il
+    dans un périmètre de protection (monument historique, site classé/inscrit, site
+    patrimonial remarquable) ? => travaux soumis à l'avis de l'ABF. Gratuit, sans clé.
+    Couverture partielle (le GPU ne publie pas toutes les SUP : absence ≠ garantie)."""
+    get_authenticated_user(settings, authorization)
+    items: list[dict] = []
+    seen: set = set()
+    try:
+        for f in _apicarto_point("/gpu/assiette-sup-s", lat, lon):
+            p = f.get("properties", {}) or {}
+            idass = str(p.get("idass") or p.get("idgen") or "")
+            cat = idass.split("-")[0] if idass else ""
+            if cat not in _SUP_PATRIMOINE:
+                continue
+            nom = str(p.get("nomsuplitt") or "").strip()
+            key = (cat, nom)
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append({"type": cat, "type_label": _SUP_PATRIMOINE[cat], "nom": nom or None})
+    except Exception:  # noqa: BLE001
+        pass
+    return {
+        "ok": True,
+        "found": bool(items),
+        "lat": lat,
+        "lon": lon,
+        "abf": bool(items),            # dans un périmètre => avis ABF requis pour les travaux
+        "count": len(items),
+        "items": items[:12],
+    }
