@@ -2551,7 +2551,8 @@ export type CadastreParcelle = {
   centroid_lon?: number | null
 }
 export type CadastreData = {
-  ok: boolean
+  ok: boolean              // ici : « parcelle trouvée au point » (recalculé côté front)
+  error?: boolean          // vraie erreur backend/réseau (ex. Render endormi) — à distinguer de « pas de parcelle »
   lat?: number
   lon?: number
   parcelles?: CadastreParcelle[]
@@ -2577,12 +2578,15 @@ export async function loadCadastre(input: { lat: number; lon: number; withCandid
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
   try {
     const suffix = input.withCandidates ? '&candidates=1' : ''
-    const r = await invokeBackendApi<CadastreData>(`/geo/cadastre?lat=${lat}&lon=${lon}${suffix}`, { method: 'GET' })
-    // On force lat/lon (le worker en a besoin pour générer le plan cadastral).
-    if (r && r.ok) return { ...r, lat, lon }
-    return { ok: false, lat, lon, parcelles: r?.parcelles ?? [], candidates: r?.candidates ?? [], plu: r?.plu ?? null }
+    const r = await invokeBackendApi<CadastreData & { found?: boolean }>(`/geo/cadastre?lat=${lat}&lon=${lon}${suffix}`, { method: 'GET' })
+    // Le backend renvoie ok:true si l'appel a réussi. Ici `ok` = « parcelle trouvée AU POINT »
+    // (ce que le front attend) : on le recalcule depuis parcelles.length, en conservant les
+    // parcelles voisines (candidates) pour le sélecteur « point sur la voie ».
+    const found = (r?.parcelles?.length ?? 0) > 0
+    return { ...r, ok: found, lat, lon }
   } catch {
-    return { ok: false }
+    // Vraie erreur réseau/backend (ex. Render endormi) : on la signale distinctement.
+    return { ok: false, error: true }
   }
 }
 
