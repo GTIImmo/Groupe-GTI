@@ -31511,6 +31511,140 @@ body {
 }
 
 /* ============================================================
+   Onglet Estimation v3 — « fiche d'informations » en 1 clic.
+   Barre d'action + hero + cartes sectionnées à pictos métier.
+   Charte GTI magenta. Scopé .estim-v3. Additif.
+   ============================================================ */
+.estim-v3 { display: flex; flex-direction: column; gap: 16px; }
+
+.ev3-bar {
+  border: 1px solid var(--ds-line, #e7e3dc);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: var(--ds-surface, #fff);
+  box-shadow: 0 1px 2px rgba(28, 28, 28, .03);
+}
+.ev3-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ev3-cta {
+  display: inline-flex; align-items: center; gap: 9px;
+  border: none; border-radius: 12px; cursor: pointer;
+  padding: 11px 20px; font-size: 14px; font-weight: 600;
+  color: #fff; background: #c5005f;
+  box-shadow: 0 2px 8px rgba(197, 0, 95, .26);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.ev3-cta:hover:not(:disabled) { background: #a80051; box-shadow: 0 4px 14px rgba(197, 0, 95, .34); transform: translateY(-1px); }
+.ev3-cta:active:not(:disabled) { transform: translateY(0); }
+.ev3-cta:disabled { opacity: .72; cursor: default; }
+.ev3-cta-ic { width: 18px; height: 18px; display: inline-flex; }
+.ev3-cta-ic svg { width: 18px; height: 18px; }
+.ev3-cta-ic.spin { animation: ev3spin 1s linear infinite; }
+@keyframes ev3spin { to { transform: rotate(360deg); } }
+.ev3-ghost {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--ds-line, #e7e3dc); background: transparent;
+  border-radius: 12px; padding: 10px 15px; font-size: 13.5px; cursor: pointer;
+  color: var(--ds-ink, #1c1c1c);
+}
+.ev3-ghost svg { width: 16px; height: 16px; }
+.ev3-ghost:hover { background: var(--ds-surface-soft, #f5f2ec); }
+.ev3-updated { margin-left: auto; font-size: 11.5px; color: var(--ds-ink-mute, #5c6163); font-variant-numeric: tabular-nums; }
+.ev3-bar-hint { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ds-ink-mute, #5c6163); }
+
+.ev3-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ev3-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; padding: 3px 10px 3px 8px; border-radius: 999px;
+  border: 1px solid var(--ds-line, #e7e3dc); color: var(--ds-ink-mute, #5c6163); background: var(--ds-surface, #fff);
+}
+.ev3-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: #cfc9bf; }
+.ev3-pill-done { color: #0f6e56; border-color: #bfe3d5; background: #eef8f3; }
+.ev3-pill-done .ev3-pill-dot { background: #1d9e75; }
+.ev3-pill-run { color: #8a5b00; border-color: #f2dfb3; background: #fdf6e7; }
+.ev3-pill-run .ev3-pill-dot { background: #e0a800; animation: ev3pulse 1s ease-in-out infinite; }
+@keyframes ev3pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.ev3-hero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ev3-hero-kpi {
+  border: 1px solid var(--ds-line, #e7e3dc); border-radius: 14px; padding: 14px 16px;
+  background: var(--ds-surface, #fff); display: flex; flex-direction: column; gap: 2px;
+}
+.ev3-hero-kpi .k { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ds-ink-mute, #5c6163); }
+.ev3-hero-kpi .v { font-size: 23px; font-weight: 700; color: var(--ds-brand-500, #c5005f); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ev3-hero-kpi .s { font-size: 11px; color: var(--ds-ink-mute, #5c6163); }
+@media (max-width: 720px) { .ev3-hero { grid-template-columns: 1fr; } }
+
+.ev3-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ev3-card-wide { grid-column: 1 / -1; }
+@media (max-width: 720px) { .ev3-grid { grid-template-columns: 1fr; } }
+
+.ev3-card {
+  border: 1px solid var(--ds-line, #e7e3dc); border-radius: 14px;
+  padding: 14px 16px; background: var(--ds-surface, #fff);
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.ev3-card:hover { border-color: #e2b8cd; box-shadow: 0 2px 10px rgba(28, 28, 28, .05); }
+.ev3-card-h { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.ev3-ico {
+  width: 34px; height: 34px; flex: none; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: #c5005f; background: color-mix(in srgb, #c5005f 8%, transparent);
+}
+.ev3-ico svg { width: 19px; height: 19px; }
+.ev3-h-titles { display: flex; flex-direction: column; min-width: 0; }
+.ev3-h-t { font-size: 14px; font-weight: 700; color: var(--ds-ink, #1c1c1c); }
+.ev3-h-s { font-size: 11.5px; color: var(--ds-ink-mute, #5c6163); }
+.ev3-h-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.ev3-badge {
+  font-size: 11px; color: #c5005f; white-space: nowrap;
+  background: color-mix(in srgb, #c5005f 8%, transparent);
+  border: 1px solid color-mix(in srgb, #c5005f 18%, transparent);
+  border-radius: 999px; padding: 2px 9px;
+}
+.ev3-badge-warn { color: #9a3412; background: #fdf1e7; border-color: #f6d5b8; }
+.ev3-refresh {
+  width: 28px; height: 28px; flex: none; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--ds-line, #e7e3dc); background: transparent;
+  color: var(--ds-ink-mute, #5c6163); display: inline-flex; align-items: center; justify-content: center;
+}
+.ev3-refresh svg { width: 15px; height: 15px; }
+.ev3-refresh:hover:not(:disabled) { background: var(--ds-surface-soft, #f5f2ec); color: #c5005f; }
+.ev3-refresh:disabled { opacity: .5; cursor: default; }
+.ev3-refresh:disabled svg { animation: ev3spin 1s linear infinite; }
+
+.ev3-kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+.ev3-card-wide .ev3-kv-grid { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 720px) { .ev3-card-wide .ev3-kv-grid { grid-template-columns: 1fr 1fr; } }
+.ev3-kv { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ev3-kv .k { font-size: 10.5px; letter-spacing: .03em; text-transform: uppercase; color: var(--ds-ink-mute, #5c6163); }
+.ev3-kv .v { font-size: 14px; font-weight: 600; color: var(--ds-ink, #1c1c1c); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+.ev3-kv .v-accent { color: #c5005f; }
+
+.ev3-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ev3-tag { font-size: 11px; color: var(--ds-ink-mute, #5c6163); background: var(--ds-surface-soft, #f5f2ec); border-radius: 6px; padding: 2px 9px; }
+
+.ev3-hint { font-size: 12px; line-height: 1.5; color: var(--ds-ink-mute, #5c6163); margin: 0; }
+.ev3-hint-run { color: #8a5b00; }
+.ev3-hint-msg { color: #9a3412; margin-top: 8px; }
+
+.ev3-apply {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin-top: 12px; padding: 8px 12px; border-radius: 10px;
+  background: color-mix(in srgb, #c5005f 6%, transparent);
+  border: 1px solid color-mix(in srgb, #c5005f 16%, transparent);
+  font-size: 12px; color: var(--ds-ink, #1c1c1c);
+}
+.ev3-apply.ev3-apply-warn { background: #fdf1e7; border-color: #f6d5b8; color: #9a3412; }
+.ev3-apply-btn { flex: none; border: none; border-radius: 999px; padding: 5px 13px; font-size: 12px; font-weight: 600; color: #fff; background: #c5005f; cursor: pointer; }
+.ev3-apply-btn:disabled { opacity: .6; cursor: default; }
+
+.ev3-toast { font-size: 12px; color: #0f6e56; background: #eef8f3; border: 1px solid #bfe3d5; border-radius: 10px; padding: 8px 12px; margin: 0; }
+
+/* Cadastre inséré dans la grille : on neutralise son cadre propre pour l'harmoniser. */
+.ev3-card-cadastre { padding: 0; overflow: hidden; }
+.ev3-card-cadastre .detail-cadastre-section { border: none; margin: 0; padding: 14px 16px; background: transparent; }
+
+/* ============================================================
    Sélecteur de parcelles cadastrales (modal) + lien « Ajuster »
    Ergonomie : une carte par parcelle voisine (plan IGN + contenance + distance),
    multi-sélection, total. Scopé .cadastre-picker / .cpk-*. Additif.

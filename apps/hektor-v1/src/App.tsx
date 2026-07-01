@@ -8281,7 +8281,7 @@ function CadastreParcellePicker({ candidates, initialKeys, commune, onConfirm, o
 // Onglet Commercialisation — bloc « Cadastre » : récupère les éléments cadastraux du bien
 // (parcelle(s) + contenance + PLU via IGN/Géoportail), les affiche, génère un PDF « Plan
 // cadastral » déposé dans Hektor (onglet Documents) et persiste les données par dossier.
-function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier: Dossier; detail: DossierDetailPayload; onJobCreated?: (job: ConsoleJob) => void }) {
+function CadastreCommercialSection({ dossier, detail, onJobCreated, autoGenerateKey, onStateChange }: { dossier: Dossier; detail: DossierDetailPayload; onJobCreated?: (job: ConsoleJob) => void; autoGenerateKey?: number; onStateChange?: (state: { busy: boolean; present: boolean }) => void }) {
   const [cad, setCad] = useState<CadastreData | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -8295,6 +8295,20 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
     loadDossierCadastre(dossier.app_dossier_id).then((row) => { if (!cancelled && row) setCad(row) }).catch(() => { /* best effort */ })
     return () => { cancelled = true }
   }, [dossier.app_dossier_id])
+
+  // Remonte l'état (busy/présence) au parent pour la pastille de progression de la fiche.
+  useEffect(() => {
+    onStateChange?.({ busy, present: !!(cad && cad.ok) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, cad])
+  // Déclenchement par le bouton global « Générer la fiche d'informations » (autoGenerateKey change).
+  useEffect(() => {
+    if (!autoGenerateKey) return
+    const { lat, lon } = { lat: Number(detail.latitude_detail), lon: Number(detail.longitude_detail) }
+    if (busy || !(Number.isFinite(lat) && Number.isFinite(lon) && lat && lon)) return
+    void handleGenerate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGenerateKey])
 
   const coords = () => ({ lat: Number(detail.latitude_detail), lon: Number(detail.longitude_detail) })
   const hasCoords = () => { const { lat, lon } = coords(); return Number.isFinite(lat) && Number.isFinite(lon) && !!lat && !!lon }
@@ -8441,7 +8455,27 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
 // de l'avis de valeur). Lit app_dossier_estimation (conteneur `sources` extensible) et rend un bloc
 // par source présente : DVF (marché), cadre de vie, puis les sources ajoutées ; + le bloc Cadastre
 // (déplacé de Commercialisation). refreshKey force le rechargement après une génération.
-function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { dossier: Dossier; detail: DossierDetailPayload; refreshKey?: number; onJobCreated?: (job: ConsoleJob) => void }) {
+// Pictos métier de la fiche d'informations (SVG inline, hérite de currentColor).
+const ESTIM_ICONS: Record<string, string[]> = {
+  market: ['M4 19V5', 'M4 14l4-4 3 3 5-6', 'M17 7h4v4'],
+  loyer: ['M8 15m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0', 'M10.8 12.2 20 3', 'M16 7l2.6 2.6'],
+  bati: ['M3 21h18', 'M5 21V8l7-5 7 5v13', 'M9 21v-6h6v6'],
+  dpe: ['M13 2 4 14h7l-1 8 9-12h-7z'],
+  cadre: ['M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z', 'M12 10m-2.4 0a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0 -4.8 0'],
+  patrimoine: ['M3 21h18', 'M6 21V10M10 21V10M14 21V10M18 21V10', 'M4 10 12 4l8 6z'],
+  cadastre: ['M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z', 'M9 4v14', 'M15 6v14'],
+  spark: ['M12 3l1.7 4.5L18 9l-4.3 1.5L12 15l-1.7-4.5L6 9l4.3-1.5z', 'M18.6 14l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7z'],
+  refresh: ['M20 11a8 8 0 1 0-2.1 5.4', 'M20 5v6h-6'],
+}
+function EstimIcon({ name }: { name: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {(ESTIM_ICONS[name] ?? []).map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  )
+}
+
+function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOpenEditor }: { dossier: Dossier; detail: DossierDetailPayload; refreshKey?: number; onJobCreated?: (job: ConsoleJob) => void; onOpenEditor?: () => void }) {
   const [estim, setEstim] = useState<DossierEstimation | null>(null)
   const [dvfBusy, setDvfBusy] = useState(false)
   const [dvfMsg, setDvfMsg] = useState<string | null>(null)
@@ -8611,206 +8645,218 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
     } finally { setApplyBusy(null) }
   }
 
+  // Orchestrateur « 1 clic » : génère TOUTES les sources en parallèle (le cadastre via un signal).
+  const [allBusy, setAllBusy] = useState(false)
+  const [cadSignal, setCadSignal] = useState(0)
+  const [cadState, setCadState] = useState<{ busy: boolean; present: boolean }>({ busy: false, present: false })
+  async function generateAll() {
+    if (allBusy) return
+    setAllBusy(true); setApplyMsg(null)
+    setCadSignal((n) => n + 1)
+    await Promise.allSettled([generateDvf(), generateLoyer(), generateBdnb(), generateDpe(), generateCadre(), generatePatrimoine()])
+    await reload()
+    setAllBusy(false)
+  }
+  const anyData = !!(dvf || loyer || bdnb || dpe || cadre || patri || cadState.present)
+  const heroValeur = dvf?.prix_estime ?? (dvf?.median_prix_m2 && loyerSurface ? Math.round(dvf.median_prix_m2 * loyerSurface) : null) ?? loyerPrix
+  const heroDpe = dpe?.etiquette_dpe ?? bdnb?.classe_dpe ?? null
+  const pillState = (has: boolean, bsy: boolean): 'run' | 'done' | 'idle' => bsy ? 'run' : (has ? 'done' : (allBusy ? 'run' : 'idle'))
+  const pills: Array<{ key: string; label: string; state: 'run' | 'done' | 'idle' }> = [
+    { key: 'dvf', label: 'Marché', state: pillState(!!(dvf && dvf.ok), dvfBusy) },
+    { key: 'loyers', label: 'Loyer', state: pillState(!!(loyer && loyer.ok), loyerBusy) },
+    { key: 'bdnb', label: 'Bâti', state: pillState(!!(bdnb && bdnb.ok), bdnbBusy) },
+    { key: 'dpe', label: 'DPE', state: pillState(!!(dpe && dpe.ok), dpeBusy) },
+    { key: 'cadre', label: 'Cadre de vie', state: pillState(!!(cadre && cadre.ok), cadreBusy) },
+    { key: 'patrimoine', label: 'Patrimoine', state: pillState(!!(patri && patri.ok), patriBusy) },
+    { key: 'cadastre', label: 'Cadastre', state: pillState(cadState.present, cadState.busy) },
+  ]
+
   return (
-    <article className="detail-subsection detail-estimation-data">
-      <div className="section-header">
-        <DetailSectionTitle icon="commercial" title="Données mémorisées" />
-        {estim?.updatedAt ? <span className="section-header-note">Mises à jour le {formatDate(estim.updatedAt)}</span> : null}
+    <article className="detail-subsection estim-v3">
+      <div className="ev3-bar">
+        <div className="ev3-bar-row">
+          <button className="ev3-cta" type="button" disabled={allBusy} onClick={() => { void generateAll() }}>
+            <span className={`ev3-cta-ic${allBusy ? ' spin' : ''}`} aria-hidden="true"><EstimIcon name={allBusy ? 'refresh' : 'spark'} /></span>
+            {allBusy ? 'Génération en cours…' : (anyData ? 'Actualiser la fiche d’informations' : 'Générer la fiche d’informations')}
+          </button>
+          {onOpenEditor ? (
+            <button className="ev3-ghost" type="button" onClick={onOpenEditor}>
+              <span aria-hidden="true"><DetailIcon type="content" /></span>Éditeur d’avis de valeur
+            </button>
+          ) : null}
+          {estim?.updatedAt ? <span className="ev3-updated">Mis à jour {formatDate(estim.updatedAt)}</span> : null}
+        </div>
+        <p className="ev3-bar-hint">Un clic récupère marché, loyer, bâti, DPE réel, cadre de vie, patrimoine et cadastre — puis les mémorise. Le plan cadastral est déposé dans les documents Hektor.</p>
+        <div className="ev3-pills" role="status" aria-label="Progression de la génération">
+          {pills.map((p) => (
+            <span key={p.key} className={`ev3-pill ev3-pill-${p.state}`}><span className="ev3-pill-dot" aria-hidden="true" />{p.label}</span>
+          ))}
+        </div>
       </div>
 
-      {/* Marché · DVF — génération directe (bouton dans le bloc, comme le cadastre). */}
-      <div className="estim-data-block">
-        <div className="estim-data-head">
-          <span className="estim-data-t">Marché · DVF</span>
-          <div className="estim-data-head-right">
-            {dvf && dvf.ok ? <span className="estim-data-badge">{fmt(dvf.count_clean ?? dvf.count)} comparables{dvf.terrain_applied ? ' · terrain similaire' : ''}</span> : null}
-            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={dvfBusy} onClick={() => { void generateDvf() }}>
-              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-              <strong>{dvfBusy ? 'Calcul…' : (dvf && dvf.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
-            </button>
-          </div>
+      {anyData ? (
+        <div className="ev3-hero">
+          <div className="ev3-hero-kpi"><span className="k">Valeur estimée</span><span className="v">{heroValeur != null ? `${fmt(heroValeur)} €` : '—'}</span><span className="s">marché DVF</span></div>
+          <div className="ev3-hero-kpi"><span className="k">Rendement brut</span><span className="v">{loyerRendement != null ? `${loyerRendement} %` : '—'}</span><span className="s">potentiel locatif</span></div>
+          <div className="ev3-hero-kpi"><span className="k">DPE réel</span><span className="v">{heroDpe ?? '—'}</span><span className="s">ADEME</span></div>
         </div>
-        {dvf && dvf.ok ? (
-          <div className="estim-data-grid">
-            <div className="estim-dg"><span className="edk">Médiane €/m²</span><span className="edv">{dvf.median_prix_m2 ? `${fmt(dvf.median_prix_m2)} €/m²` : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Valeur estimée</span><span className="edv edv-accent">{dvf.prix_estime ? `${fmt(dvf.prix_estime)} €` : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Fourchette</span><span className="edv">{dvf.fourchette_basse && dvf.fourchette_haute ? `${fmt(dvf.fourchette_basse)} – ${fmt(dvf.fourchette_haute)} €` : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Périmètre</span><span className="edv">{dvf.radius_km != null ? `${dvf.radius_km} km` : '—'}{dvf.months ? ` · ${Math.round(dvf.months / 12)} ans` : ''}</span></div>
-          </div>
-        ) : (!dvfMsg ? <p className="cadastre-hint">Prix médian au m² + valeur estimée depuis les ventes DVF comparables (type, surface ±20 %, secteur). Enregistré ici et repris dans l’avis de valeur.</p> : null)}
-        {dvfMsg ? <p className="cadastre-hint cadastre-msg">{dvfMsg}</p> : null}
-      </div>
+      ) : null}
 
-      {/* Potentiel locatif — loyer de marché commune + rendement + zonage ABC. */}
-      <div className="estim-data-block">
-        <div className="estim-data-head">
-          <span className="estim-data-t">Potentiel locatif</span>
-          <div className="estim-data-head-right">
-            {loyer && loyer.ok && loyerRendement != null ? <span className="estim-data-badge">Rendement brut {loyerRendement} %</span> : null}
-            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={loyerBusy} onClick={() => { void generateLoyer() }}>
-              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-              <strong>{loyerBusy ? 'Calcul…' : (loyer && loyer.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
-            </button>
-          </div>
-        </div>
-        {loyer && loyer.ok ? (
-          <>
-            <div className="estim-data-grid">
-              <div className="estim-dg"><span className="edk">Loyer estimé</span><span className="edv">{loyerM2 != null ? `${fmt(loyerM2)} €/m²` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Loyer mensuel</span><span className="edv edv-accent">{loyerMensuel != null ? `${fmt(loyerMensuel)} €/mois` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Rendement brut</span><span className="edv">{loyerRendement != null ? `${loyerRendement} %` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Zone ABC</span><span className="edv">{loyer.zone_abc ?? '—'}{loyer.zone_abc ? (zoneTendue ? ' · tendue' : ' · détendue') : ''}</span></div>
+      <div className="ev3-grid">
+
+        <section className="ev3-card">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="market" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Marché &amp; valeur</span><span className="ev3-h-s">Ventes DVF comparables du secteur</span></span>
+            <span className="ev3-h-right">
+              {dvf && dvf.ok ? <span className="ev3-badge">{fmt(dvf.count_clean ?? dvf.count)} comp.{dvf.terrain_applied ? ' · terrain' : ''}</span> : null}
+              <button className="ev3-refresh" type="button" title="Régénérer le marché" aria-label="Régénérer le marché" disabled={dvfBusy} onClick={() => { void generateDvf() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {dvf && dvf.ok ? (
+            <div className="ev3-kv-grid">
+              <div className="ev3-kv"><span className="k">Médiane</span><span className="v">{dvf.median_prix_m2 ? `${fmt(dvf.median_prix_m2)} €/m²` : '—'}</span></div>
+              <div className="ev3-kv"><span className="k">Estimation</span><span className="v v-accent">{dvf.prix_estime ? `${fmt(dvf.prix_estime)} €` : '—'}</span></div>
+              <div className="ev3-kv"><span className="k">Fourchette</span><span className="v">{dvf.fourchette_basse && dvf.fourchette_haute ? `${fmt(dvf.fourchette_basse)} – ${fmt(dvf.fourchette_haute)} €` : '—'}</span></div>
+              <div className="ev3-kv"><span className="k">Périmètre</span><span className="v">{dvf.radius_km != null ? `${dvf.radius_km} km` : '—'}{dvf.months ? ` · ${Math.round(dvf.months / 12)} ans` : ''}</span></div>
             </div>
-            <p className="cadastre-hint">Loyer d&apos;annonce médian (ANIL{loyer.millesime ? ` ${loyer.millesime}` : ''}) pour {loyerType === 'Maison' ? 'une maison' : 'un appartement'}{loyer.commune ? ` · ${loyer.commune}` : ''}. Rendement = loyer annuel estimé / prix affiché{zoneTendue ? ' · zone tendue (dispositifs d’investissement possibles)' : ''}. À titre indicatif.</p>
-          </>
-        ) : (!loyerMsg ? <p className="cadastre-hint">Loyer de marché (€/m², ANIL « Carte des loyers »), loyer mensuel estimé, rendement locatif brut et zone fiscale ABC — un argument pour les acquéreurs investisseurs.</p> : null)}
-        {loyerMsg ? <p className="cadastre-hint cadastre-msg">{loyerMsg}</p> : null}
-      </div>
+          ) : (dvfBusy ? <p className="ev3-hint ev3-hint-run">Calcul des comparables DVF…</p> : (dvfMsg ? <p className="ev3-hint ev3-hint-msg">{dvfMsg}</p> : <p className="ev3-hint">Prix médian au m² et valeur estimée à partir des ventes comparables (même type, surface ±20 %, secteur).</p>))}
+        </section>
 
-      {/* Cadre de vie — génération directe. */}
-      <div className="estim-data-block">
-        <div className="estim-data-head">
-          <span className="estim-data-t">Cadre de vie</span>
-          <div className="estim-data-head-right">
-            {cadre && cadre.ok && cadre.commune ? <span className="estim-data-badge">{cadre.commune}</span> : null}
-            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={cadreBusy} onClick={() => { void generateCadre() }}>
-              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-              <strong>{cadreBusy ? 'Calcul…' : (cadre && cadre.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
-            </button>
-          </div>
+        <section className="ev3-card">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="loyer" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Potentiel locatif</span><span className="ev3-h-s">Loyer de marché &amp; rendement</span></span>
+            <span className="ev3-h-right">
+              {loyer && loyer.ok && loyerRendement != null ? <span className="ev3-badge">{loyerRendement} % brut</span> : null}
+              <button className="ev3-refresh" type="button" title="Régénérer le loyer" aria-label="Régénérer le potentiel locatif" disabled={loyerBusy} onClick={() => { void generateLoyer() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {loyer && loyer.ok ? (
+            <>
+              <div className="ev3-kv-grid">
+                <div className="ev3-kv"><span className="k">Loyer estimé</span><span className="v">{loyerM2 != null ? `${fmt(loyerM2)} €/m²` : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Loyer mensuel</span><span className="v v-accent">{loyerMensuel != null ? `${fmt(loyerMensuel)} €/mois` : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Rendement brut</span><span className="v">{loyerRendement != null ? `${loyerRendement} %` : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Zone ABC</span><span className="v">{loyer.zone_abc ?? '—'}{loyer.zone_abc ? (zoneTendue ? ' · tendue' : ' · détendue') : ''}</span></div>
+              </div>
+              <p className="ev3-hint">Loyer d’annonce médian ANIL{loyer.millesime ? ` ${loyer.millesime}` : ''} pour {loyerType === 'Maison' ? 'une maison' : 'un appartement'} · rendement = loyer annuel / prix affiché. Indicatif (hors charges, vacance, fiscalité).</p>
+            </>
+          ) : (loyerBusy ? <p className="ev3-hint ev3-hint-run">Estimation du loyer…</p> : (loyerMsg ? <p className="ev3-hint ev3-hint-msg">{loyerMsg}</p> : <p className="ev3-hint">Loyer de marché, loyer mensuel estimé, rendement brut et zone fiscale ABC — l’argument pour les acquéreurs investisseurs.</p>))}
+        </section>
+
+        <section className="ev3-card">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="bati" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Le bâti</span><span className="ev3-h-s">Caractéristiques BDNB · RNB</span></span>
+            <span className="ev3-h-right">
+              {bdnb && bdnb.ok && bdnb.classe_dpe ? <span className="ev3-badge">DPE théo. {bdnb.classe_dpe}</span> : null}
+              <button className="ev3-refresh" type="button" title="Régénérer le bâti" aria-label="Régénérer le bâti" disabled={bdnbBusy} onClick={() => { void generateBdnb() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {bdnb && bdnb.ok ? (
+            <>
+              <div className="ev3-kv-grid">
+                <div className="ev3-kv"><span className="k">Construction</span><span className="v">{bdnb.annee_construction ?? '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Type</span><span className="v">{bdnb.type_batiment ?? '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Niveaux</span><span className="v">{bdnb.nb_niveau ?? '—'}{bdnb.nb_logements != null ? ` · ${bdnb.nb_logements} log.` : ''}</span></div>
+                <div className="ev3-kv"><span className="k">Murs · toit</span><span className="v">{[bdnb.mat_mur, bdnb.mat_toit].filter(Boolean).join(' · ') || '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Conso (EP)</span><span className="v">{bdnb.conso_ep_m2 != null ? `${fmt(bdnb.conso_ep_m2)} kWh/m²` : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Aléa argile</span><span className="v">{bdnb.alea_argile ?? '—'}</span></div>
+              </div>
+              {bdnb.rnb_id ? <div className="ev3-tags"><span className="ev3-tag">RNB {bdnb.rnb_id}</span></div> : null}
+              {bdnb.annee_construction != null ? (
+                !curAnnee ? (
+                  <div className="ev3-apply"><span>Année de construction absente de la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'bdnb'} onClick={() => applyToFiche('bdnb', { ANNEE_CONS: String(bdnb!.annee_construction) }, `Année ${bdnb!.annee_construction}`)}>{applyBusy === 'bdnb' ? 'Report…' : `Reporter ${bdnb!.annee_construction}`}</button></div>
+                ) : (!sameNum(curAnnee, bdnb.annee_construction) ? <div className="ev3-apply ev3-apply-warn"><span>Année — fiche {curAnnee} · BDNB {bdnb.annee_construction} (à vérifier).</span></div> : null)
+              ) : null}
+            </>
+          ) : (bdnbBusy ? <p className="ev3-hint ev3-hint-run">Interrogation BDNB…</p> : (bdnbMsg ? <p className="ev3-hint ev3-hint-msg">{bdnbMsg}</p> : <p className="ev3-hint">Année, type, matériaux, niveaux, DPE théorique et aléa argile depuis la Base de Données Nationale des Bâtiments.</p>))}
+        </section>
+
+        <section className="ev3-card">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="dpe" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">DPE réel</span><span className="ev3-h-s">Dernier diagnostic ADEME</span></span>
+            <span className="ev3-h-right">
+              {dpe && dpe.ok && dpe.matched_by === 'proximite' ? <span className="ev3-badge ev3-badge-warn">Proximité</span> : null}
+              {dpe && dpe.ok && dpe.etiquette_dpe ? <span className="ev3-badge">DPE {dpe.etiquette_dpe} · GES {dpe.etiquette_ges ?? '—'}</span> : null}
+              <button className="ev3-refresh" type="button" title="Régénérer le DPE" aria-label="Régénérer le DPE" disabled={dpeBusy} onClick={() => { void generateDpe() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {dpe && dpe.ok ? (
+            <>
+              <div className="ev3-kv-grid">
+                <div className="ev3-kv"><span className="k">Étiquette DPE</span><span className="v v-accent">{dpe.etiquette_dpe ?? '—'}</span></div>
+                <div className="ev3-kv"><span className="k">GES</span><span className="v">{dpe.etiquette_ges ?? '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Conso (EP)</span><span className="v">{dpe.conso_ep_m2 != null ? `${fmt(dpe.conso_ep_m2)} kWh/m²` : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Date</span><span className="v">{dpe.date ? formatDate(dpe.date) : '—'}</span></div>
+              </div>
+              <p className="ev3-hint">{dpe.matched_by === 'adresse' ? (dpe.nb_adresse && dpe.nb_adresse > 1 ? `${dpe.nb_adresse} DPE à cette adresse — retenu : surface la plus proche.` : `Adresse exacte du bien${dpe.surface != null ? ` · ${fmt(dpe.surface)} m²` : ''}.`) : 'DPE le plus proche (adresse exacte introuvable) — à vérifier.'}</p>
+              {(() => {
+                const fields: Record<string, string> = {}
+                if (dpe!.conso_ep_m2 != null && !curConso) fields.dpe_cons = String(Math.round(Number(dpe!.conso_ep_m2)))
+                if (dpe!.ges_emission != null && !curGes) fields.dpe_ges = String(Math.round(Number(dpe!.ges_emission)))
+                const nEmpty = Object.keys(fields).length
+                const divConso = dpe!.conso_ep_m2 != null && !!curConso && !sameNum(curConso, dpe!.conso_ep_m2)
+                const divGes = dpe!.ges_emission != null && !!curGes && !sameNum(curGes, dpe!.ges_emission)
+                return (
+                  <>
+                    {nEmpty ? <div className="ev3-apply"><span>{nEmpty > 1 ? 'DPE conso & GES absents' : (fields.dpe_cons ? 'DPE conso absent' : 'GES absent')} de la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'dpe'} onClick={() => applyToFiche('dpe', fields, 'DPE/GES')}>{applyBusy === 'dpe' ? 'Report…' : 'Reporter dans la fiche'}</button></div> : null}
+                    {divConso || divGes ? <div className="ev3-apply ev3-apply-warn"><span>{divConso ? `Conso fiche ${curConso} · ADEME ${Math.round(Number(dpe!.conso_ep_m2))}` : ''}{divConso && divGes ? ' · ' : ''}{divGes ? `GES fiche ${curGes} · ADEME ${Math.round(Number(dpe!.ges_emission))}` : ''} (à vérifier).</span></div> : null}
+                  </>
+                )
+              })()}
+            </>
+          ) : (dpeBusy ? <p className="ev3-hint ev3-hint-run">Recherche du DPE ADEME…</p> : (dpeMsg ? <p className="ev3-hint ev3-hint-msg">{dpeMsg}</p> : <p className="ev3-hint">Dernier DPE réel de l’ADEME retrouvé par l’adresse exacte (id BAN) et départagé par la surface.</p>))}
+        </section>
+
+        <section className="ev3-card">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="cadre" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Cadre de vie</span><span className="ev3-h-s">Commodités &amp; risques</span></span>
+            <span className="ev3-h-right">
+              {cadre && cadre.ok && cadre.commune ? <span className="ev3-badge">{cadre.commune}</span> : null}
+              <button className="ev3-refresh" type="button" title="Régénérer le cadre de vie" aria-label="Régénérer le cadre de vie" disabled={cadreBusy} onClick={() => { void generateCadre() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {cadre && cadre.ok ? (
+            <>
+              <div className="ev3-kv-grid">
+                <div className="ev3-kv"><span className="k">Écoles</span><span className="v">{cadre.commodites ? fmt(cadre.commodites.ecoles) : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Commerces</span><span className="v">{cadre.commodites ? fmt(cadre.commodites.commerces) : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Santé</span><span className="v">{cadre.commodites ? fmt(cadre.commodites.sante) : '—'}</span></div>
+                <div className="ev3-kv"><span className="k">Gare</span><span className="v">{cadre.commodites?.gareNom ? `${cadre.commodites.gareNom}${cadre.commodites.gareKm != null ? ` · ${cadre.commodites.gareKm} km` : ''}` : '—'}</span></div>
+              </div>
+              {cadre.risques?.risques?.length ? <div className="ev3-tags">{cadre.risques.risques.slice(0, 6).map((r, i) => <span key={i} className="ev3-tag">{r}</span>)}</div> : null}
+            </>
+          ) : (cadreBusy ? <p className="ev3-hint ev3-hint-run">Calcul du cadre de vie…</p> : (cadreMsg ? <p className="ev3-hint ev3-hint-msg">{cadreMsg}</p> : <p className="ev3-hint">Commodités (écoles, commerces, santé, gare) et risques naturels/technologiques (Overpass · Géorisques).</p>))}
+        </section>
+
+        <section className="ev3-card ev3-card-wide">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="patrimoine" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Patrimoine &amp; ABF</span><span className="ev3-h-s">Périmètres de protection (Géoportail de l’Urbanisme)</span></span>
+            <span className="ev3-h-right">
+              {patri && patri.ok && patri.abf ? <span className="ev3-badge ev3-badge-warn">Périmètre ABF</span> : (patri && patri.ok ? <span className="ev3-badge">{patri.count} périmètre{(patri.count ?? 0) > 1 ? 's' : ''}</span> : null)}
+              <button className="ev3-refresh" type="button" title="Régénérer le patrimoine" aria-label="Régénérer le patrimoine" disabled={patriBusy} onClick={() => { void generatePatrimoine() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {patri && patri.ok ? (
+            <>
+              {patri.abf ? <div className="ev3-apply ev3-apply-warn"><span>Bien en périmètre de protection — travaux soumis à l’avis de l’Architecte des Bâtiments de France (ABF).</span></div> : null}
+              {patri.items && patri.items.length ? <div className="ev3-tags">{patri.items.map((it, i) => <span key={i} className="ev3-tag">{it.type_label}{it.nom ? ` · ${it.nom}` : ''}</span>)}</div> : <p className="ev3-hint">Aucun périmètre de protection recensé sur ce point.</p>}
+            </>
+          ) : (patriBusy ? <p className="ev3-hint ev3-hint-run">Recherche des périmètres de protection…</p> : (patriMsg ? <p className="ev3-hint ev3-hint-msg">{patriMsg}</p> : <p className="ev3-hint">Monument historique, site classé/inscrit, site patrimonial remarquable — indique si les travaux passent par l’ABF. Couverture GPU partielle : absence ≠ garantie.</p>))}
+        </section>
+
+        <div className="ev3-card ev3-card-wide ev3-card-cadastre">
+          <CadastreCommercialSection dossier={dossier} detail={detail} onJobCreated={onJobCreated} autoGenerateKey={cadSignal} onStateChange={setCadState} />
         </div>
-        {cadre && cadre.ok ? (
-          <>
-            <div className="estim-data-grid">
-              <div className="estim-dg"><span className="edk">Écoles</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.ecoles) : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Commerces</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.commerces) : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Santé</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.sante) : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Gare</span><span className="edv">{cadre.commodites?.gareNom ? `${cadre.commodites.gareNom}${cadre.commodites.gareKm != null ? ` · ${cadre.commodites.gareKm} km` : ''}` : '—'}</span></div>
-            </div>
-            {cadre.risques?.risques?.length ? (
-              <div className="estim-data-tags">{cadre.risques.risques.slice(0, 6).map((r, i) => <span key={i} className="estim-data-tag">{r}</span>)}</div>
-            ) : null}
-          </>
-        ) : (!cadreMsg ? <p className="cadastre-hint">Commodités (écoles, commerces, santé, gare), pôles régionaux et risques (IGN / Overpass / Géorisques). Enregistré ici et repris dans l’avis de valeur.</p> : null)}
-        {cadreMsg ? <p className="cadastre-hint cadastre-msg">{cadreMsg}</p> : null}
+
       </div>
 
-      {/* Bâtiment · BDNB — caractéristiques du bâti (chaînage RNB->BDNB côté serveur). */}
-      <div className="estim-data-block">
-        <div className="estim-data-head">
-          <span className="estim-data-t">Bâtiment · BDNB</span>
-          <div className="estim-data-head-right">
-            {bdnb && bdnb.ok && bdnb.classe_dpe ? <span className="estim-data-badge">DPE théorique {bdnb.classe_dpe}</span> : null}
-            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={bdnbBusy} onClick={() => { void generateBdnb() }}>
-              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-              <strong>{bdnbBusy ? 'Calcul…' : (bdnb && bdnb.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
-            </button>
-          </div>
-        </div>
-        {bdnb && bdnb.ok ? (
-          <>
-            <div className="estim-data-grid">
-              <div className="estim-dg"><span className="edk">Année construction</span><span className="edv">{bdnb.annee_construction ?? '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Type</span><span className="edv">{bdnb.type_batiment ?? '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Niveaux / logements</span><span className="edv">{bdnb.nb_niveau ?? '—'}{bdnb.nb_logements != null ? ` · ${bdnb.nb_logements} log.` : ''}</span></div>
-              <div className="estim-dg"><span className="edk">Conso (EP)</span><span className="edv">{bdnb.conso_ep_m2 != null ? `${fmt(bdnb.conso_ep_m2)} kWh/m²` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Murs</span><span className="edv">{bdnb.mat_mur ?? '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Toit</span><span className="edv">{bdnb.mat_toit ?? '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Hauteur</span><span className="edv">{bdnb.hauteur != null ? `${bdnb.hauteur} m` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Aléa argile</span><span className="edv">{bdnb.alea_argile ?? '—'}</span></div>
-            </div>
-            {bdnb.rnb_id ? <div className="estim-data-tags"><span className="estim-data-tag">RNB {bdnb.rnb_id}</span></div> : null}
-            {bdnb.annee_construction != null ? (
-              !curAnnee ? (
-                <div className="estim-apply">
-                  <span>Année de construction absente de la fiche.</span>
-                  <button className="estim-apply-btn" type="button" disabled={applyBusy === 'bdnb'} onClick={() => applyToFiche('bdnb', { ANNEE_CONS: String(bdnb!.annee_construction) }, `Année ${bdnb!.annee_construction}`)}>{applyBusy === 'bdnb' ? 'Report…' : `Reporter ${bdnb!.annee_construction} dans la fiche`}</button>
-                </div>
-              ) : (!sameNum(curAnnee, bdnb.annee_construction) ? (
-                <div className="estim-apply estim-apply-warn"><span>Année — fiche : {curAnnee} · BDNB : {bdnb.annee_construction} (à vérifier).</span></div>
-              ) : null)
-            ) : null}
-          </>
-        ) : (!bdnbMsg ? <p className="cadastre-hint">Caractéristiques du bâtiment (année, type, matériaux mur/toit, niveaux, DPE théorique, aléa retrait-gonflement des argiles) depuis la Base de Données Nationale des Bâtiments.</p> : null)}
-        {bdnbMsg ? <p className="cadastre-hint cadastre-msg">{bdnbMsg}</p> : null}
-      </div>
-
-      {/* DPE réel · ADEME — dernier diagnostic à proximité immédiate. */}
-      <div className="estim-data-block">
-        <div className="estim-data-head">
-          <span className="estim-data-t">DPE réel · ADEME</span>
-          <div className="estim-data-head-right">
-            {dpe && dpe.ok && dpe.matched_by === 'adresse' ? <span className="estim-data-badge">Adresse exacte</span> : (dpe && dpe.ok && dpe.matched_by === 'proximite' ? <span className="estim-data-badge estim-badge-warn">Proximité</span> : null)}
-            {dpe && dpe.ok && dpe.etiquette_dpe ? <span className="estim-data-badge">DPE {dpe.etiquette_dpe} · GES {dpe.etiquette_ges ?? '—'}</span> : null}
-            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={dpeBusy} onClick={() => { void generateDpe() }}>
-              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-              <strong>{dpeBusy ? 'Recherche…' : (dpe && dpe.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
-            </button>
-          </div>
-        </div>
-        {dpe && dpe.ok ? (
-          <>
-            <div className="estim-data-grid">
-              <div className="estim-dg"><span className="edk">Étiquette DPE</span><span className="edv edv-accent">{dpe.etiquette_dpe ?? '—'}</span></div>
-              <div className="estim-dg"><span className="edk">GES</span><span className="edv">{dpe.etiquette_ges ?? '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Conso (EP)</span><span className="edv">{dpe.conso_ep_m2 != null ? `${fmt(dpe.conso_ep_m2)} kWh/m²` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Date du DPE</span><span className="edv">{dpe.date ? formatDate(dpe.date) : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Surface DPE</span><span className="edv">{dpe.surface != null ? `${fmt(dpe.surface)} m²` : '—'}</span></div>
-              <div className="estim-dg"><span className="edk">Adresse DPE</span><span className="edv">{dpe.adresse ?? '—'}</span></div>
-            </div>
-            {dpe.matched_by === 'adresse'
-              ? <p className="cadastre-hint">{dpe.nb_adresse && dpe.nb_adresse > 1 ? `${dpe.nb_adresse} DPE trouvés à cette adresse — retenu : celui dont la surface colle le mieux au bien.` : 'DPE de l’adresse exacte du bien.'}</p>
-              : <p className="cadastre-hint">DPE le plus proche (adresse exacte introuvable) — à vérifier.</p>}
-            {(() => {
-              const fields: Record<string, string> = {}
-              if (dpe!.conso_ep_m2 != null && !curConso) fields.dpe_cons = String(Math.round(Number(dpe!.conso_ep_m2)))
-              if (dpe!.ges_emission != null && !curGes) fields.dpe_ges = String(Math.round(Number(dpe!.ges_emission)))
-              const nEmpty = Object.keys(fields).length
-              const divConso = dpe!.conso_ep_m2 != null && !!curConso && !sameNum(curConso, dpe!.conso_ep_m2)
-              const divGes = dpe!.ges_emission != null && !!curGes && !sameNum(curGes, dpe!.ges_emission)
-              return (
-                <>
-                  {nEmpty ? (
-                    <div className="estim-apply">
-                      <span>{nEmpty > 1 ? 'DPE conso & GES absents' : (fields.dpe_cons ? 'DPE conso absent' : 'GES absent')} de la fiche.</span>
-                      <button className="estim-apply-btn" type="button" disabled={applyBusy === 'dpe'} onClick={() => applyToFiche('dpe', fields, 'DPE/GES')}>{applyBusy === 'dpe' ? 'Report…' : 'Reporter dans la fiche'}</button>
-                    </div>
-                  ) : null}
-                  {divConso || divGes ? (
-                    <div className="estim-apply estim-apply-warn"><span>{divConso ? `Conso — fiche ${curConso} · ADEME ${Math.round(Number(dpe!.conso_ep_m2))} kWh` : ''}{divConso && divGes ? ' · ' : ''}{divGes ? `GES — fiche ${curGes} · ADEME ${Math.round(Number(dpe!.ges_emission))}` : ''} (à vérifier).</span></div>
-                  ) : null}
-                </>
-              )
-            })()}
-          </>
-        ) : (!dpeMsg ? <p className="cadastre-hint">DPE réel du bien depuis l’ADEME, retrouvé par l’adresse exacte (id BAN) et départagé par la surface. Étiquette énergie + GES, consommation, date.</p> : null)}
-        {dpeMsg ? <p className="cadastre-hint cadastre-msg">{dpeMsg}</p> : null}
-        {applyMsg ? <p className="cadastre-hint cadastre-msg">{applyMsg}</p> : null}
-      </div>
-
-      {/* Patrimoine & ABF — servitudes de protection (monuments, sites, SPR) via GPU. */}
-      <div className="estim-data-block">
-        <div className="estim-data-head">
-          <span className="estim-data-t">Patrimoine &amp; ABF</span>
-          <div className="estim-data-head-right">
-            {patri && patri.ok ? <span className="estim-data-badge">{patri.count} périmètre{(patri.count ?? 0) > 1 ? 's' : ''}</span> : null}
-            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={patriBusy} onClick={() => { void generatePatrimoine() }}>
-              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-              <strong>{patriBusy ? 'Recherche…' : (patri && patri.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
-            </button>
-          </div>
-        </div>
-        {patri && patri.ok ? (
-          <>
-            {patri.abf ? <div className="estim-apply estim-apply-warn"><span>Bien en périmètre de protection — travaux soumis à l&apos;avis de l&apos;Architecte des Bâtiments de France (ABF).</span></div> : null}
-            <div className="estim-data-tags">{(patri.items ?? []).map((it, i) => <span key={i} className="estim-data-tag">{it.type_label}{it.nom ? ` · ${it.nom}` : ''}</span>)}</div>
-          </>
-        ) : (!patriMsg ? <p className="cadastre-hint">Périmètres de protection du patrimoine (monument historique, site classé/inscrit, site patrimonial remarquable) via le Géoportail de l&apos;Urbanisme. Indique si les travaux sont soumis à l&apos;ABF. Couverture GPU partielle : absence ≠ garantie.</p> : null)}
-        {patriMsg ? <p className="cadastre-hint cadastre-msg">{patriMsg}</p> : null}
-      </div>
-
-      {/* Cadastre (déplacé de Commercialisation) : composant autonome, génère + persiste + ré-affiche. */}
-      <CadastreCommercialSection dossier={dossier} detail={detail} onJobCreated={onJobCreated} />
+      {applyMsg ? <p className="ev3-toast">{applyMsg}</p> : null}
     </article>
   )
 }
@@ -20249,19 +20295,10 @@ function DossierDetailLayout(props: {
                         })()}</span></div>
                       </div>
                     </div>
-                    {!isLightweightDetail ? (
-                      <div className="estim-open-cta">
-                        <button className="hektor-context-action-button" type="button" onClick={() => setEstimEditorOpen(true)}>
-                          <span aria-hidden="true"><DetailIcon type="commercial" /></span>
-                          <strong>Ouvrir l&apos;éditeur d&apos;avis de valeur</strong>
-                        </button>
-                        <span className="estim-open-hint">Charger DVF / cadre de vie / cadastre, puis générer le PDF — les données sont mémorisées et consultables ci-dessous.</span>
-                      </div>
-                    ) : null}
                   </section>
                   {!isLightweightDetail ? (
                     <section className="fa-section">
-                      <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} />
+                      <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
                     </section>
                   ) : null}
                 </div>
@@ -24359,8 +24396,7 @@ function MobileDossierDetail(props: {
         <details className="mobile-detail-section mobile-detail-disclosure" open>
           <summary>Estimation</summary>
           <div className="mobile-detail-embedded mobile-estim-body">
-            <button className="mobile-primary-button" type="button" onClick={() => setEstimEditorOpen(true)}>Ouvrir l&apos;éditeur d&apos;avis de valeur</button>
-            <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} />
+            <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
           </div>
         </details>
       ) : null}
