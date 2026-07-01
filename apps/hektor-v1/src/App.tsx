@@ -8159,6 +8159,72 @@ const signatureAutoSyncByDossier = new Map<number, number>()
 // Bloc « Suivi de signature du mandat » : affiche, sous l'editeur de mandat (onglet Mandat & contacts),
 // les mandats avec leur etat (a envoyer / en attente / signe) + l'action utile. Reutilise les memes
 // donnees et actions que le bloc Documents. N'affiche rien s'il n'y a aucun mandat.
+// Sélecteur de parcelles : affiché quand le point du bien ne tombe sur aucune parcelle
+// (ex. sur la voie) ou via « Ajuster ». Multi-sélection, avec plan IGN + contenance + distance.
+function CadastreParcellePicker({ candidates, initialKeys, commune, onConfirm, onCancel }: {
+  candidates: CadastreParcelle[]
+  initialKeys?: string[]
+  commune?: string | null
+  onConfirm: (selected: CadastreParcelle[]) => void
+  onCancel: () => void
+}) {
+  const keyOf = (p: CadastreParcelle, i: number) => p.idu || p.reference || String(i)
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    if (initialKeys && initialKeys.length) return new Set(initialKeys)
+    return new Set(candidates.length ? [keyOf(candidates[0], 0)] : [])  // pré-sélectionne la plus proche
+  })
+  const toggle = (k: string) => setSelected((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })
+  const chosen = candidates.filter((p, i) => selected.has(keyOf(p, i)))
+  const total = chosen.reduce((s, p) => s + (Number(p.contenance) || 0), 0)
+  return (
+    <div className="cadastre-picker" role="dialog" aria-modal="true" aria-label="Choisir la parcelle du bien" onClick={onCancel}>
+      <div className="cpk-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="cpk-head">
+          <div>
+            <div className="cpk-eyebrow">Cadastre{commune ? ` · ${commune}` : ''}</div>
+            <h3>Quelle parcelle correspond au bien ?</h3>
+            <span className="cpk-warn">⚠ Le point du bien tombe sur la voie — aucune parcelle exacte</span>
+            <p className="cpk-lead">Sélectionne la ou les parcelles qui composent le bien (plusieurs possibles). La plus proche est pré-sélectionnée.</p>
+          </div>
+          <button className="cpk-close" type="button" aria-label="Fermer" onClick={onCancel}>×</button>
+        </div>
+        <div className="cpk-grid">
+          {candidates.map((p, i) => {
+            const k = keyOf(p, i)
+            const isSel = selected.has(k)
+            const thumb = cadastreMapThumbUrl(Number(p.centroid_lat), Number(p.centroid_lon), 240, 150, 90)
+            return (
+              <button type="button" key={k} className={`cpk-card ${isSel ? 'sel' : ''}`} onClick={() => toggle(k)} aria-pressed={isSel}>
+                <div className="cpk-map">
+                  {thumb ? <img src={thumb} alt={`Plan parcelle ${p.reference ?? ''}`} loading="lazy" /> : null}
+                  <span className="cpk-pin" aria-hidden="true" />
+                  {p.distance_m != null ? <span className="cpk-dist">à {p.distance_m} m{p.direction ? ` · ${p.direction}` : ''}</span> : null}
+                </div>
+                <span className="cpk-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg></span>
+                <div className="cpk-body">
+                  <div><div className="cpk-ref">{p.reference ?? '—'}</div><div className="cpk-sub">section {p.section ?? '—'} · n° {p.numero ?? '—'}</div></div>
+                  <div className="cpk-cont">{p.contenance != null ? Number(p.contenance).toLocaleString('fr-FR') : '—'}<small>m²</small></div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        <div className="cpk-foot">
+          <div className="cpk-sum">
+            {chosen.length
+              ? <>Sélection : <b>{chosen.map((p) => p.reference).filter(Boolean).join(' + ')}</b> · <span className="cpk-tot">{total.toLocaleString('fr-FR')} m²</span></>
+              : 'Aucune parcelle sélectionnée'}
+          </div>
+          <div className="cpk-btns">
+            <button className="cpk-lnk" type="button" onClick={onCancel}>Annuler</button>
+            <button className="ghost-button button-primary" type="button" disabled={!chosen.length} onClick={() => onConfirm(chosen)}>Confirmer{chosen.length ? ` (${chosen.length})` : ''}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Onglet Commercialisation — bloc « Cadastre » : récupère les éléments cadastraux du bien
 // (parcelle(s) + contenance + PLU via IGN/Géoportail), les affiche, génère un PDF « Plan
 // cadastral » déposé dans Hektor (onglet Documents) et persiste les données par dossier.
@@ -8166,28 +8232,33 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
   const [cad, setCad] = useState<CadastreData | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [picker, setPicker] = useState<{ candidates: CadastreParcelle[]; initialKeys: string[] } | null>(null)
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lon: number } | null>(null)
 
   // Re-affiche les éléments déjà enregistrés (sans re-fetch) à l'ouverture de la fiche.
   useEffect(() => {
     let cancelled = false
-    setCad(null); setMessage(null)
+    setCad(null); setMessage(null); setPicker(null); setMapCenter(null)
     loadDossierCadastre(dossier.app_dossier_id).then((row) => { if (!cancelled && row) setCad(row) }).catch(() => { /* best effort */ })
     return () => { cancelled = true }
   }, [dossier.app_dossier_id])
 
-  async function handleGenerate() {
-    if (busy) return
-    const lat = Number(detail.latitude_detail)
-    const lon = Number(detail.longitude_detail)
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMessage('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
-    setBusy(true); setMessage('Récupération des éléments cadastraux…')
+  const coords = () => ({ lat: Number(detail.latitude_detail), lon: Number(detail.longitude_detail) })
+  const hasCoords = () => { const { lat, lon } = coords(); return Number.isFinite(lat) && Number.isFinite(lon) && !!lat && !!lon }
+
+  // Crée le job de génération à partir de parcelles données (choisies ou trouvées au point).
+  async function doGenerate(chosen: CadastreParcelle[] | null, mapLat: number, mapLon: number) {
+    const { lat, lon } = coords()
+    const contenance = (chosen ?? []).reduce((s, p) => s + (Number(p.contenance) || 0), 0) || null
+    setBusy(true); setMessage('Plan cadastral en génération…')
     try {
-      const res = await loadCadastre({ lat, lon })
-      setCad(res)
-      if (!res.ok) { setMessage('Aucune parcelle cadastrale trouvée pour ces coordonnées.'); setBusy(false); return }
-      const job = await createGenerateCadastreDocumentJob({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, lat, lon })
+      const job = await createGenerateCadastreDocumentJob({
+        dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id },
+        lat, lon, parcelles: chosen, mapLat, mapLon,
+      })
       onJobCreated?.(job)
-      setMessage('Plan cadastral en génération — il apparaîtra dans l’onglet Documents (Hektor) dans un instant.')
+      if (chosen) { setCad((prev) => ({ ok: true, parcelles: chosen, contenance_totale: contenance, plu: prev?.plu ?? null })); setMapCenter({ lat: mapLat, lon: mapLon }) }
+      setMessage('Plan cadastral en génération — il apparaîtra dans le bloc Documents (onglet Contenu) et dans Hektor.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Génération des éléments cadastraux impossible.')
     } finally {
@@ -8195,8 +8266,60 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
     }
   }
 
+  async function handleGenerate() {
+    if (busy) return
+    if (!hasCoords()) { setMessage('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setBusy(true); setMessage('Récupération des éléments cadastraux…')
+    try {
+      const res = await loadCadastre({ lat, lon })
+      if (res.ok) { setCad(res); setMapCenter(null); await doGenerate(res.parcelles ?? null, lat, lon); return }
+      // Point sur la voie / hors parcelle : proposer les parcelles voisines.
+      if (res.candidates && res.candidates.length) {
+        setBusy(false)
+        setMessage('Le point du bien ne tombe sur aucune parcelle — choisis la bonne ci-dessous.')
+        setPicker({ candidates: res.candidates, initialKeys: [] })
+        return
+      }
+      setMessage('Aucune parcelle cadastrale trouvée à proximité de ce point.')
+      setBusy(false)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Génération des éléments cadastraux impossible.')
+      setBusy(false)
+    }
+  }
+
+  // Lien « Ajuster la parcelle » : ouvre le sélecteur avec les parcelles voisines (choix manuel).
+  async function handleAdjust() {
+    if (busy || !hasCoords()) return
+    const { lat, lon } = coords()
+    setBusy(true); setMessage('Chargement des parcelles voisines…')
+    try {
+      const res = await loadCadastre({ lat, lon, withCandidates: true })
+      const cands = res.candidates && res.candidates.length ? res.candidates : (res.parcelles ?? [])
+      if (!cands.length) { setMessage('Aucune parcelle voisine trouvée.'); return }
+      const currentRefs = new Set((cad?.parcelles ?? []).map((p) => p.reference))
+      const initialKeys = cands.filter((p) => p.reference && currentRefs.has(p.reference)).map((p, i) => p.idu || p.reference || String(i))
+      setPicker({ candidates: cands, initialKeys })
+      setMessage(null)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Chargement des parcelles voisines impossible.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function onPickerConfirm(chosen: CadastreParcelle[]) {
+    setPicker(null)
+    const c0 = chosen[0]
+    const mapLat = Number(c0?.centroid_lat) || coords().lat
+    const mapLon = Number(c0?.centroid_lon) || coords().lon
+    void doGenerate(chosen, mapLat, mapLon)
+  }
+
   const parcelles = cad?.parcelles ?? []
-  const thumbUrl = cad && cad.ok ? cadastreMapThumbUrl(Number(detail.latitude_detail), Number(detail.longitude_detail)) : null
+  const center = mapCenter ?? { lat: Number(detail.latitude_detail), lon: Number(detail.longitude_detail) }
+  const thumbUrl = cad && cad.ok ? cadastreMapThumbUrl(center.lat, center.lon) : null
   return (
     <article className="detail-subsection detail-cadastre-section">
       <div className="section-header">
@@ -8234,12 +8357,22 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
                 <span className="cadastre-plu-desc">{cad.plu.libelle || (cad.plu.type ? `Zone type ${cad.plu.type}` : 'Zonage PLU')}</span>
               </div>
             ) : null}
+            {hasCoords() ? <button type="button" className="cadastre-adjust" disabled={busy} onClick={() => { void handleAdjust() }}>Ajuster la parcelle</button> : null}
           </div>
         </div>
       ) : (
         <p className="cadastre-hint">Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l’Urbanisme). Le bouton génère un document « Plan cadastral » déposé dans Hektor.</p>
       )}
       {message ? <p className="cadastre-hint cadastre-msg">{message}</p> : null}
+      {picker ? (
+        <CadastreParcellePicker
+          candidates={picker.candidates}
+          initialKeys={picker.initialKeys}
+          commune={dossier.ville ?? parcelles[0]?.commune ?? null}
+          onConfirm={onPickerConfirm}
+          onCancel={() => { setPicker(null); setMessage(null) }}
+        />
+      ) : null}
     </article>
   )
 }
