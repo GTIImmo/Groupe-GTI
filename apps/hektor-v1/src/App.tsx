@@ -5070,11 +5070,11 @@ function EstimationDocumentEditor(props: {
                       <thead><tr><th>Bien</th><th>Commune</th><th>Date</th><th>Dist.</th><th style={{ textAlign: 'right' }}>Prix</th><th style={{ textAlign: 'right' }}>€/m²</th></tr></thead>
                       <tbody>
                         {marche.comparables.map((c, i) => (
-                          <tr key={i}><td>{c.type} {c.surface} m²{c.pieces ? ` · ${c.pieces} p.` : ''}</td><td>{c.commune}</td><td>{c.date}</td><td>{c.distance_km} km</td><td style={{ textAlign: 'right' }}>{c.valeur.toLocaleString('fr-FR')} €</td><td style={{ textAlign: 'right', color: 'var(--ds-brand-500, #c5005f)' }}>{c.prix_m2 ? c.prix_m2.toLocaleString('fr-FR') : '—'}</td></tr>
+                          <tr key={i}><td>{c.type} {c.surface} m²{c.pieces ? ` · ${c.pieces} p.` : ''}{c.terrain ? ` · terrain ${c.terrain.toLocaleString('fr-FR')} m²` : ''}</td><td>{c.commune}</td><td>{c.date}</td><td>{c.distance_km} km</td><td style={{ textAlign: 'right' }}>{c.valeur.toLocaleString('fr-FR')} €</td><td style={{ textAlign: 'right', color: 'var(--ds-brand-500, #c5005f)' }}>{c.prix_m2 ? c.prix_m2.toLocaleString('fr-FR') : '—'}</td></tr>
                         ))}
                       </tbody>
                     </table>
-                    <p style={{ fontSize: 11, color: 'var(--ds-ink-mute, #5c6163)', marginTop: 8 }}>Source : DVF (open data), ventes en-bloc exclues. Comparables {marche.type}, surface ±25 %, rayon {marche.radius_km} km, médiane sur {marche.count_clean ?? marche.count} biens. Ajoutés automatiquement au PDF (page Marché).</p>
+                    <p style={{ fontSize: 11, color: 'var(--ds-ink-mute, #5c6163)', marginTop: 8 }}>Source : DVF (open data), ventes en-bloc exclues. Comparables {marche.type}, surface ±20 %, rayon {marche.radius_km} km, médiane sur {marche.count_clean ?? marche.count} biens. Ajoutés automatiquement au PDF (page Marché).</p>
                   </>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Charge les ventes comparables récentes du secteur (open data DVF) — elles enrichiront la page Marché de l'avis de valeur.</p>
