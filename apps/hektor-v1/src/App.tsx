@@ -4697,16 +4697,17 @@ function EstimationDocumentEditor(props: {
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
     if (!type) { setMarcheMsg(`Comparaison DVF non pertinente pour ce type de bien (${propertyTypeLabel(dossier.type_bien)}). La base DVF ne couvre que maisons et appartements.`); return }
+    // Maisons : terrain de taille comparable, mais uniquement en LOCAL (≤2km) — la RPC v4 élargit
+    // le temps (24→48 mois) AVANT la distance, et abandonne le terrain avant de s'éloigner
+    // (pas de dérive vers le rural bon marché).
+    const terrain = type === 'Maison' ? (Number(props.detail.surface_terrain_detail) || null) : null
     setMarcheBusy(true); setMarcheMsg(null)
     try {
-      // NB : on ne filtre PAS par terrain (ça tirait la comparaison vers le rural bon marché
-      // → estimation plus basse pour un grand terrain, effet illogique). La valorisation du
-      // terrain doit se faire par un supplément foncier, pas par un filtre. Voir RPC v2.
-      const res = await loadDvfComparables({ lat, lon, dept, type, surface, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
+      const res = await loadDvfComparables({ lat, lon, dept, type, surface, terrain, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
       setMarche(res)
       const n = res.count_clean ?? res.count
       setMarcheMsg(res.ok
-        ? `${n} comparable${n > 1 ? 's' : ''} · rayon ${res.radius_km ?? '—'} km${res.median_prix_m2 ? ' · médiane ' + res.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : ''}${res.fiable === false ? ' · ⚠ peu fiable' : ''}`
+        ? `${n} comparable${n > 1 ? 's' : ''} · rayon ${res.radius_km ?? '—'} km${res.months && res.months > 24 ? ' · ' + Math.round(res.months / 12) + ' ans' : ''}${res.median_prix_m2 ? ' · médiane ' + res.median_prix_m2.toLocaleString('fr-FR') + ' €/m²' : ''}${res.terrain_applied ? ' · terrain similaire' : ''}${res.fiable === false ? ' · ⚠ peu fiable' : ''}`
         : 'Aucune donnée DVF trouvée pour ce secteur.')
     } catch (error) {
       setMarcheMsg(error instanceof Error ? error.message : 'Chargement des comparables impossible.')
