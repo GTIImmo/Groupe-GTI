@@ -72,6 +72,7 @@ import {
   loadCadastre,
   loadDossierCadastre,
   loadDossierEstimation,
+  saveDossierEstimationSource,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
@@ -8438,15 +8439,59 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
 // (déplacé de Commercialisation). refreshKey force le rechargement après une génération.
 function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { dossier: Dossier; detail: DossierDetailPayload; refreshKey?: number; onJobCreated?: (job: ConsoleJob) => void }) {
   const [estim, setEstim] = useState<DossierEstimation | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const [dvfBusy, setDvfBusy] = useState(false)
+  const [dvfMsg, setDvfMsg] = useState<string | null>(null)
+  const [cadreBusy, setCadreBusy] = useState(false)
+  const [cadreMsg, setCadreMsg] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
-    setLoaded(false)
+    setDvfMsg(null); setCadreMsg(null)
     loadDossierEstimation(dossier.app_dossier_id)
-      .then((row) => { if (!cancelled) { setEstim(row); setLoaded(true) } })
-      .catch(() => { if (!cancelled) setLoaded(true) })
+      .then((row) => { if (!cancelled) setEstim(row) })
+      .catch(() => { /* best effort */ })
     return () => { cancelled = true }
   }, [dossier.app_dossier_id, refreshKey])
+
+  const reload = async () => { try { setEstim(await loadDossierEstimation(dossier.app_dossier_id)) } catch { /* best effort */ } }
+  const coords = () => ({ lat: Number(detail.latitude_detail), lon: Number(detail.longitude_detail) })
+  const hasCoords = () => { const { lat, lon } = coords(); return Number.isFinite(lat) && Number.isFinite(lon) && !!lat && !!lon }
+
+  // Génère + mémorise le MARCHÉ DVF directement depuis l'onglet (même règle que la modale : loadMarche).
+  async function generateDvf() {
+    if (dvfBusy) return
+    if (!hasCoords()) { setDvfMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    const dept = String(dossier.code_postal || '').trim().slice(0, 2)
+    const type = dvfTypeForBien(dossier.type_bien)
+    if (!type) { setDvfMsg(`Comparaison DVF non pertinente pour ce type de bien (${propertyTypeLabel(dossier.type_bien)}).`); return }
+    const surface = Number(detail.surface_habitable_detail ?? detail.surface) || null
+    const terrain = type === 'Maison' ? (Number(detail.surface_terrain_detail) || null) : null
+    setDvfBusy(true); setDvfMsg('Calcul des comparables DVF…')
+    try {
+      const res = await loadDvfComparables({ lat, lon, dept, type, surface, terrain, radiusKm: 12, months: 24, codePostal: dossier.code_postal, commune: dossier.ville })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'dvf', res.ok, res)
+      await reload()
+      setDvfMsg(res.ok ? null : 'Aucune donnée DVF trouvée pour ce secteur.')
+    } catch (error) {
+      setDvfMsg(error instanceof Error ? error.message : 'Calcul des comparables impossible.')
+    } finally { setDvfBusy(false) }
+  }
+
+  // Génère + mémorise le CADRE DE VIE directement depuis l'onglet.
+  async function generateCadre() {
+    if (cadreBusy) return
+    if (!hasCoords()) { setCadreMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setCadreBusy(true); setCadreMsg('Calcul du cadre de vie…')
+    try {
+      const res = await loadCadreDeVie({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'cadre', res.ok, res)
+      await reload()
+      setCadreMsg(res.ok ? null : 'Cadre de vie indisponible pour ce point.')
+    } catch (error) {
+      setCadreMsg(error instanceof Error ? error.message : 'Calcul du cadre de vie impossible.')
+    } finally { setCadreBusy(false) }
+  }
 
   const dvf = estim?.sources?.dvf?.data as DvfComparablesResult | undefined
   const cadre = estim?.sources?.cadre?.data as CadreDeVie | undefined
@@ -8456,45 +8501,59 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
     <article className="detail-subsection detail-estimation-data">
       <div className="section-header">
         <DetailSectionTitle icon="commercial" title="Données mémorisées" />
-        {estim?.updatedAt ? <span className="section-header-note">Générées le {formatDate(estim.updatedAt)}</span> : null}
+        {estim?.updatedAt ? <span className="section-header-note">Mises à jour le {formatDate(estim.updatedAt)}</span> : null}
       </div>
 
-      {loaded && !dvf && !cadre ? (
-        <p className="cadastre-hint">Aucune donnée mémorisée pour l’instant. Ouvre l’éditeur d’avis de valeur, charge les blocs (DVF, cadre de vie, cadastre) et génère le PDF : les données seront enregistrées ici et consultables sans recalcul.</p>
-      ) : null}
-
-      {dvf && dvf.ok ? (
-        <div className="estim-data-block">
-          <div className="estim-data-head">
-            <span className="estim-data-t">Marché · DVF</span>
-            <span className="estim-data-badge">{fmt(dvf.count_clean ?? dvf.count)} comparables{dvf.terrain_applied ? ' · terrain similaire' : ''}</span>
+      {/* Marché · DVF — génération directe (bouton dans le bloc, comme le cadastre). */}
+      <div className="estim-data-block">
+        <div className="estim-data-head">
+          <span className="estim-data-t">Marché · DVF</span>
+          <div className="estim-data-head-right">
+            {dvf && dvf.ok ? <span className="estim-data-badge">{fmt(dvf.count_clean ?? dvf.count)} comparables{dvf.terrain_applied ? ' · terrain similaire' : ''}</span> : null}
+            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={dvfBusy} onClick={() => { void generateDvf() }}>
+              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+              <strong>{dvfBusy ? 'Calcul…' : (dvf && dvf.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
+            </button>
           </div>
+        </div>
+        {dvf && dvf.ok ? (
           <div className="estim-data-grid">
             <div className="estim-dg"><span className="edk">Médiane €/m²</span><span className="edv">{dvf.median_prix_m2 ? `${fmt(dvf.median_prix_m2)} €/m²` : '—'}</span></div>
             <div className="estim-dg"><span className="edk">Valeur estimée</span><span className="edv edv-accent">{dvf.prix_estime ? `${fmt(dvf.prix_estime)} €` : '—'}</span></div>
             <div className="estim-dg"><span className="edk">Fourchette</span><span className="edv">{dvf.fourchette_basse && dvf.fourchette_haute ? `${fmt(dvf.fourchette_basse)} – ${fmt(dvf.fourchette_haute)} €` : '—'}</span></div>
             <div className="estim-dg"><span className="edk">Périmètre</span><span className="edv">{dvf.radius_km != null ? `${dvf.radius_km} km` : '—'}{dvf.months ? ` · ${Math.round(dvf.months / 12)} ans` : ''}</span></div>
           </div>
-        </div>
-      ) : null}
+        ) : (!dvfMsg ? <p className="cadastre-hint">Prix médian au m² + valeur estimée depuis les ventes DVF comparables (type, surface ±20 %, secteur). Enregistré ici et repris dans l’avis de valeur.</p> : null)}
+        {dvfMsg ? <p className="cadastre-hint cadastre-msg">{dvfMsg}</p> : null}
+      </div>
 
-      {cadre && cadre.ok ? (
-        <div className="estim-data-block">
-          <div className="estim-data-head">
-            <span className="estim-data-t">Cadre de vie</span>
-            {cadre.commune ? <span className="estim-data-badge">{cadre.commune}</span> : null}
+      {/* Cadre de vie — génération directe. */}
+      <div className="estim-data-block">
+        <div className="estim-data-head">
+          <span className="estim-data-t">Cadre de vie</span>
+          <div className="estim-data-head-right">
+            {cadre && cadre.ok && cadre.commune ? <span className="estim-data-badge">{cadre.commune}</span> : null}
+            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={cadreBusy} onClick={() => { void generateCadre() }}>
+              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+              <strong>{cadreBusy ? 'Calcul…' : (cadre && cadre.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
+            </button>
           </div>
-          <div className="estim-data-grid">
-            <div className="estim-dg"><span className="edk">Écoles</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.ecoles) : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Commerces</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.commerces) : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Santé</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.sante) : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Gare</span><span className="edv">{cadre.commodites?.gareNom ? `${cadre.commodites.gareNom}${cadre.commodites.gareKm != null ? ` · ${cadre.commodites.gareKm} km` : ''}` : '—'}</span></div>
-          </div>
-          {cadre.risques?.risques?.length ? (
-            <div className="estim-data-tags">{cadre.risques.risques.slice(0, 6).map((r, i) => <span key={i} className="estim-data-tag">{r}</span>)}</div>
-          ) : null}
         </div>
-      ) : null}
+        {cadre && cadre.ok ? (
+          <>
+            <div className="estim-data-grid">
+              <div className="estim-dg"><span className="edk">Écoles</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.ecoles) : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Commerces</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.commerces) : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Santé</span><span className="edv">{cadre.commodites ? fmt(cadre.commodites.sante) : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Gare</span><span className="edv">{cadre.commodites?.gareNom ? `${cadre.commodites.gareNom}${cadre.commodites.gareKm != null ? ` · ${cadre.commodites.gareKm} km` : ''}` : '—'}</span></div>
+            </div>
+            {cadre.risques?.risques?.length ? (
+              <div className="estim-data-tags">{cadre.risques.risques.slice(0, 6).map((r, i) => <span key={i} className="estim-data-tag">{r}</span>)}</div>
+            ) : null}
+          </>
+        ) : (!cadreMsg ? <p className="cadastre-hint">Commodités (écoles, commerces, santé, gare), pôles régionaux et risques (IGN / Overpass / Géorisques). Enregistré ici et repris dans l’avis de valeur.</p> : null)}
+        {cadreMsg ? <p className="cadastre-hint cadastre-msg">{cadreMsg}</p> : null}
+      </div>
 
       {/* Cadastre (déplacé de Commercialisation) : composant autonome, génère + persiste + ré-affiche. */}
       <CadastreCommercialSection dossier={dossier} detail={detail} onJobCreated={onJobCreated} />

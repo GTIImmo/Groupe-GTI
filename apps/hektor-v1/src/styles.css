@@ -31408,11 +31408,20 @@ body {
 }
 .estim-data-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
+.estim-data-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.estim-gen-btn { flex: none; }
 .estim-data-t {
   font-size: 12px;
   font-weight: 700;

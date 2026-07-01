@@ -5077,24 +5077,37 @@ async function handleGenerateEstimationPdf(job) {
   // chacune { ok, data, fetched_at }. On n'ecrit que les sources presentes dans le payload enrichi
   // (l'editeur les genere ensemble). Best-effort : si la table n'existe pas encore, on n'echoue pas.
   if (dossier.app_dossier_id != null) {
-    try {
-      const nowIso = new Date().toISOString();
-      const sources = {};
-      if (payload.marche) sources.dvf = { ok: payload.marche.ok !== false, data: payload.marche, fetched_at: nowIso };
-      if (payload.cadreDeVie) sources.cadre = { ok: payload.cadreDeVie.ok !== false, data: payload.cadreDeVie, fetched_at: nowIso };
-      if (payload.cadastre) sources.cadastre = { ok: payload.cadastre.ok !== false, data: payload.cadastre, fetched_at: nowIso };
-      await supabaseRequest("app_dossier_estimation?on_conflict=app_dossier_id", {
-        method: "POST",
-        prefer: "resolution=merge-duplicates,return=minimal",
-        body: JSON.stringify([{
-          app_dossier_id: dossier.app_dossier_id,
-          hektor_annonce_id: String(dossier.hektor_annonce_id),
-          valeurs: payload.valeurs || null,
-          sources,
-          updated_at: nowIso,
-        }]),
-      });
-    } catch (_) { /* table absente / RLS : non bloquant */ }
+    const nowIso = new Date().toISOString();
+    // Fusion par SOURCE (même RPC que le bouton « Générer et enregistrer » de l'onglet) :
+    // ne réécrit que la clé concernée -> une source générée depuis l'onglet n'est pas
+    // écrasée par la génération du PDF (et inversement).
+    const persistSource = async (key, val) => {
+      if (!val) return;
+      try {
+        await supabaseRequest("rpc/app_upsert_dossier_estimation_source", {
+          method: "POST",
+          body: JSON.stringify({
+            p_app_dossier_id: dossier.app_dossier_id,
+            p_hektor_annonce_id: String(dossier.hektor_annonce_id),
+            p_key: key,
+            p_ok: val.ok !== false,
+            p_data: val,
+          }),
+        });
+      } catch (_) { /* table/RPC absente : non bloquant */ }
+    };
+    await persistSource("dvf", payload.marche);
+    await persistSource("cadre", payload.cadreDeVie);
+    await persistSource("cadastre", payload.cadastre);
+    if (payload.valeurs) {
+      try {
+        await supabaseRequest("app_dossier_estimation?app_dossier_id=eq." + dossier.app_dossier_id, {
+          method: "PATCH",
+          prefer: "return=minimal",
+          body: JSON.stringify({ valeurs: payload.valeurs, updated_at: nowIso }),
+        });
+      } catch (_) { /* non bloquant */ }
+    }
   }
 
   await logJob(job.id, "estimation_pdf", "done", "Avis de valeur genere, upload Hektor en file", {
