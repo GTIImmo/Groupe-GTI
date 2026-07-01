@@ -4675,9 +4675,10 @@ function EstimationDocumentEditor(props: {
   const [cadastre, setCadastre] = useState<CadastreData | null>(null)
   const [cadastreBusy, setCadastreBusy] = useState(false)
   const [cadastreMsg, setCadastreMsg] = useState<string | null>(null)
+  const [cadastrePicker, setCadastrePicker] = useState<CadastreParcelle[] | null>(null)  // parcelles voisines à choisir (point sur la voie)
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
-  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null) }, [initialDraft, props.modal])
+  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null); setCadastrePicker(null) }, [initialDraft, props.modal])
   useEffect(() => {
     let cancelled = false
     const id = dossier.app_dossier_id
@@ -4746,13 +4747,27 @@ function EstimationDocumentEditor(props: {
         const ref = res.parcelles?.[0]?.reference ?? null
         setCadastreMsg(`${n} parcelle${n > 1 ? 's' : ''}${ref ? ' · ' + ref + (n > 1 ? '…' : '') : ''}${res.contenance_totale ? ' · ' + res.contenance_totale.toLocaleString('fr-FR') + ' m²' : ''}${res.plu?.zone ? ' · PLU ' + res.plu.zone : ''}`)
       } else if (res.candidates && res.candidates.length) {
-        setCadastreMsg(`Le point tombe sur la voie — ${res.candidates.length} parcelle(s) voisine(s). Choisis-la depuis l'onglet Commercialisation.`)
+        setCadastreMsg('Le point du bien ne tombe sur aucune parcelle — choisis la bonne ci-dessous.')
+        setCadastrePicker(res.candidates)  // ouvre le sélecteur (point sur la voie)
       } else setCadastreMsg('Aucune parcelle cadastrale trouvée pour ces coordonnées.')
     } catch (error) {
       setCadastreMsg(error instanceof Error ? error.message : 'Chargement des éléments cadastraux impossible.')
     } finally {
       setCadastreBusy(false)
     }
+  }
+
+  // Sélecteur estimation confirmé : construit les éléments cadastraux à partir des parcelles choisies
+  // (centre carte = centroïde de la 1re parcelle) — repris dans le PDF de l'avis de valeur.
+  function onEstimCadastrePick(chosen: CadastreParcelle[]) {
+    setCadastrePicker(null)
+    const c0 = chosen[0]
+    const lat = Number(c0?.centroid_lat) || Number(props.detail.latitude_detail)
+    const lon = Number(c0?.centroid_lon) || Number(props.detail.longitude_detail)
+    const contenance = chosen.reduce((s, p) => s + (Number(p.contenance) || 0), 0) || null
+    setCadastre((prev) => ({ ok: true, lat, lon, parcelles: chosen, contenance_totale: contenance, plu: prev?.plu ?? null }))
+    const ref = chosen.map((p) => p.reference).filter(Boolean).join(', ')
+    setCadastreMsg(`${chosen.length} parcelle${chosen.length > 1 ? 's' : ''}${ref ? ' · ' + ref : ''}${contenance ? ' · ' + contenance.toLocaleString('fr-FR') + ' m²' : ''}`)
   }
 
   const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
@@ -5088,6 +5103,14 @@ function EstimationDocumentEditor(props: {
                   ) : (
                     <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l'Urbanisme) — ajoutent le bloc « Éléments cadastraux » au PDF.</p>
                   )}
+                  {cadastrePicker ? (
+                    <CadastreParcellePicker
+                      candidates={cadastrePicker}
+                      commune={dossier.ville ?? cadastre?.parcelles?.[0]?.commune ?? null}
+                      onConfirm={onEstimCadastrePick}
+                      onCancel={() => { setCadastrePicker(null); setCadastreMsg(null) }}
+                    />
+                  ) : null}
                 </div>
               </div>
             ) : null}
