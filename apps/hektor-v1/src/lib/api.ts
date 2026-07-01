@@ -2685,10 +2685,12 @@ export type BdnbData = {
   type_batiment?: string | null
   alea_argile?: string | null
 }
-// DPE ADEME : dernier diagnostic réel à proximité immédiate.
+// DPE ADEME : DPE réel du bien (match par adresse BAN exacte, départage par surface).
 export type DpeData = {
   ok: boolean
   found?: boolean
+  matched_by?: 'adresse' | 'proximite' | null   // "adresse" = précis, "proximite" = indicatif
+  nb_adresse?: number | null                     // nb de DPE trouvés à l'adresse exacte
   etiquette_dpe?: string | null
   etiquette_ges?: string | null
   date?: string | null
@@ -2709,11 +2711,12 @@ export async function loadBdnb(input: { lat: number; lon: number }): Promise<Bdn
   }
 }
 
-export async function loadDpe(input: { lat: number; lon: number }): Promise<DpeData> {
+export async function loadDpe(input: { lat: number; lon: number; surface?: number | null }): Promise<DpeData> {
   const { lat, lon } = input
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  const surfaceQ = input.surface && Number.isFinite(input.surface) ? `&surface=${input.surface}` : ''
   try {
-    const r = await invokeBackendApi<DpeData & { found?: boolean }>(`/geo/dpe?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    const r = await invokeBackendApi<DpeData & { found?: boolean }>(`/geo/dpe?lat=${lat}&lon=${lon}${surfaceQ}`, { method: 'GET' })
     return { ...r, ok: !!r?.found }
   } catch {
     return { ok: false }

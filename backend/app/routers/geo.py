@@ -356,41 +356,78 @@ def bdnb(
     }
 
 
+_DPE_SELECT = ("etiquette_dpe,etiquette_ges,date_etablissement_dpe,adresse_ban,"
+               "type_batiment,conso_5_usages_par_m2_ep,surface_habitable_logement,identifiant_ban")
+
+
+def _dpe_lines(params: dict) -> list:
+    try:
+        r = requests.get(f"{_DPE_DS}/lines", headers=_UA, timeout=25,
+                         params={**params, "select": _DPE_SELECT})
+        if r.ok:
+            return (r.json() or {}).get("results") or []
+    except Exception:  # noqa: BLE001
+        pass
+    return []
+
+
 @router.get("/geo/dpe")
 def dpe(
     lat: float = Query(...),
     lon: float = Query(...),
+    surface: float | None = Query(None, description="Surface habitable du bien (m²) — départage les DPE d'un immeuble"),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
 ):
-    """DPE ADEME (open data) : dernier diagnostic à proximité immédiate du point
-    (étiquette DPE + GES réels, conso, date, adresse). Heuristique : rayon serré 90 m,
-    le plus RÉCENT. Gratuit, sans clé."""
+    """DPE ADEME (open data) : dernier diagnostic RÉEL du bien (étiquette DPE + GES,
+    conso, date, adresse). Stratégie de précision :
+      1) adresse EXACTE via l'id BAN du bâtiment RNB (distingue le bon immeuble) ;
+      2) si `surface` fournie, on prend le DPE dont la surface colle le mieux (le bon
+         appartement dans l'immeuble), sinon le plus récent ;
+      3) repli « proximité » (rayon 90 m) si aucune adresse BAN exploitable.
+    Gratuit, sans clé."""
     get_authenticated_user(settings, authorization)
-    results: list = []
-    try:
-        r = requests.get(f"{_DPE_DS}/lines", headers=_UA, timeout=25, params={
-            "geo_distance": f"{lon},{lat},90",
-            "sort": "-date_etablissement_dpe",
-            "size": 1,
-            "select": ("etiquette_dpe,etiquette_ges,date_etablissement_dpe,adresse_ban,"
-                       "type_batiment,conso_5_usages_par_m2_ep,surface_habitable_logement"),
-        })
-        if r.ok:
-            results = (r.json() or {}).get("results") or []
-    except Exception:  # noqa: BLE001
-        results = []
-    d = results[0] if results else {}
+
+    # 1) Adresse exacte (id BAN du bâtiment le plus proche au RNB).
+    building = _rnb_closest(lat, lon)
+    adr = (building.get("addresses") or [{}])[0] if building else {}
+    ban = (adr or {}).get("ban_id") or (adr or {}).get("id")
+    rows: list = []
+    matched_by: str | None = None
+    if ban:
+        rows = _dpe_lines({"qs": f'identifiant_ban:"{ban}"', "size": 30, "sort": "-date_etablissement_dpe"})
+        if rows:
+            matched_by = "adresse"
+
+    # 2) Repli proximité si rien à l'adresse exacte.
+    if not rows:
+        rows = _dpe_lines({"geo_distance": f"{lon},{lat},90", "size": 5, "sort": "-date_etablissement_dpe"})
+        if rows:
+            matched_by = "proximite"
+
+    # Choix du bon logement : surface la plus proche si connue, sinon le plus récent.
+    chosen: dict = {}
+    if rows:
+        if surface and surface > 0:
+            def _delta(x: dict) -> float:
+                s = x.get("surface_habitable_logement")
+                return abs(float(s) - surface) if isinstance(s, (int, float)) else 1e9
+            chosen = min(rows, key=_delta)
+        else:
+            chosen = rows[0]
+
     return {
         "ok": True,
-        "found": bool(d),
+        "found": bool(chosen),
         "lat": lat,
         "lon": lon,
-        "etiquette_dpe": d.get("etiquette_dpe"),
-        "etiquette_ges": d.get("etiquette_ges"),
-        "date": d.get("date_etablissement_dpe"),
-        "adresse": d.get("adresse_ban"),
-        "type_batiment": d.get("type_batiment"),
-        "conso_ep_m2": d.get("conso_5_usages_par_m2_ep"),
-        "surface": d.get("surface_habitable_logement"),
+        "matched_by": matched_by,               # "adresse" (précis) ou "proximite" (indicatif)
+        "nb_adresse": len(rows) if matched_by == "adresse" else None,
+        "etiquette_dpe": chosen.get("etiquette_dpe"),
+        "etiquette_ges": chosen.get("etiquette_ges"),
+        "date": chosen.get("date_etablissement_dpe"),
+        "adresse": chosen.get("adresse_ban"),
+        "type_batiment": chosen.get("type_batiment"),
+        "conso_ep_m2": chosen.get("conso_5_usages_par_m2_ep"),
+        "surface": chosen.get("surface_habitable_logement"),
     }

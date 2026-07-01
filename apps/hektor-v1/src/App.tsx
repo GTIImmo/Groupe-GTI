@@ -8520,9 +8520,10 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
     if (dpeBusy) return
     if (!hasCoords()) { setDpeMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     const { lat, lon } = coords()
+    const surface = Number(detail.surface_habitable_detail ?? detail.surface) || null
     setDpeBusy(true); setDpeMsg('Recherche du DPE ADEME…')
     try {
-      const res = await loadDpe({ lat, lon })
+      const res = await loadDpe({ lat, lon, surface })
       await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'dpe', res.ok, res)
       await reload()
       setDpeMsg(res.ok ? null : 'Aucun DPE ADEME trouvé à proximité immédiate.')
@@ -8630,6 +8631,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
         <div className="estim-data-head">
           <span className="estim-data-t">DPE réel · ADEME</span>
           <div className="estim-data-head-right">
+            {dpe && dpe.ok && dpe.matched_by === 'adresse' ? <span className="estim-data-badge">Adresse exacte</span> : (dpe && dpe.ok && dpe.matched_by === 'proximite' ? <span className="estim-data-badge estim-badge-warn">Proximité</span> : null)}
             {dpe && dpe.ok && dpe.etiquette_dpe ? <span className="estim-data-badge">DPE {dpe.etiquette_dpe} · GES {dpe.etiquette_ges ?? '—'}</span> : null}
             <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={dpeBusy} onClick={() => { void generateDpe() }}>
               <span aria-hidden="true"><DetailIcon type="commercial" /></span>
@@ -8638,15 +8640,20 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
           </div>
         </div>
         {dpe && dpe.ok ? (
-          <div className="estim-data-grid">
-            <div className="estim-dg"><span className="edk">Étiquette DPE</span><span className="edv edv-accent">{dpe.etiquette_dpe ?? '—'}</span></div>
-            <div className="estim-dg"><span className="edk">GES</span><span className="edv">{dpe.etiquette_ges ?? '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Conso (EP)</span><span className="edv">{dpe.conso_ep_m2 != null ? `${fmt(dpe.conso_ep_m2)} kWh/m²` : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Date du DPE</span><span className="edv">{dpe.date ? formatDate(dpe.date) : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Surface</span><span className="edv">{dpe.surface != null ? `${fmt(dpe.surface)} m²` : '—'}</span></div>
-            <div className="estim-dg"><span className="edk">Adresse DPE</span><span className="edv">{dpe.adresse ?? '—'}</span></div>
-          </div>
-        ) : (!dpeMsg ? <p className="cadastre-hint">Dernier DPE réel enregistré à l’ADEME à proximité immédiate (étiquette énergie + GES, consommation, date). À titre indicatif — vérifier qu’il correspond bien au logement.</p> : null)}
+          <>
+            <div className="estim-data-grid">
+              <div className="estim-dg"><span className="edk">Étiquette DPE</span><span className="edv edv-accent">{dpe.etiquette_dpe ?? '—'}</span></div>
+              <div className="estim-dg"><span className="edk">GES</span><span className="edv">{dpe.etiquette_ges ?? '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Conso (EP)</span><span className="edv">{dpe.conso_ep_m2 != null ? `${fmt(dpe.conso_ep_m2)} kWh/m²` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Date du DPE</span><span className="edv">{dpe.date ? formatDate(dpe.date) : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Surface DPE</span><span className="edv">{dpe.surface != null ? `${fmt(dpe.surface)} m²` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Adresse DPE</span><span className="edv">{dpe.adresse ?? '—'}</span></div>
+            </div>
+            {dpe.matched_by === 'adresse'
+              ? <p className="cadastre-hint">{dpe.nb_adresse && dpe.nb_adresse > 1 ? `${dpe.nb_adresse} DPE trouvés à cette adresse — retenu : celui dont la surface colle le mieux au bien.` : 'DPE de l’adresse exacte du bien.'}</p>
+              : <p className="cadastre-hint">DPE le plus proche (adresse exacte introuvable) — à vérifier.</p>}
+          </>
+        ) : (!dpeMsg ? <p className="cadastre-hint">DPE réel du bien depuis l’ADEME, retrouvé par l’adresse exacte (id BAN) et départagé par la surface. Étiquette énergie + GES, consommation, date.</p> : null)}
         {dpeMsg ? <p className="cadastre-hint cadastre-msg">{dpeMsg}</p> : null}
       </div>
 
