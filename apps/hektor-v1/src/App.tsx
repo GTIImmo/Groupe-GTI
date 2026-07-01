@@ -4739,10 +4739,14 @@ function EstimationDocumentEditor(props: {
     try {
       const res = await loadCadastre({ lat, lon })
       setCadastre(res)
-      if (res.ok) {
+      if (res.error) {
+        setCadastreMsg('Service cadastre momentanément indisponible (réveil du serveur) — réessaie dans quelques secondes.')
+      } else if (res.ok) {
         const n = res.parcelles?.length ?? 0
         const ref = res.parcelles?.[0]?.reference ?? null
         setCadastreMsg(`${n} parcelle${n > 1 ? 's' : ''}${ref ? ' · ' + ref + (n > 1 ? '…' : '') : ''}${res.contenance_totale ? ' · ' + res.contenance_totale.toLocaleString('fr-FR') + ' m²' : ''}${res.plu?.zone ? ' · PLU ' + res.plu.zone : ''}`)
+      } else if (res.candidates && res.candidates.length) {
+        setCadastreMsg(`Le point tombe sur la voie — ${res.candidates.length} parcelle(s) voisine(s). Choisis-la depuis l'onglet Commercialisation.`)
       } else setCadastreMsg('Aucune parcelle cadastrale trouvée pour ces coordonnées.')
     } catch (error) {
       setCadastreMsg(error instanceof Error ? error.message : 'Chargement des éléments cadastraux impossible.')
@@ -8273,6 +8277,7 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
     setBusy(true); setMessage('Récupération des éléments cadastraux…')
     try {
       const res = await loadCadastre({ lat, lon })
+      if (res.error) { setMessage('Service cadastre momentanément indisponible (réveil du serveur) — réessaie dans quelques secondes.'); setBusy(false); return }
       if (res.ok) { setCad(res); setMapCenter(null); await doGenerate(res.parcelles ?? null, lat, lon); return }
       // Point sur la voie / hors parcelle : proposer les parcelles voisines.
       if (res.candidates && res.candidates.length) {
@@ -8296,6 +8301,7 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated }: { dossier:
     setBusy(true); setMessage('Chargement des parcelles voisines…')
     try {
       const res = await loadCadastre({ lat, lon, withCandidates: true })
+      if (res.error) { setMessage('Service cadastre momentanément indisponible (réveil du serveur) — réessaie dans quelques secondes.'); return }
       const cands = res.candidates && res.candidates.length ? res.candidates : (res.parcelles ?? [])
       if (!cands.length) { setMessage('Aucune parcelle voisine trouvée.'); return }
       const currentRefs = new Set((cad?.parcelles ?? []).map((p) => p.reference))

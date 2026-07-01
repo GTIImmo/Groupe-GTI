@@ -218,8 +218,13 @@ def cadastre(
     except Exception:  # noqa: BLE001
         pass
 
+    # ok = True : l'appel a RÉUSSI (même sans parcelle au point). Le front distingue
+    # « parcelle trouvée » via parcelles.length. Ne PAS renvoyer ok:false ici : le client
+    # HTTP (invokeBackendApi) interprète ok:false comme une erreur et jette la réponse
+    # (donc les parcelles voisines seraient perdues → « pas de cadastre » à tort).
     return {
-        "ok": bool(parcelles),
+        "ok": True,
+        "found": bool(parcelles),
         "lat": lat,
         "lon": lon,
         "parcelles": parcelles,
