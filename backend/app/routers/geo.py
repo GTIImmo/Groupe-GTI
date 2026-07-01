@@ -232,3 +232,165 @@ def cadastre(
         "candidates": nearby,
         "plu": plu,
     }
+
+
+# =====================================================================
+# 1ère vague de sources « bâti/bien » de l'estimation (per-point, gratuites,
+# sans clé) : RNB (identifiant bâtiment) -> BDNB (caractéristiques bâti) ;
+# DPE ADEME (étiquette réelle). Toutes renvoient ok:True (le front recalcule
+# la présence via `found` — ne PAS renvoyer ok:false, cf. invokeBackendApi).
+# =====================================================================
+
+_RNB = "https://rnb-api.beta.gouv.fr/api/alpha"
+_BDNB = "https://api.bdnb.io/v1/bdnb"
+_DPE_DS = "https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant"
+
+
+def _rnb_closest(lat: float, lon: float, radius: int = 40) -> dict | None:
+    """Bâtiment RNB le plus proche du point (le 1er résultat = le plus proche)."""
+    try:
+        r = requests.get(f"{_RNB}/buildings/closest/",
+                         params={"point": f"{lat},{lon}", "radius": radius},
+                         headers=_UA, timeout=20)
+        if not r.ok:
+            return None
+        results = (r.json() or {}).get("results") or []
+        return results[0] if results else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _rnb_bdnb_bc_id(building: dict | None) -> str | None:
+    """Identifiant BDNB (batiment_construction) porté par un bâtiment RNB — pivot vers la BDNB."""
+    for e in (building or {}).get("ext_ids") or []:
+        if e.get("source") == "bdnb" and e.get("id"):
+            return e["id"]
+    return None
+
+
+def _bdnb_rows(path: str, params: dict) -> list | None:
+    try:
+        r = requests.get(f"{_BDNB}/{path}", params=params, headers=_UA, timeout=25)
+        if not r.ok:
+            return None
+        d = r.json()
+        return d if isinstance(d, list) else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+@router.get("/geo/rnb")
+def rnb(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """Référentiel National des Bâtiments : identifiant `rnb_id` du bâtiment sous le
+    point + adresse validée. Sert de clé pivot vers la BDNB. Gratuit, sans clé."""
+    get_authenticated_user(settings, authorization)
+    b = _rnb_closest(lat, lon)
+    if not b:
+        return {"ok": True, "found": False, "lat": lat, "lon": lon}
+    adr = (b.get("addresses") or [{}])[0] or {}
+    parts = [adr.get("street_number"), adr.get("street"), adr.get("city_zipcode"), adr.get("city_name")]
+    address = " ".join(str(p) for p in parts if p) or None
+    return {
+        "ok": True,
+        "found": True,
+        "lat": lat,
+        "lon": lon,
+        "rnb_id": b.get("rnb_id"),
+        "status": b.get("status"),
+        "distance_m": round(b.get("distance") or 0, 1),
+        "address": address,
+        "bdnb_id": _rnb_bdnb_bc_id(b),
+    }
+
+
+@router.get("/geo/bdnb")
+def bdnb(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """Base de Données Nationale des Bâtiments : caractéristiques du bâtiment sous le
+    point (année, type, matériaux mur/toit, hauteur, niveaux, logements, DPE théorique,
+    aléa argile). Chaînage RNB (bâtiment le plus proche) -> BDNB (id construction ->
+    groupe -> fiche). Gratuit, offre Open sans clé."""
+    get_authenticated_user(settings, authorization)
+    building = _rnb_closest(lat, lon)
+    rnb_id = (building or {}).get("rnb_id")
+    bc = _rnb_bdnb_bc_id(building)
+    if not bc:
+        return {"ok": True, "found": False, "lat": lat, "lon": lon, "rnb_id": rnb_id}
+    rows = _bdnb_rows("donnees/batiment_construction",
+                      {"batiment_construction_id": f"eq.{bc}", "select": "batiment_groupe_id", "limit": 1})
+    bg = (rows or [{}])[0].get("batiment_groupe_id") if rows else None
+    if not bg:
+        return {"ok": True, "found": False, "lat": lat, "lon": lon, "rnb_id": rnb_id}
+    fields = ("annee_construction,classe_bilan_dpe,conso_5_usages_ep_m2,mat_mur_txt,"
+              "mat_toit_txt,hauteur_mean,nb_niveau,nb_log,type_batiment_dpe,alea_argile")
+    rows = _bdnb_rows("donnees/batiment_groupe_complet",
+                      {"batiment_groupe_id": f"eq.{bg}", "select": fields, "limit": 1})
+    d = (rows or [{}])[0] if rows else {}
+    conso = d.get("conso_5_usages_ep_m2")
+    return {
+        "ok": True,
+        "found": bool(d),
+        "lat": lat,
+        "lon": lon,
+        "rnb_id": rnb_id,
+        "batiment_groupe_id": bg,
+        "annee_construction": d.get("annee_construction"),
+        "classe_dpe": d.get("classe_bilan_dpe"),
+        "conso_ep_m2": round(conso) if isinstance(conso, (int, float)) else None,
+        "mat_mur": d.get("mat_mur_txt"),
+        "mat_toit": d.get("mat_toit_txt"),
+        "hauteur": d.get("hauteur_mean"),
+        "nb_niveau": d.get("nb_niveau"),
+        "nb_logements": d.get("nb_log"),
+        "type_batiment": d.get("type_batiment_dpe"),
+        "alea_argile": d.get("alea_argile"),
+    }
+
+
+@router.get("/geo/dpe")
+def dpe(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """DPE ADEME (open data) : dernier diagnostic à proximité immédiate du point
+    (étiquette DPE + GES réels, conso, date, adresse). Heuristique : rayon serré 90 m,
+    le plus RÉCENT. Gratuit, sans clé."""
+    get_authenticated_user(settings, authorization)
+    results: list = []
+    try:
+        r = requests.get(f"{_DPE_DS}/lines", headers=_UA, timeout=25, params={
+            "geo_distance": f"{lon},{lat},90",
+            "sort": "-date_etablissement_dpe",
+            "size": 1,
+            "select": ("etiquette_dpe,etiquette_ges,date_etablissement_dpe,adresse_ban,"
+                       "type_batiment,conso_5_usages_par_m2_ep,surface_habitable_logement"),
+        })
+        if r.ok:
+            results = (r.json() or {}).get("results") or []
+    except Exception:  # noqa: BLE001
+        results = []
+    d = results[0] if results else {}
+    return {
+        "ok": True,
+        "found": bool(d),
+        "lat": lat,
+        "lon": lon,
+        "etiquette_dpe": d.get("etiquette_dpe"),
+        "etiquette_ges": d.get("etiquette_ges"),
+        "date": d.get("date_etablissement_dpe"),
+        "adresse": d.get("adresse_ban"),
+        "type_batiment": d.get("type_batiment"),
+        "conso_ep_m2": d.get("conso_5_usages_par_m2_ep"),
+        "surface": d.get("surface_habitable_logement"),
+    }

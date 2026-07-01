@@ -73,6 +73,8 @@ import {
   loadDossierCadastre,
   loadDossierEstimation,
   saveDossierEstimationSource,
+  loadBdnb,
+  loadDpe,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
@@ -141,7 +143,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation } from './lib/api'
+import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -8443,9 +8445,13 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
   const [dvfMsg, setDvfMsg] = useState<string | null>(null)
   const [cadreBusy, setCadreBusy] = useState(false)
   const [cadreMsg, setCadreMsg] = useState<string | null>(null)
+  const [bdnbBusy, setBdnbBusy] = useState(false)
+  const [bdnbMsg, setBdnbMsg] = useState<string | null>(null)
+  const [dpeBusy, setDpeBusy] = useState(false)
+  const [dpeMsg, setDpeMsg] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
-    setDvfMsg(null); setCadreMsg(null)
+    setDvfMsg(null); setCadreMsg(null); setBdnbMsg(null); setDpeMsg(null)
     loadDossierEstimation(dossier.app_dossier_id)
       .then((row) => { if (!cancelled) setEstim(row) })
       .catch(() => { /* best effort */ })
@@ -8493,8 +8499,42 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
     } finally { setCadreBusy(false) }
   }
 
+  // Génère + mémorise les CARACTÉRISTIQUES BÂTI (BDNB, chaînage RNB->BDNB côté serveur).
+  async function generateBdnb() {
+    if (bdnbBusy) return
+    if (!hasCoords()) { setBdnbMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setBdnbBusy(true); setBdnbMsg('Interrogation de la BDNB…')
+    try {
+      const res = await loadBdnb({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'bdnb', res.ok, res)
+      await reload()
+      setBdnbMsg(res.ok ? null : 'Aucun bâtiment BDNB trouvé à ce point.')
+    } catch (error) {
+      setBdnbMsg(error instanceof Error ? error.message : 'Interrogation BDNB impossible.')
+    } finally { setBdnbBusy(false) }
+  }
+
+  // Génère + mémorise le DPE RÉEL (dernier diagnostic ADEME à proximité).
+  async function generateDpe() {
+    if (dpeBusy) return
+    if (!hasCoords()) { setDpeMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setDpeBusy(true); setDpeMsg('Recherche du DPE ADEME…')
+    try {
+      const res = await loadDpe({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'dpe', res.ok, res)
+      await reload()
+      setDpeMsg(res.ok ? null : 'Aucun DPE ADEME trouvé à proximité immédiate.')
+    } catch (error) {
+      setDpeMsg(error instanceof Error ? error.message : 'Recherche du DPE impossible.')
+    } finally { setDpeBusy(false) }
+  }
+
   const dvf = estim?.sources?.dvf?.data as DvfComparablesResult | undefined
   const cadre = estim?.sources?.cadre?.data as CadreDeVie | undefined
+  const bdnb = estim?.sources?.bdnb?.data as BdnbData | undefined
+  const dpe = estim?.sources?.dpe?.data as DpeData | undefined
   const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
 
   return (
@@ -8553,6 +8593,61 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated }: { 
           </>
         ) : (!cadreMsg ? <p className="cadastre-hint">Commodités (écoles, commerces, santé, gare), pôles régionaux et risques (IGN / Overpass / Géorisques). Enregistré ici et repris dans l’avis de valeur.</p> : null)}
         {cadreMsg ? <p className="cadastre-hint cadastre-msg">{cadreMsg}</p> : null}
+      </div>
+
+      {/* Bâtiment · BDNB — caractéristiques du bâti (chaînage RNB->BDNB côté serveur). */}
+      <div className="estim-data-block">
+        <div className="estim-data-head">
+          <span className="estim-data-t">Bâtiment · BDNB</span>
+          <div className="estim-data-head-right">
+            {bdnb && bdnb.ok && bdnb.classe_dpe ? <span className="estim-data-badge">DPE théorique {bdnb.classe_dpe}</span> : null}
+            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={bdnbBusy} onClick={() => { void generateBdnb() }}>
+              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+              <strong>{bdnbBusy ? 'Calcul…' : (bdnb && bdnb.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
+            </button>
+          </div>
+        </div>
+        {bdnb && bdnb.ok ? (
+          <>
+            <div className="estim-data-grid">
+              <div className="estim-dg"><span className="edk">Année construction</span><span className="edv">{bdnb.annee_construction ?? '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Type</span><span className="edv">{bdnb.type_batiment ?? '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Niveaux / logements</span><span className="edv">{bdnb.nb_niveau ?? '—'}{bdnb.nb_logements != null ? ` · ${bdnb.nb_logements} log.` : ''}</span></div>
+              <div className="estim-dg"><span className="edk">Conso (EP)</span><span className="edv">{bdnb.conso_ep_m2 != null ? `${fmt(bdnb.conso_ep_m2)} kWh/m²` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Murs</span><span className="edv">{bdnb.mat_mur ?? '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Toit</span><span className="edv">{bdnb.mat_toit ?? '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Hauteur</span><span className="edv">{bdnb.hauteur != null ? `${bdnb.hauteur} m` : '—'}</span></div>
+              <div className="estim-dg"><span className="edk">Aléa argile</span><span className="edv">{bdnb.alea_argile ?? '—'}</span></div>
+            </div>
+            {bdnb.rnb_id ? <div className="estim-data-tags"><span className="estim-data-tag">RNB {bdnb.rnb_id}</span></div> : null}
+          </>
+        ) : (!bdnbMsg ? <p className="cadastre-hint">Caractéristiques du bâtiment (année, type, matériaux mur/toit, niveaux, DPE théorique, aléa retrait-gonflement des argiles) depuis la Base de Données Nationale des Bâtiments.</p> : null)}
+        {bdnbMsg ? <p className="cadastre-hint cadastre-msg">{bdnbMsg}</p> : null}
+      </div>
+
+      {/* DPE réel · ADEME — dernier diagnostic à proximité immédiate. */}
+      <div className="estim-data-block">
+        <div className="estim-data-head">
+          <span className="estim-data-t">DPE réel · ADEME</span>
+          <div className="estim-data-head-right">
+            {dpe && dpe.ok && dpe.etiquette_dpe ? <span className="estim-data-badge">DPE {dpe.etiquette_dpe} · GES {dpe.etiquette_ges ?? '—'}</span> : null}
+            <button className="hektor-context-action-button estim-gen-btn" type="button" disabled={dpeBusy} onClick={() => { void generateDpe() }}>
+              <span aria-hidden="true"><DetailIcon type="commercial" /></span>
+              <strong>{dpeBusy ? 'Recherche…' : (dpe && dpe.ok ? 'Régénérer' : 'Générer et enregistrer')}</strong>
+            </button>
+          </div>
+        </div>
+        {dpe && dpe.ok ? (
+          <div className="estim-data-grid">
+            <div className="estim-dg"><span className="edk">Étiquette DPE</span><span className="edv edv-accent">{dpe.etiquette_dpe ?? '—'}</span></div>
+            <div className="estim-dg"><span className="edk">GES</span><span className="edv">{dpe.etiquette_ges ?? '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Conso (EP)</span><span className="edv">{dpe.conso_ep_m2 != null ? `${fmt(dpe.conso_ep_m2)} kWh/m²` : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Date du DPE</span><span className="edv">{dpe.date ? formatDate(dpe.date) : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Surface</span><span className="edv">{dpe.surface != null ? `${fmt(dpe.surface)} m²` : '—'}</span></div>
+            <div className="estim-dg"><span className="edk">Adresse DPE</span><span className="edv">{dpe.adresse ?? '—'}</span></div>
+          </div>
+        ) : (!dpeMsg ? <p className="cadastre-hint">Dernier DPE réel enregistré à l’ADEME à proximité immédiate (étiquette énergie + GES, consommation, date). À titre indicatif — vérifier qu’il correspond bien au logement.</p> : null)}
+        {dpeMsg ? <p className="cadastre-hint cadastre-msg">{dpeMsg}</p> : null}
       </div>
 
       {/* Cadastre (déplacé de Commercialisation) : composant autonome, génère + persiste + ré-affiche. */}

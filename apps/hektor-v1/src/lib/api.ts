@@ -2667,6 +2667,59 @@ export async function saveDossierEstimationSource(
   return true
 }
 
+// ---- 1ère vague de sources « bâti/bien » (proxies backend /geo/*, per-point) ----
+// BDNB : caractéristiques du bâtiment (chaînage RNB -> BDNB côté serveur).
+export type BdnbData = {
+  ok: boolean
+  found?: boolean
+  rnb_id?: string | null
+  batiment_groupe_id?: string | null
+  annee_construction?: number | null
+  classe_dpe?: string | null            // DPE « théorique » BDNB
+  conso_ep_m2?: number | null
+  mat_mur?: string | null
+  mat_toit?: string | null
+  hauteur?: number | null
+  nb_niveau?: number | null
+  nb_logements?: number | null
+  type_batiment?: string | null
+  alea_argile?: string | null
+}
+// DPE ADEME : dernier diagnostic réel à proximité immédiate.
+export type DpeData = {
+  ok: boolean
+  found?: boolean
+  etiquette_dpe?: string | null
+  etiquette_ges?: string | null
+  date?: string | null
+  adresse?: string | null
+  type_batiment?: string | null
+  conso_ep_m2?: number | null
+  surface?: number | null
+}
+
+export async function loadBdnb(input: { lat: number; lon: number }): Promise<BdnbData> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  try {
+    const r = await invokeBackendApi<BdnbData & { found?: boolean }>(`/geo/bdnb?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    return { ...r, ok: !!r?.found }
+  } catch {
+    return { ok: false }
+  }
+}
+
+export async function loadDpe(input: { lat: number; lon: number }): Promise<DpeData> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  try {
+    const r = await invokeBackendApi<DpeData & { found?: boolean }>(`/geo/dpe?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    return { ...r, ok: !!r?.found }
+  } catch {
+    return { ok: false }
+  }
+}
+
 const CDV_POLES: Array<{ nom: string; lat: number; lon: number }> = [
   { nom: 'Saint-Étienne', lat: 45.4397, lon: 4.3872 },
   { nom: 'Le Puy-en-Velay', lat: 45.0430, lon: 3.8850 },
