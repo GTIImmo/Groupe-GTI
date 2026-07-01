@@ -31422,6 +31422,11 @@ body {
   justify-content: flex-end;
 }
 .estim-gen-btn { flex: none; }
+.estim-data-badge.estim-badge-warn {
+  color: #9a3412;
+  background: #fdf1e7;
+  border-color: #f6d5b8;
+}
 .estim-data-t {
   font-size: 12px;
   font-weight: 700;
