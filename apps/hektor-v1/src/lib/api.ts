@@ -2491,7 +2491,7 @@ export async function sendEstimationEmail(input: {
 }
 
 export type DvfComparable = { commune: string; type: string; surface: number; pieces?: string | null; terrain?: number | null; valeur: number; prix_m2: number | null; date: string; distance_km: number }
-export type DvfComparablesResult = { ok: boolean; reason?: string; scope?: 'commune' | 'secteur'; n_local?: number; commune?: string | null; count: number; count_clean?: number; fiable?: boolean; radius_used_m?: number; surface?: number | null; avg_prix_m2?: number | null; median_prix_m2?: number | null; p25_prix_m2?: number | null; p75_prix_m2?: number | null; prix_estime?: number | null; fourchette_basse?: number | null; fourchette_haute?: number | null; radius_km?: number; months?: number; type?: string; terrain_applied?: boolean; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
+export type DvfComparablesResult = { ok: boolean; reason?: string; scope?: 'commune' | 'secteur'; n_local?: number; commune?: string | null; count: number; count_clean?: number; fiable?: boolean; radius_used_m?: number; surface?: number | null; avg_prix_m2?: number | null; median_prix_m2?: number | null; p25_prix_m2?: number | null; p75_prix_m2?: number | null; prix_estime?: number | null; fourchette_basse?: number | null; fourchette_haute?: number | null; radius_km?: number; months?: number; type?: string; data_through?: string | null; evolution?: Array<{ annee: string; prix_m2: number; n: number }>; comparables: DvfComparable[] }
 
 // Comparables de marché DVF autour d'un bien — RPC Supabase `app_dvf_comparables`
 // (table `app_dvf_vente` pré-chargée, rafraîchie 2×/an). Haversine côté SQL ;
@@ -2500,7 +2500,7 @@ export type DvfComparablesResult = { ok: boolean; reason?: string; scope?: 'comm
 // on n'élargit au secteur (rayon, communes limitrophes) que si l'échantillon
 // communal est < minLocal (défaut RPC = 10). `scope`/`n_local` indiquent la base.
 export async function loadDvfComparables(input: {
-  lat: number; lon: number; dept?: string; type?: 'Maison' | 'Appartement'; surface?: number | null; terrain?: number | null; radiusKm?: number; months?: number
+  lat: number; lon: number; dept?: string; type?: 'Maison' | 'Appartement'; surface?: number | null; radiusKm?: number; months?: number
   codePostal?: string | null; commune?: string | null; minLocal?: number
 }): Promise<DvfComparablesResult> {
   if (!hasSupabaseEnv || !supabase) return { ok: false, reason: 'no_supabase', count: 0, comparables: [] }
@@ -2509,7 +2509,6 @@ export async function loadDvfComparables(input: {
     p_lon: input.lon,
     p_type: input.type ?? 'Maison',
     p_surface: input.surface ?? null,
-    p_terrain: input.terrain ?? null,  // maisons : affine sur terrain similaire (repli auto si trop peu de comps)
     p_radius_km: input.radiusKm ?? 12,
     p_months: input.months ?? 24,
     p_code_postal: input.codePostal ?? null,
