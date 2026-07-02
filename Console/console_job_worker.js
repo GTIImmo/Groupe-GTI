@@ -3867,6 +3867,39 @@ async function handlePrepareDocumentCloud(job) {
 // Rendu PDF via Playwright (déjà présent pour le login/upload Hektor).
 // =========================================================================
 const ESTIM_MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const ESTIM_PROPERTY_TYPE_LABELS = {
+  "1": "Maison",
+  "2": "Appartement",
+  "3": "Parking / Garage",
+  "4": "Bureau",
+  "5": "Terrain",
+  "6": "Local",
+  "7": "Immeuble",
+  "8": "Divers",
+  "9": "Programme neuf",
+  "10": "Loft / Atelier",
+  "11": "Boutique",
+  "12": "Appartement meuble",
+  "13": "Maison meublee",
+  "14": "Garage",
+  "15": "Parking",
+  "16": "Local professionnel",
+  "17": "Chalet",
+  "18": "Batiment",
+  "19": "Demeure",
+  "20": "Propriete",
+  "21": "Mas",
+  "22": "Hotel particulier",
+  "23": "Commerce",
+  "24": "Immeuble",
+  "25": "Villa",
+  "26": "Studio",
+  "27": "Duplex",
+  "28": "Triplex",
+  "29": "Atelier",
+  "30": "Ferme",
+  "31": "Loft",
+};
 
 function estimEscapeHtml(value) {
   return String(value == null ? "" : value)
@@ -3880,6 +3913,12 @@ function estimEscapeHtml(value) {
 function estimText(value, fallback) {
   const v = String(value == null ? "" : value).trim();
   return estimEscapeHtml(v || fallback || "");
+}
+
+function estimPropertyTypeLabel(value) {
+  const v = String(value == null ? "" : value).trim();
+  if (!v) return null;
+  return /^\d+$/.test(v) ? (ESTIM_PROPERTY_TYPE_LABELS[v] || `Type ${v}`) : v;
 }
 
 function estimEuro(value) {
@@ -3911,6 +3950,12 @@ function estimRawAny(raw, key) {
 const estimNum = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
 const estimYear = (v) => { const n = parseInt(String(v || ""), 10); return n >= 1700 && n <= 2100 ? String(n) : null; };
 const estimOui = (v) => String(v || "").trim().toUpperCase() === "OUI";
+function estimIsUsablePropertyPhoto(url) {
+  const s = String(url || "").trim().toLowerCase();
+  if (!s) return false;
+  return !/(^|[/_-])(no[_-]?pic|placeholder)([/_.-]|$)/.test(s)
+    && !/(gti[-_]?mark|gti[-_]?logo|logosite|logo[_-]?site)/.test(s);
+}
 // Libellés Hektor courants (codes sans accents -> affichage propre).
 const ESTIM_LABELS = {
   "AMERICAINE": "Américaine", "EQUIPEE": "Équipée", "AMENAGEE": "Aménagée", "SEMI EQUIPEE": "Semi-équipée",
@@ -4102,9 +4147,9 @@ async function loadEstimationDetail(appDossierId) {
     let photos = [];
     try {
       const imgs = j.images_preview_json ? JSON.parse(j.images_preview_json) : (j.images_json ? JSON.parse(j.images_json) : []);
-      if (Array.isArray(imgs)) photos = imgs.map((x) => (typeof x === "string" ? x : (x && (x.url || x.full)))).filter(Boolean);
+      if (Array.isArray(imgs)) photos = imgs.map((x) => (typeof x === "string" ? x : (x && (x.url || x.full)))).filter(estimIsUsablePropertyPhoto);
     } catch (_) { /* photos best-effort */ }
-    if (photos.length === 0 && j.photo_url_listing) photos = [j.photo_url_listing];
+    if (photos.length === 0 && estimIsUsablePropertyPhoto(j.photo_url_listing)) photos = [j.photo_url_listing];
     const descriptif = String(j.corps_listing_html || j.texte_principal_html || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
     return {
       surface: num(j.surface_habitable_detail) || num(j.surface),
@@ -4340,6 +4385,71 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cad-stat .v{font-size:20px;font-weight:700;color:var(--ink);line-height:1}
 .cad-stat .v.cad-com{font-size:16px}
 .cad-stat .k{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--body);margin-top:6px}
+/* ============ HABILLAGE « V2 » — surcouche additive (look maquette carte) ============ */
+/* Accent par chapitre : --acc posé en inline style="--acc:#xxx" sur chaque .page (défaut = brand). */
+.page{--acc:var(--brand)}
+body,.page{background:#faf9f5}
+body{counter-reset:pgw}
+.page:not(.cover){counter-increment:pgw}
+.page:not(.cover)>.rh,.page:not(.cover)>.content,.page:not(.cover)>.rf{position:relative;z-index:1}
+.page:not(.cover)::before{content:"";position:absolute;top:0;left:0;right:0;height:46mm;background:radial-gradient(120% 100% at 86% 0%,color-mix(in srgb,var(--acc) 7%,transparent),transparent 62%);pointer-events:none;z-index:0}
+.page:not(.cover)::after{content:counter(pgw,decimal-leading-zero);position:absolute;top:11mm;right:16mm;font-family:'Spectral',serif;font-size:46px;font-weight:700;color:color-mix(in srgb,var(--acc) 11%,transparent);line-height:1;pointer-events:none;z-index:0}
+/* En-tête de section : grand titre serif + barre d'accent (au lieu de la puce carrée maj.) */
+.h{display:block;font-family:'Spectral',Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-.012em;text-transform:none;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:12px}
+.h::before{content:"";display:block;width:32px;height:2px;background:var(--acc);margin:0 0 7px}
+.h.mt{margin-top:15px}
+.gal{grid-auto-rows:21.5mm}
+.desc-p{font-size:10.5px;color:var(--body);line-height:1.5;margin-top:2px}
+/* Vignettes DPE/GES sur une ligne (au lieu des grandes réglettes A–G) */
+.dpe-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:4px}
+.dpe-vig{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:#fff;box-shadow:0 1px 2px rgba(40,25,15,.04),0 10px 22px -16px rgba(40,25,15,.16)}
+.dpe-vig .cls{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Spectral',serif;font-size:20px;font-weight:700;color:#fff;flex:none;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.dpe-vig .meta{min-width:0}
+.dpe-vig .k{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);font-weight:700}
+.dpe-vig .v{font-size:12.5px;font-weight:600;color:var(--ink);margin-top:2px}
+.dpe-vig .v small{font-size:9px;color:var(--mute);font-weight:400}
+/* Page cadastre : fond de carte plus grand (moins de vide) + PLU à l'accent chapitre */
+.cad-frame{height:112mm}
+.cad-plu-top{background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--acc) 11%,#fff))}
+.cad-plu .lbl{color:var(--acc)}
+.cad-plu .ty{background:var(--acc)}
+.cad-stat .v{font-size:22px}
+/* En-tête courante (bandeau haut) : filet d'accent */
+.rh{border-bottom-color:var(--line)}
+.rh .meta .t{color:var(--ink)}
+/* Cartes & surfaces : coins arrondis + ombre douce façon V2 */
+.scard,.chart,.diag,.pts,.cdv-card,.cad-stat,.cad-plu,.dvf-table{border-radius:13px;box-shadow:0 1px 2px rgba(40,25,15,.04),0 10px 22px -16px rgba(40,25,15,.16)}
+.specs{border-radius:13px;box-shadow:0 1px 2px rgba(40,25,15,.04),0 10px 22px -16px rgba(40,25,15,.16)}
+.etat-top{border-radius:13px}
+/* Pastilles d'icône : dégradé teinté par l'accent */
+.scard .ic,.pic-ic,.cf-row .i,.cf-agence-photo{color:var(--acc);background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 15%,#fff),#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 13%,transparent)}
+.scard .ic svg,.pic-ic svg,.cf-row .i svg{stroke:var(--acc);color:var(--acc)}
+/* Accents pilotés par --acc (puces, barres, graphes) */
+.h::before,.acq-ic{background:var(--acc)}
+.bcol .bar.hl{background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 55%,#fff),var(--acc))}
+.rev-row.hl .rev-bar{background:linear-gradient(90deg,var(--acc),color-mix(in srgb,var(--acc) 60%,#000))}
+.comp{border-left-color:var(--acc)}.comp .stat .pm{color:var(--acc)}
+.etat-stars .on{color:var(--acc)}
+/* Blocs commentaire = citation élégante (méthode d'estimation + avis conseiller) */
+.method{background:linear-gradient(180deg,#fff,var(--cream));border:1px solid var(--line);border-left:2px solid var(--acc);border-radius:14px;box-shadow:0 5px 24px -14px rgba(40,25,15,.22);padding:14px 16px}
+.method svg{color:var(--acc)}
+.avis .lead{border-left:2px solid var(--acc);background:linear-gradient(180deg,#fff,var(--cream));border-radius:14px;padding:18px 22px 16px;box-shadow:0 5px 24px -14px rgba(40,25,15,.22);font-size:14px}
+.disc{border-left-color:var(--acc)}
+/* Cartes V2 (en-tête icône + grille kv) pour Caractéristiques / Données bâtiment */
+.card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:13px 16px 15px;box-shadow:0 1px 2px rgba(40,25,15,.04),0 10px 22px -16px rgba(40,25,15,.16);margin-top:11px;break-inside:avoid}
+.card-lead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-ico{width:30px;height:30px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--acc);background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 15%,#fff),#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 14%,transparent)}
+.card-ico svg{width:17px;height:17px;stroke:var(--acc);fill:none}
+.card-t{font-size:12.5px;font-weight:700;color:var(--ink)}
+.card-s{font-size:9px;color:var(--mute);margin-top:1px}
+.card-badge{margin-left:auto;font-size:8.5px;font-weight:700;color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,#fff);border:1px solid color-mix(in srgb,var(--acc) 22%,#fff);border-radius:20px;padding:3px 10px;white-space:nowrap;letter-spacing:.02em}
+.grid2b{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start;margin-top:11px}
+.grid2b .card{margin-top:0}
+.kv{display:grid;grid-template-columns:repeat(2,1fr);gap:11px 16px}
+.kv.k4{grid-template-columns:repeat(4,1fr)}
+.kv .spec{background:none;padding:0;border-radius:0}
+.kv .spec .k{font-size:8px}
+.kv .spec .v{font-size:14px;margin-top:3px}
 `;
 
 // ============================ VISUELS PDF (avis de valeur) ============================
@@ -4486,7 +4596,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const docNumber = "AV-" + (ref || "ESTIM").toString().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
   const LOGO = "https://www.gti-immobilier.fr/images/logoSite.png";
   const titre = estimText(bien.titre, "Votre bien");
-  const type = bien.type || null;
+  const type = estimPropertyTypeLabel(bien.type) || null;
   const ville = bien.ville || null;
   const cp = bien.code_postal || null;
   const localite = [cp, ville].filter(Boolean).join(" ");
@@ -4656,42 +4766,47 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · ${estimText(validite)}</span></div>
   </div></div>
 </div>
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#0f6e6e">${rh}<div class="content">
   <div class="h">Votre bien en images</div>
   <div class="gal">${photoCell(0, "big")}${photoCell(1)}${photoCell(2)}${photoCell(3)}${photoCell(4)}</div>
-  <div class="h mt">Caractéristiques principales</div>
-  <div class="specs">
-    ${cellSpec("Type", estimText(type), !!type)}
-    ${cellSpec("Surface", `${surface} <small>m²</small>`, !!surface)}
-    ${cellSpec("Terrain", `${terrain} <small>m²</small>`, !!terrain)}
-    ${cellSpec("Pièces", estimText(pieces), !!pieces)}
-    ${cellSpec("Chambres", estimText(chambres), !!chambres)}
-    ${cellSpec("Garage", estimText(garage), !!garage)}
-    ${cellSpec("Étage", estimText(detail.etage), !!detail.etage)}
-    ${detail.niveaux ? cellSpec("Niveaux", estimText(detail.niveaux), true) : ""}
-    ${detail.anneeConstruction ? cellSpec("Année constr.", estimText(detail.anneeConstruction), true) : ""}
-    ${detail.copropriete ? cellSpec("Copropriété", estimText(detail.copropriete) + (detail.coproprieteNbLots ? ` · ${detail.coproprieteNbLots} lots` : ""), true) : ""}
-    ${cellSpec("Localité", estimText(localite), !!localite)}
+  <div class="grid2b">
+  <div class="card"><div class="card-lead"><span class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-6h6v6"></path></svg></span><div><div class="card-t">Caractéristiques principales</div><div class="card-s">Déclaré au mandat</div></div></div>
+    <div class="kv">
+      ${cellSpec("Type", estimText(type), !!type)}
+      ${cellSpec("Surface", `${surface} <small>m²</small>`, !!surface)}
+      ${cellSpec("Terrain", `${terrain} <small>m²</small>`, !!terrain)}
+      ${cellSpec("Pièces", estimText(pieces), !!pieces)}
+      ${cellSpec("Chambres", estimText(chambres), !!chambres)}
+      ${cellSpec("Garage", estimText(garage), !!garage)}
+      ${cellSpec("Étage", estimText(detail.etage), !!detail.etage)}
+      ${detail.niveaux ? cellSpec("Niveaux", estimText(detail.niveaux), true) : ""}
+      ${detail.anneeConstruction ? cellSpec("Année constr.", estimText(detail.anneeConstruction), true) : ""}
+      ${detail.copropriete ? cellSpec("Copropriété", estimText(detail.copropriete) + (detail.coproprieteNbLots ? ` · ${detail.coproprieteNbLots} lots` : ""), true) : ""}
+      ${cellSpec("Localité", estimText(localite), !!localite)}
+    </div>
   </div>
-  ${bdnb ? `<div class="h mt">Données bâtiment · BDNB</div>
-  <div class="specs">
-    ${bdnb.annee_construction != null ? cellSpec("Année constr.", estimText(bdnb.annee_construction), true) : ""}
-    ${bdnb.type_batiment ? cellSpec("Type (BDNB)", estimText(bdnb.type_batiment), true) : ""}
-    ${bdnb.mat_mur ? cellSpec("Murs", estimText(bdnb.mat_mur), true) : ""}
-    ${bdnb.mat_toit ? cellSpec("Toiture", estimText(bdnb.mat_toit), true) : ""}
-    ${bdnb.nb_niveau != null ? cellSpec("Niveaux", estimText(bdnb.nb_niveau), true) : ""}
-    ${bdnb.nb_logements != null ? cellSpec("Logements", estimText(bdnb.nb_logements), true) : ""}
-    ${bdnb.classe_dpe ? cellSpec("DPE théorique", estimText(bdnb.classe_dpe), true) : ""}
-    ${bdnb.alea_argile ? cellSpec("Aléa argile", estimText(bdnb.alea_argile), true) : ""}
+  ${bdnb ? `<div class="card"><div class="card-lead"><span class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"></path></svg></span><div><div class="card-t">Données bâtiment</div><div class="card-s">Bases officielles · BDNB / CSTB</div></div>${bdnb.classe_dpe ? `<span class="card-badge">DPE théo. ${estimText(bdnb.classe_dpe)}</span>` : ""}</div>
+    <div class="kv">
+      ${bdnb.annee_construction != null ? cellSpec("Année constr.", estimText(bdnb.annee_construction), true) : ""}
+      ${bdnb.type_batiment ? cellSpec("Type (BDNB)", estimText(bdnb.type_batiment), true) : ""}
+      ${bdnb.mat_mur ? cellSpec("Murs", estimText(bdnb.mat_mur), true) : ""}
+      ${bdnb.mat_toit ? cellSpec("Toiture", estimText(bdnb.mat_toit), true) : ""}
+      ${bdnb.nb_niveau != null ? cellSpec("Niveaux", estimText(bdnb.nb_niveau), true) : ""}
+      ${bdnb.nb_logements != null ? cellSpec("Logements", estimText(bdnb.nb_logements), true) : ""}
+      ${bdnb.alea_argile ? cellSpec("Aléa argile", estimText(bdnb.alea_argile), true) : ""}
+    </div>
+  </div>` : ""}
   </div>
-  <p style="font-size:10px;color:var(--mute);margin-top:4px">Source : Base de Données Nationale des Bâtiments (BDNB / CSTB).</p>` : ""}
   <div class="h mt">Performance énergétique</div>
-  <div class="energy2">${estimReglette("dpe", dpeEff, dpeImg)}${estimReglette("ges", gesEff, gesImg)}</div>
-  ${dpeReal ? `<p style="font-size:10.5px;color:var(--mute);margin-top:6px">DPE réel enregistré à l'ADEME${dpeReal.date ? " le " + estimText(dateCourt(dpeReal.date)) : ""}${dpeReal.surface ? " · " + estimText(dpeReal.surface) + " m²" : ""}${dpeReal.adresse ? " · " + estimText(dpeReal.adresse) : ""} — à titre indicatif.</p>` : ""}
+  <div class="dpe-row">
+    <div class="dpe-vig"><span class="cls" style="background:${({A:"#2a9d3f",B:"#57b03a",C:"#a0cf3a",D:"#f5d800",E:"#f3a712",F:"#ec6c1f",G:"#d7191c"})[String(dpeEff||"").toUpperCase()]||"#cfc8c0"}">${dpeEff || "—"}</span><div class="meta"><div class="k">DPE · Consommation d'énergie</div><div class="v">${dpeEff ? "Classe " + estimText(dpeEff) : todo("À réaliser")}</div></div></div>
+    <div class="dpe-vig"><span class="cls" style="background:${({A:"#2a9d3f",B:"#57b03a",C:"#a0cf3a",D:"#f5d800",E:"#f3a712",F:"#ec6c1f",G:"#d7191c"})[String(gesEff||"").toUpperCase()]||"#cfc8c0"}">${gesEff || "—"}</span><div class="meta"><div class="k">GES · Émissions de CO₂</div><div class="v">${gesEff ? "Classe " + estimText(gesEff) : todo("À réaliser")}</div></div></div>
+  </div>
+  ${dpeReal ? `<p style="font-size:9.5px;color:var(--mute);margin-top:7px">DPE réel enregistré à l'ADEME${dpeReal.date ? " le " + estimText(dateCourt(dpeReal.date)) : ""}${dpeReal.surface ? " · " + estimText(dpeReal.surface) + " m²" : ""}${dpeReal.adresse ? " · " + estimText(dpeReal.adresse) : ""} — à titre indicatif.</p>` : ""}
   <div class="h mt">Descriptif</div>
-  <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
+  <p class="desc-p">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
 </div>${rf()}</div>
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#3a5a8c">${rh}<div class="content">
   <div class="h">Composition du bien</div>
   ${estimDonut(detail, pieces, surface)}
   <div class="h mt">Le bien en détail</div>
@@ -4704,7 +4819,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${detail.particularites ? `<div class="h mt">Particularités</div><p style="font-size:11px;color:var(--body);line-height:1.6">${estimEscapeHtml(detail.particularites)}</p>` : ""}`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Caractéristiques détaillées non renseignées dans la fiche du bien.")}</p>`}
 </div>${rf()}</div>
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#2f7cb8">${rh}<div class="content">
   <div class="h">Cadre de vie &amp; localisation${cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : ""}</div>
   ${cdv ? `${estimMapWithPins(cdv)}
   ${cdvCom && Array.isArray(cdvCom.pois) && cdvCom.pois.length ? `<div class="cdv-leg"><span><i style="background:var(--brand)"></i>Le bien</span><span><i style="background:#1d4ed8"></i>Écoles</span><span><i style="background:#0e7a4b"></i>Commerces</span><span><i style="background:#c5005f"></i>Santé</span></div>` : ""}
@@ -4722,7 +4837,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
 </div>${rf()}</div>
-${cad ? `<div class="page">${rh}<div class="content">
+${cad ? `<div class="page" style="--acc:#a8842c">${rh}<div class="content">
   <div class="cad-eyebrow">Document parcellaire</div>
   <div class="h">Éléments cadastraux${cadPlu && cadPlu.zone ? ` · zone PLU ${estimText(cadPlu.zone)}` : ""}</div>
   <div class="cad-frame">${cadMapUrl
@@ -4755,14 +4870,14 @@ ${cad ? `<div class="page">${rh}<div class="content">
   </div>
   <div class="disc" style="margin-top:16px"><b>Sources.</b> Parcellaire IGN (PCI Express) · fond Plan IGN v2 · zonage Géoportail de l'Urbanisme. Références à titre informatif ; le titre de propriété et le document d'arpentage font foi. L'identité du propriétaire n'est pas communiquée (donnée nominative).</div>
 </div>${rf()}</div>` : ""}
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#7a5aa3">${rh}<div class="content">
   <div class="h">Profil de la commune${inseeProfil && inseeProfil.commune ? ` · ${estimText(inseeProfil.commune)}` : (cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : "")}</div>
   ${inseeProfil ? `<div class="cm-h">Population</div>${estimPopChart(inseeProfil)}
   <div class="cm-h" style="margin-top:22px">Revenu des ménages</div>${estimRevenuChart(inseeProfil)}
   <div class="disc" style="margin-top:18px"><b>Source.</b> INSEE — recensements de la population (séries historiques) et dispositif FiLoSoFi (niveau de vie médian annuel). Données communales à titre informatif.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Profil INSEE de la commune à charger (population, revenu médian) — via le bouton « Charger le cadre de vie ».")}</p>`}
 </div>${rf()}</div>
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#2e7d5b">${rh}<div class="content">
   <div class="h">État du logement &amp; prestations</div>
   <div class="etat-top">
     <div class="etat-stars">${stars}</div>
@@ -4793,7 +4908,7 @@ ${cad ? `<div class="page">${rh}<div class="content">
     </div>
   </div>
 </div>${rf()}</div>
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#c5005f">${rh}<div class="content">
   <div class="h">Valeur vénale estimée</div>
   <div class="val"><div class="grid">
     <div><div class="lbl">Notre estimation</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
@@ -4806,7 +4921,7 @@ ${cad ? `<div class="page">${rh}<div class="content">
     : `<p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>`}
   ${acquereursN > 0 ? `<div class="acq"><span class="acq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span><div><b>${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""}</b> de notre fichier recherche${acquereursN > 1 ? "nt" : ""} actuellement un bien correspondant au vôtre.</div></div>` : ""}
 </div>${rf()}</div>
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#b06a1f">${rh}<div class="content">
   <div class="h">Le marché en chiffres${marche && marche.commune ? ` · ${estimText(marche.commune)}` : ""}</div>
   <div class="stats">
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v tnum">${mMed ? estimEuro(mMed) + "<small>/m²</small>" : todo("—")}</div><div class="l">Prix médian · ${estimText(marche ? marche.type : "secteur")}</div></div>
@@ -4824,13 +4939,13 @@ ${cad ? `<div class="page">${rh}<div class="content">
   ${mCompsList.length ? `<div class="disc"><b>Comparables DVF.</b> ${mCompsList.length} ventes retenues sont listées page suivante${mComps.length > mCompsList.length ? ` (sur ${mComps.length} ventes reçues du moteur).` : "."}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±20 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
 </div>${rf()}</div>
-${mCompsList.length ? `<div class="page">${rh}<div class="content">
+${mCompsList.length ? `<div class="page" style="--acc:#0f6e6e">${rh}<div class="content">
   <div class="h">Biens comparables DVF vendus</div>
   <p class="dvf-sub">Liste compacte des ${mCompsList.length} ventes comparables retenues pour documenter le prix au m² et la fourchette de valeur.</p>
   <div class="dvf-table"><div class="dvf-head"><span>Bien</span><span>Date</span><span>Surface</span><span>Prix</span><span>Prix/m²</span><span>Dist.</span></div>${mCompsList.map(compTableRow).join("")}</div>
   <div class="disc"><b>Source.</b> Demandes de Valeurs Foncières (DVF, open data publique)${marche ? ` · ${mCount} ventes ${estimText(marche.type)} analysées dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}` : ""}. Affichage : ${mCompsList.length} ventes listées dans le document.</div>
 </div>${rf()}</div>` : ""}
-<div class="page">${rh}<div class="content">
+<div class="page" style="--acc:#8a3d6b">${rh}<div class="content">
   <div class="h">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
   <div class="h mt">Votre conseiller</div>
@@ -4868,7 +4983,7 @@ function estimationAvisValeurHtml(payload, dossier) {
   const valHaute = estimEuro(valeurs.haute) || "À compléter";
 
   const caracteristiques = [
-    ["Type", estimText(bien.type, "—")],
+    ["Type", estimText(estimPropertyTypeLabel(bien.type), "—")],
     ["Surface", bien.surface ? estimText(bien.surface) + " m²" : "—"],
     ["Pièces", estimText(bien.pieces, "—")],
     ["Terrain", bien.terrain ? estimText(bien.terrain) + " m²" : "—"],
