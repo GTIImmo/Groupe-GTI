@@ -4407,7 +4407,12 @@ body{counter-reset:pgw}
 .dpe-vig .meta{min-width:0}
 .dpe-vig .k{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);font-weight:700}
 .dpe-vig .v{font-size:12.5px;font-weight:600;color:var(--ink);margin-top:2px}
+.dpe-vig{gap:13px}
+.dpe-vig .meta{flex:1;min-width:0}
 .dpe-vig .v small{font-size:9px;color:var(--mute);font-weight:400}
+.dpe-scale{display:flex;align-items:flex-end;gap:2.5px;flex:none;height:22px}
+.dpe-scale i{width:11px;height:9px;border-radius:2px;opacity:.4}
+.dpe-scale i.on{height:22px;opacity:1;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 /* Page cadastre : fond de carte plus grand (moins de vide) + PLU à l'accent chapitre */
 .cad-frame{height:99mm}
 .cad-plu-top{background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--acc) 11%,#fff))}
@@ -4448,6 +4453,27 @@ body{counter-reset:pgw}
 .cover-foot .cf .v{font-size:12.5px;font-weight:600;color:var(--ink);margin-top:3px}
 .cover-foot .seal{grid-column:1/-1;display:flex;align-items:center;gap:9px;border-top:1px solid var(--line);padding-top:11px;margin-top:2px;color:#a8842c;font-size:10px;line-height:1.4}
 .cover-foot .seal svg{width:20px;height:20px;stroke:#a8842c;fill:none;flex:none}
+/* ===== Page « Le bien en détail » : cartes détail modernisées ===== */
+.detail-grid .diag-h{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:'Spectral',Georgia,serif;font-size:12.5px;font-weight:600;color:var(--ink);background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 9%,#fff),#fff);padding:10px 13px}
+.detail-grid .dh-ico{width:24px;height:24px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--acc);background:#fff;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 22%,transparent)}
+.detail-grid .dh-ico svg{width:14px;height:14px;stroke:var(--acc);fill:none}
+.detail-grid .diag-row{padding:7px 13px}
+.detail-grid .diag-row .k{color:var(--mute)}
+.detail-grid .diag-row .v{color:var(--ink)}
+.eqps{gap:7px}
+.eqp{border-color:var(--line);border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(40,25,15,.04);padding:6px 12px}
+.eqp svg{color:var(--acc)}
+/* ===== Bloc « Votre conseiller » : plus pro / graphique ===== */
+.contact-fuse{border-radius:16px;box-shadow:0 12px 32px -18px rgba(40,25,15,.32);position:relative;overflow:hidden}
+.contact-fuse::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--acc),#a8842c);z-index:2}
+.cf-body{padding-top:18px}
+.cf-nego .av{background:linear-gradient(150deg,var(--acc),color-mix(in srgb,var(--acc) 55%,#000));box-shadow:0 5px 14px -5px color-mix(in srgb,var(--acc) 55%,transparent),0 0 0 3px color-mix(in srgb,var(--acc) 12%,#fff)}
+.cf-role,.cf-agence-lbl,.cf-qr .qr-cap{color:var(--acc)}
+.cf-contact svg,.cf-row .i svg,.cf-agence-photo svg{color:var(--acc);stroke:var(--acc)}
+.cf-row .i,.cf-agence-photo{background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 12%,#fff),#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 16%,transparent)}
+.cf-qr{background:linear-gradient(180deg,#fff,var(--cream));border-left:1px solid var(--line)}
+.cf-qr .qr-box{box-shadow:0 5px 16px -8px rgba(40,25,15,.42);border-color:color-mix(in srgb,var(--acc) 24%,var(--line))}
+.cf-nm{color:var(--ink)}
 /* En-tête courante (bandeau haut) : filet d'accent */
 .rh{border-bottom-color:var(--line)}
 .rh .meta .t{color:var(--ink)}
@@ -4506,6 +4532,22 @@ function estimReglette(kind, letter, imgUrl) {
     return `<div class="rg-row${on ? " on" : ""}"><span class="rg-bar" style="width:${w}%;background:${ESTIM_DPECOL[l]}">${l}</span>${on ? `<span class="rg-cur" style="color:${ESTIM_DPECOL[l]}">◀</span>` : ""}</div>`;
   }).join("");
   return `<div class="rg"><div class="rg-h">${kind === "dpe" ? "DPE · consommation énergie" : "GES · émissions CO₂"}</div>${cls && ESTIM_DPECOL[cls] ? rows : `<div class="rg-na">${kind.toUpperCase()} à compléter</div>`}</div>`;
+}
+
+// Vignette DPE/GES « une ligne » pro : badge lettre + valeur chiffrée + mini-réglette A→G (curseur).
+function estimDpeVignette(kind, letter, value) {
+  const cls = String(letter || "").trim().toUpperCase();
+  const col = ESTIM_DPECOL[cls] || "#cfc8c0";
+  const label = kind === "dpe" ? "DPE · Consommation d'énergie" : "GES · Émissions de CO₂";
+  const unit = kind === "dpe" ? "kWh/m²·an" : "kg CO₂/m²·an";
+  const scale = ["A", "B", "C", "D", "E", "F", "G"].map((l) =>
+    `<i class="${l === cls ? "on" : ""}" style="background:${ESTIM_DPECOL[l]}"></i>`).join("");
+  const val = (value != null && value !== "" && Number.isFinite(Number(value)))
+    ? `${Number(value).toLocaleString("fr-FR")} <small>${unit}</small>`
+    : (cls ? "Classe " + cls : `<span class="todo">À réaliser</span>`);
+  return `<div class="dpe-vig"><span class="cls" style="background:${col}">${cls || "—"}</span>`
+    + `<div class="meta"><div class="k">${label}</div><div class="v">${val}</div></div>`
+    + `<div class="dpe-scale">${scale}</div></div>`;
 }
 
 // ② Donut composition du bien (répartition des pièces) + pictos chiffrés.
@@ -4834,8 +4876,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   </div>
   <div class="h mt">Performance énergétique</div>
   <div class="dpe-row">
-    <div class="dpe-vig"><span class="cls" style="background:${({A:"#2a9d3f",B:"#57b03a",C:"#a0cf3a",D:"#f5d800",E:"#f3a712",F:"#ec6c1f",G:"#d7191c"})[String(dpeEff||"").toUpperCase()]||"#cfc8c0"}">${dpeEff || "—"}</span><div class="meta"><div class="k">DPE · Consommation d'énergie</div><div class="v">${dpeEff ? "Classe " + estimText(dpeEff) : todo("À réaliser")}</div></div></div>
-    <div class="dpe-vig"><span class="cls" style="background:${({A:"#2a9d3f",B:"#57b03a",C:"#a0cf3a",D:"#f5d800",E:"#f3a712",F:"#ec6c1f",G:"#d7191c"})[String(gesEff||"").toUpperCase()]||"#cfc8c0"}">${gesEff || "—"}</span><div class="meta"><div class="k">GES · Émissions de CO₂</div><div class="v">${gesEff ? "Classe " + estimText(gesEff) : todo("À réaliser")}</div></div></div>
+    ${estimDpeVignette("dpe", dpeEff, dpeReal && dpeReal.conso_ep_m2)}
+    ${estimDpeVignette("ges", gesEff, dpeReal && dpeReal.ges_emission)}
   </div>
   ${dpeReal ? `<p style="font-size:9.5px;color:var(--mute);margin-top:7px">DPE réel enregistré à l'ADEME${dpeReal.date ? " le " + estimText(dateCourt(dpeReal.date)) : ""}${dpeReal.surface ? " · " + estimText(dpeReal.surface) + " m²" : ""}${dpeReal.adresse ? " · " + estimText(dpeReal.adresse) : ""} — à titre indicatif.</p>` : ""}
   <div class="h mt">Descriptif</div>
@@ -4846,9 +4888,9 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${estimDonut(detail, pieces, surface)}
   <div class="h mt">Le bien en détail</div>
   ${hasDetailPage ? `<div class="detail-grid">
-    ${interieurRows ? `<div class="diag"><div class="diag-h">Intérieur</div>${interieurRows}</div>` : ""}
-    ${exterieurRows ? `<div class="diag"><div class="diag-h">Extérieur</div>${exterieurRows}</div>` : ""}
-    ${confortRows ? `<div class="diag"><div class="diag-h">Confort &amp; énergie</div>${confortRows}</div>` : ""}
+    ${interieurRows ? `<div class="diag"><div class="diag-h"><span class="dh-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"></path><path d="M2 13a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4H2z"></path><path d="M5 17v2M19 17v2"></path></svg></span>Intérieur</div>${interieurRows}</div>` : ""}
+    ${exterieurRows ? `<div class="diag"><div class="diag-h"><span class="dh-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-7"></path><path d="M12 15a5 5 0 0 0 4-8 4 4 0 0 0-8 0 5 5 0 0 0 4 8z"></path></svg></span>Extérieur</div>${exterieurRows}</div>` : ""}
+    ${confortRows ? `<div class="diag"><div class="diag-h"><span class="dh-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z"></path></svg></span>Confort &amp; énergie</div>${confortRows}</div>` : ""}
   </div>
   ${equipList ? `<div class="h mt">Équipements &amp; sécurité</div><div class="eqps">${equipList}</div>` : ""}
   ${detail.particularites ? `<div class="h mt">Particularités</div><p style="font-size:11px;color:var(--body);line-height:1.6">${estimEscapeHtml(detail.particularites)}</p>` : ""}`
