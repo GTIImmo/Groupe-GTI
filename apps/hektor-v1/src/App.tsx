@@ -4776,7 +4776,25 @@ function EstimationDocumentEditor(props: {
   async function loadAllEditor() {
     if (allEditorBusy) return
     setAllEditorBusy(true)
-    await Promise.allSettled([loadMarche(), loadCadre(), loadCadastreElements()])
+    const lat = Number(props.detail.latitude_detail), lon = Number(props.detail.longitude_detail)
+    const surface = Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null
+    const aid = dossier.app_dossier_id, hid = dossier.hektor_annonce_id
+    const coordsOk = Number.isFinite(lat) && Number.isFinite(lon) && !!lat && !!lon
+    const persist = async (key: string, loader: () => Promise<{ ok: boolean }>) => {
+      try { const r = await loader(); await saveDossierEstimationSource(aid, hid, key, r.ok, r) } catch { /* best effort */ }
+    }
+    // Toutes les API : les 3 sources éditeur (état + payload PDF) + les sources mémorisées (persistées).
+    await Promise.allSettled([
+      loadMarche(), loadCadre(), loadCadastreElements(),
+      ...(coordsOk ? [
+        persist('bdnb', () => loadBdnb({ lat, lon })),
+        persist('dpe', () => loadDpe({ lat, lon, surface })),
+        persist('patrimoine', () => loadPatrimoine({ lat, lon })),
+        persist('loyers', () => loadCommuneLoyer({ lat, lon })),
+        persist('copro', () => loadCoproRnie({ lat, lon })),
+        persist('insee', () => loadCommunePopulation({ lat, lon })),
+      ] : []),
+    ])
     setAllEditorBusy(false)
   }
 
@@ -5063,7 +5081,7 @@ function EstimationDocumentEditor(props: {
                     <span className={`ev3-cta-ic${allEditorBusy ? ' spin' : ''}`} aria-hidden="true"><EstimIcon name={allEditorBusy ? 'refresh' : 'spark'} /></span>
                     {allEditorBusy ? 'Génération en cours…' : ((marche || cadre || cadastre) ? 'Tout régénérer' : 'Tout générer les données')}
                   </button>
-                  <span className="estim-editor-genall-hint">Un clic charge le marché DVF, le cadre de vie et le cadastre — repris dans le PDF de l’avis de valeur.</span>
+                  <span className="estim-editor-genall-hint">Un clic génère <b>toutes les sources</b> : marché DVF, cadre de vie, cadastre, bâti (BDNB), DPE réel ADEME, potentiel locatif, patrimoine/ABF, copropriété (RNIC) et profil commune (INSEE) — repris dans le PDF de l’avis de valeur.</span>
                 </div>
                 <div className="estim-editor-subhead"><span className="estim-editor-subhead-t">Marché · comparables DVF</span>{marcheMsg ? <span className="estim-editor-subhead-msg">{marcheMsg}</span> : null}</div>
                 {marche && marche.ok ? (
