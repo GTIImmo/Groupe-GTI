@@ -4414,6 +4414,17 @@ body{counter-reset:pgw}
 .cad-plu .lbl{color:var(--acc)}
 .cad-plu .ty{background:var(--acc)}
 .cad-stat .v{font-size:22px}
+/* Page État robuste jusqu'à 8 postes (compaction anti-débordement) */
+.pst-grid{gap:8px 24px}
+.pst-top{margin-bottom:3px}
+.diag-row{padding:7px 14px}
+.etat-top{margin-bottom:10px}
+/* Bloc note explicative (remplit les zones creuses : cadastre, profil commune) */
+.info-note{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#fff,var(--cream));padding:12px 15px;margin-top:12px;box-shadow:0 1px 2px rgba(40,25,15,.04),0 10px 22px -16px rgba(40,25,15,.16)}
+.info-note .nh{display:flex;align-items:center;gap:8px;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:7px}
+.info-note .nh::before{content:"";width:16px;height:2px;background:var(--acc)}
+.info-note p{font-size:10px;color:var(--body);line-height:1.6;margin:0}
+.info-note p+p{margin-top:6px}
 /* En-tête courante (bandeau haut) : filet d'accent */
 .rh{border-bottom-color:var(--line)}
 .rh .meta .t{color:var(--ink)}
@@ -4735,7 +4746,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const cadMapUrl = cad && cadLat != null && cadLon != null ? estimCadastreMapUrl(cadLat, cadLon) : null;
   const cadHomeSvg = '<svg viewBox="0 0 24 24" fill="#c5005f" stroke="#fff" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
   // Nb de pages (page 1 = couverture) : +1 si comparables DVF, +1 si section cadastre.
-  const totalPages = 9 + (mCompsList.length ? 1 : 0) + (cad ? 1 : 0);
+  const totalPages = 8 + (mCompsList.length ? 1 : 0) + (cad ? 1 : 0);
   const lvlColor = (v) => { const s = String(v || "").toLowerCase(); if (/élev|elev|fort/.test(s)) return "#d7191c"; if (/moyen/.test(s)) return "#f3a712"; if (/faible/.test(s)) return "#1f8a5b"; return "var(--mute)"; };
   const cdvRow = (k, v) => `<div class="cdv-row"><span>${estimText(k)}</span><b>${estimText(v)}</b></div>`;
   const cdvLvl = (k, v) => v ? `<div class="cdv-lvl"><div class="k">${k}</div><div class="v" style="color:${lvlColor(v)}">${estimText(v)}</div></div>` : "";
@@ -4850,6 +4861,7 @@ ${cad ? `<div class="page" style="--acc:#a8842c">${rh}<div class="content">
         ? cadParcelles.map((p) => `<tr><td class="ref">${estimText(p.reference || "—")}</td><td>${estimText(p.commune || (cdv && cdv.commune) || "—")}</td><td class="num">${p.contenance ? Number(p.contenance).toLocaleString("fr-FR") + " m²" : "—"}</td></tr>`).join("")
         : `<tr><td colspan="3" class="cad-muted">${todo("Aucune parcelle")}</td></tr>`}</tbody></table>
       ${cad.contenance_totale ? `<div class="cad-tot"><span>Contenance ${cadParcelles.length > 1 ? "totale" : "cadastrale"}</span><b class="tnum">${Number(cad.contenance_totale).toLocaleString("fr-FR")} m²</b></div>` : ""}
+      <div class="info-note"><div class="nh">Ce que dit le cadastre</div><p>La <b>contenance cadastrale</b> est la superficie officielle de la parcelle d'assise du bien, enregistrée au plan cadastral. Elle peut différer d'un relevé d'arpentage : en cas de bornage, seul un géomètre-expert fait foi.</p><p>La <b>référence cadastrale</b> (section + numéro) identifie le bien dans les actes notariés, le règlement de copropriété et le document d'urbanisme (PLU).</p></div>
     </div>
     <div>
       <div class="cad-sh">Urbanisme</div>
@@ -4874,7 +4886,8 @@ ${cad ? `<div class="page" style="--acc:#a8842c">${rh}<div class="content">
   <div class="h">Profil de la commune${inseeProfil && inseeProfil.commune ? ` · ${estimText(inseeProfil.commune)}` : (cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : "")}</div>
   ${inseeProfil ? `<div class="cm-h">Population</div>${estimPopChart(inseeProfil)}
   <div class="cm-h" style="margin-top:22px">Revenu des ménages</div>${estimRevenuChart(inseeProfil)}
-  <div class="disc" style="margin-top:18px"><b>Source.</b> INSEE — recensements de la population (séries historiques) et dispositif FiLoSoFi (niveau de vie médian annuel). Données communales à titre informatif.</div>`
+  <div class="info-note"><div class="nh">Lecture pour votre bien</div><p>Le profil démographique et le niveau de vie de la commune éclairent la <b>profondeur de la demande</b> locale et la solvabilité des acquéreurs potentiels. Une population stable ou en croissance, et un niveau de vie proche ou supérieur à la médiane départementale, soutiennent la liquidité du marché et la tenue des prix.</p><p>Ces indicateurs complètent l'analyse des ventes comparables (DVF) : ils ne fixent pas la valeur, mais qualifient le <b>contexte de commercialisation</b> de votre bien.</p></div>
+  <div class="disc" style="margin-top:14px"><b>Source.</b> INSEE — recensements de la population (séries historiques) et dispositif FiLoSoFi (niveau de vie médian annuel). Données communales à titre informatif.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Profil INSEE de la commune à charger (population, revenu médian) — via le bouton « Charger le cadre de vie ».")}</p>`}
 </div>${rf()}</div>
 <div class="page" style="--acc:#2e7d5b">${rh}<div class="content">
@@ -4908,21 +4921,9 @@ ${cad ? `<div class="page" style="--acc:#a8842c">${rh}<div class="content">
     </div>
   </div>
 </div>${rf()}</div>
-<div class="page" style="--acc:#c5005f">${rh}<div class="content">
-  <div class="h">Valeur vénale estimée</div>
-  <div class="val"><div class="grid">
-    <div><div class="lbl">Notre estimation</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
-    <div><div class="gauge-h">Positionnement de marché</div><div class="gbar"><div class="gpin"></div></div>
-      <div class="gends"><div class="gend" style="text-align:left"><div class="v serif tnum">${valBasse}</div><div class="k">Bas</div></div><div class="gend mid"><div class="v serif tnum">${valEstimee}</div><div class="k">Conseillé</div></div><div class="gend" style="text-align:right"><div class="v serif tnum">${valHaute}</div><div class="k">Haut</div></div></div>
-    </div>
-  </div></div>
-  ${argPrix
-    ? `<div class="method" style="margin-top:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">L'analyse de votre conseiller sur la valeur</div><div class="d">${estimEscapeHtml(argPrix)}</div></div></div>`
-    : `<p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>`}
-  ${acquereursN > 0 ? `<div class="acq"><span class="acq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span><div><b>${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""}</b> de notre fichier recherche${acquereursN > 1 ? "nt" : ""} actuellement un bien correspondant au vôtre.</div></div>` : ""}
-</div>${rf()}</div>
 <div class="page" style="--acc:#b06a1f">${rh}<div class="content">
   <div class="h">Le marché en chiffres${marche && marche.commune ? ` · ${estimText(marche.commune)}` : ""}</div>
+  ${acquereursN > 0 ? `<div class="acq"><span class="acq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span><div><b>${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""}</b> de notre fichier recherche${acquereursN > 1 ? "nt" : ""} actuellement un bien correspondant au vôtre.</div></div>` : ""}
   <div class="stats">
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v tnum">${mMed ? estimEuro(mMed) + "<small>/m²</small>" : todo("—")}</div><div class="l">Prix médian · ${estimText(marche ? marche.type : "secteur")}</div></div>
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span><div class="v tnum">${mTrend != null ? (mTrend >= 0 ? "+" : "") + mTrend + " %" : todo("—")}</div><div class="l">Évolution prix/m²</div></div>
@@ -4946,7 +4947,15 @@ ${mCompsList.length ? `<div class="page" style="--acc:#0f6e6e">${rh}<div class="
   <div class="disc"><b>Source.</b> Demandes de Valeurs Foncières (DVF, open data publique)${marche ? ` · ${mCount} ventes ${estimText(marche.type)} analysées dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}` : ""}. Affichage : ${mCompsList.length} ventes listées dans le document.</div>
 </div>${rf()}</div>` : ""}
 <div class="page" style="--acc:#8a3d6b">${rh}<div class="content">
-  <div class="h">L'avis de votre conseiller</div>
+  <div class="h">Valeur vénale estimée</div>
+  <div class="val"><div class="grid">
+    <div><div class="lbl">Notre estimation</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
+    <div><div class="gauge-h">Positionnement de marché</div><div class="gbar"><div class="gpin"></div></div>
+      <div class="gends"><div class="gend" style="text-align:left"><div class="v serif tnum">${valBasse}</div><div class="k">Bas</div></div><div class="gend mid"><div class="v serif tnum">${valEstimee}</div><div class="k">Conseillé</div></div><div class="gend" style="text-align:right"><div class="v serif tnum">${valHaute}</div><div class="k">Haut</div></div></div>
+    </div>
+  </div></div>
+  ${argPrix ? `<div class="method" style="margin-top:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">L'analyse de votre conseiller sur la valeur</div><div class="d">${estimEscapeHtml(argPrix)}</div></div></div>` : ""}
+  <div class="h mt">L'avis de votre conseiller</div>
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
   <div class="h mt">Votre conseiller</div>
   <div class="contact-fuse"><div class="cf-body">
