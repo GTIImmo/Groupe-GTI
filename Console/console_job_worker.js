@@ -4416,7 +4416,7 @@ body{counter-reset:pgw 1}
 .h{display:block;font-family:'Spectral',Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-.012em;text-transform:none;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:12px}
 .h::before{content:"";display:block;width:32px;height:2px;background:var(--acc);margin:0 0 7px}
 .h.mt{margin-top:15px}
-.gal{grid-auto-rows:21.5mm}
+.gal{grid-auto-rows:18mm}
 .desc-p{font-size:10.5px;color:var(--body);line-height:1.5;margin-top:2px}
 /* Vignettes DPE/GES sur une ligne (au lieu des grandes réglettes A–G) */
 .dpe-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:4px}
@@ -4839,6 +4839,8 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const cadPlu = cad && cad.plu ? cad.plu : null;
   // Patrimoine / ABF (payload.patrimoine, lu server-side depuis les sources mémorisées).
   const patri = payload.patrimoine && (payload.patrimoine.abf || (Array.isArray(payload.patrimoine.items) && payload.patrimoine.items.length)) ? payload.patrimoine : null;
+  // Copropriété (payload.copro) : registre RNIC — n° immat, lots, période, syndic, procédure.
+  const copro = payload.copro && (payload.copro.found || payload.copro.immatriculation) ? payload.copro : null;
   // Potentiel locatif (payload.loyers) : loyer €/m² selon le type, loyer mensuel, rendement brut.
   const loyer = payload.loyers && (payload.loyers.loyer_maison != null || payload.loyers.loyer_appart != null || payload.loyers.zone_abc) ? payload.loyers : null;
   const loyerIsMaison = /maison|villa|chalet|ferme|propri|mas\b|demeure/i.test(String(type || ""));
@@ -4916,6 +4918,14 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     </div>
   </div>` : ""}
   </div>
+  ${copro ? `<div class="info-note" style="margin-top:14px${copro.procedure ? ';border-left-color:#c0392b' : ''}">
+    <div class="nh">Copropriété · Registre national RNIC (ANAH)${copro.immatriculation ? " · N° " + estimText(copro.immatriculation) : ""}</div>
+    <p>${[
+      copro.nb_lots != null ? `<b>${estimText(copro.nb_lots)} lots</b>${copro.nb_lots_habitation != null ? ` (dont ${estimText(copro.nb_lots_habitation)} hab.${copro.nb_lots_stationnement ? `, ${estimText(copro.nb_lots_stationnement)} stat.` : ""})` : ""}` : "",
+      copro.periode_construction ? `construction ${estimText(copro.periode_construction)}` : "",
+      copro.type_syndic ? `syndic ${estimText(copro.type_syndic)}${copro.syndic_nom ? ` — ${estimText(copro.syndic_nom)}` : ""}` : "",
+    ].filter(Boolean).join(" · ")}.${copro.procedure ? ` <b style="color:#9a3412">Procédure en cours (${estimText(copro.mandat_en_cours)}).</b>` : ""}</p>
+  </div>` : ""}
   <div class="h mt">Performance énergétique</div>
   <div class="dpe-row">
     ${estimDpeVignette("dpe", dpeEff, dpeReal && dpeReal.conso_ep_m2)}
@@ -5271,7 +5281,7 @@ async function handleGenerateEstimationPdf(job) {
   // l'enrichissement commodités/INSEE et le fallback cadastre ci-dessous.
   const _needEstimReload = dossier.app_dossier_id != null && (
     !(payload.marche && payload.marche.ok) || !(payload.cadreDeVie && payload.cadreDeVie.ok) ||
-    !(payload.cadastre && payload.cadastre.ok) || !payload.bdnb || !payload.dpe || !payload.patrimoine || !payload.loyers);
+    !(payload.cadastre && payload.cadastre.ok) || !payload.bdnb || !payload.dpe || !payload.patrimoine || !payload.loyers || !payload.copro);
   if (_needEstimReload) {
     try {
       const rows = await supabaseRequest(
@@ -5285,6 +5295,7 @@ async function handleGenerateEstimationPdf(job) {
         if (!payload.dpe && src.dpe && src.dpe.data) payload.dpe = src.dpe.data;
         if (!payload.patrimoine && src.patrimoine && src.patrimoine.data) payload.patrimoine = src.patrimoine.data;
         if (!payload.loyers && src.loyers && src.loyers.data) payload.loyers = src.loyers.data;
+        if (!payload.copro && src.copro && src.copro.data) payload.copro = src.copro.data;
       }
     } catch (_) { /* table absente / best-effort */ }
   }
