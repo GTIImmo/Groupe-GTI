@@ -4425,6 +4425,29 @@ body{counter-reset:pgw}
 .info-note .nh::before{content:"";width:16px;height:2px;background:var(--acc)}
 .info-note p{font-size:10px;color:var(--body);line-height:1.6;margin:0}
 .info-note p+p{margin-top:6px}
+/* ===== Couverture façon maquette V2 (bandeau sombre + photo + légende blanche + pied ancré) ===== */
+.cover{padding:0;background:#fff;overflow:hidden}
+.cover-top{background:var(--ink);color:#fff;padding:12mm 14mm 10mm;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #a8842c;flex:none}
+.cover-top img{height:24mm;width:auto;display:block}
+.cover-top .ref{text-align:right;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#cfc8c0}
+.cover-top .ref b{display:block;font-size:15px;color:#fff;letter-spacing:0;text-transform:none;margin-top:3px}
+.cover-hero{position:relative;flex:none;height:96mm;overflow:hidden;background:linear-gradient(135deg,#2a2723,#413b34)}
+.cover-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cover-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:100% 7px;opacity:.32;pointer-events:none}
+.cover-caption{flex:0 0 auto;padding:12mm 14mm 4mm;background:#fff;color:var(--ink);display:flex;flex-direction:column}
+.cover-caption .kick{display:inline-flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--brand);margin-bottom:10px}
+.cover-caption .kick svg{width:14px;height:14px;stroke:var(--brand);fill:none}
+.cover-caption .title{font-family:'Spectral',serif;font-size:46px;font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.cover-caption .bien{font-family:'Spectral',serif;font-size:21px;font-weight:500;margin-top:10px;color:#4a4038}
+.cover-caption .loc{font-size:11px;color:#6a5f56;margin-top:6px;display:flex;align-items:center;gap:6px}
+.cover-caption .loc svg{width:14px;height:14px;stroke:var(--brand);fill:none}
+.cover-caption .chips{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+.cover-caption .chips span{font-size:9.5px;border:1px solid var(--line);border-radius:20px;padding:3px 11px;color:var(--body)}
+.cover-foot{background:#fff;padding:11mm 14mm 12mm;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:auto;border-top:3px solid var(--brand)}
+.cover-foot .cf .l{font-size:8.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--mute)}
+.cover-foot .cf .v{font-size:12.5px;font-weight:600;color:var(--ink);margin-top:3px}
+.cover-foot .seal{grid-column:1/-1;display:flex;align-items:center;gap:9px;border-top:1px solid var(--line);padding-top:11px;margin-top:2px;color:#a8842c;font-size:10px;line-height:1.4}
+.cover-foot .seal svg{width:20px;height:20px;stroke:#a8842c;fill:none;flex:none}
 /* En-tête courante (bandeau haut) : filet d'accent */
 .rh{border-bottom-color:var(--line)}
 .rh .meta .t{color:var(--ink)}
@@ -4762,20 +4785,21 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${ESTIM_PREMIUM_CSS}</style></head><body>
 <div class="page cover">
-  <div class="c-head"><img src="${ESTIM_LOGO_COVER || LOGO}" alt="GTI Immobilier"><div class="ref">Dossier confidentiel<b>N° ${docNumber}</b></div></div>
-  <div class="c-hero">${heroImg}<div class="c-photo-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Établi par un professionnel</div></div>
-  <div class="c-hero-foot">
-    <span class="c-kicker"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Estimation immobilière</span>
-    <div class="c-title serif">Avis de valeur</div>
-    <div class="c-bien serif">${titre}</div>
-    <div class="c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${estimText(localite || "—")}</div>
-    <div class="c-tags">${[tags, dpeEff ? `<span>DPE ${dpeEff}</span>` : ""].filter(Boolean).join("") || '<span class="todo">Caractéristiques à compléter</span>'}</div>
+  <div class="cover-top"><img src="${ESTIM_LOGO_COVER || LOGO}" alt="Groupe GTI"><div class="ref">Dossier confidentiel<b>N° ${docNumber}</b></div></div>
+  <div class="cover-hero">${heroImg}</div>
+  <div class="cover-caption">
+    <div class="kick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l8 4v5c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V7z"></path></svg>Estimation immobilière · établie par un professionnel</div>
+    <div class="title serif">Avis de valeur</div>
+    <div class="bien serif">${titre}</div>
+    <div class="loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${estimText(localite || "—")}</div>
+    <div class="chips">${[tags, dpeEff ? `<span>DPE ${dpeEff}</span>` : ""].filter(Boolean).join("") || '<span>Caractéristiques à compléter</span>'}</div>
   </div>
-  <div class="c-info"><div class="c-info-row">
-    <div class="c-info-cell"><span class="l">Établi pour</span><span class="v">${proprio}</span></div>
-    <div class="c-info-cell"><span class="l">Conseiller</span><span class="v">${negoNom}</span></div>
-    <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · ${estimText(validite)}</span></div>
-  </div></div>
+  <div class="cover-foot">
+    <div class="cf"><div class="l">Établi pour</div><div class="v">${proprio}</div></div>
+    <div class="cf"><div class="l">Votre conseiller</div><div class="v">${negoNom}</div></div>
+    <div class="cf"><div class="l">Date · validité</div><div class="v">${dateLong} · ${estimText(validite)}</div></div>
+    <div class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l8 4v5c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V7z"></path><path d="m9 12 2 2 4-4"></path></svg>Analyse fondée sur les ventes réelles (DVF), les bases officielles du bâtiment et notre fichier acquéreurs.</div>
+  </div>
 </div>
 <div class="page" style="--acc:#0f6e6e">${rh}<div class="content">
   <div class="h">Votre bien en images</div>
