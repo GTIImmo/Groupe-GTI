@@ -5030,14 +5030,23 @@ async function handleGenerateEstimationPdf(job) {
   });
 
   const detail = await loadEstimationDetail(dossier.app_dossier_id || job.app_dossier_id);
-  // Sources « bâti/bien » mémorisées dans l'onglet Estimation (BDNB + DPE réel) : générées
-  // hors éditeur -> on les LIT ici pour enrichir la page « Bien » du PDF (si non déjà au payload).
-  if (dossier.app_dossier_id != null && !(payload.bdnb && payload.dpe && payload.patrimoine && payload.loyers)) {
+  // Sources mémorisées (onglet Estimation + éditeur) : on les LIT ici pour compléter le PDF quand
+  // le payload de la modale ne les porte pas (ex. échec transitoire d'un loader avalé par
+  // Promise.allSettled). La donnée reste en base -> aucune page ne doit sortir vide si elle existe.
+  // NB : dvf/cadre/cadastre étaient tributaires du seul payload -> ajoutés au rechargement, AVANT
+  // l'enrichissement commodités/INSEE et le fallback cadastre ci-dessous.
+  const _needEstimReload = dossier.app_dossier_id != null && (
+    !(payload.marche && payload.marche.ok) || !(payload.cadreDeVie && payload.cadreDeVie.ok) ||
+    !(payload.cadastre && payload.cadastre.ok) || !payload.bdnb || !payload.dpe || !payload.patrimoine || !payload.loyers);
+  if (_needEstimReload) {
     try {
       const rows = await supabaseRequest(
         "app_dossier_estimation?app_dossier_id=eq." + dossier.app_dossier_id + "&select=sources", { method: "GET" });
       const src = Array.isArray(rows) && rows[0] ? rows[0].sources : null;
       if (src) {
+        if (!(payload.marche && payload.marche.ok) && src.dvf && src.dvf.data) payload.marche = src.dvf.data;
+        if (!(payload.cadreDeVie && payload.cadreDeVie.ok) && src.cadre && src.cadre.data) payload.cadreDeVie = src.cadre.data;
+        if (!(payload.cadastre && payload.cadastre.ok) && src.cadastre && src.cadastre.data) payload.cadastre = src.cadastre.data;
         if (!payload.bdnb && src.bdnb && src.bdnb.data) payload.bdnb = src.bdnb.data;
         if (!payload.dpe && src.dpe && src.dpe.data) payload.dpe = src.dpe.data;
         if (!payload.patrimoine && src.patrimoine && src.patrimoine.data) payload.patrimoine = src.patrimoine.data;
