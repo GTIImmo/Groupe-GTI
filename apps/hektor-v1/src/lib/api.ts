@@ -2763,6 +2763,36 @@ export async function loadPatrimoine(input: { lat: number; lon: number }): Promi
   }
 }
 
+// Copropriété (RNIC / ANAH) : registre national d'immatriculation — n° immat, lots, syndic, procédure.
+export type CoproRnieData = {
+  ok: boolean
+  found?: boolean
+  reference_cadastrale?: string | null
+  immatriculation?: string | null
+  date_immatriculation?: string | null
+  nb_lots?: number | null
+  nb_lots_habitation?: number | null
+  nb_lots_stationnement?: number | null
+  periode_construction?: string | null
+  type_syndic?: string | null
+  syndic_nom?: string | null
+  syndicat_cooperatif?: string | null
+  residence_service?: string | null
+  mandat_en_cours?: string | null
+  procedure?: boolean
+  commune?: string | null
+}
+export async function loadCoproRnie(input: { lat: number; lon: number }): Promise<CoproRnieData> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  try {
+    const r = await invokeBackendApi<CoproRnieData & { found?: boolean }>(`/copro/rnie?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    return { ...r, ok: !!r?.found }
+  } catch {
+    return { ok: false }
+  }
+}
+
 export async function loadBdnb(input: { lat: number; lon: number }): Promise<BdnbData> {
   const { lat, lon } = input
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }

@@ -76,6 +76,7 @@ import {
   loadBdnb,
   loadDpe,
   loadPatrimoine,
+  loadCoproRnie,
   loadCommuneLoyer,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
@@ -145,7 +146,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData } from './lib/api'
+import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData, CoproRnieData } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -8495,6 +8496,8 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const [dpeMsg, setDpeMsg] = useState<string | null>(null)
   const [patriBusy, setPatriBusy] = useState(false)
   const [patriMsg, setPatriMsg] = useState<string | null>(null)
+  const [coproBusy, setCoproBusy] = useState(false)
+  const [coproMsg, setCoproMsg] = useState<string | null>(null)
   const [loyerBusy, setLoyerBusy] = useState(false)
   const [loyerMsg, setLoyerMsg] = useState<string | null>(null)
   const [applyBusy, setApplyBusy] = useState<string | null>(null)  // clé du bloc en cours d'application
@@ -8598,6 +8601,22 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     } finally { setPatriBusy(false) }
   }
 
+  // Génère + mémorise la COPROPRIÉTÉ (registre RNIC/ANAH, live data.gouv par parcelle).
+  async function generateCopro() {
+    if (coproBusy) return
+    if (!hasCoords()) { setCoproMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setCoproBusy(true); setCoproMsg('Recherche au registre des copropriétés…')
+    try {
+      const res = await loadCoproRnie({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'copro', res.ok, res)
+      await reload()
+      setCoproMsg(res.ok ? null : 'Aucune copropriété immatriculée trouvée pour ce bien (RNIC).')
+    } catch (error) {
+      setCoproMsg(error instanceof Error ? error.message : 'Recherche copropriété impossible.')
+    } finally { setCoproBusy(false) }
+  }
+
   // Génère + mémorise le POTENTIEL LOCATIF (loyer commune + zonage ABC).
   async function generateLoyer() {
     if (loyerBusy) return
@@ -8619,6 +8638,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const bdnb = estim?.sources?.bdnb?.data as BdnbData | undefined
   const dpe = estim?.sources?.dpe?.data as DpeData | undefined
   const patri = estim?.sources?.patrimoine?.data as PatrimoineData | undefined
+  const copro = estim?.sources?.copro?.data as CoproRnieData | undefined
   const loyer = estim?.sources?.loyers?.data as LoyerData | undefined
   const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
 
@@ -8661,7 +8681,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     if (allBusy) return
     setAllBusy(true); setApplyMsg(null)
     setCadSignal((n) => n + 1)
-    await Promise.allSettled([generateDvf(), generateLoyer(), generateBdnb(), generateDpe(), generateCadre(), generatePatrimoine()])
+    await Promise.allSettled([generateDvf(), generateLoyer(), generateBdnb(), generateDpe(), generateCadre(), generatePatrimoine(), generateCopro()])
     await reload()
     setAllBusy(false)
   }
@@ -8676,6 +8696,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     { key: 'dpe', label: 'DPE', state: pillState(!!(dpe && dpe.ok), dpeBusy) },
     { key: 'cadre', label: 'Cadre de vie', state: pillState(!!(cadre && cadre.ok), cadreBusy) },
     { key: 'patrimoine', label: 'Patrimoine', state: pillState(!!(patri && patri.ok), patriBusy) },
+    { key: 'copro', label: 'Copropriété', state: pillState(!!(copro && copro.ok), coproBusy) },
     { key: 'cadastre', label: 'Cadastre', state: pillState(cadState.present, cadState.busy) },
   ]
 
@@ -8856,6 +8877,30 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
               {patri.items && patri.items.length ? <div className="ev3-tags">{patri.items.map((it, i) => <span key={i} className="ev3-tag">{it.type_label}{it.nom ? ` · ${it.nom}` : ''}</span>)}</div> : <p className="ev3-hint">Aucun périmètre de protection recensé sur ce point.</p>}
             </>
           ) : (patriBusy ? <p className="ev3-hint ev3-hint-run">Recherche des périmètres de protection…</p> : (patriMsg ? <p className="ev3-hint ev3-hint-msg">{patriMsg}</p> : <p className="ev3-hint">Monument historique, site classé/inscrit, site patrimonial remarquable — indique si les travaux passent par l’ABF. Couverture GPU partielle : absence ≠ garantie.</p>))}
+        </section>
+
+        <section className="ev3-card ev3-card-wide">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="patrimoine" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Copropriété (RNIE)</span><span className="ev3-h-s">Registre national d’immatriculation des copropriétés (ANAH)</span></span>
+            <span className="ev3-h-right">
+              {copro && copro.ok ? (copro.procedure ? <span className="ev3-badge ev3-badge-warn">Procédure</span> : <span className="ev3-badge">{copro.nb_lots ?? '—'} lots</span>) : null}
+              <button className="ev3-refresh" type="button" title="Régénérer la copropriété" aria-label="Régénérer la copropriété" disabled={coproBusy} onClick={() => { void generateCopro() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {copro && copro.ok ? (
+            <>
+              {copro.procedure ? <div className="ev3-apply ev3-apply-warn"><span>Procédure en cours ({copro.mandat_en_cours}) — copropriété sous surveillance.</span></div> : null}
+              <div className="ev3-tags">
+                {copro.immatriculation ? <span className="ev3-tag">N° {copro.immatriculation}</span> : null}
+                {copro.nb_lots != null ? <span className="ev3-tag">{copro.nb_lots} lots{copro.nb_lots_habitation != null ? ` · ${copro.nb_lots_habitation} hab.` : ''}{copro.nb_lots_stationnement ? ` · ${copro.nb_lots_stationnement} park.` : ''}</span> : null}
+                {copro.periode_construction ? <span className="ev3-tag">{copro.periode_construction}</span> : null}
+                {copro.type_syndic ? <span className="ev3-tag">Syndic {copro.type_syndic}</span> : null}
+                {copro.syndic_nom ? <span className="ev3-tag">{copro.syndic_nom}</span> : null}
+                {copro.residence_service && /oui/i.test(copro.residence_service) ? <span className="ev3-tag">Résidence-service</span> : null}
+              </div>
+            </>
+          ) : (coproBusy ? <p className="ev3-hint ev3-hint-run">Recherche au registre des copropriétés…</p> : (coproMsg ? <p className="ev3-hint ev3-hint-msg">{coproMsg}</p> : <p className="ev3-hint">Immatriculation, nombre de lots, période, syndic, procédure — registre national ANAH (RNIC), toujours à jour. Pour les biens en copropriété uniquement.</p>))}
         </section>
 
         <div className="ev3-card ev3-card-wide ev3-card-cadastre">
