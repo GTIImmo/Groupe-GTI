@@ -4130,8 +4130,10 @@ const ESTIM_PREMIUM_CSS = `
 html,body{background:#fff;-webkit-font-smoothing:antialiased}
 body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);line-height:1.5}
 svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant-numeric:tabular-nums}
-.page{position:relative;width:210mm;height:297mm;background:#fff;margin:0 auto;padding:var(--mx);display:flex;flex-direction:column;overflow:hidden;page-break-after:always}
-.page:last-child{page-break-after:auto}
+.page{position:relative;width:210mm;min-height:297mm;background:#fff;margin:0 auto;padding:var(--mx);display:flex;flex-direction:column;break-after:page;page-break-after:always}
+.page:last-child{break-after:auto;page-break-after:auto}
+.page.cover{height:297mm;overflow:hidden}
+.specs,.spec,.scard,.chart,.comp,.cdv-card,.cdv-map,.pts,.diag,.method,.epill,.contact-fuse,.val,.etat-top,.dvf-table,.acq,.acq-mkt,.gal,.energy2,.dn{break-inside:avoid}
 .rh{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;border-bottom:1.5px solid var(--line);flex:none}
 .rh img{height:68px;width:auto}
 .rh .meta{text-align:right}.rh .meta .t{font-family:'Spectral',serif;font-size:13px;font-weight:700;line-height:1}.rh .meta .d{font-size:8.5px;color:var(--mute);margin-top:3px;letter-spacing:.04em}
@@ -4142,11 +4144,11 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .h::before{content:"";width:9px;height:9px;background:var(--brand);flex:none}.h.mt{margin-top:13px}
 .todo{color:var(--faint);font-style:italic;font-weight:500}
 .cover{padding:0;display:flex;flex-direction:column;color:#1a1614;overflow:hidden}
-.cover .c-head{display:flex;align-items:center;justify-content:space-between;padding:6mm var(--mx);background:linear-gradient(115deg,#160a10,#241019 45%,#3a1224)}
+.cover .c-head{display:flex;align-items:center;justify-content:space-between;padding:6mm var(--mx);background:linear-gradient(115deg,#160a10,#241019 45%,#3a1224);border-bottom:2px solid #b0a03f}
 .cover .c-head img{height:128px;width:auto}
 .cover .c-head .ref{font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);text-align:right;line-height:1.8}
 .cover .c-head .ref b{display:block;color:#fff;font-size:9.5px;letter-spacing:2.4px}
-.cover .c-hero{position:relative;flex:none;height:112mm;overflow:hidden;background:linear-gradient(135deg,#2a2230,#3a1224)}
+.cover .c-hero{position:relative;flex:none;height:95mm;overflow:hidden;background:linear-gradient(135deg,#2a2230,#3a1224)}
 .cover .c-hero>img{width:100%;height:100%;object-fit:cover}
 .cover .c-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(15,13,12,.45))}
 .cover .c-photo-tag{position:absolute;left:var(--mx);bottom:6mm;z-index:4;display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:700;color:#fff;background:rgba(15,13,12,.5);border:1px solid rgba(255,255,255,.22);padding:7px 13px;border-radius:2px}
@@ -4158,8 +4160,10 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cover .c-bien{font-family:'Spectral',serif;font-size:18px;font-weight:500;font-style:italic;margin-top:11px;color:#4a4038}
 .cover .c-loc{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#6a5f56;margin-top:7px}.cover .c-loc svg{width:13px;height:13px;color:var(--brand)}
 .cover .c-tags{display:flex;gap:7px;margin-top:16px}.cover .c-tags span{font-size:9.5px;font-weight:700;border:1px solid rgba(26,22,20,.2);background:rgba(26,22,20,.03);padding:7px 13px;color:#3a322c;white-space:nowrap;border-radius:2px}
-.cover .c-info{flex:none;margin:9mm var(--mx) var(--mx)}.cover .c-info-row{display:flex}
-.cover .c-info-cell{flex:1;padding:13px 16px;border:1px solid rgba(26,22,20,.16);border-left:none;min-width:0}.cover .c-info-cell:first-child{border-left:1px solid transparent}
+.cover .c-info{flex:none;margin:auto var(--mx) 6mm;border-top:1.5px solid var(--brand);padding-top:12px}.cover .c-info-row{display:flex;gap:22px}
+.cover .c-info-cell{flex:1;padding:0;border:none;min-width:0}.cover .c-info-cell:first-child{border:none}
+.cover .c-seal{flex:none;display:flex;align-items:center;gap:8px;margin:0 var(--mx) var(--mx);font-size:8.5px;color:var(--mute);letter-spacing:.02em;line-height:1.4}
+.cover .c-seal svg{width:13px;height:13px;color:var(--brand);flex:none}
 .cover .c-info-cell.accent{background:var(--brand);border-color:var(--brand);flex:0 0 36%;display:flex;flex-direction:column;justify-content:center}
 .cover .c-info-cell .l{display:block;font-size:7.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--brand)}.cover .c-info-cell.accent .l{color:rgba(255,255,255,.85)}
 .cover .c-info-cell .v{display:block;font-size:11.5px;font-weight:600;margin-top:5px;color:#1a1614;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cover .c-info-cell.accent .v{color:#fff;font-family:'Spectral',serif;font-size:22px;font-weight:700;letter-spacing:-.02em}
@@ -4186,6 +4190,10 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.scard{border:1px solid var(--line);border-radius:11px;padding:15px 16px}
 .acq{display:flex;align-items:center;gap:11px;margin-top:8px;padding:9px 13px;background:var(--brand-50);border:1px solid #f3c9dd;border-radius:11px;font-size:11px;color:var(--body);line-height:1.4}
 .acq b{color:var(--brand-d)}.acq-ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--brand);border-radius:50%;color:#fff}.acq-ic svg{width:15px;height:15px}
+.acq-mkt{display:flex;align-items:center;gap:22px;margin-top:4px;padding:20px 26px;background:linear-gradient(135deg,#fbeaf2,#fff 78%);border:1px solid #f3c9dd;border-left:4px solid var(--brand);border-radius:12px}
+.acq-mkt-n{font-family:'Spectral',serif;font-size:52px;font-weight:700;color:var(--brand);line-height:.86;flex:none;text-align:center;min-width:60px}
+.acq-mkt-t{font-size:13px;font-weight:700;color:var(--ink);line-height:1.3}
+.acq-mkt-d{font-size:11px;color:var(--body);line-height:1.6;margin-top:7px}
 .cdv-map{position:relative;width:100%;height:76mm;border-radius:11px;overflow:hidden;border:1px solid var(--line);background:var(--cream)}
 .cdv-map img{width:100%;height:100%;object-fit:cover;display:block}
 .cdv-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);color:var(--brand)}.cdv-pin svg{width:30px;height:30px}
@@ -4340,6 +4348,82 @@ svg{display:block}.serif{font-family:'Spectral',Georgia,serif}.tnum{font-variant
 .cad-stat .v{font-size:20px;font-weight:700;color:var(--ink);line-height:1}
 .cad-stat .v.cad-com{font-size:16px}
 .cad-stat .k{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--body);margin-top:6px}
+/* ===== Passe design premium (additive, décorative — aucune donnée retirée) ===== */
+:root{--gold:#a8842c}
+body{counter-reset:sec}
+/* Mise en page en FLUX continu : en-tête/pied fixes répétés à chaque page, sections qui s'enchaînent (fini la page pleine forcée -> fini les pages blanches). */
+@page{size:A4;margin:15mm 13mm 15mm}
+@page:first{margin:0}
+.page.cover{break-after:page}
+.sheet{position:relative;counter-increment:sec;break-inside:auto;padding-top:2mm}
+.sheet:first-of-type{padding-top:0}
+/* Cohésion des coupures : en-tête de section + 1er bloc restent solidaires, sous-titres pas orphelins,
+   blocs jamais scindés -> une coupure ne tombe qu'ENTRE deux blocs entiers (propre), sans page blanche. */
+.sec-lead,.h,.h.mt{break-after:avoid}
+.detail-grid,.stats,.pts-grid,.diag-grid,.energy2,.gal,.dn,.pop,.rev,.bdnb-src,.specs{break-inside:avoid}
+.sheet p{orphans:3;widows:3}
+.sheet+.sheet{margin-top:8mm}
+.sheet.brk{break-before:page}
+.sheet::before{content:"";position:absolute;top:-3mm;left:0;right:0;height:42mm;background:radial-gradient(120% 100% at 90% 0,rgba(197,0,95,.05),transparent 60%);pointer-events:none;z-index:0}
+.inner{position:relative;z-index:1}
+.sec-lead{break-after:avoid}
+.h.mt{break-after:avoid}
+.sec-lead{display:flex;align-items:center;gap:13px;margin-bottom:13px;padding-bottom:10px;border-bottom:1.5px solid var(--ink)}
+.sec-ico{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--brand);background:linear-gradient(135deg,#f8d3e3,#fdeef5);box-shadow:inset 0 0 0 1px #f0b9d2}
+.sec-ico svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sec-tx{flex:1;min-width:0}
+.sec-tx .st{font-family:'Spectral',serif;font-size:17px;font-weight:700;color:var(--ink);letter-spacing:-.01em;line-height:1.12}
+.sec-tx .ss{font-size:9.5px;color:var(--mute);margin-top:3px;line-height:1.35}
+.sec-num{flex:none;font-family:'Spectral',serif;font-size:38px;font-weight:700;color:rgba(197,0,95,.13);line-height:1}
+.sec-num::before{content:counter(sec,decimal-leading-zero)}
+.rh{border-bottom:none;padding-bottom:11px}
+.rh::after{content:"";position:absolute;left:0;bottom:0;width:46px;height:2px;background:var(--brand)}
+.rh::before{content:"";position:absolute;left:0;bottom:0;right:0;height:1px;background:var(--line)}
+.rf{border-top:none;padding-top:11px}
+.rf::before{content:"";position:absolute;left:0;top:0;right:0;height:1px;background:linear-gradient(90deg,var(--brand),transparent 42%)}
+.scard{background:linear-gradient(180deg,#fff,#fdfbf7)}
+.scard .ic,.pic-ic{background:linear-gradient(135deg,#f8d3e3,#fdeef5);box-shadow:inset 0 0 0 1px #f0b9d2}
+.val{position:relative;overflow:hidden;box-shadow:0 6px 30px -16px rgba(58,18,38,.6)}
+.val::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--brand),var(--gold));z-index:2}
+.val::after{content:"";position:absolute;top:-50px;right:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(255,158,200,.18),transparent 70%)}
+.val .grid{padding-left:8px}
+.acq-mkt{background:linear-gradient(125deg,#1c1916,#3a2f2a 66%,#4a2a3a);border:none;border-radius:16px;box-shadow:0 6px 30px -16px rgba(28,20,16,.6);position:relative;overflow:hidden;padding:22px 26px}
+.acq-mkt::before{content:"";position:absolute;top:-30px;right:-20px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(255,90,161,.16),transparent 68%)}
+.acq-mkt-n{color:#ff6fae;position:relative}
+.acq-mkt>div{position:relative}
+.acq-mkt-t{color:#fff}
+.acq-mkt-d{color:#e7e0d8}.acq-mkt-d b{color:#fff}
+/* ===== Refonte v2 : blocs premium + effets de fond (additif) ===== */
+html{background:#faf8f3}
+.sheet::before{height:52mm;background:radial-gradient(130% 100% at 88% 0,rgba(197,0,95,.06),transparent 58%)}
+.sheet::after{content:"";position:absolute;left:-30mm;bottom:6mm;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(168,132,44,.05),transparent 68%);pointer-events:none;z-index:0}
+/* ombres douces générales pour la profondeur */
+.scard,.cdv-card,.diag,.pts,.chart,.epill,.cad-stat,.contact-fuse,.method,.cdv-map,.cad-frame{box-shadow:0 2px 13px -8px rgba(60,20,40,.18)}
+/* — Caractéristiques principales : refonte en cartes-stat premium — */
+.specs{grid-template-columns:repeat(4,1fr);gap:9px;background:none;border:none;border-radius:0;overflow:visible}
+.spec{position:relative;overflow:hidden;background:linear-gradient(158deg,#fff,#fbf5ef);border:1px solid var(--line);border-radius:13px;padding:13px 15px 14px 18px;box-shadow:0 2px 12px -8px rgba(60,20,40,.16)}
+.spec::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,var(--brand),var(--brand-d))}
+.spec::after{content:"";position:absolute;right:-18px;top:-18px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,rgba(197,0,95,.06),transparent 70%)}
+.spec .k{font-size:8px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute);font-weight:800}
+.spec .v{font-family:'Spectral',serif;font-size:21px;font-weight:600;margin-top:7px;color:var(--ink);line-height:1.05}
+.spec .v small{font-size:11px;color:var(--mute);font-weight:400;font-family:'Inter',sans-serif}
+/* — Données bâtiment (BDNB) : traitement « source officielle » (accent doré) — */
+.specs.bdnb .spec{background:linear-gradient(158deg,#fffdf6,#faf3e4);border-color:#ece0c4}
+.specs.bdnb .spec::before{background:linear-gradient(180deg,var(--gold),#c9a24a)}
+.specs.bdnb .spec::after{background:radial-gradient(circle,rgba(168,132,44,.08),transparent 70%)}
+.specs.bdnb .spec .v{color:#5c4a1f}
+.bdnb-src{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);background:#fbf3e2;border:1px solid #ecdcbb;border-radius:20px;padding:4px 11px}
+.bdnb-src svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2}
+/* — Urbanisme / cadastre : PLU en bandeau magenta premium — */
+.cad-plu{border:none;box-shadow:0 4px 20px -10px rgba(60,20,40,.3)}
+.cad-plu-top{background:linear-gradient(135deg,var(--brand),var(--brand-d))}
+.cad-plu-top .lbl{color:rgba(255,255,255,.82)}
+.cad-plu-top .z{color:#fff}
+.cad-plu-top .ty{background:#fff;color:var(--brand)}
+.cad-stat{background:linear-gradient(160deg,#fff,#fbf5ef);border:1px solid var(--line)}
+.cad-stat .v{color:var(--brand)}
+/* — Réglettes énergie & épingles carte : petit lift — */
+.epill{background:linear-gradient(160deg,#fff,#fbf6f1)}
 `;
 
 // ============================ VISUELS PDF (avis de valeur) ============================
@@ -4539,6 +4623,20 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     : `<li>${todo("À compléter par votre conseiller")}</li>`;
   const checkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5 10 17 19 7"></path></svg>`;
   const warnIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>`;
+  // En-tête de section « premium » : picto + titre + sous-titre + numéro filigrané (décoratif).
+  const SEC_ICO = {
+    bien: '<svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>',
+    compo: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="11" width="8" height="10" rx="1"/><rect x="3" y="14" width="8" height="7" rx="1"/></svg>',
+    cadre: '<svg viewBox="0 0 24 24"><path d="M20 10c0 7-8 12-8 12s-8-5-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+    cadastre: '<svg viewBox="0 0 24 24"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/></svg>',
+    insee: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 6a3 3 0 0 1 0 6M15.5 20a5.5 5.5 0 0 0-2-4.3"/></svg>',
+    etat: '<svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 11 2 2 4-4"/></svg>',
+    marche: '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 14l4-4 3 3 5-6M17 7h4v4"/></svg>',
+    comps: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>',
+    estim: '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7"/></svg>',
+    avis: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>',
+  };
+  const secLead = (key, title, sub) => `<div class="sec-lead"><span class="sec-ico">${SEC_ICO[key] || ""}</span><div class="sec-tx"><div class="st">${title}</div>${sub ? `<div class="ss">${sub}</div>` : ""}</div><span class="sec-num"></span></div>`;
   const charges = payload.charges || {};
   const chargeRow = (k, v) => { const e = estimEuro(v); return `<div class="diag-row"><span class="k">${k}</span><span class="v ${e ? "" : "na"}">${e ? e + "/an" : todo("à compléter")}</span></div>`; };
   const dpe = String((bien.dpe || etat.dpe) || "").trim().toUpperCase();
@@ -4637,14 +4735,42 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   const diagOtherLines = Object.entries(detail.diagnostics || {}).filter(([label]) => label !== "DPE").map(([label, d]) =>
     `<div class="diag-row"><span class="k">${label}</span><span class="v ${d && d.done ? "ok" : "na"}">${d && d.done ? "Réalisé · " + estimText(dateCourt(d.date)) : "Non communiqué"}</span></div>`).join("");
 
+  // === Variante design "maquette V2" (additif, isolé) : gardée par flag, repli sur V1 si souci. ===
+  if (payload && payload._variant === "v2") {
+    try {
+      const V2 = require("./estim_avis_v2.js");
+      const _mapFull = cdv ? estimMapWithPins(cdv) : "";
+      const _mapPins = (String(_mapFull).match(/<span class="mp (?!home)[^"]*"[^>]*>[\s\S]*?<\/span>/g) || []).join("");
+      return V2.buildV2Html({
+        docNumber, titre, type, ville, surface, terrain, pieces, chambres, garage,
+        localite: localite || [dossier.code_postal, dossier.ville].filter(Boolean).join(" "),
+        proprio, negoNom, agence, tel, email, agenceTel, agenceMail, agencePhoto, qrSvg, initials,
+        avis, argPrix, methode, valEstimee, valBasse, valHaute, pricePerM2, validite, dateLong,
+        etatComment: String((etat && etat.commentaire) || "").trim(),
+        appreciation: String((payload.appreciation || payload.appreciationGenerale) || "").trim(),
+        photos, tags, note, stars, etatLabel, forts, vigi, charges,
+        dpeEff, gesEff, dpeReal, bdnb, descriptif,
+        marche, mEvo, mMed, mCount, mRadius, mP25, mP75, mTrend, mCompsList, dateCourt,
+        interieurRows, exterieurRows, confortRows, equipList, hasDetailPage,
+        acquereursN, cdv, inseeProfil, cdvCom, cdvRisk, cad, cadParcelles, cadPlu, patri, cadMapUrl,
+        loyer, loyerM2, loyerMensuel, loyerRdt, loyerTendue, loyerIsMaison,
+        postes, postesBlock, diagOtherLines, detail,
+        mapPins: _mapPins,
+        popChart: estimPopChart(inseeProfil), revenuChart: estimRevenuChart(inseeProfil),
+        logoCover: ESTIM_LOGO_COVER, mark: ESTIM_MARK,
+        _t: estimText, _e: estimEuro, _esc: (typeof estimEscapeHtml === "function" ? estimEscapeHtml : estimText),
+      });
+    } catch (e) { console.error("Avis V2 render failed, fallback V1:", e && e.stack ? e.stack : e); }
+  }
+
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Avis de valeur ${docNumber}</title>
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${ESTIM_PREMIUM_CSS}</style></head><body>
 <div class="page cover">
   <div class="c-head"><img src="${ESTIM_LOGO_COVER || LOGO}" alt="GTI Immobilier"><div class="ref">Dossier confidentiel<b>N° ${docNumber}</b></div></div>
-  <div class="c-hero">${heroImg}<div class="c-photo-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Établi par un professionnel</div></div>
+  <div class="c-hero">${heroImg}</div>
   <div class="c-hero-foot">
-    <span class="c-kicker"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Estimation immobilière</span>
+    <span class="c-kicker"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path></svg>Estimation immobilière · établie par un professionnel</span>
     <div class="c-title serif">Avis de valeur</div>
     <div class="c-bien serif">${titre}</div>
     <div class="c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${estimText(localite || "—")}</div>
@@ -4655,9 +4781,10 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     <div class="c-info-cell"><span class="l">Conseiller</span><span class="v">${negoNom}</span></div>
     <div class="c-info-cell"><span class="l">Date · validité</span><span class="v">${dateLong} · ${estimText(validite)}</span></div>
   </div></div>
+  <div class="c-seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path><path d="m9 12 2 2 4-4"></path></svg>Analyse fondée sur les ventes réelles (DVF), les bases officielles du bâtiment et notre fichier acquéreurs.</div>
 </div>
-<div class="page">${rh}<div class="content">
-  <div class="h">Votre bien en images</div>
+<section class="sheet"><div class="inner">
+  ${secLead("bien", "Votre bien", "Photos, caractéristiques, bâti (BDNB) et performance énergétique.")}
   <div class="gal">${photoCell(0, "big")}${photoCell(1)}${photoCell(2)}${photoCell(3)}${photoCell(4)}</div>
   <div class="h mt">Caractéristiques principales</div>
   <div class="specs">
@@ -4674,7 +4801,7 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     ${cellSpec("Localité", estimText(localite), !!localite)}
   </div>
   ${bdnb ? `<div class="h mt">Données bâtiment · BDNB</div>
-  <div class="specs">
+  <div class="specs bdnb">
     ${bdnb.annee_construction != null ? cellSpec("Année constr.", estimText(bdnb.annee_construction), true) : ""}
     ${bdnb.type_batiment ? cellSpec("Type (BDNB)", estimText(bdnb.type_batiment), true) : ""}
     ${bdnb.mat_mur ? cellSpec("Murs", estimText(bdnb.mat_mur), true) : ""}
@@ -4684,15 +4811,15 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     ${bdnb.classe_dpe ? cellSpec("DPE théorique", estimText(bdnb.classe_dpe), true) : ""}
     ${bdnb.alea_argile ? cellSpec("Aléa argile", estimText(bdnb.alea_argile), true) : ""}
   </div>
-  <p style="font-size:10px;color:var(--mute);margin-top:4px">Source : Base de Données Nationale des Bâtiments (BDNB / CSTB).</p>` : ""}
+  <div class="bdnb-src"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"></path><path d="m9 12 2 2 4-4"></path></svg>Source officielle · Base de Données Nationale des Bâtiments (BDNB / CSTB)</div>` : ""}
   <div class="h mt">Performance énergétique</div>
   <div class="energy2">${estimReglette("dpe", dpeEff, dpeImg)}${estimReglette("ges", gesEff, gesImg)}</div>
   ${dpeReal ? `<p style="font-size:10.5px;color:var(--mute);margin-top:6px">DPE réel enregistré à l'ADEME${dpeReal.date ? " le " + estimText(dateCourt(dpeReal.date)) : ""}${dpeReal.surface ? " · " + estimText(dpeReal.surface) + " m²" : ""}${dpeReal.adresse ? " · " + estimText(dpeReal.adresse) : ""} — à titre indicatif.</p>` : ""}
   <div class="h mt">Descriptif</div>
   <p style="font-size:11.5px;color:var(--body);line-height:1.7">${descriptif ? estimEscapeHtml(descriptif) : todo("Descriptif du bien à compléter par votre conseiller.")}</p>
-</div>${rf()}</div>
-<div class="page">${rh}<div class="content">
-  <div class="h">Composition du bien</div>
+</div></section>
+<section class="sheet"><div class="inner">
+  ${secLead("compo", "Composition &amp; détail du bien", "Répartition des pièces, intérieur / extérieur et équipements.")}
   ${estimDonut(detail, pieces, surface)}
   <div class="h mt">Le bien en détail</div>
   ${hasDetailPage ? `<div class="detail-grid">
@@ -4703,9 +4830,9 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   ${equipList ? `<div class="h mt">Équipements &amp; sécurité</div><div class="eqps">${equipList}</div>` : ""}
   ${detail.particularites ? `<div class="h mt">Particularités</div><p style="font-size:11px;color:var(--body);line-height:1.6">${estimEscapeHtml(detail.particularites)}</p>` : ""}`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Caractéristiques détaillées non renseignées dans la fiche du bien.")}</p>`}
-</div>${rf()}</div>
-<div class="page">${rh}<div class="content">
-  <div class="h">Cadre de vie &amp; localisation${cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : ""}</div>
+</div></section>
+<section class="sheet"><div class="inner">
+  ${secLead("cadre", `Cadre de vie${cdv && cdv.commune ? " · " + estimText(cdv.commune) : ""}`, "Commodités, accessibilité et risques du secteur.")}
   ${cdv ? `${estimMapWithPins(cdv)}
   ${cdvCom && Array.isArray(cdvCom.pois) && cdvCom.pois.length ? `<div class="cdv-leg"><span><i style="background:var(--brand)"></i>Le bien</span><span><i style="background:#1d4ed8"></i>Écoles</span><span><i style="background:#0e7a4b"></i>Commerces</span><span><i style="background:#c5005f"></i>Santé</span></div>` : ""}
   <div class="cdv-grid">
@@ -4721,10 +4848,10 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   <div class="jgs">${estimJauge("Potentiel radon", cdvRisk.radon)}${estimJauge("Sismicité", cdvRisk.sismicite)}${estimJauge("Retrait-gonflement argiles", cdvRisk.argiles)}</div>` : `<p style="font-size:11px;color:var(--mute)">${todo("Risques à charger par votre conseiller.")}</p>`}
   <div class="disc" style="margin-top:14px"><b>Sources.</b> Fond de carte IGN · commodités OpenStreetMap · risques Géorisques (état des risques). Données indicatives ; l'état des risques officiel (ERP) est annexé au compromis.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Cadre de vie, carte et risques à charger par votre conseiller (bouton « Charger le cadre de vie »).")}</p>`}
-</div>${rf()}</div>
-${cad ? `<div class="page">${rh}<div class="content">
+</div></section>
+${cad ? `<section class="sheet"><div class="inner">
   <div class="cad-eyebrow">Document parcellaire</div>
-  <div class="h">Éléments cadastraux${cadPlu && cadPlu.zone ? ` · zone PLU ${estimText(cadPlu.zone)}` : ""}</div>
+  ${secLead("cadastre", `Urbanisme &amp; cadastre${cadPlu && cadPlu.zone ? " · PLU " + estimText(cadPlu.zone) : ""}`, "Parcellaire IGN (PCI Express), contenance et zonage.")}
   <div class="cad-frame">${cadMapUrl
     ? `<img src="${estimText(cadMapUrl)}" alt="Plan cadastral"><span class="cad-grid"></span><span class="cad-tick tl"></span><span class="cad-tick tr"></span><span class="cad-tick bl"></span><span class="cad-tick br"></span><span class="cad-mk"><span class="halo"></span><span class="cx"></span><span class="cy"></span><span class="dot"></span></span><div class="cad-cap"><span>Fond Plan IGN v2 · parcellaire PCI Express</span><span>Localisation indicative</span></div>`
     : `<div class="cad-empty">${todo("Plan indisponible — coordonnées du bien manquantes.")}</div>`}</div>
@@ -4754,16 +4881,16 @@ ${cad ? `<div class="page">${rh}<div class="content">
     <div class="cad-stat"><div class="v serif cad-com">${estimText((cadParcelles[0] && cadParcelles[0].commune) || (cdv && cdv.commune) || "—")}</div><div class="k">Commune</div></div>
   </div>
   <div class="disc" style="margin-top:16px"><b>Sources.</b> Parcellaire IGN (PCI Express) · fond Plan IGN v2 · zonage Géoportail de l'Urbanisme. Références à titre informatif ; le titre de propriété et le document d'arpentage font foi. L'identité du propriétaire n'est pas communiquée (donnée nominative).</div>
-</div>${rf()}</div>` : ""}
-<div class="page">${rh}<div class="content">
-  <div class="h">Profil de la commune${inseeProfil && inseeProfil.commune ? ` · ${estimText(inseeProfil.commune)}` : (cdv && cdv.commune ? ` · ${estimText(cdv.commune)}` : "")}</div>
+</div></section>` : ""}
+<section class="sheet"><div class="inner">
+  ${secLead("insee", `Profil de la commune${inseeProfil && inseeProfil.commune ? " · " + estimText(inseeProfil.commune) : (cdv && cdv.commune ? " · " + estimText(cdv.commune) : "")}`, "Population et niveau de vie médian des ménages (INSEE).")}
   ${inseeProfil ? `<div class="cm-h">Population</div>${estimPopChart(inseeProfil)}
   <div class="cm-h" style="margin-top:22px">Revenu des ménages</div>${estimRevenuChart(inseeProfil)}
   <div class="disc" style="margin-top:18px"><b>Source.</b> INSEE — recensements de la population (séries historiques) et dispositif FiLoSoFi (niveau de vie médian annuel). Données communales à titre informatif.</div>`
   : `<p style="font-size:11.5px;color:var(--body);line-height:1.7">${todo("Profil INSEE de la commune à charger (population, revenu médian) — via le bouton « Charger le cadre de vie ».")}</p>`}
-</div>${rf()}</div>
-<div class="page">${rh}<div class="content">
-  <div class="h">État du logement &amp; prestations</div>
+</div></section>
+<section class="sheet"><div class="inner">
+  ${secLead("etat", "État du logement &amp; prestations", "Évaluation poste par poste, points forts et diagnostics obligatoires.")}
   <div class="etat-top">
     <div class="etat-stars">${stars}</div>
     <div><div class="etat-rl serif">${etatLabel ? estimText(etatLabel) : todo("État à évaluer")}</div><div class="etat-rs">${etatLabel ? "Évaluation du conseiller" : "À renseigner par votre conseiller"}</div></div>
@@ -4792,20 +4919,9 @@ ${cad ? `<div class="page">${rh}<div class="content">
       ${detail.charges ? chargeRow("Charges copro.", detail.charges) : ""}
     </div>
   </div>
-</div>${rf()}</div>
-<div class="page">${rh}<div class="content">
-  <div class="h">Valeur vénale estimée</div>
-  <div class="val"><div class="grid">
-    <div><div class="lbl">Notre estimation</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
-    <div><div class="gauge-h">Positionnement de marché</div><div class="gbar"><div class="gpin"></div></div>
-      <div class="gends"><div class="gend" style="text-align:left"><div class="v serif tnum">${valBasse}</div><div class="k">Bas</div></div><div class="gend mid"><div class="v serif tnum">${valEstimee}</div><div class="k">Conseillé</div></div><div class="gend" style="text-align:right"><div class="v serif tnum">${valHaute}</div><div class="k">Haut</div></div></div>
-    </div>
-  </div></div>
-  ${argPrix
-    ? `<div class="method" style="margin-top:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">L'analyse de votre conseiller sur la valeur</div><div class="d">${estimEscapeHtml(argPrix)}</div></div></div>`
-    : `<p style="font-size:10.5px;color:var(--mute);margin-top:10px;line-height:1.55">Le prix conseillé vise une commercialisation dans un délai raisonnable. Un positionnement dans le haut de la fourchette est possible mais allonge généralement le délai de vente.</p>`}
-  ${acquereursN > 0 ? `<div class="acq"><span class="acq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span><div><b>${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""}</b> de notre fichier recherche${acquereursN > 1 ? "nt" : ""} actuellement un bien correspondant au vôtre.</div></div>` : ""}
-  <div class="h mt">Le marché en chiffres${marche && marche.commune ? ` · ${estimText(marche.commune)}` : ""}</div>
+</div></section>
+<section class="sheet"><div class="inner">
+  ${secLead("marche", `Le marché &amp; les indicateurs${marche && marche.commune ? " · " + estimText(marche.commune) : ""}`, "Repères objectifs (ventes DVF, loyers) — ils éclairent l'analyse, sans fixer seuls le prix.")}
   <div class="stats">
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m7 14 4-4 3 3 5-6"></path></svg></span><div class="v tnum">${mMed ? estimEuro(mMed) + "<small>/m²</small>" : todo("—")}</div><div class="l">Prix médian · ${estimText(marche ? marche.type : "secteur")}</div></div>
     <div class="scard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span><div class="v tnum">${mTrend != null ? (mTrend >= 0 ? "+" : "") + mTrend + " %" : todo("—")}</div><div class="l">Évolution prix/m²</div></div>
@@ -4821,15 +4937,31 @@ ${cad ? `<div class="page">${rh}<div class="content">
   <p style="font-size:10px;color:var(--mute);margin-top:6px">Loyer d'annonce médian (ANIL${loyer.millesime ? " " + estimText(loyer.millesime) : ""}) pour ${loyerIsMaison ? "une maison" : "un appartement"}. Rendement brut = loyer annuel estimé / prix affiché ; hors charges, vacance et fiscalité. À titre indicatif.</p>` : ""}
   ${mCompsList.length ? `<div class="disc"><b>Comparables DVF.</b> ${mCompsList.length} ventes retenues sont listées page suivante${mComps.length > mCompsList.length ? ` (sur ${mComps.length} ventes reçues du moteur).` : "."}</div>` : ""}
   <div class="disc"><b>Source.</b> Données issues des Demandes de Valeurs Foncières (DVF, open data publique) ${marche ? `· prix <b>médian</b> sur ${mCount} ventes ${estimText(marche.type)} comparables, dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}, sur ${Math.round(marche.months / 12)} ans · ventes en bloc exclues, surface ±20 %` : "— à charger par votre conseiller"}. Valeurs à titre indicatif.</div>
-</div>${rf()}</div>
-${mCompsList.length ? `<div class="page">${rh}<div class="content">
-  <div class="h">Biens comparables DVF vendus</div>
+</div></section>
+${mCompsList.length ? `<section class="sheet"><div class="inner">
+  ${secLead("comps", "Biens comparables DVF vendus", "Transactions réelles retenues pour documenter le prix au m².")}
   <p class="dvf-sub">Liste compacte des ${mCompsList.length} ventes comparables retenues pour documenter le prix au m² et la fourchette de valeur.</p>
   <div class="dvf-table"><div class="dvf-head"><span>Bien</span><span>Date</span><span>Surface</span><span>Prix</span><span>Prix/m²</span><span>Dist.</span></div>${mCompsList.map(compTableRow).join("")}</div>
   <div class="disc"><b>Source.</b> Demandes de Valeurs Foncières (DVF, open data publique)${marche ? ` · ${mCount} ventes ${estimText(marche.type)} analysées dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}` : ""}. Affichage : ${mCompsList.length} ventes listées dans le document.</div>
-</div>${rf()}</div>` : ""}
-<div class="page">${rh}<div class="content">
-  <div class="h">L'avis de votre conseiller</div>
+</div></section>` : ""}
+<section class="sheet"><div class="inner">
+  ${secLead("estim", "Notre estimation", "La valeur retenue par votre conseiller, au terme de l'analyse.")}
+  <div class="val"><div class="grid">
+    <div><div class="lbl">Valeur vénale conseillée</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
+    <div><div class="gauge-h">Positionnement de marché</div><div class="gbar"><div class="gpin"></div></div>
+      <div class="gends"><div class="gend" style="text-align:left"><div class="v serif tnum">${valBasse}</div><div class="k">Bas</div></div><div class="gend mid"><div class="v serif tnum">${valEstimee}</div><div class="k">Conseillé</div></div><div class="gend" style="text-align:right"><div class="v serif tnum">${valHaute}</div><div class="k">Haut</div></div></div>
+    </div>
+  </div></div>
+  <div class="method" style="margin-top:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg><div><div class="t">${argPrix ? "L'analyse de votre conseiller sur la valeur" : "La valeur est déterminée par votre conseiller"}</div><div class="d">${argPrix ? estimEscapeHtml(argPrix) : "À partir de sa connaissance du bien, de la visite et de son expérience du secteur. Les indicateurs présentés (ventes DVF, loyers, demande acquéreurs) sont des repères objectifs — ils ne fixent pas le prix à eux seuls. Le prix conseillé vise une commercialisation dans un délai raisonnable."}</div></div></div>
+  <div class="h mt">Acquéreurs potentiels</div>
+  <div class="acq-mkt">
+    <div class="acq-mkt-n serif">${acquereursN > 0 ? acquereursN : "✓"}</div>
+    <div><div class="acq-mkt-t">${acquereursN > 0 ? `${acquereursN} acquéreur${acquereursN > 1 ? "s" : ""} recherche${acquereursN > 1 ? "nt" : ""} déjà un bien comme le vôtre` : "Un réseau d'acquéreurs qualifiés, prêts à visiter"}</div>
+    <div class="acq-mkt-d">${acquereursN > 0 ? `Notre fichier compte ${acquereursN} projet${acquereursN > 1 ? "s" : ""} d'achat actif${acquereursN > 1 ? "s" : ""} dont les critères correspondent à votre bien au prix conseillé de <b>${valEstimee}</b>. Dès la mise en vente, ils sont contactés en priorité — un atout pour vendre vite et au juste prix.` : `Dès la signature du mandat, votre bien est présenté à notre fichier d'acquéreurs qualifiés et diffusé sur les grands portails immobiliers — pour toucher rapidement les bons profils au prix conseillé de <b>${valEstimee}</b>.`}</div></div>
+  </div>
+</div></section>
+<section class="sheet"><div class="inner">
+  ${secLead("avis", "L'avis de votre conseiller", "Le mot de votre conseiller et vos coordonnées.")}
   <div class="avis"><div class="lead">${avis ? estimEscapeHtml(avis) : "Estimation établie à partir des caractéristiques du bien et de la connaissance du marché local."}</div></div>
   <div class="h mt">Votre conseiller</div>
   <div class="contact-fuse"><div class="cf-body">
@@ -4847,7 +4979,7 @@ ${mCompsList.length ? `<div class="page">${rh}<div class="content">
   </div>${qrSvg ? `<aside class="cf-qr"><div class="qr-box">${qrSvg}</div><div class="qr-cap">Ajoutez-moi à vos contacts</div><div class="qr-sub">Scannez avec l'appareil photo de votre téléphone</div></aside>` : ""}</div>
   <div class="disc"><b>Avis de valeur indicatif.</b> Le présent document constitue une estimation de la valeur vénale du bien, établie à partir des éléments communiqués et de la connaissance du marché local. Il ne constitue ni une expertise au sens réglementaire, ni un engagement sur un prix de vente.</div>
   <div class="legal">GROUPE GTI, SAS au capital de 309 968 € — Siège : 22 rue Jean Jaurès, 42700 Firminy — RCS Saint-Étienne 502 811 144 — Carte professionnelle CPI 42022019 000 043 878 (CCI Lyon St Étienne Roanne).</div>
-</div>${rf()}</div>
+</div></section>
 </body></html>`;
 }
 
@@ -4939,6 +5071,11 @@ async function renderHtmlToPdfBuffer(html, opts) {
     browser = await chromium.launch(browserLaunchOptions({ headless: true }));
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle", timeout: 30000 });
+    // preferCSSPageSize (opt-in) : laisse @page (taille + marges, y compris @page:first) piloter la pagination.
+    // Additif : les autres documents ne passent pas ce flag et gardent le comportement historique.
+    if (opts && opts.preferCSSPageSize) {
+      return await page.pdf({ printBackground: true, preferCSSPageSize: true });
+    }
     return await page.pdf({
       format: "A4",
       printBackground: true,
@@ -5094,6 +5231,9 @@ async function handleGenerateEstimationPdf(job) {
       }
     }
   } catch (_) { /* le PDF se génère même sans QR */ }
+  // Design "maquette V2" : activé par défaut, désactivable via AVIS_V2_DISABLED=1 (kill-switch, repli V1
+  // automatique en cas d'erreur de rendu — cf. try/catch dans estimationAvisValeurHtmlPremium).
+  if (process.env.AVIS_V2_DISABLED !== "1") payload._variant = "v2";
   const html = estimationAvisValeurHtmlPremium(payload, dossier, detail);
   // Marges PDF à 0 : chaque .page fait déjà 210×297mm (marge interne via --mx) -> 1 page
   // physique exacte. Sinon les marges 12mm font déborder la page de 297mm sur une 2e page.
