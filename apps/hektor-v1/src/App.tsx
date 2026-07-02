@@ -77,6 +77,7 @@ import {
   loadDpe,
   loadPatrimoine,
   loadCoproRnie,
+  loadCommunePopulation,
   loadCommuneLoyer,
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
@@ -146,7 +147,7 @@ import {
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
 } from './lib/api'
-import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData, CoproRnieData } from './lib/api'
+import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData, CoproRnieData, InseeProfil } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
@@ -8498,6 +8499,8 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const [patriMsg, setPatriMsg] = useState<string | null>(null)
   const [coproBusy, setCoproBusy] = useState(false)
   const [coproMsg, setCoproMsg] = useState<string | null>(null)
+  const [popuBusy, setPopuBusy] = useState(false)
+  const [popuMsg, setPopuMsg] = useState<string | null>(null)
   const [loyerBusy, setLoyerBusy] = useState(false)
   const [loyerMsg, setLoyerMsg] = useState<string | null>(null)
   const [applyBusy, setApplyBusy] = useState<string | null>(null)  // clé du bloc en cours d'application
@@ -8601,6 +8604,22 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     } finally { setPatriBusy(false) }
   }
 
+  // Génère + mémorise le PROFIL COMMUNE (population INSEE + revenu médian) depuis la table pré-ingérée.
+  async function generatePopulation() {
+    if (popuBusy) return
+    if (!hasCoords()) { setPopuMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    const { lat, lon } = coords()
+    setPopuBusy(true); setPopuMsg('Lecture du profil INSEE de la commune…')
+    try {
+      const res = await loadCommunePopulation({ lat, lon })
+      await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'insee', res.ok, res)
+      await reload()
+      setPopuMsg(res.ok ? null : 'Profil INSEE indisponible pour cette commune.')
+    } catch (error) {
+      setPopuMsg(error instanceof Error ? error.message : 'Lecture du profil commune impossible.')
+    } finally { setPopuBusy(false) }
+  }
+
   // Génère + mémorise la COPROPRIÉTÉ (registre RNIC/ANAH, live data.gouv par parcelle).
   async function generateCopro() {
     if (coproBusy) return
@@ -8639,6 +8658,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const dpe = estim?.sources?.dpe?.data as DpeData | undefined
   const patri = estim?.sources?.patrimoine?.data as PatrimoineData | undefined
   const copro = estim?.sources?.copro?.data as CoproRnieData | undefined
+  const popu = estim?.sources?.insee?.data as InseeProfil | undefined
   const loyer = estim?.sources?.loyers?.data as LoyerData | undefined
   const fmt = (n: number | null | undefined) => (n != null && Number.isFinite(n) ? n.toLocaleString('fr-FR') : '—')
 
@@ -8655,7 +8675,12 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const curAnnee = rawWizardDetailField(detail, 'ANNEE_CONS')
   const curConso = rawWizardDetailField(detail, 'dpe_cons')
   const curGes = rawWizardDetailField(detail, 'dpe_ges')
+  const curCopro = rawWizardDetailField(detail, 'copropriete')          // "OUI"/"NON"/""
+  const curCoproLots = rawWizardDetailField(detail, 'copropriete_nb_lot')
   const sameNum = (a: unknown, b: unknown) => Math.round(Number(a)) === Math.round(Number(b))
+  // La fiche Hektor stocke souvent "0" pour un champ non renseigné (conso/GES/année) : on le
+  // traite comme VIDE, pas comme une valeur (sinon fausse divergence + bouton « Reporter » masqué).
+  const filledNum = (v: unknown) => { const n = Number(String(v ?? '').trim()); return Number.isFinite(n) && n > 0 }
 
   // « Reporter dans la fiche » : n'écrit QUE les champs Hektor vides (jamais d'écrasement) via
   // l'édition optimiste (app d'abord → push Hektor différé). blockKey = bloc en cours (busy/msg).
@@ -8681,7 +8706,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     if (allBusy) return
     setAllBusy(true); setApplyMsg(null)
     setCadSignal((n) => n + 1)
-    await Promise.allSettled([generateDvf(), generateLoyer(), generateBdnb(), generateDpe(), generateCadre(), generatePatrimoine(), generateCopro()])
+    await Promise.allSettled([generateDvf(), generateLoyer(), generateBdnb(), generateDpe(), generateCadre(), generatePatrimoine(), generateCopro(), generatePopulation()])
     await reload()
     setAllBusy(false)
   }
@@ -8697,6 +8722,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     { key: 'cadre', label: 'Cadre de vie', state: pillState(!!(cadre && cadre.ok), cadreBusy) },
     { key: 'patrimoine', label: 'Patrimoine', state: pillState(!!(patri && patri.ok), patriBusy) },
     { key: 'copro', label: 'Copropriété', state: pillState(!!(copro && copro.ok), coproBusy) },
+    { key: 'insee', label: 'Population', state: pillState(!!(popu && popu.ok), popuBusy) },
     { key: 'cadastre', label: 'Cadastre', state: pillState(cadState.present, cadState.busy) },
   ]
 
@@ -8795,7 +8821,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
               </div>
               {bdnb.rnb_id ? <div className="ev3-tags"><span className="ev3-tag">RNB {bdnb.rnb_id}</span></div> : null}
               {bdnb.annee_construction != null ? (
-                !curAnnee ? (
+                !filledNum(curAnnee) ? (
                   <div className="ev3-apply"><span>Année de construction absente de la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'bdnb'} onClick={() => applyToFiche('bdnb', { ANNEE_CONS: String(bdnb!.annee_construction) }, `Année ${bdnb!.annee_construction}`)}>{applyBusy === 'bdnb' ? 'Report…' : `Reporter ${bdnb!.annee_construction}`}</button></div>
                 ) : (!sameNum(curAnnee, bdnb.annee_construction) ? <div className="ev3-apply ev3-apply-warn"><span>Année — fiche {curAnnee} · BDNB {bdnb.annee_construction} (à vérifier).</span></div> : null)
               ) : null}
@@ -8824,11 +8850,11 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
               <p className="ev3-hint">{dpe.matched_by === 'adresse' ? (dpe.nb_adresse && dpe.nb_adresse > 1 ? `${dpe.nb_adresse} DPE à cette adresse — retenu : surface la plus proche.` : `Adresse exacte du bien${dpe.surface != null ? ` · ${fmt(dpe.surface)} m²` : ''}.`) : 'DPE le plus proche (adresse exacte introuvable) — à vérifier.'}</p>
               {(() => {
                 const fields: Record<string, string> = {}
-                if (dpe!.conso_ep_m2 != null && !curConso) fields.dpe_cons = String(Math.round(Number(dpe!.conso_ep_m2)))
-                if (dpe!.ges_emission != null && !curGes) fields.dpe_ges = String(Math.round(Number(dpe!.ges_emission)))
+                if (dpe!.conso_ep_m2 != null && !filledNum(curConso)) fields.dpe_cons = String(Math.round(Number(dpe!.conso_ep_m2)))
+                if (dpe!.ges_emission != null && !filledNum(curGes)) fields.dpe_ges = String(Math.round(Number(dpe!.ges_emission)))
                 const nEmpty = Object.keys(fields).length
-                const divConso = dpe!.conso_ep_m2 != null && !!curConso && !sameNum(curConso, dpe!.conso_ep_m2)
-                const divGes = dpe!.ges_emission != null && !!curGes && !sameNum(curGes, dpe!.ges_emission)
+                const divConso = dpe!.conso_ep_m2 != null && filledNum(curConso) && !sameNum(curConso, dpe!.conso_ep_m2)
+                const divGes = dpe!.ges_emission != null && filledNum(curGes) && !sameNum(curGes, dpe!.ges_emission)
                 return (
                   <>
                     {nEmpty ? <div className="ev3-apply"><span>{nEmpty > 1 ? 'DPE conso & GES absents' : (fields.dpe_cons ? 'DPE conso absent' : 'GES absent')} de la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'dpe'} onClick={() => applyToFiche('dpe', fields, 'DPE/GES')}>{applyBusy === 'dpe' ? 'Report…' : 'Reporter dans la fiche'}</button></div> : null}
@@ -8899,8 +8925,43 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
                 {copro.syndic_nom ? <span className="ev3-tag">{copro.syndic_nom}</span> : null}
                 {copro.residence_service && /oui/i.test(copro.residence_service) ? <span className="ev3-tag">Résidence-service</span> : null}
               </div>
+              {(() => {
+                const fields: Record<string, string> = {}
+                const coproEmpty = !String(curCopro ?? '').trim()
+                if (coproEmpty) fields.copropriete = 'OUI'
+                if (copro!.nb_lots != null && !filledNum(curCoproLots)) fields.copropriete_nb_lot = String(copro!.nb_lots)
+                const nEmpty = Object.keys(fields).length
+                const divStatut = !coproEmpty && !/oui/i.test(String(curCopro))
+                const divLots = copro!.nb_lots != null && filledNum(curCoproLots) && !sameNum(curCoproLots, copro!.nb_lots)
+                return (
+                  <>
+                    {nEmpty ? <div className="ev3-apply"><span>{fields.copropriete && fields.copropriete_nb_lot ? 'Copropriété & nombre de lots absents' : (fields.copropriete_nb_lot ? 'Nombre de lots absent' : 'Copropriété non renseignée')} dans la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'copro'} onClick={() => applyToFiche('copro', fields, 'Copropriété')}>{applyBusy === 'copro' ? 'Report…' : 'Reporter dans la fiche'}</button></div> : null}
+                    {divStatut ? <div className="ev3-apply ev3-apply-warn"><span>Fiche : « non copropriété » · Registre RNIC : copropriété immatriculée (à vérifier).</span></div> : null}
+                    {divLots ? <div className="ev3-apply ev3-apply-warn"><span>Nb de lots — fiche {curCoproLots} · RNIC {copro!.nb_lots} (à vérifier).</span></div> : null}
+                  </>
+                )
+              })()}
             </>
           ) : (coproBusy ? <p className="ev3-hint ev3-hint-run">Recherche au registre des copropriétés…</p> : (coproMsg ? <p className="ev3-hint ev3-hint-msg">{coproMsg}</p> : <p className="ev3-hint">Immatriculation, nombre de lots, période, syndic, procédure — registre national ANAH (RNIC), toujours à jour. Pour les biens en copropriété uniquement.</p>))}
+        </section>
+
+        <section className="ev3-card ev3-card-wide">
+          <header className="ev3-card-h">
+            <span className="ev3-ico" aria-hidden="true"><EstimIcon name="cadre" /></span>
+            <span className="ev3-h-titles"><span className="ev3-h-t">Profil commune</span><span className="ev3-h-s">Population &amp; revenus des ménages (INSEE)</span></span>
+            <span className="ev3-h-right">
+              {popu && popu.ok && popu.population != null ? <span className="ev3-badge">{popu.population.toLocaleString('fr-FR')} hab.</span> : null}
+              <button className="ev3-refresh" type="button" title="Régénérer le profil commune" aria-label="Régénérer le profil commune" disabled={popuBusy} onClick={() => { void generatePopulation() }}><EstimIcon name="refresh" /></button>
+            </span>
+          </header>
+          {popu && popu.ok ? (
+            <div className="ev3-kv-grid">
+              <div className="ev3-kv"><span className="k">Commune</span><span className="v">{popu.commune ?? '—'}</span></div>
+              <div className="ev3-kv"><span className="k">Population</span><span className="v v-accent">{popu.population != null ? popu.population.toLocaleString('fr-FR') : '—'}{popu.population_annee ? ` (${popu.population_annee})` : ''}</span></div>
+              <div className="ev3-kv"><span className="k">Évolution</span><span className="v">{popu.pop_evolution != null ? `${popu.pop_evolution > 0 ? '+' : ''}${popu.pop_evolution} %` : '—'}{popu.pop_tendance ? ` · ${popu.pop_tendance}` : ''}</span></div>
+              <div className="ev3-kv"><span className="k">Revenu médian</span><span className="v">{popu.revenu_median != null ? `${popu.revenu_median.toLocaleString('fr-FR')} €` : '—'}{popu.dept_revenu_median ? ` · dépt ${popu.dept_revenu_median.toLocaleString('fr-FR')} €` : ''}</span></div>
+            </div>
+          ) : (popuBusy ? <p className="ev3-hint ev3-hint-run">Lecture du profil INSEE…</p> : (popuMsg ? <p className="ev3-hint ev3-hint-msg">{popuMsg}</p> : <p className="ev3-hint">Population (recensement INSEE), évolution, revenu médian des ménages (FiLoSoFi) — apparaît sur la page « Profil de la commune » du PDF.</p>))}
         </section>
 
         <div className="ev3-card ev3-card-wide ev3-card-cadastre">

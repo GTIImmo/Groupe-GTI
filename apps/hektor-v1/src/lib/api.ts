@@ -2874,6 +2874,57 @@ export async function loadCadreDeVie(input: { lat: number; lon: number }): Promi
   return { ok: true, lat, lon, insee, commune, mapUrl, commodites, poles, risques }
 }
 
+// Profil INSEE de la commune (population, série historique, revenu médian) — lu depuis la table
+// pré-ingérée app_commune_insee (comme les risques). Miroir de loadCommuneInsee du worker.
+export type InseeProfil = {
+  ok: boolean
+  insee?: string | null
+  commune?: string | null
+  population?: number | null
+  population_annee?: number | null
+  pop_evolution?: number | null
+  pop_tendance?: string | null
+  revenu_median?: number | null
+  pop_series?: Record<string, number> | null
+  dept_revenu_median?: number | null
+}
+export async function loadCommunePopulation(input: { lat: number; lon: number }): Promise<InseeProfil> {
+  const { lat, lon } = input
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon || !hasSupabaseEnv || !supabase) return { ok: false }
+  let insee: string | null = null, dept: string | null = null
+  try {
+    const r = await fetch(`https://data.geopf.fr/geocodage/reverse?lon=${lon}&lat=${lat}&index=address`)
+    const j = await r.json()
+    const p = j?.features?.[0]?.properties
+    if (p?.citycode) { insee = String(p.citycode); dept = insee.slice(0, 2) }
+  } catch { /* best effort */ }
+  if (!insee) return { ok: false }
+  try {
+    const { data } = await supabase.from('app_commune_insee')
+      .select('commune,population,population_annee,pop_evolution,pop_tendance,revenu_median,pop_series')
+      .eq('code_insee', insee).maybeSingle()
+    if (!data) return { ok: false, insee }
+    let series: unknown = (data as Record<string, unknown>).pop_series
+    if (typeof series === 'string') { try { series = JSON.parse(series) } catch { series = null } }
+    let deptRevenu: number | null = null
+    if (dept) {
+      const { data: dr } = await supabase.from('app_commune_insee').select('revenu_median').eq('dept', dept).not('revenu_median', 'is', null)
+      const vals = (dr ?? []).map((x: Record<string, unknown>) => Number(x.revenu_median)).filter((n: number) => Number.isFinite(n)).sort((a: number, b: number) => a - b)
+      if (vals.length) deptRevenu = vals[Math.floor(vals.length / 2)]
+    }
+    const d = data as Record<string, unknown>
+    const num = (v: unknown) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
+    return {
+      ok: true, insee, commune: (d.commune as string) ?? null,
+      population: num(d.population), population_annee: num(d.population_annee),
+      pop_evolution: num(d.pop_evolution), pop_tendance: (d.pop_tendance as string) ?? null,
+      revenu_median: num(d.revenu_median),
+      pop_series: series && typeof series === 'object' ? (series as Record<string, number>) : null,
+      dept_revenu_median: deptRevenu,
+    }
+  } catch { return { ok: false, insee } }
+}
+
 export async function loadEmailTracking(input: { contactSearchKey?: string | null; hektorContactId?: string | null }): Promise<EmailEnvoiRow[]> {
   const params = new URLSearchParams()
   if (input.contactSearchKey?.trim()) params.set('contact_search_key', input.contactSearchKey.trim())
