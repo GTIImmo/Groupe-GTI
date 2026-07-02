@@ -480,3 +480,114 @@ def patrimoine(
         "count": len(items),
         "items": items[:12],
     }
+
+
+# =====================================================================
+# Copropriété : Registre National d'Immatriculation des Copropriétés (RNIC, ANAH).
+# Requête LIVE via l'API tabulaire data.gouv (comme le DPE ADEME) : parcelle(s) au
+# point (idu cadastral 14 car.) -> recherche par référence cadastrale. Toujours à
+# jour (data.gouv MAJ quotidienne). Gratuit, sans clé. ok:True toujours.
+# =====================================================================
+
+_RNIC = "https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/"
+
+
+def _rnic_row_for_idus(idus: list[str]) -> tuple[str | None, dict | None]:
+    """Copro dont une des 3 références cadastrales est dans la liste d'idus (14 car.).
+    La parcelle enregistrée au RNIC n'est pas toujours celle sous le point exact ->
+    on passe le point + les parcelles voisines, en 1 requête via le filtre __in."""
+    keys = [str(i).strip() for i in idus if i and len(str(i).strip()) >= 10]
+    if not keys:
+        return None, None
+    csv = ",".join(dict.fromkeys(keys))  # dédup en gardant l'ordre
+    for col in ("reference_cadastrale_1", "reference_cadastrale_2", "reference_cadastrale_3"):
+        try:
+            r = requests.get(_RNIC, params={f"{col}__in": csv, "page_size": 1}, headers=_UA, timeout=20)
+            if not r.ok:
+                continue
+            rows = (r.json() or {}).get("data") or []
+            if rows:
+                return rows[0].get(col), rows[0]
+        except Exception:  # noqa: BLE001
+            continue
+    return None, None
+
+
+def _copro_norm(row: dict) -> dict:
+    def _i(k):
+        v = row.get(k)
+        try:
+            return int(v) if v not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
+    def _s(k):
+        v = row.get(k)
+        v = str(v).strip() if v is not None else ""
+        return v or None
+
+    periode = _s("periode_construction")
+    if periode:  # AVANT_1949 -> "Avant 1949", ENTRE_1949_ET_1960 -> "Entre 1949 et 1960"
+        periode = periode.replace("_ET_", " et ").replace("_", " ").capitalize()
+    mandat = _s("mandat_en_cours")
+    return {
+        "immatriculation": _s("numero_immatriculation"),
+        "date_immatriculation": _s("date_immatriculation"),
+        "nb_lots": _i("nombre_total_lots"),
+        "nb_lots_habitation": _i("nombre_lots_habitation"),
+        "nb_lots_stationnement": _i("nombre_lots_stationnement"),
+        "periode_construction": periode,
+        "type_syndic": _s("type_syndic"),
+        "syndic_nom": _s("raison_sociale_representant_legal"),
+        "syndicat_cooperatif": _s("syndicat_cooperatif"),
+        "residence_service": _s("residence_service"),
+        "mandat_en_cours": mandat,
+        # procédure = un mandat (ad hoc / administration provisoire) est en cours
+        "procedure": bool(mandat and "pas de mandat" not in mandat.lower()),
+        "commune": _s("commune"),
+    }
+
+
+@router.get("/copro/rnie")
+def copro_rnie(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+):
+    """Copropriété au RNIC (ANAH). On récupère la/les parcelle(s) cadastrale(s) au
+    point (idu 14 car.) puis on cherche la copropriété par référence cadastrale via
+    l'API tabulaire data.gouv (live, toujours à jour). Gratuit, sans clé. ok:True
+    toujours (le front recalcule la présence via `found` — cf. invokeBackendApi)."""
+    get_authenticated_user(settings, authorization)
+
+    def _idus(features):
+        out: list[str] = []
+        for f in features:
+            idu = (f.get("properties", {}) or {}).get("idu")
+            if idu and idu not in out:
+                out.append(idu)
+        return out
+
+    # 1) parcelle(s) sous le point exact (match précis, priorité anti-faux-positif).
+    tested: list[str] = []
+    matched = row = None
+    try:
+        tested = _idus(_apicarto_point("/cadastre/parcelle", lat, lon))
+        matched, row = _rnic_row_for_idus(tested)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 2) repli : parcelles voisines (~80 m) — le RNIC enregistre parfois la copro sur
+    #    une parcelle adjacente (grandes résidences), pas celle du point exact.
+    if not row:
+        try:
+            near = _idus(_apicarto_geom("/cadastre/parcelle", _square_polygon(lat, lon, 80)))
+            tested = list(dict.fromkeys(tested + near))
+            matched, row = _rnic_row_for_idus(near)
+        except Exception:  # noqa: BLE001
+            pass
+
+    if not row:
+        return {"ok": True, "found": False, "lat": lat, "lon": lon, "parcelles_testees": tested}
+    return {"ok": True, "found": True, "lat": lat, "lon": lon, "reference_cadastrale": matched, **_copro_norm(row)}
