@@ -3976,6 +3976,20 @@ function estimHuman(v) {
   return s.toLowerCase().replace(/(^|[\s\-'])([a-zàâäéèêëîïôöùûüç])/g, (m, p, c) => p + c.toUpperCase());
 }
 const estimDiagDone = (v) => { const s = String(v || "").trim(); if (!s || s === "0000-00-00") return false; const y = parseInt(s.slice(0, 4), 10); return y >= 2000 && y <= 2100; };
+// Chauffage : extraction console dédiée (champ chauffage_console_json = [{format,type,energie:{label}}]),
+// PAS dans detail_raw_json. On garde la 1re entrée renseignée (hors « Non précisé »).
+function estimParseChauffage(cjRaw) {
+  try {
+    let cj = cjRaw; if (typeof cj === "string") cj = JSON.parse(cj);
+    if (!Array.isArray(cj)) return {};
+    const lbl = (x) => { const s = String((x && x.label) || "").trim(); return s && !/^non\s*pr[ée]cis/i.test(s) ? s : null; };
+    const entries = cj.map((c) => ({ format: lbl(c.format), type: lbl(c.type), energie: lbl(c.energie) }))
+      .filter((c) => c.format || c.type || c.energie);
+    if (!entries.length) return {};
+    const f = entries[0];
+    return { chauffageEnergie: f.energie, chauffageFormat: f.format, chauffageType: f.type };
+  } catch (_) { return {}; }
+}
 function estimEnrichDetail(j) {
   const raw = estimParseRaw(j);
   const diagKeys = { DPE: "dpe_date", Amiante: "diag_amiante_date", Plomb: "diag_plomb_date",
@@ -4005,6 +4019,7 @@ function estimEnrichDetail(j) {
     chauffageType: estimHuman(estimRawAny(raw, "typeChauff")), chauffageEnergie: estimHuman(estimRawAny(raw, "energieChauff")), chauffageFormat: estimHuman(estimRawAny(raw, "formatChauff")),
     climatisation: estimOui(estimRawAny(raw, "climatisation")),
     eau: estimHuman(estimRawAny(raw, "EAU")), assainissement: estimHuman(estimRawAny(raw, "ASSAINISSEMENT")),
+    eauEnergie: estimHuman(estimRawAny(raw, "ENERGIE_EAU")), eauDistribution: estimHuman(estimRawAny(raw, "DISTRIBUTION_EAU")),
     cheminee: estimOui(estimRawAny(raw, "cheminee")), voletsElec: estimOui(estimRawAny(raw, "volets_elctriques")),
     doubleVitrage: estimOui(estimRawAny(raw, "double_vitrage")), tripleVitrage: estimOui(estimRawAny(raw, "triple_vitrage")),
     porteBlindee: estimOui(estimRawAny(raw, "porte_blindee")), interphone: estimOui(estimRawAny(raw, "interphone")),
@@ -4163,6 +4178,7 @@ async function loadEstimationDetail(appDossierId) {
       dpe_img: j.dpe_image_url || null,
       ges_img: j.ges_image_url || null,
       ...estimEnrichDetail(j),  // Lot A : caractéristiques étendues, intérieur/extérieur, équipements, diagnostics, charges
+      ...estimParseChauffage(j.chauffage_console_json),  // chauffage : source console dédiée (absente de detail_raw_json)
     };
   } catch (_) {
     return {};
@@ -4803,8 +4819,9 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
     detRow("Parking intérieur", detail.parkInt), detRow("Parking extérieur", detail.parkExt),
   ].join("");
   const confortRows = [
-    detRow("Chauffage", [detail.chauffageType, detail.chauffageEnergie].filter(Boolean).join(" · ") || null),
-    detRow("Eau", detail.eau), detRow("Assainissement", detail.assainissement),
+    detRow("Chauffage", [detail.chauffageEnergie, detail.chauffageFormat, detail.chauffageType].filter(Boolean).join(" · ") || null),
+    detRow("Eau chaude", detail.eauEnergie),
+    detRow("Eau", detail.eau), detRow("Distribution eau", detail.eauDistribution), detRow("Assainissement", detail.assainissement),
   ].join("");
   const equipDefs = [["Double vitrage", detail.doubleVitrage], ["Triple vitrage", detail.tripleVitrage], ["Volets électriques", detail.voletsElec], ["Cheminée", detail.cheminee], ["Climatisation", detail.climatisation], ["Porte blindée", detail.porteBlindee], ["Interphone", detail.interphone], ["Visiophone", detail.visiophone], ["Alarme", detail.alarme], ["Digicode", detail.digicode], ["Détecteur de fumée", detail.detecteurFumee], ["Accès handicapé", detail.accesHandi]];
   const equipList = equipDefs.filter(([, v]) => v).map(([k]) => `<span class="eqp">${checkIcon}${k}</span>`).join("");
@@ -4987,7 +5004,7 @@ ${cad ? `<div class="page" style="--acc:#a8842c">${rh()}<div class="content">
     <div class="etat-stars">${stars}</div>
     <div><div class="etat-rl serif">${etatLabel ? estimText(etatLabel) : todo("État à évaluer")}</div><div class="etat-rs">${etatLabel ? "Évaluation du conseiller" : "À renseigner par votre conseiller"}</div></div>
     <div class="etat-sep"></div>
-    <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage || [detail.chauffageType, detail.chauffageEnergie].filter(Boolean).join(" · "))}${etatMeta("Exposition", etat.exposition || detail.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries || (detail.doubleVitrage ? "Double vitrage" : detail.tripleVitrage ? "Triple vitrage" : ""))}</div>
+    <div class="etat-meta">${etatMeta("Chauffage", etat.chauffage || [detail.chauffageEnergie, detail.chauffageFormat, detail.chauffageType].filter(Boolean).join(" · "))}${etatMeta("Exposition", etat.exposition || detail.exposition)}${etatMeta("Toiture", etat.toiture)}${etatMeta("Menuiseries", etat.menuiseries || (detail.doubleVitrage ? "Double vitrage" : detail.tripleVitrage ? "Triple vitrage" : ""))}</div>
   </div>
   ${etat.commentaire ? `<p style="font-size:11px;color:var(--body);line-height:1.65;margin-top:12px">${estimEscapeHtml(String(etat.commentaire))}</p>` : ""}
   ${postesBlock}
