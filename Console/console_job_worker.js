@@ -4393,7 +4393,9 @@ body{counter-reset:pgw 1}
 .page:not(.cover){counter-increment:pgw}
 .page:not(.cover)>.rh,.page:not(.cover)>.content,.page:not(.cover)>.rf{position:relative;z-index:1}
 .page:not(.cover)::before{content:"";position:absolute;top:0;left:0;right:0;height:46mm;background:radial-gradient(120% 100% at 86% 0%,color-mix(in srgb,var(--acc) 7%,transparent),transparent 62%);pointer-events:none;z-index:0}
-.page:not(.cover)::after{content:counter(pgw,decimal-leading-zero);position:absolute;top:11mm;right:16mm;font-family:'Spectral',serif;font-size:46px;font-weight:700;color:color-mix(in srgb,var(--acc) 11%,transparent);line-height:1;pointer-events:none;z-index:0}
+/* Filigrane numéro retiré (doublon avec l'en-tête « Page X / N ») */
+/* Pied de page masqué partout sauf sur la dernière page */
+.page:not(.last) .rf{display:none}
 /* En-tête de section : grand titre serif + barre d'accent (au lieu de la puce carrée maj.) */
 .h{display:block;font-family:'Spectral',Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-.012em;text-transform:none;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:12px}
 .h::before{content:"";display:block;width:32px;height:2px;background:var(--acc);margin:0 0 7px}
@@ -4485,13 +4487,15 @@ body{counter-reset:pgw 1}
 .cf-nego{padding-bottom:11px}
 .cf-agence-lbl{margin-top:10px}
 .cf-agence{margin-top:7px}
-.cf-rows{gap:6px}
-.cf-agence-photo{width:60px;height:48px}
+.cf-rows{gap:5px}
+.cf-agence-photo{width:56px;height:44px}
 .cf-qr .qr-sub{font-size:7.5px}
-.cf-qr .qr-box{width:100px;height:100px}
+.cf-qr .qr-box{width:90px;height:90px}
+.cf-nego .av{width:44px;height:44px;font-size:16px}
+.cf-body{padding:11px 18px}
 .contact-fuse{margin-top:2px}
-.disc{font-size:9px;padding:8px 12px;margin-top:8px}
-.legal{font-size:7.5px;margin-top:5px;line-height:1.45}
+.disc{font-size:9px;padding:7px 12px;margin-top:6px}
+.legal{font-size:7.5px;margin-top:4px;line-height:1.4}
 /* En-tête courante (bandeau haut) : filet d'accent + pagination */
 .rh{border-bottom-color:var(--line)}
 .rh .meta .t{color:var(--ink)}
@@ -5031,7 +5035,7 @@ ${mCompsList.length ? `<div class="page" style="--acc:#0f6e6e">${rh()}<div class
   <div class="dvf-table"><div class="dvf-head"><span>Bien</span><span>Date</span><span>Surface</span><span>Prix</span><span>Prix/m²</span><span>Dist.</span></div>${mCompsList.map(compTableRow).join("")}</div>
   <div class="disc"><b>Source.</b> Demandes de Valeurs Foncières (DVF, open data publique)${marche ? ` · ${mCount} ventes ${estimText(marche.type)} analysées dans un rayon de ${mRadius} km${marche.commune ? " autour de " + estimText(marche.commune) : ""}` : ""}. Affichage : ${mCompsList.length} ventes listées dans le document.</div>
 </div>${rf()}</div>` : ""}
-<div class="page" style="--acc:#8a3d6b">${rh()}<div class="content">
+<div class="page last" style="--acc:#8a3d6b">${rh()}<div class="content">
   <div class="h">Valeur vénale estimée</div>
   <div class="val"><div class="grid">
     <div><div class="lbl">Notre estimation</div><div class="main serif">${valEstimee}</div><div class="sub">${pricePerM2}</div></div>
