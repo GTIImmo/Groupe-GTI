@@ -4409,7 +4409,7 @@ body{counter-reset:pgw}
 .dpe-vig .v{font-size:12.5px;font-weight:600;color:var(--ink);margin-top:2px}
 .dpe-vig .v small{font-size:9px;color:var(--mute);font-weight:400}
 /* Page cadastre : fond de carte plus grand (moins de vide) + PLU à l'accent chapitre */
-.cad-frame{height:112mm}
+.cad-frame{height:99mm}
 .cad-plu-top{background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--acc) 11%,#fff))}
 .cad-plu .lbl{color:var(--acc)}
 .cad-plu .ty{background:var(--acc)}
