@@ -4840,7 +4840,9 @@ function estimationAvisValeurHtmlPremium(payload, dossier, detail) {
   // Patrimoine / ABF (payload.patrimoine, lu server-side depuis les sources mémorisées).
   const patri = payload.patrimoine && (payload.patrimoine.abf || (Array.isArray(payload.patrimoine.items) && payload.patrimoine.items.length)) ? payload.patrimoine : null;
   // Copropriété (payload.copro) : registre RNIC — n° immat, lots, période, syndic, procédure.
-  const copro = payload.copro && (payload.copro.found || payload.copro.immatriculation) ? payload.copro : null;
+  // Garde-fou : uniquement si le bien est marqué « copropriété » dans Hektor (évite un faux
+  // positif RNIC sur une mono-propriété dont le point tombe près d'une copro voisine).
+  const copro = (/oui/i.test(String(detail.copropriete || "")) && payload.copro && (payload.copro.found || payload.copro.immatriculation)) ? payload.copro : null;
   // Potentiel locatif (payload.loyers) : loyer €/m² selon le type, loyer mensuel, rendement brut.
   const loyer = payload.loyers && (payload.loyers.loyer_maison != null || payload.loyers.loyer_appart != null || payload.loyers.zone_abc) ? payload.loyers : null;
   const loyerIsMaison = /maison|villa|chalet|ferme|propri|mas\b|demeure/i.test(String(type || ""));
