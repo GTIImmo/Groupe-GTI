@@ -4791,7 +4791,7 @@ function EstimationDocumentEditor(props: {
         persist('dpe', () => loadDpe({ lat, lon, surface })),
         persist('patrimoine', () => loadPatrimoine({ lat, lon })),
         persist('loyers', () => loadCommuneLoyer({ lat, lon })),
-        ...(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) ? [persist('copro', () => loadCoproRnie({ lat, lon }))] : []),
+        ...(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) ? [persist('copro', () => loadCoproRnie({ lat, lon, parcelles: cadastre?.parcelles?.map((p) => p.idu) }))] : []),
         persist('insee', () => loadCommunePopulation({ lat, lon })),
       ] : []),
     ])
@@ -8650,7 +8650,8 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     const { lat, lon } = coords()
     setCoproBusy(true); setCoproMsg('Recherche au registre des copropriétés…')
     try {
-      const res = await loadCoproRnie({ lat, lon })
+      const parcelles = (estim?.sources?.cadastre?.data as CadastreData | undefined)?.parcelles?.map((p) => p.idu)
+      const res = await loadCoproRnie({ lat, lon, parcelles })
       await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'copro', res.ok, res)
       await reload()
       setCoproMsg(res.ok ? null : 'Aucune copropriété immatriculée trouvée pour ce bien (RNIC).')
