@@ -4791,7 +4791,7 @@ function EstimationDocumentEditor(props: {
         persist('dpe', () => loadDpe({ lat, lon, surface })),
         persist('patrimoine', () => loadPatrimoine({ lat, lon })),
         persist('loyers', () => loadCommuneLoyer({ lat, lon })),
-        persist('copro', () => loadCoproRnie({ lat, lon })),
+        ...(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) ? [persist('copro', () => loadCoproRnie({ lat, lon }))] : []),
         persist('insee', () => loadCommunePopulation({ lat, lon })),
       ] : []),
     ])
@@ -8641,6 +8641,11 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise la COPROPRIÉTÉ (registre RNIC/ANAH, live data.gouv par parcelle).
   async function generateCopro() {
     if (coproBusy) return
+    // Recherche RNIC UNIQUEMENT pour les biens marqués « copropriété = Oui » : sinon on ramasse à tort
+    // une copro voisine (ex. mono-propriété en centre-ville dont le point tombe sur la voie).
+    if (!/oui/i.test(String(rawWizardDetailField(detail, 'copropriete') ?? ''))) {
+      setCoproMsg('Bien non marqué « copropriété » dans la fiche — recherche RNIC non applicable.'); return
+    }
     if (!hasCoords()) { setCoproMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     const { lat, lon } = coords()
     setCoproBusy(true); setCoproMsg('Recherche au registre des copropriétés…')
