@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import math
+import re
+import unicodedata
 
 import requests
 from fastapi import APIRouter, Depends, Query
@@ -523,6 +525,30 @@ def _copro_refs(row: dict) -> list[str]:
             ("reference_cadastrale_1", "reference_cadastrale_2", "reference_cadastrale_3") if row.get(k)]
 
 
+_STREET_TYPES = {"rue", "avenue", "boulevard", "place", "impasse", "allee", "chemin", "cours",
+                 "quai", "route", "lotissement", "montee", "passage", "square", "sentier", "voie",
+                 "r", "av", "ave", "bd", "bld", "pl", "che", "ch", "crs", "all", "imp", "rte", "mte", "sq"}
+
+
+def _street_tokens(s: str) -> set[str]:
+    """Tokens signifiants d'un libellé de voie (sans accents/type de voie/numéros)."""
+    t = unicodedata.normalize("NFD", str(s or "").lower())
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    t = re.sub(r"[^a-z0-9]+", " ", t)
+    return {tok for tok in t.split() if len(tok) > 2 and not tok.isdigit() and tok not in _STREET_TYPES}
+
+
+def _point_street(lat: float, lon: float) -> set[str]:
+    """Rue du bien via géocodage inverse BAN (confirme le rapprochement copro par l'adresse)."""
+    try:
+        r = requests.get("https://data.geopf.fr/geocodage/reverse",
+                         params={"lon": lon, "lat": lat, "index": "address"}, headers=_UA, timeout=15)
+        p = ((r.json() or {}).get("features") or [{}])[0].get("properties", {}) or {}
+        return _street_tokens(p.get("street") or p.get("name") or "")
+    except Exception:  # noqa: BLE001
+        return set()
+
+
 def _copro_norm(row: dict) -> dict:
     def _i(k):
         v = row.get(k)
@@ -608,8 +634,10 @@ def copro_rnie(
         ref = next((r for r in _copro_refs(row) if r in pt), (_copro_refs(row) or [None])[0])
         return _res(row, ref, "parcelle")
 
-    # 2) Parcelle voisine LA PLUS PROCHE du point (≤ 45 m) — on choisit la copro dont la
-    #    parcelle enregistrée est la plus proche, pas la 1re trouvée dans le secteur.
+    # 2) Parcelles du secteur : on retient la copro dont l'ADRESSE (rue) correspond à celle du
+    #    bien (confirmée par géocodage — comme le DPE), la plus proche. Rejette les copros
+    #    voisines sur une AUTRE rue (faux positifs en centre dense). Sans info de rue : repli
+    #    sur la parcelle la plus proche ≤ 45 m.
     dist: dict[str, float] = {}
     try:
         for f in _apicarto_geom("/cadastre/parcelle", _square_polygon(lat, lon, 80)):
@@ -619,16 +647,29 @@ def copro_rnie(
                 dist[idu] = _km(lat, lon, c[0], c[1]) * 1000
     except Exception:  # noqa: BLE001
         pass
+    bien_street = _point_street(lat, lon)
     best = None
-    best_d = 1e9
+    best_score: tuple | None = None
     best_ref: str | None = None
+    best_d = 0.0
     for row in _rnic_rows_for_idus(list(dist.keys())):
-        for ref in _copro_refs(row):
-            d = dist.get(ref)
-            if d is not None and d < best_d:
-                best_d, best, best_ref = d, row, ref
-    if best is not None and best_d <= 45:
-        return _res(best, best_ref, "proximite", best_d)
+        drefs = [r for r in _copro_refs(row) if r in dist]
+        if not drefs:
+            continue
+        d = min(dist[r] for r in drefs)
+        ctoks = _street_tokens(row.get("adresse_reference"))
+        # fraction des tokens de rue du bien présents dans l'adresse copro (robuste au nom de commune).
+        frac = (len(bien_street & ctoks) / len(bien_street)) if bien_street else 0.0
+        if bien_street:
+            if frac < 0.6 or d > 200:   # rue du bien absente de l'adresse copro -> voisine, on rejette
+                continue
+        elif d > 45:                    # pas d'info de rue : repli parcelle la plus proche
+            continue
+        score = (round(frac, 3), -d)    # meilleure correspondance de rue, puis plus proche
+        if best_score is None or score > best_score:
+            best_score, best, best_d, best_ref = score, row, d, drefs[0]
+    if best is not None:
+        return _res(best, best_ref, "adresse" if bien_street else "proximite", best_d)
 
     return {"ok": True, "found": False, "lat": lat, "lon": lon,
             "parcelles_testees": (provided or pt or list(dist.keys()))[:20]}
