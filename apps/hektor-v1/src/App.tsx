@@ -8705,6 +8705,8 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const curGes = rawWizardDetailField(detail, 'dpe_ges')
   const curCopro = rawWizardDetailField(detail, 'copropriete')          // "OUI"/"NON"/""
   const curCoproLots = rawWizardDetailField(detail, 'copropriete_nb_lot')
+  const curSyndic = rawWizardDetailField(detail, 'syndic')              // texte libre (nom du syndic)
+  const curStatutSyndicat = rawWizardDetailField(detail, 'copropriete_statut_syndicat')
   const coproFiche = /oui/i.test(String(curCopro ?? ''))                // le bien est-il marqué copropriété dans Hektor ?
   const sameNum = (a: unknown, b: unknown) => Math.round(Number(a)) === Math.round(Number(b))
   // La fiche Hektor stocke souvent "0" pour un champ non renseigné (conso/GES/année) : on le
@@ -8956,14 +8958,35 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
               </div>
               {(() => {
                 const fields: Record<string, string> = {}
+                const labels: string[] = []
                 const coproEmpty = !String(curCopro ?? '').trim()
-                if (coproEmpty) fields.copropriete = 'OUI'
-                if (copro!.nb_lots != null && !filledNum(curCoproLots)) fields.copropriete_nb_lot = String(copro!.nb_lots)
-                const nEmpty = Object.keys(fields).length
+                if (coproEmpty) { fields.copropriete = 'OUI'; labels.push('copropriété') }
+                if (copro!.nb_lots != null && !filledNum(curCoproLots)) { fields.copropriete_nb_lot = String(copro!.nb_lots); labels.push(`nombre de lots (${copro!.nb_lots})`) }
+                // Syndic (texte libre) : nom + type de syndic après un tiret — emprunt de données, faute de case dédiée au type.
+                const typeSyndic = (() => {
+                  const t = String(copro!.type_syndic ?? '').toLowerCase()
+                  if (/oui/i.test(String(copro!.syndicat_cooperatif ?? '')) || /coop/.test(t)) return 'Syndic coopératif'
+                  if (/pro/.test(t)) return 'Syndic professionnel'
+                  if (/b[eé]n[eé]vole|copropri[eé]taire|non.?pro/.test(t)) return 'Syndic bénévole'
+                  return t ? `Syndic ${t}` : ''
+                })()
+                const syndicComposed = [String(copro!.syndic_nom ?? '').trim(), typeSyndic].filter(Boolean).join(' — ')
+                if (syndicComposed && !String(curSyndic ?? '').trim()) { fields.syndic = syndicComposed; labels.push(`syndic (${syndicComposed})`) }
+                // Procédure -> statut syndicat (case Hektor à options).
+                const statutCode = (() => {
+                  if (!copro!.procedure) return 'PAS_DE_PROCEDURE'
+                  const m = String(copro!.mandat_en_cours ?? '').toLowerCase()
+                  if (/alerte/.test(m)) return 'ALERTE'
+                  if (/redress/.test(m)) return 'REDRESSEMENT'
+                  return 'PROCEDURE_EN_COURS'
+                })()
+                const statutLabel: Record<string, string> = { PAS_DE_PROCEDURE: 'pas de procédure', ALERTE: "procédure d'alerte", REDRESSEMENT: 'redressement', PROCEDURE_EN_COURS: 'procédure en cours' }
+                if (statutCode && !String(curStatutSyndicat ?? '').trim()) { fields.copropriete_statut_syndicat = statutCode; labels.push(`statut syndicat (${statutLabel[statutCode]})`) }
+                const nEmpty = labels.length
                 const divLots = copro!.nb_lots != null && filledNum(curCoproLots) && !sameNum(curCoproLots, copro!.nb_lots)
                 return (
                   <>
-                    {nEmpty ? <div className="ev3-apply"><span>{fields.copropriete && fields.copropriete_nb_lot ? 'Copropriété & nombre de lots absents' : (fields.copropriete_nb_lot ? 'Nombre de lots absent' : 'Copropriété non renseignée')} dans la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'copro'} onClick={() => applyToFiche('copro', fields, 'Copropriété')}>{applyBusy === 'copro' ? 'Report…' : 'Reporter dans la fiche'}</button></div> : null}
+                    {nEmpty ? <div className="ev3-apply"><span>À compléter dans la fiche : {labels.join(', ')}.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'copro'} onClick={() => applyToFiche('copro', fields, 'Copropriété')}>{applyBusy === 'copro' ? 'Report…' : 'Reporter dans la fiche'}</button></div> : null}
                     {divLots ? <div className="ev3-apply ev3-apply-warn"><span>Nb de lots — fiche {curCoproLots} · RNIC {copro!.nb_lots} (à vérifier).</span></div> : null}
                   </>
                 )
