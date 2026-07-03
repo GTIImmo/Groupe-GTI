@@ -492,25 +492,35 @@ def patrimoine(
 _RNIC = "https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/"
 
 
-def _rnic_row_for_idus(idus: list[str]) -> tuple[str | None, dict | None]:
-    """Copro dont une des 3 références cadastrales est dans la liste d'idus (14 car.).
-    La parcelle enregistrée au RNIC n'est pas toujours celle sous le point exact ->
-    on passe le point + les parcelles voisines, en 1 requête via le filtre __in."""
+def _rnic_rows_for_idus(idus: list[str], size: int = 25) -> list[dict]:
+    """Copros dont une des 3 références cadastrales est dans idus (14 car.), via __in
+    (1 requête par colonne de référence). Dédupliquées par n° d'immatriculation."""
     keys = [str(i).strip() for i in idus if i and len(str(i).strip()) >= 10]
     if not keys:
-        return None, None
+        return []
     csv = ",".join(dict.fromkeys(keys))  # dédup en gardant l'ordre
+    out: list[dict] = []
+    seen: set[str] = set()
     for col in ("reference_cadastrale_1", "reference_cadastrale_2", "reference_cadastrale_3"):
         try:
-            r = requests.get(_RNIC, params={f"{col}__in": csv, "page_size": 1}, headers=_UA, timeout=20)
+            r = requests.get(_RNIC, params={f"{col}__in": csv, "page_size": size}, headers=_UA, timeout=20)
             if not r.ok:
                 continue
-            rows = (r.json() or {}).get("data") or []
-            if rows:
-                return rows[0].get(col), rows[0]
+            for row in (r.json() or {}).get("data") or []:
+                imm = row.get("numero_immatriculation")
+                if imm and imm in seen:
+                    continue
+                if imm:
+                    seen.add(imm)
+                out.append(row)
         except Exception:  # noqa: BLE001
             continue
-    return None, None
+    return out
+
+
+def _copro_refs(row: dict) -> list[str]:
+    return [str(row.get(k) or "").strip() for k in
+            ("reference_cadastrale_1", "reference_cadastrale_2", "reference_cadastrale_3") if row.get(k)]
 
 
 def _copro_norm(row: dict) -> dict:
@@ -552,13 +562,15 @@ def _copro_norm(row: dict) -> dict:
 def copro_rnie(
     lat: float = Query(...),
     lon: float = Query(...),
+    parcelles: str = Query("", description="idu(s) cadastraux 14 car. du bien (cadastre validé), séparés par des virgules — match le plus sûr"),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
 ):
-    """Copropriété au RNIC (ANAH). On récupère la/les parcelle(s) cadastrale(s) au
-    point (idu 14 car.) puis on cherche la copropriété par référence cadastrale via
-    l'API tabulaire data.gouv (live, toujours à jour). Gratuit, sans clé. ok:True
-    toujours (le front recalcule la présence via `found` — cf. invokeBackendApi)."""
+    """Copropriété au RNIC (ANAH), match par référence cadastrale, du plus sûr au plus large :
+    0) parcelle(s) du cadastre déjà validées par l'utilisateur (param `parcelles`) ;
+    1) parcelle sous le point exact ;
+    2) parcelle voisine LA PLUS PROCHE du point (≤ 45 m) — et non la première venue du secteur.
+    Live data.gouv (API tabulaire), gratuit, sans clé. ok:True toujours (front recalcule via `found`)."""
     get_authenticated_user(settings, authorization)
 
     def _idus(features):
@@ -569,25 +581,54 @@ def copro_rnie(
                 out.append(idu)
         return out
 
-    # 1) parcelle(s) sous le point exact (match précis, priorité anti-faux-positif).
-    tested: list[str] = []
-    matched = row = None
+    def _res(row: dict, ref: str | None, match: str, dist: float | None = None):
+        r = {"ok": True, "found": True, "lat": lat, "lon": lon,
+             "reference_cadastrale": ref, "match": match, **_copro_norm(row)}
+        if dist is not None:
+            r["distance_m"] = round(dist)
+        return r
+
+    # 0) Parcelles du cadastre validées par l'utilisateur = le plus fiable (pas de proximité).
+    provided = [p.strip() for p in (parcelles or "").split(",") if p.strip()]
+    if provided:
+        rows = _rnic_rows_for_idus(provided)
+        if rows:
+            row = rows[0]
+            ref = next((r for r in _copro_refs(row) if r in provided), provided[0])
+            return _res(row, ref, "cadastre")
+
+    # 1) Parcelle sous le point exact.
     try:
-        tested = _idus(_apicarto_point("/cadastre/parcelle", lat, lon))
-        matched, row = _rnic_row_for_idus(tested)
+        pt = _idus(_apicarto_point("/cadastre/parcelle", lat, lon))
+    except Exception:  # noqa: BLE001
+        pt = []
+    rows = _rnic_rows_for_idus(pt)
+    if rows:
+        row = rows[0]
+        ref = next((r for r in _copro_refs(row) if r in pt), (_copro_refs(row) or [None])[0])
+        return _res(row, ref, "parcelle")
+
+    # 2) Parcelle voisine LA PLUS PROCHE du point (≤ 45 m) — on choisit la copro dont la
+    #    parcelle enregistrée est la plus proche, pas la 1re trouvée dans le secteur.
+    dist: dict[str, float] = {}
+    try:
+        for f in _apicarto_geom("/cadastre/parcelle", _square_polygon(lat, lon, 80)):
+            idu = (f.get("properties", {}) or {}).get("idu")
+            c = _geom_centroid(f.get("geometry"))
+            if idu and c:
+                dist[idu] = _km(lat, lon, c[0], c[1]) * 1000
     except Exception:  # noqa: BLE001
         pass
+    best = None
+    best_d = 1e9
+    best_ref: str | None = None
+    for row in _rnic_rows_for_idus(list(dist.keys())):
+        for ref in _copro_refs(row):
+            d = dist.get(ref)
+            if d is not None and d < best_d:
+                best_d, best, best_ref = d, row, ref
+    if best is not None and best_d <= 45:
+        return _res(best, best_ref, "proximite", best_d)
 
-    # 2) repli : parcelles voisines (~80 m) — le RNIC enregistre parfois la copro sur
-    #    une parcelle adjacente (grandes résidences), pas celle du point exact.
-    if not row:
-        try:
-            near = _idus(_apicarto_geom("/cadastre/parcelle", _square_polygon(lat, lon, 80)))
-            tested = list(dict.fromkeys(tested + near))
-            matched, row = _rnic_row_for_idus(near)
-        except Exception:  # noqa: BLE001
-            pass
-
-    if not row:
-        return {"ok": True, "found": False, "lat": lat, "lon": lon, "parcelles_testees": tested}
-    return {"ok": True, "found": True, "lat": lat, "lon": lon, "reference_cadastrale": matched, **_copro_norm(row)}
+    return {"ok": True, "found": False, "lat": lat, "lon": lon,
+            "parcelles_testees": (provided or pt or list(dist.keys()))[:20]}

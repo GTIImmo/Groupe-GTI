@@ -2782,11 +2782,14 @@ export type CoproRnieData = {
   procedure?: boolean
   commune?: string | null
 }
-export async function loadCoproRnie(input: { lat: number; lon: number }): Promise<CoproRnieData> {
+export async function loadCoproRnie(input: { lat: number; lon: number; parcelles?: (string | null | undefined)[] }): Promise<CoproRnieData> {
   const { lat, lon } = input
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }
+  // Parcelles cadastrales validées (idu 14 car.) : match le plus sûr côté backend.
+  const parc = (input.parcelles ?? []).map((p) => String(p ?? '').trim()).filter((p) => p.length >= 10)
+  const parcQ = parc.length ? `&parcelles=${encodeURIComponent(parc.join(','))}` : ''
   try {
-    const r = await invokeBackendApi<CoproRnieData & { found?: boolean }>(`/copro/rnie?lat=${lat}&lon=${lon}`, { method: 'GET' })
+    const r = await invokeBackendApi<CoproRnieData & { found?: boolean }>(`/copro/rnie?lat=${lat}&lon=${lon}${parcQ}`, { method: 'GET' })
     return { ...r, ok: !!r?.found }
   } catch {
     return { ok: false }
