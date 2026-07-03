@@ -8643,8 +8643,12 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     if (coproBusy) return
     // Recherche RNIC UNIQUEMENT pour les biens marqués « copropriété = Oui » : sinon on ramasse à tort
     // une copro voisine (ex. mono-propriété en centre-ville dont le point tombe sur la voie).
+    // Sur un bien non-copro : on EFFACE une éventuelle copro mémorisée (ancien faux positif).
     if (!/oui/i.test(String(rawWizardDetailField(detail, 'copropriete') ?? ''))) {
-      setCoproMsg('Bien non marqué « copropriété » dans la fiche — recherche RNIC non applicable.'); return
+      setCoproBusy(true)
+      try { await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'copro', false, { ok: false, found: false }); await reload() } catch { /* best effort */ }
+      setCoproBusy(false)
+      setCoproMsg('Bien non marqué « copropriété » dans la fiche — recherche RNIC non applicable (donnée effacée).'); return
     }
     if (!hasCoords()) { setCoproMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     const { lat, lon } = coords()
@@ -8701,6 +8705,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   const curGes = rawWizardDetailField(detail, 'dpe_ges')
   const curCopro = rawWizardDetailField(detail, 'copropriete')          // "OUI"/"NON"/""
   const curCoproLots = rawWizardDetailField(detail, 'copropriete_nb_lot')
+  const coproFiche = /oui/i.test(String(curCopro ?? ''))                // le bien est-il marqué copropriété dans Hektor ?
   const sameNum = (a: unknown, b: unknown) => Math.round(Number(a)) === Math.round(Number(b))
   // La fiche Hektor stocke souvent "0" pour un champ non renseigné (conso/GES/année) : on le
   // traite comme VIDE, pas comme une valeur (sinon fausse divergence + bouton « Reporter » masqué).
@@ -8745,7 +8750,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     { key: 'dpe', label: 'DPE', state: pillState(!!(dpe && dpe.ok), dpeBusy) },
     { key: 'cadre', label: 'Cadre de vie', state: pillState(!!(cadre && cadre.ok), cadreBusy) },
     { key: 'patrimoine', label: 'Patrimoine', state: pillState(!!(patri && patri.ok), patriBusy) },
-    { key: 'copro', label: 'Copropriété', state: pillState(!!(copro && copro.ok), coproBusy) },
+    { key: 'copro', label: 'Copropriété', state: pillState(!!(coproFiche && copro && copro.ok), coproBusy) },
     { key: 'insee', label: 'Population', state: pillState(!!(popu && popu.ok), popuBusy) },
     { key: 'cadastre', label: 'Cadastre', state: pillState(cadState.present, cadState.busy) },
   ]
@@ -8934,11 +8939,11 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
             <span className="ev3-ico" aria-hidden="true"><EstimIcon name="patrimoine" /></span>
             <span className="ev3-h-titles"><span className="ev3-h-t">Copropriété (RNIE)</span><span className="ev3-h-s">Registre national d’immatriculation des copropriétés (ANAH)</span></span>
             <span className="ev3-h-right">
-              {copro && copro.ok ? (copro.procedure ? <span className="ev3-badge ev3-badge-warn">Procédure</span> : <span className="ev3-badge">{copro.nb_lots ?? '—'} lots</span>) : null}
+              {coproFiche && copro && copro.ok ? (copro.procedure ? <span className="ev3-badge ev3-badge-warn">Procédure</span> : <span className="ev3-badge">{copro.nb_lots ?? '—'} lots</span>) : null}
               <button className="ev3-refresh" type="button" title="Régénérer la copropriété" aria-label="Régénérer la copropriété" disabled={coproBusy} onClick={() => { void generateCopro() }}><EstimIcon name="refresh" /></button>
             </span>
           </header>
-          {copro && copro.ok ? (
+          {coproFiche && copro && copro.ok ? (
             <>
               {copro.procedure ? <div className="ev3-apply ev3-apply-warn"><span>Procédure en cours ({copro.mandat_en_cours}) — copropriété sous surveillance.</span></div> : null}
               <div className="ev3-tags">
@@ -8955,18 +8960,16 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
                 if (coproEmpty) fields.copropriete = 'OUI'
                 if (copro!.nb_lots != null && !filledNum(curCoproLots)) fields.copropriete_nb_lot = String(copro!.nb_lots)
                 const nEmpty = Object.keys(fields).length
-                const divStatut = !coproEmpty && !/oui/i.test(String(curCopro))
                 const divLots = copro!.nb_lots != null && filledNum(curCoproLots) && !sameNum(curCoproLots, copro!.nb_lots)
                 return (
                   <>
                     {nEmpty ? <div className="ev3-apply"><span>{fields.copropriete && fields.copropriete_nb_lot ? 'Copropriété & nombre de lots absents' : (fields.copropriete_nb_lot ? 'Nombre de lots absent' : 'Copropriété non renseignée')} dans la fiche.</span><button className="ev3-apply-btn" type="button" disabled={applyBusy === 'copro'} onClick={() => applyToFiche('copro', fields, 'Copropriété')}>{applyBusy === 'copro' ? 'Report…' : 'Reporter dans la fiche'}</button></div> : null}
-                    {divStatut ? <div className="ev3-apply ev3-apply-warn"><span>Fiche : « non copropriété » · Registre RNIC : copropriété immatriculée (à vérifier).</span></div> : null}
                     {divLots ? <div className="ev3-apply ev3-apply-warn"><span>Nb de lots — fiche {curCoproLots} · RNIC {copro!.nb_lots} (à vérifier).</span></div> : null}
                   </>
                 )
               })()}
             </>
-          ) : (coproBusy ? <p className="ev3-hint ev3-hint-run">Recherche au registre des copropriétés…</p> : (coproMsg ? <p className="ev3-hint ev3-hint-msg">{coproMsg}</p> : <p className="ev3-hint">Immatriculation, nombre de lots, période, syndic, procédure — registre national ANAH (RNIC), toujours à jour. Pour les biens en copropriété uniquement.</p>))}
+          ) : (!coproFiche ? <p className="ev3-hint ev3-hint-msg">Bien non marqué « copropriété » dans la fiche — registre RNIC non applicable.</p> : (coproBusy ? <p className="ev3-hint ev3-hint-run">Recherche au registre des copropriétés…</p> : (coproMsg ? <p className="ev3-hint ev3-hint-msg">{coproMsg}</p> : <p className="ev3-hint">Immatriculation, nombre de lots, période, syndic, procédure — registre national ANAH (RNIC), toujours à jour. Pour les biens en copropriété uniquement.</p>)))}
         </section>
 
         <section className="ev3-card ev3-card-wide">
