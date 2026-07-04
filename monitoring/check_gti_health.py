@@ -524,6 +524,7 @@ class Monitor:
             ("email_volume", self.check_email_volume),
             ("public_surfaces", self.check_public_surfaces),
             ("vitrine_catalogue", self.check_vitrine_catalogue),
+            ("cron_health", self.check_cron_health),
             ("supabase_runs", self.check_supabase_runs),
             ("console_jobs", self.check_console_jobs),
             ("backend_health", self.check_backend_health),
@@ -946,6 +947,63 @@ class Monitor:
             {"url": url, "items": count, "age_hours": age_hours, "min_items": min_items, "freshness_hours": fresh_hours},
         )
 
+    def check_cron_health(self) -> None:
+        """Sante pg_cron : alerte si un job planifie echoue ou se fige.
+
+        Comble l'angle mort revele le 04/07 (cron rapprochement-alerts en echec,
+        invisible). Degrade en info si la RPC app_cron_health n'est pas provisionnee.
+        """
+        if not self.supabase:
+            return
+        try:
+            rows = self.supabase.request("rpc/app_cron_health", method="POST", payload={})
+        except Exception as exc:
+            self.add(
+                "cron.health",
+                "system",
+                "cron",
+                "pg_cron",
+                "ok",
+                "Sante pg_cron en attente de migration (patch_cron_health_rpc_2026-07-04.sql)",
+                {"pending_migration": True, "error": str(exc)[:200]},
+                severity="info",
+            )
+            return
+        rows = rows or []
+        stale_limit = float(self.args.cron_stale_minutes)
+        problems: list[dict[str, Any]] = []
+        for row in rows:
+            if row.get("active") is False:
+                continue
+            jobname = row.get("jobname") or "?"
+            last_status = row.get("last_status")
+            age = age_minutes(parse_iso(row.get("last_run")))
+            if last_status == "failed":
+                problems.append({"job": jobname, "reason": "dernier run en echec"})
+            elif age is not None and age > stale_limit:
+                problems.append({"job": jobname, "reason": f"pas de run depuis {age:.0f} min"})
+        for item in problems:
+            slug = str(item["job"]).replace(" ", "_").replace("-", "_")
+            self.add(
+                f"cron.health:{slug}",
+                "system",
+                "cron",
+                "pg_cron_job",
+                "warning",
+                f"Cron {item['job']}: {item['reason']}",
+                {"job": item["job"], "reason": item["reason"]},
+            )
+        summary_status = "warning" if problems else "ok"
+        self.add(
+            "cron.health",
+            "system",
+            "cron",
+            "pg_cron",
+            summary_status,
+            f"pg_cron: {len(rows)} jobs suivis, {len(problems)} en anomalie",
+            {"job_count": len(rows), "problem_count": len(problems), "problems": [item["job"] for item in problems]},
+        )
+
     def check_supabase_runs(self) -> None:
         if not self.supabase:
             return
@@ -1328,6 +1386,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--vitrine-catalogue-url", default="https://gtiimmo.github.io/vitrine/exports/catalogue_vitrine.json")
     parser.add_argument("--vitrine-min-items", type=int, default=100)
     parser.add_argument("--vitrine-freshness-hours", type=float, default=30.0)
+    parser.add_argument("--cron-stale-minutes", type=int, default=30)
     parser.add_argument("--document-storage-path", default=os.getenv("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
     parser.add_argument("--timeout-seconds", type=int, default=15)
     parser.add_argument("--supabase-freshness-minutes", type=int, default=30 * 60)
