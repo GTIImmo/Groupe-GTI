@@ -1890,6 +1890,29 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
   return data as DashboardSummary
 }
 
+export type MonitorStatusRow = {
+  status_key: string
+  domain: string | null
+  component: string | null
+  check_name: string | null
+  status: string
+  severity: string | null
+  message: string | null
+  observed_at: string | null
+  updated_at: string | null
+  details_json: Record<string, unknown> | null
+}
+
+export async function loadMonitorStatus(): Promise<MonitorStatusRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_monitor_status')
+    .select('status_key,domain,component,check_name,status,severity,message,observed_at,updated_at,details_json')
+    .order('status_key', { ascending: true })
+  if (error) throw new Error(error.message ?? 'Unable to load monitor status')
+  return (data ?? []) as MonitorStatusRow[]
+}
+
 type ContactStatsSnapshotRow = {
   total?: number | string | null
   active?: number | string | null

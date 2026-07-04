@@ -1,0 +1,49 @@
+.sante-systeme-v1 { display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
+
+.sante-systeme-v1 .ss-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sante-systeme-v1 .ss-title { display: flex; align-items: center; gap: 12px; }
+.sante-systeme-v1 .ss-title h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.sante-systeme-v1 .ss-sub { margin: 2px 0 0; font-size: 13px; color: #6b7686; }
+
+.sante-systeme-v1 .ss-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; display: inline-block; }
+.sante-systeme-v1 .ss-ok { background: #1c8a55; }
+.sante-systeme-v1 .ss-warn { background: #b9770a; }
+.sante-systeme-v1 .ss-crit { background: #c33831; }
+.sante-systeme-v1 .ss-unknown { background: #8a93a3; }
+
+.sante-systeme-v1 .ss-refresh { border: 1px solid #d7dbe3; background: #fff; border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
+.sante-systeme-v1 .ss-refresh:hover { background: #f5f6f8; }
+
+.sante-systeme-v1 .ss-error { background: #fbe9e7; color: #a32d2d; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin: 0; }
+
+.sante-systeme-v1 .ss-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.sante-systeme-v1 .ss-kpi { background: #f6f7f9; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.sante-systeme-v1 .ss-kpi-label { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #748097; }
+.sante-systeme-v1 .ss-kpi-val { font-size: 22px; font-weight: 600; }
+.sante-systeme-v1 .ss-text-ok { color: #1c8a55; }
+.sante-systeme-v1 .ss-text-warn { color: #b9770a; }
+.sante-systeme-v1 .ss-text-crit { color: #c33831; }
+
+.sante-systeme-v1 .ss-group { background: #fff; border: 1px solid #e4e8ef; border-radius: 12px; padding: 12px 14px; }
+.sante-systeme-v1 .ss-group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.sante-systeme-v1 .ss-group-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.sante-systeme-v1 .ss-count { font-size: 12px; color: #9aa5b6; }
+
+.sante-systeme-v1 .ss-rows { display: flex; flex-direction: column; }
+.sante-systeme-v1 .ss-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-top: 1px solid #eef1f6; }
+.sante-systeme-v1 .ss-row:first-child { border-top: none; }
+.sante-systeme-v1 .ss-row .ss-dot { margin-top: 4px; }
+.sante-systeme-v1 .ss-row-body { flex: 1; min-width: 0; }
+.sante-systeme-v1 .ss-row-name { font-size: 13.5px; font-weight: 500; }
+.sante-systeme-v1 .ss-row-msg { font-size: 12px; color: #6b7686; margin-top: 2px; overflow-wrap: anywhere; }
+.sante-systeme-v1 .ss-row-meta { display: flex; align-items: center; gap: 8px; flex: none; }
+.sante-systeme-v1 .ss-pill { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.sante-systeme-v1 .ss-bg-ok { background: #e6f4ec; color: #1c8a55; }
+.sante-systeme-v1 .ss-bg-warn { background: #fbf1de; color: #b9770a; }
+.sante-systeme-v1 .ss-bg-crit { background: #fbe9e7; color: #c33831; }
+.sante-systeme-v1 .ss-bg-unknown { background: #eef0f4; color: #5f5e5a; }
+.sante-systeme-v1 .ss-age { font-size: 11px; color: #9aa5b6; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .sante-systeme-v1 .ss-row-meta { flex-direction: column; align-items: flex-end; gap: 2px; }
+}
