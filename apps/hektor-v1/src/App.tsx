@@ -159,6 +159,7 @@ import ContactSearchModal from './ContactSearchModal'
 import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import NotificationsBell from './NotificationsBell'
+import SanteSystemeScreen from './SanteSystemeScreen'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 
@@ -225,7 +226,7 @@ const heavyListingFilterKeys = new Set<keyof AppFilters>([
   'offreStatus',
   'compromisStatus',
 ])
-type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi'
+type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type SuiviRequestFilter = 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio'
 type LightweightDetailTarget = Dossier | MandatRecord
@@ -14259,7 +14260,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const contactHektorUserEmail = resolvedUserNegotiatorContext?.negociateur_email ?? sessionEmail ?? null
   const contactHektorUserId = resolvedUserNegotiatorContext?.hektor_user_id ?? null
   useEffect(() => {
-    if (screen === 'suivi' && !isAdmin) setScreen('mandats')
+    if ((screen === 'suivi' || screen === 'sante') && !isAdmin) setScreen('mandats')
   }, [screen, isAdmin])
   const images = useMemo(() => {
     const rawImages = [
@@ -16575,6 +16576,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" title="Contacts" onClick={() => openScreen('contacts')}>Contacts</button>
           <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" title="Agenda" onClick={() => openScreen('agenda')}>Agenda</button>
           {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
+          {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
         </nav>
         <div className="header-user-stack">
           <div className="side-card user-card">
@@ -17362,6 +17364,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenRequestModal={openRequestModal}
             loading={mandatLoading}
           />
+        ) : screen === 'sante' ? (
+          <SanteSystemeScreen isAdmin={isAdmin} />
         ) : (
           <SuiviMandatsScreenV2
             isAdmin={isAdmin}
