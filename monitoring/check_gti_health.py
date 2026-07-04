@@ -124,6 +124,13 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     },
 ]
 
+# Surfaces publiques a sonder depuis l'exterieur (up-check HTTP simple).
+PUBLIC_SURFACES = [
+    ("surface.app_vercel", "App metier (Vercel)", "https://groupe-gti.vercel.app"),
+    ("surface.vitrine", "Vitrine agences (GitHub Pages)", "https://gtiimmo.github.io/vitrine/"),
+    ("surface.rdv_public", "Portail RDV public", "https://gtiimmo.github.io/vitrine/rdv/index.html"),
+]
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -515,6 +522,8 @@ class Monitor:
             ("scheduled_tasks", self.check_scheduled_tasks),
             ("data_sentinels", self.check_data_sentinels),
             ("email_volume", self.check_email_volume),
+            ("public_surfaces", self.check_public_surfaces),
+            ("vitrine_catalogue", self.check_vitrine_catalogue),
             ("supabase_runs", self.check_supabase_runs),
             ("console_jobs", self.check_console_jobs),
             ("backend_health", self.check_backend_health),
@@ -871,6 +880,72 @@ class Monitor:
             {"count": count, "cap": cap, "alert": alert},
         )
 
+    def check_public_surfaces(self) -> None:
+        """Sonde synthetique : les surfaces publiques repondent-elles depuis Internet ?
+
+        Vu de l'exterieur (pas depuis le serveur) : app Vercel, vitrine agences, RDV public.
+        """
+        for key, label, url in PUBLIC_SURFACES:
+            started = time.monotonic()
+            try:
+                request = urllib.request.Request(url, method="GET", headers={"User-Agent": "gti-monitor"})
+                with urllib.request.urlopen(request, timeout=self.args.backend_timeout_seconds) as response:
+                    elapsed_ms = int((time.monotonic() - started) * 1000)
+                    status = "ok" if response.status == 200 else "warning"
+                    self.add(
+                        key, "system", "surface", "http_up", status,
+                        f"{label}: HTTP {response.status}",
+                        {"url": url, "elapsed_ms": elapsed_ms},
+                    )
+            except Exception as exc:
+                self.add(
+                    key, "system", "surface", "http_up", "warning",
+                    f"{label} injoignable: {exc}",
+                    {"url": url, "error": str(exc)[:200]},
+                )
+
+    def check_vitrine_catalogue(self) -> None:
+        """Sante du catalogue vitrine : nb de biens + fraicheur (generatedAt).
+
+        Un catalogue vide ou fige = ecrans en agence qui affichent du blanc ou du perime,
+        sans que personne ne le voie. Detecte les deux cas.
+        """
+        url = self.args.vitrine_catalogue_url
+        try:
+            request = urllib.request.Request(url, method="GET", headers={"User-Agent": "gti-monitor"})
+            with urllib.request.urlopen(request, timeout=self.args.backend_timeout_seconds) as response:
+                raw = response.read().decode("utf-8", errors="replace")
+            data = json.loads(raw)
+        except Exception as exc:
+            self.add(
+                "surface.vitrine_catalogue", "business", "surface", "vitrine_catalogue", "warning",
+                f"Catalogue vitrine illisible: {exc}",
+                {"url": url, "error": str(exc)[:200]},
+            )
+            return
+        items = data.get("items") if isinstance(data, dict) else data
+        count = len(items) if isinstance(items, list) else 0
+        generated = parse_iso(data.get("generatedAt")) if isinstance(data, dict) else None
+        age_hours = (age_minutes(generated) or 0.0) / 60.0 if generated else None
+        min_items = int(self.args.vitrine_min_items)
+        fresh_hours = float(self.args.vitrine_freshness_hours)
+        problems = []
+        if count < min_items:
+            problems.append(f"seulement {count} biens (seuil {min_items})")
+        if age_hours is not None and age_hours > fresh_hours:
+            problems.append(f"fige depuis {age_hours:.0f}h (seuil {fresh_hours:.0f}h)")
+        if problems:
+            status, message = "warning", "Vitrine: " + " ; ".join(problems)
+        elif age_hours is not None:
+            status, message = "ok", f"Vitrine OK: {count} biens, genere il y a {age_hours:.0f}h"
+        else:
+            status, message = "ok", f"Vitrine OK: {count} biens"
+        self.add(
+            "surface.vitrine_catalogue", "business", "surface", "vitrine_catalogue", status,
+            message,
+            {"url": url, "items": count, "age_hours": age_hours, "min_items": min_items, "freshness_hours": fresh_hours},
+        )
+
     def check_supabase_runs(self) -> None:
         if not self.supabase:
             return
@@ -1225,6 +1300,9 @@ def build_parser() -> argparse.ArgumentParser:
     # 2e = mesure reelle. Evite les faux "injoignable" dus au cold start Render.
     parser.add_argument("--backend-health-attempts", type=int, default=2)
     parser.add_argument("--backend-retry-delay-seconds", type=float, default=3.0)
+    parser.add_argument("--vitrine-catalogue-url", default="https://gtiimmo.github.io/vitrine/exports/catalogue_vitrine.json")
+    parser.add_argument("--vitrine-min-items", type=int, default=100)
+    parser.add_argument("--vitrine-freshness-hours", type=float, default=30.0)
     parser.add_argument("--document-storage-path", default=os.getenv("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
     parser.add_argument("--timeout-seconds", type=int, default=15)
     parser.add_argument("--supabase-freshness-minutes", type=int, default=30 * 60)
