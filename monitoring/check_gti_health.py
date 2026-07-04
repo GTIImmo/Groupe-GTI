@@ -514,6 +514,7 @@ class Monitor:
             ("worker_heartbeat", self.check_worker_heartbeat),
             ("scheduled_tasks", self.check_scheduled_tasks),
             ("data_sentinels", self.check_data_sentinels),
+            ("email_volume", self.check_email_volume),
             ("supabase_runs", self.check_supabase_runs),
             ("console_jobs", self.check_console_jobs),
             ("backend_health", self.check_backend_health),
@@ -825,6 +826,50 @@ class Monitor:
             status, message, details = self._evaluate_sentinel(sentinel, count)
             details["count"] = count
             self.add(key, "data_quality", "data", "sentinel", status, message, details)
+
+    def check_email_volume(self) -> None:
+        """Volume d'emails REELS envoyes aujourd'hui vs plafond quotidien (anti-spam).
+
+        Complement du garde-fou backend (EMAIL_DAILY_SEND_CAP). Surface une derive
+        (surge d'envois) ou confirme le calme (ex : apres blocage des relances auto).
+        """
+        if not self.supabase:
+            return
+        try:
+            cap = int(os.getenv("EMAIL_DAILY_SEND_CAP", "80") or 80)
+            alert = int(os.getenv("EMAIL_DAILY_SEND_ALERT", "50") or 50)
+        except ValueError:
+            cap, alert = 80, 50
+        today = utc_now().strftime("%Y-%m-%dT00:00:00Z")
+        try:
+            count = self.supabase.count(
+                "app_email_envoi",
+                {"dry_run": "eq.false", "created_at": f"gte.{today}"},
+            )
+        except Exception as exc:
+            self.add(
+                "email.volume_today",
+                "business",
+                "email",
+                "daily_volume",
+                "unknown",
+                f"Volume email illisible: {exc}",
+                {"error": str(exc)[:200]},
+                severity="unknown",
+            )
+            return
+        if count is None:
+            return
+        status = "warning" if count >= alert else "ok"
+        self.add(
+            "email.volume_today",
+            "business",
+            "email",
+            "daily_volume",
+            status,
+            f"Emails reels aujourd'hui: {count}/{cap} (seuil alerte {alert})",
+            {"count": count, "cap": cap, "alert": alert},
+        )
 
     def check_supabase_runs(self) -> None:
         if not self.supabase:
