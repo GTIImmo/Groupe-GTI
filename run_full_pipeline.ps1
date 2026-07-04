@@ -92,20 +92,49 @@ function Write-RunLog {
     Add-Content -Path $runLog -Value $line
 }
 
+function Send-Heartbeat {
+    # Palier 1 / Lot 1.2 : signale l'execution d'un worker dans app_worker_registry.
+    # Best-effort STRICT : ne doit JAMAIS interrompre le pipeline ni polluer $LASTEXITCODE.
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WorkerKey,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("success", "error", "running")]
+        [string]$Status
+    )
+
+    try {
+        $hbScript = Join-Path $projectRoot "monitoring\heartbeat.py"
+        if (Test-Path -LiteralPath $hbScript) {
+            & $pythonExe $hbScript "--worker" $WorkerKey "--status" $Status | Out-Null
+        }
+    }
+    catch {
+        Write-RunLog "WARN heartbeat report failed for $WorkerKey ($Status): $($_.Exception.Message)"
+    }
+    finally {
+        $global:LASTEXITCODE = 0
+    }
+}
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Label,
         [Parameter(Mandatory = $true)]
-        [string[]]$Arguments
+        [string[]]$Arguments,
+        [string]$WorkerKey = ""
     )
 
     Write-RunLog "START $Label"
     & $pythonExe @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Step failed: $Label (exit code $LASTEXITCODE)"
+    $stepExit = $LASTEXITCODE
+    if ($stepExit -ne 0) {
+        if ($WorkerKey) { Send-Heartbeat -WorkerKey $WorkerKey -Status "error" }
+        throw "Step failed: $Label (exit code $stepExit)"
     }
     Write-RunLog "DONE  $Label"
+    if ($WorkerKey) { Send-Heartbeat -WorkerKey $WorkerKey -Status "success" }
 }
 
 function Invoke-OptionalStepWithRetry {
@@ -117,7 +146,8 @@ function Invoke-OptionalStepWithRetry {
         [int]$MaxAttempts = 1,
         [int]$RetryDelaySeconds = 120,
         [switch]$FailOnError,
-        [ref]$Succeeded
+        [ref]$Succeeded,
+        [string]$WorkerKey = ""
     )
 
     if ($Succeeded) {
@@ -133,6 +163,7 @@ function Invoke-OptionalStepWithRetry {
             if ($Succeeded) {
                 $Succeeded.Value = $true
             }
+            if ($WorkerKey) { Send-Heartbeat -WorkerKey $WorkerKey -Status "success" }
             return
         }
 
@@ -142,6 +173,8 @@ function Invoke-OptionalStepWithRetry {
             Start-Sleep -Seconds ([Math]::Max(1, $RetryDelaySeconds))
         }
     }
+
+    if ($WorkerKey) { Send-Heartbeat -WorkerKey $WorkerKey -Status "error" }
 
     if ($FailOnError) {
         throw "Step failed: $Label after $attempts attempt(s)"
@@ -175,11 +208,11 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "--resources", "negos", "annonces", "contacts", "mandats", "offres", "compromis", "ventes", "broadcasts",
     "--max-pages", [string]$DailyRawMaxPages,
     "--missing-only"
-)
+) -WorkerKey "phase1.sync_raw"
 
 Invoke-Step -Label "normalize_source" -Arguments @(
     "normalize_source.py"
-)
+) -WorkerKey "phase1.normalize_source"
 
 # Panier Brouillon : rafraichit l'etat isDraft (GraphQL Console, lecture seule) dans
 # hektor_annonce_draft_state. Non bloquant : si la session est expiree, le run continue.
@@ -204,7 +237,7 @@ if (-not $SkipContactDetails) {
         "--max-consecutive-404-errors", [string]$ContactDetailMaxConsecutive404Errors,
         "--client-max-retries", [string]$ContactDetailClientMaxRetries,
         "--no-normalize"
-    ) -MaxAttempts $ContactDetailMaxAttempts -RetryDelaySeconds $ContactDetailRetryDelaySeconds -FailOnError:$FailOnContactDetailsError -Succeeded ([ref]$contactDetailsOk)
+    ) -MaxAttempts $ContactDetailMaxAttempts -RetryDelaySeconds $ContactDetailRetryDelaySeconds -FailOnError:$FailOnContactDetailsError -Succeeded ([ref]$contactDetailsOk) -WorkerKey "contacts.sync_detail"
 
     if ($contactDetailsOk) {
         Invoke-Step -Label "normalize_source after contact details" -Arguments @(
@@ -221,24 +254,24 @@ else {
 
 Invoke-Step -Label "build_case_index" -Arguments @(
     "build_case_index.py"
-)
+) -WorkerKey "phase1.build_case_index"
 
 Invoke-Step -Label "phase2 bootstrap" -Arguments @(
     "phase2\bootstrap_phase2.py"
-)
+) -WorkerKey "phase2.bootstrap"
 
 Invoke-Step -Label "phase2 refresh views" -Arguments @(
     "phase2\refresh_views.py"
-)
+) -WorkerKey "phase2.refresh_views"
 
 Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
     "phase2\contacts\build_contacts_layer.py",
     "--no-reports"
-)
+) -WorkerKey "phase2.contacts_layer"
 
 Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
-)
+) -WorkerKey "phase2.quality_checks"
 
 Invoke-Step -Label "phase2 contact sync status" -Arguments @(
     "phase2\checks\contact_sync_status.py"
@@ -346,11 +379,11 @@ if ($SupabaseSinceWatermark) {
 if (-not $AllowStaleSupabaseDeletes) {
     $supabaseArgs += "--skip-stale-deletes"
 }
-Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs
+Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -WorkerKey "supabase.push_upgrade"
 
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
-)
+) -WorkerKey "supabase.push_hektor_directory"
 
 if ($PushContactsToSupabase) {
     $contactsScope = if ($ContactsEligibleOnly) { "eligible" } else { "active_or_eligible" }
@@ -365,7 +398,7 @@ if ($PushContactsToSupabase) {
     if ($IncludeArchivedContactSearches) {
         $contactsPushArgs += "--include-archived-searches"
     }
-    Invoke-Step -Label "phase2 push contacts to supabase" -Arguments $contactsPushArgs
+    Invoke-Step -Label "phase2 push contacts to supabase" -Arguments $contactsPushArgs -WorkerKey "supabase.push_contacts"
 }
 else {
     Write-RunLog "SKIP phase2 push contacts to supabase"
@@ -396,12 +429,12 @@ Invoke-Step -Label "phase2 sync Matterport links to supabase" -Arguments @(
     "--max-models", "0",
     "--supabase-upsert",
     "--supabase-push-mode", $MatterportPushMode
-)
+) -WorkerKey "matterport.sync_models"
 
 Invoke-Step -Label "backfill appointment public links" -Arguments @(
     "backend\scripts\backfill_appointment_public_links.py",
     "--quiet"
-)
+) -WorkerKey "appointments.backfill_public_links"
 
 if (-not $SkipAndroid) {
     if (-not (Test-Path $GitHubTokenFile)) {
@@ -427,4 +460,5 @@ else {
     Write-RunLog "SKIP android vitrine export and push"
 }
 
+Send-Heartbeat -WorkerKey "pipeline.full" -Status "success"
 Write-RunLog "Pipeline finished successfully"

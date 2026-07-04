@@ -3,19 +3,126 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
+import subprocess
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_NAME = "check_gti_health"
+
+# Politique de fraicheur du heartbeat workers, par classe de frequence du
+# registre (app_worker_registry.frequency). Valeur = age max toleré depuis le
+# dernier succes, en minutes. None = worker "a la demande" -> jamais "en retard".
+# Le run nuit tourne a 05:30 et le monitor toutes les 2h : 28h couvre un jour
+# manque sans crier a tort.
+WORKER_STALE_POLICY: dict[str, int | None] = {
+    "pipeline_step": 28 * 60,
+    "optional_pipeline_step": 50 * 60,
+    "scheduled_or_manual": 28 * 60,
+    "manual_or_scheduled": 28 * 60,
+    "daemon_or_scheduled": 6 * 60,
+    "service": 3 * 60,
+    "watcher": 6 * 60,
+    "console_follow_up": None,
+    "backend_or_manual": None,
+    "manual": None,
+    "manual_or_watch": None,
+}
+
+# Criticite des taches planifiees Windows surveillees (defaut = warning).
+TASK_CRITICALITY: dict[str, str] = {
+    "GTI Quotidien": "critical",
+}
+
+# Codes LastTaskResult consideres comme sains : succes / en cours / jamais lance.
+ACCEPTABLE_TASK_RESULTS = {0, 267009, 267011}
+
+# Sentinelles de donnees : requetes read-only qui detectent les DERIVES SILENCIEUSES
+# (idnego, notifications orphelines, diffusion sans mandat, chute d'actives...) que le
+# monitoring infra ne voit pas. Calibrees sur la baseline live du 2026-07-04.
+#   - "absolute" : anomalie si count > max (signaux qui doivent rester bas).
+#   - "growth"   : compare au run precedent (via details_json.count persiste) ; alerte
+#                  si hausse > growth_pct ET hausse absolue >= growth_abs.
+#   - "drop"     : alerte si chute > drop_pct vs precedent ; critical sous min_floor.
+DATA_SENTINELS: list[dict[str, Any]] = [
+    {
+        "key": "data.actives_total",
+        "label": "Annonces actives",
+        "table": "app_dossier_current",
+        "params": {"archive": "eq.0"},
+        "rule": "drop",
+        "drop_pct": 12,
+        "min_floor": 500,
+    },
+    {
+        "key": "data.actives_sans_nego",
+        "label": "Annonces actives sans negociateur",
+        "table": "app_dossier_current",
+        "params": {"archive": "eq.0", "or": "(negociateur_email.is.null,negociateur_email.eq.)"},
+        "rule": "growth",
+        "growth_pct": 15,
+        "growth_abs": 300,
+    },
+    {
+        "key": "data.diffusees_sans_mandat",
+        "label": "Annonces diffusees sans mandat",
+        "table": "app_dossier_current",
+        "params": {"nb_portails_actifs": "gt.0", "or": "(mandat_type.is.null,mandat_type.eq.)"},
+        "rule": "absolute",
+        "max": 150,
+    },
+    {
+        "key": "data.diffusion_erreur",
+        "label": "Annonces en erreur de diffusion",
+        "table": "app_dossier_current",
+        "params": {"has_diffusion_error": "eq.true"},
+        "rule": "absolute",
+        "max": 10,
+    },
+    {
+        "key": "data.contacts_sans_nego",
+        "label": "Contacts eligibles sans negociateur",
+        "table": "app_contact_current",
+        "params": {"supabase_sync_eligible": "eq.true", "or": "(negociateur_email.is.null,negociateur_email.eq.)"},
+        "rule": "growth",
+        "growth_pct": 15,
+        "growth_abs": 500,
+    },
+    {
+        "key": "data.contacts_doublons",
+        "label": "Doublons contacts high/critical",
+        "table": "app_contact_current",
+        "params": {"duplicate_max_severity": "in.(high,critical)"},
+        "rule": "growth",
+        "growth_pct": 15,
+        "growth_abs": 500,
+    },
+    {
+        "key": "data.notif_orphelines",
+        "label": "Notifications sans destinataire",
+        "table": "app_notification",
+        "params": {"negociateur_email": "is.null"},
+        "rule": "absolute",
+        "max": 20,
+    },
+    {
+        "key": "data.notif_non_lues",
+        "label": "Notifications non lues",
+        "table": "app_notification",
+        "params": {"read_at": "is.null"},
+        "rule": "absolute",
+        "max": 300,
+    },
+]
 
 
 def utc_now() -> datetime:
@@ -203,6 +310,30 @@ class SupabaseClient:
     def get(self, path: str, params: dict[str, str] | None = None) -> Any:
         return self.request(path, params=params)
 
+    def count(self, path: str, params: dict[str, str] | None = None) -> int | None:
+        """Compte exact via PostgREST (en-tete Content-Range), sans ramener les lignes."""
+        merged = dict(params or {})
+        merged["limit"] = "1"
+        query = "?" + urllib.parse.urlencode(merged, doseq=False, safe="(),.*")
+        request = urllib.request.Request(
+            f"{self.url}/rest/v1/{path}{query}",
+            method="GET",
+            headers=self._headers(prefer="count=exact"),
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                content_range = response.headers.get("Content-Range") or ""
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:300]
+            raise RuntimeError(f"Supabase count HTTP {exc.code} on {path}: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Supabase count unreachable on {path}: {exc}") from exc
+        if "/" in content_range:
+            total = content_range.rsplit("/", 1)[-1].strip()
+            if total.isdigit():
+                return int(total)
+        return None
+
     def upsert_status(self, rows: list[dict[str, Any]]) -> None:
         if not rows:
             return
@@ -218,6 +349,115 @@ class SupabaseClient:
         if not rows:
             return
         self.request("app_monitor_event", method="POST", payload=rows, prefer="return=minimal")
+
+    def purge_stale_status(self, cutoff_iso: str) -> None:
+        """Supprime les statuts non re-emis depuis cutoff (cle resolue / obsolete).
+
+        Le run vient d'upserter tous les statuts courants avec updated_at=now ; toute
+        ligne plus ancienne que cutoff correspond donc a une cle qui n'est plus emise.
+        """
+        self.request(
+            "app_monitor_status",
+            method="DELETE",
+            params={"updated_at": f"lt.{cutoff_iso}"},
+            prefer="return=minimal",
+        )
+
+
+class Alerter:
+    """Canal d'alerte sortant : previent Frederic (email + WhatsApp) sur bascule vers critical.
+
+    Palier 1 / Lot 1.4. Best-effort STRICT : un echec d'envoi ne casse jamais le monitor.
+    - Email : SMTP direct (smtplib) avec la config SMTP_* existante du projet.
+    - WhatsApp : POST vers une passerelle configurable (env WHATSAPP_ALERT_WEBHOOK),
+      inactif tant que la passerelle n'est pas fournie.
+    Destinataires par defaut : Frederic (jamais accueil@).
+    """
+
+    def __init__(self, args: argparse.Namespace) -> None:
+        self.enabled = not getattr(args, "no_alerts", False)
+        self.email_to = args.alert_email
+        self.whatsapp_to = args.alert_whatsapp
+        self.whatsapp_webhook = os.getenv("WHATSAPP_ALERT_WEBHOOK", "").strip()
+        self.whatsapp_token = os.getenv("WHATSAPP_ALERT_TOKEN", "").strip()
+        self.smtp_host = os.getenv("SMTP_HOST", "").strip()
+        self.smtp_port = int(os.getenv("SMTP_PORT", "0") or 0)
+        self.smtp_user = os.getenv("SMTP_USER", "").strip()
+        self.smtp_pass = os.getenv("SMTP_PASS", "")
+        self.smtp_from = (os.getenv("SMTP_FROM", "").strip() or self.smtp_user)
+        self.smtp_secure = (os.getenv("SMTP_SECURE", "") or "").strip().lower()
+        self.timeout = 20
+
+    def compose(self, critical_results: list["CheckResult"], kind: str = "critical") -> tuple[str, str]:
+        host = socket.gethostname()
+        stamp = iso_utc()
+        if kind == "recovery":
+            subject = "[GTI Monitoring] Retour a la normale"
+            body = "\n".join(
+                ["Les alertes critiques GTI/Hektor sont resolues.", "", f"Hote: {host}", f"Heure: {stamp}"]
+            )
+            return subject, body
+        count = len(critical_results)
+        subject = f"[GTI Monitoring] {count} alerte(s) critique(s)"
+        lines = [f"{count} alerte(s) critique(s) detectee(s) sur GTI/Hektor :", ""]
+        for result in critical_results:
+            lines.append(f"- [{result.status_key}] {result.message}")
+        lines += ["", f"Hote: {host}", f"Heure: {stamp}"]
+        return subject, "\n".join(lines)
+
+    def dispatch(self, critical_results: list["CheckResult"], kind: str = "critical", dry_run: bool = False) -> None:
+        if not self.enabled:
+            return
+        subject, body = self.compose(critical_results, kind=kind)
+        if dry_run:
+            print(f"[alert dry-run] to={self.email_to} / whatsapp={self.whatsapp_to}\n{subject}\n{body}")
+            return
+        self._send_email(subject, body)
+        self._send_whatsapp(f"{subject}\n{body}")
+
+    def _send_email(self, subject: str, body: str) -> None:
+        if not (self.smtp_host and self.email_to and self.smtp_from):
+            print("[alert] email ignore: SMTP non configure", file=sys.stderr)
+            return
+        try:
+            import smtplib
+            from email.message import EmailMessage
+
+            message = EmailMessage()
+            message["From"] = self.smtp_from
+            message["To"] = self.email_to
+            message["Subject"] = subject
+            message.set_content(body)
+            port = self.smtp_port or (465 if self.smtp_secure == "ssl" else 587)
+            if self.smtp_secure == "ssl" or port == 465:
+                with smtplib.SMTP_SSL(self.smtp_host, port, timeout=self.timeout) as server:
+                    if self.smtp_user:
+                        server.login(self.smtp_user, self.smtp_pass)
+                    server.send_message(message)
+            else:
+                with smtplib.SMTP(self.smtp_host, port, timeout=self.timeout) as server:
+                    if self.smtp_secure in ("starttls", "tls"):
+                        server.starttls()
+                    if self.smtp_user:
+                        server.login(self.smtp_user, self.smtp_pass)
+                    server.send_message(message)
+        except Exception as exc:
+            print(f"[alert] email echoue: {exc}", file=sys.stderr)
+
+    def _send_whatsapp(self, text: str) -> None:
+        if not self.whatsapp_webhook:
+            print("[alert] whatsapp ignore: WHATSAPP_ALERT_WEBHOOK absent", file=sys.stderr)
+            return
+        try:
+            payload = json.dumps({"to": self.whatsapp_to, "text": text}).encode("utf-8")
+            headers = {"Content-Type": "application/json"}
+            if self.whatsapp_token:
+                headers["Authorization"] = f"Bearer {self.whatsapp_token}"
+            request = urllib.request.Request(self.whatsapp_webhook, data=payload, method="POST", headers=headers)
+            with urllib.request.urlopen(request, timeout=self.timeout):
+                pass
+        except Exception as exc:
+            print(f"[alert] whatsapp echoue: {exc}", file=sys.stderr)
 
 
 class Monitor:
@@ -271,6 +511,9 @@ class Monitor:
     def run(self) -> list[CheckResult]:
         checks = [
             ("supabase_registry", self.check_supabase_registry),
+            ("worker_heartbeat", self.check_worker_heartbeat),
+            ("scheduled_tasks", self.check_scheduled_tasks),
+            ("data_sentinels", self.check_data_sentinels),
             ("supabase_runs", self.check_supabase_runs),
             ("console_jobs", self.check_console_jobs),
             ("backend_health", self.check_backend_health),
@@ -309,6 +552,279 @@ class Monitor:
             f"Worker registry available: {count} workers",
             {"worker_count": count, "critical_count": critical},
         )
+
+    def check_worker_heartbeat(self) -> None:
+        """Preuve de vie par worker : alerte si un worker planifie n'a plus de succes recent.
+
+        Lit le heartbeat (last_success_at) ecrit par chaque worker. Degrade en
+        info si les colonnes ne sont pas encore provisionnees (migration
+        patch_worker_heartbeat non appliquee), sans polluer le resume.
+        """
+        if not self.supabase:
+            return
+        try:
+            rows = self.supabase.get(
+                "app_worker_registry",
+                {
+                    "select": "worker_key,worker_name,criticality,frequency,status,last_success_at,last_run_at,last_status",
+                    "order": "worker_key.asc",
+                },
+            )
+        except Exception as exc:
+            self.add(
+                "workers.heartbeat",
+                "system",
+                "workers",
+                "heartbeat",
+                "ok",
+                "Heartbeat workers en attente de migration (patch_worker_heartbeat_2026-07-04.sql)",
+                {"pending_migration": True, "error": str(exc)[:300]},
+                severity="info",
+            )
+            return
+        rows = rows or []
+        default_max = float(self.args.worker_stale_default_minutes)
+        stale: list[dict[str, Any]] = []
+        never: list[str] = []
+        scheduled = 0
+        for row in rows:
+            if (row.get("status") or "active") != "active":
+                continue
+            frequency = row.get("frequency") or ""
+            max_age = WORKER_STALE_POLICY.get(frequency, default_max)
+            if max_age is None:
+                continue  # worker a la demande : pas de notion de retard
+            scheduled += 1
+            worker_key = row.get("worker_key") or "?"
+            success_at = parse_iso(row.get("last_success_at"))
+            if success_at is None:
+                never.append(worker_key)
+                continue
+            age = age_minutes(success_at) or 0.0
+            if age > float(max_age):
+                criticality = row.get("criticality") or "medium"
+                severity = "critical" if criticality == "critical" else "warning"
+                stale.append(
+                    {
+                        "worker_key": worker_key,
+                        "age": age,
+                        "threshold": float(max_age),
+                        "severity": severity,
+                        "frequency": frequency,
+                        "criticality": criticality,
+                        "last_status": row.get("last_status"),
+                    }
+                )
+        for item in stale:
+            self.add(
+                f"workers.heartbeat:{item['worker_key']}",
+                "system",
+                "workers",
+                "heartbeat_worker",
+                item["severity"],
+                f"Worker sans succes depuis {item['age']:.0f} min (seuil {item['threshold']:.0f}): {item['worker_key']}",
+                {
+                    "worker_key": item["worker_key"],
+                    "age_minutes": item["age"],
+                    "threshold_minutes": item["threshold"],
+                    "frequency": item["frequency"],
+                    "criticality": item["criticality"],
+                    "last_status": item["last_status"],
+                },
+                severity=item["severity"],
+            )
+        if any(item["severity"] == "critical" for item in stale):
+            summary_status = "critical"
+        elif stale:
+            summary_status = "warning"
+        else:
+            summary_status = "ok"
+        self.add(
+            "workers.heartbeat",
+            "system",
+            "workers",
+            "heartbeat",
+            summary_status,
+            f"Heartbeat workers: {scheduled} planifies suivis, {len(stale)} en retard, {len(never)} sans premier signe",
+            {
+                "scheduled_tracked": scheduled,
+                "stale_count": len(stale),
+                "stale_workers": [item["worker_key"] for item in stale],
+                "never_reported": never,
+            },
+        )
+
+    def check_scheduled_tasks(self) -> None:
+        """Surveille les taches planifiees Windows GTI (LastTaskResult != 0 = echec).
+
+        Complementaire du heartbeat : detecte un planificateur qui echoue meme
+        quand le worker lui-meme n'a pas eu l'occasion de tourner. Utilise
+        Get-ScheduledTaskInfo (proprietes en anglais -> insensible a la locale).
+        Skip propre hors Windows.
+        """
+        if os.name != "nt":
+            self.add(
+                "scheduledtasks",
+                "system",
+                "scheduledtasks",
+                "windows_tasks",
+                "ok",
+                "Verification taches planifiees ignoree (hors Windows)",
+                {"skipped": True},
+                severity="info",
+            )
+            return
+        names = [n.strip() for n in str(self.args.scheduled_tasks).split(",") if n.strip()]
+        if not names:
+            return
+        ps_names = ",".join("'" + n.replace("'", "''") + "'" for n in names)
+        script = (
+            "$ErrorActionPreference='SilentlyContinue';"
+            f"$names=@({ps_names});"
+            "$out=foreach($n in $names){"
+            " $t=Get-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue;"
+            " if($t){ $i=$t|Get-ScheduledTaskInfo;"
+            "  $age=$null; if($i.LastRunTime){$age=[int]((Get-Date)-$i.LastRunTime).TotalMinutes};"
+            "  [pscustomobject]@{Name=$n;State=[string]$t.State;LastResult=$i.LastTaskResult;AgeMin=$age} }"
+            " else { [pscustomobject]@{Name=$n;State='NotFound';LastResult=$null;AgeMin=$null} } };"
+            "$out | ConvertTo-Json -Compress -Depth 3"
+        )
+        try:
+            proc = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                capture_output=True,
+                text=True,
+                timeout=self.args.timeout_seconds,
+            )
+            raw = (proc.stdout or "").strip()
+            data = json.loads(raw) if raw else []
+        except Exception as exc:
+            self.add(
+                "scheduledtasks",
+                "system",
+                "scheduledtasks",
+                "windows_tasks",
+                "unknown",
+                f"Impossible de lire les taches planifiees: {exc}",
+                {"error": str(exc)[:300]},
+                severity="unknown",
+            )
+            return
+        if isinstance(data, dict):
+            data = [data]
+        problems: list[dict[str, Any]] = []
+        for row in data:
+            name = row.get("Name") or "?"
+            state = row.get("State") or "?"
+            result = row.get("LastResult")
+            if state == "Disabled":
+                continue  # tache volontairement desactivee : pas une alerte
+            criticality = TASK_CRITICALITY.get(name, "warning")
+            if state == "NotFound":
+                problems.append({"name": name, "severity": "warning", "reason": "tache introuvable", "result": None})
+                continue
+            if result is not None and int(result) not in ACCEPTABLE_TASK_RESULTS:
+                severity = "critical" if criticality == "critical" else "warning"
+                problems.append({"name": name, "severity": severity, "reason": f"dernier resultat {result}", "result": result})
+        for item in problems:
+            slug = str(item["name"]).lower().replace(" ", "_")
+            self.add(
+                f"scheduledtasks:{slug}",
+                "system",
+                "scheduledtasks",
+                "windows_task",
+                item["severity"],
+                f"Tache planifiee {item['name']}: {item['reason']}",
+                {"task": item["name"], "reason": item["reason"], "last_result": item["result"]},
+                severity=item["severity"],
+            )
+        if any(item["severity"] == "critical" for item in problems):
+            summary_status = "critical"
+        elif problems:
+            summary_status = "warning"
+        else:
+            summary_status = "ok"
+        self.add(
+            "scheduledtasks",
+            "system",
+            "scheduledtasks",
+            "windows_tasks",
+            summary_status,
+            f"Taches planifiees: {len(data)} suivies, {len(problems)} en anomalie",
+            {"tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems]},
+        )
+
+    def _previous_sentinel_count(self, status_key: str) -> int | None:
+        """Lit le count du run precedent depuis app_monitor_status.details_json.count."""
+        try:
+            rows = self.supabase.get(
+                "app_monitor_status",
+                {"status_key": f"eq.{status_key}", "select": "details_json", "limit": "1"},
+            ) if self.supabase else None
+        except Exception:
+            return None
+        if rows:
+            detail = rows[0].get("details_json") or {}
+            value = detail.get("count")
+            if isinstance(value, (int, float)):
+                return int(value)
+        return None
+
+    def _evaluate_sentinel(self, sentinel: dict[str, Any], count: int) -> tuple[str, str, dict[str, Any]]:
+        label = sentinel["label"]
+        rule = sentinel["rule"]
+        if rule == "absolute":
+            max_v = int(sentinel["max"])
+            if count > max_v:
+                return "warning", f"{label}: {count} (seuil {max_v})", {"rule": rule, "threshold": max_v}
+            return "ok", f"{label}: {count} (seuil {max_v})", {"rule": rule, "threshold": max_v}
+        previous = self._previous_sentinel_count(sentinel["key"])
+        if previous is None:
+            return "ok", f"{label}: {count} (baseline etablie)", {"rule": rule, "previous": None}
+        if rule == "growth":
+            growth_pct = float(sentinel.get("growth_pct", 15))
+            growth_abs = int(sentinel.get("growth_abs", 0))
+            if count > previous * (1 + growth_pct / 100) and (count - previous) >= growth_abs:
+                return "warning", f"{label}: {count} (etait {previous}, +{count - previous})", {"rule": rule, "previous": previous, "growth_pct": growth_pct}
+            return "ok", f"{label}: {count} (prec. {previous})", {"rule": rule, "previous": previous}
+        if rule == "drop":
+            drop_pct = float(sentinel.get("drop_pct", 12))
+            floor = int(sentinel.get("min_floor", 0))
+            if count < floor:
+                return "critical", f"{label}: {count} sous le plancher {floor}", {"rule": rule, "previous": previous, "floor": floor}
+            if count < previous * (1 - drop_pct / 100):
+                return "warning", f"{label}: chute {previous} -> {count}", {"rule": rule, "previous": previous, "drop_pct": drop_pct}
+            return "ok", f"{label}: {count} (prec. {previous})", {"rule": rule, "previous": previous}
+        return "ok", f"{label}: {count}", {"rule": rule}
+
+    def check_data_sentinels(self) -> None:
+        """Sentinelles de donnees : detecte les derives silencieuses (idnego, orphelines,
+        diffusion sans mandat, chute d'actives...) invisibles pour le monitoring infra.
+        Chaque sentinelle persiste son count pour la comparaison au run suivant.
+        """
+        if not self.supabase:
+            return
+        for sentinel in DATA_SENTINELS:
+            key = sentinel["key"]
+            try:
+                count = self.supabase.count(sentinel["table"], sentinel.get("params"))
+            except Exception as exc:
+                self.add(
+                    key,
+                    "data_quality",
+                    "data",
+                    "sentinel",
+                    "unknown",
+                    f"Sentinelle '{sentinel['label']}' illisible: {exc}",
+                    {"error": str(exc)[:200]},
+                    severity="unknown",
+                )
+                continue
+            if count is None:
+                continue
+            status, message, details = self._evaluate_sentinel(sentinel, count)
+            details["count"] = count
+            self.add(key, "data_quality", "data", "sentinel", status, message, details)
 
     def check_supabase_runs(self) -> None:
         if not self.supabase:
@@ -384,6 +900,7 @@ class Monitor:
         error_recent = []
         pending_limit = float(self.args.console_pending_minutes)
         running_limit = float(self.args.console_running_minutes)
+        error_window = float(self.args.console_error_window_minutes)
         for row in rows:
             status = row.get("status")
             if status == "pending":
@@ -395,7 +912,11 @@ class Monitor:
                 if current_age > running_limit:
                     running_stale.append(row)
             elif status == "error":
-                error_recent.append(row)
+                # Anti-bruit : on ne compte que les erreurs recentes (les erreurs historiques
+                # deja corrigees ne doivent plus polluer le signal courant).
+                error_age = age_minutes(parse_iso(row.get("requested_at")))
+                if error_age is None or error_age <= error_window:
+                    error_recent.append(row)
         if running_stale:
             self.add(
                 "console.jobs.running_stale",
@@ -431,8 +952,8 @@ class Monitor:
             "console",
             "error_jobs",
             "warning" if error_recent else "ok",
-            f"{len(error_recent)} Console jobs currently in error",
-            {"count": len(error_recent)},
+            f"{len(error_recent)} Console jobs in error (last {error_window / 60:.0f}h)",
+            {"count": len(error_recent), "window_minutes": error_window},
         )
 
     def check_backend_health(self) -> None:
@@ -440,42 +961,51 @@ class Monitor:
         if not url:
             self.add("backend.health", "system", "backend", "health", "unknown", "Backend health URL not configured")
             return
-        request = urllib.request.Request(url, method="GET")
-        started = time.monotonic()
-        try:
-            with urllib.request.urlopen(request, timeout=self.args.timeout_seconds) as response:
-                elapsed_ms = int((time.monotonic() - started) * 1000)
-                payload = response.read().decode("utf-8", errors="replace")[:500]
-                if response.status != 200:
-                    self.add(
-                        "backend.health",
-                        "system",
-                        "backend",
-                        "health",
-                        "warning",
-                        f"Backend health returned HTTP {response.status}",
-                        {"url": url, "elapsed_ms": elapsed_ms, "body": payload},
-                    )
-                else:
-                    self.add(
-                        "backend.health",
-                        "system",
-                        "backend",
-                        "health",
-                        "ok",
-                        "Backend health OK",
-                        {"url": url, "elapsed_ms": elapsed_ms},
-                    )
-        except Exception as exc:
-            self.add(
-                "backend.health",
-                "system",
-                "backend",
-                "health",
-                "warning",
-                f"Backend health unreachable: {exc}",
-                {"url": url, "error": str(exc)},
-            )
+        attempts = max(1, int(self.args.backend_health_attempts))
+        last_error: str | None = None
+        for attempt in range(1, attempts + 1):
+            request = urllib.request.Request(url, method="GET")
+            started = time.monotonic()
+            try:
+                with urllib.request.urlopen(request, timeout=self.args.backend_timeout_seconds) as response:
+                    elapsed_ms = int((time.monotonic() - started) * 1000)
+                    payload = response.read().decode("utf-8", errors="replace")[:500]
+                    if response.status != 200:
+                        self.add(
+                            "backend.health",
+                            "system",
+                            "backend",
+                            "health",
+                            "warning",
+                            f"Backend health returned HTTP {response.status}",
+                            {"url": url, "elapsed_ms": elapsed_ms, "attempt": attempt, "body": payload},
+                        )
+                    else:
+                        message = "Backend health OK" if attempt == 1 else f"Backend health OK (reveil, tentative {attempt})"
+                        self.add(
+                            "backend.health",
+                            "system",
+                            "backend",
+                            "health",
+                            "ok",
+                            message,
+                            {"url": url, "elapsed_ms": elapsed_ms, "attempt": attempt},
+                        )
+                    return
+            except Exception as exc:
+                last_error = str(exc)
+                # 1re tentative en echec = probable cold start Render : reveil puis nouvelle mesure.
+                if attempt < attempts:
+                    time.sleep(self.args.backend_retry_delay_seconds)
+        self.add(
+            "backend.health",
+            "system",
+            "backend",
+            "health",
+            "warning",
+            f"Backend health unreachable after {attempts} attempt(s): {last_error}",
+            {"url": url, "attempts": attempts, "error": last_error},
+        )
 
     def check_sqlite_files(self) -> None:
         sqlite_specs = [
@@ -638,18 +1168,41 @@ class Monitor:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="GTI local read-only health supervisor.")
     parser.add_argument("--project-root", default=str(ROOT))
-    parser.add_argument("--backend-health-url", default=os.getenv("GTI_BACKEND_HEALTH_URL", "http://127.0.0.1:8000/health"))
+    # Backend en prod = Render (public), pas localhost. Surchargeable via GTI_BACKEND_HEALTH_URL
+    # (ex : http://127.0.0.1:8000/health pour surveiller une instance locale de dev).
+    parser.add_argument(
+        "--backend-health-url",
+        default=os.getenv("GTI_BACKEND_HEALTH_URL", "https://gti-backend-xlyf.onrender.com/health"),
+    )
+    # Timeout dedie plus large que le timeout global : Render peut sortir de veille (cold start).
+    parser.add_argument("--backend-timeout-seconds", type=int, default=60)
+    # Le monitor ping toutes les 2h -> backend souvent en veille. 1re tentative = reveil,
+    # 2e = mesure reelle. Evite les faux "injoignable" dus au cold start Render.
+    parser.add_argument("--backend-health-attempts", type=int, default=2)
+    parser.add_argument("--backend-retry-delay-seconds", type=float, default=3.0)
     parser.add_argument("--document-storage-path", default=os.getenv("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
     parser.add_argument("--timeout-seconds", type=int, default=15)
     parser.add_argument("--supabase-freshness-minutes", type=int, default=30 * 60)
+    parser.add_argument("--worker-stale-default-minutes", type=int, default=28 * 60)
+    parser.add_argument(
+        "--scheduled-tasks",
+        default="GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,GTI Relances Email",
+        help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
+    )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
     parser.add_argument("--actif-sqlite-freshness-minutes", type=int, default=7 * 24 * 60)
     parser.add_argument("--pipeline-log-freshness-minutes", type=int, default=30 * 60)
     parser.add_argument("--console-pending-minutes", type=int, default=60)
     parser.add_argument("--console-running-minutes", type=int, default=45)
+    parser.add_argument("--console-error-window-minutes", type=int, default=48 * 60)
+    parser.add_argument("--status-ttl-hours", type=float, default=24.0)
     parser.add_argument("--wal-warning-mb", type=int, default=512)
     parser.add_argument("--wal-critical-mb", type=int, default=1024)
     parser.add_argument("--log-dir-warning-mb", type=int, default=1024)
+    parser.add_argument("--alert-email", default=os.getenv("GTI_ALERT_EMAIL", "frederic.gerphagnon@gti-immobilier.fr"))
+    parser.add_argument("--alert-whatsapp", default=os.getenv("GTI_ALERT_WHATSAPP", "0658770893"))
+    parser.add_argument("--no-alerts", action="store_true", help="Desactive l'envoi d'alertes sortantes.")
+    parser.add_argument("--test-alert", action="store_true", help="Compose et affiche une alerte de test (aucun envoi).")
     parser.add_argument("--dry-run", action="store_true", help="Run checks but do not write to Supabase.")
     parser.add_argument("--emit-ok-events", action="store_true", help="Insert events for OK checks too.")
     parser.add_argument("--json", action="store_true", help="Print JSON report.")
@@ -669,17 +1222,65 @@ def configure_supabase(args: argparse.Namespace) -> SupabaseClient | None:
     return SupabaseClient(url, service_key, timeout_seconds=args.timeout_seconds)
 
 
-def write_results(supabase: SupabaseClient | None, results: list[CheckResult], emit_ok_events: bool) -> tuple[bool, str | None]:
+def write_results(
+    supabase: SupabaseClient | None,
+    results: list[CheckResult],
+    emit_ok_events: bool,
+    status_ttl_hours: float = 24.0,
+    alerter: "Alerter | None" = None,
+) -> tuple[bool, str | None]:
     if not supabase:
         return False, "Supabase writes skipped"
     try:
+        # Etats precedents (avant upsert) pour dedupliquer les events : on n'insere un
+        # event que sur CHANGEMENT d'etat, pas a chaque run (fini les memes warnings 12x/jour).
+        previous_status: dict[str, Any] = {}
+        try:
+            prev_rows = supabase.get("app_monitor_status", {"select": "status_key,status", "limit": "2000"})
+            for prev_row in prev_rows or []:
+                previous_status[prev_row.get("status_key")] = prev_row.get("status")
+        except Exception:
+            previous_status = {}
+
         supabase.upsert_status([result.status_row() for result in results])
-        event_rows = [
-            result.event_row()
-            for result in results
-            if emit_ok_events or result.status in {"warning", "critical", "unknown"}
-        ]
+
+        problem_states = {"warning", "critical", "unknown"}
+        event_rows = []
+        for result in results:
+            was = previous_status.get(result.status_key)
+            changed = was != result.status
+            # Event si : mode verbeux, OU transition impliquant un etat problematique
+            # (nouveau probleme, aggravation, ou resolution).
+            if emit_ok_events or (changed and (result.status in problem_states or was in problem_states)):
+                event_rows.append(result.event_row())
         supabase.insert_events(event_rows)
+
+        # TTL : purge des statuts obsoletes (cle resolue ou plus emise depuis > ttl).
+        if status_ttl_hours and status_ttl_hours > 0:
+            try:
+                cutoff = iso_utc(utc_now() - timedelta(hours=status_ttl_hours))
+                supabase.purge_stale_status(cutoff)
+            except Exception:
+                pass  # purge best-effort : ne doit pas faire echouer l'ecriture des statuts
+
+        # Alerte sortante : uniquement sur BASCULE vers critical (nouvelle cle critique),
+        # pas a chaque run tant que le probleme persiste. Best-effort : n'echoue jamais.
+        if alerter is not None:
+            try:
+                newly_critical = [
+                    result
+                    for result in results
+                    if result.status == "critical" and previous_status.get(result.status_key) != "critical"
+                ]
+                had_critical = any(state == "critical" for state in previous_status.values())
+                has_critical = any(result.status == "critical" for result in results)
+                if newly_critical:
+                    alerter.dispatch(newly_critical, kind="critical")
+                elif had_critical and not has_critical:
+                    alerter.dispatch([], kind="recovery")
+            except Exception:
+                pass  # alerting best-effort
+
         return True, None
     except Exception as exc:
         return False, str(exc)
@@ -697,12 +1298,25 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     supabase = configure_supabase(args)
+    alerter = Alerter(args)
+    if args.test_alert:
+        sample = CheckResult(
+            status_key="test.critical",
+            domain="system",
+            component="test",
+            check_name="test",
+            status="critical",
+            severity="critical",
+            message="Alerte de TEST du canal de monitoring (aucun incident reel).",
+        )
+        alerter.dispatch([sample], kind="critical", dry_run=True)
+        return 0
     monitor = Monitor(args, supabase)
     results = monitor.run()
     if args.dry_run:
         wrote, write_error = False, None
     else:
-        wrote, write_error = write_results(supabase, results, args.emit_ok_events)
+        wrote, write_error = write_results(supabase, results, args.emit_ok_events, args.status_ttl_hours, alerter)
     if args.dry_run:
         results.append(
             CheckResult(
