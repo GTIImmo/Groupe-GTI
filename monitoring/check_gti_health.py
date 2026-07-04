@@ -993,14 +993,39 @@ class Monitor:
                 f"Latest completed Supabase delta run age: {latest_age:.0f} min",
                 {"age_minutes": latest_age, "threshold_minutes": stale_limit},
             )
+        # Remonter la RAISON du dernier echec (extraite de notes.error) directement dans
+        # l'alerte, pour un diagnostic immediat (ex : PG 21000 doublon d'upsert).
+        if failed:
+            latest_failed = failed[0]  # failed derive de delta_rows trie started_at desc
+            notes = latest_failed.get("notes")
+            if isinstance(notes, dict):
+                reason = str(notes.get("error") or notes)[:300]
+            elif notes:
+                reason = str(notes)[:300]
+            else:
+                reason = "(sans detail)"
+            failed_scope = latest_failed.get("scope") or "?"
+            errors_message = (
+                f"{len(failed)} app_delta_run en echec sur {len(delta_rows)} recents "
+                f"- dernier ({failed_scope}): {reason}"
+            )
+            errors_details = {
+                "failed_count": len(failed),
+                "recent_count": len(delta_rows),
+                "latest_scope": failed_scope,
+                "latest_error": reason,
+            }
+        else:
+            errors_message = f"0 app_delta_run en echec sur {len(delta_rows)} recents"
+            errors_details = {"failed_count": 0, "recent_count": len(delta_rows)}
         self.add(
             "supabase.delta_run.errors",
             "system",
             "supabase",
             "delta_run_errors",
             "warning" if failed else "ok",
-            f"{len(failed)} failed app_delta_run rows in latest {len(delta_rows)} runs",
-            {"failed_count": len(failed), "recent_count": len(delta_rows)},
+            errors_message,
+            errors_details,
         )
 
     def check_console_jobs(self) -> None:
