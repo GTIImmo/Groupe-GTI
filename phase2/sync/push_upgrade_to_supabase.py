@@ -730,7 +730,11 @@ def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict
 
 
 def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
-    current_rows: list[dict[str, object]] = []
+    # Dedup par hektor_annonce_id (dernier gagne) = cle de conflit de l'upsert.
+    # Sans ca, un doublon dans la source fait echouer tout le push (PG 21000 :
+    # "ON CONFLICT DO UPDATE cannot affect row a second time"). Meme principe que
+    # normalize_broadcast_rows plus bas.
+    current_by_id: dict[int, dict[str, object]] = {}
     for row in rows:
         normalized = normalize_row(row, HISTORICAL_INDEX_NULLABLE_KEYS)
         hektor_annonce_id = normalized.get("hektor_annonce_id")
@@ -767,12 +771,13 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
         current_row["source_hash"] = stable_upload_hash(current_row)
-        current_rows.append(current_row)
-    return current_rows
+        current_by_id[current_row["hektor_annonce_id"]] = current_row
+    return list(current_by_id.values())
 
 
 def build_current_brouillon_index_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
-    current_rows: list[dict[str, object]] = []
+    # Dedup par hektor_annonce_id (dernier gagne) : idem index historique (PG 21000).
+    current_by_id: dict[int, dict[str, object]] = {}
     for row in rows:
         normalized = normalize_row(row, HISTORICAL_INDEX_NULLABLE_KEYS)
         hektor_annonce_id = normalized.get("hektor_annonce_id")
@@ -809,8 +814,8 @@ def build_current_brouillon_index_rows(rows: list[dict[str, object]]) -> list[di
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
         current_row["source_hash"] = stable_upload_hash(current_row)
-        current_rows.append(current_row)
-    return current_rows
+        current_by_id[current_row["hektor_annonce_id"]] = current_row
+    return list(current_by_id.values())
 
 
 def normalize_broadcast_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
