@@ -73,6 +73,8 @@ import {
   loadDossierCadastre,
   loadDossierEstimation,
   saveDossierEstimationSource,
+  saveEstimationScanDraft,
+  loadEstimationScanDraft,
   loadBdnb,
   loadDpe,
   loadPatrimoine,
@@ -985,6 +987,19 @@ function draftAnnoncePropertyTypeIdFromLabel(value: string | null | undefined) {
   return draftAnnoncePropertyTypes.find((item) => normalized.includes(normalizeDraftAnnonceScanText(item.label)) || normalizeDraftAnnonceScanText(item.label).includes(normalized))?.id ?? ''
 }
 
+// Resout un libelle de type de piece OCR (ex. "Chambre") vers l'idTypePiece Hektor.
+// Le worker sait aussi re-resoudre depuis le libelle, mais on cale l'id des le front.
+function compositionPieceTypeIdFromLabel(label: string | null | undefined): string {
+  const normalized = normalizeDraftAnnonceScanText(label)
+  if (!normalized) return ''
+  const direct = hektorCompositionPieceTypeOptions.find((opt) => normalizeDraftAnnonceScanText(opt.label) === normalized)
+  if (direct) return direct.value
+  return hektorCompositionPieceTypeOptions.find((opt) => {
+    const optLabel = normalizeDraftAnnonceScanText(opt.label)
+    return optLabel && (normalized.includes(optLabel) || optLabel.includes(normalized))
+  })?.value ?? ''
+}
+
 function draftAnnonceScanValue(scan: DraftAnnonceSheetScanPayload, key: keyof DraftAnnonceSheetScanPayload['fields']) {
   return scan.fields[key]?.value?.trim() ?? ''
 }
@@ -1474,6 +1489,86 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     ],
   },
 ]
+
+// Correspondance champs OCR (scan fiche) -> champs dynamiques Hektor (draftAnnonceWizardFields).
+// Ne couvre QUE les champs non deja geres par draftAnnonceAdvanced (pas de double).
+// kind : text/num bruts, ouinon -> OUI/NON, enum -> code d'option resolu depuis le libelle.
+type ScanWizardMapEntry = {
+  ocr: keyof DraftAnnonceSheetScanPayload['fields']
+  name: string
+  kind: 'text' | 'num' | 'ouinon' | 'enum'
+  options?: HektorSelectOption[]
+}
+
+const scanWizardFieldMap: ScanWizardMapEntry[] = [
+  { ocr: 'immeuble', name: 'immeuble', kind: 'text' },
+  { ocr: 'transport', name: 'TRANSPORT', kind: 'text' },
+  { ocr: 'proximity', name: 'PROXIMITE', kind: 'text' },
+  { ocr: 'environment', name: 'ENVIRONNEMENT', kind: 'text' },
+  { ocr: 'kitchenEquipment', name: 'CUISINE_EQUIPEMENT', kind: 'enum', options: hektorKitchenEquipmentOptions },
+  { ocr: 'particularities', name: 'Particularites', kind: 'enum', options: hektorParticularityOptions },
+  { ocr: 'terrace', name: 'TERRASSE', kind: 'ouinon' },
+  { ocr: 'terraceSurface', name: 'SURFACE_TERRASSE', kind: 'num' },
+  { ocr: 'balcony', name: 'BALCON', kind: 'ouinon' },
+  { ocr: 'balconyCount', name: 'NB_BALCON', kind: 'num' },
+  { ocr: 'balconySurface', name: 'SURFACE_BALCON', kind: 'num' },
+  { ocr: 'cellar', name: 'CAVE', kind: 'ouinon' },
+  { ocr: 'cellarSurface', name: 'SURFACE_CAVE', kind: 'num' },
+  { ocr: 'floor', name: 'ETAGE', kind: 'num' },
+  { ocr: 'topFloor', name: 'DERNIER_ETAGE', kind: 'ouinon' },
+  { ocr: 'floorsCount', name: 'NB_ETAGES', kind: 'num' },
+  { ocr: 'partyWalls', name: 'MURS_MITOYENS', kind: 'enum', options: hektorPartyWallOptions },
+  { ocr: 'residence', name: 'RESIDENCE', kind: 'enum', options: hektorResidenceOptions },
+  { ocr: 'residenceType', name: 'TYPE_RESIDENCE', kind: 'enum', options: hektorResidenceTypeOptions },
+  { ocr: 'heatingFormat', name: 'formatChauff', kind: 'enum', options: hektorHeatingFormatOptions },
+  { ocr: 'heatingType', name: 'typeChauff', kind: 'enum', options: hektorHeatingTypeOptions },
+  { ocr: 'heatingEnergy', name: 'energieChauff', kind: 'enum', options: hektorHeatingEnergyOptions },
+  { ocr: 'water', name: 'EAU', kind: 'enum', options: hektorWaterOptions },
+  { ocr: 'sanitation', name: 'ASSAINISSEMENT', kind: 'enum', options: hektorSanitationOptions },
+  { ocr: 'waterDistribution', name: 'DISTRIBUTION_EAU', kind: 'enum', options: hektorHotWaterDistributionOptions },
+  { ocr: 'waterEnergy', name: 'ENERGIE_EAU', kind: 'enum', options: hektorHotWaterEnergyOptions },
+  { ocr: 'elevator', name: 'ASCENSEUR', kind: 'ouinon' },
+  { ocr: 'disabledAccess', name: 'ACCES_HANDI', kind: 'ouinon' },
+  { ocr: 'airConditioning', name: 'climatisation', kind: 'ouinon' },
+  { ocr: 'fireplace', name: 'cheminee', kind: 'ouinon' },
+  { ocr: 'electricShutters', name: 'volets_elctriques', kind: 'ouinon' },
+  { ocr: 'doubleGlazing', name: 'double_vitrage', kind: 'ouinon' },
+  { ocr: 'tripleGlazing', name: 'triple_vitrage', kind: 'ouinon' },
+  { ocr: 'fiber', name: 'cable', kind: 'ouinon' },
+  { ocr: 'armoredDoor', name: 'porte_blindee', kind: 'ouinon' },
+  { ocr: 'intercom', name: 'interphone', kind: 'ouinon' },
+  { ocr: 'videophone', name: 'visiophone', kind: 'ouinon' },
+  { ocr: 'alarm', name: 'alarme', kind: 'ouinon' },
+  { ocr: 'digicode', name: 'digicode', kind: 'ouinon' },
+  { ocr: 'smokeDetector', name: 'detecteur_fumee', kind: 'ouinon' },
+  { ocr: 'caretaker', name: 'gardien', kind: 'ouinon' },
+  { ocr: 'dpeDate', name: 'dpe_date', kind: 'text' },
+  { ocr: 'finalEnergy', name: 'valeurEnergieFinale', kind: 'num' },
+  { ocr: 'energyCostMin', name: 'dpe_couts_min', kind: 'num' },
+  { ocr: 'energyCostMax', name: 'dpe_couts_max', kind: 'num' },
+  { ocr: 'coproperty', name: 'copropriete', kind: 'ouinon' },
+  { ocr: 'coproLot', name: 'copropriete_lot', kind: 'text' },
+  { ocr: 'safeguardPlan', name: 'copropriete_plan_sauvegarde', kind: 'ouinon' },
+  { ocr: 'available', name: 'DISPO', kind: 'ouinon' },
+  { ocr: 'releaseDate', name: 'DATE_LIBER', kind: 'text' },
+  { ocr: 'availabilityDate', name: 'DATE_DISPO', kind: 'text' },
+  { ocr: 'keys', name: 'CLES', kind: 'text' },
+  { ocr: 'estimationAmount', name: 'ESTIMATION_MONTANT', kind: 'num' },
+  { ocr: 'estimationDate', name: 'ESTIMATION_DATE', kind: 'text' },
+  { ocr: 'propertyTax', name: 'TAXE_FONCIERE', kind: 'num' },
+  { ocr: 'housingTax', name: 'TAXE_HABITATION', kind: 'num' },
+]
+
+function resolveWizardOptionValue(text: string, options: HektorSelectOption[]): string {
+  const norm = normalizeDraftAnnonceScanText(text)
+  if (!norm) return ''
+  const direct = options.find((opt) => opt.value && normalizeDraftAnnonceScanText(opt.label) === norm)
+  if (direct) return direct.value
+  return options.find((opt) => {
+    const optLabel = normalizeDraftAnnonceScanText(opt.label)
+    return opt.value && optLabel && (norm.includes(optLabel) || optLabel.includes(norm))
+  })?.value ?? ''
+}
 
 const draftAnnonceAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKind, readonly DraftAnnonceAdvancedKey[]> = {
   apartment: [
@@ -4669,6 +4764,24 @@ function EstimationDocumentEditor(props: {
 
   const [open, setOpen] = useState(!!props.modal)
   const [draft, setDraft] = useState(initialDraft)
+  // Pre-remplissage depuis le brouillon scanne (agent de saisie) : ecrase les
+  // defauts par ce qui a ete lu sur la fiche (valeurs, etat, points, argumentaire…).
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const scanDraft = await loadEstimationScanDraft(dossier.app_dossier_id)
+      if (cancelled || !scanDraft || !Object.keys(scanDraft).length) return
+      setDraft((current) => {
+        const merged = { ...current } as Record<string, unknown>
+        for (const [key, val] of Object.entries(scanDraft)) {
+          if (val == null || val === '') continue
+          merged[key] = val
+        }
+        return merged as typeof current
+      })
+    })()
+    return () => { cancelled = true }
+  }, [dossier.app_dossier_id])
   const [tab, setTab] = useState<'bien' | 'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('bien')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -10331,7 +10444,14 @@ export default function App() {
   const [draftAnnoncePhotoDrafts, setDraftAnnoncePhotoDrafts] = useState<DraftAnnoncePhotoDraft[]>([])
   const [draftAnnoncePhotoInputVersion, setDraftAnnoncePhotoInputVersion] = useState(0)
   const [draftAnnonceQueuedPhotos, setDraftAnnonceQueuedPhotos] = useState<Record<string, DraftAnnonceQueuedPhoto[]>>({})
+  // Brouillon d'estimation scanne (agent de saisie) : mis a jour au scan, puis mis en file
+  // par job de creation pour etre ecrit une fois l'app_dossier_id resolu.
+  const [draftAnnonceEstimationScan, setDraftAnnonceEstimationScan] = useState<Record<string, unknown> | null>(null)
+  const [draftAnnonceQueuedEstimation, setDraftAnnonceQueuedEstimation] = useState<Record<string, Record<string, unknown>>>({})
+  // Agent de saisie : une fiche scannee cree une ESTIMATION (quel que soit l'ecran d'origine).
+  const [draftAnnonceScanEstimation, setDraftAnnonceScanEstimation] = useState(false)
   const draftAnnoncePhotoUploadStartedRef = useRef<Set<string>>(new Set())
+  const draftAnnonceEstimationSavedRef = useRef<Set<string>>(new Set())
   const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('offre')
   const [draftAnnonceTitle, setDraftAnnonceTitle] = useState('')
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
@@ -10582,7 +10702,7 @@ export default function App() {
         : draftMandantChoice === 'existing'
           ? 'Contact a selectionner'
           : 'Non ajoute'
-  const draftAnnonceCreationStatus = screen === 'estimations' ? 'estimation' : 'active'
+  const draftAnnonceCreationStatus = (draftAnnonceScanEstimation || screen === 'estimations') ? 'estimation' : 'active'
   const draftAnnonceCreationStatusLabel = draftAnnonceCreationStatus === 'estimation' ? 'Estimation' : 'Actif'
   const negotiatorAssignAgency = useMemo(() => {
     return hektorAgencies.find((item) => item.idAgence === negotiatorAssignAgencyValue) ?? null
@@ -11146,6 +11266,48 @@ export default function App() {
       cancelled = true
     }
   }, [dataScope, draftAnnonceQueuedPhotos, hektorActionJobs, hektorActionLinkedDossiers, session])
+
+  // Ecrit le brouillon d'estimation scanne dans app_dossier_estimation une fois
+  // l'annonce creee resolue (meme mecanique que la file photos). L'editeur d'avis
+  // de valeur le chargera ensuite en initialDraft.
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    const entries = Object.entries(draftAnnonceQueuedEstimation).filter(([, draft]) => draft && Object.keys(draft).length > 0)
+    if (entries.length === 0) return
+    let cancelled = false
+    async function saveQueuedEstimations() {
+      for (const [createJobId, scanDraft] of entries) {
+        if (cancelled || draftAnnonceEstimationSavedRef.current.has(createJobId)) continue
+        const createJob = hektorActionJobs.find((job) => job.id === createJobId)
+        if (!createJob) continue
+        if (createJob.status === 'error') {
+          setDraftAnnonceQueuedEstimation((current) => { const next = { ...current }; delete next[createJobId]; return next })
+          continue
+        }
+        if (createJob.status !== 'done') continue
+        const hektorAnnonceId = hektorCreatedAnnonceId(createJob)
+        if (!hektorAnnonceId) continue
+        draftAnnonceEstimationSavedRef.current.add(createJobId)
+        try {
+          let dossier: Dossier | null = hektorActionLinkedDossiers[hektorAnnonceId] ?? null
+          if (!dossier) {
+            dossier = await loadHektorActionAppDossier(createJob, dataScope)
+            if (dossier && !cancelled) setHektorActionLinkedDossiers((current) => current[hektorAnnonceId] ? current : { ...current, [hektorAnnonceId]: dossier as Dossier })
+          }
+          if (cancelled) return
+          if (!dossier) { draftAnnonceEstimationSavedRef.current.delete(createJobId); continue }
+          await saveEstimationScanDraft(dossier.app_dossier_id, hektorAnnonceId, scanDraft)
+          if (cancelled) return
+          setDraftAnnonceQueuedEstimation((current) => { const next = { ...current }; delete next[createJobId]; return next })
+        } catch {
+          if (cancelled) return
+          draftAnnonceEstimationSavedRef.current.delete(createJobId)
+        }
+      }
+    }
+    void saveQueuedEstimations()
+    return () => { cancelled = true }
+  }, [dataScope, draftAnnonceQueuedEstimation, hektorActionJobs, hektorActionLinkedDossiers, session])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
@@ -12128,6 +12290,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceCompositionPieces([])
     setDraftAnnonceCompositionDraft(createEmptyHektorCompositionPieceDraft())
     setDraftAnnonceStep('offre')
+    setDraftAnnonceEstimationScan(null)
+    setDraftAnnonceScanEstimation(false)
     setDraftAnnonceScanMessage(null)
     setDraftAnnonceScanWarnings([])
     setDraftAnnonceScanInputVersion((value) => value + 1)
@@ -12287,12 +12451,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setIfPresent(setDraftAnnonceSurface, value('surface'))
     setIfPresent(setDraftAnnonceRoomCount, value('roomCount'))
     setIfPresent(setDraftAnnonceBedroomCount, value('bedroomCount'))
+    setIfPresent(setDraftAnnonceLevelCount, value('levelCount'))
     setIfPresent(setDraftAnnonceNote, value('note') || scan.rawNotes || '')
     setIfPresent(setDraftMandantCivility, value('mandantCivility'))
     setIfPresent(setDraftMandantLastName, value('mandantLastName'))
     setIfPresent(setDraftMandantFirstName, value('mandantFirstName'))
     setIfPresent(setDraftMandantEmail, value('mandantEmail'))
     setIfPresent(setDraftMandantPhone, value('mandantPhone'))
+    setIfPresent(setDraftMandantAddress, value('mandantAddress'))
+    setIfPresent(setDraftMandantPostalCode, value('mandantPostalCode'))
+    setIfPresent(setDraftMandantCity, value('mandantCity'))
 
     const propertyTypeId = draftAnnoncePropertyTypeIdFromLabel(value('propertyType'))
     if (propertyTypeId) setDraftAnnonceTypeId(propertyTypeId)
@@ -12307,6 +12475,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const setAdvancedIfPresent = (key: DraftAnnonceAdvancedKey, next: string) => {
       if (next) advancedUpdates[key] = next
     }
+    // Jardin/Piscine sont des selecteurs OUI/NON : on normalise le texte OCR.
+    const toOuiNon = (raw: string): string => {
+      const t = raw.trim().toLowerCase()
+      if (!t) return ''
+      if (t.startsWith('o') || t.includes('oui') || t.includes('avec') || t === '1') return 'OUI'
+      if (t.startsWith('n') || t.includes('non') || t.includes('sans') || t === '0') return 'NON'
+      return ''
+    }
     setAdvancedIfPresent('description', value('description'))
     setAdvancedIfPresent('netSellerPrice', value('netSellerPrice'))
     setAdvancedIfPresent('carrezSurface', value('carrezSurface'))
@@ -12320,8 +12496,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setAdvancedIfPresent('interiorState', value('interiorState'))
     setAdvancedIfPresent('exteriorState', value('exteriorState'))
     setAdvancedIfPresent('landSurface', value('landSurface'))
+    setAdvancedIfPresent('garden', toOuiNon(value('garden')))
+    setAdvancedIfPresent('pool', toOuiNon(value('pool')))
     setAdvancedIfPresent('terraceCount', value('terraceCount'))
     setAdvancedIfPresent('garageCount', value('garageCount'))
+    setAdvancedIfPresent('garageSurface', value('garageSurface'))
     setAdvancedIfPresent('parkingInsideCount', value('parkingInsideCount'))
     setAdvancedIfPresent('parkingOutsideCount', value('parkingOutsideCount'))
     setAdvancedIfPresent('constructionYear', value('constructionYear'))
@@ -12339,6 +12518,66 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (hasMandant) {
       setDraftMandantChoice('new')
     }
+
+    // Composition des pieces (OCR -> draftAnnonceCompositionPieces).
+    // idTypePiece resolu depuis le libelle ; le worker re-resout au besoin.
+    const scannedPieces = Array.isArray(scan.pieces) ? scan.pieces : []
+    const mappedPieces = scannedPieces
+      .map((piece) => {
+        const idTypePiece = compositionPieceTypeIdFromLabel(piece?.type)
+        return createEmptyHektorCompositionPieceDraft({
+          idTypePiece: idTypePiece || '1',
+          typeLabel: (piece?.type ?? '').trim(),
+          detailPiece: (piece?.detail ?? '').trim(),
+          etagePiece: (piece?.etage ?? '').trim(),
+          surfacePiece: (piece?.surface ?? '').replace(',', '.').trim(),
+          notePublique: (piece?.note ?? '').trim(),
+        })
+      })
+      .filter((piece) => hektorCompositionPieceHasContent(piece))
+    if (mappedPieces.length) setDraftAnnonceCompositionPieces(mappedPieces)
+
+    // Champs dynamiques Hektor (equipements, exterieur detaille, diagnostics, copro, fiscalite).
+    for (const entry of scanWizardFieldMap) {
+      const raw = value(entry.ocr)
+      if (!raw) continue
+      let mapped = raw
+      if (entry.kind === 'ouinon') mapped = toOuiNon(raw)
+      else if (entry.kind === 'num') mapped = raw.replace(',', '.')
+      else if (entry.kind === 'enum' && entry.options) mapped = resolveWizardOptionValue(raw, entry.options)
+      if (mapped) updateDraftAnnonceWizardField(entry.name, mapped)
+    }
+
+    // Brouillon d'estimation (avis de valeur) depuis l'OCR -> ecrit apres creation,
+    // charge par l'editeur EstimationDocumentEditor. Cle = champs du draft de l'editeur.
+    const estimationDraft: Record<string, unknown> = {}
+    const setEstim = (key: string, next: string) => { if (next) estimationDraft[key] = next }
+    setEstim('basse', value('estimationLow'))
+    setEstim('estimee', value('estimationAmount'))
+    setEstim('haute', value('estimationHigh'))
+    setEstim('etatNote', value('stateNote'))
+    setEstim('etatLabel', value('stateLabel'))
+    setEstim('etatTexte', value('stateAppreciation'))
+    setEstim('pointsForts', value('strongPoints'))
+    setEstim('pointsVigilance', value('watchPoints'))
+    setEstim('argumentaire', value('priceArgument'))
+    setEstim('commentaire', value('advisorOpinion'))
+    setEstim('taxeFonciere', value('propertyTax'))
+    setEstim('energie', value('chargeEnergy'))
+    setEstim('eau', value('chargeWater'))
+    setEstim('assurance', value('chargeInsurance'))
+    const scannedPosts = Array.isArray(scan.statePosts) ? scan.statePosts : []
+    if (scannedPosts.length) {
+      const etatPostes: Record<string, { niveau: string; label: string }> = {}
+      for (const post of scannedPosts) {
+        const key = (post?.poste ?? '').trim()
+        if (key) etatPostes[key] = { niveau: (post?.level ?? '').trim(), label: (post?.note ?? '').trim() }
+      }
+      if (Object.keys(etatPostes).length) estimationDraft.etatPostes = etatPostes
+    }
+    setDraftAnnonceEstimationScan(Object.keys(estimationDraft).length ? estimationDraft : null)
+    // Agent de saisie : une fiche scannee cree une estimation.
+    setDraftAnnonceScanEstimation(true)
 
     const lowConfidence = Object.entries(scan.fields)
       .filter(([, field]) => field.value?.trim() && typeof field.confidence === 'number' && field.confidence < 0.75)
@@ -12648,6 +12887,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (queuedPhotos.length) {
         setDraftAnnonceQueuedPhotos((current) => ({ ...current, [job.id]: queuedPhotos }))
         clearDraftAnnoncePhotoDrafts()
+      }
+      if (draftAnnonceEstimationScan && Object.keys(draftAnnonceEstimationScan).length) {
+        const scanDraft = draftAnnonceEstimationScan
+        setDraftAnnonceQueuedEstimation((current) => ({ ...current, [job.id]: scanDraft }))
+        setDraftAnnonceEstimationScan(null)
       }
       setDraftAnnonceModalOpen(false)
       setNoticeMessage(queuedPhotos.length
