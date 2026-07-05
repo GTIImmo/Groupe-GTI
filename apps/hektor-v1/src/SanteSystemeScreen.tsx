@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, type MonitorStatusRow } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, type MonitorStatusRow, type AlertRow } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
@@ -21,6 +21,14 @@ const STATUS_LABEL: Record<Tone, string> = {
   warn: 'À surveiller',
   crit: 'Incident',
   unknown: 'Indéterminé',
+}
+
+const SOURCE_LABEL: Record<string, string> = {
+  monitoring: 'Système',
+  notification: 'Notif',
+  relance: 'Relance',
+  pauline: 'Pauline',
+  agent: 'Agent',
 }
 
 const DOMAIN_LABEL: Record<string, string> = {
@@ -62,6 +70,7 @@ function timeAgo(iso: string | null): string {
 
 export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps) {
   const [rows, setRows] = useState<MonitorStatusRow[]>([])
+  const [alerts, setAlerts] = useState<AlertRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
@@ -69,8 +78,9 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      const data = await loadMonitorStatus()
-      setRows(data)
+      const [status, alertRows] = await Promise.all([loadMonitorStatus(), loadAlertsCurrent()])
+      setRows(status)
+      setAlerts(alertRows)
       setLastRefresh(new Date())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement')
@@ -127,6 +137,22 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
     return entries
   }, [rows])
 
+  const alertsToTreat = useMemo(
+    () =>
+      alerts
+        .filter((alert) => alert.severity === 'warning' || alert.severity === 'critical')
+        .sort(
+          (a, b) =>
+            (a.severity === 'critical' ? 0 : 1) - (b.severity === 'critical' ? 0 : 1) ||
+            (b.created_at ?? '').localeCompare(a.created_at ?? ''),
+        ),
+    [alerts],
+  )
+  const alertsInfoCount = useMemo(
+    () => alerts.filter((alert) => alert.severity !== 'warning' && alert.severity !== 'critical').length,
+    [alerts],
+  )
+
   if (!isAdmin) {
     return (
       <section className="panel">
@@ -177,6 +203,41 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
           <span className={`ss-kpi-val ${counts.crit ? 'ss-text-crit' : ''}`}>{counts.crit}</span>
         </div>
       </div>
+
+      {alertsToTreat.length > 0 || alertsInfoCount > 0 ? (
+        <div className="ss-group">
+          <div className="ss-group-head">
+            <h2>Alertes à traiter</h2>
+            <span className="ss-count">{alertsToTreat.length}</span>
+          </div>
+          <div className="ss-rows">
+            {alertsToTreat.map((alert) => {
+              const tone = toneOf(alert.severity)
+              return (
+                <div className="ss-row" key={alert.alert_key}>
+                  <span className={`ss-dot ss-${tone}`} aria-hidden="true" />
+                  <div className="ss-row-body">
+                    <div className="ss-row-name">
+                      <span className="ss-src">{SOURCE_LABEL[alert.source] ?? alert.source}</span>{' '}
+                      {alert.title ?? alert.alert_key}
+                    </div>
+                    <div className="ss-row-msg">{alert.owner_email ?? alert.owner_role ?? ''}</div>
+                  </div>
+                  <div className="ss-row-meta">
+                    <span className={`ss-pill ss-bg-${tone}`}>{STATUS_LABEL[tone]}</span>
+                    <span className="ss-age">{timeAgo(alert.created_at)}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {alertsInfoCount > 0 ? (
+            <div className="ss-alerts-info">
+              + {alertsInfoCount} notification{alertsInfoCount > 1 ? 's' : ''} non lue{alertsInfoCount > 1 ? 's' : ''}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {groups.map(([domain, list]) => (
         <div className="ss-group" key={domain}>

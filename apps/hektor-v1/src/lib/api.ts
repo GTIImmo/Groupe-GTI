@@ -1913,6 +1913,30 @@ export async function loadMonitorStatus(): Promise<MonitorStatusRow[]> {
   return (data ?? []) as MonitorStatusRow[]
 }
 
+export type AlertRow = {
+  alert_key: string
+  source: string
+  category: string | null
+  severity: string
+  owner_role: string | null
+  owner_email: string | null
+  object_type: string | null
+  object_id: string | null
+  title: string | null
+  action_url: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export async function loadAlertsCurrent(): Promise<AlertRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('alerts_current')
+    .select('alert_key,source,category,severity,owner_role,owner_email,object_type,object_id,title,action_url,created_at,updated_at')
+  if (error) throw new Error(error.message ?? 'Unable to load alerts')
+  return (data ?? []) as AlertRow[]
+}
+
 type ContactStatsSnapshotRow = {
   total?: number | string | null
   active?: number | string | null
