@@ -549,19 +549,26 @@ class Monitor:
                 "order": "worker_key.asc",
             },
         )
-        count = len(rows or [])
-        if count == 0:
+        all_rows = rows or []
+        if len(all_rows) == 0:
             self.add("supabase.registry", "system", "supabase", "worker_registry", "critical", "Worker registry is empty")
             return
-        critical = sum(1 for row in rows if row.get("criticality") == "critical")
+        # On ne compte que les workers operationnels : les 'disabled' (ex : prototype ACTIF
+        # abandonne) ne doivent pas gonfler le compteur ni la realite pilotee.
+        operational = [row for row in all_rows if row.get("status") != "disabled"]
+        disabled = len(all_rows) - len(operational)
+        critical = sum(1 for row in operational if row.get("criticality") == "critical")
+        message = f"Registre workers: {len(operational)} actifs"
+        if disabled:
+            message += f" ({disabled} desactives)"
         self.add(
             "supabase.registry",
             "system",
             "supabase",
             "worker_registry",
             "ok",
-            f"Worker registry available: {count} workers",
-            {"worker_count": count, "critical_count": critical},
+            message,
+            {"worker_count": len(operational), "disabled_count": disabled, "critical_count": critical},
         )
 
     def check_worker_heartbeat(self) -> None:
@@ -1016,7 +1023,15 @@ class Monitor:
             },
         ) or []
         completed = [row for row in delta_rows if row.get("status") == "completed"]
-        failed = [row for row in delta_rows if row.get("status") == "failed"]
+        # Anti-bruit : ne compter que les echecs RECENTS (un echec deja corrige depuis
+        # 2 jours ne doit plus polluer le signal courant).
+        delta_error_window = float(self.args.delta_error_window_minutes)
+        failed = [
+            row
+            for row in delta_rows
+            if row.get("status") == "failed"
+            and (age_minutes(parse_iso(row.get("started_at"))) or 0.0) <= delta_error_window
+        ]
         latest_completed = completed[0] if completed else None
         latest_finished = parse_iso(latest_completed.get("finished_at") if latest_completed else None)
         latest_age = age_minutes(latest_finished)
@@ -1214,7 +1229,6 @@ class Monitor:
         sqlite_specs = [
             ("sqlite.hektor", self.root / "data" / "hektor.sqlite", self.args.sqlite_freshness_minutes, "critical"),
             ("sqlite.phase2", self.root / "phase2" / "phase2.sqlite", self.args.sqlite_freshness_minutes, "critical"),
-            ("sqlite.actif", self.root / "ACTIF" / "actif.sqlite", self.args.actif_sqlite_freshness_minutes, "warning"),
         ]
         for key, path, freshness_minutes, stale_status in sqlite_specs:
             if not path.exists():
@@ -1390,6 +1404,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--document-storage-path", default=os.getenv("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
     parser.add_argument("--timeout-seconds", type=int, default=15)
     parser.add_argument("--supabase-freshness-minutes", type=int, default=30 * 60)
+    parser.add_argument("--delta-error-window-minutes", type=int, default=24 * 60)
     parser.add_argument("--worker-stale-default-minutes", type=int, default=28 * 60)
     parser.add_argument(
         "--scheduled-tasks",
@@ -1397,7 +1412,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
-    parser.add_argument("--actif-sqlite-freshness-minutes", type=int, default=7 * 24 * 60)
     parser.add_argument("--pipeline-log-freshness-minutes", type=int, default=30 * 60)
     parser.add_argument("--console-pending-minutes", type=int, default=60)
     parser.add_argument("--console-running-minutes", type=int, default=45)
