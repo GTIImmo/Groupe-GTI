@@ -45,6 +45,12 @@
 .sante-systeme-v1 .ss-age { font-size: 11px; color: #9aa5b6; white-space: nowrap; }
 .sante-systeme-v1 .ss-src { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: #748097; background: #eef1f6; padding: 1px 6px; border-radius: 5px; margin-right: 2px; }
 .sante-systeme-v1 .ss-alerts-info { font-size: 12px; color: #6b7686; padding: 8px 0 0; }
+.sante-systeme-v1 .ss-ack { font-size: 10px; font-weight: 600; color: #0a5347; background: #e4f3f0; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.sante-systeme-v1 .ss-actions { display: inline-flex; gap: 6px; }
+.sante-systeme-v1 .ss-act { font-size: 11px; border: 1px solid #d7dbe3; background: #fff; border-radius: 7px; padding: 3px 9px; cursor: pointer; white-space: nowrap; color: #3a4658; }
+.sante-systeme-v1 .ss-act:hover { background: #f5f6f8; }
+.sante-systeme-v1 .ss-act-done { border-color: #cfe6e0; color: #0a5347; background: #e4f3f0; }
+.sante-systeme-v1 .ss-act-done:hover { background: #d7ece7; }
 
 @media (max-width: 640px) {
   .sante-systeme-v1 .ss-row-meta { flex-direction: column; align-items: flex-end; gap: 2px; }

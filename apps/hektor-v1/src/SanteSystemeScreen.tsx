@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, loadAlertsCurrent, type MonitorStatusRow, type AlertRow } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, setAlertState, type MonitorStatusRow, type AlertRow } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
@@ -89,6 +89,18 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
     }
   }, [])
 
+  const handleAlertAction = useCallback(
+    async (alertKey: string, status: 'acknowledged' | 'resolved') => {
+      try {
+        await setAlertState(alertKey, status)
+        void refresh()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Action impossible')
+      }
+    },
+    [refresh],
+  )
+
   useEffect(() => {
     if (!isAdmin) return
     void refresh()
@@ -140,7 +152,13 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
   const alertsToTreat = useMemo(
     () =>
       alerts
-        .filter((alert) => alert.severity === 'warning' || alert.severity === 'critical')
+        .filter(
+          (alert) =>
+            (alert.severity === 'warning' || alert.severity === 'critical') &&
+            alert.lifecycle_status !== 'resolved' &&
+            alert.lifecycle_status !== 'ignored' &&
+            alert.lifecycle_status !== 'snoozed',
+        )
         .sort(
           (a, b) =>
             (a.severity === 'critical' ? 0 : 1) - (b.severity === 'critical' ? 0 : 1) ||
@@ -224,8 +242,15 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
                     <div className="ss-row-msg">{alert.owner_email ?? alert.owner_role ?? ''}</div>
                   </div>
                   <div className="ss-row-meta">
+                    {alert.lifecycle_status === 'acknowledged' ? <span className="ss-ack">Pris en charge</span> : null}
                     <span className={`ss-pill ss-bg-${tone}`}>{STATUS_LABEL[tone]}</span>
                     <span className="ss-age">{timeAgo(alert.created_at)}</span>
+                    <span className="ss-actions">
+                      {alert.lifecycle_status === 'new' ? (
+                        <button type="button" className="ss-act" onClick={() => { void handleAlertAction(alert.alert_key, 'acknowledged') }}>Prendre en charge</button>
+                      ) : null}
+                      <button type="button" className="ss-act ss-act-done" onClick={() => { void handleAlertAction(alert.alert_key, 'resolved') }}>Résolu</button>
+                    </span>
                   </div>
                 </div>
               )
