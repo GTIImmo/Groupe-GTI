@@ -16432,6 +16432,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenDetailPage={openDossierDetailPage}
             onOpenRequestModal={(id, requestType) => openRequestModal(id, 'pauline', requestType)}
           />
+        ) : screen === 'sante' ? (
+          <SanteSystemeScreen isAdmin={isAdmin} />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
             mandats={screenMandats}
