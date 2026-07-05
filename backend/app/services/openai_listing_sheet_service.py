@@ -30,6 +30,7 @@ FIELD_KEYS = [
     "livingSurface",
     "roomCount",
     "bedroomCount",
+    "levelCount",
     "bathroomCount",
     "showerRoomCount",
     "wcCount",
@@ -39,8 +40,11 @@ FIELD_KEYS = [
     "interiorState",
     "exteriorState",
     "landSurface",
+    "garden",
+    "pool",
     "terraceCount",
     "garageCount",
+    "garageSurface",
     "parkingInsideCount",
     "parkingOutsideCount",
     "constructionYear",
@@ -50,6 +54,83 @@ FIELD_KEYS = [
     "coproCharges",
     "coproQuotePart",
     "coproWorksFund",
+    # Localisation (optionnel)
+    "immeuble",
+    "transport",
+    "proximity",
+    "environment",
+    # Interieur
+    "kitchenEquipment",
+    "particularities",
+    # Exterieur detaille
+    "terrace",
+    "terraceSurface",
+    "balcony",
+    "balconyCount",
+    "balconySurface",
+    "cellar",
+    "cellarSurface",
+    "floor",
+    "topFloor",
+    "floorsCount",
+    "partyWalls",
+    "residence",
+    "residenceType",
+    # Equipements
+    "heatingFormat",
+    "heatingType",
+    "heatingEnergy",
+    "water",
+    "sanitation",
+    "waterDistribution",
+    "waterEnergy",
+    "elevator",
+    "disabledAccess",
+    "airConditioning",
+    "fireplace",
+    "electricShutters",
+    "doubleGlazing",
+    "tripleGlazing",
+    "fiber",
+    "armoredDoor",
+    "intercom",
+    "videophone",
+    "alarm",
+    "digicode",
+    "smokeDetector",
+    "caretaker",
+    # Diagnostics / energie (optionnel)
+    "dpeDate",
+    "finalEnergy",
+    "energyCostMin",
+    "energyCostMax",
+    # Copropriete / disponibilite
+    "coproperty",
+    "coproLot",
+    "safeguardPlan",
+    "available",
+    "releaseDate",
+    "availabilityDate",
+    "keys",
+    # Estimation (uniquement si le bien est une estimation)
+    "estimationAmount",
+    "estimationDate",
+    # Charges / fiscalite (info annonce, pas le mandat)
+    "propertyTax",
+    "housingTax",
+    # Avis de valeur (modale estimation) - saisis a la main par le commercial
+    "estimationLow",        # fourchette basse
+    "estimationHigh",       # fourchette haute
+    "stateNote",            # note d'etat globale 1-5
+    "stateLabel",           # libelle d'etat (ex. "bon etat general")
+    "stateAppreciation",    # appreciation redigee de l'etat
+    "strongPoints",         # points forts (un par ligne)
+    "watchPoints",          # points de vigilance (un par ligne)
+    "priceArgument",        # argumentaire de prix
+    "advisorOpinion",       # avis du conseiller
+    "chargeEnergy",         # charges energie EUR/an
+    "chargeWater",          # charges eau EUR/an
+    "chargeInsurance",      # charges assurance EUR/an
     "description",
     "note",
     "mandantCivility",
@@ -57,6 +138,18 @@ FIELD_KEYS = [
     "mandantFirstName",
     "mandantEmail",
     "mandantPhone",
+    "mandantAddress",
+    "mandantPostalCode",
+    "mandantCity",
+    # 2e mandant (indivision) — extraction prete ; rattachement a la creation a cabler
+    "mandant2Civility",
+    "mandant2LastName",
+    "mandant2FirstName",
+    "mandant2Email",
+    "mandant2Phone",
+    "mandant2Address",
+    "mandant2PostalCode",
+    "mandant2City",
 ]
 
 
@@ -73,6 +166,34 @@ def _field_schema() -> dict[str, Any]:
     }
 
 
+# Composition = liste variable de pieces (chambre, cuisine, sejour...) avec type,
+# detail, etage, surface et une note. Chaque piece = un objet ; nombre variable.
+PIECE_KEYS = ["type", "detail", "etage", "surface", "note"]
+
+
+def _piece_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {key: {"type": ["string", "null"]} for key in PIECE_KEYS},
+        "required": PIECE_KEYS,
+        "additionalProperties": False,
+    }
+
+
+# Bareme d'etat par poste (avis de valeur) : 8 postes fixes, chacun avec un niveau
+# (neuf/bon/correct/a prevoir) et une precision libre.
+STATE_POST_KEYS = ["poste", "level", "note"]
+
+
+def _state_post_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {key: {"type": ["string", "null"]} for key in STATE_POST_KEYS},
+        "required": STATE_POST_KEYS,
+        "additionalProperties": False,
+    }
+
+
 def _schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -84,11 +205,13 @@ def _schema() -> dict[str, Any]:
                 "required": FIELD_KEYS,
                 "additionalProperties": False,
             },
+            "pieces": {"type": "array", "items": _piece_schema()},
+            "statePosts": {"type": "array", "items": _state_post_schema()},
             "warnings": {"type": "array", "items": {"type": "string"}},
             "missingFields": {"type": "array", "items": {"type": "string"}},
             "rawNotes": {"type": ["string", "null"]},
         },
-        "required": ["summaryConfidence", "fields", "warnings", "missingFields", "rawNotes"],
+        "required": ["summaryConfidence", "fields", "pieces", "statePosts", "warnings", "missingFields", "rawNotes"],
         "additionalProperties": False,
     }
 
@@ -149,10 +272,30 @@ def _normalize_extraction(parsed: dict[str, Any], model: str) -> dict[str, Any]:
             "confidence": _normalize_confidence(item.get("confidence")),
             "rawText": str(raw_text).strip() if raw_text is not None and str(raw_text).strip() else None,
         }
+    normalized_pieces: list[dict[str, Any]] = []
+    raw_pieces = parsed.get("pieces")
+    if isinstance(raw_pieces, list):
+        for piece in raw_pieces:
+            if not isinstance(piece, dict):
+                continue
+            cleaned = {key: (str(piece.get(key)).strip() if piece.get(key) is not None and str(piece.get(key)).strip() else None) for key in PIECE_KEYS}
+            if any(cleaned.values()):
+                normalized_pieces.append(cleaned)
+    normalized_posts: list[dict[str, Any]] = []
+    raw_posts = parsed.get("statePosts")
+    if isinstance(raw_posts, list):
+        for post in raw_posts:
+            if not isinstance(post, dict):
+                continue
+            cleaned = {key: (str(post.get(key)).strip() if post.get(key) is not None and str(post.get(key)).strip() else None) for key in STATE_POST_KEYS}
+            if any(cleaned.values()):
+                normalized_posts.append(cleaned)
     return {
         "model": model,
         "summaryConfidence": _normalize_confidence(parsed.get("summaryConfidence")),
         "fields": normalized_fields,
+        "pieces": normalized_pieces,
+        "statePosts": normalized_posts,
         "warnings": [str(item).strip() for item in parsed.get("warnings", []) if str(item).strip()] if isinstance(parsed.get("warnings"), list) else [],
         "missingFields": [str(item).strip() for item in parsed.get("missingFields", []) if str(item).strip()] if isinstance(parsed.get("missingFields"), list) else [],
         "rawNotes": str(parsed.get("rawNotes")).strip() if parsed.get("rawNotes") else None,
@@ -174,7 +317,31 @@ class OpenAIListingSheetService:
             "Retourne uniquement les donnees visibles. N'invente jamais une valeur absente ou illisible. "
             "Les montants et surfaces doivent etre retournes en chiffres simples, sans unite, espace ou symbole euro. "
             "Si une valeur est incertaine, baisse confidence. Si elle est illisible, value doit etre null. "
-            "Les champs mandant concernent le proprietaire/vendeur, pas le negociateur."
+            "Les champs garden (jardin) et pool (piscine) valent 'oui' ou 'non' selon leur presence. "
+            "garageSurface est une surface de garage en m2 (chiffres simples). "
+            "levelCount est le nombre de niveaux/etages du bien. "
+            "Les champs de presence (terrace, balcony, cellar, elevator, disabledAccess, airConditioning, "
+            "fireplace, electricShutters, doubleGlazing, tripleGlazing, fiber, armoredDoor, intercom, "
+            "videophone, alarm, digicode, smokeDetector, caretaker, coproperty, safeguardPlan, available, "
+            "topFloor) valent 'oui' ou 'non'. "
+            "heatingFormat/heatingType/heatingEnergy = format, type et energie du chauffage en clair "
+            "(ex: individuel, gaz de ville, electrique). water=type d'eau, sanitation=assainissement. "
+            "estimationAmount = valeur estimee du bien (chiffres), uniquement s'il s'agit d'une estimation. "
+            "propertyTax=taxe fonciere, housingTax=taxe d'habitation (chiffres). "
+            "Les champs mandant (dont mandantAddress/mandantPostalCode/mandantCity) concernent "
+            "le proprietaire/vendeur, pas le negociateur. Les champs mandant2* concernent un SECOND "
+            "proprietaire (indivision) si la fiche en mentionne un, sinon null. "
+            "N'extrais AUCUN numero ni donnee de mandat (type, duree, honoraires) : hors perimetre. "
+            "Le tableau 'pieces' liste la COMPOSITION du logement : une entree par piece decrite "
+            "(type ex. Chambre/Cuisine/Sejour/Salle de bains/WC/Entree/Bureau/Dressing/Buanderie, "
+            "detail ex. 'suite parentale', etage, surface en m2, note libre). Nombre de pieces variable ; "
+            "liste vide si la fiche n'en decrit aucune. "
+            "Les champs d'avis de valeur (estimationLow/estimationHigh/estimee via estimationAmount, "
+            "stateNote 1-5, stateLabel, stateAppreciation, strongPoints, watchPoints, priceArgument, "
+            "advisorOpinion, chargeEnergy/chargeWater/chargeInsurance) sont saisis a la main par le "
+            "commercial pour l'estimation. Le tableau 'statePosts' est le bareme d'etat : une entree "
+            "par poste evalue (poste ex. 'Toiture', level = neuf/bon/correct/a prevoir, note = precision "
+            "ex. 'refaite 2019') ; liste vide si non rempli."
         )
         request_payload = {
             "model": model,
@@ -195,7 +362,7 @@ class OpenAIListingSheetService:
                     "schema": _schema(),
                 }
             },
-            "max_output_tokens": 3500,
+            "max_output_tokens": 6500,
         }
         response = requests.post(
             "https://api.openai.com/v1/responses",

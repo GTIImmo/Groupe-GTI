@@ -744,6 +744,7 @@ export type DraftAnnonceSheetScanFieldKey =
   | 'livingSurface'
   | 'roomCount'
   | 'bedroomCount'
+  | 'levelCount'
   | 'bathroomCount'
   | 'showerRoomCount'
   | 'wcCount'
@@ -753,8 +754,11 @@ export type DraftAnnonceSheetScanFieldKey =
   | 'interiorState'
   | 'exteriorState'
   | 'landSurface'
+  | 'garden'
+  | 'pool'
   | 'terraceCount'
   | 'garageCount'
+  | 'garageSurface'
   | 'parkingInsideCount'
   | 'parkingOutsideCount'
   | 'constructionYear'
@@ -764,6 +768,74 @@ export type DraftAnnonceSheetScanFieldKey =
   | 'coproCharges'
   | 'coproQuotePart'
   | 'coproWorksFund'
+  | 'immeuble'
+  | 'transport'
+  | 'proximity'
+  | 'environment'
+  | 'kitchenEquipment'
+  | 'particularities'
+  | 'terrace'
+  | 'terraceSurface'
+  | 'balcony'
+  | 'balconyCount'
+  | 'balconySurface'
+  | 'cellar'
+  | 'cellarSurface'
+  | 'floor'
+  | 'topFloor'
+  | 'floorsCount'
+  | 'partyWalls'
+  | 'residence'
+  | 'residenceType'
+  | 'heatingFormat'
+  | 'heatingType'
+  | 'heatingEnergy'
+  | 'water'
+  | 'sanitation'
+  | 'waterDistribution'
+  | 'waterEnergy'
+  | 'elevator'
+  | 'disabledAccess'
+  | 'airConditioning'
+  | 'fireplace'
+  | 'electricShutters'
+  | 'doubleGlazing'
+  | 'tripleGlazing'
+  | 'fiber'
+  | 'armoredDoor'
+  | 'intercom'
+  | 'videophone'
+  | 'alarm'
+  | 'digicode'
+  | 'smokeDetector'
+  | 'caretaker'
+  | 'dpeDate'
+  | 'finalEnergy'
+  | 'energyCostMin'
+  | 'energyCostMax'
+  | 'coproperty'
+  | 'coproLot'
+  | 'safeguardPlan'
+  | 'available'
+  | 'releaseDate'
+  | 'availabilityDate'
+  | 'keys'
+  | 'estimationAmount'
+  | 'estimationDate'
+  | 'propertyTax'
+  | 'housingTax'
+  | 'estimationLow'
+  | 'estimationHigh'
+  | 'stateNote'
+  | 'stateLabel'
+  | 'stateAppreciation'
+  | 'strongPoints'
+  | 'watchPoints'
+  | 'priceArgument'
+  | 'advisorOpinion'
+  | 'chargeEnergy'
+  | 'chargeWater'
+  | 'chargeInsurance'
   | 'description'
   | 'note'
   | 'mandantCivility'
@@ -771,6 +843,17 @@ export type DraftAnnonceSheetScanFieldKey =
   | 'mandantFirstName'
   | 'mandantEmail'
   | 'mandantPhone'
+  | 'mandantAddress'
+  | 'mandantPostalCode'
+  | 'mandantCity'
+  | 'mandant2Civility'
+  | 'mandant2LastName'
+  | 'mandant2FirstName'
+  | 'mandant2Email'
+  | 'mandant2Phone'
+  | 'mandant2Address'
+  | 'mandant2PostalCode'
+  | 'mandant2City'
 
 export type DraftAnnonceSheetScanField = {
   value: string | null
@@ -778,10 +861,26 @@ export type DraftAnnonceSheetScanField = {
   rawText: string | null
 }
 
+export type DraftAnnonceSheetScanPiece = {
+  type: string | null
+  detail: string | null
+  etage: string | null
+  surface: string | null
+  note: string | null
+}
+
+export type DraftAnnonceSheetScanStatePost = {
+  poste: string | null
+  level: string | null
+  note: string | null
+}
+
 export type DraftAnnonceSheetScanPayload = {
   model?: string | null
   summaryConfidence: number | null
   fields: Record<DraftAnnonceSheetScanFieldKey, DraftAnnonceSheetScanField>
+  pieces?: DraftAnnonceSheetScanPiece[]
+  statePosts?: DraftAnnonceSheetScanStatePost[]
   warnings: string[]
   missingFields: string[]
   rawNotes: string | null
@@ -834,6 +933,71 @@ export async function scanDraftAnnonceSheet(file: File): Promise<DraftAnnonceShe
     throw new Error(extractApiErrorMessage(payload) || 'Scan OCR impossible')
   }
   return (payload?.payload ?? payload) as DraftAnnonceSheetScanPayload
+}
+
+// ---- Agent "Redacteur d'annonce" (Phase 3, propose-only) --------------------
+
+export type RedacteurProposal = {
+  runId: number | null
+  title: string
+  description: string
+  highlights: string[]
+  model: string | null
+  costUsd: number | null
+}
+
+export type RedacteurInput = {
+  propertyData: Record<string, unknown>
+  photoUrls?: string[]
+  appDossierId?: number | null
+  hektorAnnonceId?: number | null
+  customIntro?: string | null
+}
+
+export async function generateAnnonceDescription(input: RedacteurInput): Promise<RedacteurProposal> {
+  const payload = await invokeBackendApi<{
+    ok: true
+    runId: number | null
+    title: string
+    description: string
+    highlights: string[]
+    model: string | null
+    costUsd: number | null
+  }>('/annonces/redacteur', {
+    method: 'POST',
+    body: {
+      propertyData: input.propertyData ?? {},
+      photoUrls: (input.photoUrls ?? []).slice(0, 8),
+      appDossierId: input.appDossierId ?? null,
+      hektorAnnonceId: input.hektorAnnonceId ?? null,
+      customIntro: input.customIntro ?? null,
+    },
+  })
+  return {
+    runId: payload.runId ?? null,
+    title: payload.title ?? '',
+    description: payload.description ?? '',
+    highlights: Array.isArray(payload.highlights) ? payload.highlights : [],
+    model: payload.model ?? null,
+    costUsd: payload.costUsd ?? null,
+  }
+}
+
+export async function recordRedacteurDecision(
+  runId: number,
+  status: 'accepted' | 'rejected',
+  finalTitle?: string | null,
+  finalDescription?: string | null,
+): Promise<void> {
+  // Best-effort : la trace ne doit jamais bloquer l'UI.
+  try {
+    await invokeBackendApi('/annonces/redacteur/decision', {
+      method: 'POST',
+      body: { runId, status, finalTitle: finalTitle ?? null, finalDescription: finalDescription ?? null },
+    })
+  } catch {
+    /* trace analytics uniquement, on ignore l'echec */
+  }
 }
 
 function extractApiErrorMessage(payload: unknown) {
@@ -2726,6 +2890,39 @@ export async function saveDossierEstimationSource(
   })
   if (error) throw new Error(error.message ?? 'Impossible d’enregistrer la source d’estimation')
   return true
+}
+
+// Brouillon d'estimation issu du scan de fiche (agent de saisie). Ecrit une fois
+// l'app_dossier_id de l'annonce creee resolu ; charge par l'editeur d'avis de valeur.
+export async function saveEstimationScanDraft(
+  appDossierId: number | null | undefined,
+  hektorAnnonceId: string | number | null | undefined,
+  draft: Record<string, unknown>,
+): Promise<boolean> {
+  if (appDossierId == null || !hasSupabaseEnv || !supabase) return false
+  const hektorId = hektorAnnonceId == null || hektorAnnonceId === '' ? null : Number(hektorAnnonceId)
+  const { error } = await supabase.rpc('app_upsert_dossier_estimation_scan_draft', {
+    p_app_dossier_id: appDossierId,
+    p_hektor_annonce_id: Number.isFinite(hektorId as number) ? hektorId : null,
+    p_scan_draft: (draft ?? null) as never,
+  })
+  return !error
+}
+
+export async function loadEstimationScanDraft(
+  appDossierId: number | null | undefined,
+): Promise<Record<string, unknown> | null> {
+  if (appDossierId == null || !hasSupabaseEnv || !supabase) return null
+  try {
+    const { data } = await supabase
+      .from('app_dossier_estimation')
+      .select('scan_draft')
+      .eq('app_dossier_id', appDossierId)
+      .maybeSingle()
+    return (data?.scan_draft ?? null) as Record<string, unknown> | null
+  } catch {
+    return null
+  }
 }
 
 // ---- 1ère vague de sources « bâti/bien » (proxies backend /geo/*, per-point) ----
