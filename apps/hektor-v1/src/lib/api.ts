@@ -1913,6 +1913,8 @@ export async function loadMonitorStatus(): Promise<MonitorStatusRow[]> {
   return (data ?? []) as MonitorStatusRow[]
 }
 
+export type AlertLifecycleStatus = 'new' | 'acknowledged' | 'resolved' | 'ignored' | 'snoozed'
+
 export type AlertRow = {
   alert_key: string
   source: string
@@ -1926,15 +1928,27 @@ export type AlertRow = {
   action_url: string | null
   created_at: string | null
   updated_at: string | null
+  lifecycle_status: AlertLifecycleStatus
+  lifecycle_acted_at: string | null
+  lifecycle_note: string | null
 }
 
 export async function loadAlertsCurrent(): Promise<AlertRow[]> {
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase
-    .from('alerts_current')
-    .select('alert_key,source,category,severity,owner_role,owner_email,object_type,object_id,title,action_url,created_at,updated_at')
+    .from('alerts_governed')
+    .select('alert_key,source,category,severity,owner_role,owner_email,object_type,object_id,title,action_url,created_at,updated_at,lifecycle_status,lifecycle_acted_at,lifecycle_note')
   if (error) throw new Error(error.message ?? 'Unable to load alerts')
   return (data ?? []) as AlertRow[]
+}
+
+export async function setAlertState(
+  alertKey: string,
+  status: 'acknowledged' | 'resolved' | 'ignored',
+): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  const { error } = await supabase.rpc('app_alert_set_state', { p_alert_key: alertKey, p_status: status })
+  if (error) throw new Error(error.message ?? 'Unable to update alert state')
 }
 
 type ContactStatsSnapshotRow = {
