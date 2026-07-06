@@ -12549,6 +12549,50 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (mapped) updateDraftAnnonceWizardField(entry.name, mapped)
     }
 
+    // MIROIR : le wizard affiche certains champs 2x (structure en haut + sections
+    // "Details"). On reflete les valeurs structurees dans les champs dynamiques
+    // equivalents pour que les sections Details se remplissent aussi (memes valeurs).
+    const mirror: Record<string, string> = {
+      surfappart: value('surface'),
+      surfterrain: value('landSurface'),
+      nbpieces: value('roomCount'),
+      NB_CHAMBRES: value('bedroomCount'),
+      NB_NIVEAUX: value('levelCount'),
+      NB_SDB: value('bathroomCount'),
+      NB_SE: value('showerRoomCount'),
+      NB_WC: value('wcCount'),
+      SURF_CARREZ: value('carrezSurface'),
+      SURF_SEJOUR: value('livingSurface'),
+      vuee: value('view'),
+      ANNEE_CONS: value('constructionYear'),
+      dpe_cons: value('dpeValue'),
+      dpe_ges: value('gesValue'),
+      GARAGE_BOX: value('garageCount'),
+      SURFACE_GARAGE: value('garageSurface'),
+      NB_PARK_INT: value('parkingInsideCount'),
+      NB_PARK_EXT: value('parkingOutsideCount'),
+      copropriete_nb_lot: value('coproLots'),
+      copropriete_quote_part: value('coproQuotePart'),
+      montant_fonds_travaux: value('coproWorksFund'),
+      CHARGES: value('coproCharges'),
+      PRIXNETVENDEUR: value('netSellerPrice'),
+      prix: value('price'),
+    }
+    for (const [name, next] of Object.entries(mirror)) {
+      if (next) updateDraftAnnonceWizardField(name, next.replace(',', '.'))
+    }
+    // Enums miroir (resolution d'option ; exposition en lettres N/S/E/O normalisee).
+    const expoMap: Record<string, string> = { N: 'NORD', S: 'SUD', E: 'EST', O: 'OUEST', NE: 'NORD-EST', NO: 'NORD-OUEST', SE: 'SUD-EST', SO: 'SUD-OUEST' }
+    const expoRaw = value('exposure').trim()
+    const expo = resolveWizardOptionValue(expoMap[expoRaw.toUpperCase()] || expoRaw, hektorExposureOptions)
+    if (expo) updateDraftAnnonceWizardField('EXPOSITION', expo)
+    const cuisine = resolveWizardOptionValue(value('kitchen'), hektorKitchenOptions)
+    if (cuisine) updateDraftAnnonceWizardField('CUISINE', cuisine)
+    const etatInt = resolveWizardOptionValue(value('interiorState'), hektorInteriorStateOptions)
+    if (etatInt) updateDraftAnnonceWizardField('etat_interieur', etatInt)
+    const etatExt = resolveWizardOptionValue(value('exteriorState'), hektorExteriorStateOptions)
+    if (etatExt) updateDraftAnnonceWizardField('etat_exterieur', etatExt)
+
     // Brouillon d'estimation (avis de valeur) depuis l'OCR -> ecrit apres creation,
     // charge par l'editeur EstimationDocumentEditor. Cle = champs du draft de l'editeur.
     const estimationDraft: Record<string, unknown> = {}
