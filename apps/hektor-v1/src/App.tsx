@@ -4772,7 +4772,24 @@ function EstimationDocumentEditor(props: {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const scanDraft = await loadEstimationScanDraft(dossier.app_dossier_id)
+      let scanDraft = await loadEstimationScanDraft(dossier.app_dossier_id)
+      // Repli robuste : si rien n'a ete ecrit (l'ecriture en session avait pu echouer
+      // faute de synchro), on recupere le brouillon durable pose au scan (localStorage,
+      // cle = n0 annonce) et on l'ecrit MAINTENANT (ici app_dossier_id est connu).
+      if ((!scanDraft || !Object.keys(scanDraft).length) && dossier.hektor_annonce_id != null) {
+        try {
+          const key = `hektor_estim_scan_draft_${dossier.hektor_annonce_id}`
+          const raw = window.localStorage.getItem(key)
+          if (raw) {
+            const held = JSON.parse(raw) as Record<string, unknown>
+            if (held && Object.keys(held).length) {
+              await saveEstimationScanDraft(dossier.app_dossier_id, dossier.hektor_annonce_id, held)
+              window.localStorage.removeItem(key)
+              scanDraft = held
+            }
+          }
+        } catch { /* localStorage/JSON best-effort */ }
+      }
       if (cancelled || !scanDraft || !Object.keys(scanDraft).length) return
       setDraft((current) => {
         const merged = { ...current } as Record<string, unknown>
@@ -4784,7 +4801,7 @@ function EstimationDocumentEditor(props: {
       })
     })()
     return () => { cancelled = true }
-  }, [dossier.app_dossier_id])
+  }, [dossier.app_dossier_id, dossier.hektor_annonce_id])
   const [tab, setTab] = useState<'bien' | 'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('bien')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -11352,6 +11369,9 @@ export default function App() {
         if (createJob.status !== 'done') continue
         const hektorAnnonceId = hektorCreatedAnnonceId(createJob)
         if (!hektorAnnonceId) continue
+        // Depot DURABLE du brouillon des qu'on connait le n0 annonce (avant meme la
+        // synchro app) : survit a un refresh ; l'editeur le finalisera a son ouverture.
+        try { window.localStorage.setItem(`hektor_estim_scan_draft_${hektorAnnonceId}`, JSON.stringify(scanDraft)) } catch { /* best-effort */ }
         draftAnnonceEstimationSavedRef.current.add(createJobId)
         try {
           let dossier: Dossier | null = hektorActionLinkedDossiers[hektorAnnonceId] ?? null
