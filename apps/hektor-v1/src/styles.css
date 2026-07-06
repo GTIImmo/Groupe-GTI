@@ -96,6 +96,54 @@
   padding: 5px 9px;
 }
 
+/* Point 4 : revue par confiance — les champs lus avec doute, a verifier. */
+.draft-annonce-scan-review {
+  margin: 8px 0 4px;
+  border: 1px solid rgba(217, 119, 6, 0.30);
+  border-radius: 10px;
+  background: rgba(255, 251, 235, 0.75);
+  padding: 10px 12px;
+}
+.draft-annonce-scan-review .dasr-head {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+.draft-annonce-scan-review ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.draft-annonce-scan-review li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+.draft-annonce-scan-review .dasr-label {
+  color: #78350f;
+  font-weight: 600;
+  flex: 0 0 auto;
+  min-width: 130px;
+}
+.draft-annonce-scan-review .dasr-value {
+  color: #1c1c1c;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.draft-annonce-scan-review .dasr-conf {
+  color: #b45309;
+  font-weight: 700;
+  font-size: 0.74rem;
+  flex: 0 0 auto;
+}
+
 .draft-annonce-scan-section {
   grid-template-columns: 210px minmax(0, 1fr) !important;
 }
