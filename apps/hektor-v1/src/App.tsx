@@ -11361,8 +11361,11 @@ export default function App() {
           }
           if (cancelled) return
           if (!dossier) { draftAnnonceEstimationSavedRef.current.delete(createJobId); continue }
-          await saveEstimationScanDraft(dossier.app_dossier_id, hektorAnnonceId, scanDraft)
+          const saved = await saveEstimationScanDraft(dossier.app_dossier_id, hektorAnnonceId, scanDraft)
           if (cancelled) return
+          // Ne vider la file (et considerer comme sauve) QU'EN CAS DE SUCCES : sinon
+          // on rejoue au prochain passage plutot que de perdre le brouillon.
+          if (!saved) { draftAnnonceEstimationSavedRef.current.delete(createJobId); continue }
           setDraftAnnonceQueuedEstimation((current) => { const next = { ...current }; delete next[createJobId]; return next })
         } catch {
           if (cancelled) return
