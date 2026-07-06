@@ -10532,6 +10532,24 @@ export default function App() {
   // par job de creation pour etre ecrit une fois l'app_dossier_id resolu.
   const [draftAnnonceEstimationScan, setDraftAnnonceEstimationScan] = useState<Record<string, unknown> | null>(null)
   const [draftAnnonceQueuedEstimation, setDraftAnnonceQueuedEstimation] = useState<Record<string, Record<string, unknown>>>({})
+  // Re-hydrate la file des brouillons d'estimation depuis localStorage au demarrage :
+  // un brouillon depose au scan survit ainsi a un refresh, et l'effet d'ecriture le
+  // deversera des que l'annonce est resolue (meme dans une session ulterieure).
+  useEffect(() => {
+    try {
+      const restored: Record<string, Record<string, unknown>> = {}
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i)
+        if (!k || !k.startsWith('hektor_estim_pending_')) continue
+        const jobId = k.slice('hektor_estim_pending_'.length)
+        try {
+          const draft = JSON.parse(window.localStorage.getItem(k) || 'null')
+          if (draft && typeof draft === 'object' && Object.keys(draft).length) restored[jobId] = draft
+        } catch { /* ignore cle corrompue */ }
+      }
+      if (Object.keys(restored).length) setDraftAnnonceQueuedEstimation((current) => ({ ...restored, ...current }))
+    } catch { /* localStorage indispo */ }
+  }, [])
   // Agent de saisie : une fiche scannee cree une ESTIMATION (quel que soit l'ecran d'origine).
   const [draftAnnonceScanEstimation, setDraftAnnonceScanEstimation] = useState(false)
   const draftAnnoncePhotoUploadStartedRef = useRef<Set<string>>(new Set())
@@ -11366,6 +11384,7 @@ export default function App() {
         if (!createJob) continue
         if (createJob.status === 'error') {
           setDraftAnnonceQueuedEstimation((current) => { const next = { ...current }; delete next[createJobId]; return next })
+          try { window.localStorage.removeItem(`hektor_estim_pending_${createJobId}`) } catch { /* best-effort */ }
           continue
         }
         if (createJob.status !== 'done') continue
@@ -11388,6 +11407,7 @@ export default function App() {
           // Ne vider la file (et considerer comme sauve) QU'EN CAS DE SUCCES : sinon
           // on rejoue au prochain passage plutot que de perdre le brouillon.
           if (!saved) { draftAnnonceEstimationSavedRef.current.delete(createJobId); continue }
+          try { window.localStorage.removeItem(`hektor_estim_pending_${createJobId}`) } catch { /* best-effort */ }
           setDraftAnnonceQueuedEstimation((current) => { const next = { ...current }; delete next[createJobId]; return next })
         } catch {
           if (cancelled) return
@@ -13111,6 +13131,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (draftAnnonceEstimationScan && Object.keys(draftAnnonceEstimationScan).length) {
         const scanDraft = draftAnnonceEstimationScan
         setDraftAnnonceQueuedEstimation((current) => ({ ...current, [job.id]: scanDraft }))
+        // Depot DURABLE immediat (des la creation, avant toute synchro) : survit a un
+        // refresh. La file en memoire est re-hydratee depuis ces cles au demarrage.
+        try { window.localStorage.setItem(`hektor_estim_pending_${job.id}`, JSON.stringify(scanDraft)) } catch { /* best-effort */ }
         setDraftAnnonceEstimationScan(null)
       }
       setDraftAnnonceModalOpen(false)
