@@ -329,6 +329,7 @@ class OpenAIListingSheetService:
             "heatingFormat/heatingType/heatingEnergy = format, type et energie du chauffage en clair "
             "(ex: individuel, gaz de ville, electrique). water=type d'eau, sanitation=assainissement. "
             "estimationAmount = valeur estimee du bien (chiffres), uniquement s'il s'agit d'une estimation. "
+            "estimationDate = la date inscrite en haut de la fiche (libelle 'Date estimation'), format tel qu'ecrit. "
             "propertyTax=taxe fonciere, housingTax=taxe d'habitation (chiffres). "
             "Les champs mandant (dont mandantAddress/mandantPostalCode/mandantCity) concernent "
             "le proprietaire/vendeur, pas le negociateur. Les champs mandant2* concernent un SECOND "

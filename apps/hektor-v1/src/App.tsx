@@ -76,6 +76,7 @@ import {
   saveEstimationScanDraft,
   loadEstimationScanDraft,
   improveEstimationTexts,
+  wakeBackendApi,
   loadBdnb,
   loadDpe,
   loadPatrimoine,
@@ -4770,6 +4771,7 @@ function EstimationDocumentEditor(props: {
   // Pre-remplissage depuis le brouillon scanne (agent de saisie) : ecrase les
   // defauts par ce qui a ete lu sur la fiche (valeurs, etat, points, argumentaire…).
   useEffect(() => {
+    wakeBackendApi()  // reveil anticipe : le bouton "Ameliorer les textes (IA)" appellera le backend
     let cancelled = false
     void (async () => {
       let scanDraft = await loadEstimationScanDraft(dossier.app_dossier_id)
@@ -4982,7 +4984,7 @@ function EstimationDocumentEditor(props: {
           argumentairePrix: draft.argumentaire,
           avisConseiller: draft.commentaire,
         },
-      })
+      }, () => setMessage('Reveil du serveur (~30 s)…'))
       setDraft((d) => ({
         ...d,
         etatTexte: result.appreciationEtat || d.etatTexte,
@@ -12634,6 +12636,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       else if (entry.kind === 'num') mapped = raw.replace(',', '.')
       else if (entry.kind === 'enum' && entry.options) mapped = resolveWizardOptionValue(raw, entry.options)
       if (mapped) updateDraftAnnonceWizardField(entry.name, mapped)
+    }
+
+    // Date d'estimation : si non lue sur la fiche -> defaut = date du jour (format jj-mm-aaaa).
+    if (!value('estimationDate')) {
+      const d = new Date()
+      const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
+      updateDraftAnnonceWizardField('ESTIMATION_DATE', today)
     }
 
     // MIROIR : le wizard affiche certains champs 2x (structure en haut + sections

@@ -1034,8 +1034,43 @@ export type RedacteurInput = {
   customIntro?: string | null
 }
 
-export async function generateAnnonceDescription(input: RedacteurInput): Promise<RedacteurProposal> {
-  const payload = await invokeBackendApi<{
+// Reveil anticipe du backend (Render gratuit s'endort apres ~15min ; le 1er appel
+// met ~30s a le reveiller). Fire-and-forget : on ne bloque rien, on declenche juste
+// le reveil pendant que l'utilisateur remplit le formulaire.
+export function wakeBackendApi(): void {
+  if (!backendApiBaseUrl) return
+  try {
+    void fetch(`${backendApiBaseUrl}/`, { method: 'GET', mode: 'cors' }).catch(() => undefined)
+  } catch { /* best-effort */ }
+}
+
+// Un echec RESEAU (fetch qui jette : "Failed to fetch" / CORS pendant le reveil)
+// signifie backend endormi -> on reessaie. Un vrai code HTTP (4xx/5xx) n'est PAS
+// une erreur reseau : on le laisse remonter tout de suite.
+function isNetworkFailure(err: unknown): boolean {
+  if (err instanceof TypeError) return true
+  const m = String((err as Error)?.message || '').toLowerCase()
+  return /failed to fetch|networkerror|load failed|fetch failed|err_failed/.test(m)
+}
+
+async function withBackendWake<T>(fn: () => Promise<T>, onWaking?: () => void): Promise<T> {
+  const delays = [0, 5000, 8000, 10000, 12000]  // ~35s de couverture (cold start ~30s)
+  let lastErr: unknown
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i]) await new Promise((r) => setTimeout(r, delays[i]))
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (!isNetworkFailure(err) || i === delays.length - 1) throw err
+      onWaking?.()  // signale "reveil du serveur..." et on retente
+    }
+  }
+  throw lastErr
+}
+
+export async function generateAnnonceDescription(input: RedacteurInput, onWaking?: () => void): Promise<RedacteurProposal> {
+  const payload = await withBackendWake(() => invokeBackendApi<{
     ok: true
     runId: number | null
     title: string
@@ -1053,7 +1088,7 @@ export async function generateAnnonceDescription(input: RedacteurInput): Promise
       hektorAnnonceId: input.hektorAnnonceId ?? null,
       customIntro: input.customIntro ?? null,
     },
-  })
+  }), onWaking)
   return {
     runId: payload.runId ?? null,
     title: payload.title ?? '',
@@ -1085,8 +1120,8 @@ export type EstimationRedactionInput = {
 
 // Agent "Avis de valeur" (propose-only) : ameliore les textes d'estimation issus
 // de la fiche manuscrite scannee. Un seul appel, sortie JSON stricte.
-export async function improveEstimationTexts(input: EstimationRedactionInput): Promise<EstimationRedactionProposal> {
-  const payload = await invokeBackendApi<{
+export async function improveEstimationTexts(input: EstimationRedactionInput, onWaking?: () => void): Promise<EstimationRedactionProposal> {
+  const payload = await withBackendWake(() => invokeBackendApi<{
     ok: true
     runId: number | null
     appreciationEtat: string
@@ -1104,7 +1139,7 @@ export async function improveEstimationTexts(input: EstimationRedactionInput): P
       appDossierId: input.appDossierId ?? null,
       hektorAnnonceId: input.hektorAnnonceId ?? null,
     },
-  })
+  }), onWaking)
   return {
     runId: payload.runId ?? null,
     appreciationEtat: payload.appreciationEtat ?? '',

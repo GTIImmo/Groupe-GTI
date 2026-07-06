@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   generateAnnonceDescription,
   recordRedacteurDecision,
+  wakeBackendApi,
   type RedacteurProposal,
 } from './lib/api'
 import './redacteur-panel.css'
@@ -28,6 +29,7 @@ export default function RedacteurPanel({
   onAccept,
 }: RedacteurPanelProps) {
   const [loading, setLoading] = useState(false)
+  const [waking, setWaking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [proposal, setProposal] = useState<RedacteurProposal | null>(null)
   const [title, setTitle] = useState('')
@@ -36,10 +38,15 @@ export default function RedacteurPanel({
   const [highlightsText, setHighlightsText] = useState('')
   const [decided, setDecided] = useState<null | 'accepted' | 'rejected'>(null)
 
+  // Reveil anticipe du backend des l'ouverture du panneau (Render gratuit s'endort) :
+  // il se reveille pendant que l'utilisateur lit/remplit, l'appel repond ensuite vite.
+  useEffect(() => { wakeBackendApi() }, [])
+
   const currentHighlights = () => highlightsText.split('\n').map((h) => h.trim()).filter(Boolean)
 
   const runGenerate = async () => {
     setLoading(true)
+    setWaking(false)
     setError(null)
     setDecided(null)
     try {
@@ -48,7 +55,7 @@ export default function RedacteurPanel({
         photoUrls,
         appDossierId,
         hektorAnnonceId,
-      })
+      }, () => setWaking(true))
       setProposal(result)
       setTitle(result.title)
       setAccroche(result.accroche)
@@ -58,6 +65,7 @@ export default function RedacteurPanel({
       setError(err instanceof Error ? err.message : 'Génération impossible')
     } finally {
       setLoading(false)
+      setWaking(false)
     }
   }
 
@@ -92,7 +100,7 @@ export default function RedacteurPanel({
           </div>
         </div>
         <button type="button" className="redac-generate" onClick={() => { void runGenerate() }} disabled={loading}>
-          {loading ? 'Génération…' : proposal ? 'Régénérer' : 'Générer avec l’IA'}
+          {loading ? (waking ? 'Réveil du serveur (~30 s)…' : 'Génération…') : proposal ? 'Régénérer' : 'Générer avec l’IA'}
         </button>
       </div>
 
