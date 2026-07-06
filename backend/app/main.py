@@ -21,7 +21,11 @@ app = FastAPI(title="GTI Backend", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # Auth par token Bearer (en-tete Authorization), PAS par cookies -> pas besoin de
+    # credentials. IMPORTANT : allow_credentials=True + allow_origins=["*"] produit une
+    # reponse CORS INVALIDE (Access-Control-Allow-Origin: * avec Allow-Credentials: true),
+    # rejetee par les navigateurs (parfois de facon intermittente) -> "Failed to fetch".
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
