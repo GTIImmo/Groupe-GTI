@@ -75,6 +75,7 @@ import {
   saveDossierEstimationSource,
   saveEstimationScanDraft,
   loadEstimationScanDraft,
+  improveEstimationTexts,
   loadBdnb,
   loadDpe,
   loadPatrimoine,
@@ -163,6 +164,7 @@ import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
+import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 
@@ -4927,6 +4929,59 @@ function EstimationDocumentEditor(props: {
   }
 
   const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
+
+  // Agent "Avis de valeur" : ameliore d'un seul appel les textes de l'estimation
+  // (appreciation d'etat, points forts/vigilance, argumentaire, avis) issus de la
+  // fiche manuscrite. Propose-only : on remplace les champs par la version redigee.
+  const [textBusy, setTextBusy] = useState(false)
+  async function improveEstimationTextsHandler() {
+    if (textBusy) return
+    const hasSomething = [draft.etatTexte, draft.pointsForts, draft.pointsVigilance, draft.argumentaire, draft.commentaire]
+      .some((t) => (t || '').trim())
+    if (!hasSomething) { setMessage('Rien a ameliorer : les zones de texte sont vides.'); return }
+    setTextBusy(true)
+    setMessage(null)
+    try {
+      const facts: Record<string, unknown> = {
+        type_bien: propertyTypeLabel(dossier.type_bien),
+        ville: props.detail.ville_publique_listing ?? '',
+        prix: prix != null ? String(prix) : '',
+        surface: props.detail.surface ?? props.detail.surface_habitable_detail ?? '',
+        pieces: props.detail.nb_pieces ?? '',
+        chambres: props.detail.nb_chambres ?? '',
+        etat: draft.etatLabel || '',
+        chauffage: draft.chauffage || '',
+        dpe: draft.dpe || '',
+        ges: draft.ges || '',
+      }
+      const result = await improveEstimationTexts({
+        appDossierId: typeof dossier.app_dossier_id === 'number' ? dossier.app_dossier_id : null,
+        hektorAnnonceId: typeof dossier.hektor_annonce_id === 'number' ? dossier.hektor_annonce_id : null,
+        propertyData: facts,
+        texts: {
+          appreciationEtat: draft.etatTexte,
+          pointsForts: draft.pointsForts,
+          pointsVigilance: draft.pointsVigilance,
+          argumentairePrix: draft.argumentaire,
+          avisConseiller: draft.commentaire,
+        },
+      })
+      setDraft((d) => ({
+        ...d,
+        etatTexte: result.appreciationEtat || d.etatTexte,
+        pointsForts: result.pointsForts.length ? result.pointsForts.join('\n') : d.pointsForts,
+        pointsVigilance: result.pointsVigilance.length ? result.pointsVigilance.join('\n') : d.pointsVigilance,
+        argumentaire: result.argumentairePrix || d.argumentaire,
+        commentaire: result.avisConseiller || d.commentaire,
+      }))
+      const cts = result.costUsd != null ? ` (~${(result.costUsd * 100).toFixed(2)} cts)` : ''
+      setMessage(`Textes ameliores par l'IA${cts}. Verifie et ajuste avant d'enregistrer.`)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Amelioration impossible')
+    } finally {
+      setTextBusy(false)
+    }
+  }
   const numStr = (v: string) => v.replace(/[^\d]/g, '')
   // Met à jour un poste du barème d'état (niveau ou libellé).
   const setPoste = (key: string, field: 'niveau' | 'label', value: string) => {
@@ -5081,6 +5136,15 @@ function EstimationDocumentEditor(props: {
                 <button key={t.v} className={tab === t.v ? 'is-active' : ''} type="button" onClick={() => setTab(t.v)}>{t.icon}{t.label}{t.badge ? <span className="avd-badge">{t.badge}</span> : null}</button>
               ))}
             </div>
+            {(tab === 'valeur' || tab === 'etat' || tab === 'points') ? (
+              <div className="estim-editor-ia-bar">
+                <button className="estim-editor-ia-btn" type="button" disabled={textBusy} onClick={() => { void improveEstimationTextsHandler() }}>
+                  <span aria-hidden="true"><EstimIcon name={textBusy ? 'refresh' : 'spark'} /></span>
+                  {textBusy ? 'Amelioration en cours…' : 'Ameliorer les textes (IA)'}
+                </button>
+                <span className="estim-editor-ia-hint">Reformule l’appreciation d’etat, les points forts/vigilance, l’argumentaire et l’avis — sans inventer.</span>
+              </div>
+            ) : null}
             <div className="avd-scroll">
             {tab === 'bien' ? (
               <div className="mandat-document-panel">
@@ -12658,6 +12722,80 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
+  // Assemble les donnees FACTUELLES deja saisies/scannees pour l'agent Redacteur.
+  // Aucune re-derivation serveur : on n'envoie que du lisible (libelles, pas de codes).
+  function buildDraftAnnonceRedacteurData(): Record<string, unknown> {
+    const optLabel = (options: HektorSelectOption[], code: string | undefined) => {
+      const c = (code ?? '').trim()
+      if (!c) return ''
+      return options.find((o) => o.value === c)?.label ?? ''
+    }
+    const wf = (name: string) => (draftAnnonceWizardFields[name] ?? '').trim()
+    const isYes = (raw: string) => {
+      const t = raw.trim().toLowerCase()
+      return t === 'oui' || t === 'o' || t === '1' || t === 'true'
+    }
+    // Equipements presents (Oui) -> libelles lisibles.
+    const equipmentLabels: Array<[string, string]> = [
+      ['climatisation', 'climatisation'], ['cheminee', 'cheminee'],
+      ['double_vitrage', 'double vitrage'], ['triple_vitrage', 'triple vitrage'],
+      ['ASCENSEUR', 'ascenseur'], ['TERRASSE', 'terrasse'], ['BALCON', 'balcon'],
+      ['CAVE', 'cave'], ['cable', 'fibre'], ['porte_blindee', 'porte blindee'],
+      ['alarme', 'alarme'], ['digicode', 'digicode'], ['interphone', 'interphone'],
+      ['visiophone', 'visiophone'], ['gardien', 'gardien'], ['ACCES_HANDI', 'acces handicape'],
+      ['volets_elctriques', 'volets electriques'], ['detecteur_fumee', 'detecteur de fumee'],
+    ]
+    const equipements = equipmentLabels.filter(([key]) => isYes(wf(key))).map(([, label]) => label)
+    if (isYes(draftAnnonceAdvanced.garden)) equipements.push('jardin')
+    if (isYes(draftAnnonceAdvanced.pool)) equipements.push('piscine')
+    // Chauffage : codes d'options -> libelles.
+    const chauffage = [
+      optLabel(hektorHeatingFormatOptions, wf('formatChauff')),
+      optLabel(hektorHeatingTypeOptions, wf('typeChauff')),
+      optLabel(hektorHeatingEnergyOptions, wf('energieChauff')),
+    ].filter(Boolean).join(', ')
+    // Secteur / environnement : champs texte libres.
+    const secteur = [wf('TRANSPORT'), wf('PROXIMITE'), wf('ENVIRONNEMENT')].filter(Boolean).join(' ; ')
+    // Composition : une ligne lisible par piece renseignee.
+    const composition = draftAnnonceCompositionPieces
+      .filter((piece) => hektorCompositionPieceHasContent(piece))
+      .map((piece) => {
+        const label = (piece.typeLabel || hektorCompositionPieceTypeLabel(piece.idTypePiece) || 'Piece').trim()
+        const bits: string[] = []
+        if (piece.detailPiece?.trim()) bits.push(piece.detailPiece.trim())
+        if (piece.etagePiece?.trim()) bits.push(`etage ${piece.etagePiece.trim()}`)
+        if (piece.surfacePiece?.trim()) bits.push(`${piece.surfacePiece.trim()} m2`)
+        return bits.length ? `${label} (${bits.join(', ')})` : label
+      })
+    const data: Record<string, unknown> = {
+      type_bien: draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
+      ville: draftAnnonceCity.trim(),
+      code_postal: draftAnnoncePostalCode.trim(),
+      prix: draftAnnoncePrice.trim(),
+      surface: draftAnnonceTypeRules.surfaceMode === 'habitable' ? draftAnnonceSurface.trim() : '',
+      surface_terrain: (draftAnnonceAdvanced.landSurface ?? '').trim(),
+      pieces: draftAnnonceTypeRules.showRooms ? draftAnnonceRoomCount.trim() : '',
+      chambres: draftAnnonceTypeRules.showBedrooms ? draftAnnonceBedroomCount.trim() : '',
+      sdb: (draftAnnonceAdvanced.bathroomCount ?? '').trim(),
+      etage: wf('ETAGE'),
+      exposition: optLabel(hektorExposureOptions, draftAnnonceAdvanced.exposure) || (draftAnnonceAdvanced.exposure ?? '').trim(),
+      etat: (draftAnnonceAdvanced.interiorState ?? '').trim(),
+      chauffage,
+      dpe: (draftAnnonceAdvanced.dpeValue ?? '').trim(),
+      ges: (draftAnnonceAdvanced.gesValue ?? '').trim(),
+      annee_construction: (draftAnnonceAdvanced.constructionYear ?? '').trim(),
+      equipements,
+      secteur,
+      composition,
+    }
+    // On retire les cles vides pour ne pas polluer le prompt.
+    for (const key of Object.keys(data)) {
+      const v = data[key]
+      if (v == null || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && v.length === 0)) delete data[key]
+    }
+    return data
+  }
+
   function renderDraftAnnonceScanButton(description: string) {
     return (
       <label className={`draft-annonce-scan-button ${draftAnnonceScanPending ? 'is-loading' : ''}`}>
@@ -14851,6 +14989,27 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span>Titre / repere interne</span>
                       <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
                     </label>
+                    <RedacteurPanel
+                      propertyData={buildDraftAnnonceRedacteurData()}
+                      onAccept={(result) => {
+                        // Corps = accroche + descriptif + points forts (les 4 sorties fondues
+                        // dans le texte diffuse, puisque l'annonce n'a qu'une zone de texte).
+                        const parts: string[] = []
+                        if (result.accroche.trim()) parts.push(result.accroche.trim())
+                        if (result.description.trim()) parts.push(result.description.trim())
+                        if (result.highlights.length) parts.push('Points forts :\n' + result.highlights.map((h) => `- ${h}`).join('\n'))
+                        const body = parts.join('\n\n')
+                        if (result.title) {
+                          setDraftAnnonceTitle(result.title)               // #1 Titre / repere interne
+                          updateDraftAnnonceWizardField('titre', result.title) // #3 Titre annonce (diffusion)
+                        }
+                        if (body) {
+                          setDraftAnnonceAdvanced((current) => ({ ...current, description: body })) // #2 Description (Detail app)
+                          updateDraftAnnonceWizardField('corps', body)     // #4 Texte annonce (diffusion)
+                        }
+                        setNoticeMessage('IA : titre (repere + annonce) et texte (description + texte annonce) remplis. Verifie avant creation.')
+                      }}
+                    />
                   </section>
                     <section className="draft-annonce-section draft-annonce-scan-section">
                       <div className="draft-annonce-section-title">

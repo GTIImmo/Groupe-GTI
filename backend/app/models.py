@@ -86,6 +86,35 @@ class ScanAnnonceSheetPayload(BaseModel):
     formVersion: str | None = None
 
 
+class RedacteurAnnoncePayload(BaseModel):
+    # Agent "Redacteur d'annonce" (propose-only). Le front envoie les donnees
+    # factuelles deja affichees sur la fiche + les URLs photos ; le backend ne
+    # re-derive rien et n'ecrit rien sur l'annonce.
+    propertyData: dict = Field(default_factory=dict)
+    photoUrls: list[str] = Field(default_factory=list, max_length=8)
+    appDossierId: int | None = Field(default=None, gt=0)
+    hektorAnnonceId: int | None = Field(default=None, gt=0)
+    customIntro: str | None = Field(default=None, max_length=500)
+
+
+class RedacteurDecisionPayload(BaseModel):
+    # Trace de la decision humaine sur une proposition (analytics uniquement,
+    # ne declenche aucune ecriture sur l'annonce).
+    runId: int = Field(gt=0)
+    status: Literal["accepted", "rejected"]
+    finalTitle: str | None = Field(default=None, max_length=300)
+    finalDescription: str | None = Field(default=None, max_length=8000)
+
+
+class EstimationRedactionPayload(BaseModel):
+    # Agent "Avis de valeur" (propose-only) : ameliore les notes brutes d'estimation
+    # (issues d'une fiche manuscrite). texts = notes actuelles ; propertyData = faits.
+    texts: dict = Field(default_factory=dict)
+    propertyData: dict = Field(default_factory=dict)
+    appDossierId: int | None = Field(default=None, gt=0)
+    hektorAnnonceId: int | None = Field(default=None, gt=0)
+
+
 class AppointmentRequestCreatePayload(BaseModel):
     clientName: str = Field(min_length=1, max_length=160)
     clientEmail: EmailStr | None = None
