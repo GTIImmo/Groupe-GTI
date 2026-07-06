@@ -373,5 +373,25 @@
   </div>
 </section>
 
+<style id="fill-mode">
+  [contenteditable]{outline:none;cursor:text;min-width:40px}
+  [contenteditable]:focus{background:#eaf4ff;border-radius:3px}
+  .cb i.checked, table.bareme td.ck i.checked{background:#1e2a3c !important}
+  .fill-hint{position:fixed;top:10px;right:10px;max-width:260px;background:#1e2a3c;color:#fff;
+    font:12px/1.5 "Segoe UI",Arial,sans-serif;padding:9px 12px;border-radius:8px;z-index:999;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+  .fill-hint b{color:#ffd9b0}
+  @media print{.fill-hint{display:none}}
+</style>
+<div class="fill-hint">✍️ <b>Mode écran</b> — cliquez les cases pour les cocher, tapez dans les champs et les zones. Puis <b>capture d'écran</b> (Win + Maj + S) → uploadez-la dans « scan de fiche ».</div>
+<script>
+  // Rend le patron remplissable a l'ecran (pour tester sans imprimante).
+  document.querySelectorAll('.wl, .zone, .nb, .money, table.bareme td.prec').forEach(function(el){
+    el.setAttribute('contenteditable', 'true');
+  });
+  document.querySelectorAll('.cb i, table.bareme td.ck i').forEach(function(el){
+    el.style.cursor = 'pointer';
+    el.addEventListener('mousedown', function(ev){ ev.preventDefault(); el.classList.toggle('checked'); });
+  });
+</script>
 </body>
 </html>

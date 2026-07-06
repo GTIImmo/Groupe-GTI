@@ -935,6 +935,46 @@ export async function scanDraftAnnonceSheet(file: File): Promise<DraftAnnonceShe
   return (payload?.payload ?? payload) as DraftAnnonceSheetScanPayload
 }
 
+// Fusionne plusieurs pages OCR (scan multi-images) en une seule extraction :
+// - chaque champ prend la valeur non vide la plus fiable parmi les pages,
+// - les pieces et le bareme d'etat (statePosts) sont concatenes.
+export function mergeDraftAnnonceScanPayloads(payloads: DraftAnnonceSheetScanPayload[]): DraftAnnonceSheetScanPayload {
+  if (payloads.length <= 1) return payloads[0]
+  const base = payloads[0]
+  const keys = Object.keys(base.fields) as DraftAnnonceSheetScanFieldKey[]
+  const mergedFields = {} as Record<DraftAnnonceSheetScanFieldKey, DraftAnnonceSheetScanField>
+  for (const key of keys) {
+    let best: DraftAnnonceSheetScanField = { value: null, confidence: null, rawText: null }
+    for (const p of payloads) {
+      const f = p.fields?.[key]
+      if (!f || !f.value || !f.value.trim()) continue
+      if (!best.value || (f.confidence ?? 0) > (best.confidence ?? 0)) best = f
+    }
+    mergedFields[key] = best
+  }
+  const confs = payloads.map((p) => p.summaryConfidence).filter((c): c is number => typeof c === 'number')
+  return {
+    model: base.model,
+    summaryConfidence: confs.length ? confs.reduce((a, b) => a + b, 0) / confs.length : null,
+    fields: mergedFields,
+    pieces: payloads.flatMap((p) => p.pieces ?? []),
+    statePosts: payloads.flatMap((p) => p.statePosts ?? []),
+    warnings: Array.from(new Set(payloads.flatMap((p) => p.warnings ?? []))),
+    missingFields: keys.filter((k) => !mergedFields[k].value),
+    rawNotes: payloads.map((p) => p.rawNotes).filter(Boolean).join(' | ') || null,
+  }
+}
+
+// Scan multi-pages : OCR chaque image (sequentiel) puis fusionne.
+export async function scanDraftAnnonceSheets(files: File[]): Promise<DraftAnnonceSheetScanPayload> {
+  const payloads: DraftAnnonceSheetScanPayload[] = []
+  for (const file of files) {
+    payloads.push(await scanDraftAnnonceSheet(file))
+  }
+  if (!payloads.length) throw new Error('Aucune page à lire.')
+  return mergeDraftAnnonceScanPayloads(payloads)
+}
+
 // ---- Agent "Redacteur d'annonce" (Phase 3, propose-only) --------------------
 
 export type RedacteurProposal = {
