@@ -110,6 +110,7 @@ import {
   createHektorDraftAnnonceJobOptimistic,
   dismissAnnonceProvisional,
   scanDraftAnnonceSheet,
+  scanDraftAnnonceSheets,
   createMatterportActionJob,
   createConsoleDocumentSignedUrl,
   createSignedProcedureDocumentUrl,
@@ -12591,15 +12592,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   async function handleDraftAnnonceScanFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null
-    if (!file) return
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
     setDraftAnnonceScanPending(true)
-    setDraftAnnonceScanMessage(null)
+    setDraftAnnonceScanMessage(files.length > 1 ? `Lecture de ${files.length} pages…` : null)
     setDraftAnnonceScanWarnings([])
     setErrorMessage(null)
     try {
-      const scan = await scanDraftAnnonceSheet(file)
+      // Multi-pages : chaque photo est OCRisee puis fusionnee (une fiche = jusqu'a 5 pages,
+      // une image geante serait illisible pour l'OCR — cf. test 2026-07-06).
+      const scan = files.length > 1 ? await scanDraftAnnonceSheets(files) : await scanDraftAnnonceSheet(files[0])
       applyDraftAnnonceScan(scan)
+      if (files.length > 1) {
+        setDraftAnnonceScanMessage((current) => `${current ?? ''} (${files.length} pages fusionnées)`.trim())
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de lire la fiche avec OCR')
     } finally {
@@ -12612,13 +12618,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return (
       <label className={`draft-annonce-scan-button ${draftAnnonceScanPending ? 'is-loading' : ''}`}>
         <span aria-hidden="true"><DetailIcon type="photo" /></span>
-        <strong>{draftAnnonceScanPending ? 'Lecture OCR...' : 'Scanner une fiche papier'}</strong>
+        <strong>{draftAnnonceScanPending ? 'Lecture OCR...' : 'Scanner la fiche (photos)'}</strong>
         <small>{description}</small>
         <input
           key={`draft-scan-${draftAnnonceScanInputVersion}`}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture="environment"
+          multiple
           onChange={(event) => void handleDraftAnnonceScanFile(event)}
           disabled={draftAnnoncePending || draftAnnonceScanPending}
         />
