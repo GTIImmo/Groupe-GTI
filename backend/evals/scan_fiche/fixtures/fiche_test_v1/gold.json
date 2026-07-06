@@ -1,0 +1,72 @@
+{
+  "_note": "Verite attendue pour la fiche de reference fiche_test_v1 (5 pages, ecriture simulee, donnees connues). Les champs numeriques sont verifies exactement ; les champs texte/enum sont verifies en presence (non vide) + normalisation souple. Voir eval_scan_fiche.py.",
+
+  "num": {
+    "postalCode": "42700",
+    "landSurface": "250",
+    "surface": "88",
+    "roomCount": "4",
+    "bedroomCount": "3",
+    "levelCount": "1",
+    "bathroomCount": "1",
+    "showerRoomCount": "0",
+    "wcCount": "1",
+    "carrezSurface": "88",
+    "livingSurface": "28",
+    "garageCount": "1",
+    "garageSurface": "15",
+    "parkingOutsideCount": "0",
+    "constructionYear": "1975",
+    "dpeValue": "210",
+    "gesValue": "45",
+    "stateNote": "3",
+    "estimationLow": "139000",
+    "estimationAmount": "149000",
+    "estimationHigh": "159000",
+    "price": "160000",
+    "propertyTax": "980",
+    "chargeEnergy": "1800",
+    "chargeWater": "350"
+  },
+
+  "enum": {
+    "propertyType": "maison",
+    "mandantCivility": "m",
+    "city": "firminy",
+    "garden": "non",
+    "pool": "non",
+    "terrace": "oui",
+    "cellar": "oui",
+    "exposure": "ouest",
+    "coproperty": "non",
+    "partyWalls": "oui",
+    "fireplace": "oui",
+    "electricShutters": "oui",
+    "doubleGlazing": "oui",
+    "stateLabel": "rafraichir"
+  },
+
+  "text": {
+    "negotiatorName": "vincent gonzalez",
+    "agency": "gti firminy",
+    "mandantLastName": "roux",
+    "mandantEmail": "m.roux@orange.fr",
+    "mandantPhone": "0698765432",
+    "view": "cour",
+    "kitchen": "amenagee",
+    "sanitation": "egout",
+    "strongPoints": "expose sud",
+    "watchPoints": "chauffage",
+    "stateAppreciation": "rafraichir",
+    "priceArgument": "secteur",
+    "advisorOpinion": "vendable"
+  },
+
+  "_present_note": "estimationDate + works exclus de v1 : les images de reference sont l'ancien patron (sans case 'Date estimation' ni 'Travaux'). A ajouter quand on regenere les images de reference (v2).",
+  "present": [
+    "negotiatorName", "agency", "mandantLastName", "mandantEmail", "mandantPhone",
+    "view", "kitchen", "strongPoints", "watchPoints", "stateAppreciation",
+    "priceArgument", "advisorOpinion", "transport", "particularities",
+    "heatingFormat", "heatingType", "heatingEnergy"
+  ]
+}
