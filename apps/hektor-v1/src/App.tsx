@@ -12716,9 +12716,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setEstim('basse', value('estimationLow'))
     setEstim('estimee', value('estimationAmount'))
     setEstim('haute', value('estimationHigh'))
-    setEstim('etatNote', value('stateNote'))
+    // B) Note = un chiffre (1-5). Si l'OCR a mis du TEXTE dans stateNote, c'est en fait
+    // l'appreciation -> on la bascule dans etatTexte (evite l'inversion note/appreciation).
+    const rawStateNote = value('stateNote')
+    const stateNoteIsNumber = /^\s*\d+([.,]\d+)?\s*$/.test(rawStateNote)
+    setEstim('etatNote', stateNoteIsNumber ? rawStateNote : '')
     setEstim('etatLabel', value('stateLabel'))
-    setEstim('etatTexte', value('stateAppreciation'))
+    setEstim('etatTexte', value('stateAppreciation') || (stateNoteIsNumber ? '' : rawStateNote))
     setEstim('pointsForts', value('strongPoints'))
     setEstim('pointsVigilance', value('watchPoints'))
     setEstim('argumentaire', value('priceArgument'))
@@ -12727,6 +12731,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setEstim('energie', value('chargeEnergy'))
     setEstim('eau', value('chargeWater'))
     setEstim('assurance', value('chargeInsurance'))
+    // A) Champs extraits pour le wizard mais aussi utiles a l'estimation/PDF : recopies ici.
+    setEstim('dpe', value('dpeValue'))
+    setEstim('ges', value('gesValue'))
+    setEstim('exposition', value('exposure'))
+    setEstim('chauffage', [value('heatingFormat'), value('heatingType'), value('heatingEnergy')].filter(Boolean).join(' ').trim())
     const scannedPosts = Array.isArray(scan.statePosts) ? scan.statePosts : []
     if (scannedPosts.length) {
       const etatPostes: Record<string, { niveau: string; label: string }> = {}
@@ -12734,7 +12743,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         const key = (post?.poste ?? '').trim()
         if (key) etatPostes[key] = { niveau: (post?.level ?? '').trim(), label: (post?.note ?? '').trim() }
       }
-      if (Object.keys(etatPostes).length) estimationDraft.etatPostes = etatPostes
+      if (Object.keys(etatPostes).length) {
+        estimationDraft.etatPostes = etatPostes
+        // Champs dedies toiture/menuiseries : derives du bareme d'etat (par nom de poste).
+        const posteText = (re: RegExp) => {
+          const k = Object.keys(etatPostes).find((p) => re.test(p))
+          if (!k) return ''
+          const v = etatPostes[k]
+          return [v.niveau, v.label].filter(Boolean).join(' - ').trim()
+        }
+        setEstim('toiture', posteText(/toit|charpente/i))
+        setEstim('menuiseries', posteText(/menuiser|vitrage/i))
+      }
     }
     setDraftAnnonceEstimationScan(Object.keys(estimationDraft).length ? estimationDraft : null)
     // Agent de saisie : une fiche scannee cree une estimation.
