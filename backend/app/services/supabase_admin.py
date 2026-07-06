@@ -444,3 +444,34 @@ class SupabaseAdminService:
         )
         self._raise_for_response(response, "Unable to send reset email")
         return {"ok": True}
+
+    # ---- Suivi des runs d'agent IA (Phase 3, propose-only) --------------------
+    # Best-effort : la tracabilite ne doit jamais faire echouer la generation.
+
+    def insert_agent_run(self, row: dict[str, Any]) -> int | None:
+        try:
+            response = requests.post(
+                f"{self.settings.supabase_url}/rest/v1/app_agent_run",
+                headers={**self._rest_headers(), "Prefer": "return=representation"},
+                json=[row],
+                timeout=20,
+            )
+            if not response.ok:
+                return None
+            rows = response.json() or []
+            return int(rows[0]["id"]) if rows and rows[0].get("id") is not None else None
+        except Exception:
+            return None
+
+    def update_agent_run_decision(self, run_id: int, patch: dict[str, Any]) -> bool:
+        try:
+            response = requests.patch(
+                f"{self.settings.supabase_url}/rest/v1/app_agent_run",
+                headers=self._rest_headers(),
+                params={"id": f"eq.{run_id}"},
+                json=patch,
+                timeout=20,
+            )
+            return response.ok
+        except Exception:
+            return False
