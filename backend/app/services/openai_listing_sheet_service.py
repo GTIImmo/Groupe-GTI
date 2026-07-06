@@ -118,6 +118,8 @@ FIELD_KEYS = [
     # Charges / fiscalite (info annonce, pas le mandat)
     "propertyTax",
     "housingTax",
+    "works",         # travaux a prevoir (texte) -> champ Hektor TRAVAUX
+    "chargesDetail",  # detail des charges (texte) -> champ Hektor CHARGES_DETAIL
     # Avis de valeur (modale estimation) - saisis a la main par le commercial
     "estimationLow",        # fourchette basse
     "estimationHigh",       # fourchette haute
@@ -333,6 +335,8 @@ class OpenAIListingSheetService:
             "estimationAmount = valeur estimee du bien (chiffres), uniquement s'il s'agit d'une estimation. "
             "estimationDate = la date inscrite en haut de la fiche (libelle 'Date estimation'), format tel qu'ecrit. "
             "propertyTax=taxe fonciere, housingTax=taxe d'habitation (chiffres). "
+            "works=travaux a prevoir (texte libre, ex. 'toiture a refaire, electricite a revoir'). "
+            "chargesDetail=detail des charges (texte libre). "
             "Les champs mandant (dont mandantAddress/mandantPostalCode/mandantCity) concernent "
             "le proprietaire/vendeur, pas le negociateur. Les champs mandant2* concernent un SECOND "
             "proprietaire (indivision) si la fiche en mentionne un, sinon null. "

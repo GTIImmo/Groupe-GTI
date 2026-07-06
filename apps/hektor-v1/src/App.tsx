@@ -12658,6 +12658,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (mapped) updateDraftAnnonceWizardField(entry.name, mapped)
     }
 
+    // Travaux a prevoir + detail des charges -> champs wizard TRAVAUX / CHARGES_DETAIL
+    // (le worker les envoie a Hektor ; verifie console_job_worker.js:6955-6956 + set autorise 6573).
+    if (value('works')) updateDraftAnnonceWizardField('TRAVAUX', value('works'))
+    if (value('chargesDetail')) updateDraftAnnonceWizardField('CHARGES_DETAIL', value('chargesDetail'))
     // Date d'estimation : si non lue sur la fiche -> defaut = date du jour (format jj-mm-aaaa).
     if (!value('estimationDate')) {
       const d = new Date()
