@@ -895,6 +895,35 @@ function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
+// Reduit une image trop grande avant l'OCR (moins de tokens = plus rapide + moins
+// cher) tout en gardant le texte lisible. Les petites images sont laissees telles
+// quelles ; repli sur l'original en cas de souci.
+async function prepareScanImageDataUrl(file: File, maxSide = 1600): Promise<{ dataUrl: string; mimeType: string }> {
+  const dataUrl = await readFileAsDataUrl(file)
+  const fallback = { dataUrl, mimeType: file.type || 'image/jpeg' }
+  if (typeof document === 'undefined') return fallback
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image()
+      im.onload = () => resolve(im)
+      im.onerror = () => reject(new Error('image'))
+      im.src = dataUrl
+    })
+    const longSide = Math.max(img.naturalWidth, img.naturalHeight)
+    if (!longSide || longSide <= maxSide) return fallback
+    const scale = maxSide / longSide
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.naturalWidth * scale)
+    canvas.height = Math.round(img.naturalHeight * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return fallback
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), mimeType: 'image/jpeg' }
+  } catch {
+    return fallback
+  }
+}
+
 export async function scanDraftAnnonceSheet(file: File): Promise<DraftAnnonceSheetScanPayload> {
   if (!backendApiBaseUrl) {
     throw new Error('Backend Python non configure pour le scan OCR.')
@@ -906,15 +935,15 @@ export async function scanDraftAnnonceSheet(file: File): Promise<DraftAnnonceShe
     throw new Error('Photo trop lourde pour le scan OCR. Reprends une photo moins lourde.')
   }
   const accessToken = hasSupabaseEnv && supabase ? await getFreshSupabaseAccessToken() : null
-  const imageBase64 = await readFileAsDataUrl(file)
+  const prepared = await prepareScanImageDataUrl(file)
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`
   const response = await fetch(`${backendApiBaseUrl}/annonces/scan-fiche`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      imageBase64,
-      mimeType: file.type || null,
+      imageBase64: prepared.dataUrl,
+      mimeType: prepared.mimeType,
       filename: file.name || null,
       formVersion: 'draft_annonce_v1',
     }),
@@ -965,14 +994,24 @@ export function mergeDraftAnnonceScanPayloads(payloads: DraftAnnonceSheetScanPay
   }
 }
 
-// Scan multi-pages : OCR chaque image (sequentiel) puis fusionne.
+// Scan multi-pages : OCR de toutes les images EN PARALLELE (bien plus rapide que
+// sequentiel) puis fusion. Resilient : une page illisible ne fait pas echouer le
+// reste (elle est signalee en avertissement).
 export async function scanDraftAnnonceSheets(files: File[]): Promise<DraftAnnonceSheetScanPayload> {
-  const payloads: DraftAnnonceSheetScanPayload[] = []
-  for (const file of files) {
-    payloads.push(await scanDraftAnnonceSheet(file))
+  const results = await Promise.allSettled(files.map((file) => scanDraftAnnonceSheet(file)))
+  const payloads = results
+    .filter((r): r is PromiseFulfilledResult<DraftAnnonceSheetScanPayload> => r.status === 'fulfilled')
+    .map((r) => r.value)
+  if (!payloads.length) {
+    const firstErr = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined
+    throw new Error(firstErr?.reason instanceof Error ? firstErr.reason.message : 'Lecture des pages impossible.')
   }
-  if (!payloads.length) throw new Error('Aucune page à lire.')
-  return mergeDraftAnnonceScanPayloads(payloads)
+  const merged = mergeDraftAnnonceScanPayloads(payloads)
+  const failed = results.length - payloads.length
+  if (failed > 0) {
+    merged.warnings = [...(merged.warnings ?? []), `${failed} page(s) illisible(s) — reprends-les en photo.`]
+  }
+  return merged
 }
 
 // ---- Agent "Redacteur d'annonce" (Phase 3, propose-only) --------------------

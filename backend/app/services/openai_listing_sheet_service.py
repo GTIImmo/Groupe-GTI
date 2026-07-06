@@ -154,14 +154,16 @@ FIELD_KEYS = [
 
 
 def _field_schema() -> dict[str, Any]:
+    # Sortie allegee : plus de rawText (inutilise cote front) -> ~1/3 de tokens de
+    # sortie en moins => plus rapide. _normalize_extraction remet rawText=None pour
+    # garder la forme de reponse stable.
     return {
         "type": "object",
         "properties": {
             "value": {"type": ["string", "null"]},
             "confidence": {"type": ["number", "null"]},
-            "rawText": {"type": ["string", "null"]},
         },
-        "required": ["value", "confidence", "rawText"],
+        "required": ["value", "confidence"],
         "additionalProperties": False,
     }
 
