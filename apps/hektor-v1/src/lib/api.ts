@@ -1019,6 +1019,7 @@ export async function scanDraftAnnonceSheets(files: File[]): Promise<DraftAnnonc
 export type RedacteurProposal = {
   runId: number | null
   title: string
+  accroche: string
   description: string
   highlights: string[]
   model: string | null
@@ -1038,6 +1039,7 @@ export async function generateAnnonceDescription(input: RedacteurInput): Promise
     ok: true
     runId: number | null
     title: string
+    accroche: string
     description: string
     highlights: string[]
     model: string | null
@@ -1055,8 +1057,61 @@ export async function generateAnnonceDescription(input: RedacteurInput): Promise
   return {
     runId: payload.runId ?? null,
     title: payload.title ?? '',
+    accroche: payload.accroche ?? '',
     description: payload.description ?? '',
     highlights: Array.isArray(payload.highlights) ? payload.highlights : [],
+    model: payload.model ?? null,
+    costUsd: payload.costUsd ?? null,
+  }
+}
+
+export type EstimationRedactionProposal = {
+  runId: number | null
+  appreciationEtat: string
+  pointsForts: string[]
+  pointsVigilance: string[]
+  argumentairePrix: string
+  avisConseiller: string
+  model: string | null
+  costUsd: number | null
+}
+
+export type EstimationRedactionInput = {
+  texts: Record<string, unknown>
+  propertyData?: Record<string, unknown>
+  appDossierId?: number | null
+  hektorAnnonceId?: number | null
+}
+
+// Agent "Avis de valeur" (propose-only) : ameliore les textes d'estimation issus
+// de la fiche manuscrite scannee. Un seul appel, sortie JSON stricte.
+export async function improveEstimationTexts(input: EstimationRedactionInput): Promise<EstimationRedactionProposal> {
+  const payload = await invokeBackendApi<{
+    ok: true
+    runId: number | null
+    appreciationEtat: string
+    pointsForts: string[]
+    pointsVigilance: string[]
+    argumentairePrix: string
+    avisConseiller: string
+    model: string | null
+    costUsd: number | null
+  }>('/annonces/estimation-redaction', {
+    method: 'POST',
+    body: {
+      texts: input.texts ?? {},
+      propertyData: input.propertyData ?? {},
+      appDossierId: input.appDossierId ?? null,
+      hektorAnnonceId: input.hektorAnnonceId ?? null,
+    },
+  })
+  return {
+    runId: payload.runId ?? null,
+    appreciationEtat: payload.appreciationEtat ?? '',
+    pointsForts: Array.isArray(payload.pointsForts) ? payload.pointsForts : [],
+    pointsVigilance: Array.isArray(payload.pointsVigilance) ? payload.pointsVigilance : [],
+    argumentairePrix: payload.argumentairePrix ?? '',
+    avisConseiller: payload.avisConseiller ?? '',
     model: payload.model ?? null,
     costUsd: payload.costUsd ?? null,
   }
