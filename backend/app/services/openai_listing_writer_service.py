@@ -7,6 +7,7 @@ import requests
 from fastapi import HTTPException
 
 from ..settings import Settings
+from . import agent_registry
 
 # Agent "Redacteur d'annonce" (Phase 3, premier agent IA, propose-only).
 # Genere un titre + description + points forts a partir des donnees FACTUELLES
@@ -116,45 +117,28 @@ class OpenAIListingWriterService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def generate(
+    def _run_json_agent(
         self,
-        property_data: dict[str, Any],
-        photo_urls: list[str] | None = None,
-        custom_intro: str | None = None,
-    ) -> dict[str, Any]:
+        agent_key: str,
+        variables: dict[str, Any],
+        schema: dict[str, Any],
+        schema_name: str,
+        extra_content: list[dict[str, Any]] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any], str]:
+        # Point d'appel unique : lit la fiche de l'agent (registre Supabase + repli
+        # code), rend le prompt, appelle OpenAI, parse le JSON strict. HTTP + erreurs
+        # + parse mutualises pour tous les agents. Le schema reste fourni par l'appelant
+        # (couple au parsing en aval).
         if not self.settings.openai_api_key:
             raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configure sur le backend")
 
-        model = self.settings.openai_vision_model
-        facts = _format_facts(property_data)
-        has_photos = any(str(u).strip() for u in (photo_urls or []))
-        prompt = (
-            "Tu es redacteur immobilier expert (agence GTI Immobilier). Redige une annonce en francais "
-            "a partir des seules DONNEES FACTUELLES fournies.\n"
-            "Regles :\n"
-            "- N'utilise QUE les faits fournis ; n'invente aucun chiffre ni caracteristique ; n'affirme rien d'incertain.\n"
-            "- Style precis et evocateur, sans cliches ('coup de coeur', 'ecrin de verdure', 'prestations de qualite', "
-            "'rare a la vente') ni superlatifs vides.\n"
-            "- Valorise concretement : volumes, luminosite, exposition, distribution des pieces, atouts techniques "
-            "(DPE, chauffage) et environnement.\n"
-            "Produis (JSON) :\n"
-            "- title : 60-70 caracteres (type + atout majeur + secteur).\n"
-            "- accroche : 1 phrase (~140 caracteres) qui capte l'essentiel.\n"
-            "- description : 3 courts paragraphes (exterieur/localisation ; interieur/distribution ; technique & "
-            "conclusion), 700-1100 caracteres, sans repeter le titre.\n"
-            "- highlights : 3 a 5 atouts concrets de 3 a 6 mots.\n"
-        )
-        if has_photos:
-            prompt += "- Les photos servent a decrire l'ambiance et les volumes, jamais a deduire un chiffre.\n"
-        if custom_intro and custom_intro.strip():
-            prompt += f"- Consigne du negociateur : {custom_intro.strip()}\n"
-        prompt += f"\nDONNEES FACTUELLES :\n{facts}"
+        spec = agent_registry.load_spec(self.settings, agent_key)
+        model = spec.model or self.settings.openai_vision_model
+        prompt = agent_registry.render(spec.instructions, variables)
 
         content: list[dict[str, Any]] = [{"type": "input_text", "text": prompt}]
-        for url in (photo_urls or [])[:MAX_PHOTOS]:
-            clean = str(url).strip()
-            if clean:
-                content.append({"type": "input_image", "image_url": clean})
+        if extra_content:
+            content.extend(extra_content)
 
         request_payload = {
             "model": model,
@@ -162,12 +146,12 @@ class OpenAIListingWriterService:
             "text": {
                 "format": {
                     "type": "json_schema",
-                    "name": "hektor_listing_description",
+                    "name": schema_name,
                     "strict": True,
-                    "schema": _writer_schema(),
+                    "schema": schema,
                 }
             },
-            "max_output_tokens": 1200,
+            "max_output_tokens": spec.max_output_tokens,
         }
         response = requests.post(
             "https://api.openai.com/v1/responses",
@@ -184,24 +168,55 @@ class OpenAIListingWriterService:
                 message = error_payload.get("error", {}).get("message") or error_payload.get("message")
             except Exception:
                 message = response.text.strip()
-            raise HTTPException(status_code=502, detail=message or "Erreur OpenAI (redacteur)")
+            raise HTTPException(status_code=502, detail=message or f"Erreur OpenAI ({agent_key})")
 
         data = response.json()
         parsed = json.loads(_extract_output_text(data))
         if not isinstance(parsed, dict):
-            raise HTTPException(status_code=502, detail="Reponse OpenAI inattendue (redacteur)")
-        usage = data.get("usage") or {}
+            raise HTTPException(status_code=502, detail=f"Reponse OpenAI inattendue ({agent_key})")
+        usage_raw = data.get("usage") or {}
+        usage = {
+            "input_tokens": usage_raw.get("input_tokens"),
+            "output_tokens": usage_raw.get("output_tokens"),
+            "total_tokens": usage_raw.get("total_tokens"),
+        }
+        return parsed, usage, model
+
+    def generate(
+        self,
+        property_data: dict[str, Any],
+        photo_urls: list[str] | None = None,
+        custom_intro: str | None = None,
+    ) -> dict[str, Any]:
+        has_photos = any(str(u).strip() for u in (photo_urls or []))
+        variables = {
+            "facts": _format_facts(property_data),
+            "photo_line": (
+                "- Les photos servent a decrire l'ambiance et les volumes, jamais a deduire un chiffre.\n"
+                if has_photos else ""
+            ),
+            "custom_intro_line": (
+                f"- Consigne du negociateur : {custom_intro.strip()}\n"
+                if (custom_intro and custom_intro.strip()) else ""
+            ),
+        }
+        extra_content: list[dict[str, Any]] = []
+        for url in (photo_urls or [])[:MAX_PHOTOS]:
+            clean = str(url).strip()
+            if clean:
+                extra_content.append({"type": "input_image", "image_url": clean})
+
+        parsed, usage, model = self._run_json_agent(
+            "redacteur", variables, _writer_schema(), "hektor_listing_description",
+            extra_content=extra_content,
+        )
         return {
             "title": str(parsed.get("title") or "").strip(),
             "accroche": str(parsed.get("accroche") or "").strip(),
             "description": str(parsed.get("description") or "").strip(),
             "highlights": [str(item).strip() for item in parsed.get("highlights", []) if str(item).strip()],
             "model": model,
-            "usage": {
-                "input_tokens": usage.get("input_tokens"),
-                "output_tokens": usage.get("output_tokens"),
-                "total_tokens": usage.get("total_tokens"),
-            },
+            "usage": usage,
         }
 
     def polish_estimation(
@@ -211,62 +226,13 @@ class OpenAIListingWriterService:
     ) -> dict[str, Any]:
         # Ameliore les textes d'un AVIS DE VALEUR (issus d'une fiche manuscrite scannee) :
         # reformule en francais professionnel SANS inventer de fait ni de chiffre.
-        if not self.settings.openai_api_key:
-            raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configure sur le backend")
-
-        model = self.settings.openai_vision_model
-        facts = _format_facts(property_data or {})
-        raw = _format_estimation_texts(texts or {})
-        prompt = (
-            "Tu es expert en evaluation immobiliere (agence GTI Immobilier). Reformule des NOTES BRUTES "
-            "(issues d'une fiche manuscrite) en textes d'avis de valeur professionnels, a partir des seules "
-            "infos fournies.\n"
-            "Regles :\n"
-            "- N'invente aucun fait ni chiffre ; conserve le sens ; corrige orthographe, grammaire et syntaxe.\n"
-            "- Ton d'expert : objectif, sobre, argumente ; aucun langage commercial ni superlatif.\n"
-            "- Un champ vide en entree reste vide en sortie (jamais de remplissage invente).\n"
-            "Produis (JSON), concis et rediges :\n"
-            "- appreciationEtat : etat general en 2 a 4 phrases completes.\n"
-            "- pointsForts / pointsVigilance : listes, un element factuel par entree.\n"
-            "- argumentairePrix : justification du positionnement (atouts/limites, coherence marche), 2 a 4 phrases.\n"
-            "- avisConseiller : synthese et recommandation, 2 a 3 phrases.\n\n"
-            f"NOTES BRUTES :\n{raw}\n\nFAITS DU BIEN :\n{facts}"
-        )
-        request_payload = {
-            "model": model,
-            "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
-            "text": {
-                "format": {
-                    "type": "json_schema",
-                    "name": "hektor_estimation_redaction",
-                    "strict": True,
-                    "schema": _estimation_schema(),
-                }
-            },
-            "max_output_tokens": 1200,
+        variables = {
+            "raw": _format_estimation_texts(texts or {}),
+            "facts": _format_facts(property_data or {}),
         }
-        response = requests.post(
-            "https://api.openai.com/v1/responses",
-            headers={
-                "Authorization": f"Bearer {self.settings.openai_api_key}",
-                "Content-Type": "application/json",
-            },
-            json=request_payload,
-            timeout=120,
+        parsed, usage, model = self._run_json_agent(
+            "avis_valeur", variables, _estimation_schema(), "hektor_estimation_redaction",
         )
-        if not response.ok:
-            try:
-                error_payload = response.json()
-                message = error_payload.get("error", {}).get("message") or error_payload.get("message")
-            except Exception:
-                message = response.text.strip()
-            raise HTTPException(status_code=502, detail=message or "Erreur OpenAI (avis de valeur)")
-
-        data = response.json()
-        parsed = json.loads(_extract_output_text(data))
-        if not isinstance(parsed, dict):
-            raise HTTPException(status_code=502, detail="Reponse OpenAI inattendue (avis de valeur)")
-        usage = data.get("usage") or {}
         return {
             "appreciationEtat": str(parsed.get("appreciationEtat") or "").strip(),
             "pointsForts": [str(item).strip() for item in parsed.get("pointsForts", []) if str(item).strip()],
@@ -274,9 +240,5 @@ class OpenAIListingWriterService:
             "argumentairePrix": str(parsed.get("argumentairePrix") or "").strip(),
             "avisConseiller": str(parsed.get("avisConseiller") or "").strip(),
             "model": model,
-            "usage": {
-                "input_tokens": usage.get("input_tokens"),
-                "output_tokens": usage.get("output_tokens"),
-                "total_tokens": usage.get("total_tokens"),
-            },
+            "usage": usage,
         }
