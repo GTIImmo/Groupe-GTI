@@ -317,6 +317,8 @@ class OpenAIListingSheetService:
         prompt = (
             "Tu lis une fiche papier d'annonce immobiliere francaise, souvent remplie a la main par un commercial. "
             "Retourne uniquement les donnees visibles. N'invente jamais une valeur absente ou illisible. "
+            "Sois EXHAUSTIF : parcours toute la fiche et renseigne TOUS les champs correspondant a une "
+            "donnee lisible, meme secondaire ; n'omets aucun champ dont l'information figure sur la page. "
             "Les montants et surfaces doivent etre retournes en chiffres simples, sans unite, espace ou symbole euro. "
             "Si une valeur est incertaine, baisse confidence. Si elle est illisible, value doit etre null. "
             "Les champs garden (jardin) et pool (piscine) valent 'oui' ou 'non' selon leur presence. "
@@ -340,9 +342,12 @@ class OpenAIListingSheetService:
             "detail ex. 'suite parentale', etage, surface en m2, note libre). Nombre de pieces variable ; "
             "liste vide si la fiche n'en decrit aucune. "
             "Les champs d'avis de valeur (estimationLow/estimationHigh/estimee via estimationAmount, "
-            "stateNote 1-5, stateLabel, stateAppreciation, strongPoints, watchPoints, priceArgument, "
+            "stateNote, stateLabel, stateAppreciation, strongPoints, watchPoints, priceArgument, "
             "advisorOpinion, chargeEnergy/chargeWater/chargeInsurance) sont saisis a la main par le "
-            "commercial pour l'estimation. Le tableau 'statePosts' est le bareme d'etat : une entree "
+            "commercial. IMPORTANT : stateNote = UNIQUEMENT la note globale CHIFFREE (1 a 5), jamais de "
+            "texte ; stateAppreciation = le TEXTE d'appreciation redige de l'etat. Ne mets jamais de "
+            "phrase dans stateNote. "
+            "Le tableau 'statePosts' est le bareme d'etat : une entree "
             "par poste evalue (poste ex. 'Toiture', level = neuf/bon/correct/a prevoir, note = precision "
             "ex. 'refaite 2019') ; liste vide si non rempli."
         )
