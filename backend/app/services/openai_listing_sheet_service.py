@@ -361,7 +361,11 @@ class OpenAIListingSheetService:
                 "format": {
                     "type": "json_schema",
                     "name": "hektor_listing_sheet_extraction",
-                    "strict": True,
+                    # NON-strict : en strict, le modele DOIT emettre les 124 champs (meme
+                    # vides) -> ~2000 tokens de sortie -> ~60s/page. En non-strict il n'emet
+                    # que les champs trouves -> ~2,5x plus rapide et moins cher. Le front
+                    # (_normalize_extraction) complete les champs absents a null.
+                    "strict": False,
                     "schema": _schema(),
                 }
             },
