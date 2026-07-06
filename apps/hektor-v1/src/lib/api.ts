@@ -898,7 +898,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 // Reduit une image trop grande avant l'OCR (moins de tokens = plus rapide + moins
 // cher) tout en gardant le texte lisible. Les petites images sont laissees telles
 // quelles ; repli sur l'original en cas de souci.
-async function prepareScanImageDataUrl(file: File, maxSide = 1600): Promise<{ dataUrl: string; mimeType: string }> {
+async function prepareScanImageDataUrl(file: File, maxSide = 1280): Promise<{ dataUrl: string; mimeType: string }> {
   const dataUrl = await readFileAsDataUrl(file)
   const fallback = { dataUrl, mimeType: file.type || 'image/jpeg' }
   if (typeof document === 'undefined') return fallback
