@@ -824,6 +824,8 @@ export type DraftAnnonceSheetScanFieldKey =
   | 'estimationDate'
   | 'propertyTax'
   | 'housingTax'
+  | 'works'
+  | 'chargesDetail'
   | 'estimationLow'
   | 'estimationHigh'
   | 'stateNote'
