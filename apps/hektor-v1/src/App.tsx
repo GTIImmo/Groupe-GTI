@@ -1504,6 +1504,31 @@ type ScanWizardMapEntry = {
   options?: HektorSelectOption[]
 }
 
+// Libelles lisibles pour la revue par confiance (Point 4) : cle OCR -> libelle FR.
+const scanFieldLabels: Record<string, string> = {
+  title: 'Titre', propertyType: 'Type de bien', address: 'Adresse', postalCode: 'Code postal', city: 'Ville',
+  price: 'Prix', netSellerPrice: 'Prix net vendeur', surface: 'Surface habitable', carrezSurface: 'Surface Carrez',
+  livingSurface: 'Surface sejour', roomCount: 'Pieces', bedroomCount: 'Chambres', levelCount: 'Niveaux',
+  bathroomCount: 'Salles de bain', showerRoomCount: "Salles d'eau", wcCount: 'WC', kitchen: 'Cuisine',
+  exposure: 'Exposition', view: 'Vue', interiorState: 'Etat interieur', exteriorState: 'Etat exterieur',
+  landSurface: 'Surface terrain', garden: 'Jardin', pool: 'Piscine', garageCount: 'Garages',
+  garageSurface: 'Surface garage', parkingInsideCount: 'Parking interieur', parkingOutsideCount: 'Parking exterieur',
+  constructionYear: 'Annee construction', dpeValue: 'DPE', gesValue: 'GES', coproLots: 'Lots copro',
+  coproCharges: 'Charges copro', heatingFormat: 'Format chauffage', heatingType: 'Type chauffage',
+  heatingEnergy: 'Energie chauffage', water: 'Eau', sanitation: 'Assainissement',
+  mandantCivility: 'Civilite vendeur', mandantLastName: 'Nom vendeur', mandantFirstName: 'Prenom vendeur',
+  mandantEmail: 'Email vendeur', mandantPhone: 'Telephone vendeur', mandantAddress: 'Adresse vendeur',
+  estimationAmount: 'Valeur estimee', estimationLow: 'Fourchette basse', estimationHigh: 'Fourchette haute',
+  estimationDate: 'Date estimation', propertyTax: 'Taxe fonciere', housingTax: "Taxe d'habitation",
+  chargeEnergy: 'Charges energie', chargeWater: 'Charges eau', stateNote: 'Note etat', stateLabel: 'Libelle etat',
+  stateAppreciation: "Appreciation d'etat", strongPoints: 'Points forts', watchPoints: 'Points de vigilance',
+  priceArgument: 'Argumentaire prix', advisorOpinion: 'Avis conseiller', works: 'Travaux', chargesDetail: 'Detail charges',
+  negotiatorName: 'Negociateur', agency: 'Agence', transport: 'Transport', particularities: 'Particularites',
+}
+function scanFieldLabel(key: string): string {
+  return scanFieldLabels[key] ?? key
+}
+
 const scanWizardFieldMap: ScanWizardMapEntry[] = [
   { ocr: 'immeuble', name: 'immeuble', kind: 'text' },
   { ocr: 'transport', name: 'TRANSPORT', kind: 'text' },
@@ -10525,6 +10550,9 @@ export default function App() {
   const [draftAnnonceScanInputVersion, setDraftAnnonceScanInputVersion] = useState(0)
   const [draftAnnonceScanMessage, setDraftAnnonceScanMessage] = useState<string | null>(null)
   const [draftAnnonceScanWarnings, setDraftAnnonceScanWarnings] = useState<string[]>([])
+  // Point 4 : champs lus avec faible confiance -> a proposer a la revue (confiance deja
+  // renvoyee par l'OCR, aucun appel/token en plus).
+  const [draftAnnonceScanReview, setDraftAnnonceScanReview] = useState<Array<{ key: string; label: string; value: string; confidence: number }>>([])
   const [draftAnnoncePhotoDrafts, setDraftAnnoncePhotoDrafts] = useState<DraftAnnoncePhotoDraft[]>([])
   const [draftAnnoncePhotoInputVersion, setDraftAnnoncePhotoInputVersion] = useState(0)
   const [draftAnnonceQueuedPhotos, setDraftAnnonceQueuedPhotos] = useState<Record<string, DraftAnnonceQueuedPhoto[]>>({})
@@ -12404,6 +12432,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceScanEstimation(false)
     setDraftAnnonceScanMessage(null)
     setDraftAnnonceScanWarnings([])
+    setDraftAnnonceScanReview([])
     setDraftAnnonceScanInputVersion((value) => value + 1)
     setDraftMandantChoice('none')
     setDraftExistingMandantSearch('')
@@ -12764,13 +12793,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // Agent de saisie : une fiche scannee cree une estimation.
     setDraftAnnonceScanEstimation(true)
 
-    const lowConfidence = Object.entries(scan.fields)
+    // Revue par confiance : champs remplis mais lus avec faible confiance (<75%).
+    const review = Object.entries(scan.fields)
       .filter(([, field]) => field.value?.trim() && typeof field.confidence === 'number' && field.confidence < 0.75)
-      .map(([key]) => key)
-      .slice(0, 8)
-    const warnings = [...scan.warnings]
-    if (lowConfidence.length) warnings.push(`A verifier : ${lowConfidence.join(', ')}`)
-    setDraftAnnonceScanWarnings(warnings)
+      .map(([key, field]) => ({ key, label: scanFieldLabel(key), value: (field.value ?? '').trim(), confidence: field.confidence as number }))
+      .sort((a, b) => a.confidence - b.confidence)
+      .slice(0, 12)
+    setDraftAnnonceScanReview(review)
+    setDraftAnnonceScanWarnings([...scan.warnings])
     setDraftAnnonceScanMessage(`${draftAnnonceScanFilledCount(scan)} champs recuperes depuis la fiche${scan.summaryConfidence != null ? ` - fiabilite ${(scan.summaryConfidence * 100).toFixed(0)}%` : ''}.`)
     setDraftAnnonceStep('offre')
   }
@@ -15045,6 +15075,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <ul className="draft-annonce-scan-warnings">
                     {draftAnnonceScanWarnings.slice(0, 4).map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}
                   </ul>
+                ) : null}
+                {draftAnnonceScanReview.length ? (
+                  <div className="draft-annonce-scan-review">
+                    <div className="dasr-head"><span aria-hidden="true">⚠</span> {draftAnnonceScanReview.length} champ{draftAnnonceScanReview.length > 1 ? 's' : ''} à vérifier — l'IA n'est pas sûre de sa lecture</div>
+                    <ul>
+                      {draftAnnonceScanReview.map((f) => (
+                        <li key={f.key}>
+                          <span className="dasr-label">{f.label}</span>
+                          <span className="dasr-value">{f.value}</span>
+                          <span className="dasr-conf">{Math.round(f.confidence * 100)}%</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : null}
                 <div className="draft-annonce-page-head">
                   <div>
