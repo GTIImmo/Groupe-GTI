@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import logging
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger("gti.backend")
 
 from .routers.admin_users import router as admin_users_router
 from .routers.annonces import router as annonces_router
@@ -36,12 +41,15 @@ app.add_middleware(
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     # Piege Starlette : une exception NON GEREE produit un 500 SANS en-tetes CORS
     # (ServerErrorMiddleware est au-dessus de CORSMiddleware) -> le navigateur affiche
-    # "No Access-Control-Allow-Origin header present" au lieu de l'erreur reelle.
-    # On renvoie un 500 AVEC en-tete CORS + le type/message d'exception, pour que
-    # l'erreur soit visible cote client (au lieu d'un faux probleme CORS).
+    # "No Access-Control-Allow-Origin header present" au lieu de l'erreur. On garde le
+    # 500 AVEC en-tete CORS, mais on NE FUITE PLUS le detail au client : le traceback
+    # complet part dans les logs serveur (avec une ref), le client ne recoit qu'un
+    # message generique + la ref pour retrouver l'erreur dans les logs.
+    ref = uuid.uuid4().hex[:8]
+    logger.error("Unhandled error [ref=%s] %s %s", ref, request.method, request.url.path, exc_info=exc)
     return JSONResponse(
         status_code=500,
-        content={"detail": f"{type(exc).__name__}: {exc}"},
+        content={"detail": f"Erreur interne du serveur (ref: {ref})"},
         headers={"Access-Control-Allow-Origin": "*"},
     )
 

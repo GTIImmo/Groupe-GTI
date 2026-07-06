@@ -39,6 +39,24 @@ def _estimate_cost_usd(usage: dict) -> float | None:
     return round(in_tok * _REDACTEUR_PRICE_IN + out_tok * _REDACTEUR_PRICE_OUT, 5)
 
 
+def _record_agent_error(admin_service, agent_key, negociateur_email, app_dossier_id, hektor_annonce_id, exc) -> None:
+    # Trace best-effort d'un echec d'agent dans app_agent_run (status='error') -> retrouvable
+    # en base. Ne doit jamais masquer l'erreur d'origine (on re-raise apres).
+    try:
+        admin_service.insert_agent_run(
+            {
+                "agent_key": agent_key,
+                "app_dossier_id": app_dossier_id,
+                "hektor_annonce_id": hektor_annonce_id,
+                "negociateur_email": negociateur_email,
+                "status": "error",
+                "error_text": f"{type(exc).__name__}: {exc}"[:2000],
+            }
+        )
+    except Exception:
+        pass
+
+
 @router.post("/scan-fiche")
 def scan_annonce_sheet(
     payload: ScanAnnonceSheetPayload,
@@ -71,11 +89,16 @@ def redacteur_generate(
     if role not in {"admin", "manager", "commercial"} or profile.get("is_active") is not True:
         raise HTTPException(status_code=403, detail="Acces redacteur refuse")
 
-    proposal = writer_service.generate(
-        payload.propertyData or {},
-        photo_urls=payload.photoUrls or [],
-        custom_intro=payload.customIntro,
-    )
+    try:
+        proposal = writer_service.generate(
+            payload.propertyData or {},
+            photo_urls=payload.photoUrls or [],
+            custom_intro=payload.customIntro,
+        )
+    except Exception as exc:
+        _record_agent_error(admin_service, "redacteur", (user.email or "").strip().lower() or None,
+                            payload.appDossierId, payload.hektorAnnonceId, exc)
+        raise
     usage = proposal.get("usage") or {}
     run_id = admin_service.insert_agent_run(
         {
@@ -156,7 +179,12 @@ def estimation_redaction(
     if role not in {"admin", "manager", "commercial"} or profile.get("is_active") is not True:
         raise HTTPException(status_code=403, detail="Acces redacteur refuse")
 
-    result = writer_service.polish_estimation(payload.texts or {}, payload.propertyData or {})
+    try:
+        result = writer_service.polish_estimation(payload.texts or {}, payload.propertyData or {})
+    except Exception as exc:
+        _record_agent_error(admin_service, "avis_valeur", (user.email or "").strip().lower() or None,
+                            payload.appDossierId, payload.hektorAnnonceId, exc)
+        raise
     usage = result.get("usage") or {}
     run_id = admin_service.insert_agent_run(
         {
