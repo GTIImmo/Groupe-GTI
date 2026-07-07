@@ -443,7 +443,10 @@ class Alerter:
                     server.send_message(message)
             else:
                 with smtplib.SMTP(self.smtp_host, port, timeout=self.timeout) as server:
-                    if self.smtp_secure in ("starttls", "tls"):
+                    # STARTTLS par defaut sur un port non-SSL (Gmail 587 l'EXIGE). On ne le saute
+                    # que si explicitement desactive (none/plain/off). Avant, seul "starttls"/"tls"
+                    # le declenchait -> avec SMTP_SECURE=false l'email d'alerte echouait en silence.
+                    if self.smtp_secure not in ("none", "plain", "off"):
                         server.starttls()
                     if self.smtp_user:
                         server.login(self.smtp_user, self.smtp_pass)
