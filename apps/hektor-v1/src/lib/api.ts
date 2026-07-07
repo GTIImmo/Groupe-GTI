@@ -2286,6 +2286,34 @@ export async function setAlertState(
   if (error) throw new Error(error.message ?? 'Unable to update alert state')
 }
 
+export type AgentRunRow = {
+  id: number
+  agent_key: string
+  negociateur_email: string | null
+  status: string
+  model: string | null
+  input_tokens: number | null
+  output_tokens: number | null
+  cost_usd: number | null
+  error_text: string | null
+  created_at: string
+}
+
+// Runs d'agents IA (app_agent_run) des N derniers jours. RLS : nego voit ses runs,
+// admin/manager voient tout. Pour le cockpit Sante (admin/manager) -> tous les runs.
+export async function loadAgentRuns(days = 7): Promise<AgentRunRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const since = new Date(Date.now() - days * 86400000).toISOString()
+  const { data, error } = await supabase
+    .from('app_agent_run')
+    .select('id,agent_key,negociateur_email,status,model,input_tokens,output_tokens,cost_usd,error_text,created_at')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(500)
+  if (error) throw new Error(error.message ?? 'Unable to load agent runs')
+  return (data ?? []) as AgentRunRow[]
+}
+
 type ContactStatsSnapshotRow = {
   total?: number | string | null
   active?: number | string | null

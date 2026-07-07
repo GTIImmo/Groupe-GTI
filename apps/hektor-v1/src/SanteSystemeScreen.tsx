@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, loadAlertsCurrent, setAlertState, type MonitorStatusRow, type AlertRow } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, type MonitorStatusRow, type AlertRow, type AgentRunRow } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
@@ -50,6 +50,12 @@ const DOMAIN_LABEL: Record<string, string> = {
   monitor: 'Superviseur',
 }
 
+const AGENT_LABEL: Record<string, string> = {
+  redacteur: "Rédacteur d'annonce",
+  avis_valeur: 'Avis de valeur',
+  scan_fiche: 'Scan fiche',
+}
+
 const TONE_RANK: Record<Tone, number> = { crit: 0, warn: 1, unknown: 2, ok: 3 }
 
 function toneOf(status: string | null | undefined): Tone {
@@ -71,6 +77,7 @@ function timeAgo(iso: string | null): string {
 export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps) {
   const [rows, setRows] = useState<MonitorStatusRow[]>([])
   const [alerts, setAlerts] = useState<AlertRow[]>([])
+  const [agentRuns, setAgentRuns] = useState<AgentRunRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
@@ -78,9 +85,10 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      const [status, alertRows] = await Promise.all([loadMonitorStatus(), loadAlertsCurrent()])
+      const [status, alertRows, runs] = await Promise.all([loadMonitorStatus(), loadAlertsCurrent(), loadAgentRuns(7).catch(() => [])])
       setRows(status)
       setAlerts(alertRows)
+      setAgentRuns(runs)
       setLastRefresh(new Date())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement')
@@ -170,6 +178,28 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
     () => alerts.filter((alert) => alert.severity !== 'warning' && alert.severity !== 'critical').length,
     [alerts],
   )
+
+  const agentStats = useMemo(() => {
+    const total = agentRuns.length
+    let cost = 0
+    const byAgent: Record<string, { n: number; cost: number }> = {}
+    const errors: AgentRunRow[] = []
+    let accepted = 0
+    let rejected = 0
+    for (const r of agentRuns) {
+      const c = Number(r.cost_usd) || 0
+      cost += c
+      const a = byAgent[r.agent_key] ?? { n: 0, cost: 0 }
+      a.n += 1
+      a.cost += c
+      byAgent[r.agent_key] = a
+      if (r.status === 'accepted') accepted += 1
+      else if (r.status === 'rejected') rejected += 1
+      else if (r.status === 'error') errors.push(r)
+    }
+    const decided = accepted + rejected
+    return { total, cost, byAgent, errors, accepted, rejected, acceptRate: decided ? accepted / decided : null }
+  }, [agentRuns])
 
   if (!isAdmin) {
     return (
@@ -261,6 +291,42 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
               + {alertsInfoCount} notification{alertsInfoCount > 1 ? 's' : ''} non lue{alertsInfoCount > 1 ? 's' : ''}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {agentStats.total > 0 ? (
+        <div className="ss-group">
+          <div className="ss-group-head">
+            <h2>Agents IA · 7 jours</h2>
+            <span className="ss-count">{agentStats.total}</span>
+          </div>
+          <div className="ss-kpis">
+            <div className="ss-kpi"><span className="ss-kpi-label">Exécutions</span><span className="ss-kpi-val">{agentStats.total}</span></div>
+            <div className="ss-kpi"><span className="ss-kpi-label">Coût</span><span className="ss-kpi-val">{(agentStats.cost * 100).toFixed(1)} cts</span></div>
+            <div className="ss-kpi"><span className="ss-kpi-label">Acceptation</span><span className="ss-kpi-val">{agentStats.acceptRate != null ? `${Math.round(agentStats.acceptRate * 100)}%` : '—'}</span></div>
+            <div className="ss-kpi"><span className="ss-kpi-label">Erreurs</span><span className={`ss-kpi-val ${agentStats.errors.length ? 'ss-text-crit' : ''}`}>{agentStats.errors.length}</span></div>
+          </div>
+          <div className="ss-rows">
+            {Object.entries(agentStats.byAgent).map(([agent, s]) => (
+              <div className="ss-row" key={agent}>
+                <span className="ss-dot ss-ok" aria-hidden="true" />
+                <div className="ss-row-body">
+                  <div className="ss-row-name">{AGENT_LABEL[agent] ?? agent}</div>
+                  <div className="ss-row-msg">{s.n} run{s.n > 1 ? 's' : ''} · {(s.cost * 100).toFixed(1)} cts</div>
+                </div>
+              </div>
+            ))}
+            {agentStats.errors.slice(0, 3).map((e) => (
+              <div className="ss-row" key={`err-${e.id}`}>
+                <span className="ss-dot ss-crit" aria-hidden="true" />
+                <div className="ss-row-body">
+                  <div className="ss-row-name"><span className="ss-src">{AGENT_LABEL[e.agent_key] ?? e.agent_key}</span> erreur</div>
+                  <div className="ss-row-msg">{(e.error_text ?? '').slice(0, 90)}</div>
+                </div>
+                <div className="ss-row-meta"><span className="ss-age">{timeAgo(e.created_at)}</span></div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 
