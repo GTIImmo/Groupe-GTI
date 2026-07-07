@@ -1166,6 +1166,8 @@ type DraftAnnonceWizardField = {
   multiline?: boolean
   options?: HektorSelectOption[]
   defaultValue?: string
+  // Visibilite conditionnelle : le champ n'apparait que si le champ `field` vaut `value`.
+  showIf?: { field: string; value: string }
 }
 
 type DraftAnnonceWizardGroup = {
@@ -1277,6 +1279,14 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('NB_NIVEAUX', 'Niveaux', { inputMode: 'numeric' }),
       wf('JARDIN-', 'Jardin', { options: wizardUnknownOuiNon }),
       wf('PISCINE-', 'Piscine', { options: wizardUnknownOuiNon }),
+      wf('PISCINE_TYPE', 'Type de piscine', { showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('PISCINE_NATURE', 'Nature piscine', { showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('PISCINE_DIMENSIONS', 'Dimensions piscine', { showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('PISCINE_TRAITEMENT', 'Traitement piscine', { showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('PISCINE_CHAUFFEE', 'Piscine chauffee', { options: wizardUnknownOuiNon, showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('PISCINE_COUVERTE', 'Piscine couverte', { options: wizardUnknownOuiNon, showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('POOL_HOUSE', 'Pool house', { options: wizardUnknownOuiNon, showIf: { field: 'PISCINE-', value: 'OUI' } }),
+      wf('PISCINE_DETAILS', 'Details piscine', { multiline: true, showIf: { field: 'PISCINE-', value: 'OUI' } }),
       wf('GARAGE_BOX', 'Garages', { inputMode: 'numeric' }),
       wf('EXPOSITION', 'Exposition', { options: hektorExposureOptions }),
       wf('vuee', 'Vue'),
@@ -1306,7 +1316,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - Interieur',
+    title: '5. Détails · Intérieur',
     fields: [
       wf('Particularites', 'Particularites', { options: hektorParticularityOptions }),
       wf('NB_CHAMBRES', 'Chambres', { inputMode: 'numeric' }),
@@ -1323,7 +1333,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - Exterieur',
+    title: '5. Détails · Extérieur & annexes',
     fields: [
       wf('MURS_MITOYENS', 'Murs mitoyens', { options: hektorPartyWallOptions }),
       wf('floorState', 'Indication etage', { options: wizardFloorStateOptions }),
@@ -1348,7 +1358,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - Terrain, piscine & construction',
+    title: '5. Détails · Terrain',
     fields: [
       wf('SURFACE_JARDIN', 'Surface jardin', { inputMode: 'decimal' }),
       wf('terrain_constructible', 'Terrain constructible', { options: wizardUnknownOuiNon }),
@@ -1361,14 +1371,12 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('terrain_raccordement_telephone', 'Raccordement telephone', { options: wizardUnknownOuiNon }),
       wf('terrain_arbore', 'Terrain arbore', { options: wizardUnknownOuiNon }),
       wf('terrain_piscinable', 'Terrain piscinable', { options: wizardUnknownOuiNon }),
-      wf('PISCINE_TYPE', 'Type de piscine'),
-      wf('PISCINE_NATURE', 'Nature piscine'),
-      wf('PISCINE_DIMENSIONS', 'Dimensions piscine'),
-      wf('PISCINE_TRAITEMENT', 'Traitement piscine'),
-      wf('PISCINE_CHAUFFEE', 'Piscine chauffee', { options: wizardUnknownOuiNon }),
-      wf('PISCINE_COUVERTE', 'Piscine couverte', { options: wizardUnknownOuiNon }),
-      wf('POOL_HOUSE', 'Pool house', { options: wizardUnknownOuiNon }),
-      wf('PISCINE_DETAILS', 'Details piscine', { multiline: true }),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Détails · Construction récente',
+    fields: [
       wf('garantie_decennale', 'Garantie decennale', { options: wizardUnknownOuiNon }),
       wf('assurance_dommages_ouvrage', 'Assurance dommages-ouvrage', { options: wizardUnknownOuiNon }),
       wf('certificat_conformite', 'Certificat de conformite', { options: wizardUnknownOuiNon }),
@@ -1377,7 +1385,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - Equipements',
+    title: '5. Détails · Équipements & confort',
     fields: [
       wf('formatChauff', 'Format chauffage', { options: hektorHeatingFormatOptions, defaultValue: '4' }),
       wf('typeChauff', 'Type chauffage', { options: hektorHeatingTypeOptions, defaultValue: '9' }),
@@ -1406,7 +1414,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - Diagnostics',
+    title: '5. Détails · Diagnostics & énergie',
     fields: [
       wf('ANNEE_CONS', 'Annee construction', { inputMode: 'numeric' }),
       wf('etat_exterieur', 'Etat exterieur', { options: hektorExteriorStateOptions }),
@@ -1452,7 +1460,7 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
-    title: '5. Details - Copropriete et visite',
+    title: '5. Détails · Copropriété',
     fields: [
       wf('copropriete', 'Copropriete', { options: wizardUnknownOuiNon }),
       wf('copropriete_lot', 'Lot copropriete'),
@@ -1461,6 +1469,12 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('montant_fonds_travaux', 'Fonds travaux', { inputMode: 'decimal' }),
       wf('copropriete_plan_sauvegarde', 'Plan sauvegarde', { options: wizardUnknownOuiNon }),
       wf('copropriete_statut_syndicat', 'Statut syndicat', { options: wizardProcedureOptions }),
+    ],
+  },
+  {
+    step: 5,
+    title: '5. Détails · Disponibilité & visite',
+    fields: [
       wf('DISPO', 'Disponible', { options: wizardUnknownOuiNon }),
       wf('DATE_LIBER', 'Date liberation'),
       wf('DATE_DISPO', 'Date disponibilite'),
@@ -1876,11 +1890,11 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
     7: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
   },
   house: {
-    1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'surfterrain', 'JARDIN-', 'PISCINE-', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
+    1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'surfterrain', 'JARDIN-', 'PISCINE-',
+      'PISCINE_TYPE', 'PISCINE_NATURE', 'PISCINE_DIMENSIONS', 'PISCINE_TRAITEMENT', 'PISCINE_CHAUFFEE',
+      'PISCINE_COUVERTE', 'POOL_HOUSE', 'PISCINE_DETAILS', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
     5: [
-      'SURFACE_JARDIN', 'PISCINE_TYPE', 'PISCINE_NATURE', 'PISCINE_DIMENSIONS', 'PISCINE_TRAITEMENT',
-      'PISCINE_CHAUFFEE', 'PISCINE_COUVERTE', 'POOL_HOUSE', 'PISCINE_DETAILS',
-      'SHON', 'terrain_arbore', 'terrain_piscinable',
+      'SURFACE_JARDIN', 'SHON', 'terrain_arbore', 'terrain_piscinable',
       'garantie_decennale', 'assurance_dommages_ouvrage', 'certificat_conformite', 'declaration_achevement_travaux',
       'Particularites',
       'NB_CHAMBRES',
@@ -10861,6 +10875,9 @@ export default function App() {
       ? draftAnnonceAdvanced.garageSurface
       : draftAnnonceSurface
   const draftAnnonceVisibleWizardGroups = filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, draftAnnonceTypeRules.kind)
+    // Visibilite conditionnelle (ex. sous-champs piscine si Piscine=Oui) : lue sur les valeurs courantes.
+    .map((section) => ({ ...section, fields: section.fields.filter((field) => !field.showIf || (draftAnnonceWizardFields[field.showIf.field] ?? '') === field.showIf.value) }))
+    .filter((section) => section.fields.length > 0)
   const draftAnnonceVisibleWizardFieldNames = new Set(draftAnnonceVisibleWizardGroups.flatMap((section) => section.fields.map((field) => field.name)))
   const draftAnnonceCoreFilledCount = [
     draftAnnonceTitle,
