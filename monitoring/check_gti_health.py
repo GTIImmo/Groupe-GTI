@@ -1116,9 +1116,12 @@ class Monitor:
         pending_stale = []
         running_stale = []
         error_recent = []
+        error_burst = []
         pending_limit = float(self.args.console_pending_minutes)
         running_limit = float(self.args.console_running_minutes)
         error_window = float(self.args.console_error_window_minutes)
+        error_burst_window = float(self.args.console_error_critical_window_minutes)
+        error_critical_count = int(self.args.console_error_critical_count)
         for row in rows:
             status = row.get("status")
             if status == "pending":
@@ -1135,6 +1138,9 @@ class Monitor:
                 error_age = age_minutes(parse_iso(row.get("requested_at")))
                 if error_age is None or error_age <= error_window:
                     error_recent.append(row)
+                # Burst : erreurs tres recentes -> panne en cours -> escalade critical.
+                if error_age is not None and error_age <= error_burst_window:
+                    error_burst.append(row)
         if running_stale:
             self.add(
                 "console.jobs.running_stale",
@@ -1164,14 +1170,27 @@ class Monitor:
             f"{len(pending_stale)} Console jobs pending too long",
             {"count": len(pending_stale), "threshold_minutes": pending_limit},
         )
+        if len(error_burst) >= error_critical_count:
+            error_severity = "critical"
+        elif error_recent:
+            error_severity = "warning"
+        else:
+            error_severity = "ok"
         self.add(
             "console.jobs.errors",
             "business",
             "console",
             "error_jobs",
-            "warning" if error_recent else "ok",
-            f"{len(error_recent)} Console jobs in error (last {error_window / 60:.0f}h)",
-            {"count": len(error_recent), "window_minutes": error_window},
+            error_severity,
+            f"{len(error_recent)} Console jobs in error (last {error_window / 60:.0f}h) "
+            f"- {len(error_burst)} in last {error_burst_window:.0f}min",
+            {
+                "count": len(error_recent),
+                "burst_count": len(error_burst),
+                "window_minutes": error_window,
+                "burst_window_minutes": error_burst_window,
+                "critical_threshold": error_critical_count,
+            },
         )
 
     def check_backend_health(self) -> None:
@@ -1416,6 +1435,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--console-pending-minutes", type=int, default=60)
     parser.add_argument("--console-running-minutes", type=int, default=45)
     parser.add_argument("--console-error-window-minutes", type=int, default=48 * 60)
+    # Escalade en critical : un burst d'erreurs recentes (>= N sur une fenetre courte)
+    # signale une panne en cours (ex. connectivite Hektor coupee) et doit alerter,
+    # la ou le compteur 48h reste un simple "warning" de fond.
+    parser.add_argument("--console-error-critical-count", type=int, default=3)
+    parser.add_argument("--console-error-critical-window-minutes", type=int, default=30)
     parser.add_argument("--status-ttl-hours", type=float, default=24.0)
     parser.add_argument("--wal-warning-mb", type=int, default=512)
     parser.add_argument("--wal-critical-mb", type=int, default=1024)

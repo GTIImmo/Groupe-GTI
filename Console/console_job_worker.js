@@ -884,6 +884,43 @@ async function supabaseRequest(pathname, options = {}) {
   return payload;
 }
 
+// --- Heartbeat worker temps reel (app_worker_registry) ---
+// Les workers console.worker.* (temps reel) n'ecrivaient AUCUN heartbeat -> le monitoring
+// etait aveugle a leur arret (seuls les 14 workers du run nocturne en ecrivaient). On ecrit
+// ici la VIVACITE de la boucle de polling : last_run_at a chaque cycle, last_success_at = "la
+// boucle tourne + Supabase joignable". L'echec d'un JOB (ex. Hektor injoignable) est capte
+// separement par la sentinelle console.jobs.errors ; ici on ne mesure QUE la vivacite du
+// process (detecte un worker mort/bloque). Best-effort : ne bloque JAMAIS le traitement.
+const HEARTBEAT_WORKER_KEY = `console.worker.${WORKER_KIND}`;
+const HEARTBEAT_MIN_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_HEARTBEAT_INTERVAL_MS || 60000);
+let heartbeatLastWrittenAt = 0;
+async function writeWorkerHeartbeat(status, extra = {}) {
+  try {
+    const now = Date.now();
+    const isJobEvent = status === "success" || status === "error";
+    // Cycles idle : throttle pour ne pas marteler Supabase. Evenements de job : toujours ecrits.
+    if (!isJobEvent && now - heartbeatLastWrittenAt < HEARTBEAT_MIN_INTERVAL_MS) return;
+    heartbeatLastWrittenAt = now;
+    const iso = new Date(now).toISOString();
+    const patch = {
+      last_run_at: iso,
+      last_success_at: iso,
+      last_status: status,
+      last_run_host: os.hostname(),
+    };
+    if (extra.durationMs != null) patch.last_duration_ms = Math.round(extra.durationMs);
+    if (extra.error != null) patch.last_error = String(extra.error).slice(0, 500);
+    else if (isJobEvent) patch.last_error = null;
+    await supabaseRequest(`app_worker_registry?worker_key=eq.${encodeURIComponent(HEARTBEAT_WORKER_KEY)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify(patch),
+    });
+  } catch (_) {
+    // Heartbeat best-effort : un echec ici ne doit jamais perturber le worker.
+  }
+}
+
 // --- Création optimiste : réconciliation de la ligne provisoire (app_annonce_provisional) ---
 // La provisoire est insérée par le front au moment du "Créer" (affichage instantané "En création").
 // Le worker la relie ensuite au vrai bien Hektor (link), ou la marque en erreur, et le read-through
@@ -11753,7 +11790,10 @@ async function runHandlerWithSessionRetry(job) {
 async function processOnce() {
   await refreshHektorSessionIfDue();
   const job = await claimNextJob();
-  if (!job) return false;
+  if (!job) {
+    await writeWorkerHeartbeat("idle");
+    return false;
+  }
 
   await logJob(job.id, "claim", "running", `Job claimed by ${WORKER_ID}`, {
     worker_kind: WORKER_KIND,
@@ -11762,14 +11802,17 @@ async function processOnce() {
     hektor_annonce_id: job.hektor_annonce_id,
   });
 
+  const startedAt = Date.now();
   try {
     const result = await withTimeout(runHandlerWithSessionRetry(job), JOB_TIMEOUT_MS, `Job ${job.job_type}`);
     await logJob(job.id, "finish", "done", "Job completed", result || {});
     await finishJob(job.id, "done", result || {}, null);
+    await writeWorkerHeartbeat("success", { durationMs: Date.now() - startedAt });
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
     await logJob(job.id, "finish", "error", message, null);
     await finishJob(job.id, "error", null, message);
+    await writeWorkerHeartbeat("error", { durationMs: Date.now() - startedAt, error: message });
   }
 
   return true;
@@ -11794,6 +11837,8 @@ async function main() {
     syncLightJobTypes: Array.from(SYNC_LIGHT_JOB_TYPES),
     syncFullJobTypes: Array.from(SYNC_FULL_JOB_TYPES),
   }));
+
+  await writeWorkerHeartbeat("startup"); // le worker (re)demarre : signale sa vivacite tout de suite
 
   if (once) {
     await processOnce();
