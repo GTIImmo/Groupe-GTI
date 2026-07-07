@@ -6045,6 +6045,52 @@ function extractHektorFormValues(html, groupName) {
   return values;
 }
 
+// Options des <select> du formulaire (name -> [{value,label}]). Sert a resoudre une
+// valeur saisie en clair (ex. "enterrée") vers l'id d'option attendu par Hektor, comme
+// pour le chauffage. Sans ca, ecrire un libelle dans un select est silencieusement ignore.
+function extractHektorFormSelectOptions(html, groupName) {
+  const map = new Map();
+  const source = String(html || "");
+  const selectRegex = /<select\b[^>]*>[\s\S]*?<\/select>/gi;
+  let match;
+  while ((match = selectRegex.exec(source))) {
+    const field = match[0];
+    const name = attrValue(field, "name");
+    if (!name) continue;
+    const fieldGroup = attrValue(field, "group") || attrValue(field, "data-group");
+    if (groupName && fieldGroup && fieldGroup !== groupName) continue;
+    const options = Array.from(field.matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option>/gi)).map((optionMatch) => ({
+      value: attrValue(`<option${optionMatch[1]}>`, "value") || "",
+      label: decodeHtmlEntities(String(optionMatch[2] || "").replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim(),
+    }));
+    if (options.length) map.set(name, options);
+  }
+  return map;
+}
+
+function normalizeHektorSelectLabel(value) {
+  return String(value == null ? "" : value)
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// Resout une valeur (libelle OU id) vers un id d'option valide. Renvoie null si aucun match.
+function resolveHektorSelectValue(options, rawValue) {
+  if (!Array.isArray(options) || !options.length) return null;
+  const raw = String(rawValue == null ? "" : rawValue).trim();
+  if (!raw) return null;
+  if (options.some((option) => String(option.value) === raw)) return raw; // deja un id d'option
+  const norm = normalizeHektorSelectLabel(raw);
+  if (!norm) return null;
+  let hit = options.find((option) => option.value && normalizeHektorSelectLabel(option.label) === norm);
+  if (!hit) hit = options.find((option) => option.value && norm.length >= 3 && normalizeHektorSelectLabel(option.label).includes(norm));
+  if (!hit) hit = options.find((option) => {
+    const lab = normalizeHektorSelectLabel(option.label);
+    return option.value && lab.length >= 3 && norm.includes(lab);
+  });
+  return hit ? String(hit.value) : null;
+}
+
 function extractWizardAnnonceId(html) {
   let source = String(html || "");
   try {
@@ -6541,12 +6587,12 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "ag_interieur",
     mode: "ihmChargeGroupe",
-    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]),
+    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]),
   },
   {
     group: "ag_exterieur",
     mode: "ihmChargeGroupe",
-    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "PISCINE_TYPE", "PISCINE_NATURE", "PISCINE_DETAILS", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "POOL_HOUSE", "PISCINE_CHAUFFEE", "PISCINE_COUVERTE", "RESIDENCE", "TYPE_RESIDENCE"]),
+    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "NB_NIVEAUX", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "PISCINE_TYPE", "PISCINE_NATURE", "PISCINE_DETAILS", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "POOL_HOUSE", "PISCINE_CHAUFFEE", "PISCINE_COUVERTE", "RESIDENCE", "TYPE_RESIDENCE"]),
   },
   {
     group: "terrain",
@@ -7071,6 +7117,7 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     },
   });
   const values = extractHektorFormValues(html.text, groupName);
+  const selectOptions = extractHektorFormSelectOptions(html.text, groupName);
   if (groupName === "equipements") stripHektorSpecialWizardFields(values);
   const applied = [];
   const skipped = [];
@@ -7085,7 +7132,19 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
       skipped.push({ field: key, candidates });
       continue;
     }
-    values.set(targetKey, String(spec.value));
+    let writeValue = String(spec.value);
+    // Champ <select> (ex. PISCINE_TYPE/NATURE) : Hektor attend un id d'option, pas un
+    // libelle. On resout label->id depuis les options du formulaire charge. Si aucun
+    // match, on n'ecrit pas (sinon Hektor ignore silencieusement et la valeur est perdue).
+    if (selectOptions.has(targetKey)) {
+      const resolved = resolveHektorSelectValue(selectOptions.get(targetKey), writeValue);
+      if (resolved == null) {
+        skipped.push({ field: key, target: targetKey, reason: "select_no_option_match", value: writeValue });
+        continue;
+      }
+      writeValue = resolved;
+    }
+    values.set(targetKey, writeValue);
     applied.push({ field: key, target: targetKey });
   }
   if (!applied.length) {
@@ -7861,7 +7920,6 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
   if (cleanFields.bedroom_count != null) agInterieur.bedroom_count = fieldSpec(cleanFields.bedroom_count, ["NB_CHAMBRES"]);
-  if (cleanFields.level_count != null) agInterieur.level_count = fieldSpec(cleanFields.level_count, ["NB_NIVEAUX"]);
   if (cleanFields.surface != null) agInterieur.surface = fieldSpec(cleanFields.surface, ["surfappart"]);
   if (cleanFields.carrez_surface != null) agInterieur.carrez_surface = fieldSpec(cleanFields.carrez_surface, ["SURF_CARREZ"]);
   if (cleanFields.bathroom_count != null) agInterieur.bathroom_count = fieldSpec(cleanFields.bathroom_count, ["SDB", "NB_SDB", "nb_sdb", "sdb"]);
@@ -7873,6 +7931,9 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   await pushHektorGroupUpdate(results, job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur, options);
 
   const agExterieur = {};
+  // NB_NIVEAUX (nombre de niveaux) vit dans le groupe ag_exterieur cote Hektor,
+  // pas ag_interieur (verifie sur 150/150 Maisons via detail_raw_json).
+  if (cleanFields.level_count != null) agExterieur.level_count = fieldSpec(cleanFields.level_count, ["NB_NIVEAUX"]);
   if (cleanFields.floor != null) {
     const floorState = inferHektorFloorStateValue(cleanFields.floor);
     if (floorState) agExterieur.floor_state = fieldSpec(floorState, ["floorState"]);
