@@ -5084,6 +5084,10 @@ function EstimationDocumentEditor(props: {
         chauffage: draft.chauffage || '',
         dpe: draft.dpe || '',
         ges: draft.ges || '',
+        terrain_constructible: rawDetailProp(props.detail, 'terrain', 'terrain_constructible'),
+        terrain_viabilise: rawDetailProp(props.detail, 'terrain', 'terrain_viabilise'),
+        piscine: rawDetailProp(props.detail, 'ag_exterieur', 'PISCINE'),
+        piscine_chauffee: rawDetailProp(props.detail, 'ag_exterieur', 'PISCINE_CHAUFFEE'),
       }
       const result = await improveEstimationTexts({
         appDossierId: typeof dossier.app_dossier_id === 'number' ? dossier.app_dossier_id : null,
@@ -12948,7 +12952,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     ]
     const equipements = equipmentLabels.filter(([key]) => isYes(wf(key))).map(([, label]) => label)
     if (isYes(draftAnnonceAdvanced.garden)) equipements.push('jardin')
-    if (isYes(draftAnnonceAdvanced.pool)) equipements.push('piscine')
+    if (isYes(draftAnnonceAdvanced.pool)) {
+      const q = [isYes(wf('PISCINE_CHAUFFEE')) ? 'chauffee' : '', isYes(wf('PISCINE_COUVERTE')) ? 'couverte' : '', isYes(wf('POOL_HOUSE')) ? 'avec pool house' : '']
+        .filter(Boolean).join(' ')
+      equipements.push(q ? `piscine ${q}` : 'piscine')
+    }
     // Chauffage : codes d'options -> libelles.
     const chauffage = [
       optLabel(hektorHeatingFormatOptions, wf('formatChauff')),
@@ -12975,6 +12983,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       prix: draftAnnoncePrice.trim(),
       surface: draftAnnonceTypeRules.surfaceMode === 'habitable' ? draftAnnonceSurface.trim() : '',
       surface_terrain: (draftAnnonceAdvanced.landSurface ?? '').trim(),
+      terrain_constructible: isYes(wf('terrain_constructible')) ? 'oui' : '',
+      terrain_viabilise: isYes(wf('terrain_viabilise')) ? 'oui' : '',
+      construction_recente: (isYes(wf('garantie_decennale')) || isYes(wf('certificat_conformite')) || isYes(wf('declaration_achevement_travaux'))) ? 'oui (bien recent/neuf)' : '',
       pieces: draftAnnonceTypeRules.showRooms ? draftAnnonceRoomCount.trim() : '',
       chambres: draftAnnonceTypeRules.showBedrooms ? draftAnnonceBedroomCount.trim() : '',
       sdb: (draftAnnonceAdvanced.bathroomCount ?? '').trim(),
