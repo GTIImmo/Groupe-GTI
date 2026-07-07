@@ -1574,6 +1574,38 @@ const scanFieldLabels: Record<string, string> = {
   stateAppreciation: "Appreciation d'etat", strongPoints: 'Points forts', watchPoints: 'Points de vigilance',
   priceArgument: 'Argumentaire prix', advisorOpinion: 'Avis conseiller', works: 'Travaux', chargesDetail: 'Detail charges',
   negotiatorName: 'Negociateur', agency: 'Agence', transport: 'Transport', particularities: 'Particularites',
+  // Terrain
+  landConstructible: 'Terrain constructible', constructibleSurface: 'Surface constructible', shon: 'SHON',
+  landServiced: 'Terrain viabilise', waterConnection: 'Raccordement eau', gasConnection: 'Raccordement gaz',
+  electricityConnection: 'Raccordement electricite', phoneConnection: 'Raccordement telephone',
+  landWooded: 'Terrain arbore', landPoolable: 'Terrain piscinable', gardenSurface: 'Surface jardin',
+  // Piscine
+  poolType: 'Type de piscine', poolNature: 'Nature piscine', poolDetails: 'Details piscine',
+  poolDimensions: 'Dimensions piscine', poolTreatment: 'Traitement piscine', poolHouse: 'Pool house',
+  poolHeated: 'Piscine chauffee', poolCovered: 'Piscine couverte',
+  // Construction recente
+  tenYearWarranty: 'Garantie decennale', damageInsurance: 'Assurance dommages-ouvrage',
+  conformityCertificate: 'Certificat de conformite', completionDeclaration: "Declaration d'achevement",
+  // Copropriete
+  coproSyndicateStatus: 'Statut syndicat', coproQuotePart: 'Quote-part copro', coproWorksFund: 'Fonds travaux',
+  coproLot: 'Lot copro', safeguardPlan: 'Plan sauvegarde', coproperty: 'Copropriete',
+  // Exterieur / annexes
+  balcony: 'Balcon', balconyCount: 'Nb balcons', balconySurface: 'Surface balcon',
+  cellar: 'Cave', cellarSurface: 'Surface cave', terrace: 'Terrasse', terraceCount: 'Nb terrasses', terraceSurface: 'Surface terrasse',
+  floor: 'Etage', topFloor: 'Dernier etage', floorsCount: 'Nb etages', partyWalls: 'Mitoyennete',
+  residence: 'Residence', residenceType: 'Type residence', kitchenEquipment: 'Equipement cuisine',
+  // Equipements
+  elevator: 'Ascenseur', disabledAccess: 'Acces handicape', airConditioning: 'Climatisation', fireplace: 'Cheminee',
+  electricShutters: 'Volets electriques', doubleGlazing: 'Double vitrage', tripleGlazing: 'Triple vitrage',
+  fiber: 'Fibre', armoredDoor: 'Porte blindee', intercom: 'Interphone', videophone: 'Visiophone',
+  alarm: 'Alarme', digicode: 'Digicode', smokeDetector: 'Detecteur fumee', caretaker: 'Gardien',
+  waterDistribution: 'Distribution eau', waterEnergy: 'Energie eau',
+  // Charges / diagnostics / dispo
+  chargeInsurance: 'Charges assurance', dpeDate: 'Date DPE', finalEnergy: 'Energie finale',
+  energyCostMin: 'Cout energie min', energyCostMax: 'Cout energie max',
+  available: 'Disponible', releaseDate: 'Date liberation', availabilityDate: 'Date disponibilite', keys: 'Cles',
+  proximity: 'Proximite', environment: 'Environnement', immeuble: 'Immeuble',
+  description: 'Descriptif', note: 'Note interne',
 }
 function scanFieldLabel(key: string): string {
   return scanFieldLabels[key] ?? key
