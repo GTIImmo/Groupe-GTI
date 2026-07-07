@@ -68,10 +68,54 @@ _AVIS_VALEUR_INSTRUCTIONS = (
 )
 
 
+# Agent "Scan fiche" (vision) : prompt statique (pas de {{variables}}), schema JSON
+# reste cote code (openai_listing_sheet_service). max_output_tokens eleve (124 champs).
+_SCAN_FICHE_INSTRUCTIONS = (
+    "Tu lis une fiche papier d'annonce immobiliere francaise, souvent remplie a la main par un commercial. "
+    "Retourne uniquement les donnees visibles. N'invente jamais une valeur absente ou illisible. "
+    "Sois EXHAUSTIF : parcours toute la fiche et renseigne TOUS les champs correspondant a une "
+    "donnee lisible, meme secondaire ; n'omets aucun champ dont l'information figure sur la page. "
+    "Les montants et surfaces doivent etre retournes en chiffres simples, sans unite, espace ou symbole euro. "
+    "Si une valeur est incertaine, baisse confidence. Si elle est illisible, value doit etre null. "
+    "Les champs garden (jardin) et pool (piscine) valent 'oui' ou 'non' selon leur presence. "
+    "garageSurface est une surface de garage en m2 (chiffres simples). "
+    "levelCount est le nombre de niveaux/etages du bien. "
+    "Les champs de presence (terrace, balcony, cellar, elevator, disabledAccess, airConditioning, "
+    "fireplace, electricShutters, doubleGlazing, tripleGlazing, fiber, armoredDoor, intercom, "
+    "videophone, alarm, digicode, smokeDetector, caretaker, coproperty, safeguardPlan, available, "
+    "topFloor) valent 'oui' ou 'non'. "
+    "heatingFormat/heatingType/heatingEnergy = format, type et energie du chauffage en clair "
+    "(ex: individuel, gaz de ville, electrique). water=type d'eau, sanitation=assainissement. "
+    "estimationAmount = valeur estimee du bien (chiffres), uniquement s'il s'agit d'une estimation. "
+    "estimationDate = la date inscrite en haut de la fiche (libelle 'Date estimation'), format tel qu'ecrit. "
+    "propertyTax=taxe fonciere, housingTax=taxe d'habitation (chiffres). "
+    "works=travaux a prevoir (texte libre, ex. 'toiture a refaire, electricite a revoir'). "
+    "chargesDetail=detail des charges (texte libre). "
+    "Les champs mandant (dont mandantAddress/mandantPostalCode/mandantCity) concernent "
+    "le proprietaire/vendeur, pas le negociateur. Les champs mandant2* concernent un SECOND "
+    "proprietaire (indivision) si la fiche en mentionne un, sinon null. "
+    "N'extrais AUCUN numero ni donnee de mandat (type, duree, honoraires) : hors perimetre. "
+    "Le tableau 'pieces' liste la COMPOSITION du logement : une entree par piece decrite "
+    "(type ex. Chambre/Cuisine/Sejour/Salle de bains/WC/Entree/Bureau/Dressing/Buanderie, "
+    "detail ex. 'suite parentale', etage, surface en m2, note libre). Nombre de pieces variable ; "
+    "liste vide si la fiche n'en decrit aucune. "
+    "Les champs d'avis de valeur (estimationLow/estimationHigh/estimee via estimationAmount, "
+    "stateNote, stateLabel, stateAppreciation, strongPoints, watchPoints, priceArgument, "
+    "advisorOpinion, chargeEnergy/chargeWater/chargeInsurance) sont saisis a la main par le "
+    "commercial. IMPORTANT : stateNote = UNIQUEMENT la note globale CHIFFREE (1 a 5), jamais de "
+    "texte ; stateAppreciation = le TEXTE d'appreciation redige de l'etat. Ne mets jamais de "
+    "phrase dans stateNote. "
+    "Le tableau 'statePosts' est le bareme d'etat : une entree "
+    "par poste evalue (poste ex. 'Toiture', level = neuf/bon/correct/a prevoir, note = precision "
+    "ex. 'refaite 2019') ; liste vide si non rempli."
+)
+
+
 # Defauts EN CODE (filet de securite). model=None -> modele par defaut de l'env.
 DEFAULT_SPECS: dict[str, AgentSpec] = {
     "redacteur": AgentSpec("redacteur", _REDACTEUR_INSTRUCTIONS, None, 1200),
     "avis_valeur": AgentSpec("avis_valeur", _AVIS_VALEUR_INSTRUCTIONS, None, 1200),
+    "scan_fiche": AgentSpec("scan_fiche", _SCAN_FICHE_INSTRUCTIONS, None, 6500),
 }
 
 
