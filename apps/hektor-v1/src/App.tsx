@@ -1348,6 +1348,35 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
   },
   {
     step: 5,
+    title: '5. Details - Terrain, piscine & construction',
+    fields: [
+      wf('SURFACE_JARDIN', 'Surface jardin', { inputMode: 'decimal' }),
+      wf('terrain_constructible', 'Terrain constructible', { options: wizardUnknownOuiNon }),
+      wf('terrain_surface_constructible', 'Surface constructible', { inputMode: 'decimal' }),
+      wf('SHON', 'SHON', { inputMode: 'decimal' }),
+      wf('terrain_viabilise', 'Terrain viabilise', { options: wizardUnknownOuiNon }),
+      wf('terrain_raccordement_eau', 'Raccordement eau', { options: wizardUnknownOuiNon }),
+      wf('terrain_raccordement_gaz', 'Raccordement gaz', { options: wizardUnknownOuiNon }),
+      wf('terrain_raccordement_electricite', 'Raccordement electricite', { options: wizardUnknownOuiNon }),
+      wf('terrain_raccordement_telephone', 'Raccordement telephone', { options: wizardUnknownOuiNon }),
+      wf('terrain_arbore', 'Terrain arbore', { options: wizardUnknownOuiNon }),
+      wf('terrain_piscinable', 'Terrain piscinable', { options: wizardUnknownOuiNon }),
+      wf('PISCINE_TYPE', 'Type de piscine'),
+      wf('PISCINE_NATURE', 'Nature piscine'),
+      wf('PISCINE_DIMENSIONS', 'Dimensions piscine'),
+      wf('PISCINE_TRAITEMENT', 'Traitement piscine'),
+      wf('PISCINE_CHAUFFEE', 'Piscine chauffee', { options: wizardUnknownOuiNon }),
+      wf('PISCINE_COUVERTE', 'Piscine couverte', { options: wizardUnknownOuiNon }),
+      wf('POOL_HOUSE', 'Pool house', { options: wizardUnknownOuiNon }),
+      wf('PISCINE_DETAILS', 'Details piscine', { multiline: true }),
+      wf('garantie_decennale', 'Garantie decennale', { options: wizardUnknownOuiNon }),
+      wf('assurance_dommages_ouvrage', 'Assurance dommages-ouvrage', { options: wizardUnknownOuiNon }),
+      wf('certificat_conformite', 'Certificat de conformite', { options: wizardUnknownOuiNon }),
+      wf('declaration_achevement_travaux', 'Declaration achevement', { options: wizardUnknownOuiNon }),
+    ],
+  },
+  {
+    step: 5,
     title: '5. Details - Equipements',
     fields: [
       wf('formatChauff', 'Format chauffage', { options: hektorHeatingFormatOptions, defaultValue: '4' }),
@@ -1750,6 +1779,7 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
     1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
     3: ['immeuble'],
     5: [
+      'garantie_decennale', 'assurance_dommages_ouvrage', 'certificat_conformite', 'declaration_achevement_travaux',
       'Particularites',
       'NB_CHAMBRES',
       'NB_SDB',
@@ -1848,6 +1878,10 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
   house: {
     1: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'surfterrain', 'JARDIN-', 'PISCINE-', 'GARAGE_BOX', 'EXPOSITION', 'vuee'],
     5: [
+      'SURFACE_JARDIN', 'PISCINE_TYPE', 'PISCINE_NATURE', 'PISCINE_DIMENSIONS', 'PISCINE_TRAITEMENT',
+      'PISCINE_CHAUFFEE', 'PISCINE_COUVERTE', 'POOL_HOUSE', 'PISCINE_DETAILS',
+      'SHON', 'terrain_arbore', 'terrain_piscinable',
+      'garantie_decennale', 'assurance_dommages_ouvrage', 'certificat_conformite', 'declaration_achevement_travaux',
       'Particularites',
       'NB_CHAMBRES',
       'NB_SDB',
@@ -1936,6 +1970,9 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
   land: {
     1: ['surfterrain'],
     5: [
+      'terrain_constructible', 'terrain_surface_constructible', 'SHON', 'terrain_viabilise',
+      'terrain_raccordement_eau', 'terrain_raccordement_gaz', 'terrain_raccordement_electricite',
+      'terrain_raccordement_telephone', 'terrain_arbore', 'terrain_piscinable', 'SURFACE_JARDIN',
       'EAU',
       'ASSAINISSEMENT',
       'DISTRIBUTION_EAU',
@@ -2346,6 +2383,7 @@ const hektorWizardRawDetailGroups = [
   'equipements',
   'diagnostiques',
   'copropriete',
+  'construction_recente',
   'organiser_visite',
 ]
 
