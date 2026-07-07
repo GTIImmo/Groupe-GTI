@@ -10,69 +10,103 @@
     --brand:#1e2a3c; --sienna:#a4592a; --teal:#2c6a78;
     --line:#c3c9d4; --line-soft:#dde2ea; --hair:#e7ebf1;
     --tint:#f7f9fc; --sienna-soft:#fbf3ec; --teal-soft:#eef6f8;
-    --rule:30px;
+    --rule:27px; --write-tint:#f4f7fb;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#e7e9ee;color:var(--ink);
     font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.4;
     -webkit-font-smoothing:antialiased;}
-  .sheet{width:210mm;min-height:297mm;margin:14px auto;background:#fff;padding:14mm 13mm 11mm;box-shadow:0 3px 18px rgba(20,30,48,.16);}
+  .sheet{width:210mm;min-height:297mm;margin:14px auto;background:#fff;padding:12mm 12mm 9mm;box-shadow:0 3px 18px rgba(20,30,48,.16);}
   .sheet + .sheet{margin-top:18px}
 
-  /* Masthead (page 1) */
-  .masthead{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:13px;border-bottom:2px solid var(--brand);margin-bottom:17px}
-  .mh-brand{display:flex;align-items:center;gap:13px}
-  .mono{width:44px;height:44px;border:2px solid var(--brand);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;letter-spacing:.01em;color:var(--brand);flex:none}
-  .mh-title .co{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
-  .mh-title .doc{font-size:21px;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin-top:2px}
-  .mh-meta{text-align:right;font-size:9.5px;color:var(--muted);line-height:1.65}
-  .mh-meta .badge{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 9px;font-weight:700;color:var(--ink);letter-spacing:.03em;margin-bottom:3px}
+  /* Masthead (page 1) — compact */
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:8px;border-bottom:2px solid var(--brand);margin-bottom:9px}
+  .mh-brand{display:flex;align-items:center;gap:11px}
+  .mono{width:36px;height:36px;border:2px solid var(--brand);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--brand);flex:none}
+  .mh-title .co{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .mh-title .doc{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin-top:1px}
+  .mh-meta{text-align:right;font-size:9px;color:var(--muted);line-height:1.55}
+  .mh-meta .badge{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-weight:700;color:var(--ink);margin-bottom:2px}
+
+  /* Ligne negociateur/agence/date — slim (l'app la reattribue) */
+  .idline{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:flex-end;margin-bottom:11px;font-size:11px;color:var(--muted)}
+  .idline .field{gap:6px}
+  .idline .field>label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .idline .wl{min-height:20px}
 
   /* En-tete courant (pages 2+) */
-  .runhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:15px;font-size:10px;color:var(--muted);letter-spacing:.02em}
+  .runhead{display:flex;justify-content:space-between;align-items:center;padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:11px;font-size:10px;color:var(--muted);letter-spacing:.02em}
   .runhead b{color:var(--ink);font-weight:700}
 
-  .topmeta{display:flex;flex-wrap:wrap;gap:13px 22px;align-items:flex-end;margin-bottom:15px}
-
-  /* Sections : carte claire + badge numerote + filet accent */
-  .sec{border:1px solid var(--line-soft);border-radius:9px;background:#fff;margin-bottom:13px;break-inside:avoid;overflow:hidden}
-  .sec-hd{display:flex;align-items:center;gap:11px;padding:10px 13px 9px;border-bottom:1.5px solid var(--brand)}
-  .sec-hd .n{width:23px;height:23px;border-radius:6px;background:var(--brand);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
-  .sec-hd .t{font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink)}
-  .sec-hd .opt{margin-left:auto;font-size:10px;color:var(--muted);font-style:italic;font-weight:400;text-align:right}
+  /* Sections */
+  .sec{border:1px solid var(--line-soft);border-radius:9px;background:#fff;margin-bottom:9px;break-inside:avoid;overflow:hidden}
+  .sec-hd{display:flex;align-items:center;gap:10px;padding:7px 12px 6px;border-bottom:1.5px solid var(--brand)}
+  .sec-hd .n{width:21px;height:21px;border-radius:6px;background:var(--brand);color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  .sec-hd .t{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink)}
+  .sec-hd .opt{margin-left:auto;font-size:9.5px;color:var(--muted);font-style:italic;font-weight:400;text-align:right}
   .sec.est .sec-hd{border-bottom-color:var(--sienna)} .sec.est .sec-hd .n{background:var(--sienna)}
   .sec.com .sec-hd{border-bottom-color:var(--teal)} .sec.com .sec-hd .n{background:var(--teal)}
-  .body{padding:12px 13px}
+  .body{padding:9px 11px}
 
-  .row{display:flex;flex-wrap:wrap;gap:11px 28px;align-items:flex-end;margin-bottom:13px}
-  .row:last-child{margin-bottom:2px}
-  .f{display:flex;align-items:flex-end;gap:8px;font-size:12px;color:var(--ink-soft)}
-  .f>label{white-space:nowrap;font-weight:600}
-  .grow{flex:1 1 auto}
-  .wl{flex:1 1 90px;border-bottom:1.4px solid var(--line);min-height:28px}
-  .u{font-size:12px;color:var(--muted);margin-left:9px;font-weight:700}
-  .nb{display:inline-block;border:1.4px solid var(--line);border-radius:5px;min-width:58px;height:32px;background:var(--tint)}
-  .money{display:inline-block;border:1.4px solid var(--line);border-radius:5px;min-width:165px;height:34px;background:var(--tint)}
-  .money.sm{min-width:130px}
+  /* lignes mixtes label + champ court (souligne) */
+  .line{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:flex-end;margin-bottom:8px}
+  .line:last-child{margin-bottom:0}
+  .field{display:flex;align-items:flex-end;gap:8px;font-size:12px;color:var(--ink-soft)}
+  .field>label{font-weight:600;white-space:nowrap}
+  .field.grow{flex:1 1 auto}
+  .wl{flex:1 1 110px;border-bottom:1.4px solid var(--line);min-height:23px}
 
+  /* CHOIX (cases) */
+  .ticks{display:flex;flex-wrap:wrap;gap:8px 17px;align-items:center;margin-bottom:8px}
+  .ticks:last-child{margin-bottom:0}
+  .grpname{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
   .cb{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);white-space:nowrap}
-  .cb i{width:16px;height:16px;border:1.6px solid #7a8596;border-radius:4px;display:inline-block;flex:none;background:#fff}
-  .checks{display:flex;flex-wrap:wrap;gap:9px 20px;align-items:center}
-  .grpname{font-size:11.5px;font-weight:700;color:var(--muted);margin-right:4px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+  .cb i{width:15px;height:15px;border:1.6px solid #7a8596;border-radius:4px;display:inline-block;flex:none;background:#fff}
+  .vbar{width:1px;align-self:stretch;min-height:18px;background:var(--line-soft);margin:0 2px}
 
-  .cbox{margin-bottom:12px}
-  .cbox>.lab{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:2px;display:flex;align-items:center}
-  .cbox>.lab .tag{font-weight:700;font-size:9px;color:var(--teal);background:var(--teal-soft);border:1px solid #c3dde3;border-radius:4px;padding:1px 7px;margin-left:8px;text-transform:uppercase;letter-spacing:.04em}
-  .cbox>.hint{font-size:10px;color:var(--muted);font-style:italic;margin:0 0 3px}
-  .cbox>.zone{border:1px solid var(--line-soft);border-radius:6px;background:
-    linear-gradient(#fff,#fff) padding-box,
-    repeating-linear-gradient(#fcfdfe,#fcfdfe calc(var(--rule) - 1px),#e2e7ee calc(var(--rule) - 1px),#e2e7ee var(--rule));}
-  .z2{height:calc(var(--rule)*2)}.z3{height:calc(var(--rule)*3)}.z4{height:calc(var(--rule)*4)}
+  /* SURFACES / MONTANTS : boite large + unite */
+  .measures{display:flex;flex-wrap:wrap;gap:9px 22px;align-items:flex-end;margin-bottom:9px}
+  .measures:last-child{margin-bottom:0}
+  .measure{display:flex;flex-direction:column;gap:4px}
+  .measure>label{font-size:10.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap}
+  .box{height:31px;width:148px;border:1.4px solid var(--line);border-radius:6px;background:var(--tint);display:flex;align-items:stretch;overflow:hidden}
+  .box .bx{flex:1 1 auto;min-width:0;padding:0 9px;display:flex;align-items:center}
+  .box .u{display:flex;align-items:center;padding:0 9px;font-size:10.5px;color:var(--muted);font-weight:700;border-left:1px solid var(--line-soft);white-space:nowrap;background:#eef1f6}
+  .box.mini{height:25px;width:82px}
+  .box.code{width:116px}
+  .box.money{width:170px}
+  .box.money.sm{width:132px}
 
+  /* COMPTEURS : petit carre blanc */
+  .counters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin-bottom:9px}
+  .counters:last-child{margin-bottom:0}
+  .counters>.grpname{align-self:center}
+  .count{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .count>label{font-size:10px;font-weight:600;color:var(--ink-soft);white-space:nowrap}
+  .sq{width:40px;height:31px;border:1.6px solid #9aa4b4;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:15px}
+
+  /* ECRITURE LIBRE : bande teintee + lignes de base */
+  .wf{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+  .wf:last-child{margin-bottom:0}
+  .wf>label{font-size:11px;font-weight:600;color:var(--ink-soft)}
+  .wf>label em{font-weight:400;font-style:italic;color:var(--muted)}
+  .wf>label .tag{font-weight:700;font-size:9px;color:var(--teal);background:var(--teal-soft);border:1px solid #c3dde3;border-radius:4px;padding:1px 7px;margin-left:8px;text-transform:uppercase;letter-spacing:.04em}
+  .wz{border:1px solid var(--line-soft);border-radius:6px;
+    background:
+      linear-gradient(var(--write-tint),var(--write-tint)) padding-box,
+      repeating-linear-gradient(#0000,#0000 calc(var(--rule) - 1px),#dbe2ec calc(var(--rule) - 1px),#dbe2ec var(--rule));}
+  .wz.h1{min-height:calc(var(--rule))}
+  .wz.h2{min-height:calc(var(--rule)*2)}
+  .wz.h3{min-height:calc(var(--rule)*3)}
+  .wz.h4{min-height:calc(var(--rule)*4)}
+
+  .mandant{border:1px solid var(--line-soft);border-radius:7px;padding:8px 10px;margin-bottom:8px;background:var(--tint)}
+
+  /* Tableaux (barème d'état + composition) */
   table.bareme{width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-  table.bareme th{background:var(--brand);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:6px 6px;font-size:9px;border-right:1px solid rgba(255,255,255,.15)}
+  table.bareme th{background:var(--brand);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:5px 6px;font-size:9px;border-right:1px solid rgba(255,255,255,.15)}
   table.bareme th:last-child{border-right:0}
-  table.bareme td{border-top:1px solid var(--line-soft);border-right:1px solid var(--line-soft);padding:8px;background:#fff}
+  table.bareme td{border-top:1px solid var(--line-soft);border-right:1px solid var(--line-soft);padding:6px 8px;background:#fff}
   table.bareme td:last-child{border-right:0}
   table.bareme tr:nth-child(even) td{background:var(--tint)}
   table.bareme td.poste{font-weight:600;color:var(--ink);text-align:left;width:29%}
@@ -80,237 +114,211 @@
   table.bareme td.ck i{width:15px;height:15px;border:1.5px solid #7a8596;border-radius:4px;display:inline-block;background:#fff}
   table.bareme td.prec{width:26%}
 
-  .mandant{border:1px solid var(--line-soft);border-radius:7px;padding:10px 12px;margin-bottom:9px;background:var(--tint)}
-  .mandant .mt{font-size:10px;font-weight:800;color:var(--sienna);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+  table.ptable{table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  table.ptable th{background:var(--brand);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:6px 9px;font-size:9px;text-align:left;border-right:1px solid rgba(255,255,255,.15)}
+  table.ptable th:last-child{border-right:0}
+  table.ptable td{border-top:1px solid var(--line-soft);border-right:1px solid var(--line-soft);height:31px;padding:0 9px}
+  table.ptable td:last-child{border-right:0}
+  table.ptable tr:nth-child(even) td{background:var(--tint)}
+  table.ptable td.num{text-align:center;font-weight:800;color:var(--ink);font-size:12px}
+  table.ptable td.ctr{text-align:center}
+  .cnote{font-size:9.5px;color:#7a4318;background:var(--sienna-soft);border:1px solid #e7c9ad;border-radius:6px;padding:5px 10px;margin-top:6px;font-weight:600}
 
-  .piece{border:1px solid var(--line-soft);border-radius:8px;padding:11px 13px;margin-bottom:12px;break-inside:avoid;background:#fff}
-  .piece .ph{display:flex;flex-wrap:wrap;gap:11px 26px;align-items:flex-end;margin-bottom:10px}
-  .pnum{font-weight:800;color:#fff;background:var(--brand);font-size:12.5px;border-radius:6px;min-width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0 8px;letter-spacing:.02em}
-  .legend{font-size:11px;color:var(--ink-soft);background:var(--tint);border:1px solid var(--line-soft);border-radius:7px;padding:9px 12px;margin-bottom:14px;line-height:1.75}
-  .legend b{color:var(--ink);text-transform:uppercase;font-size:10px;letter-spacing:.04em}
-  .dupnote{font-size:10.5px;color:#7a4318;background:var(--sienna-soft);border:1px solid #e7c9ad;border-radius:7px;padding:8px 12px;margin-top:5px;font-weight:600}
-
-  .warn{border:1px solid #e7c9ad;border-left:4px solid var(--sienna);border-radius:7px;padding:9px 13px;color:#7a4318;background:var(--sienna-soft);font-size:10.5px;font-weight:600;margin-bottom:10px}
-  .foot{margin-top:10px;border-top:1px solid var(--hair);padding-top:8px;display:flex;gap:16px;font-size:9px;color:var(--muted);line-height:1.55}
+  .warn{border:1px solid #e7c9ad;border-left:4px solid var(--sienna);border-radius:7px;padding:8px 11px;color:#7a4318;background:var(--sienna-soft);font-size:10px;font-weight:600;margin-bottom:8px}
+  .foot{margin-top:8px;border-top:1px solid var(--hair);padding-top:6px;display:flex;gap:16px;font-size:9px;color:var(--muted);line-height:1.5}
   .foot b{color:var(--ink-soft)}
 
   @media print{
     html,body{background:#fff}
     .sheet{box-shadow:none;margin:0;width:auto;min-height:auto;padding:0}
-    .sheet + .sheet{margin-top:0}
-    @page{size:A4;margin:12mm}
+    .sheet + .sheet{margin-top:0;break-before:page}
+    .fill-hint{display:none}
+    @page{size:A4;margin:11mm}
   }
 </style>
 </head>
 <body>
 
-<!-- ===================== PAGE 1 — LE VENDEUR & LE BIEN ===================== -->
+<!-- ===================== PAGE 1 — VENDEUR · BIEN · EXTÉRIEUR ===================== -->
 <section class="sheet">
-  <div class="masthead">
-    <div class="mh-brand">
-      <div class="mono">GTI</div>
-      <div class="mh-title"><div class="co">Groupe GTI · Immobilier</div><div class="doc">Fiche de visite — Estimation</div></div>
-    </div>
-    <div class="mh-meta"><span class="badge">draft_annonce_v1</span><br/>À remplir sur place · lue par l'IA<br/>Crée une estimation pré-remplie</div>
-  </div>
-
-  <div class="topmeta">
-    <span class="f grow"><label>Négociateur</label><span class="wl"></span></span>
-    <span class="f grow"><label>Agence</label><span class="wl"></span></span>
-    <span class="f"><label>Date estimation</label><span class="wl" style="flex-basis:120px"></span></span>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:8px;border-bottom:2px solid var(--brand);margin-bottom:11px">
+    <div style="font-size:12.5px;color:var(--ink)"><b>Négociateur :</b> Franck GERPHAGNON &nbsp;&nbsp;·&nbsp;&nbsp; <b>Agence :</b> FORMATION</div>
+    <span class="field" style="font-size:12px"><label>Date</label><span class="wl" style="flex:0 0 120px"></span></span>
   </div>
 
   <div class="sec">
     <div class="sec-hd"><span class="n">1</span><span class="t">Le vendeur</span><span class="opt">le propriétaire du bien</span></div>
     <div class="body">
       <div class="mandant">
-        <div class="row"><span class="checks"><span class="cb"><i></i>M.</span><span class="cb"><i></i>Mme</span></span>
-          <span class="f grow"><label>Nom &amp; prénom</label><span class="wl"></span></span></div>
-        <div class="row"><span class="f grow"><label>Téléphone</label><span class="wl"></span></span>
-          <span class="f grow"><label>Email</label><span class="wl"></span></span></div>
-        <div class="row"><span class="f grow"><label>Adresse</label><span class="wl"></span></span></div>
+        <div class="line"><span class="ticks" style="margin:0"><span class="cb"><i></i>M.</span><span class="cb"><i></i>Mme</span></span>
+          <span class="field grow"><label>Nom &amp; prénom</label><span class="wl"></span></span></div>
+        <div class="line"><span class="field grow"><label>Téléphone</label><span class="wl"></span></span>
+          <span class="field grow"><label>Email</label><span class="wl"></span></span></div>
+        <div class="line" style="margin:0"><span class="field grow"><label>Adresse</label><span class="wl"></span></span></div>
       </div>
-      <div class="row"><span class="checks"><span class="grpname">Contexte</span><span class="cb"><i></i>Vente</span><span class="cb"><i></i>Succession</span></span></div>
-      <div class="row"><span class="f grow"><label>Motivation / délai souhaité</label><span class="wl"></span></span></div>
+      <div class="ticks"><span class="grpname">Contexte</span><span class="cb"><i></i>Vente</span><span class="cb"><i></i>Succession</span></div>
+      <div class="wf" style="margin:0"><label>Motivation / délai souhaité</label><div class="wz h2"></div></div>
     </div>
   </div>
 
   <div class="sec">
     <div class="sec-hd"><span class="n">2</span><span class="t">Le bien — type &amp; adresse</span></div>
     <div class="body">
-      <div class="row"><span class="grpname" style="flex:0 0 108px">Maisons</span><span class="checks grow">
+      <div class="ticks"><span class="grpname" style="flex:0 0 100px">Maisons</span>
         <span class="cb"><i></i>Maison</span><span class="cb"><i></i>Villa</span><span class="cb"><i></i>Maison de village</span><span class="cb"><i></i>Bastide</span>
         <span class="cb"><i></i>Château</span><span class="cb"><i></i>Ferme</span><span class="cb"><i></i>Mas</span><span class="cb"><i></i>Propriété</span>
-        <span class="cb"><i></i>Rez de villa</span><span class="cb"><i></i>Viager</span></span></div>
-      <div class="row"><span class="grpname" style="flex:0 0 108px">Appartements</span><span class="checks grow">
+        <span class="cb"><i></i>Rez de villa</span><span class="cb"><i></i>Viager</span></div>
+      <div class="ticks"><span class="grpname" style="flex:0 0 100px">Appartements</span>
         <span class="cb"><i></i>Appartement</span><span class="cb"><i></i>Studio</span><span class="cb"><i></i>Duplex</span><span class="cb"><i></i>Triplex</span>
-        <span class="cb"><i></i>Loft</span><span class="cb"><i></i>Rez de jardin</span><span class="cb"><i></i>Viager</span></span></div>
-      <div class="row"><span class="grpname" style="flex:0 0 108px">Terrains / autres</span><span class="checks grow">
+        <span class="cb"><i></i>Loft</span><span class="cb"><i></i>Rez de jardin</span><span class="cb"><i></i>Viager</span></div>
+      <div class="ticks"><span class="grpname" style="flex:0 0 100px">Terrains / autres</span>
         <span class="cb"><i></i>Terrain</span><span class="cb"><i></i>À bâtir</span><span class="cb"><i></i>Agricole</span><span class="cb"><i></i>De loisir</span>
         <span class="cb"><i></i>Immeuble</span><span class="cb"><i></i>Garage</span><span class="cb"><i></i>Parking</span><span class="cb"><i></i>Cave</span>
-        <span class="cb"><i></i>Chalet</span><span class="cb"><i></i>Autre</span></span></div>
-      <div class="row" style="margin-top:5px"><span class="f grow"><label>Adresse</label><span class="wl"></span></span></div>
-      <div class="row" style="gap:12px 30px">
-        <span class="f"><label>Code postal</label><span class="nb" style="min-width:150px;height:34px"></span></span>
-        <span class="f grow"><label>Ville</label><span class="wl"></span></span></div>
-      <div class="row"><span class="f grow"><label>Transport / proximité / environnement</label><span class="wl"></span></span></div>
+        <span class="cb"><i></i>Chalet</span><span class="cb"><i></i>Autre</span></div>
+      <div class="line" style="margin-top:3px"><span class="field grow"><label>Adresse</label><span class="wl"></span></span></div>
+      <div class="line">
+        <span class="measure"><label>Code postal</label><span class="box code"><span class="bx"></span></span></span>
+        <span class="field grow"><label>Ville</label><span class="wl"></span></span></div>
+      <div class="wf" style="margin:0"><label>Transport / proximité / environnement</label><div class="wz h2"></div></div>
     </div>
   </div>
-
-  <div class="foot"><div><b>Page 1 / 5</b> &nbsp;·&nbsp; Fiche de visite estimation &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
-</section>
-
-<!-- ===================== PAGE 2 — LA VISITE : EXTÉRIEUR → INTÉRIEUR ===================== -->
-<section class="sheet">
-  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>La visite</span></div>
 
   <div class="sec">
     <div class="sec-hd"><span class="n">3</span><span class="t">Extérieur &amp; annexes</span><span class="opt">à l'arrivée</span></div>
     <div class="body">
-      <div class="row">
-        <span class="checks"><span class="grpname">État extérieur</span>
-          <span class="cb"><i></i>Neuf</span><span class="cb"><i></i>Bon</span><span class="cb"><i></i>À rafraîchir</span><span class="cb"><i></i>À rénover</span></span>
-        <span class="f"><label>Surface terrain</label><span class="nb"></span><span class="u">m²</span></span>
+      <div class="ticks"><span class="grpname">État extérieur</span>
+        <span class="cb"><i></i>Neuf</span><span class="cb"><i></i>Bon</span><span class="cb"><i></i>À rafraîchir</span><span class="cb"><i></i>À rénover</span></div>
+      <div class="ticks">
+        <span class="grpname">Jardin</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span><span class="vbar"></span>
+        <span class="grpname">Piscine</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span><span class="vbar"></span>
+        <span class="grpname">Terrasse</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span>
+        <span style="font-size:10px;font-weight:600;color:var(--muted)">surf.</span><span class="box mini"><span class="bx"></span><span class="u">m²</span></span><span class="vbar"></span>
+        <span class="grpname">Cave</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span></div>
+      <div class="measures">
+        <div class="measure"><label>Surface terrain</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+        <div class="measure"><label>Surface garage</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+        <span class="counters" style="margin:0"><span class="grpname">Nombre de</span>
+          <div class="count"><label>Garages</label><span class="sq"></span></div>
+          <div class="count"><label>Parking int.</label><span class="sq"></span></div>
+          <div class="count"><label>Parking ext.</label><span class="sq"></span></div>
+        </span>
       </div>
-      <div class="row">
-        <span class="checks"><span class="grpname">Jardin</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span></span>
-        <span class="checks"><span class="grpname">Piscine</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span></span>
-        <span class="checks"><span class="grpname">Terrasse</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span>
-          <span class="f"><label>surf</label><span class="nb"></span><span class="u">m²</span></span></span>
-        <span class="checks"><span class="grpname">Cave</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span></span>
-      </div>
-      <div class="row">
-        <span class="f"><label>Garages</label><span class="nb"></span></span>
-        <span class="f"><label>Surf. garage</label><span class="nb"></span><span class="u">m²</span></span>
-        <span class="f"><label>Parking int.</label><span class="nb"></span></span>
-        <span class="f"><label>Parking ext.</label><span class="nb"></span></span>
-      </div>
-      <div class="row"><span class="f grow"><label>Résidence / mitoyenneté / particularités extérieures</label><span class="wl"></span></span></div>
+      <div class="wf" style="margin:0"><label>Résidence / mitoyenneté / particularités extérieures</label><div class="wz h2"></div></div>
     </div>
   </div>
+
+
+  <div class="foot"><div><b>Page 1 / 4</b> &nbsp;·&nbsp; Fiche de visite estimation &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
+</section>
+
+<!-- ===================== PAGE 2 — INTÉRIEUR · ÉQUIPEMENTS · COMPOSITION ===================== -->
+<section class="sheet">
+  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Intérieur &amp; composition</span></div>
 
   <div class="sec">
     <div class="sec-hd"><span class="n">4</span><span class="t">Intérieur</span></div>
     <div class="body">
-      <div class="row">
-        <span class="f"><label>Surface habitable</label><span class="nb"></span><span class="u">m²</span></span>
-        <span class="f"><label>Pièces</label><span class="nb"></span></span>
-        <span class="f"><label>Chambres</label><span class="nb"></span></span>
-        <span class="f"><label>Niveaux</label><span class="nb"></span></span>
-        <span class="f"><label>Étage</label><span class="nb"></span></span>
+      <div class="measures">
+        <div class="measure"><label>Surface habitable</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+        <div class="measure"><label>Surface Carrez</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+        <div class="measure"><label>Surface séjour</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
       </div>
-      <div class="row">
-        <span class="f"><label>SDB</label><span class="nb"></span></span>
-        <span class="f"><label>Salles d'eau</label><span class="nb"></span></span>
-        <span class="f"><label>WC</label><span class="nb"></span></span>
-        <span class="f"><label>Surf. Carrez</label><span class="nb"></span><span class="u">m²</span></span>
-        <span class="f"><label>Surf. séjour</label><span class="nb"></span><span class="u">m²</span></span>
+      <div class="counters"><span class="grpname">Nombre de</span>
+        <div class="count"><label>Pièces</label><span class="sq"></span></div>
+        <div class="count"><label>Chambres</label><span class="sq"></span></div>
+        <div class="count"><label>Niveaux</label><span class="sq"></span></div>
+        <div class="count"><label>Salles de bains</label><span class="sq"></span></div>
+        <div class="count"><label>Salles d'eau</label><span class="sq"></span></div>
+        <div class="count"><label>WC</label><span class="sq"></span></div>
+        <span class="vbar"></span>
+        <div class="count"><label>Étage <span style="color:var(--muted);font-weight:400">(situé au)</span></label><span class="sq"></span></div>
       </div>
-      <div class="row">
-        <span class="checks"><span class="grpname">Exposition</span>
-          <span class="cb"><i></i>N</span><span class="cb"><i></i>S</span><span class="cb"><i></i>E</span><span class="cb"><i></i>O</span>
-          <span class="cb"><i></i>NE</span><span class="cb"><i></i>NO</span><span class="cb"><i></i>SE</span><span class="cb"><i></i>SO</span></span>
-        <span class="f grow"><label>Vue</label><span class="wl"></span></span>
+      <div class="ticks"><span class="grpname">Exposition</span>
+        <span class="cb"><i></i>N</span><span class="cb"><i></i>S</span><span class="cb"><i></i>E</span><span class="cb"><i></i>O</span>
+        <span class="cb"><i></i>NE</span><span class="cb"><i></i>NO</span><span class="cb"><i></i>SE</span><span class="cb"><i></i>SO</span></div>
+      <div class="line"><span class="field grow"><label>Vue</label><span class="wl"></span></span></div>
+      <div class="line" style="margin:0"><span class="field grow"><label>Cuisine (type) / particularités intérieures</label><span class="wl"></span></span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hd"><span class="n">5</span><span class="t">Composition des pièces</span><span class="opt">1 pièce par ligne · nombre variable</span></div>
+    <div class="body">
+      <table class="ptable">
+        <colgroup><col style="width:30px"><col style="width:31%"><col style="width:52px"><col style="width:82px"><col></colgroup>
+        <thead><tr><th>N°</th><th>Type de pièce</th><th>Étage</th><th>Surface (m²)</th><th>Commentaire</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">2</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">3</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">4</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">5</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">6</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">7</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">8</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">9</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">10</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">11</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">12</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">13</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">14</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">15</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">16</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">17</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">18</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+        </tbody>
+      </table>
+      <div class="cnote">➕ Plus de 18 pièces ? Continuez sur la page annexe « Composition (suite) », facultative.</div>
+    </div>
+  </div>
+
+  <div class="foot"><div><b>Page 2 / 4</b> &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
+</section>
+
+<!-- ===================== PAGE 3 — TECHNIQUE · ÉTAT · VALEUR ===================== -->
+<section class="sheet">
+  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Technique · état · valeur</span></div>
+
+  <div class="sec">
+    <div class="sec-hd"><span class="n">6</span><span class="t">Technique</span><span class="opt">DPE / cadastre / marché générés ensuite dans l'app</span></div>
+    <div class="body">
+      <div class="measures">
+        <div class="measure"><label>Année construction</label><div class="box code"><span class="bx"></span></div></div>
+        <div class="measure"><label>DPE conso</label><div class="box"><span class="bx"></span><span class="u">kWh</span></div></div>
+        <div class="measure"><label>GES</label><div class="box code"><span class="bx"></span></div></div>
       </div>
-      <div class="row"><span class="f grow"><label>Cuisine (type) / particularités intérieures</label><span class="wl"></span></span></div>
+      <div class="ticks">
+        <span class="grpname">Copropriété</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span>
+        <span class="count" style="flex-direction:row;align-items:center;gap:7px"><label>Nb lots</label><span class="sq"></span></span>
+        <span class="vbar"></span>
+        <span class="grpname">Disponibilité</span><span class="cb"><i></i>Libre</span><span class="cb"><i></i>Occupé</span></div>
+      <div class="line" style="margin:0"><span class="field grow"><label>Date / clés / précisions</label><span class="wl"></span></span></div>
     </div>
   </div>
 
   <div class="sec">
-    <div class="sec-hd"><span class="n">5</span><span class="t">Équipements &amp; confort</span></div>
+    <div class="sec-hd"><span class="n">7</span><span class="t">Équipements &amp; confort</span></div>
     <div class="body">
-      <div class="row"><span class="checks"><span class="grpname">Chauffage</span>
+      <div class="ticks"><span class="grpname">Chauffage · mode</span>
         <span class="cb"><i></i>Individuel</span><span class="cb"><i></i>Collectif</span>
-        <span class="cb"><i></i>Gaz</span><span class="cb"><i></i>Élec.</span><span class="cb"><i></i>Fioul</span><span class="cb"><i></i>Bois</span><span class="cb"><i></i>PAC</span></span></div>
-      <div class="row"><span class="checks"><span class="grpname">Assainissement</span>
-        <span class="cb"><i></i>Tout-à-l'égout</span><span class="cb"><i></i>Fosse / individuel</span></span></div>
-      <div class="row"><span class="checks">
+        <span class="vbar"></span><span class="grpname">énergie</span>
+        <span class="cb"><i></i>Gaz</span><span class="cb"><i></i>Élec.</span><span class="cb"><i></i>Fioul</span><span class="cb"><i></i>Bois</span><span class="cb"><i></i>PAC</span>
+        <span class="vbar"></span><span class="grpname">Assainissement</span>
+        <span class="cb"><i></i>Tout-à-l'égout</span><span class="cb"><i></i>Fosse / individuel</span></div>
+      <div class="ticks" style="margin:0;gap:8px 22px">
         <span class="cb"><i></i>Ascenseur</span><span class="cb"><i></i>Climatisation</span><span class="cb"><i></i>Cheminée</span><span class="cb"><i></i>Double vitrage</span>
-        <span class="cb"><i></i>Volets élec.</span><span class="cb"><i></i>Fibre</span><span class="cb"><i></i>Porte blindée</span>
-        <span class="cb"><i></i>Interphone</span><span class="cb"><i></i>Visiophone</span><span class="cb"><i></i>Alarme</span><span class="cb"><i></i>Digicode</span></span></div>
-    </div>
-  </div>
-
-  <div class="foot"><div><b>Page 2 / 5</b> &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
-</section>
-
-<!-- ===================== PAGE 3 — COMPOSITION DES PIÈCES ===================== -->
-<section class="sheet">
-  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Composition</span></div>
-
-  <div class="sec">
-    <div class="sec-hd"><span class="n">6</span><span class="t">Composition des pièces</span><span class="opt">une pièce par bloc · nombre variable</span></div>
-    <div class="body">
-      <div class="legend"><b>Types de pièce</b> &nbsp;— Chambre · Cuisine · Salon/séjour · Salle de bains · Salle d'eau · WC · Entrée · Bureau · Pièce à vivre · Dressing · Buanderie · Cave · Garage · Véranda · Mezzanine · Suite · Terrasse · Balcon · Jardin · Autre…</div>
-
-      <div class="piece"><div class="ph">
-        <span class="pnum">N° 1</span>
-        <span class="f grow"><label>Type de pièce</label><span class="wl"></span></span>
-        <span class="f"><label>Étage</label><span class="nb"></span></span>
-        <span class="f"><label>Surface</label><span class="nb"></span><span class="u">m²</span></span>
-      </div>
-        <div class="cbox" style="margin:0"><div class="lab" style="font-weight:600;color:var(--muted)">Détail / description <span style="font-weight:400;font-style:italic">(ex. « suite parentale », revêtement, exposition, état…)</span></div><div class="zone z4"></div></div>
-      </div>
-
-      <div class="piece"><div class="ph">
-        <span class="pnum">N° 2</span>
-        <span class="f grow"><label>Type de pièce</label><span class="wl"></span></span>
-        <span class="f"><label>Étage</label><span class="nb"></span></span>
-        <span class="f"><label>Surface</label><span class="nb"></span><span class="u">m²</span></span>
-      </div>
-        <div class="cbox" style="margin:0"><div class="lab" style="font-weight:600;color:var(--muted)">Détail / description</div><div class="zone z4"></div></div>
-      </div>
-
-      <div class="piece"><div class="ph">
-        <span class="pnum">N° 3</span>
-        <span class="f grow"><label>Type de pièce</label><span class="wl"></span></span>
-        <span class="f"><label>Étage</label><span class="nb"></span></span>
-        <span class="f"><label>Surface</label><span class="nb"></span><span class="u">m²</span></span>
-      </div>
-        <div class="cbox" style="margin:0"><div class="lab" style="font-weight:600;color:var(--muted)">Détail / description</div><div class="zone z4"></div></div>
-      </div>
-
-      <div class="piece"><div class="ph">
-        <span class="pnum">N° 4</span>
-        <span class="f grow"><label>Type de pièce</label><span class="wl"></span></span>
-        <span class="f"><label>Étage</label><span class="nb"></span></span>
-        <span class="f"><label>Surface</label><span class="nb"></span><span class="u">m²</span></span>
-      </div>
-        <div class="cbox" style="margin:0"><div class="lab" style="font-weight:600;color:var(--muted)">Détail / description</div><div class="zone z4"></div></div>
-      </div>
-
-      <div class="dupnote">➕ Plus de pièces ? Imprimez cette page en plusieurs exemplaires et numérotez à la suite (5, 6, 7…). Le nombre de pièces est libre.</div>
-    </div>
-  </div>
-  <div class="foot"><div><b>Page 3 / 5</b> &nbsp;·&nbsp; Composition &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
-</section>
-
-<!-- ===================== PAGE 4 — TECHNIQUE & ÉTAT ===================== -->
-<section class="sheet">
-  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Technique &amp; état</span></div>
-
-  <div class="sec">
-    <div class="sec-hd"><span class="n">7</span><span class="t">Technique</span><span class="opt">DPE / cadastre / marché générés ensuite dans l'app</span></div>
-    <div class="body">
-      <div class="row">
-        <span class="f"><label>Année construction</label><span class="nb"></span></span>
-        <span class="f"><label>DPE conso</label><span class="nb"></span><span class="u">kWh</span></span>
-        <span class="f"><label>GES</label><span class="nb"></span></span>
-        <span class="checks"><span class="grpname">Copropriété</span><span class="cb"><i></i>Oui</span><span class="cb"><i></i>Non</span></span>
-        <span class="f"><label>Nb lots</label><span class="nb"></span></span>
-      </div>
-      <div class="row">
-        <span class="checks"><span class="grpname">Disponibilité</span><span class="cb"><i></i>Libre</span><span class="cb"><i></i>Occupé</span></span>
-        <span class="f grow"><label>Date / clés / précisions</label><span class="wl"></span></span></div>
+        <span class="cb"><i></i>Volets élec.</span><span class="cb"><i></i>Fibre</span><span class="cb"><i></i>Porte blindée</span><span class="cb"><i></i>Interphone</span>
+        <span class="cb"><i></i>Visiophone</span><span class="cb"><i></i>Alarme</span><span class="cb"><i></i>Digicode</span></div>
     </div>
   </div>
 
   <div class="sec est">
     <div class="sec-hd"><span class="n">8</span><span class="t">État détaillé</span><span class="opt">pour l'avis de valeur</span></div>
     <div class="body">
-      <div class="row"><span class="checks"><span class="grpname">Note globale</span>
-        <span class="cb"><i></i>1</span><span class="cb"><i></i>2</span><span class="cb"><i></i>3</span><span class="cb"><i></i>4</span><span class="cb"><i></i>5</span></span>
-        <span class="f grow"><label>En un mot</label><span class="wl"></span></span></div>
+      <div class="ticks"><span class="grpname">Note globale</span>
+        <span class="cb"><i></i>1</span><span class="cb"><i></i>2</span><span class="cb"><i></i>3</span><span class="cb"><i></i>4</span><span class="cb"><i></i>5</span>
+        <span class="vbar"></span>
+        <span class="field grow"><label>En un mot</label><span class="wl"></span></span></div>
       <table class="bareme">
         <thead><tr><th class="poste">Poste</th><th>Neuf</th><th>Bon</th><th>Correct</th><th>À prévoir</th><th>Précision</th></tr></thead>
         <tbody>
@@ -327,67 +335,142 @@
     </div>
   </div>
 
-  <div class="foot"><div><b>Page 4 / 5</b> &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
-</section>
-
-<!-- ===================== PAGE 5 — VALEUR & AVIS ===================== -->
-<section class="sheet">
-  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Valeur &amp; avis</span></div>
-
   <div class="sec est">
     <div class="sec-hd"><span class="n">9</span><span class="t">Valeur &amp; charges</span></div>
     <div class="body">
-      <div class="row"><span class="f"><label>Prix souhaité par le vendeur</label><span class="money"></span><span class="u">€</span></span></div>
-      <div class="row" style="gap:14px 34px">
-        <span class="f"><label>Fourchette basse</label><span class="money sm"></span><span class="u">€</span></span>
-        <span class="f"><label><b>Valeur estimée</b></label><span class="money"></span><span class="u">€</span></span>
-        <span class="f"><label>Fourchette haute</label><span class="money sm"></span><span class="u">€</span></span>
+      <div class="measures">
+        <div class="measure"><label>Prix souhaité par le vendeur</label><div class="box money"><span class="bx"></span><span class="u">€</span></div></div>
+        <div class="measure"><label>Fourchette basse</label><div class="box money sm"><span class="bx"></span><span class="u">€</span></div></div>
+        <div class="measure"><label><b>Valeur estimée</b></label><div class="box money"><span class="bx"></span><span class="u">€</span></div></div>
+        <div class="measure"><label>Fourchette haute</label><div class="box money sm"><span class="bx"></span><span class="u">€</span></div></div>
       </div>
-      <div class="row" style="gap:14px 34px">
-        <span class="f"><label>Taxe foncière</label><span class="money sm"></span><span class="u">€/an</span></span>
-        <span class="f"><label>Énergie</label><span class="money sm"></span><span class="u">€/an</span></span>
-        <span class="f"><label>Eau</label><span class="money sm"></span><span class="u">€/an</span></span>
-        <span class="f"><label>Charges copro</label><span class="money sm"></span><span class="u">€</span></span>
+      <div class="measures">
+        <div class="measure"><label>Taxe foncière</label><div class="box money sm"><span class="bx"></span><span class="u">€/an</span></div></div>
+        <div class="measure"><label>Énergie</label><div class="box money sm"><span class="bx"></span><span class="u">€/an</span></div></div>
+        <div class="measure"><label>Eau</label><div class="box money sm"><span class="bx"></span><span class="u">€/an</span></div></div>
+        <div class="measure"><label>Charges copro</label><div class="box money sm"><span class="bx"></span><span class="u">€</span></div></div>
       </div>
-      <div class="row"><span class="f grow"><label>Détail des charges</label><span class="wl"></span></span></div>
+      <div class="wf" style="margin:0"><label>Détail des charges</label><div class="wz h1"></div></div>
     </div>
   </div>
+
+  <div class="foot"><div><b>Page 3 / 4</b> &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
+</section>
+
+<!-- ===================== PAGE 4 — POINTS & COMMENTAIRES ===================== -->
+<section class="sheet">
+  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Avis &amp; commentaires</span></div>
 
   <div class="sec com">
     <div class="sec-hd"><span class="n">10</span><span class="t">Points &amp; commentaires</span><span class="opt">écriture libre — l'IA range dans le bon champ</span></div>
     <div class="body">
-      <div class="cbox"><div class="lab" style="color:#1c7a45;font-size:13px">✓&nbsp; Points forts</div><div class="zone z4"></div></div>
-      <div class="cbox"><div class="lab" style="color:#a35a15;font-size:13px">⚠&nbsp; Points de vigilance</div><div class="zone z4"></div></div>
-      <div class="cbox"><div class="lab">Travaux à prévoir<span class="tag">→ estimation</span></div><div class="zone z3"></div></div>
-      <div class="cbox"><div class="lab">Appréciation de l'état<span class="tag">→ estimation</span></div><div class="zone z3"></div></div>
-      <div class="cbox"><div class="lab">Argumentaire de prix<span class="tag">→ estimation</span></div><div class="zone z3"></div></div>
-      <div class="cbox"><div class="lab">Avis du conseiller<span class="tag">→ estimation</span></div><div class="zone z3"></div></div>
-      <div class="cbox"><div class="lab">Note interne<span class="tag" style="color:var(--sienna);background:var(--sienna-soft);border-color:#e7c9ad">→ note annonce</span></div><div class="zone z2"></div></div>
-      <div class="cbox"><div class="lab">Descriptif de l'annonce<span class="tag" style="color:var(--sienna);background:var(--sienna-soft);border-color:#e7c9ad">→ texte public</span></div><div class="zone z4"></div></div>
+      <div class="wf"><label style="color:#1c7a45;font-size:12.5px">✓&nbsp; Points forts</label><div class="wz h4"></div></div>
+      <div class="wf"><label style="color:#a35a15;font-size:12.5px">⚠&nbsp; Points de vigilance</label><div class="wz h3"></div></div>
+      <div class="wf"><label>Travaux à prévoir<span class="tag">→ estimation</span></label><div class="wz h3"></div></div>
+      <div class="wf"><label>Appréciation de l'état<span class="tag">→ estimation</span></label><div class="wz h3"></div></div>
+      <div class="wf"><label>Argumentaire de prix<span class="tag">→ estimation</span></label><div class="wz h3"></div></div>
+      <div class="wf"><label>Avis du conseiller<span class="tag">→ estimation</span></label><div class="wz h3"></div></div>
+      <div class="wf"><label>Note interne<span class="tag" style="color:var(--sienna);background:var(--sienna-soft);border-color:#e7c9ad">→ note annonce</span></label><div class="wz h3"></div></div>
+      <div class="wf" style="margin:0"><label>Descriptif de l'annonce<span class="tag" style="color:var(--sienna);background:var(--sienna-soft);border-color:#e7c9ad">→ texte public</span></label><div class="wz h4"></div></div>
     </div>
   </div>
 
-  <div class="warn">Cette fiche crée une <b>estimation</b> et rattache le(s) vendeur(s). <b>Aucun mandat ni numéro</b> ici — le mandat se génère ensuite dans l'app. Les cases cochées se mappent directement ; les commentaires sont interprétés par l'IA vers le champ indiqué.</div>
+  <div class="foot"><div><b>Page 4 / 4</b> &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
+</section>
 
-  <div class="foot">
-    <div><b>RGPD</b> — Données du/des vendeur(s) recueillies pour établir l'estimation, transmises au service de lecture automatique (IA vision). Base légale : mesures précontractuelles. Conservation limitée au temps utile ; droits d'accès, de rectification et d'effacement auprès de l'agence.</div>
-    <div style="text-align:right;white-space:nowrap"><b>Page 5 / 5</b><br/>draft_annonce_v1</div>
+
+<!-- ===================== PAGE ANNEXE (FACULTATIVE) — COMPOSITION (SUITE) ===================== -->
+<section class="sheet">
+  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Composition (suite) · page facultative</span></div>
+
+  <div class="sec">
+    <div class="sec-hd"><span class="n">5</span><span class="t">Composition des pièces — suite</span><span class="opt">page facultative · uniquement si le bien a plus de 18 pièces</span></div>
+    <div class="body">
+      <table class="ptable">
+        <colgroup><col style="width:30px"><col style="width:31%"><col style="width:52px"><col style="width:82px"><col></colgroup>
+        <thead><tr><th>N°</th><th>Type de pièce</th><th>Étage</th><th>Surface (m²)</th><th>Commentaire</th></tr></thead>
+        <tbody>
+          <tr><td class="num">19</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">20</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">21</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">22</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">23</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">24</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">25</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">26</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">27</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">28</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">29</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">30</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">31</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">32</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">33</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">34</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">35</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">36</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">37</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">38</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">39</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">40</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">41</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">42</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">43</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+          <tr><td class="num">44</td><td></td><td class="ctr"></td><td class="ctr"></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  <div class="foot"><div><b>Annexe</b> &nbsp;·&nbsp; Composition (suite) &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
+</section>
+
+<!-- ===================== PAGE ANNEXE (FACULTATIVE) — COMPLÉMENTS (terrain / piscine) ===================== -->
+<section class="sheet">
+  <div class="runhead"><span><b>Groupe GTI</b> · Fiche de visite — Estimation</span><span>Compléments · page facultative</span></div>
+
+  <div class="sec">
+    <div class="sec-hd"><span class="n">T</span><span class="t">Terrain nu</span><span class="opt">page facultative · si le bien est un terrain / a une parcelle</span></div>
+    <div class="body">
+      <div class="ticks">
+        <span class="grpname">Terrain</span>
+        <span class="cb"><i></i>Constructible</span><span class="cb"><i></i>Viabilisé</span><span class="cb"><i></i>Arboré</span><span class="cb"><i></i>Piscinable</span>
+        <span class="vbar"></span><span class="grpname">Raccordements</span>
+        <span class="cb"><i></i>Eau</span><span class="cb"><i></i>Gaz</span><span class="cb"><i></i>Électricité</span><span class="cb"><i></i>Téléphone</span></div>
+      <div class="measures" style="margin:0">
+        <div class="measure"><label>Surface constructible</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+        <div class="measure"><label>SHON</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+        <div class="measure"><label>Surface jardin</label><div class="box"><span class="bx"></span><span class="u">m²</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hd"><span class="n">P</span><span class="t">Piscine</span><span class="opt">si le bien a une piscine</span></div>
+    <div class="body">
+      <div class="ticks">
+        <span class="grpname">Piscine</span><span class="cb"><i></i>Chauffée</span><span class="cb"><i></i>Couverte</span><span class="cb"><i></i>Pool house</span></div>
+      <div class="line"><span class="field grow"><label>Type</label><span class="wl"></span></span>
+        <span class="field grow"><label>Nature</label><span class="wl"></span></span></div>
+      <div class="line" style="margin:0"><span class="field grow"><label>Dimensions</label><span class="wl"></span></span>
+        <span class="field grow"><label>Traitement</label><span class="wl"></span></span></div>
+      <div class="wf" style="margin:0"><label>Détails piscine</label><div class="wz h1"></div></div>
+    </div>
+  </div>
+
+  <div class="foot"><div><b>Annexe</b> &nbsp;·&nbsp; Compléments (terrain / piscine) &nbsp;·&nbsp; draft_annonce_v1 &nbsp;·&nbsp; Groupe GTI</div></div>
 </section>
 
 <style id="fill-mode">
-  [contenteditable]{outline:none;cursor:text;min-width:40px}
+  [contenteditable]{outline:none;cursor:text}
   [contenteditable]:focus{background:#eaf4ff;border-radius:3px}
   .cb i.checked, table.bareme td.ck i.checked{background:#1e2a3c !important}
-  .fill-hint{position:fixed;top:10px;right:10px;max-width:260px;background:#1e2a3c;color:#fff;
+  .fill-hint{position:fixed;top:10px;right:10px;max-width:250px;background:#1e2a3c;color:#fff;
     font:12px/1.5 "Segoe UI",Arial,sans-serif;padding:9px 12px;border-radius:8px;z-index:999;box-shadow:0 2px 10px rgba(0,0,0,.3)}
   .fill-hint b{color:#ffd9b0}
-  @media print{.fill-hint{display:none}}
 </style>
-<div class="fill-hint">✍️ <b>Mode écran</b> — cliquez les cases pour les cocher, tapez dans les champs et les zones. Puis <b>capture d'écran</b> (Win + Maj + S) → uploadez-la dans « scan de fiche ».</div>
+<div class="fill-hint">✍️ <b>Mode écran</b> — cochez les cases, tapez dans les champs. Puis <b>capture d'écran</b> → uploadez dans « scan de fiche ».</div>
 <script>
-  // Rend le patron remplissable a l'ecran (pour tester sans imprimante).
-  document.querySelectorAll('.wl, .zone, .nb, .money, table.bareme td.prec').forEach(function(el){
+  document.querySelectorAll('.wl, .wz, .bx, .sq, table.bareme td.prec, table.ptable td:not(.num)').forEach(function(el){
     el.setAttribute('contenteditable', 'true');
   });
   document.querySelectorAll('.cb i, table.bareme td.ck i').forEach(function(el){

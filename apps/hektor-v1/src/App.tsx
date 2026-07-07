@@ -1586,6 +1586,34 @@ const scanWizardFieldMap: ScanWizardMapEntry[] = [
   { ocr: 'estimationDate', name: 'ESTIMATION_DATE', kind: 'text' },
   { ocr: 'propertyTax', name: 'TAXE_FONCIERE', kind: 'num' },
   { ocr: 'housingTax', name: 'TAXE_HABITATION', kind: 'num' },
+  // Terrain (bloc) — le worker connait ces champs Hektor (groupe terrain)
+  { ocr: 'landConstructible', name: 'terrain_constructible', kind: 'ouinon' },
+  { ocr: 'constructibleSurface', name: 'terrain_surface_constructible', kind: 'num' },
+  { ocr: 'shon', name: 'SHON', kind: 'num' },
+  { ocr: 'landServiced', name: 'terrain_viabilise', kind: 'ouinon' },
+  { ocr: 'waterConnection', name: 'terrain_raccordement_eau', kind: 'ouinon' },
+  { ocr: 'gasConnection', name: 'terrain_raccordement_gaz', kind: 'ouinon' },
+  { ocr: 'electricityConnection', name: 'terrain_raccordement_electricite', kind: 'ouinon' },
+  { ocr: 'phoneConnection', name: 'terrain_raccordement_telephone', kind: 'ouinon' },
+  { ocr: 'landWooded', name: 'terrain_arbore', kind: 'ouinon' },
+  { ocr: 'landPoolable', name: 'terrain_piscinable', kind: 'ouinon' },
+  { ocr: 'gardenSurface', name: 'SURFACE_JARDIN', kind: 'num' },
+  // Piscine (sous-bloc si pool=oui). poolType/poolNature = selects Hektor -> 'text' pour
+  // l'instant (listes d'options a ajouter plus tard comme les autres enums).
+  { ocr: 'poolType', name: 'PISCINE_TYPE', kind: 'text' },
+  { ocr: 'poolNature', name: 'PISCINE_NATURE', kind: 'text' },
+  { ocr: 'poolDetails', name: 'PISCINE_DETAILS', kind: 'text' },
+  { ocr: 'poolDimensions', name: 'PISCINE_DIMENSIONS', kind: 'text' },
+  { ocr: 'poolTreatment', name: 'PISCINE_TRAITEMENT', kind: 'text' },
+  { ocr: 'poolHouse', name: 'POOL_HOUSE', kind: 'ouinon' },
+  { ocr: 'poolHeated', name: 'PISCINE_CHAUFFEE', kind: 'ouinon' },
+  { ocr: 'poolCovered', name: 'PISCINE_COUVERTE', kind: 'ouinon' },
+  // Copropriete (statut syndicat) + construction recente
+  { ocr: 'coproSyndicateStatus', name: 'copropriete_statut_syndicat', kind: 'text' },
+  { ocr: 'tenYearWarranty', name: 'garantie_decennale', kind: 'ouinon' },
+  { ocr: 'damageInsurance', name: 'assurance_dommages_ouvrage', kind: 'ouinon' },
+  { ocr: 'conformityCertificate', name: 'certificat_conformite', kind: 'ouinon' },
+  { ocr: 'completionDeclaration', name: 'declaration_achevement_travaux', kind: 'ouinon' },
 ]
 
 function resolveWizardOptionValue(text: string, options: HektorSelectOption[]): string {

@@ -3933,7 +3933,7 @@ function estimEuro(value) {
 // diagnostiques/copropriete/mandat_infofi…) avec props[KEY].value. Réplique la
 // logique du front (rawWizardDetailField) : on cherche une clé à travers les groupes.
 const ESTIM_RAW_GROUPS = ["mandat_infofi", "mandat_mandatdispo", "secteur", "ag_interieur",
-  "ag_exterieur", "terrain", "equipements", "diagnostiques", "copropriete", "organiser_visite"];
+  "ag_exterieur", "terrain", "equipements", "diagnostiques", "copropriete", "construction_recente", "organiser_visite"];
 function estimParseRaw(j) {
   try { let r = j.detail_raw_json; if (typeof r === "string") r = JSON.parse(r); return r && typeof r === "object" ? r : {}; }
   catch (_) { return {}; }
@@ -6407,11 +6407,16 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
     "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire", "clearing",
     "copropriete", "copropriete_lot", "copropriete_nb_lot", "copropriete_quote_part",
     "montant_fonds_travaux", "copropriete_plan_sauvegarde", "copropriete_statut_syndicat",
+    "garantie_decennale", "assurance_dommages_ouvrage", "certificat_conformite", "declaration_achevement_travaux",
     "DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite",
   ]),
   house: new Set([
     "surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "surfterrain", "JARDIN",
-    "JARDIN-", "SURFACE_JARDIN", "PISCINE", "PISCINE-", "GARAGE_BOX", "EXPOSITION", "vuee",
+    "JARDIN-", "SURFACE_JARDIN", "PISCINE", "PISCINE-", "PISCINE_TYPE", "PISCINE_NATURE",
+    "PISCINE_DETAILS", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "POOL_HOUSE", "PISCINE_CHAUFFEE",
+    "PISCINE_COUVERTE", "SHON", "terrain_arbore", "terrain_piscinable", "garantie_decennale",
+    "assurance_dommages_ouvrage", "certificat_conformite", "declaration_achevement_travaux",
+    "GARAGE_BOX", "EXPOSITION", "vuee",
     "NB_SDB", "NB_SE", "NB_WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE",
     "CUISINE_EQUIPEMENT", "MURS_MITOYENS", "NB_ETAGES", "CAVE", "SURFACE_CAVE",
     "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "SURFACE_GARAGE", "NB_PARK_INT",
@@ -6434,6 +6439,7 @@ const HEKTOR_WIZARD_FIELDS_BY_PROFILE = {
     "surfterrain", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "terrain_constructible",
     "terrain_surface_constructible", "terrain_viabilise", "terrain_raccordement_eau",
     "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone",
+    "SHON", "terrain_arbore", "terrain_piscinable",
     "diag_termites",
     "diag_termites_date", "diag_termites_commentaire", "diag_risques_nat_tech",
     "diag_risques_nat_tech_date", "diag_risques_nat_tech_commentaire", "diag_assainissement",
@@ -6540,12 +6546,12 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "ag_exterieur",
     mode: "ihmChargeGroupe",
-    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "RESIDENCE", "TYPE_RESIDENCE"]),
+    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "PISCINE_TYPE", "PISCINE_NATURE", "PISCINE_DETAILS", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "POOL_HOUSE", "PISCINE_CHAUFFEE", "PISCINE_COUVERTE", "RESIDENCE", "TYPE_RESIDENCE"]),
   },
   {
     group: "terrain",
     mode: "ihmChargeGroupe",
-    fields: new Set(["surfterrain", "terrain_constructible", "terrain_surface_constructible", "terrain_viabilise", "terrain_raccordement_eau", "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone"]),
+    fields: new Set(["surfterrain", "terrain_constructible", "terrain_surface_constructible", "SHON", "terrain_viabilise", "terrain_raccordement_eau", "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone", "terrain_arbore", "terrain_piscinable"]),
   },
   {
     group: "equipements",
@@ -6561,6 +6567,11 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
     group: "copropriete",
     mode: "ihmChargeGroupe",
     fields: new Set(["copropriete", "copropriete_lot", "copropriete_nb_lot", "copropriete_quote_part", "montant_fonds_travaux", "copropriete_plan_sauvegarde", "copropriete_statut_syndicat"]),
+  },
+  {
+    group: "construction_recente",
+    mode: "ihmChargeGroupe",
+    fields: new Set(["garantie_decennale", "assurance_dommages_ouvrage", "certificat_conformite", "declaration_achevement_travaux"]),
   },
   {
     group: "organiser_visite",
@@ -6596,12 +6607,13 @@ const HEKTOR_OUI_NON_EXACT_FIELDS = new Set([
   "ASCENSEUR", "ACCES_HANDI", "climatisation", "cheminee", "volets_elctriques", "gardien",
   "double_vitrage", "triple_vitrage", "cable", "porte_blindee", "interphone", "visiophone",
   "alarme", "digicode", "detecteur_fumee", "DERNIER_ETAGE", "CAVE", "BALCON", "TERRASSE",
-  "JARDIN", "JARDIN-", "PISCINE", "PISCINE-",
+  "JARDIN", "JARDIN-", "PISCINE", "PISCINE-", "POOL_HOUSE", "PISCINE_CHAUFFEE", "PISCINE_COUVERTE",
   "copropriete", "copropriete_plan_sauvegarde", "diag_termites", "diag_amiante",
   "diag_electrique", "diag_loi_carrez", "diag_risques_nat_tech", "clearing", "diag_plomb",
   "diag_gaz", "diag_assainissement", "terrain_constructible", "terrain_viabilise",
   "terrain_raccordement_eau", "terrain_raccordement_gaz", "terrain_raccordement_electricite",
-  "terrain_raccordement_telephone",
+  "terrain_raccordement_telephone", "terrain_arbore", "terrain_piscinable",
+  "garantie_decennale", "assurance_dommages_ouvrage", "certificat_conformite", "declaration_achevement_travaux",
 ]);
 
 const HEKTOR_DATE_EXACT_FIELDS = new Set([
@@ -10850,6 +10862,23 @@ async function cleanupSupabaseAnnonceRows(appDossierId, hektorAnnonceId) {
   return results;
 }
 
+// Nettoyage du panier Brouillon (isDraft) : l'index + le cache detail ne sont PAS
+// couverts par cleanupSupabaseAnnonceRows (cle = hektor_annonce_id seul, pas
+// app_dossier_id). Sans ca, une annonce brouillon supprimee resterait affichee dans
+// le panier tant qu'un push complet ne l'aurait pas reconciliee. Best effort.
+async function cleanupSupabaseBrouillonRows(hektorAnnonceId) {
+  const filters = [["hektor_annonce_id", hektorAnnonceId]];
+  const tables = [
+    "app_brouillon_annonce_index_current",
+    "app_brouillon_annonce_detail_cache",
+  ];
+  const results = [];
+  for (const table of tables) {
+    results.push(...await deleteSupabaseRows(table, filters));
+  }
+  return results;
+}
+
 async function cleanupSupabaseContactRows(hektorContactId) {
   const filters = [["hektor_contact_id", hektorContactId]];
   const tables = [
@@ -11088,6 +11117,7 @@ async function handleDeleteHektorAnnonce(job) {
   const cleanup = {
     documents: null,
     supabase_rows: null,
+    brouillon_rows: null,
     local: null,
     errors: [],
   };
@@ -11100,6 +11130,11 @@ async function handleDeleteHektorAnnonce(job) {
     cleanup.supabase_rows = await cleanupSupabaseAnnonceRows(appDossierId, hektorAnnonceId);
   } catch (error) {
     cleanup.errors.push({ step: "supabase_rows", error: error && error.message ? error.message : String(error) });
+  }
+  try {
+    cleanup.brouillon_rows = await cleanupSupabaseBrouillonRows(hektorAnnonceId);
+  } catch (error) {
+    cleanup.errors.push({ step: "brouillon_rows", error: error && error.message ? error.message : String(error) });
   }
   try {
     cleanup.local = await runDeletedAnnonceLocalCleanup(job, hektorAnnonceId, appDossierId);

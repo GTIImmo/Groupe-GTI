@@ -41,8 +41,29 @@ FIELD_KEYS = [
     "interiorState",
     "exteriorState",
     "landSurface",
+    # Terrain (bloc) — surtout type Terrain, mais aussi maisons avec parcelle
+    "landConstructible",       # terrain_constructible (oui/non)
+    "constructibleSurface",    # terrain_surface_constructible (m2)
+    "shon",                    # SHON (m2)
+    "landServiced",            # terrain_viabilise (oui/non)
+    "waterConnection",         # terrain_raccordement_eau (oui/non)
+    "gasConnection",           # terrain_raccordement_gaz (oui/non)
+    "electricityConnection",   # terrain_raccordement_electricite (oui/non)
+    "phoneConnection",         # terrain_raccordement_telephone (oui/non)
+    "landWooded",              # terrain_arbore (oui/non)
+    "landPoolable",            # terrain_piscinable (oui/non)
     "garden",
+    "gardenSurface",           # SURFACE_JARDIN (m2) — le scan n'avait que jardin oui/non
     "pool",
+    # Piscine (sous-bloc revele si pool=oui) — surtout maisons
+    "poolType",        # PISCINE_TYPE (enterree, hors-sol...)
+    "poolNature",      # PISCINE_NATURE (beton, coque...)
+    "poolDetails",     # PISCINE_DETAILS (texte libre)
+    "poolDimensions",  # PISCINE_DIMENSIONS (texte, ex. 8x4)
+    "poolTreatment",   # PISCINE_TRAITEMENT (sel, chlore...)
+    "poolHouse",       # POOL_HOUSE (oui/non)
+    "poolHeated",      # PISCINE_CHAUFFEE (oui/non)
+    "poolCovered",     # PISCINE_COUVERTE (oui/non)
     "terraceCount",
     "garageCount",
     "garageSurface",
@@ -109,6 +130,12 @@ FIELD_KEYS = [
     "coproperty",
     "coproLot",
     "safeguardPlan",
+    "coproSyndicateStatus",   # copropriete_statut_syndicat (procedure d'alerte/redressement/en cours/aucune)
+    # Construction recente (bien neuf/recent) — groupe Hektor construction_recente
+    "tenYearWarranty",        # garantie_decennale (oui/non)
+    "damageInsurance",        # assurance_dommages_ouvrage (oui/non)
+    "conformityCertificate",  # certificat_conformite (oui/non)
+    "completionDeclaration",  # declaration_achevement_travaux (oui/non)
     "available",
     "releaseDate",
     "availabilityDate",
