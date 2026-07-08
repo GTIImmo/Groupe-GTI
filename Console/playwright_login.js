@@ -111,6 +111,49 @@ async function waitVisible(locator, timeout = 5000) {
   }
 }
 
+// Ferme tout pop-up / modal promo que Ma Boite Immo peut afficher (ex. Smartpix Pro)
+// et qui recouvre le menu -> sinon le clic "Hektor" ne trouve jamais l'element visible.
+// Generique et best-effort : gere aussi les futurs pop-ups (croix + Echap). Renvoie le
+// nombre de pop-ups fermes (utile pour le monitoring / alerte "pop-up bloquant").
+async function dismissBlockingPopups(page, rounds = 4) {
+  let closedCount = 0;
+  const closeSelectors = [
+    // Pop-up HeadlessUI de Ma Boite Immo (Smartpix...) : croix = 1er bouton du header
+    // "justify-end", sans aria-label, avec une SVG. On cible plusieurs variantes robustes.
+    '[role="dialog"][aria-modal="true"] .justify-end button',
+    '[role="dialog"][aria-modal="true"] button.rounded-full.bg-white',
+    '[role="dialog"][aria-modal="true"] button:has(svg)',
+    // Selecteurs generiques (autres types de pop-ups / futurs)
+    'button[aria-label="Fermer"]', 'button[aria-label="Close"]',
+    'button[aria-label*="fermer" i]', 'button[aria-label*="close" i]',
+    'button[title*="fermer" i]', 'button[title*="close" i]',
+    '[class*="modal" i] button[class*="close" i]',
+    '[class*="popup" i] button[class*="close" i]',
+  ];
+  for (let i = 0; i < rounds; i++) {
+    let closed = false;
+    for (const sel of closeSelectors) {
+      const btn = page.locator(sel).first();
+      if (await waitVisible(btn, 700)) {
+        try {
+          await btn.click({ timeout: 2500, force: true });
+          closed = true; closedCount++;
+          await page.waitForTimeout(400);
+          break;
+        } catch (_) {}
+      }
+    }
+    if (!closed) {
+      // Repli generique : Echap ferme la plupart des modals. Une seule passe puis on sort.
+      await page.keyboard.press("Escape").catch(() => {});
+      await page.waitForTimeout(300);
+      break;
+    }
+  }
+  if (closedCount) console.log(`🧹 Pop-up(s) ferme(s): ${closedCount}`);
+  return closedCount;
+}
+
 async function tryOpenAdminDirect(context, adminUrl, expectedDomain) {
   const directPage = await context.newPage();
   try {
@@ -131,6 +174,7 @@ async function tryOpenAdminDirect(context, adminUrl, expectedDomain) {
 
 async function clickHektorAccessFromPortal(page, context) {
   console.log("Opening Hektor from Ma Boite Immo portal...");
+  await dismissBlockingPopups(page).catch(() => {});
 
   const hektorMenu = page.locator('a:has-text("Hektor"), button:has-text("Hektor"), text=Hektor').first();
   if (await waitVisible(hektorMenu, 10000)) {
@@ -301,10 +345,15 @@ async function gotoWithRetry(page, url, opts = {}) {
       }
     }
 
+    // Ferme un eventuel pop-up promo (Smartpix...) qui recouvrirait le portail avant
+    // d'aller chercher le menu Hektor. Best-effort, gere aussi les futurs pop-ups.
+    await dismissBlockingPopups(page).catch(() => {});
+
     let landed = await tryOpenAdminDirect(context, ADMIN_URL, EXPECT_DOMAIN);
 
     if (!landed) {
     // B) Click menu "Hektor"
+    await dismissBlockingPopups(page).catch(() => {});
     const hektorMenu = page.locator("text=Hektor").first();
     await hektorMenu.waitFor({ state: "visible", timeout: 30000 });
     await safeClick(page, hektorMenu);
