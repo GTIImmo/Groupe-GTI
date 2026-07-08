@@ -6111,8 +6111,33 @@ function normalizeHektorSelectLabel(value) {
     .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// Synonymes scan -> valeur d'option Hektor, par champ cible. Complete le resolveur generique
+// quand le libelle scanne n'a pas de correspondance directe (abreviations d'exposition,
+// vocabulaire piscine different). Cles = forme NORMALISEE (minuscule, sans accent, tirets->espaces).
+// Options Hektor reelles observees (log available_options) : EXPOSITION = NORD/SUD/EST/OUEST/
+// NORD-EST/... ; PISCINE_NATURE = COQUE/TRADITIONNELLE/HORS-SOL/SEMI-ENTERREE.
+const HEKTOR_SELECT_SYNONYMS = {
+  EXPOSITION: {
+    n: "NORD", nord: "NORD",
+    s: "SUD", sud: "SUD",
+    e: "EST", est: "EST",
+    o: "OUEST", w: "OUEST", ouest: "OUEST",
+    ne: "NORD-EST", "nord est": "NORD-EST",
+    no: "NORD-OUEST", nw: "NORD-OUEST", "nord ouest": "NORD-OUEST",
+    se: "SUD-EST", "sud est": "SUD-EST",
+    so: "SUD-OUEST", sw: "SUD-OUEST", "sud ouest": "SUD-OUEST",
+  },
+  PISCINE_NATURE: {
+    beton: "TRADITIONNELLE", traditionnelle: "TRADITIONNELLE", traditionnel: "TRADITIONNELLE",
+    maconnee: "TRADITIONNELLE", enterree: "TRADITIONNELLE", creusee: "TRADITIONNELLE", liner: "TRADITIONNELLE",
+    coque: "COQUE", polyester: "COQUE",
+    "hors sol": "HORS-SOL", horssol: "HORS-SOL",
+    "semi enterree": "SEMI-ENTERREE",
+  },
+};
+
 // Resout une valeur (libelle OU id) vers un id d'option valide. Renvoie null si aucun match.
-function resolveHektorSelectValue(options, rawValue) {
+function resolveHektorSelectValue(options, rawValue, fieldName) {
   if (!Array.isArray(options) || !options.length) return null;
   const raw = String(rawValue == null ? "" : rawValue).trim();
   if (!raw) return null;
@@ -6125,6 +6150,12 @@ function resolveHektorSelectValue(options, rawValue) {
     const lab = normalizeHektorSelectLabel(option.label);
     return option.value && lab.length >= 3 && norm.includes(lab);
   });
+  // Dernier recours : dictionnaire de synonymes par champ. On ne renvoie la valeur mappee
+  // que si elle existe reellement dans les options chargees (robuste si Hektor change sa liste).
+  if (!hit && fieldName && HEKTOR_SELECT_SYNONYMS[fieldName]) {
+    const mapped = HEKTOR_SELECT_SYNONYMS[fieldName][norm];
+    if (mapped && options.some((option) => String(option.value) === mapped)) return mapped;
+  }
   return hit ? String(hit.value) : null;
 }
 
@@ -7175,7 +7206,7 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     // match, on n'ecrit pas (sinon Hektor ignore silencieusement et la valeur est perdue).
     if (selectOptions.has(targetKey)) {
       const opts = selectOptions.get(targetKey);
-      const resolved = resolveHektorSelectValue(opts, writeValue);
+      const resolved = resolveHektorSelectValue(opts, writeValue, targetKey);
       if (resolved == null) {
         // On journalise les options reelles du <select> Hektor pour pouvoir mapper
         // ensuite (ex. "S" -> "Sud", "enteree" -> le bon libelle). Aucune requete en plus.
