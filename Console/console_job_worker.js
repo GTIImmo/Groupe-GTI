@@ -7174,9 +7174,18 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     // libelle. On resout label->id depuis les options du formulaire charge. Si aucun
     // match, on n'ecrit pas (sinon Hektor ignore silencieusement et la valeur est perdue).
     if (selectOptions.has(targetKey)) {
-      const resolved = resolveHektorSelectValue(selectOptions.get(targetKey), writeValue);
+      const opts = selectOptions.get(targetKey);
+      const resolved = resolveHektorSelectValue(opts, writeValue);
       if (resolved == null) {
-        skipped.push({ field: key, target: targetKey, reason: "select_no_option_match", value: writeValue });
+        // On journalise les options reelles du <select> Hektor pour pouvoir mapper
+        // ensuite (ex. "S" -> "Sud", "enteree" -> le bon libelle). Aucune requete en plus.
+        skipped.push({
+          field: key,
+          target: targetKey,
+          reason: "select_no_option_match",
+          value: writeValue,
+          available_options: Array.isArray(opts) ? opts.map((o) => ({ value: o.value, label: o.label })) : null,
+        });
         continue;
       }
       writeValue = resolved;
