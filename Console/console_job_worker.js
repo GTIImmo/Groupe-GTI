@@ -6799,7 +6799,16 @@ function buildExactWizardGroupUpdates(payload, options = {}) {
     if (!/^[A-Za-z0-9_[\]-]+$/.test(key)) continue;
     if (!isHektorWizardFieldAllowedForPayload(payload, key)) continue;
     if (rawValue === undefined || rawValue === null) continue;
-    const value = normalizeHektorExactWizardUpdateValue(key, rawValue);
+    // Resilience : une valeur invalide (ex. "Libre" mis par le scan dans DATE_DISPO, un
+    // champ date) faisait THROW et abandonnait TOUTE l'ecriture des champs. On saute ce
+    // champ isole et on continue -> les 40+ autres champs sont ecrits normalement.
+    let value;
+    try {
+      value = normalizeHektorExactWizardUpdateValue(key, rawValue);
+    } catch (error) {
+      console.warn(`[wizard_fields] champ ignore ${key}=${JSON.stringify(rawValue)}: ${error && error.message ? error.message : error}`);
+      continue;
+    }
     if (!value) continue;
     const candidates = exactWizardCandidateKeys(key);
     const config = HEKTOR_WIZARD_UPDATE_GROUPS.find((item) => candidates.some((candidate) => item.fields.has(candidate)));
