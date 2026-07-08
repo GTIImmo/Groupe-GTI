@@ -4939,8 +4939,22 @@ function EstimationDocumentEditor(props: {
       if (cancelled || !scanDraft || !Object.keys(scanDraft).length) return
       setDraft((current) => {
         const merged = { ...current } as Record<string, unknown>
+        const normPoste = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
         for (const [key, val] of Object.entries(scanDraft)) {
           if (val == null || val === '') continue
+          if (key === 'etatPostes' && val && typeof val === 'object' && !Array.isArray(val)) {
+            // Le scan stocke le bareme par LIBELLE de poste ("Électricité", "Gros œuvre / structure"),
+            // mais l'editeur lit par CODE (electricite, grosoeuvre) -> sans remap le bareme reste vide.
+            // On resout chaque libelle scanne vers le code ESTIM_POSTES (accent-insensible, partiel).
+            const remapped: Record<string, unknown> = {}
+            for (const [poste, v] of Object.entries(val as Record<string, unknown>)) {
+              const np = normPoste(poste)
+              const match = ESTIM_POSTES.find((p) => { const nl = normPoste(p.label); return nl === np || nl.includes(np) || np.includes(nl) })
+              remapped[match ? match.key : poste] = v
+            }
+            merged.etatPostes = remapped
+            continue
+          }
           merged[key] = val
         }
         return merged as typeof current
