@@ -8064,12 +8064,44 @@ export type HektorDraftAnnonceJobInput = {
   priority?: number
 }
 
+// Postgres refuse le caractere NUL (U+0000) et les surrogates non apparies en jsonb :
+// une valeur scannee (OCR / vision) peut en contenir -> le cast jsonb echoue au bord de
+// PostgREST (400 unsupported Unicode escape sequence), avant meme le corps du RPC. On
+// nettoie donc toute chaine du payload avant l'appel. Additif : accents / emojis conserves.
+function stripJsonbUnsafeString(value: string): string {
+  let out = ''
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i)
+    if ((code < 0x20 && code !== 0x09 && code !== 0x0A && code !== 0x0D) || code === 0x7F) continue
+    if (code >= 0xD800 && code <= 0xDBFF) {
+      const next = value.charCodeAt(i + 1)
+      if (!(next >= 0xDC00 && next <= 0xDFFF)) continue
+      out += value[i] + value[i + 1]
+      i++
+      continue
+    }
+    if (code >= 0xDC00 && code <= 0xDFFF) continue
+    out += value[i]
+  }
+  return out
+}
+function sanitizeForJsonb<T>(value: T): T {
+  if (typeof value === 'string') return stripJsonbUnsafeString(value) as unknown as T
+  if (Array.isArray(value)) return value.map((item) => sanitizeForJsonb(item)) as unknown as T
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) out[key] = sanitizeForJsonb(item)
+    return out as unknown as T
+  }
+  return value
+}
+
 export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const creationStatus = input.creationStatus === 'estimation' ? 'estimation' : 'active'
   const { data, error } = await supabase.rpc('app_console_create_draft_annonce_job', {
-    draft_payload: {
+    draft_payload: sanitizeForJsonb({
       title: input.title?.trim() || null,
       description: input.description?.trim() || null,
       agence_nom: input.agenceNom?.trim() || null,
@@ -8137,7 +8169,7 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
         postal_code: input.initialMandant.postalCode?.trim() || null,
         city: input.initialMandant.city?.trim() || null,
       } : null,
-    },
+    }),
     draft_priority: input.priority ?? 20,
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor draft annonce job')
