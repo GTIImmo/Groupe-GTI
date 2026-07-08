@@ -59,6 +59,8 @@ def _format_facts(property_data: dict[str, Any]) -> str:
         ("etage", "Etage"),
         ("exposition", "Exposition"),
         ("etat", "Etat general"),
+        ("etat_interieur", "Etat interieur"),
+        ("etat_exterieur", "Etat exterieur"),
         ("chauffage", "Chauffage"),
         ("dpe", "DPE"),
         ("ges", "GES"),
