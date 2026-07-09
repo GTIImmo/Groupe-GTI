@@ -988,6 +988,18 @@ function draftAnnoncePropertyTypeIdFromLabel(value: string | null | undefined) {
   if (legacy) return legacy.id
   const direct = draftAnnoncePropertyTypes.find((item) => normalizeDraftAnnonceScanText(item.label) === normalized)
   if (direct) return direct.id
+  // Rattachement au plus proche pour un type ecrit LIBREMENT et non liste (patron V2 : champ libre).
+  // Dico de familles ; l'ecran de validation reste editable si le rattachement n'est pas parfait.
+  const familySynonyms: Array<{ id: string; keys: string[] }> = [
+    { id: '1', keys: ['longere', 'fermette', 'pavillon', 'gite', 'chaumiere', 'maison de maitre', 'maison bourgeoise', 'maison individuelle', 'maison de campagne', 'maison de ville', 'grange', 'chalet', 'gentilhommiere'] },
+    { id: '30', keys: ['corps de ferme'] },
+    { id: '22', keys: ['domaine', 'manoir'] },
+    { id: '2', keys: ['t1', 't2', 't3', 't4', 't5', 't6', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6'] },
+    { id: '4', keys: ['studette'] },
+  ]
+  const words = normalized.split(' ')
+  const family = familySynonyms.find((item) => item.keys.some((k) => normalized === k || words.includes(k) || (k.length > 4 && normalized.includes(k))))
+  if (family) return family.id
   return draftAnnoncePropertyTypes.find((item) => normalized.includes(normalizeDraftAnnonceScanText(item.label)) || normalizeDraftAnnonceScanText(item.label).includes(normalized))?.id ?? ''
 }
 
