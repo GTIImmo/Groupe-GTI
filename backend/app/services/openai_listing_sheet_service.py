@@ -183,14 +183,31 @@ FIELD_KEYS = [
 ]
 
 
-def _field_schema() -> dict[str, Any]:
+# Descriptions au niveau du champ (schema). Nudge le modele vision a TOUJOURS emettre
+# certains champs qu'il saute sinon, meme avec une instruction dans le prompt. Mesure
+# reelle sur propertyType "Longere" (type atypique) : 1/3 sans description -> 4/4 avec.
+# Etendre ce dico aux autres champs recalcitrants au besoin (eau/assainissement/cuisine).
+FIELD_DESCRIPTIONS: dict[str, str] = {
+    "propertyType": (
+        "OBLIGATOIRE : le type de bien inscrit dans le champ 'Type de bien' en haut de la "
+        "fiche, recopie EXACTEMENT meme atypique ou hors liste (maison, longere, mas, corps "
+        "de ferme, bastide, gite, terrain, appartement, studio...). Ne jamais laisser null "
+        "si un type est ecrit sur la fiche."
+    ),
+}
+
+
+def _field_schema(description: str | None = None) -> dict[str, Any]:
     # Sortie allegee : plus de rawText (inutilise cote front) -> ~1/3 de tokens de
     # sortie en moins => plus rapide. _normalize_extraction remet rawText=None pour
     # garder la forme de reponse stable.
+    value_schema: dict[str, Any] = {"type": ["string", "null"]}
+    if description:
+        value_schema["description"] = description
     return {
         "type": "object",
         "properties": {
-            "value": {"type": ["string", "null"]},
+            "value": value_schema,
             "confidence": {"type": ["number", "null"]},
         },
         "required": ["value", "confidence"],
@@ -233,7 +250,7 @@ def _schema() -> dict[str, Any]:
             "summaryConfidence": {"type": ["number", "null"]},
             "fields": {
                 "type": "object",
-                "properties": {key: _field_schema() for key in FIELD_KEYS},
+                "properties": {key: _field_schema(FIELD_DESCRIPTIONS.get(key)) for key in FIELD_KEYS},
                 "required": FIELD_KEYS,
                 "additionalProperties": False,
             },
