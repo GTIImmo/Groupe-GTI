@@ -988,19 +988,32 @@ function draftAnnoncePropertyTypeIdFromLabel(value: string | null | undefined) {
   if (legacy) return legacy.id
   const direct = draftAnnoncePropertyTypes.find((item) => normalizeDraftAnnonceScanText(item.label) === normalized)
   if (direct) return direct.id
-  // Rattachement au plus proche pour un type ecrit LIBREMENT et non liste (patron V2 : champ libre).
-  // Dico de familles ; l'ecran de validation reste editable si le rattachement n'est pas parfait.
+  // 2. Contient un vrai libelle Hektor -> ce mot gagne (ex. "grande maison" -> Maison,
+  //    "villa contemporaine" -> Villa, "corps de ferme" -> Ferme, "beau terrain" -> Terrain).
+  const contained = draftAnnoncePropertyTypes.find((item) => {
+    const l = normalizeDraftAnnonceScanText(item.label)
+    return l.length >= 3 && (normalized.includes(l) || l.includes(normalized))
+  })
+  if (contained) return contained.id
+  // 3. Synonymes de famille : type ecrit LIBREMENT et non liste (patron V2 = champ libre).
+  //    L'ecran de validation reste editable ; enrichir cette liste au fil des cas reels.
   const familySynonyms: Array<{ id: string; keys: string[] }> = [
-    { id: '1', keys: ['longere', 'fermette', 'pavillon', 'gite', 'chaumiere', 'maison de maitre', 'maison bourgeoise', 'maison individuelle', 'maison de campagne', 'maison de ville', 'grange', 'chalet', 'gentilhommiere'] },
-    { id: '30', keys: ['corps de ferme'] },
-    { id: '22', keys: ['domaine', 'manoir'] },
-    { id: '2', keys: ['t1', 't2', 't3', 't4', 't5', 't6', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6'] },
-    { id: '4', keys: ['studette'] },
+    { id: '1', keys: ['pavillon', 'longere', 'gite', 'chaumiere', 'echoppe', 'borderie', 'closerie', 'cottage', 'plain pied'] }, // Maison
+    { id: '30', keys: ['fermette', 'bergerie', 'metairie', 'grange'] }, // Ferme
+    { id: '22', keys: ['domaine', 'manoir', 'demeure', 'gentilhommiere', 'chartreuse', 'hotel particulier'] }, // Propriete
+    { id: '11', keys: ['bastidon'] }, // Bastide
+    { id: '28', keys: ['castel'] }, // Chateau
+    { id: '10', keys: ['mas provencal'] }, // Mas
+    { id: '2', keys: ['appart', 't1', 't2', 't3', 't4', 't5', 't6', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'deux pieces', 'trois pieces', 'quatre pieces', 'cinq pieces', 'six pieces', 'rez de chaussee'] }, // Appartement
+    { id: '4', keys: ['studette'] }, // Studio
+    { id: '31', keys: ['atelier'] }, // Loft
+    { id: '5', keys: ['parcelle'] }, // Terrain
+    { id: '16', keys: ['place de parking', 'emplacement', 'stationnement'] }, // Parking
+    { id: '15', keys: ['box'] }, // Garage
   ]
   const words = normalized.split(' ')
   const family = familySynonyms.find((item) => item.keys.some((k) => normalized === k || words.includes(k) || (k.length > 4 && normalized.includes(k))))
-  if (family) return family.id
-  return draftAnnoncePropertyTypes.find((item) => normalized.includes(normalizeDraftAnnonceScanText(item.label)) || normalizeDraftAnnonceScanText(item.label).includes(normalized))?.id ?? ''
+  return family ? family.id : ''
 }
 
 // Resout un libelle de type de piece OCR (ex. "Chambre") vers l'idTypePiece Hektor.
