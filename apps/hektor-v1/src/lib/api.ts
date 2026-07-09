@@ -2733,6 +2733,24 @@ export async function loadDossierPropositions(appDossierId: number): Promise<Dos
   return (data ?? []) as DossierPropositionRow[]
 }
 
+/** État d'écriture de la dernière édition optimiste d'un bien.
+ *  `conflict` = bloqué (bien modifié dans Hektor depuis l'édition, rien écrit).
+ *  `partial`  = enregistré partiellement (au moins un champ ignoré au push). */
+export type AnnonceEditSkippedField = { field: string; reason?: string | null; value?: unknown }
+export type AnnonceEditStatus = {
+  pending: boolean
+  conflict?: boolean
+  partial?: boolean
+  skipped_fields?: AnnonceEditSkippedField[]
+  push_attempts?: number
+}
+export async function loadAnnonceEditStatus(appDossierId: number): Promise<AnnonceEditStatus | null> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return null
+  const { data, error } = await supabase.rpc('app_annonce_edit_status', { target_dossier_id: appDossierId })
+  if (error) throw new Error(error.message ?? 'Unable to load annonce edit status')
+  return (data ?? null) as AnnonceEditStatus | null
+}
+
 export async function setBienStatut(contactSearchKey: string, appDossierId: number, status: string, reason?: string | null, nego?: string | null): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_set_bien_statut', {

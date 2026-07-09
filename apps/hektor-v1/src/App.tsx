@@ -129,6 +129,8 @@ import {
   type SearchToComplete,
   loadDossierPropositions,
   type DossierPropositionRow,
+  loadAnnonceEditStatus,
+  type AnnonceEditStatus,
   loadRapprochementCounts,
   type RapprochementCount,
   hasOffreAchatEnCours,
@@ -21122,6 +21124,8 @@ function DossierDetailLayout(props: {
                 </section>
               ) : null}
 
+              <AnnonceEditStatusBanner dossier={dossier} />
+
               <nav className="detail-tabbar" aria-label="Navigation detail annonce" style={{ gridTemplateColumns: `repeat(${detailTabsForVariant.length}, minmax(0, 1fr))` }}>
                 {detailTabsForVariant.map((tab) => (
                   <button
@@ -24015,6 +24019,42 @@ function DossierPropositionsSection({ dossier, onOpenContact }: { dossier: Dossi
       )}
     </section>
   )
+}
+
+// Tier 2 — fidélité optimiste : bandeau d'alerte quand la dernière édition d'un bien
+// n'a PAS été fidèlement enregistrée dans Hektor (conflit = rien écrit, partiel = champ ignoré).
+// Lit app_annonce_pending via le RPC app_annonce_edit_status. Rien affiché si tout est OK.
+function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
+  const [status, setStatus] = useState<AnnonceEditStatus | null>(null)
+  const dossierId = dossier?.app_dossier_id ?? null
+  useEffect(() => {
+    if (dossierId == null) { setStatus(null); return }
+    let cancelled = false
+    loadAnnonceEditStatus(dossierId)
+      .then((s) => { if (!cancelled) setStatus(s) })
+      .catch(() => { if (!cancelled) setStatus(null) })
+    return () => { cancelled = true }
+  }, [dossierId])
+
+  if (!status || !status.pending) return null
+
+  const base = { padding: '10px 14px', borderRadius: 8, fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' } as const
+  if (status.conflict) {
+    return (
+      <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
+        <strong>Modification non enregistrée.</strong> Le bien a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.
+      </div>
+    )
+  }
+  if (status.partial) {
+    const fields = (status.skipped_fields ?? []).map((s) => s.field).filter(Boolean)
+    return (
+      <div role="status" style={{ ...base, background: '#FCF3E3', border: '1px solid #E4C583', color: '#6B4E12' }}>
+        <strong>Enregistré partiellement.</strong>{fields.length ? ` Champ(s) non appliqué(s) dans Hektor : ${fields.join(', ')}.` : ''} Vérifiez ces champs directement dans Hektor.
+      </div>
+    )
+  }
+  return null
 }
 
 function GoogleAgendaAnnonceSection(props: {
