@@ -999,8 +999,8 @@ function draftAnnoncePropertyTypeIdFromLabel(value: string | null | undefined) {
   //    L'ecran de validation reste editable ; enrichir cette liste au fil des cas reels.
   const familySynonyms: Array<{ id: string; keys: string[] }> = [
     { id: '1', keys: ['pavillon', 'longere', 'gite', 'chaumiere', 'echoppe', 'borderie', 'closerie', 'cottage', 'plain pied'] }, // Maison
-    { id: '30', keys: ['fermette', 'bergerie', 'metairie', 'grange'] }, // Ferme
-    { id: '22', keys: ['domaine', 'manoir', 'demeure', 'gentilhommiere', 'chartreuse', 'hotel particulier'] }, // Propriete
+    { id: '30', keys: ['fermette', 'bergerie', 'metairie', 'grange', 'ecurie', 'ecuries', 'manege'] }, // Ferme
+    { id: '22', keys: ['domaine', 'manoir', 'demeure', 'gentilhommiere', 'chartreuse', 'hotel particulier', 'haras'] }, // Propriete
     { id: '11', keys: ['bastidon'] }, // Bastide
     { id: '28', keys: ['castel'] }, // Chateau
     { id: '10', keys: ['mas provencal'] }, // Mas
