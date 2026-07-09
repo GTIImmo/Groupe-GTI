@@ -252,6 +252,23 @@ def load_contact_state_map(conn) -> Dict[str, str]:
     return {str(row["hektor_contact_id"]): str(row["date_maj"] or "") for row in rows}
 
 
+def load_draft_annonce_ids(conn) -> set:
+    """Ids Hektor des annonces brouillon (isDraft=1) depuis le store local
+    hektor_annonce_draft_state, alimente par le balayage GraphQL (phase2/sync/sync_hektor_drafts.py).
+    Le REST (AnnonceById) renvoie du vide sur ces brouillons -> on les saute au fetch detail
+    pour eviter des erreurs de sync et des appels API inutiles. Renvoie un set vide si la table
+    n'existe pas encore (feature brouillon non deployee) -> comportement historique inchange."""
+    has_table = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hektor_annonce_draft_state'"
+    ).fetchone()
+    if not has_table:
+        return set()
+    rows = conn.execute(
+        "SELECT hektor_annonce_id FROM hektor_annonce_draft_state WHERE COALESCE(is_draft, 0) = 1"
+    ).fetchall()
+    return {str(row[0]).strip() for row in rows if str(row[0]).strip()}
+
+
 def load_annonce_ids_missing_detail_sync(conn) -> list[str]:
     rows = conn.execute(
         """
@@ -1268,6 +1285,20 @@ def main() -> int:
                     set_meta_value(conn, f"contact_cursor_{variant['scope']}", max_seen_date)
             if "annonces" in args.resources:
                 detail_ids = list(dict.fromkeys(detail_ids + sorted(find_annonce_ids_by_contact_ids(conn, changed_contact_ids))))
+
+        if "annonces" in args.resources and detail_ids:
+            # Saute les brouillons connus (isDraft=1) : AnnonceById renvoie du vide dessus
+            # (erreurs de sync + appels API gaspilles). Liste alimentee par le balayage
+            # GraphQL (sync_hektor_drafts.py), persistee entre les runs -> pas besoin de la
+            # Console au prealable. Un brouillon tout neuf (pas encore balaye) passe au pire
+            # une fois, puis est connu au run suivant.
+            draft_ids = load_draft_annonce_ids(conn)
+            if draft_ids:
+                before = len(detail_ids)
+                detail_ids = [aid for aid in detail_ids if str(aid) not in draft_ids]
+                skipped = before - len(detail_ids)
+                if skipped:
+                    print(f"Skip {skipped} brouillon(s) isDraft au fetch detail (AnnonceById renvoie vide)")
 
         if "annonces" in args.resources and detail_ids:
             sync_annonce_details(conn, run_id, client, settings, detail_ids)
