@@ -8017,25 +8017,11 @@ async function handleUpdateHektorAnnonceFields(job) {
 
   if (!results.length) throw new Error("Aucun champ annonce modifiable fourni");
 
-  // Tier 2 : bilan du push. `skipped` = champs jetes (ex. <select> non resolu),
-  // `wrote` = au moins un champ reellement ecrit dans Hektor.
-  const skipped = results.flatMap((r) => (r && Array.isArray(r.skipped)) ? r.skipped : []);
-  const wrote = results.some((r) => r && r.status !== "error");
-
-  // Push from_pending : on efface le pending SEULEMENT si tout est passe (aucun champ
-  // jete et au moins une ecriture). Sinon on le CONSERVE, marque `partial`, pour que le
-  // front (badge) et le monitoring (sentinelle) le voient au lieu d'un faux "enregistre".
+  // Tier 2 : push from_pending réussi -> on efface le pending (avant l'after-refresh,
+  // pour qu'il resynchronise normalement). Clone du clearSearchPending des recherches.
   if (fromPending) {
     const appDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
-    if (skipped.length > 0 || !wrote) {
-      await markAnnoncePartial(appDossierId, skipped);
-      await logJob(job.id, "hektor_annonce_update", "done", `Edition incomplete : ${skipped.length} champ(s) ignore(s)`, {
-        hektor_annonce_id: annonceId,
-        skipped,
-      });
-    } else {
-      await clearAnnoncePending(appDossierId);
-    }
+    await clearAnnoncePending(appDossierId);
   }
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
@@ -8044,10 +8030,9 @@ async function handleUpdateHektorAnnonceFields(job) {
   });
 
   return {
-    status: skipped.length > 0 ? "updated_partial" : "updated",
+    status: "updated",
     hektor_annonce_id: annonceId,
     updated_groups: results,
-    skipped_fields: skipped,
     sync_job: syncJob,
   };
 }
@@ -10337,23 +10322,6 @@ async function markAnnoncePendingConflict(appDossierId) {
       `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
       { method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
-  } catch (_) { /* best-effort */ }
-}
-// Tier 2 : le push a ignore au moins un champ (ex. <select> non resolu). On NE supprime
-// PAS le pending -> on le marque `partial` avec la liste des champs jetes. Le monitoring
-// (sentinelle data.annonce_partielle) et le front (RPC app_annonce_edit_status) le lisent.
-async function markAnnoncePartial(appDossierId, skipped) {
-  if (appDossierId == null) return;
-  try {
-    await supabaseRequest(
-      `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
-      { method: "PATCH", prefer: "return=minimal",
-        body: JSON.stringify({
-          partial: true,
-          skipped_fields: Array.isArray(skipped) ? skipped : [],
-          push_job_id: null,
-          updated_at: new Date().toISOString(),
-        }) });
   } catch (_) { /* best-effort */ }
 }
 

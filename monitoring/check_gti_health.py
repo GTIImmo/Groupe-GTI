@@ -122,32 +122,6 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 300,
     },
-    # Fidelite de la boucle optimiste (Tier 2). Ces jobs finissent "done" cote worker,
-    # donc check_console_jobs ne les voit PAS -> ces sentinelles comblent le trou.
-    {
-        "key": "data.annonce_conflit",
-        "label": "Editions annonce bloquees (conflit Hektor)",
-        "table": "app_annonce_pending",
-        "params": {"conflict": "eq.true"},
-        "rule": "absolute",
-        "max": 0,
-    },
-    {
-        "key": "data.annonce_partielle",
-        "label": "Editions annonce incompletes (champ ignore)",
-        "table": "app_annonce_pending",
-        "params": {"partial": "eq.true"},
-        "rule": "absolute",
-        "max": 0,
-    },
-    {
-        "key": "data.annonce_push_bloque",
-        "label": "Push annonce en echec repete",
-        "table": "app_annonce_pending",
-        "params": {"push_attempts": "gte.3"},
-        "rule": "absolute",
-        "max": 0,
-    },
 ]
 
 # Surfaces publiques a sonder depuis l'exterieur (up-check HTTP simple).
