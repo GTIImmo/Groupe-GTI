@@ -911,6 +911,43 @@ async function supabaseRequest(pathname, options = {}) {
   return payload;
 }
 
+// --- Heartbeat worker temps reel (app_worker_registry) ---
+// Les workers console.worker.* (temps reel) n'ecrivaient AUCUN heartbeat -> le monitoring
+// etait aveugle a leur arret (seuls les 14 workers du run nocturne en ecrivaient). On ecrit
+// ici la VIVACITE de la boucle de polling : last_run_at a chaque cycle, last_success_at = "la
+// boucle tourne + Supabase joignable". L'echec d'un JOB (ex. Hektor injoignable) est capte
+// separement par la sentinelle console.jobs.errors ; ici on ne mesure QUE la vivacite du
+// process (detecte un worker mort/bloque). Best-effort : ne bloque JAMAIS le traitement.
+const HEARTBEAT_WORKER_KEY = `console.worker.${WORKER_KIND}`;
+const HEARTBEAT_MIN_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_HEARTBEAT_INTERVAL_MS || 60000);
+let heartbeatLastWrittenAt = 0;
+async function writeWorkerHeartbeat(status, extra = {}) {
+  try {
+    const now = Date.now();
+    const isJobEvent = status === "success" || status === "error";
+    // Cycles idle : throttle pour ne pas marteler Supabase. Evenements de job : toujours ecrits.
+    if (!isJobEvent && now - heartbeatLastWrittenAt < HEARTBEAT_MIN_INTERVAL_MS) return;
+    heartbeatLastWrittenAt = now;
+    const iso = new Date(now).toISOString();
+    const patch = {
+      last_run_at: iso,
+      last_success_at: iso,
+      last_status: status,
+      last_run_host: os.hostname(),
+    };
+    if (extra.durationMs != null) patch.last_duration_ms = Math.round(extra.durationMs);
+    if (extra.error != null) patch.last_error = String(extra.error).slice(0, 500);
+    else if (isJobEvent) patch.last_error = null;
+    await supabaseRequest(`app_worker_registry?worker_key=eq.${encodeURIComponent(HEARTBEAT_WORKER_KEY)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify(patch),
+    });
+  } catch (_) {
+    // Heartbeat best-effort : un echec ici ne doit jamais perturber le worker.
+  }
+}
+
 // --- Création optimiste : réconciliation de la ligne provisoire (app_annonce_provisional) ---
 // La provisoire est insérée par le front au moment du "Créer" (affichage instantané "En création").
 // Le worker la relie ensuite au vrai bien Hektor (link), ou la marque en erreur, et le read-through
@@ -6072,6 +6109,83 @@ function extractHektorFormValues(html, groupName) {
   return values;
 }
 
+// Options des <select> du formulaire (name -> [{value,label}]). Sert a resoudre une
+// valeur saisie en clair (ex. "enterrée") vers l'id d'option attendu par Hektor, comme
+// pour le chauffage. Sans ca, ecrire un libelle dans un select est silencieusement ignore.
+function extractHektorFormSelectOptions(html, groupName) {
+  const map = new Map();
+  const source = String(html || "");
+  const selectRegex = /<select\b[^>]*>[\s\S]*?<\/select>/gi;
+  let match;
+  while ((match = selectRegex.exec(source))) {
+    const field = match[0];
+    const name = attrValue(field, "name");
+    if (!name) continue;
+    const fieldGroup = attrValue(field, "group") || attrValue(field, "data-group");
+    if (groupName && fieldGroup && fieldGroup !== groupName) continue;
+    const options = Array.from(field.matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option>/gi)).map((optionMatch) => ({
+      value: attrValue(`<option${optionMatch[1]}>`, "value") || "",
+      label: decodeHtmlEntities(String(optionMatch[2] || "").replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim(),
+    }));
+    if (options.length) map.set(name, options);
+  }
+  return map;
+}
+
+function normalizeHektorSelectLabel(value) {
+  return String(value == null ? "" : value)
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// Synonymes scan -> valeur d'option Hektor, par champ cible. Complete le resolveur generique
+// quand le libelle scanne n'a pas de correspondance directe (abreviations d'exposition,
+// vocabulaire piscine different). Cles = forme NORMALISEE (minuscule, sans accent, tirets->espaces).
+// Options Hektor reelles observees (log available_options) : EXPOSITION = NORD/SUD/EST/OUEST/
+// NORD-EST/... ; PISCINE_NATURE = COQUE/TRADITIONNELLE/HORS-SOL/SEMI-ENTERREE.
+const HEKTOR_SELECT_SYNONYMS = {
+  EXPOSITION: {
+    n: "NORD", nord: "NORD",
+    s: "SUD", sud: "SUD",
+    e: "EST", est: "EST",
+    o: "OUEST", w: "OUEST", ouest: "OUEST",
+    ne: "NORD-EST", "nord est": "NORD-EST",
+    no: "NORD-OUEST", nw: "NORD-OUEST", "nord ouest": "NORD-OUEST",
+    se: "SUD-EST", "sud est": "SUD-EST",
+    so: "SUD-OUEST", sw: "SUD-OUEST", "sud ouest": "SUD-OUEST",
+  },
+  PISCINE_NATURE: {
+    beton: "TRADITIONNELLE", traditionnelle: "TRADITIONNELLE", traditionnel: "TRADITIONNELLE",
+    maconnee: "TRADITIONNELLE", enterree: "TRADITIONNELLE", creusee: "TRADITIONNELLE", liner: "TRADITIONNELLE",
+    coque: "COQUE", polyester: "COQUE",
+    "hors sol": "HORS-SOL", horssol: "HORS-SOL",
+    "semi enterree": "SEMI-ENTERREE",
+  },
+};
+
+// Resout une valeur (libelle OU id) vers un id d'option valide. Renvoie null si aucun match.
+function resolveHektorSelectValue(options, rawValue, fieldName) {
+  if (!Array.isArray(options) || !options.length) return null;
+  const raw = String(rawValue == null ? "" : rawValue).trim();
+  if (!raw) return null;
+  if (options.some((option) => String(option.value) === raw)) return raw; // deja un id d'option
+  const norm = normalizeHektorSelectLabel(raw);
+  if (!norm) return null;
+  let hit = options.find((option) => option.value && normalizeHektorSelectLabel(option.label) === norm);
+  if (!hit) hit = options.find((option) => option.value && norm.length >= 3 && normalizeHektorSelectLabel(option.label).includes(norm));
+  if (!hit) hit = options.find((option) => {
+    const lab = normalizeHektorSelectLabel(option.label);
+    return option.value && lab.length >= 3 && norm.includes(lab);
+  });
+  // Dernier recours : dictionnaire de synonymes par champ. On ne renvoie la valeur mappee
+  // que si elle existe reellement dans les options chargees (robuste si Hektor change sa liste).
+  if (!hit && fieldName && HEKTOR_SELECT_SYNONYMS[fieldName]) {
+    const mapped = HEKTOR_SELECT_SYNONYMS[fieldName][norm];
+    if (mapped && options.some((option) => String(option.value) === mapped)) return mapped;
+  }
+  return hit ? String(hit.value) : null;
+}
+
 function extractWizardAnnonceId(html) {
   let source = String(html || "");
   try {
@@ -6568,12 +6682,12 @@ const HEKTOR_WIZARD_UPDATE_GROUPS = [
   {
     group: "ag_interieur",
     mode: "ihmChargeGroupe",
-    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]),
+    fields: new Set(["surfappart", "nbpieces", "NB_CHAMBRES", "NB_SDB", "SDB", "NB_SE", "SE", "SDE", "NB_WC", "WC", "SURF_CARREZ", "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]),
   },
   {
     group: "ag_exterieur",
     mode: "ihmChargeGroupe",
-    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "PISCINE_TYPE", "PISCINE_NATURE", "PISCINE_DETAILS", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "POOL_HOUSE", "PISCINE_CHAUFFEE", "PISCINE_COUVERTE", "RESIDENCE", "TYPE_RESIDENCE"]),
+    fields: new Set(["JARDIN", "JARDIN-", "SURFACE_JARDIN", "MURS_MITOYENS", "floorState", "NB_NIVEAUX", "ETAGE", "DERNIER_ETAGE", "NB_ETAGES", "CAVE", "SURFACE_CAVE", "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "GARAGE_BOX", "SURFACE_GARAGE", "NB_PARK_INT", "NB_PARK_EXT", "PISCINE", "PISCINE-", "PISCINE_TYPE", "PISCINE_NATURE", "PISCINE_DETAILS", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "POOL_HOUSE", "PISCINE_CHAUFFEE", "PISCINE_COUVERTE", "RESIDENCE", "TYPE_RESIDENCE"]),
   },
   {
     group: "terrain",
@@ -6712,7 +6826,16 @@ function buildExactWizardGroupUpdates(payload, options = {}) {
     if (!/^[A-Za-z0-9_[\]-]+$/.test(key)) continue;
     if (!isHektorWizardFieldAllowedForPayload(payload, key)) continue;
     if (rawValue === undefined || rawValue === null) continue;
-    const value = normalizeHektorExactWizardUpdateValue(key, rawValue);
+    // Resilience : une valeur invalide (ex. "Libre" mis par le scan dans DATE_DISPO, un
+    // champ date) faisait THROW et abandonnait TOUTE l'ecriture des champs. On saute ce
+    // champ isole et on continue -> les 40+ autres champs sont ecrits normalement.
+    let value;
+    try {
+      value = normalizeHektorExactWizardUpdateValue(key, rawValue);
+    } catch (error) {
+      console.warn(`[wizard_fields] champ ignore ${key}=${JSON.stringify(rawValue)}: ${error && error.message ? error.message : error}`);
+      continue;
+    }
     if (!value) continue;
     const candidates = exactWizardCandidateKeys(key);
     const config = HEKTOR_WIZARD_UPDATE_GROUPS.find((item) => candidates.some((candidate) => item.fields.has(candidate)));
@@ -7098,6 +7221,7 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     },
   });
   const values = extractHektorFormValues(html.text, groupName);
+  const selectOptions = extractHektorFormSelectOptions(html.text, groupName);
   if (groupName === "equipements") stripHektorSpecialWizardFields(values);
   const applied = [];
   const skipped = [];
@@ -7112,7 +7236,28 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
       skipped.push({ field: key, candidates });
       continue;
     }
-    values.set(targetKey, String(spec.value));
+    let writeValue = String(spec.value);
+    // Champ <select> (ex. PISCINE_TYPE/NATURE) : Hektor attend un id d'option, pas un
+    // libelle. On resout label->id depuis les options du formulaire charge. Si aucun
+    // match, on n'ecrit pas (sinon Hektor ignore silencieusement et la valeur est perdue).
+    if (selectOptions.has(targetKey)) {
+      const opts = selectOptions.get(targetKey);
+      const resolved = resolveHektorSelectValue(opts, writeValue, targetKey);
+      if (resolved == null) {
+        // On journalise les options reelles du <select> Hektor pour pouvoir mapper
+        // ensuite (ex. "S" -> "Sud", "enteree" -> le bon libelle). Aucune requete en plus.
+        skipped.push({
+          field: key,
+          target: targetKey,
+          reason: "select_no_option_match",
+          value: writeValue,
+          available_options: Array.isArray(opts) ? opts.map((o) => ({ value: o.value, label: o.label })) : null,
+        });
+        continue;
+      }
+      writeValue = resolved;
+    }
+    values.set(targetKey, writeValue);
     applied.push({ field: key, target: targetKey });
   }
   if (!applied.length) {
@@ -7888,7 +8033,6 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
   if (cleanFields.bedroom_count != null) agInterieur.bedroom_count = fieldSpec(cleanFields.bedroom_count, ["NB_CHAMBRES"]);
-  if (cleanFields.level_count != null) agInterieur.level_count = fieldSpec(cleanFields.level_count, ["NB_NIVEAUX"]);
   if (cleanFields.surface != null) agInterieur.surface = fieldSpec(cleanFields.surface, ["surfappart"]);
   if (cleanFields.carrez_surface != null) agInterieur.carrez_surface = fieldSpec(cleanFields.carrez_surface, ["SURF_CARREZ"]);
   if (cleanFields.bathroom_count != null) agInterieur.bathroom_count = fieldSpec(cleanFields.bathroom_count, ["SDB", "NB_SDB", "nb_sdb", "sdb"]);
@@ -7900,6 +8044,9 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   await pushHektorGroupUpdate(results, job, annonceId, "ag_interieur", "ihmChargeGroupe", agInterieur, options);
 
   const agExterieur = {};
+  // NB_NIVEAUX (nombre de niveaux) vit dans le groupe ag_exterieur cote Hektor,
+  // pas ag_interieur (verifie sur 150/150 Maisons via detail_raw_json).
+  if (cleanFields.level_count != null) agExterieur.level_count = fieldSpec(cleanFields.level_count, ["NB_NIVEAUX"]);
   if (cleanFields.floor != null) {
     const floorState = inferHektorFloorStateValue(cleanFields.floor);
     if (floorState) agExterieur.floor_state = fieldSpec(floorState, ["floorState"]);
@@ -8044,11 +8191,25 @@ async function handleUpdateHektorAnnonceFields(job) {
 
   if (!results.length) throw new Error("Aucun champ annonce modifiable fourni");
 
-  // Tier 2 : push from_pending réussi -> on efface le pending (avant l'after-refresh,
-  // pour qu'il resynchronise normalement). Clone du clearSearchPending des recherches.
+  // Tier 2 : bilan du push. `skipped` = champs jetes (ex. <select> non resolu),
+  // `wrote` = au moins un champ reellement ecrit dans Hektor.
+  const skipped = results.flatMap((r) => (r && Array.isArray(r.skipped)) ? r.skipped : []);
+  const wrote = results.some((r) => r && r.status !== "error");
+
+  // Push from_pending : on efface le pending SEULEMENT si tout est passe (aucun champ
+  // jete et au moins une ecriture). Sinon on le CONSERVE, marque `partial`, pour que le
+  // front (badge) et le monitoring (sentinelle) le voient au lieu d'un faux "enregistre".
   if (fromPending) {
     const appDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
-    await clearAnnoncePending(appDossierId);
+    if (skipped.length > 0 || !wrote) {
+      await markAnnoncePartial(appDossierId, skipped);
+      await logJob(job.id, "hektor_annonce_update", "done", `Edition incomplete : ${skipped.length} champ(s) ignore(s)`, {
+        hektor_annonce_id: annonceId,
+        skipped,
+      });
+    } else {
+      await clearAnnoncePending(appDossierId);
+    }
   }
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
@@ -8057,9 +8218,10 @@ async function handleUpdateHektorAnnonceFields(job) {
   });
 
   return {
-    status: "updated",
+    status: skipped.length > 0 ? "updated_partial" : "updated",
     hektor_annonce_id: annonceId,
     updated_groups: results,
+    skipped_fields: skipped,
     sync_job: syncJob,
   };
 }
@@ -10351,6 +10513,23 @@ async function markAnnoncePendingConflict(appDossierId) {
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
   } catch (_) { /* best-effort */ }
 }
+// Tier 2 : le push a ignore au moins un champ (ex. <select> non resolu). On NE supprime
+// PAS le pending -> on le marque `partial` avec la liste des champs jetes. Le monitoring
+// (sentinelle data.annonce_partielle) et le front (RPC app_annonce_edit_status) le lisent.
+async function markAnnoncePartial(appDossierId, skipped) {
+  if (appDossierId == null) return;
+  try {
+    await supabaseRequest(
+      `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({
+          partial: true,
+          skipped_fields: Array.isArray(skipped) ? skipped : [],
+          push_job_id: null,
+          updated_at: new Date().toISOString(),
+        }) });
+  } catch (_) { /* best-effort */ }
+}
 
 // Lot B (contacts) : nettoyage du pending contact après push réussi, ou marquage conflit.
 async function clearContactPending(contactId) {
@@ -11738,6 +11917,7 @@ async function processOnce() {
   await refreshHektorSessionIfDue();
   const job = await claimNextJob();
   if (!job) {
+    await writeWorkerHeartbeat("idle");
     await keepHektorSessionWarmIfDue();
     return false;
   }
@@ -11749,14 +11929,17 @@ async function processOnce() {
     hektor_annonce_id: job.hektor_annonce_id,
   });
 
+  const startedAt = Date.now();
   try {
     const result = await withTimeout(runHandlerWithSessionRetry(job), JOB_TIMEOUT_MS, `Job ${job.job_type}`);
     await logJob(job.id, "finish", "done", "Job completed", result || {});
     await finishJob(job.id, "done", result || {}, null);
+    await writeWorkerHeartbeat("success", { durationMs: Date.now() - startedAt });
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
     await logJob(job.id, "finish", "error", message, null);
     await finishJob(job.id, "error", null, message);
+    await writeWorkerHeartbeat("error", { durationMs: Date.now() - startedAt, error: message });
   }
 
   lastHektorActivityAt = Date.now();  // ce job a touche Hektor -> repousse le prochain keep-alive
@@ -11782,6 +11965,8 @@ async function main() {
     syncLightJobTypes: Array.from(SYNC_LIGHT_JOB_TYPES),
     syncFullJobTypes: Array.from(SYNC_FULL_JOB_TYPES),
   }));
+
+  await writeWorkerHeartbeat("startup"); // le worker (re)demarre : signale sa vivacite tout de suite
 
   if (once) {
     await processOnce();
