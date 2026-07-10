@@ -41,11 +41,16 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function redactHeaders(headers) {
+function redactHeaders(headers, url) {
+  // On garde les en-têtes d'AUTH uniquement vers le SaaS de signature (immo-sign/mylegitech),
+  // car le full-auto HTTP a besoin du Bearer token. Cookies/secret Hektor restent masqués.
+  const isSaaS = /immo-sign\.com|mylegitech\.com/i.test(url || "");
   const safe = {};
   for (const [key, value] of Object.entries(headers || {})) {
-    if (/cookie|authorization|token|secret|password/i.test(key)) safe[key] = "[redacted]";
-    else safe[key] = value;
+    const k = key.toLowerCase();
+    if (/cookie|secret|password/.test(k)) { safe[key] = "[redacted]"; continue; }
+    if ((k === "authorization" || k.includes("token") || k.includes("api-key")) && !isSaaS) { safe[key] = "[redacted]"; continue; }
+    safe[key] = value;
   }
   return safe;
 }
@@ -58,7 +63,11 @@ function isInterestingUrl(url) {
     || u.includes("signature")
     || u.includes("/admin/upload")
     || u.includes("upload_uploadeddoc")
-    || u.includes("chargeannonce");
+    || u.includes("chargeannonce")
+    // bascule en acces negociateur (impersonation) : on capte aussi le passage
+    || u.includes("call=authenticate")
+    || u.includes("autologin")
+    || u.includes("impersonate");
 }
 
 // Une requête est "ImmoSign" si l'URL ou le corps mentionne ImmoSign / une procédure.
@@ -90,10 +99,10 @@ async function main() {
   }
 
   const events = [];
-  const browser = await chromium.launch({ headless: false, slowMo: 60 });
+  const browser = await chromium.launch({ headless: false, slowMo: 60, args: ["--start-maximized"] });
   const context = await browser.newContext({
     storageState: STORAGE_STATE_PATH,
-    viewport: { width: 1440, height: 950 },
+    viewport: null,  // suit la taille reelle de la fenetre (maximisee) -> scroll + boutons a droite visibles
   });
   const page = await context.newPage();
 
@@ -105,7 +114,7 @@ async function main() {
       event: "request",
       method: request.method(),
       url,
-      headers: redactHeaders(request.headers()),
+      headers: redactHeaders(request.headers(), url),
       postData: request.postData(),
     });
   });
@@ -129,7 +138,7 @@ async function main() {
       method: request.method(),
       url,
       status: response.status(),
-      headers: redactHeaders(response.headers()),
+      headers: redactHeaders(response.headers(), url),
       bodyPreview: text.slice(0, 12000),
     });
   });
@@ -181,7 +190,8 @@ async function main() {
   );
 
   await snapshot(page, "final").catch(() => {});
-  await context.storageState({ path: STORAGE_STATE_PATH }).catch(() => {});
+  // NB: on NE réécrit PAS storageState ici — pour ne pas laisser la session en
+  // contexte negociateur impersonné après la capture (lecture seule de la session).
   await browser.close().catch(() => {});
 
   console.log(JSON.stringify({

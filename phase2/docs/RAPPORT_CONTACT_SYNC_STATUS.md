@@ -4,29 +4,29 @@ Controle local de l'extraction ContactById, de la couche contacts phase 2 et de 
 
 ## Synthese
 
-- Contacts listing local : `354577`
-- Fiches detail recuperees : `346918`
+- Contacts listing local : `354965`
+- Fiches detail recuperees : `347306`
 - Fiches detail restantes : `7659`
-- Contacts app eligibles Supabase : `57173`
-- Contacts avec recherche active : `3588`
-- Dernier run detail : `success` / `2026-06-06T06:11:04Z`
+- Contacts app eligibles Supabase : `57297`
+- Contacts avec recherche active : `3632`
+- Dernier run detail : `success` / `2026-07-10T04:03:38Z`
 
 ## Donnees completes
 
 ```json
 {
-  "generated_at": "2026-06-06T06:21:47+00:00",
+  "generated_at": "2026-07-10T04:10:56+00:00",
   "hektor": {
     "db_exists": true,
     "contact_state": {
-      "total": 354577,
-      "detail_synced": 346918,
+      "total": 354965,
+      "detail_synced": 347306,
       "detail_missing": 7659,
-      "latest_detail_sync_at": "2026-06-05T21:47:39Z"
+      "latest_detail_sync_at": "2026-07-10T04:03:37Z"
     },
-    "raw_contact_details": 346918,
+    "raw_contact_details": 347306,
     "contact_detail_skip": {
-      "total": 7659,
+      "total": 7660,
       "by_reason": [
         {
           "reason": "http_404_not_found",
@@ -34,123 +34,123 @@ Controle local de l'extraction ContactById, de la couche contacts phase 2 et de 
         },
         {
           "reason": "http_403_forbidden",
-          "count": 2
+          "count": 3
         }
       ]
     },
     "contact_detail_errors": {
-      "total": 8408,
-      "not_found": 8383,
-      "timeout_or_connect": 15,
+      "total": 8442,
+      "not_found": 8384,
+      "timeout_or_connect": 28,
       "latest": [
         {
-          "created_at": "2026-06-04T17:14:51Z",
-          "object_id": "483095",
-          "error_message": "404 Client Error: Not Found for url: https://groupe-gti-immobilier.la-boite-immo.com/Api/Contact/ContactById?id=483095&version=v2"
+          "created_at": "2026-07-10T01:06:59Z",
+          "object_id": "423771",
+          "error_message": "403 Client Error: Forbidden for url: https://groupe-gti-immobilier.la-boite-immo.com/Api/Contact/ContactById?id=423771&version=v2"
         },
         {
-          "created_at": "2026-06-04T17:14:49Z",
-          "object_id": "41239",
-          "error_message": "404 Client Error: Not Found for url: https://groupe-gti-immobilier.la-boite-immo.com/Api/Contact/ContactById?id=41239&version=v2"
+          "created_at": "2026-07-09T01:19:05Z",
+          "object_id": "602355",
+          "error_message": "GET /Api/Contact/ContactById did not return valid JSON after 1 attempts: GET /Api/Contact/ContactById failed after 1 attempts: HTTPSConnectionPool(host='groupe-gti-immobilier.la-boite-immo.com', port=443): Max retries ex"
         },
         {
-          "created_at": "2026-06-04T17:14:49Z",
-          "object_id": "41238",
-          "error_message": "404 Client Error: Not Found for url: https://groupe-gti-immobilier.la-boite-immo.com/Api/Contact/ContactById?id=41238&version=v2"
+          "created_at": "2026-07-09T01:18:44Z",
+          "object_id": "602345",
+          "error_message": "GET /Api/Contact/ContactById did not return valid JSON after 1 attempts: GET /Api/Contact/ContactById failed after 1 attempts: HTTPSConnectionPool(host='groupe-gti-immobilier.la-boite-immo.com', port=443): Max retries ex"
         },
         {
-          "created_at": "2026-06-04T17:14:42Z",
-          "object_id": "27689",
-          "error_message": "404 Client Error: Not Found for url: https://groupe-gti-immobilier.la-boite-immo.com/Api/Contact/ContactById?id=27689&version=v2"
+          "created_at": "2026-07-09T01:18:23Z",
+          "object_id": "602344",
+          "error_message": "GET /Api/Contact/ContactById did not return valid JSON after 1 attempts: GET /Api/Contact/ContactById failed after 1 attempts: ('Connection aborted.', ConnectionResetError(10054, 'Une connexion existante a d\u00fb \u00eatre ferm\u00e9e"
         },
         {
-          "created_at": "2026-06-04T17:14:42Z",
-          "object_id": "27688",
-          "error_message": "404 Client Error: Not Found for url: https://groupe-gti-immobilier.la-boite-immo.com/Api/Contact/ContactById?id=27688&version=v2"
+          "created_at": "2026-07-09T01:12:20Z",
+          "object_id": "409298",
+          "error_message": "GET /Api/Contact/ContactById did not return valid JSON after 1 attempts: GET /Api/Contact/ContactById failed after 1 attempts: HTTPSConnectionPool(host='groupe-gti-immobilier.la-boite-immo.com', port=443): Max retries ex"
         }
       ]
     },
     "latest_run": {
-      "id": 287,
+      "id": 1844,
       "status": "success",
-      "started_at": "2026-06-06T06:10:55Z",
-      "finished_at": "2026-06-06T06:11:04Z",
-      "heartbeat_at": "2026-06-06T06:11:04Z",
-      "current_step": "authenticate",
-      "current_endpoint": null,
+      "started_at": "2026-07-10T04:03:29Z",
+      "finished_at": "2026-07-10T04:03:38Z",
+      "heartbeat_at": "2026-07-10T04:03:38Z",
+      "current_step": "contact_detail_batch",
+      "current_endpoint": "contact_detail",
       "current_object_id": null,
       "current_page": null,
-      "progress_done": 0,
-      "progress_total": 1,
-      "progress_unit": "step",
-      "notes": "details_synced=0; errors=0; hard_errors=0; not_found=0; selection_mode=missing_or_changed; before_with_detail=346918; after_with_detail=346918",
-      "heartbeat_age_minutes": 10
+      "progress_done": 19,
+      "progress_total": 19,
+      "progress_unit": "objects",
+      "notes": "details_synced=19; errors=0; hard_errors=0; not_found=0; selection_mode=missing_or_changed; before_with_detail=347294; after_with_detail=347306",
+      "heartbeat_age_minutes": 7
     }
   },
   "phase2": {
     "db_exists": true,
     "contacts_layer": {
-      "total": 354577,
-      "active": 170494,
-      "archived": 184083,
-      "eligible_supabase": 57173,
-      "with_relation": 108793,
-      "with_active_search": 3588,
-      "with_any_search": 67637,
-      "with_contact_detail": 346918
+      "total": 355104,
+      "active": 171005,
+      "archived": 184099,
+      "eligible_supabase": 57297,
+      "with_relation": 108985,
+      "with_active_search": 3632,
+      "with_any_search": 67712,
+      "with_contact_detail": 347306
     },
     "relations_layer": {
-      "total": 164769,
-      "active_annonce": 77031,
-      "transaction": 32856,
+      "total": 165103,
+      "active_annonce": 77186,
+      "transaction": 32985,
       "by_role": [
         {
           "role_contact": "proprietaire",
-          "count": 85310
-        },
-        {
-          "role_contact": "mandant",
-          "count": 46603
+          "count": 123601
         },
         {
           "role_contact": "acquereur_compromis",
-          "count": 13058
+          "count": 13097
         },
         {
           "role_contact": "acquereur_offre",
-          "count": 10892
+          "count": 10934
         },
         {
           "role_contact": "acquereur_vente",
-          "count": 8906
+          "count": 8954
+        },
+        {
+          "role_contact": "mandant",
+          "count": 8517
         }
       ]
     },
     "searches_layer": {
-      "total": 76585,
-      "active": 3770,
-      "archived": 72815
+      "total": 76668,
+      "active": 3812,
+      "archived": 72856
     },
     "duplicates_layer": {
-      "groups": 36582,
-      "high_or_critical": 23758,
-      "suspected_mass_archive_error": 10713
+      "groups": 36842,
+      "high_or_critical": 23933,
+      "suspected_mass_archive_error": 10783
     },
     "supabase_push_state": [
       {
         "table_name": "app_contact_current",
-        "rows_marked_pushed": 191927,
-        "latest_pushed_at": "2026-06-05T22:00:03+00:00"
+        "rows_marked_pushed": 57288,
+        "latest_pushed_at": "2026-07-10T01:09:40+00:00"
       },
       {
         "table_name": "app_contact_relation_current",
-        "rows_marked_pushed": 77031,
-        "latest_pushed_at": "2026-06-05T22:00:03+00:00"
+        "rows_marked_pushed": 77186,
+        "latest_pushed_at": "2026-07-10T01:08:40+00:00"
       },
       {
         "table_name": "app_contact_search_current",
-        "rows_marked_pushed": 3770,
-        "latest_pushed_at": "2026-06-05T17:08:38+00:00"
+        "rows_marked_pushed": 3809,
+        "latest_pushed_at": "2026-07-10T01:09:40+00:00"
       }
     ]
   }

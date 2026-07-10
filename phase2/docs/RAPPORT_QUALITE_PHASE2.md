@@ -4,8 +4,8 @@ Controles automatises de coherence sur `phase2.sqlite`.
 
 ## Metriques
 
-- `vue_generale_total` : 56473 | attente : doit rester stable entre deux runs hors variation source
-- `demandes_total` : 21738 | attente : doit rester stable entre deux runs hors variation source
+- `vue_generale_total` : 56666 | attente : doit rester stable entre deux runs hors variation source
+- `demandes_total` : 21866 | attente : doit rester stable entre deux runs hors variation source
 - `missing_titles` : 0 | attente : 0
 - `view_generale_without_dossier` : 0 | attente : 0
 - `demandes_without_view_generale` : 0 | attente : 0
@@ -48,7 +48,7 @@ Controles automatises de coherence sur `phase2.sqlite`.
     "hektor_annonce_id": "10003",
     "no_dossier": "EM18604",
     "no_mandat": "3914",
-    "mandat_id": null,
+    "mandat_id": "10003:3715",
     "hektor_mandat_id": "3914",
     "numero": "3181",
     "mandat_annonce_id": "10383"
@@ -57,10 +57,28 @@ Controles automatises de coherence sur `phase2.sqlite`.
     "hektor_annonce_id": "10006",
     "no_dossier": "VM18708",
     "no_mandat": "3901",
-    "mandat_id": "10085",
+    "mandat_id": "3716",
     "hektor_mandat_id": "3901",
     "numero": "3257",
     "mandat_annonce_id": "10367"
+  },
+  {
+    "hektor_annonce_id": "10007",
+    "no_dossier": "VM18748",
+    "no_mandat": "3909",
+    "mandat_id": "3717",
+    "hektor_mandat_id": "3909",
+    "numero": "3223",
+    "mandat_annonce_id": "10377"
+  },
+  {
+    "hektor_annonce_id": "10009",
+    "no_dossier": "VM18814",
+    "no_mandat": "3888",
+    "mandat_id": "3718",
+    "hektor_mandat_id": "3888",
+    "numero": "3336",
+    "mandat_annonce_id": "10352"
   },
   {
     "hektor_annonce_id": "1001",
@@ -72,6 +90,15 @@ Controles automatises de coherence sur `phase2.sqlite`.
     "mandat_annonce_id": "11876"
   },
   {
+    "hektor_annonce_id": "10014",
+    "no_dossier": "VM19066",
+    "no_mandat": "3867",
+    "mandat_id": "3719",
+    "hektor_mandat_id": "3867",
+    "numero": "3450",
+    "mandat_annonce_id": "10312"
+  },
+  {
     "hektor_annonce_id": "10017",
     "no_dossier": "VM19068",
     "no_mandat": "3873",
@@ -79,6 +106,15 @@ Controles automatises de coherence sur `phase2.sqlite`.
     "hektor_mandat_id": "3873",
     "numero": "3430",
     "mandat_annonce_id": "10330"
+  },
+  {
+    "hektor_annonce_id": "10018",
+    "no_dossier": "VM19002",
+    "no_mandat": "3902",
+    "mandat_id": "3721",
+    "hektor_mandat_id": "3902",
+    "numero": "3247",
+    "mandat_annonce_id": "10368"
   },
   {
     "hektor_annonce_id": "10019",
@@ -115,42 +151,6 @@ Controles automatises de coherence sur `phase2.sqlite`.
     "hektor_mandat_id": "3855",
     "numero": "3473",
     "mandat_annonce_id": "10297"
-  },
-  {
-    "hektor_annonce_id": "10029",
-    "no_dossier": "VM19160",
-    "no_mandat": "3854",
-    "mandat_id": "3725",
-    "hektor_mandat_id": "3854",
-    "numero": "3477",
-    "mandat_annonce_id": "10296"
-  },
-  {
-    "hektor_annonce_id": "1003",
-    "no_dossier": "VA22278",
-    "no_mandat": "4996",
-    "mandat_id": "205",
-    "hektor_mandat_id": "4996",
-    "numero": "3621",
-    "mandat_annonce_id": "11944"
-  },
-  {
-    "hektor_annonce_id": "10033",
-    "no_dossier": "VM19250",
-    "no_mandat": "3848",
-    "mandat_id": "3727",
-    "hektor_mandat_id": "3848",
-    "numero": "3506",
-    "mandat_annonce_id": "10287"
-  },
-  {
-    "hektor_annonce_id": "10034",
-    "no_dossier": "VM19260",
-    "no_mandat": "3847",
-    "mandat_id": "3728",
-    "hektor_mandat_id": "3847",
-    "numero": "3513",
-    "mandat_annonce_id": "10285"
   }
 ]
 ```
