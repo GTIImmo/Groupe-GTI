@@ -11368,9 +11368,13 @@ async function handleCreateHektorDraftAnnonce(job) {
   const before = await fetchLatestHektorProperties(1, false);
   const beforeIds = new Set(before.map((property) => String(property.id)));
 
+  // Chronometrage (Idee 0) : mesure le temps de chaque bloc pour savoir ou couper.
+  // Purement additif (aucune logique modifiee) -> expose dans result_json.timings_ms.
+  const tPrepEnd = Date.now();
   const wizardResult = await createHektorAnnonce(job, payload);
   const idannWizard = wizardResult.idannWizard;
   await rememberCreatedHektorAnnonceId(job, idannWizard);
+  const tWizardEnd = Date.now();
   let initialFieldsUpdate = { status: "skipped", reason: "not_started" };
 
   try {
@@ -11387,7 +11391,9 @@ async function handleCreateHektorDraftAnnonce(job) {
     });
   }
 
+  const tFieldsEnd = Date.now();
   const created = await confirmCreatedHektorAnnonce(job, idannWizard, payload, beforeIds, startedAtMs);
+  const tConfirmEnd = Date.now();
 
   if (!created) {
     throw new Error(`Creation annonce Hektor non confirmee par GraphQL apres enregistrement wizard ${idannWizard}`);
@@ -11489,9 +11495,21 @@ async function handleCreateHektorDraftAnnonce(job) {
   // d'afficher le doublon (dédup par hektor_annonce_id) ; le read-through ci-dessus la supprimera.
   await linkProvisionalCreation(creationToken, created.id);
 
+  // Idee 0 : bilan par etape (ms). fields = remplissage des ~10 groupes ; confirm = polling GraphQL.
+  const timingsMs = {
+    prep_ms: tPrepEnd - startedAtMs,
+    wizard_ms: tWizardEnd - tPrepEnd,
+    fields_ms: tFieldsEnd - tWizardEnd,
+    confirm_ms: tConfirmEnd - tFieldsEnd,
+    post_confirm_ms: Date.now() - tConfirmEnd,
+    total_ms: Date.now() - startedAtMs,
+  };
+  await logJob(job.id, "hektor_annonce_timing", "done", "Chronometrage creation annonce (ms par etape)", timingsMs);
+
   return {
     hektor_annonce_id: String(created.id),
     wizard_id: String(idannWizard),
+    timings_ms: timingsMs,
     is_draft: created.isDraft === true,
     is_broadcasted: created.isBroadcasted === true,
     is_valid: created.isValid === true,
