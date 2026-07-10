@@ -89,6 +89,9 @@ const WORKER_LOCK_PATH = path.join(WORKER_LOCK_DIR, `console_worker_${WORKER_KIN
 const DEFAULT_POLL_INTERVAL_MS = ["sync", "sync_full"].includes(WORKER_KIND) ? 60000 : WORKER_KIND === "sync_light" ? 10000 : 5000;
 const POLL_INTERVAL_MS = Number(process.env.CONSOLE_WORKER_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
 const HEKTOR_SESSION_REFRESH_MS = Number(process.env.CONSOLE_HEKTOR_SESSION_REFRESH_MS || 2 * 60 * 60 * 1000);
+// Keep-alive session Hektor : une lecture legere (~0,5s) toutes les N minutes d'inactivite garde la
+// session chaude -> le prochain job ne paie pas le login a froid (prep ~35s -> ~19s, mesure validee).
+const HEKTOR_KEEPALIVE_MS = Number(process.env.CONSOLE_HEKTOR_KEEPALIVE_MS || 7 * 60 * 1000);
 const NODE_SCRIPT_TIMEOUT_MS = Number(process.env.CONSOLE_NODE_SCRIPT_TIMEOUT_MS || 3 * 60 * 1000);
 const JOB_TIMEOUT_MS = Number(process.env.CONSOLE_JOB_TIMEOUT_MS || 10 * 60 * 1000);
 const ENABLE_HEKTOR_ACTIONS = String(process.env.CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS || "").toLowerCase() === "true";
@@ -160,6 +163,7 @@ mutation ToggleCrmBirthdayConfiguration($enabled: Boolean!, $prospect: Int) {
 
 let hektorLoginPromise = null;
 let lastHektorLoginAt = fs.existsSync(STORAGE_STATE_PATH) ? fs.statSync(STORAGE_STATE_PATH).mtimeMs : 0;
+let lastHektorActivityAt = Date.now();  // derniere activite Hektor (job ou keep-alive) -> pilote le keep-alive
 
 function requireEnv(name, value) {
   if (!value) throw new Error(`Missing environment variable: ${name}`);
@@ -317,6 +321,29 @@ async function refreshHektorSessionIfDue() {
   lastHektorLoginAt = Math.max(lastHektorLoginAt, stateMtime);
   if (Date.now() - lastHektorLoginAt >= HEKTOR_SESSION_REFRESH_MS) {
     await refreshHektorSession("scheduled_refresh");
+  }
+}
+
+// Garde la session Hektor chaude pendant l'inactivite : une lecture legere authentifiee toutes les
+// HEKTOR_KEEPALIVE_MS remet a zero le TTL serveur (mesure : session vivante apres 42min de pings a
+// 7min, creation suivante prep ~19s au lieu de ~35s). Gated ENABLE_HEKTOR_ACTIONS ; appele en idle.
+async function keepHektorSessionWarmIfDue() {
+  if (!ENABLE_HEKTOR_ACTIONS) return;
+  if (HEKTOR_KEEPALIVE_MS <= 0) return;
+  if (Date.now() - lastHektorActivityAt < HEKTOR_KEEPALIVE_MS) return;
+  try {
+    await fetchLatestHektorProperties(1, false);  // lecture legere -> rafraichit le TTL sans re-login
+    lastHektorActivityAt = Date.now();
+    console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_keepalive", status: "ok" }));
+  } catch (error) {
+    // Session probablement morte : re-login A VIDE -> le prochain vrai job sera chaud quand meme.
+    try {
+      await refreshHektorSession("keepalive_relogin");
+      lastHektorActivityAt = Date.now();
+      console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_keepalive", status: "relogin" }));
+    } catch (reloginError) {
+      console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_keepalive", status: "error", error: reloginError && reloginError.message ? reloginError.message : String(reloginError) }));
+    }
   }
 }
 
@@ -11710,7 +11737,10 @@ async function runHandlerWithSessionRetry(job) {
 async function processOnce() {
   await refreshHektorSessionIfDue();
   const job = await claimNextJob();
-  if (!job) return false;
+  if (!job) {
+    await keepHektorSessionWarmIfDue();
+    return false;
+  }
 
   await logJob(job.id, "claim", "running", `Job claimed by ${WORKER_ID}`, {
     worker_kind: WORKER_KIND,
@@ -11729,6 +11759,7 @@ async function processOnce() {
     await finishJob(job.id, "error", null, message);
   }
 
+  lastHektorActivityAt = Date.now();  // ce job a touche Hektor -> repousse le prochain keep-alive
   return true;
 }
 
