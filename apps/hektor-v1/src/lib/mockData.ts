@@ -160,6 +160,27 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     vues_30j: 148,
     report_sent: '2026-06-28',
     report_opened: '2026-06-29',
+    // Documents (v27) : liste avec type + statut signature.
+    documents_json: JSON.stringify([
+      { name: 'Mandat 17125.pdf', sig: 'Signé le 14/06 · ImmoSign', badge: 'Signé', signed: true, type: 'mandat', typeLabel: 'Mandat' },
+      { name: 'DPE.pdf', sig: 'À envoyer en signature', badge: 'À préparer', signed: false, type: 'diag', typeLabel: 'Diagnostic' },
+      { name: 'Avenant rectificatif.pdf', sig: 'À envoyer en signature', badge: 'À préparer', signed: false, type: 'avenant', typeLabel: 'Avenant' },
+      { name: 'Attestation de propriété.pdf', sig: 'À envoyer en signature', badge: 'À préparer', signed: false, type: 'autre', typeLabel: 'Autre' },
+      { name: 'Plan des lots.pdf', sig: 'À envoyer en signature', badge: 'À préparer', signed: false, type: 'autre', typeLabel: 'Autre' },
+    ]),
+    // Estimation (v27) : avis de valeur + KPIs + barème + sources mémorisées.
+    estimation_json: JSON.stringify({
+      valeur: '259 000 €', prixM2: '3 500 €', basse: '238 000 €', haute: '278 000 €', grade: 'Bon état',
+      kpis: [{ k: 'Valeur estimée', v: '259 000 €', s: 'marché DVF', tone: 'br' }, { k: 'Rendement brut', v: '4,6 %', s: 'potentiel locatif', tone: '' }, { k: 'DPE réel', v: 'D · 210', s: 'ADEME', tone: '' }],
+      sources: [
+        { icon: 'estimation', title: 'Marché & valeur', sub: 'Ventes DVF comparables du secteur', c: '#c2125f', s: '#f9e7ef', desc: 'Prix médian au m² et valeur estimée à partir des ventes comparables (même type, surface ±20 %).', state: 'ok', stateLabel: 'à jour · 08/07', value: '2 610 €/m² médian' },
+        { icon: 'lebien', title: 'Le bâti', sub: 'Caractéristiques BDNB · RNB', c: '#b5651d', s: '#f6e9db', desc: 'Année, type, matériaux, niveaux, DPE théorique depuis la Base de Données Nationale des Bâtiments.', state: 'ok', stateLabel: 'à jour · 08/07', value: '1972 · béton' },
+        { icon: 'estimation', title: 'DPE réel', sub: 'Dernier diagnostic ADEME', c: '#2f8a5b', s: '#e6f2ea', desc: "Dernier DPE réel de l'ADEME retrouvé par l'adresse exacte (id BAN).", state: 'ok', stateLabel: 'à jour · 08/07', value: 'D · 210 kWh/m²' },
+        { icon: 'rendezvous', title: 'Cadre de vie', sub: 'Commodités & risques', c: '#3a5a8a', s: '#e7edf7', desc: 'Commodités (écoles, commerces, santé) et risques naturels/technologiques.', state: 'old', stateLabel: 'à actualiser', value: '' },
+        { icon: 'reporting', title: 'Profil commune', sub: 'Population & revenus (INSEE)', c: '#0f7c8a', s: '#daeef1', desc: 'Population (INSEE), évolution, revenu médian des ménages (FiLoSoFi).', state: 'ok', stateLabel: 'à jour · 08/07', value: '172 000 hab' },
+        { icon: 'estimation', title: 'Potentiel locatif', sub: 'Loyer de marché & rendement', c: '#0f7c8a', s: '#daeef1', desc: 'Loyer de marché, loyer mensuel estimé, rendement brut et zone fiscale ABC.', state: 'void', stateLabel: 'non récupéré', value: '' },
+      ],
+    }),
   },
   5502: {
     surface_habitable_detail: 58,

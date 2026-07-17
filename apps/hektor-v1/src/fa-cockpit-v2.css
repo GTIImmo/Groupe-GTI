@@ -511,3 +511,55 @@
 .fa-ck-hs.ok { background: #e9f4ee; color: #1f6e44; border-color: #cfe7d8; }
 .fa-ck-hs.err { background: #fbecec; color: #a33; border-color: #e6c3c3; }
 .fa-ck-trelance { font-size: 10.5px; color: var(--fa-faint, #a89e95); }
+
+/* ============================================================
+   Rubriques Estimation + Documents — re-skin scopé vers v27.
+   ============================================================ */
+.fa-ck-estim, .fa-ck-documents { display: flex; flex-direction: column; gap: 4px; }
+.fa-ck-estim-lead { border: 1px solid var(--fa-line); border-radius: 16px; background: #fff; padding: 16px 18px; box-shadow: 0 18px 36px -30px rgba(24, 18, 14, .3); }
+.fa-ck-estim-lead .fa-ck-ct-sec { margin: 0 0 12px; }
+.fa-ck-badge-est { font-size: 11px; font-weight: 800; color: #8a6a2f; background: var(--fa-gold-soft, #f7f0e3); border: 1px solid #ecdfc7; border-radius: 99px; padding: 4px 11px; display: inline-flex; align-items: center; gap: 6px; }
+.fa-ck-badge-est::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--fa-gold, #a8814a); }
+.fa-ck-valrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 4px; }
+.fa-ck-valrow .vf { padding: 2px 20px; border-left: 1px solid var(--fa-line-soft); } .fa-ck-valrow .vf:first-child { border-left: 0; padding-left: 0; }
+.fa-ck-valrow .vk { font-size: 11px; font-weight: 600; color: var(--fa-muted); }
+.fa-ck-valrow .vv { font-family: 'Fraunces', 'Spectral', serif; font-size: 22px; font-weight: 600; margin-top: 3px; color: var(--fa-ink); }
+.fa-ck-valrow .vv.em { color: var(--fa-brand-ink); } .fa-ck-valrow .vv.mut { font-size: 15px; font-style: italic; color: var(--fa-faint, #a89e95); font-family: inherit; font-weight: 600; }
+.fa-ck-frange { margin-top: 16px; }
+.fa-ck-frange-track { position: relative; height: 8px; border-radius: 99px; background: linear-gradient(90deg, #f4ecd9, #f9e7ef, #e4f3ea); }
+.fa-ck-frange-fill { position: absolute; top: 0; bottom: 0; left: 22%; right: 24%; background: linear-gradient(90deg, var(--fa-gold, #a8814a), var(--fa-brand)); border-radius: 99px; opacity: .5; }
+.fa-ck-frange-mk { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid var(--fa-brand); box-shadow: 0 4px 10px -4px rgba(194, 18, 95, .6); }
+.fa-ck-frange-lb { display: flex; justify-content: space-between; margin-top: 9px; font-size: 11px; font-weight: 700; color: var(--fa-muted); } .fa-ck-frange-lb b { color: var(--fa-brand-ink); font-size: 13px; }
+.fa-ck-grade { display: flex; gap: 8px; flex-wrap: wrap; }
+.fa-ck-gr { flex: 1; min-width: 96px; font: inherit; cursor: pointer; background: #fdfbf8; border: 1px solid var(--fa-line); border-radius: 13px; padding: 11px 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; color: var(--fa-ink-soft, #544b45); transition: .14s; }
+.fa-ck-gr small { font-size: 11px; font-weight: 700; color: var(--fa-muted); }
+.fa-ck-gr:hover { border-color: var(--fa-gold, #a8814a); }
+.fa-ck-gr.on { background: linear-gradient(150deg, #fff, #f7f0e3); border-color: #c79a54; color: #8a6a2f; box-shadow: 0 12px 24px -18px rgba(168, 129, 74, .7); } .fa-ck-gr.on small { color: #a8814a; }
+.fa-ck-srcgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .fa-ck-srcgrid { grid-template-columns: 1fr; } }
+.fa-ck-src { background: #fff; border: 1px solid var(--fa-line); border-radius: 16px; padding: 15px 16px; }
+.fa-ck-sh { display: flex; align-items: flex-start; gap: 11px; }
+.fa-ck-sic { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; background: var(--s, #f9e7ef); color: var(--c, #9d0f4e); } .fa-ck-sic svg { width: 17px; height: 17px; }
+.fa-ck-stt2 { font-size: 14px; font-weight: 700; color: var(--fa-ink); } .fa-ck-ssb2 { font-size: 11.5px; color: var(--fa-muted); margin-top: 1px; }
+.fa-ck-sst { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; margin-left: auto; color: var(--fa-muted); white-space: nowrap; }
+.fa-ck-sst .sd { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.fa-ck-sst.ok { color: #1f8a55; } .fa-ck-sst.old { color: #9a5b05; } .fa-ck-sst.void { color: var(--fa-faint, #a89e95); }
+.fa-ck-sdesc { font-size: 12px; color: var(--fa-muted); line-height: 1.5; margin-top: 10px; }
+.fa-ck-svalue { font-size: 12.5px; font-weight: 800; color: var(--fa-ink); margin-top: 8px; }
+/* Documents v27 */
+.fa-ck-doccount { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.fa-ck-doccount .dc { font-size: 11.5px; font-weight: 700; color: #4756a6; background: #e9ebf8; border: 1px solid #d4d9f0; border-radius: 99px; padding: 5px 12px; }
+.fa-ck-doccount .dc.warn { color: #8a6a2f; background: var(--fa-gold-soft, #f7f0e3); border-color: #ecdfc7; }
+.fa-ck-doclist { display: flex; flex-direction: column; gap: 9px; }
+.fa-ck-docitem { display: flex; align-items: center; gap: 13px; background: #fff; border: 1px solid var(--fa-line); border-radius: 14px; padding: 12px 14px; }
+.fa-ck-dfic { width: 38px; height: 38px; border-radius: 10px; background: #f0f1f9; color: #4756a6; display: flex; align-items: center; justify-content: center; flex: none; } .fa-ck-dfic svg { width: 19px; height: 19px; }
+.fa-ck-dinfo { flex: 1; min-width: 0; }
+.fa-ck-dnm-row { display: flex; align-items: center; min-width: 0; }
+.fa-ck-dnm { font-size: 14px; font-weight: 700; color: var(--fa-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-ck-dtype { font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 6px; padding: 2px 7px; margin-left: 8px; flex: none; }
+.fa-ck-dtype.mandat { color: #9d0f4e; background: #f9e7ef; } .fa-ck-dtype.diag { color: #2f8a5b; background: #e6f2ea; } .fa-ck-dtype.avenant { color: #8a6a2f; background: #f4ecd9; } .fa-ck-dtype.autre { color: #4756a6; background: #e9ebf8; }
+.fa-ck-dmeta { font-size: 11.5px; color: var(--fa-muted); margin-top: 2px; }
+.fa-ck-docsig { margin-top: 6px; font-size: 11px; font-weight: 700; color: #9a5b05; } .fa-ck-docsig.signed { color: #1f6e44; }
+.fa-ck-dright { flex: none; }
+.fa-ck-docbadge { font-size: 11px; font-weight: 800; color: #8a6a2f; background: var(--fa-gold-soft, #f7f0e3); border: 1px solid #ecdfc7; border-radius: 99px; padding: 5px 12px; }
+.fa-ck-docbadge.ok { color: #1f6e44; background: #e9f4ee; border-color: #cfe7d8; }

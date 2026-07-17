@@ -21359,7 +21359,32 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </section>
             </div>
           ) : activeTab === 'documents' ? (
-            <div className="fa-ck-rub">
+            <div className="fa-ck-rub fa-ck-documents">
+              {(() => {
+                const docs = parseJson<Array<{ name: string; sig: string; badge: string; signed?: boolean; type: string; typeLabel: string }>>(detailStr('documents_json') || '[]', [])
+                if (!docs.length) return null
+                const toPrep = docs.filter((d) => !d.signed).length
+                const signed = docs.filter((d) => d.signed).length
+                return (
+                  <>
+                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Documents Hektor Console</div><div className="fa-ck-pub-s">Ajouter, consulter et préparer</div></div><div className="fa-ck-doccount"><span className="dc">{docs.length} docs</span><span className="dc">{signed} cloud</span>{toPrep ? <span className="dc warn">{toPrep} à préparer</span> : null}</div></div>
+                    <div className="fa-ck-doclist">
+                      {docs.map((d, i) => (
+                        <div key={i} className="fa-ck-docitem">
+                          <span className="fa-ck-dfic" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
+                          <div className="fa-ck-dinfo">
+                            <div className="fa-ck-dnm-row"><span className="fa-ck-dnm">{d.name}</span><span className={`fa-ck-dtype ${d.type}`}>{d.typeLabel}</span></div>
+                            <div className="fa-ck-dmeta">document · Privé</div>
+                            <div className={`fa-ck-docsig${d.signed ? ' signed' : ''}`}>{d.sig}</div>
+                          </div>
+                          <div className="fa-ck-dright"><span className={`fa-ck-docbadge${d.signed ? ' ok' : ''}`}>{d.badge}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
+              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Outil documents (Console Hektor)</div>
               <section className="detail-section">
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
@@ -21367,7 +21392,48 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </section>
             </div>
           ) : activeTab === 'estimation' ? (
-            <div className="fa-ck-rub">
+            <div className="fa-ck-rub fa-ck-estim">
+              {(() => {
+                const est = parseJson<{ valeur: string; prixM2: string; basse: string; haute: string; grade?: string; kpis: Array<{ k: string; v: string; s: string; tone?: string }>; sources: Array<{ icon: string; title: string; sub: string; c: string; s: string; desc: string; state: string; stateLabel: string; value: string }> } | null>(detailStr('estimation_json') || 'null', null)
+                if (!est) return null
+                const grades: Array<[string, string]> = [['Neuf', '+8 %'], ['Rénové', '+4 %'], ['Bon état', 'référence'], ['À rafraîchir', '−5 %'], ['À rénover', '−12 %']]
+                return (
+                  <>
+                    <div className="fa-ck-estim-lead">
+                      <div className="fa-ck-ct-sec"><span className="l">Avis de valeur</span><span className="fa-ck-badge-est">Estimation</span><span className="bar" /></div>
+                      <div className="fa-ck-valrow">
+                        <div className="vf"><div className="vk">Fourchette basse</div><div className="vv mut">{est.basse}</div></div>
+                        <div className="vf"><div className="vk">Valeur retenue</div><div className="vv em">{est.valeur}</div></div>
+                        <div className="vf"><div className="vk">Fourchette haute</div><div className="vv mut">{est.haute}</div></div>
+                        <div className="vf"><div className="vk">Prix au m²</div><div className="vv">{est.prixM2}</div></div>
+                      </div>
+                      <div className="fa-ck-frange"><div className="fa-ck-frange-track"><div className="fa-ck-frange-fill" /><div className="fa-ck-frange-mk" style={{ left: '50%' }} /></div><div className="fa-ck-frange-lb"><span>{est.basse}</span><span><b>{est.valeur}</b> retenu</span><span>{est.haute}</span></div></div>
+                    </div>
+                    <div className="fa-ck-kpis">
+                      {est.kpis.map((k, i) => <div key={i} className="fa-ck-kpi"><div className="kl">{k.k}</div><div className={`kv ${k.tone ?? ''}`}>{k.v}</div><div className="ks">{k.s}</div></div>)}
+                    </div>
+                    <div className="fa-ck-ct-sec"><span className="l">Barème d'état du bien</span><span className="bar" /><span className="k">{est.grade}</span></div>
+                    <div className="fa-ck-grade">
+                      {grades.map(([g, sub]) => <button key={g} type="button" className={`fa-ck-gr${g === est.grade ? ' on' : ''}`}>{g}<small>{sub}</small></button>)}
+                    </div>
+                    <div className="fa-ck-ct-sec"><span className="l">Sources mémorisées</span><span className="bar" /><span className="k">Récupérées puis stockées</span></div>
+                    <div className="fa-ck-srcgrid">
+                      {est.sources.map((s, i) => (
+                        <div key={i} className="fa-ck-src">
+                          <div className="fa-ck-sh">
+                            <span className="fa-ck-sic" style={{ ['--c']: s.c, ['--s']: s.s } as CSSProperties}><CkIcon path={CK_ICON[s.icon] ?? CK_ICON.estimation} /></span>
+                            <div><div className="fa-ck-stt2">{s.title}</div><div className="fa-ck-ssb2">{s.sub}</div></div>
+                            <span className={`fa-ck-sst ${s.state}`}><span className="sd" />{s.stateLabel}</span>
+                          </div>
+                          <div className="fa-ck-sdesc">{s.desc}</div>
+                          {s.value ? <div className="fa-ck-svalue">{s.value}</div> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
+              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Éditeur d'avis de valeur (outil réel)</div>
               <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
             </div>
           ) : activeTab === 'mandat' ? (
