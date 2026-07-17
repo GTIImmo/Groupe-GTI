@@ -11,8 +11,9 @@
   --fa-paper: #fbf8f3;
   --fa-gold: #a8814a;
   --fa-line: #e7ddd0;
-  --fa-ink: #2a2018;
-  --fa-muted: #8a7d6d;
+  --fa-line-soft: #f0e8dc;
+  --fa-ink: #211a16;
+  --fa-muted: #8a807a;
 }
 
 /* Lot 1a — châssis : topbar + (rail | contenu). */
@@ -85,32 +86,30 @@
 .fa-ck-hero-price-k { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fa-muted); }
 .fa-ck-hero-price-v { font-family: 'Fraunces', 'Spectral', serif; font-size: 26px; font-weight: 700; color: var(--fa-brand-ink); line-height: 1; }
 
-.fa-ck-rail { display: flex; flex-direction: column; gap: 6px; }
+/* Rail — porté de la maquette v26 (.rn) : tuile d'icône pleine couleur + nom + sous-titre + chevron. */
+.fa-ck-rail { display: flex; flex-direction: column; gap: 8px; }
 .fa-ck-rn {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  text-align: left;
-  border: 1px solid var(--fa-line);
-  background: #fff;
-  color: var(--fa-ink);
-  border-radius: 12px;
-  padding: 11px 13px;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color .14s, box-shadow .14s, background .14s;
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  font: inherit; background: #fff; border: 1px solid var(--fa-line-soft);
+  border-radius: 15px; padding: 10px 12px; cursor: pointer; position: relative;
+  transition: .16s; box-shadow: 0 1px 2px rgba(32, 24, 18, .04);
 }
-.fa-ck-rn:hover { border-color: color-mix(in srgb, var(--c, var(--fa-brand)) 40%, var(--fa-line)); }
+.fa-ck-rn:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 16px 28px -16px var(--c, var(--fa-brand)); }
 .fa-ck-rn.is-active {
   border-color: var(--c, var(--fa-brand));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--fa-brand)) 22%, transparent);
-  background: color-mix(in srgb, var(--c, var(--fa-brand)) 5%, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--fa-brand)) 24%, transparent), 0 12px 24px -14px color-mix(in srgb, var(--c, var(--fa-brand)) 48%, transparent);
 }
-.fa-ck-rn-ic { width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 9px; background: color-mix(in srgb, var(--c, var(--fa-brand)) 13%, #fff); color: var(--c, var(--fa-brand-ink)); }
-.fa-ck-rn-ic svg { width: 18px; height: 18px; }
-.fa-ck-rn-lb { flex: 1; min-width: 0; }
+.fa-ck-rn-ic {
+  width: 40px; height: 40px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center;
+  color: #fff; background: linear-gradient(145deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 55%), var(--c, var(--fa-brand));
+  box-shadow: 0 7px 15px -6px var(--c, var(--fa-brand)), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.fa-ck-rn-ic svg { width: 19px; height: 19px; }
+.fa-ck-rn-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fa-ck-rn-n { font-size: 13.5px; font-weight: 700; line-height: 1.2; color: var(--fa-ink); }
+.fa-ck-rn-s { font-size: 11px; color: var(--fa-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-ck-rn-ch { color: #c3b8ab; font-size: 15px; flex: none; font-weight: 700; transition: .16s; }
+.fa-ck-rn.is-active .fa-ck-rn-ch { color: var(--c, var(--fa-brand)); }
 
 .fa-ck-content {
   border: 1px solid var(--fa-line);

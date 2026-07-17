@@ -20709,19 +20709,19 @@ const APP_COCKPIT_V2_ENABLED =
 
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
-const CK_RUBRIQUES: Array<{ key: string; label: string; icon: DetailIconKey; color: string }> = [
-  { key: 'synthese', label: 'Synthèse', icon: 'summary', color: '#c2125f' },
-  { key: 'lebien', label: 'Le Bien', icon: 'content', color: '#a8814a' },
-  { key: 'estimation', label: 'Estimation', icon: 'priority', color: '#e0952f' },
-  { key: 'mandat', label: 'Mandat', icon: 'mandate', color: '#9d0f4e' },
-  { key: 'contact', label: 'Contact', icon: 'contact', color: '#3a5a8a' },
-  { key: 'publicite', label: 'Publicité', icon: 'diffusion', color: '#c2125f' },
-  { key: 'rapprochement', label: 'Rapprochement', icon: 'actions', color: '#0f7c8a' },
-  { key: 'rendezvous', label: 'Rendez-vous', icon: 'commercial', color: '#6d4bb5' },
-  { key: 'affaires', label: 'Affaires', icon: 'summary', color: '#1f6e44' },
-  { key: 'documents', label: 'Documents', icon: 'hektor', color: '#4756a6' },
-  { key: 'historique', label: 'Historique', icon: 'history', color: '#8a807a' },
-  { key: 'reporting', label: 'Reporting', icon: 'commercial', color: '#a8814a' },
+const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; icon: DetailIconKey; color: string }> = [
+  { key: 'synthese', label: 'Synthèse', sub: "Vue d'ensemble", icon: 'summary', color: '#c2125f' },
+  { key: 'lebien', label: 'Le Bien', sub: 'Photos · caractéristiques', icon: 'content', color: '#a8814a' },
+  { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur', icon: 'priority', color: '#e0952f' },
+  { key: 'mandat', label: 'Mandat', sub: 'N° · signature', icon: 'mandate', color: '#9d0f4e' },
+  { key: 'contact', label: 'Contact', sub: 'Mandants · vendeurs', icon: 'contact', color: '#3a5a8a' },
+  { key: 'publicite', label: 'Publicité', sub: 'Portails · diffusion', icon: 'diffusion', color: '#c2125f' },
+  { key: 'rapprochement', label: 'Rapprochement', sub: 'Acquéreurs', icon: 'actions', color: '#0f7c8a' },
+  { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes', icon: 'commercial', color: '#6d4bb5' },
+  { key: 'affaires', label: 'Affaires', sub: 'Offres · compromis', icon: 'summary', color: '#1f6e44' },
+  { key: 'documents', label: 'Documents', sub: 'Pièces du dossier', icon: 'hektor', color: '#4756a6' },
+  { key: 'historique', label: 'Historique', sub: 'Demandes · suivi', icon: 'history', color: '#8a807a' },
+  { key: 'reporting', label: 'Reporting', sub: 'Indicateurs · prix', icon: 'commercial', color: '#a8814a' },
 ]
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
@@ -20813,7 +20813,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
             >
               <span className="fa-ck-rn-ic" aria-hidden="true"><DetailIcon type={rub.icon} /></span>
-              <span className="fa-ck-rn-lb">{rub.label}</span>
+              <span className="fa-ck-rn-t"><span className="fa-ck-rn-n">{rub.label}</span><span className="fa-ck-rn-s">{rub.sub}</span></span>
+              <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
             </button>
           ))}
         </nav>
