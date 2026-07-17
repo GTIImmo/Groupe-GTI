@@ -20760,6 +20760,123 @@ function CkDpeScale({ label, value, unit, kind }: { label: string; value: number
   )
 }
 
+// Rubrique Affaires (façon v31) : parcours 3 étapes + transactions + parties + honoraires.
+type CkParty = { n: string; s?: string; tel?: string; mail?: string }
+type CkAffaire = {
+  banner?: { mood?: string; state?: string; next?: string; comment?: string; chip?: string }
+  tl?: { offre?: string; compromis?: string; vente?: string }
+  offre?: Record<string, string> | null
+  compromis?: Record<string, string> | null
+  vente?: Record<string, string> | null
+  parties?: { acq?: CkParty | null; notAcq?: CkParty | null; notVend?: CkParty | null; vendeur?: CkParty | null }
+  honoraires?: Record<string, string>
+}
+function CkTxCard({ num, kind, title, sub, pill, pillTone, rows, open }: { num: string; kind: string; title: string; sub: string; pill: string; pillTone: string; rows: Array<[string, string, boolean?]>; open: boolean }) {
+  if (!rows.length) {
+    return <details className={`fa-ck-txcard t-${kind} pending`}><summary><span className="fa-ck-tx-num">{num}</span><div className="fa-ck-tx-hd"><div className="fa-ck-tx-t">{title}</div><div className="fa-ck-tx-s">{sub}</div></div><span className="fa-ck-tx-pill wait">{pill}</span></summary></details>
+  }
+  return (
+    <details className={`fa-ck-txcard t-${kind}`} open={open}>
+      <summary>
+        <span className="fa-ck-tx-num">{num}</span>
+        <div className="fa-ck-tx-hd"><div className="fa-ck-tx-t">{title}</div><div className="fa-ck-tx-s">{sub}</div></div>
+        <span className={`fa-ck-tx-pill ${pillTone}`}>{pill}</span>
+        <svg className="fa-ck-tx-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </summary>
+      <div className="fa-ck-tx-body"><div className="fa-ck-tx-grid">
+        {rows.map(([k, v, full], i) => <div key={i} className={full ? 'fa-ck-tg-full' : ''}><div className="fa-ck-tg-k">{k}</div><div className={`fa-ck-tg-v${i === 0 ? ' big' : ''}`}>{v}</div></div>)}
+      </div></div>
+    </details>
+  )
+}
+function CkParty({ role, p }: { role: string; p?: CkParty | null }) {
+  if (!p) return <div className="fa-ck-party"><div className="fa-ck-pa-r">{role}</div><div className="fa-ck-pa-empty">Non renseigné</div></div>
+  return (
+    <div className="fa-ck-party">
+      <div className="fa-ck-pa-r">{role}</div>
+      <div className="fa-ck-pa-n">{p.n}</div>
+      {p.s ? <div className="fa-ck-pa-sub">{p.s}</div> : null}
+      {(p.tel || p.mail) ? (
+        <div className="fa-ck-pa-links">
+          {p.tel ? <a href={`tel:${p.tel.replace(/\s+/g, '')}`}>Appeler</a> : null}
+          {p.mail ? <a href={`mailto:${p.mail}`}>E-mail</a> : null}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+function CkAffaires({ affaire }: { affaire: CkAffaire }) {
+  const tl = affaire.tl ?? {}
+  const steps: Array<{ k: string; label: string; meta: string }> = [
+    { k: 'offre', label: 'Offre', meta: affaire.offre ? `${affaire.offre.montant ?? ''} · ${affaire.offre.date ?? ''}` : 'Non renseignée' },
+    { k: 'compromis', label: 'Compromis', meta: affaire.compromis ? `Acte le ${affaire.compromis.dateActe ?? '—'}` : 'Non renseigné' },
+    { k: 'vente', label: 'Vente', meta: affaire.vente ? `Vendu le ${affaire.vente.date ?? ''}` : 'Non renseignée' },
+  ]
+  const o = affaire.offre, c = affaire.compromis, v = affaire.vente
+  return (
+    <div className="fa-ck-aff">
+      {affaire.banner ? (
+        <div className={`fa-ck-aff-banner ${affaire.banner.mood ?? 'ok'}`}>
+          <span className="fa-ck-ab-ic" aria-hidden="true"><CkIcon path={CK_ICON.affaires} /></span>
+          <div className="fa-ck-ab-tx">
+            <div className="fa-ck-ab-state">{affaire.banner.state}</div>
+            {affaire.banner.next ? <div className="fa-ck-ab-next">{affaire.banner.next}</div> : null}
+            {affaire.banner.comment ? <div className="fa-ck-ab-cm">{affaire.banner.comment}</div> : null}
+          </div>
+          {affaire.banner.chip ? <span className="fa-ck-ab-chip">{affaire.banner.chip}</span> : null}
+        </div>
+      ) : null}
+
+      <div className="fa-ck-ct-sec"><span className="l">Parcours de l'affaire</span><span className="bar" /><span className="k">Offre · Compromis · Vente</span></div>
+      <div className="fa-ck-tl3">
+        {steps.map((st) => {
+          const state = (tl as Record<string, string>)[st.k] ?? 'pending'
+          return (
+            <div key={st.k} className={`fa-ck-tl3-step k-${st.k} ${state}`}>
+              <div className="fa-ck-tl3-node">{state === 'done' ? '✓' : st.k === 'offre' ? '1' : st.k === 'compromis' ? '2' : '3'}</div>
+              <div className="fa-ck-tl3-l">{st.label}</div>
+              <div className="fa-ck-tl3-m">{st.meta}</div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="fa-ck-tl-rev">Réversibilité : une offre peut être refusée, un compromis annulé — la vente est définitive.</div>
+
+      <div className="fa-ck-ct-sec"><span className="l">Transactions détaillées</span><span className="bar" /><span className="k">Synchronisé depuis Hektor</span></div>
+      <CkTxCard num="01" kind="offre" title={o ? `Offre d'achat — ${o.montant ?? ''}` : "Offre d'achat"} sub={o ? `${o.etat ?? ''} · ${o.date ?? ''} · ${o.acqNom ?? ''}` : 'Aucune offre enregistrée'} pill={o ? (o.etat ?? 'Offre') : 'À venir'} pillTone={o ? 'on' : 'wait'} open={Boolean(o)} rows={o ? [
+        ["Montant de l'offre", o.montant ?? '—'], ['Prix net vendeur', o.net ?? '—'], ["Date de l'offre", o.date ?? '—'], ['Validité', o.validite ?? '—'], ['État', o.etat ?? '—'], ['Statut source Hektor', o.raw ?? '—'], ['Acquéreur', [o.acqNom, o.acqTel, o.acqMail].filter(Boolean).join(' · '), true],
+      ] : []} />
+      <CkTxCard num="02" kind="compromis" title="Compromis de vente" sub={c ? `Acte le ${c.dateActe ?? '—'} · séquestre ${c.sequestre ?? '—'}` : "À venir · après acceptation de l'offre"} pill={c ? (tl.compromis === 'done' ? 'Signé' : 'En cours') : 'À venir'} pillTone={c ? (tl.compromis === 'done' ? 'done' : 'on') : 'wait'} open={Boolean(c) && tl.compromis !== 'done'} rows={c ? [
+        ['Prix de vente', c.prix ?? '—'], ['Prix net vendeur', c.net ?? '—'], ['Date compromis', c.dateStart ?? '—'], ['Date acte prévue', c.dateActe ?? '—'], ['Rétractation SRU', c.retract ?? '—'], ['Séquestre', c.sequestre ?? '—'],
+      ] : []} />
+      <CkTxCard num="03" kind="vente" title="Vente — acte authentique" sub={v ? `Vendu le ${v.date ?? ''} · ${v.prix ?? ''}` : 'À venir · acte définitif'} pill={v ? 'Vendu' : 'À venir'} pillTone={v ? 'done' : 'wait'} open={Boolean(v)} rows={v ? [
+        ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
+      ] : []} />
+
+      <div className="fa-ck-ct-sec"><span className="l">Parties à l'affaire</span><span className="bar" /></div>
+      <div className="fa-ck-parties">
+        <CkParty role="Acquéreur" p={affaire.parties?.acq} />
+        <CkParty role="Notaire acquéreur" p={affaire.parties?.notAcq} />
+        <CkParty role="Notaire vendeur" p={affaire.parties?.notVend} />
+        <CkParty role="Mandants / vendeurs" p={affaire.parties?.vendeur} />
+      </div>
+
+      {affaire.honoraires ? (
+        <>
+          <div className="fa-ck-ct-sec"><span className="l">Honoraires &amp; rendement</span><span className="bar" /><span className="k">Affichage seul · synchronisé</span></div>
+          <div className="fa-ck-hono">
+            {affaire.honoraires.fai ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Honoraires (FAI)</div><div className="fa-ck-hf-v gold">{affaire.honoraires.fai}</div></div> : null}
+            {affaire.honoraires.charge ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">À la charge de</div><div className="fa-ck-hf-v">{affaire.honoraires.charge}</div></div> : null}
+            {affaire.honoraires.taux ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Taux</div><div className="fa-ck-hf-v">{affaire.honoraires.taux}</div></div> : null}
+            {affaire.honoraires.part ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Part agence / apporteur</div><div className="fa-ck-hf-v">{affaire.honoraires.part}</div></div> : null}
+            {affaire.honoraires.rendement ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Rendement locatif estimé</div><div className="fa-ck-hf-v">{affaire.honoraires.rendement}</div></div> : null}
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 // Logos/couleurs des portails (rubrique Publicité, façon v36). Fallback = initiales + brand.
 const CK_PORTAL_META: Record<string, { abbr: string; color: string }> = {
   seloger: { abbr: 'SL', color: '#e2001a' },
@@ -21280,7 +21397,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'affaires' ? (
             <div className="fa-ck-rub">
-              <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
+              {(() => {
+                const aff = parseJson<CkAffaire | null>(detailStr('affaire_json') || 'null', null)
+                return aff ? <CkAffaires affaire={aff} /> : <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
+              })()}
             </div>
           ) : activeTab === 'contact' ? (
             <div className="fa-ck-rub fa-ck-contact">
