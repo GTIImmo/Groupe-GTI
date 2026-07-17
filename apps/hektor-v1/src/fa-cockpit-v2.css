@@ -59,6 +59,9 @@
 .fa-ck-hero-sb { position: absolute; top: 11px; left: 11px; display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .44); border: 1px solid rgba(255, 255, 255, .28); padding: 5px 11px; border-radius: 99px; backdrop-filter: blur(6px); }
 .fa-ck-hero-led { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255, 255, 255, .2); }
 .fa-ck-hero-rf { position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .44); border: 1px solid rgba(255, 255, 255, .22); padding: 3px 9px; border-radius: 99px; backdrop-filter: blur(6px); }
+.fa-ck-media-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.fa-ck-mb { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .55); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px; padding: 7px 6px; backdrop-filter: blur(6px); }
+.fa-ck-mb svg { width: 14px; height: 14px; }
 .fa-ck-hero-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; margin-top: 15px; color: var(--fa-ink); }
 .fa-ck-hero-addr { margin-top: 8px; color: var(--fa-muted); font-size: 13px; display: flex; align-items: flex-start; gap: 7px; font-weight: 500; }
 .fa-ck-hero-addr svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: #a89e95; }

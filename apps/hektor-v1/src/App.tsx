@@ -20837,6 +20837,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-hero-grad" aria-hidden="true" />
               <span className="fa-ck-hero-sb"><span className="fa-ck-hero-led" style={{ background: statusLed }} />{dossier.statut_annonce || 'Annonce'}</span>
               <span className="fa-ck-hero-rf">Réf. {dossier.numero_dossier ?? dossier.hektor_annonce_id ?? ''}</span>
+              {props.images.length > 0 ? (
+                <div className="fa-ck-media-bar">
+                  <span className="fa-ck-mb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                    {props.images.length} photo{props.images.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+              ) : null}
             </div>
             <div className="fa-ck-hero-title">{heroTitle}</div>
             <div className="fa-ck-hero-addr">
