@@ -20772,12 +20772,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const pOffre = Boolean(props.detail.offre_id || props.detail.offre_state)
   const pCompromis = Boolean(props.detail.compromis_id || props.detail.compromis_state)
   const pVendu = /vendu|vente|clos/i.test(String(dossier.statut_annonce ?? ''))
-  const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo'; sub: string }> = [
-    { label: 'Avis de valeur', state: 'done', sub: 'Validé' },
-    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo', sub: pMandatNum ? (pMandatOk ? 'Validé' : 'À valider') : 'À créer' },
-    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : 'todo'), sub: pOffre ? 'Reçue' : (pCompromis || pVendu ? 'Passée' : '—') },
-    { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo'), sub: pCompromis ? 'En cours' : (pVendu ? 'Signé' : '—') },
-    { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—' },
+  const detailStr = (k: string) => { const v = (props.detail as Record<string, unknown>)[k]; return v == null ? '' : String(v) }
+  const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo'; sub: string; date: string }> = [
+    { label: 'Avis de valeur', state: 'done', sub: 'Validé', date: detailStr('date_avis') },
+    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo', sub: pMandatNum ? (pMandatOk ? 'Validé' : 'À valider') : 'À créer', date: detailStr('date_mandat') },
+    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : 'todo'), sub: pOffre ? 'Reçue' : (pCompromis || pVendu ? 'Passée' : '—'), date: detailStr('date_offre') },
+    { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo'), sub: pCompromis ? 'En cours' : (pVendu ? 'Signé' : '—'), date: detailStr('date_compromis') },
+    { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—', date: detailStr('date_vente') },
   ]
   const nbPortails = Number(dossier.nb_portails_actifs) || 0
   const statusLed = pVendu ? '#a86af0' : (pOffre || pCompromis) ? '#3fbf7a' : (pMandatNum && pMandatOk) ? '#3fbf7a' : '#f0a935'
@@ -20802,7 +20803,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
     >
       <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
-      <span className="fa-ck-rn-t"><span className="fa-ck-rn-n">{rub.label}</span><span className="fa-ck-rn-s">{rub.sub}</span></span>
+      <span className="fa-ck-rn-t">
+        <span className="fa-ck-rn-n">{rub.label}{rubCount(rub.key) ? <span className="fa-ck-rn-badge">{rubCount(rub.key)}</span> : null}</span>
+        <span className="fa-ck-rn-s">{rub.sub}</span>
+      </span>
       <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
     </button>
   )
@@ -20848,6 +20852,36 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : 'Mandat validé — ouvrez la diffusion pour passer en ligne.'
   const appts = parseAppointmentRequests(props.detail)
   const emailContacts = props.contacts.filter((c) => c.email)
+  // Négociateur (carte topbar) : dérivé des champs réels commercial_nom / agence_nom.
+  const negoName = (dossier.commercial_nom ?? '').trim()
+  const negoInitials = negoName ? negoName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') : ''
+  const negoRole = ['Négociateur', (dossier.agence_nom ?? '').trim()].filter(Boolean).join(' · ')
+  // Compteurs affichés en pastille sur le rail (uniquement quand la donnée existe).
+  const rubCount = (key: string): string | null => {
+    if (key === 'rendezvous') return appts.length > 0 ? `${appts.length} demande${appts.length > 1 ? 's' : ''}` : null
+    if (key === 'contact') return props.contacts.length > 0 ? String(props.contacts.length) : null
+    if (key === 'publicite') return nbPortails > 0 ? `${nbPortails} portail${nbPortails > 1 ? 's' : ''}` : null
+    return null
+  }
+  // Horodatage relatif du fil d'activité.
+  const relTime = (iso: string): string => {
+    if (!iso) return ''
+    const t = Date.parse(iso)
+    if (Number.isNaN(t)) return ''
+    const min = Math.round((Date.now() - t) / 60000)
+    if (min < 1) return "à l'instant"
+    if (min < 60) return `il y a ${min} min`
+    const h = Math.round(min / 60)
+    if (h < 24) return `il y a ${h} h`
+    const d = Math.round(h / 24)
+    if (d < 7) return `il y a ${d} j`
+    return formatDate(iso)
+  }
+  const lastApptAt = appts
+    .map((a) => String((a as { requested_at?: string }).requested_at ?? ''))
+    .filter(Boolean)
+    .sort()
+    .slice(-1)[0] ?? ''
   const historiqueItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
     .slice()
     .sort((a, b) => (b.date ? Date.parse(b.date) : 0) - (a.date ? Date.parse(a.date) : 0))
@@ -20868,6 +20902,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         </div>
         <div className="fa-ck-tb-right">
           <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />Hektor · à jour</span>
+          {negoName ? (
+            <span className="fa-ck-tb-nego" title={negoRole}>
+              <span className="fa-ck-tb-nego-av" aria-hidden="true">{negoInitials}</span>
+              <span className="fa-ck-tb-nego-tx"><b>{negoName}</b><em>{negoRole}</em></span>
+            </span>
+          ) : null}
           {props.onChangeAnnonceStatus && !isLightweightDetail ? (
             <button type="button" className="fa-ck-tb-btn" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button>
           ) : null}
@@ -20940,6 +20980,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <span className="fa-ck-tl-nd">{step.state === 'done' ? '✓' : i + 1}</span>
                   <span className="fa-ck-tl-lb">{step.label}</span>
                   <span className="fa-ck-tl-et">{step.sub}</span>
+                  {step.date ? <span className="fa-ck-tl-dt">{formatDate(step.date)}</span> : null}
                 </div>
               ))}
             </div>
@@ -20987,11 +21028,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 </div>
                 <div className="fa-ck-acti-card">
                   <div className="fa-ck-afeed">
+                    {(appts.length > 0 || emailContacts.length > 0) ? <div className="fa-ck-afeed-h">Récent</div> : null}
                     {appts.length > 0 && actiFilter !== 'mandant' ? (
                       <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
                         <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
                         <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
-                        <span className="fa-ck-at">à traiter</span>
+                        <span className="fa-ck-at">{lastApptAt ? relTime(lastApptAt) : 'à traiter'}</span>
                       </button>
                     ) : null}
                     {emailContacts.filter((c) => actiFilter === 'tout' || (/mandant|propri|owner|vendeur/i.test(c.role || '') ? 'mandant' : 'acq') === actiFilter).slice(0, 4).map((c) => (

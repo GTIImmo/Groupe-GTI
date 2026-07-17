@@ -24,6 +24,7 @@ export const mockDossiers: Dossier[] = [
     prix: 259000,
     commercial_id: '5',
     commercial_nom: 'Melanie LEGRAND',
+    agence_nom: 'GTI Saint-Etienne',
     negociateur_email: 'melanie.legrand@gti.test',
     statut_annonce: 'Disponible',
     validation_diffusion_state: 'valide',
@@ -53,6 +54,7 @@ export const mockDossiers: Dossier[] = [
     prix: 189000,
     commercial_id: '5',
     commercial_nom: 'Melanie LEGRAND',
+    agence_nom: 'GTI Saint-Etienne',
     negociateur_email: 'melanie.legrand@gti.test',
     statut_annonce: 'Disponible',
     validation_diffusion_state: 'valide',
@@ -80,6 +82,8 @@ function mockImages(seeds: Array<[string, string]>) {
 export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
   32621: {
     surface_habitable_detail: 74,
+    date_avis: '2026-06-11',
+    date_mandat: '2026-06-15',
     nb_pieces: 3,
     nb_chambres: 2,
     etage_detail: '3e étage avec ascenseur',
@@ -117,6 +121,9 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
   },
   5502: {
     surface_habitable_detail: 58,
+    date_avis: '2026-05-28',
+    date_mandat: '2026-06-03',
+    date_offre: '2026-07-12',
     nb_pieces: 3,
     nb_chambres: 2,
     etage_detail: '2e étage',
