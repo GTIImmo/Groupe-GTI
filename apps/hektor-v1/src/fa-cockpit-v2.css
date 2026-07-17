@@ -618,3 +618,14 @@
 .fa-ck-rp { font-size: 11.5px; font-weight: 700; border-radius: 8px; padding: 4px 10px; }
 .fa-ck-rp.ok { color: #1f6e44; background: #e9f4ee; border: 1px solid #cfe7d8; }
 .fa-ck-rp.warn { color: #9a5b05; background: #fdf4e2; border: 1px solid #ecd9b0; }
+
+/* Le Bien v21 : raccourcis médias */
+.fa-ck-mshorts { display: flex; gap: 9px; flex-wrap: wrap; }
+.fa-ck-msc { flex: 1; min-width: 150px; display: flex; align-items: center; gap: 11px; background: #fff; border: 1px solid var(--fa-line); border-radius: 14px; padding: 11px 14px; cursor: pointer; font: inherit; text-align: left; transition: .16s; position: relative; }
+.fa-ck-msc:hover { border-color: var(--fa-brand); transform: translateY(-2px); box-shadow: 0 14px 26px -18px rgba(24, 18, 14, .3); }
+.fa-ck-msc .mci { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; } .fa-ck-msc .mci svg { width: 17px; height: 17px; }
+.fa-ck-msc.p .mci { background: linear-gradient(150deg, #fdeaf2, #f7dce8); color: var(--fa-brand-ink); }
+.fa-ck-msc.d .mci { background: linear-gradient(150deg, #e9eefb, #dbe4f7); color: #3a5a8a; }
+.fa-ck-msc.v .mci { background: linear-gradient(150deg, #e6f3ec, #d7ecdf); color: #2f8a5b; }
+.fa-ck-msc .mct { font-size: 13.5px; font-weight: 700; color: var(--fa-ink); } .fa-ck-msc .mcs { font-size: 11.5px; color: var(--fa-muted); }
+.fa-ck-msc .mca { margin-left: auto; font-size: 9px; font-weight: 800; color: #9a5b05; background: #fbefd8; border: 1px solid #f0dcae; border-radius: 99px; padding: 2px 8px; flex: none; }

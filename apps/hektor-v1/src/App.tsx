@@ -21309,6 +21309,28 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   })}
                 </div>
               ) : null}
+              {/* Raccourcis médias (façon v21) : photos · documents · visite virtuelle */}
+              {(() => {
+                const docs = parseJson<Array<{ signed?: boolean }>>(detailStr('documents_json') || '[]', [])
+                const toPrep = docs.filter((d) => !d.signed).length
+                return (
+                  <div className="fa-ck-mshorts">
+                    <button type="button" className="fa-ck-msc p" onClick={() => props.images[0] && props.onOpenImage?.(props.images[0].url)}>
+                      <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span>
+                      <div><div className="mct">{props.images.length} photo{props.images.length > 1 ? 's' : ''}</div><div className="mcs">Gérer · ajouter · réordonner</div></div>
+                    </button>
+                    <button type="button" className="fa-ck-msc d" onClick={() => setActiveTab('documents')}>
+                      <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
+                      <div><div className="mct">{docs.length} document{docs.length > 1 ? 's' : ''}</div><div className="mcs">Ajouter · préparer</div></div>
+                      {toPrep > 0 ? <span className="mca">{toPrep} à préparer</span> : null}
+                    </button>
+                    <button type="button" className="fa-ck-msc v">
+                      <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
+                      <div><div className="mct">Visite virtuelle</div><div className="mcs">Matterport 3D · ajouter</div></div>
+                    </button>
+                  </div>
+                )
+              })()}
               {/* Bande de statistiques clés (façon v21) */}
               {(() => {
                 const lbStats = [
