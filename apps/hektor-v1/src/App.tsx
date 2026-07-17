@@ -21090,8 +21090,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </div>
             </div>
           ) : activeTab === 'lebien' ? (
-            <div className="fa-ck-rub">
-              <section className="detail-section">
+            <div className="fa-ck-rub fa-ck-lebien">
+              <section className="detail-section fa-ck-lb-photos">
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Les photos ne peuvent pas etre modifiees depuis une fiche d'index leger." />
                   : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}

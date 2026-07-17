@@ -233,3 +233,49 @@
   .fa-ck-rail { flex-direction: row; flex-wrap: wrap; }
   .fa-ck-rn { width: auto; }
 }
+
+/* ============================================================
+   Rubrique « Le Bien » — re-skin scopé vers la maquette v21.
+   Ne touche QUE les composants réels rendus dans .fa-ck-lebien
+   (ConsolePhotosPanel + HektorAnnonceFieldDetailPanel).
+   ============================================================ */
+.fa-ck-lebien { display: flex; flex-direction: column; gap: 26px; }
+.fa-ck-lebien .fa-ck-lb-photos { border: 0; padding: 0; margin: 0; background: none; }
+
+/* --- Galerie photos (console-photos-*) --- */
+.fa-ck-lebien .console-photos-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.fa-ck-lebien .console-photos-head h3, .fa-ck-lebien .console-photos-head h4 { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-lebien .console-photo-upload-card { background: #fff; border: 1px solid var(--fa-line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 18px 36px -28px rgba(24, 18, 14, .3); margin-bottom: 14px; }
+.fa-ck-lebien .console-photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.fa-ck-lebien .console-photos-grid > * { border-radius: 14px; overflow: hidden; border: 1px solid var(--fa-line); background: #efe7dd; }
+.fa-ck-lebien .console-photos-grid img { transition: transform .5s cubic-bezier(.22, 1, .36, 1); }
+.fa-ck-lebien .console-photos-grid > *:hover img { transform: scale(1.05); }
+
+/* --- Champs Hektor → sections + feature cards façon v21 --- */
+.fa-ck-lebien .detail-hektor-fields-section { border: 0; padding: 0; background: none; }
+.fa-ck-lebien .detail-hektor-fields-section > .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.fa-ck-lebien .detail-hektor-fields-section > .section-header > span { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--fa-brand-ink); background: var(--fa-brand-soft, #f9e7ef); border: 1px solid color-mix(in srgb, var(--fa-brand-ink) 20%, transparent); border-radius: 99px; padding: 5px 12px; }
+.fa-ck-lebien .hektor-detail-field-groups { display: flex; flex-direction: column; gap: 22px; }
+/* chaque groupe = une « section » v21 (carte + accent couleur + barre latérale) */
+.fa-ck-lebien .hektor-detail-field-group { --c: #c2125f; --s: #f9e7ef; border: 0; border-radius: 0; background: none; position: relative; padding-left: 19px; }
+.fa-ck-lebien .hektor-detail-field-group::before { content: ''; position: absolute; left: 0; top: 34px; bottom: 4px; width: 3px; border-radius: 3px; background: linear-gradient(var(--c), transparent); opacity: .5; }
+.fa-ck-lebien .hektor-detail-field-group:nth-of-type(6n+1) { --c: #c2125f; --s: #f9e7ef; }
+.fa-ck-lebien .hektor-detail-field-group:nth-of-type(6n+2) { --c: #7a4bb0; --s: #f1eafc; }
+.fa-ck-lebien .hektor-detail-field-group:nth-of-type(6n+3) { --c: #b5651d; --s: #f6e9db; }
+.fa-ck-lebien .hektor-detail-field-group:nth-of-type(6n+4) { --c: #3b7d4f; --s: #e4f1e8; }
+.fa-ck-lebien .hektor-detail-field-group:nth-of-type(6n+5) { --c: #8a6a2f; --s: #f4ecd9; }
+.fa-ck-lebien .hektor-detail-field-group:nth-of-type(6n+6) { --c: #3a5a8a; --s: #e7edf7; }
+.fa-ck-lebien .hektor-detail-field-group > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-left: 0; }
+.fa-ck-lebien .hektor-detail-field-group > summary::-webkit-details-marker { display: none; }
+.fa-ck-lebien .hektor-detail-field-group > summary::before { content: ''; width: 34px; height: 34px; border-radius: 11px; flex: none; background: var(--s); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 6px 14px -8px var(--c); }
+.fa-ck-lebien .hektor-detail-field-group > summary strong { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-lebien .hektor-detail-field-group > summary span { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--c); background: var(--s); border: 1px solid color-mix(in srgb, var(--c) 22%, transparent); border-radius: 99px; padding: 5px 11px; }
+.fa-ck-lebien .hektor-detail-field-grid, .fa-ck-lebien .hektor-detail-composition-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.fa-ck-lebien .hektor-detail-field-grid article, .fa-ck-lebien .hektor-detail-composition-list article { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 12px 14px; border: 1px solid var(--fa-line); border-radius: 14px; background: #fff; transition: .16s; }
+.fa-ck-lebien .hektor-detail-field-grid article:hover, .fa-ck-lebien .hektor-detail-composition-list article:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(24, 18, 14, .28); }
+.fa-ck-lebien .hektor-detail-field-grid article > span, .fa-ck-lebien .hektor-detail-composition-list article > span { font-size: 13px; font-weight: 700; color: var(--fa-ink); line-height: 1.2; }
+.fa-ck-lebien .hektor-detail-field-grid article > strong, .fa-ck-lebien .hektor-detail-composition-list article > strong { font-size: 13px; font-weight: 700; color: var(--fa-ink-soft, #544b45); text-align: right; }
+.fa-ck-lebien .hektor-detail-field-grid article > small, .fa-ck-lebien .hektor-detail-composition-list article > small { grid-column: 1 / -1; font-size: 10px; color: var(--fa-faint, #a89e95); }
+.fa-ck-lebien .hektor-detail-field-grid article.is-empty { border-style: dashed; background: #fdfbf8; }
+.fa-ck-lebien .hektor-detail-field-grid article.is-empty > span { color: var(--fa-muted); }
+.fa-ck-lebien .hektor-detail-field-grid article.is-empty > strong { color: var(--fa-faint, #a89e95); font-style: italic; font-weight: 600; }
