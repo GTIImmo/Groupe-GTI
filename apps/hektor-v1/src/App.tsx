@@ -20707,14 +20707,91 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
 const APP_COCKPIT_V2_ENABLED =
   String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').toLowerCase() === 'true'
 
-// Cockpit v2 — bascule drop-in (Lot 0 : fondations invisibles).
-// Le flag est lu et prêt ; tant que le rendu cockpit n'est pas branché, on rend l'existant
-// à l'identique (flag ON ou OFF). Le cockpit sera greffé ici dans un lot ultérieur.
-function DossierDetailLayout(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
-  if (APP_COCKPIT_V2_ENABLED) {
-    // Lot 1+ : return <CockpitDetail {...props} />
+// Cockpit v2 — coquille (Lot 1a : châssis + rail + rubrique preuve « Le bien »).
+// Réutilise les composants/handlers existants ; DossierDetailLayoutBase reste 100 % intacte.
+// Les rubriques restantes seront portées en 1b/1c. Rendu uniquement si le flag est ON.
+function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
+  const detailVariant = props.detailVariant ?? 'annonce'
+  const [activeTab, setActiveTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
+  if (!props.selectedDossier) {
+    return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
-  return <DossierDetailLayoutBase {...props} />
+  const dossier = props.selectedDossier
+  const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
+  const detailTabsForVariant = isEstimation
+    ? estimationTabs
+    : (detailVariant === 'annonce' ? detailTabs : detailTabs.filter((tab) => tab.key !== 'estimation'))
+  const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
+  const currentTab = detailTabsForVariant.find((tab) => tab.key === activeTab) ?? detailTabsForVariant[0]
+
+  return (
+    <section className="fa-cockpit-v2 fa-ck-shell" data-detail-variant={detailVariant}>
+      <header className="fa-ck-topbar">
+        <button type="button" className="fa-ck-back" onClick={props.onBack}>{'←'} {props.backLabel ?? 'Retour'}</button>
+        <div className="fa-ck-id">
+          <span className="fa-ck-eyebrow">{props.eyebrow ?? 'Dossier annonce'}</span>
+          <strong className="fa-ck-title">{dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'}</strong>
+          <span className="fa-ck-sub">{props.address}</span>
+        </div>
+        <div className="fa-ck-actions">
+          {props.onChangeAnnonceStatus && !isLightweightDetail ? (
+            <button type="button" className="fa-ck-act" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button>
+          ) : null}
+          {props.onOpenRapprochement ? (
+            <button type="button" className="fa-ck-act fa-ck-act-brand" onClick={() => props.onOpenRapprochement?.(dossier)}>Acquereurs</button>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="fa-ck-body">
+        <nav className="fa-ck-rail" aria-label="Rubriques">
+          {detailTabsForVariant.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`fa-ck-rn ${activeTab === tab.key ? 'is-active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <span className="fa-ck-rn-ic" aria-hidden="true"><DetailIcon type={tab.icon} /></span>
+              <span className="fa-ck-rn-lb">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="fa-ck-content">
+          <div className="fa-ck-content-head">
+            <span className="fa-ck-content-ic" aria-hidden="true"><DetailIcon type={currentTab.icon} /></span>
+            <strong>{currentTab.label}</strong>
+          </div>
+
+          {activeTab === 'content' ? (
+            <div className="fa-ck-rub">
+              <section className="detail-section">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="Les photos ne peuvent pas etre modifiees depuis une fiche d'index leger." />
+                  : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+              </section>
+              <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
+              <section className="detail-section">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
+                  : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+              </section>
+            </div>
+          ) : (
+            <div className="fa-ck-todo">
+              <p>Rubrique <strong>« {currentTab.label} »</strong> — integration en cours (Lot 1b/1c). Le contenu reel sera branche ici en reutilisant les composants existants.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Cockpit v2 — bascule drop-in. OFF (défaut) = app d'origine à l'identique ; ON = coquille cockpit.
+function DossierDetailLayout(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
+  return APP_COCKPIT_V2_ENABLED ? <CockpitDetail {...props} /> : <DossierDetailLayoutBase {...props} />
 }
 
 function DossierDetailLayoutBase(props: {
