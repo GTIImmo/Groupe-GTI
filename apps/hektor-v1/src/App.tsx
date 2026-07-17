@@ -20713,6 +20713,8 @@ const APP_COCKPIT_V2_ENABLED =
 function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const detailVariant = props.detailVariant ?? 'annonce'
   const [activeTab, setActiveTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
+  const [estimEditorOpen, setEstimEditorOpen] = useState(false)
+  const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
@@ -20725,6 +20727,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const currentTab = detailTabsForVariant.find((tab) => tab.key === activeTab) ?? detailTabsForVariant[0]
 
   return (
+    <>
     <section className="fa-cockpit-v2 fa-ck-shell" data-detail-variant={detailVariant}>
       <header className="fa-ck-topbar">
         <button type="button" className="fa-ck-back" onClick={props.onBack}>{'←'} {props.backLabel ?? 'Retour'}</button>
@@ -20778,14 +20781,53 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               </section>
             </div>
+          ) : activeTab === 'estimation' ? (
+            <div className="fa-ck-rub">
+              <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
+            </div>
+          ) : activeTab === 'mandate' ? (
+            <div className="fa-ck-rub">
+              {isLightweightDetail
+                ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." />
+                : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+              {!isLightweightDetail ? <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} /> : null}
+              {!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
+            </div>
+          ) : activeTab === 'commercial' ? (
+            <div className="fa-ck-rub">
+              <GoogleAgendaAnnonceSection
+                dossier={dossier}
+                detail={props.detail}
+                contacts={props.contacts}
+                canManageContacts={props.canManageContacts}
+                hektorUserEmail={props.contactHektorUserEmail}
+                hektorUserId={props.contactHektorUserId}
+                hektorNegotiators={props.hektorNegotiators}
+                profileRole={props.profileRole}
+                sessionEmail={props.sessionEmail}
+                onOpenContact={props.onOpenContact}
+                onHektorActionJobCreated={props.onHektorActionJobCreated}
+              />
+              <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
+              <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
+            </div>
           ) : (
             <div className="fa-ck-todo">
-              <p>Rubrique <strong>« {currentTab.label} »</strong> — integration en cours (Lot 1b/1c). Le contenu reel sera branche ici en reutilisant les composants existants.</p>
+              <p>Rubrique <strong>« {currentTab.label} »</strong> — integration en cours (Lot 1c : synthese, diffusion, historique, reporting).</p>
             </div>
           )}
         </div>
       </div>
     </section>
+    {estimEditorOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
+      <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }}>
+        <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
+          <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
+        </div>
+      </div>,
+      document.body,
+    ) : null}
+    </>
   )
 }
 
