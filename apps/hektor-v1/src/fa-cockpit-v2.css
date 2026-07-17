@@ -115,11 +115,11 @@
   box-shadow: 0 7px 15px -6px var(--c, var(--fa-brand)), inset 0 1px 0 rgba(255, 255, 255, .35);
 }
 .fa-ck-rn-ic svg { width: 19px; height: 19px; }
-.fa-ck-rn-t { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.fa-ck-rn-t { flex: 1; min-width: 0; }
 .fa-ck-rn-n { font-size: 13.5px; font-weight: 700; line-height: 1.2; color: var(--fa-ink); }
 .fa-ck-rn-s { font-size: 11px; color: var(--fa-muted); margin-top: 2px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Pastille de statut (= .rn-st du v26) sur les rubriques « en avant » */
-.fa-ck-rn-st { font-size: 9.5px; font-weight: 800; border-radius: 6px; padding: 2px 7px; display: inline-block; margin-top: 3px; }
+.fa-ck-rn-st { font-size: 9.5px; font-weight: 800; border-radius: 6px; padding: 2px 7px; display: inline-block; margin-top: 3px; margin-left: 7px; vertical-align: middle; }
 .fa-ck-rn-st.ok { color: #1f6e44; background: #e9f4ee; }
 .fa-ck-rn-st.alert { color: #9a5b05; background: #fdf4e2; }
 .fa-ck-rn-st.wait { color: #1f63b8; background: #e7effb; }
@@ -210,9 +210,14 @@
 .fa-ck-an { width: 36px; height: 36px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: var(--nb, #f1eae1); color: var(--nc, var(--fa-brand)); box-shadow: 0 0 0 4px #fff, 0 6px 14px -8px var(--nc, var(--fa-brand)); }
 .fa-ck-an svg { width: 17px; height: 17px; }
 .fa-ck-atx { flex: 1; min-width: 0; padding-top: 4px; }
-.fa-ck-al { font-size: 13px; line-height: 1.4; color: var(--fa-ink); }
-.fa-ck-al b { font-weight: 700; }
-.fa-ck-at { font-size: 10.5px; font-weight: 700; color: #a89e95; white-space: nowrap; flex: none; padding-top: 8px; }
+.fa-ck-al { font-size: 12.8px; line-height: 1.45; color: var(--fa-muted); }
+.fa-ck-al b { color: var(--fa-ink); font-weight: 700; }
+.fa-ck-at { font-size: 10.5px; font-weight: 700; color: #a89e95; white-space: nowrap; flex: none; padding-top: 6px; }
+.fa-ck-aev.new .fa-ck-an { box-shadow: 0 0 0 4px #fff, 0 0 0 6px color-mix(in srgb, var(--nc, var(--fa-brand)) 22%, transparent), 0 6px 14px -8px var(--nc, var(--fa-brand)); }
+.fa-ck-aev.new::after { content: 'maintenant'; position: absolute; left: 44px; top: -2px; font-size: 8.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #bb1059; }
+.fa-ck-aev.new .fa-ck-atx { padding-top: 9px; }
+.fa-ck-aev.over .fa-ck-at { color: #9a5b05; }
+.fa-ck-aev.over .fa-ck-at::before { content: '● '; color: #c2701a; font-size: 8px; vertical-align: middle; }
 .fa-ck-empty { margin: 0; font-size: 12.5px; color: var(--fa-muted); }
 .fa-ck-todo { padding: 24px; color: var(--fa-muted); background: var(--fa-cream); border-radius: 12px; font-size: 13.5px; line-height: 1.55; }
 .fa-ck-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }

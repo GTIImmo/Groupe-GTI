@@ -20724,6 +20724,7 @@ const CK_ICON: Record<string, string> = {
   historique: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',
   reporting: '<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  heart: '<path d="M12 21s-7-4.5-9.3-9A5 5 0 0 1 12 5.5 5 5 0 0 1 21.3 12c-2.3 4.5-9.3 9-9.3 9z"/>',
 }
 function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
@@ -20959,10 +20960,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const pCompromis = Boolean(props.detail.compromis_id || props.detail.compromis_state)
   const pVendu = /vendu|vente|clos/i.test(String(dossier.statut_annonce ?? ''))
   const detailStr = (k: string) => { const v = (props.detail as Record<string, unknown>)[k]; return v == null ? '' : String(v) }
+  // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
+  const pDiffused = pMandatNum && pMandatOk && (Number(dossier.nb_portails_actifs) || 0) > 0
   const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo'; sub: string; date: string }> = [
     { label: 'Avis de valeur', state: 'done', sub: 'Validé', date: detailStr('date_avis') },
-    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo', sub: pMandatNum ? (pMandatOk ? 'Validé' : 'À valider') : 'À créer', date: detailStr('date_mandat') },
-    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : 'todo'), sub: pOffre ? 'Reçue' : (pCompromis || pVendu ? 'Passée' : '—'), date: detailStr('date_offre') },
+    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo', sub: pMandatNum ? (pMandatOk ? (pDiffused ? 'Diffusé' : 'Validé') : 'À valider') : 'À créer', date: detailStr('date_mandat') },
+    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : (pDiffused ? 'cur' : 'todo')), sub: pOffre ? 'Reçue' : (pCompromis || pVendu ? 'Passée' : (pDiffused ? 'En attente' : '—')), date: detailStr('date_offre') },
     { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo'), sub: pCompromis ? 'En cours' : (pVendu ? 'Signé' : '—'), date: detailStr('date_compromis') },
     { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—', date: detailStr('date_vente') },
   ]
@@ -21246,23 +21249,41 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 </div>
                 <div className="fa-ck-acti-card">
-                  <div className="fa-ck-afeed">
-                    {(appts.length > 0 || emailContacts.length > 0) ? <div className="fa-ck-afeed-h">Récent</div> : null}
-                    {appts.length > 0 && actiFilter !== 'mandant' ? (
-                      <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
-                        <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
-                        <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
-                        <span className="fa-ck-at">{lastApptAt ? relTime(lastApptAt) : 'à traiter'}</span>
-                      </button>
-                    ) : null}
-                    {emailContacts.filter((c) => actiFilter === 'tout' || (/mandant|propri|owner|vendeur/i.test(c.role || '') ? 'mandant' : 'acq') === actiFilter).slice(0, 4).map((c) => (
-                      <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
-                        <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><CkIcon path={CK_ICON.mail} /></span>
-                        <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>
-                      </a>
-                    ))}
-                    {appts.length === 0 && emailContacts.length === 0 ? <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p> : null}
-                  </div>
+                  {(() => {
+                    const evts = parseJson<Array<{ icon: string; aud: string; nb: string; nc: string; time: string; html: string; new?: boolean; over?: boolean }>>(detailStr('activite_json') || '[]', [])
+                    if (evts.length > 0) {
+                      const shown = evts.filter((e) => actiFilter === 'tout' || e.aud === actiFilter)
+                      return (
+                        <div className="fa-ck-afeed">
+                          {shown.length > 0 ? shown.map((e, i) => (
+                            <div key={i} className={`fa-ck-aev${e.new ? ' new' : ''}${e.over ? ' over' : ''}`}>
+                              <span className="fa-ck-an" style={{ ['--nb']: e.nb, ['--nc']: e.nc } as CSSProperties}><CkIcon path={CK_ICON[e.icon] ?? CK_ICON.mail} /></span>
+                              <div className="fa-ck-atx"><div className="fa-ck-al" dangerouslySetInnerHTML={{ __html: e.html }} /></div>
+                              <span className="fa-ck-at">{e.time}</span>
+                            </div>
+                          )) : <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité pour ce filtre.</p>}
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className="fa-ck-afeed">
+                        {appts.length > 0 && actiFilter !== 'mandant' ? (
+                          <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
+                            <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
+                            <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
+                            <span className="fa-ck-at">{lastApptAt ? relTime(lastApptAt) : 'à traiter'}</span>
+                          </button>
+                        ) : null}
+                        {emailContacts.filter((c) => actiFilter === 'tout' || (/mandant|propri|owner|vendeur/i.test(c.role || '') ? 'mandant' : 'acq') === actiFilter).slice(0, 4).map((c) => (
+                          <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
+                            <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><CkIcon path={CK_ICON.mail} /></span>
+                            <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>
+                          </a>
+                        ))}
+                        {appts.length === 0 && emailContacts.length === 0 ? <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p> : null}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             </div>

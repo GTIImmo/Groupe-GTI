@@ -150,6 +150,15 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     price_change_last_old_value: 269000,
     price_change_last_new_value: 259000,
     price_change_last_detected_at: '2026-06-30T08:00:00Z',
+    // Activité (v26 synthèse) : fil d'événements variés.
+    activite_json: JSON.stringify([
+      { icon: 'rapprochement', aud: 'acq', nb: '#daeef1', nc: '#0f7c8a', time: 'il y a 5 min', html: '<b>Nouvel acquéreur</b> correspond — M. Petit · <b>score 92</b>', new: true },
+      { icon: 'heart', aud: 'acq', nb: '#fdeaf2', nc: '#c2125f', time: 'il y a 30 min', html: '<b>Coup de cœur ❤️</b> — Mme Leroy a aimé le bien · <b>lead chaud</b>' },
+      { icon: 'rendezvous', aud: 'acq', nb: '#ece4f8', nc: '#6d4bb5', time: 'il y a 25 min', html: "<b>Demande de visite</b> — Mme Leroy · issue de l'espace client" },
+      { icon: 'mail', aud: 'acq', nb: '#e7edf7', nc: '#3a5a8a', time: 'il y a 2 h', html: '<b>Reçu</b> de M. Durand (acquéreur) · « Toujours dispo samedi ? »' },
+      { icon: 'contact', aud: 'mandant', nb: '#e7edf7', nc: '#3a5a8a', time: 'il y a 3 j', html: '<b>Point mandant</b> — appel aux MOREAU · compte-rendu de commercialisation' },
+      { icon: 'mail', aud: 'acq', nb: '#fbeee0', nc: '#c2701a', time: 'il y a 6 j', html: '<b>Relance à faire</b> — M. Morel · proposé, sans réponse', over: true },
+    ]),
     // Historique (v27) : journal des demandes filtrable.
     historique_json: JSON.stringify([
       { title: 'Bien diffusable non visible', type: 'Diffusion', date: '2026-06-24', states: [{ a: 'pending', b: 'pret_diffusion' }, { a: 'valide', b: 'en_erreur', tone: 'err' }], relance: '—' },
