@@ -47,11 +47,9 @@
 .fa-ck-body {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  padding: 16px 18px;
+  align-items: stretch;
 }
-.fa-ck-leftcol { display: flex; flex-direction: column; gap: 14px; }
+.fa-ck-leftcol { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 22px; border-right: 1px solid var(--fa-line-soft); background: linear-gradient(180deg, rgba(255, 253, 250, .7), transparent 40%); }
 
 /* Hero — porté du v26 (photo + badges + titre + adresse + prix). */
 .fa-ck-hero-photo { position: relative; height: 186px; border-radius: 16px; overflow: hidden; background: #efe7dd; box-shadow: 0 1px 2px rgba(32, 24, 18, .06), 0 18px 34px -18px rgba(32, 24, 18, .34); }
@@ -95,15 +93,10 @@
 .fa-ck-rn-ch { color: #c3b8ab; font-size: 15px; flex: none; font-weight: 700; transition: .16s; }
 .fa-ck-rn.is-active .fa-ck-rn-ch { color: var(--c, var(--fa-brand)); }
 
-.fa-ck-content {
-  border: 1px solid var(--fa-line);
-  border-radius: 16px;
-  background: #fff;
-  padding: 16px 18px;
-  min-height: 320px;
-}
+.fa-ck-content { min-height: 320px; }
+.fa-ck-wc { padding: 18px 22px 24px; }
 /* Parcours « Vie du mandat » — porté du v26 (.timeline / .tl-*). */
-.fa-ck-timeline { padding: 18px 20px 18px; margin: -16px -18px 16px; border-bottom: 1px solid var(--fa-line); background: linear-gradient(180deg, rgba(255, 253, 250, .6), transparent); }
+.fa-ck-timeline { padding: 18px 22px; margin: 0; border-bottom: 1px solid var(--fa-line); background: linear-gradient(180deg, rgba(255, 253, 250, .6), transparent); }
 .fa-ck-tl-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
 .fa-ck-tl-ey { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #a89e95; }
 .fa-ck-tl-status { margin-left: auto; font: inherit; display: inline-flex; align-items: center; gap: 11px; background: #fff; border: 1px solid #e9dcc5; border-radius: 999px; padding: 6px 8px 6px 7px; cursor: pointer; box-shadow: 0 14px 30px -18px rgba(24, 18, 14, .3), 0 2px 5px rgba(24, 18, 14, .05); transition: .2s; }

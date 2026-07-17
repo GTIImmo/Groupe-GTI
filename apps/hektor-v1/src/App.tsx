@@ -20882,6 +20882,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ))}
             </div>
           </div>
+          <div className="fa-ck-wc">
           <div className="fa-ck-content-head">
             <span className="fa-ck-content-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
             <strong>{currentTab.label}</strong>
@@ -21031,6 +21032,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <p>Rubrique <strong>« {currentTab.label} »</strong>.</p>
             </div>
           )}
+          </div>
         </div>
       </div>
     </section>
