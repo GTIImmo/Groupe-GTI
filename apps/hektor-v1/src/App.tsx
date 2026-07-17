@@ -20753,6 +20753,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—' },
   ]
   const nbPortails = Number(dossier.nb_portails_actifs) || 0
+  const statusLed = pVendu ? '#a86af0' : (pOffre || pCompromis) ? '#3fbf7a' : (pMandatNum && pMandatOk) ? '#3fbf7a' : '#f0a935'
   const situationLabel = pVendu ? 'Vendu'
     : pCompromis ? 'Compromis en cours'
     : pOffre ? 'Sous offre'
@@ -20795,12 +20796,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       <div className="fa-ck-body">
         <div className="fa-ck-leftcol">
           <div className="fa-ck-hero">
-            <div className="fa-ck-hero-photo">{heroPhoto ? <img src={heroPhoto} alt={heroTitle} /> : <span className="fa-ck-hero-noimg" aria-hidden="true" />}</div>
-            <strong className="fa-ck-hero-title">{heroTitle}</strong>
-            <div className="fa-ck-hero-addr">{props.address}</div>
+            <div className="fa-ck-hero-photo">
+              {heroPhoto ? <img src={heroPhoto} alt={heroTitle} /> : <span className="fa-ck-hero-noimg" aria-hidden="true" />}
+              <div className="fa-ck-hero-grad" aria-hidden="true" />
+              <span className="fa-ck-hero-sb"><span className="fa-ck-hero-led" style={{ background: statusLed }} />{dossier.statut_annonce || 'Annonce'}</span>
+              <span className="fa-ck-hero-rf">Réf. {dossier.numero_dossier ?? dossier.hektor_annonce_id ?? ''}</span>
+            </div>
+            <div className="fa-ck-hero-title">{heroTitle}</div>
+            <div className="fa-ck-hero-addr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10Z" /><circle cx="12" cy="11" r="2.2" /></svg>
+              <span>{props.address}</span>
+            </div>
             <div className="fa-ck-hero-price">
-              <span className="fa-ck-hero-price-k">Prix</span>
-              <span className="fa-ck-hero-price-v">{formatPrice(dossier.prix)}</span>
+              <div className="fa-ck-hero-pl">Prix</div>
+              <div className="fa-ck-hero-pv">{formatPrice(dossier.prix)}</div>
             </div>
           </div>
         <nav className="fa-ck-rail" aria-label="Rubriques">
