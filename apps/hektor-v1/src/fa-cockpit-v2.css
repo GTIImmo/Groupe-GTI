@@ -388,3 +388,27 @@
 .fa-ck-rc.ok .n { color: #2f8a5b; }
 .fa-ck-rc.wait .n { color: #9a5b05; }
 .fa-ck-rc.err .n { color: #a33; }
+
+/* --- Le Bien v21 : description, DPE, localisation, notes --- */
+.fa-ck-lb-desc { font-size: 15px; line-height: 1.75; color: var(--fa-ink-soft, #544b45); }
+.fa-ck-lb-desc p { margin: 0 0 13px; } .fa-ck-lb-desc p:last-child { margin: 0; } .fa-ck-lb-desc p:first-of-type { color: var(--fa-ink); } .fa-ck-lb-desc b { color: var(--fa-ink); }
+.fa-ck-lb-energy { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .fa-ck-lb-energy { grid-template-columns: 1fr; } }
+.fa-ck-dpe-t { font-size: 12px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--fa-muted); margin-bottom: 12px; }
+.fa-ck-dpe-t b { color: var(--fa-ink); font-size: 15px; }
+.fa-ck-dpe-scale { display: flex; flex-direction: column; gap: 4px; }
+.fa-ck-sr { display: flex; align-items: center; gap: 10px; height: 18px; }
+.fa-ck-bar { height: 100%; border-radius: 0 6px 6px 0; font-size: 10px; font-weight: 800; display: flex; align-items: center; padding-left: 9px; }
+.fa-ck-sr.on .bar, .fa-ck-sr.on .fa-ck-bar { box-shadow: 0 0 0 2px #241e1a; }
+.fa-ck-flag { margin-left: auto; position: relative; font-size: 12px; font-weight: 800; color: #fff; background: #241e1a; padding: 3px 9px; border-radius: 6px; }
+.fa-ck-flag::before { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); border: 5px solid transparent; border-right-color: #241e1a; }
+.fa-ck-lb-map { border-radius: 14px; height: 190px; background: linear-gradient(135deg, #e8f0e1, #dbe7ea); border: 1px solid var(--fa-line); position: relative; overflow: hidden; }
+.fa-ck-lb-map::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.04) 0 1px, transparent 1px 32px), repeating-linear-gradient(90deg, rgba(0,0,0,.04) 0 1px, transparent 1px 32px); }
+.fa-ck-lb-pin { position: absolute; left: 46%; top: 38%; width: 28px; height: 28px; color: var(--fa-brand); z-index: 2; }
+.fa-ck-lb-pin svg { width: 100%; height: 100%; }
+.fa-ck-lb-maddr { position: absolute; left: 16px; bottom: 16px; font-size: 12.5px; font-weight: 700; color: #374437; background: rgba(255, 255, 255, .92); padding: 9px 14px; border-radius: 12px; }
+.fa-ck-lb-note { display: flex; gap: 12px; padding: 13px 0; border-top: 1px solid var(--fa-line-soft); }
+.fa-ck-lb-note:first-child { border-top: 0; padding-top: 2px; }
+.fa-ck-lb-note-av { width: 34px; height: 34px; border-radius: 10px; background: #f7eed9; color: #b07d1c; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
+.fa-ck-lb-note-m { font-size: 11.5px; font-weight: 700; color: var(--fa-muted); margin-bottom: 3px; }
+.fa-ck-lb-note-t { font-size: 13.5px; color: var(--fa-ink-soft, #544b45); line-height: 1.5; }

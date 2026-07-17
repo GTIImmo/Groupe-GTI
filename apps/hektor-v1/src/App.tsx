@@ -20729,6 +20729,37 @@ function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
 }
 
+// Échelle DPE/GES (rubrique Le Bien, façon v21) : barres A→G, lettre active mise en avant.
+function ckDpeLetter(value: number, kind: 'conso' | 'ges') {
+  const t = kind === 'conso' ? [70, 110, 180, 250, 330, 420] : [6, 11, 30, 50, 70, 100]
+  const idx = t.findIndex((x) => value <= x)
+  return ['A', 'B', 'C', 'D', 'E', 'F', 'G'][idx === -1 ? 6 : idx]
+}
+function CkDpeScale({ label, value, unit, kind }: { label: string; value: number; unit: string; kind: 'conso' | 'ges' }) {
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+  const widths = [32, 42, 52, 62, 72, 86, 100]
+  const colors = kind === 'conso'
+    ? ['#0e8a3c', '#4fae3a', '#c9d43a', '#f4c430', '#efa227', '#e2711d', '#d63f2a']
+    : ['#eef0f7', '#d6d3ea', '#b8afd9', '#9a86c6', '#7c5eb0', '#5f3a9a', '#431c7f']
+  const active = ckDpeLetter(value, kind)
+  return (
+    <div className="fa-ck-dpe">
+      <div className="fa-ck-dpe-t">{label} <b>{value}</b> {unit}</div>
+      <div className="fa-ck-dpe-scale">
+        {letters.map((l, i) => {
+          const dark = (kind === 'conso' && (l === 'C' || l === 'D')) || (kind === 'ges' && (l === 'A' || l === 'B'))
+          return (
+            <div key={l} className={`fa-ck-sr${l === active ? ' on' : ''}`}>
+              <div className="fa-ck-bar" style={{ width: `${widths[i]}%`, background: colors[i], color: dark ? '#4a4a1a' : '#fff' }}>{l}</div>
+              {l === active ? <span className="fa-ck-flag">{l} · {value}</span> : null}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // Logos/couleurs des portails (rubrique Publicité, façon v36). Fallback = initiales + brand.
 const CK_PORTAL_META: Record<string, { abbr: string; color: string }> = {
   seloger: { abbr: 'SL', color: '#e2001a' },
@@ -21149,7 +21180,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   { l: 'Chambres', v: detailStr('nb_chambres'), u: '' },
                   { l: 'Étage', v: detailStr('etage_detail'), u: '' },
                   { l: 'Garage', v: detailStr('garage_box_detail'), u: '' },
-                ].filter((s) => s.v && s.v.trim())
+                ].filter((s) => s.v && s.v.trim() && s.v.trim() !== '0')
                 return lbStats.length > 0 ? (
                   <div className="fa-ck-lb-stats">
                     {lbStats.map((s) => (
@@ -21158,8 +21189,50 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 ) : null
               })()}
+              {/* Description (façon v21) */}
+              {props.texts.length > 0 ? (
+                <>
+                  <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span><div><div className="fa-ck-pub-t">Description</div><div className="fa-ck-pub-s">Le texte de l'annonce</div></div></div>
+                  <div className="fa-ck-pub-card"><div className="fa-ck-lb-desc" dangerouslySetInnerHTML={{ __html: props.texts[0].html }} /></div>
+                </>
+              ) : null}
+              {/* Diagnostics & énergie : échelles DPE / GES (façon v21) */}
+              {(() => {
+                const conso = Number(detailStr('dpe_conso') || detailStr('dpe_cons'))
+                const ges = Number(detailStr('dpe_ges'))
+                return conso > 0 || ges > 0 ? (
+                  <>
+                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.estimation} /></span><div><div className="fa-ck-pub-t">Diagnostics &amp; énergie</div><div className="fa-ck-pub-s">DPE · GES</div></div></div>
+                    <div className="fa-ck-pub-card"><div className="fa-ck-lb-energy">
+                      {conso > 0 ? <CkDpeScale label="DPE · conso" value={conso} unit="kWh/m²/an" kind="conso" /> : null}
+                      {ges > 0 ? <CkDpeScale label="GES · émissions" value={ges} unit="kg CO₂/m²/an" kind="ges" /> : null}
+                    </div></div>
+                  </>
+                ) : null
+              })()}
               {/* Fiche détaillée : vrais champs Hektor (sections + feature cards) */}
               <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
+              {/* Localisation (façon v21) */}
+              {props.address ? (
+                <>
+                  <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic blue" aria-hidden="true"><CkIcon path={CK_ICON.rendezvous} /></span><div><div className="fa-ck-pub-t">Localisation</div><div className="fa-ck-pub-s">Adresse &amp; secteur</div></div></div>
+                  <div className="fa-ck-pub-card"><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{props.address}</span></div></div>
+                </>
+              ) : null}
+              {/* Notes internes (façon v21) */}
+              {props.notes.length > 0 ? (
+                <>
+                  <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic gray" aria-hidden="true"><CkIcon path={CK_ICON.historique} /></span><div><div className="fa-ck-pub-t">Notes internes</div><div className="fa-ck-pub-s">Commentaires agence — non publiés</div></div></div>
+                  <div className="fa-ck-pub-card">
+                    {props.notes.map((n) => (
+                      <div key={n.id} className="fa-ck-lb-note">
+                        <span className="fa-ck-lb-note-av" aria-hidden="true">FG</span>
+                        <div><div className="fa-ck-lb-note-m">{[n.title, n.date ? formatDate(n.date) : ''].filter(Boolean).join(' · ')}</div><div className="fa-ck-lb-note-t">{n.content}</div></div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
               {/* Gestion des photos : vrai composant Console (ajout / synchro Hektor) */}
               <section className="detail-section fa-ck-lb-photos">
                 <div className="fa-ck-lb-manage-h">Gérer les photos</div>

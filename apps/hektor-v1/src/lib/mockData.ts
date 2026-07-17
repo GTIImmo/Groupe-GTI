@@ -89,9 +89,21 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     nb_chambres: 2,
     etage_detail: '3e étage avec ascenseur',
     garage_box_detail: 'Garage fermé',
+    surface_terrain_detail: 0,
     adresse_detail: '18 rue de la Bellevue',
     code_postal_prive_detail: '42000',
     ville_privee_detail: 'Saint-Etienne',
+    latitude_detail: 45.4397,
+    longitude_detail: 4.3872,
+    // Le Bien (v21) : description, diagnostics DPE/GES, notes internes.
+    texte_principal_titre: 'Grand T3 lumineux · secteur Bellevue',
+    texte_principal_html: '<p><b>Exclusivité — secteur Bellevue.</b> Grand T3 de 74 m² au 3e étage avec ascenseur, très lumineux, séjour traversant ouvrant sur balcon, deux chambres et cuisine équipée. Garage fermé en sous-sol.</p><p>Proche commerces, écoles et transports. Copropriété bien tenue, faibles charges. Idéal premier achat ou investissement locatif.</p>',
+    dpe_conso: 210,
+    dpe_ges: 35,
+    notes_json: JSON.stringify([
+      { type: 'Note interne', date: '2026-06-12', content: 'Vendeurs disponibles pour les visites en semaine après 17 h. Prévoir un bon de visite systématique.' },
+      { type: 'Note interne', date: '2026-06-28', content: 'Prix légèrement au-dessus du marché — envisager une baisse si pas d’offre sous 3 semaines.' },
+    ]),
     images_json: JSON.stringify(mockImages([
       ['1505693416388-ac5ce068fe85', 'Séjour'],
       ['1512917774080-9991f1c4c750', 'Façade'],
