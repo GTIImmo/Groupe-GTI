@@ -21140,18 +21140,47 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
             </div>
           ) : activeTab === 'contact' ? (
-            <div className="fa-ck-rub">
+            <div className="fa-ck-rub fa-ck-contact">
+              <div className="fa-ck-ct-toolbar">
+                <span className="fa-ck-ct-strip">Source <b>API AnnonceById</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
+              </div>
+              <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Les contacts ne sont pas modifiables depuis une fiche d'index leger." />
                 : <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               {props.contacts.length > 0 ? (
-                <div className="fa-ck-acti-list">
-                  {props.contacts.map((c) => (
-                    <div key={c.id} className="fa-ck-acti-row">
-                      <span className="fa-ck-acti-nm">{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</span>
-                      <span className="fa-ck-acti-em">{[c.role, c.email].filter(Boolean).join(' · ')}</span>
-                    </div>
-                  ))}
+                <div className="fa-ck-ct-list">
+                  {props.contacts.map((c) => {
+                    const name = c.name || `${c.civility ?? ''} ${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'
+                    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'C'
+                    const addr = [c.address, [c.postalCode, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')
+                    const ctField = (k: string, v: string | null | undefined, locked?: boolean, full?: boolean) => v && String(v).trim()
+                      ? <div className={`fa-ck-cg${full ? ' full' : ''}`}><span className="fa-ck-ck">{k}{locked ? <span className="fa-ck-lock">lié</span> : null}</span><span className={`fa-ck-cv${locked ? ' locked' : ''}`}>{v}</span></div>
+                      : null
+                    return (
+                      <div key={c.id} className="fa-ck-ct-card">
+                        <div className="fa-ck-ct-top">
+                          <span className="fa-ck-ct-av" aria-hidden="true">{initials}</span>
+                          <div className="fa-ck-ct-idw"><div className="fa-ck-ct-nm">{name}</div>{c.role ? <div className="fa-ck-ct-role">{c.role}</div> : null}</div>
+                          {c.sourceId ? <span className="fa-ck-ct-badge">Contact {c.sourceId}</span> : null}
+                          <div className="fa-ck-ct-acts">
+                            {c.phone ? <a className="fa-ck-ct-a" href={`tel:${c.phone.replace(/\s+/g, '')}`}>Appeler</a> : null}
+                            {c.email ? <a className="fa-ck-ct-a" href={`mailto:${c.email}`}>E-mail</a> : null}
+                            {c.sourceId && props.onOpenContact ? <button type="button" className="fa-ck-ct-a" onClick={() => props.onOpenContact?.(c.sourceId ?? '')}>Fiche</button> : null}
+                          </div>
+                        </div>
+                        <div className="fa-ck-ct-grid">
+                          {ctField('Rôle', c.role)}
+                          {ctField('ID Hektor', c.sourceId, true)}
+                          {ctField('Téléphone', c.phone)}
+                          {ctField('E-mail', c.email)}
+                          {ctField('MAJ Hektor', c.dateUpdated, true)}
+                          {ctField('Adresse', addr, false, true)}
+                          {ctField('Commentaire', c.comment, false, true)}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
             </div>

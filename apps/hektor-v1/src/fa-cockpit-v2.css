@@ -279,3 +279,35 @@
 .fa-ck-lebien .hektor-detail-field-grid article.is-empty { border-style: dashed; background: #fdfbf8; }
 .fa-ck-lebien .hektor-detail-field-grid article.is-empty > span { color: var(--fa-muted); }
 .fa-ck-lebien .hektor-detail-field-grid article.is-empty > strong { color: var(--fa-faint, #a89e95); font-style: italic; font-weight: 600; }
+
+/* ============================================================
+   Rubrique « Contact » — re-skin scopé vers la maquette v34.
+   Cartes mandant construites depuis props.contacts (données réelles) ;
+   le formulaire d'ajout reste le vrai HektorMandantContactForm.
+   ============================================================ */
+.fa-ck-contact { --blue: #3a5a8a; --blue-ink: #2c4770; --blue-soft: #e7edf7; --blue-line: #cfd9ea; display: flex; flex-direction: column; gap: 4px; }
+.fa-ck-ct-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.fa-ck-ct-strip { font-size: 11.5px; color: var(--fa-muted); background: #fff; border: 1px solid var(--fa-line); border-radius: 99px; padding: 6px 13px; }
+.fa-ck-ct-strip b { color: var(--fa-ink); }
+.fa-ck-ct-sec { display: flex; align-items: center; gap: 10px; margin: 14px 2px 12px; }
+.fa-ck-ct-sec .l { font-family: 'Fraunces', 'Spectral', serif; font-size: 14px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-ct-sec .bar { flex: 1; height: 1px; background: var(--fa-line); }
+.fa-ck-ct-list { display: flex; flex-direction: column; gap: 13px; }
+.fa-ck-ct-card { border: 1px solid var(--fa-line); border-radius: 16px; background: #fff; overflow: hidden; }
+.fa-ck-ct-top { display: flex; align-items: center; gap: 13px; padding: 14px 16px; background: linear-gradient(100deg, var(--blue-soft), #fff 62%); border-bottom: 1px solid var(--fa-line); }
+.fa-ck-ct-av { width: 46px; height: 46px; border-radius: 13px; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; background: linear-gradient(150deg, #5578b0, #33507d); box-shadow: 0 8px 18px -9px rgba(58, 90, 138, .7); }
+.fa-ck-ct-idw { flex: 1; min-width: 0; }
+.fa-ck-ct-nm { font-size: 15px; font-weight: 800; color: var(--fa-ink); }
+.fa-ck-ct-role { font-size: 11.5px; color: var(--blue-ink); font-weight: 700; }
+.fa-ck-ct-badge { font-size: 10px; font-weight: 800; border-radius: 99px; padding: 4px 10px; background: var(--blue-soft); color: var(--blue-ink); white-space: nowrap; flex: none; }
+.fa-ck-ct-acts { display: flex; gap: 7px; flex: none; }
+.fa-ck-ct-a { font: inherit; font-size: 11.5px; font-weight: 700; border: 1px solid var(--fa-line); background: #fff; border-radius: 9px; padding: 6px 10px; cursor: pointer; color: var(--fa-ink-soft, #544b45); text-decoration: none; transition: .14s; }
+.fa-ck-ct-a:hover { border-color: var(--blue); color: var(--blue); }
+.fa-ck-ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 22px; padding: 15px 16px; }
+.fa-ck-cg { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.fa-ck-cg.full { grid-column: 1 / -1; }
+.fa-ck-ck { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--fa-muted); display: flex; align-items: center; gap: 5px; }
+.fa-ck-cv { font-size: 13px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-cv.locked { color: var(--fa-muted); }
+.fa-ck-lock { font-size: 9px; font-weight: 800; color: var(--fa-faint, #a89e95); background: var(--blue-soft); border-radius: 5px; padding: 1px 5px; letter-spacing: 0; text-transform: none; }
+@media (max-width: 720px) { .fa-ck-ct-grid { grid-template-columns: 1fr; } }
