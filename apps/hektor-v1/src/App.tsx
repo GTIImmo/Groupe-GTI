@@ -20759,6 +20759,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const currentTab = CK_RUBRIQUES.find((r) => r.key === activeTab) ?? CK_RUBRIQUES[0]
   const heroPhoto = props.images[0]?.url ?? dossier.photo_url_listing ?? null
   const heroTitle = dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'
+  const prixM2 = (() => {
+    const s = Number((props.detail as { surface_habitable_detail?: string | number }).surface_habitable_detail)
+    const p = Number(dossier.prix)
+    return s > 0 && p > 0 ? Math.round(p / s) : null
+  })()
   // Parcours 5 jalons (Avis → Mandat → Offre → Compromis → Vente) dérivé des vrais drapeaux.
   const pMandatNum = Boolean(String(dossier.numero_mandat ?? '').trim())
   const pMandatOk = isValidationApproved(dossier.validation_diffusion_state)
@@ -20840,9 +20845,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
             <div className="fa-ck-hero-price">
               <div className="fa-ck-hero-pl">Prix</div>
-              <div className="fa-ck-hero-pv">{formatPrice(dossier.prix)}</div>
+              <div className="fa-ck-hero-pv">{formatPrice(dossier.prix)}{prixM2 ? <em>{prixM2.toLocaleString('fr-FR')} €/m²</em> : null}</div>
             </div>
           </div>
+        <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{CK_RUBRIQUES.length}</span></div>
         <nav className="fa-ck-rail" aria-label="Rubriques">
           {CK_RUBRIQUES.map((rub) => (
             <button
@@ -20883,16 +20889,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           </div>
           <div className="fa-ck-wc">
-          <div className="fa-ck-content-head">
-            <span className="fa-ck-content-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
-            <strong>{currentTab.label}</strong>
-          </div>
+          {activeTab !== 'synthese' ? (
+            <div className="fa-ck-content-head">
+              <span className="fa-ck-content-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
+              <strong>{currentTab.label}</strong>
+            </div>
+          ) : null}
 
           {activeTab === 'synthese' ? (
             <div className="fa-ck-rub">
               <div className="fa-ck-pa" style={{ ['--led']: statusLed } as CSSProperties}>
-                <div className="fa-ck-pa-eye"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />Prochaine action</div>
-                <div className="fa-ck-pa-title">{situationLabel}</div>
+                <div className="fa-ck-pa-title"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />{situationLabel}</div>
                 <p className="fa-ck-pa-desc">{situationDesc}</p>
                 {nextLink && nextRub ? (
                   <div className="fa-ck-pa-nav">
