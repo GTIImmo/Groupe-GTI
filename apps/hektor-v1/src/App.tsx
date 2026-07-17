@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, type CSSProperties, FormEvent, Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Session } from '@supabase/supabase-js'
 import {
@@ -20709,19 +20709,19 @@ const APP_COCKPIT_V2_ENABLED =
 
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
-const CK_RUBRIQUES: Array<{ key: string; label: string; icon: DetailIconKey }> = [
-  { key: 'synthese', label: 'Synthèse', icon: 'summary' },
-  { key: 'lebien', label: 'Le Bien', icon: 'content' },
-  { key: 'estimation', label: 'Estimation', icon: 'priority' },
-  { key: 'mandat', label: 'Mandat', icon: 'mandate' },
-  { key: 'contact', label: 'Contact', icon: 'contact' },
-  { key: 'publicite', label: 'Publicité', icon: 'diffusion' },
-  { key: 'rapprochement', label: 'Rapprochement', icon: 'actions' },
-  { key: 'rendezvous', label: 'Rendez-vous', icon: 'commercial' },
-  { key: 'affaires', label: 'Affaires', icon: 'summary' },
-  { key: 'documents', label: 'Documents', icon: 'hektor' },
-  { key: 'historique', label: 'Historique', icon: 'history' },
-  { key: 'reporting', label: 'Reporting', icon: 'commercial' },
+const CK_RUBRIQUES: Array<{ key: string; label: string; icon: DetailIconKey; color: string }> = [
+  { key: 'synthese', label: 'Synthèse', icon: 'summary', color: '#c2125f' },
+  { key: 'lebien', label: 'Le Bien', icon: 'content', color: '#a8814a' },
+  { key: 'estimation', label: 'Estimation', icon: 'priority', color: '#e0952f' },
+  { key: 'mandat', label: 'Mandat', icon: 'mandate', color: '#9d0f4e' },
+  { key: 'contact', label: 'Contact', icon: 'contact', color: '#3a5a8a' },
+  { key: 'publicite', label: 'Publicité', icon: 'diffusion', color: '#c2125f' },
+  { key: 'rapprochement', label: 'Rapprochement', icon: 'actions', color: '#0f7c8a' },
+  { key: 'rendezvous', label: 'Rendez-vous', icon: 'commercial', color: '#6d4bb5' },
+  { key: 'affaires', label: 'Affaires', icon: 'summary', color: '#1f6e44' },
+  { key: 'documents', label: 'Documents', icon: 'hektor', color: '#4756a6' },
+  { key: 'historique', label: 'Historique', icon: 'history', color: '#8a807a' },
+  { key: 'reporting', label: 'Reporting', icon: 'commercial', color: '#a8814a' },
 ]
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
@@ -20745,12 +20745,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const pOffre = Boolean(props.detail.offre_id || props.detail.offre_state)
   const pCompromis = Boolean(props.detail.compromis_id || props.detail.compromis_state)
   const pVendu = /vendu|vente|clos/i.test(String(dossier.statut_annonce ?? ''))
-  const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo' }> = [
-    { label: 'Avis de valeur', state: 'done' },
-    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo' },
-    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : 'todo') },
-    { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo') },
-    { label: 'Vente', state: pVendu ? 'done' : 'todo' },
+  const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo'; sub: string }> = [
+    { label: 'Avis de valeur', state: 'done', sub: 'Validé' },
+    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo', sub: pMandatNum ? (pMandatOk ? 'Validé' : 'À valider') : 'À créer' },
+    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : 'todo'), sub: pOffre ? 'Reçue' : (pCompromis || pVendu ? 'Passée' : '—') },
+    { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo'), sub: pCompromis ? 'En cours' : (pVendu ? 'Signé' : '—') },
+    { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—' },
   ]
   const nbPortails = Number(dossier.nb_portails_actifs) || 0
   const situationLabel = pVendu ? 'Vendu'
@@ -20809,6 +20809,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               key={rub.key}
               type="button"
               className={`fa-ck-rn ${activeTab === rub.key ? 'is-active' : ''}`}
+              style={{ ['--c']: rub.color } as CSSProperties}
               onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
             >
               <span className="fa-ck-rn-ic" aria-hidden="true"><DetailIcon type={rub.icon} /></span>
@@ -20824,6 +20825,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div key={step.label} className={`fa-ck-jalon is-${step.state}`}>
                 <span className="fa-ck-jalon-node">{step.state === 'done' ? '✓' : i + 1}</span>
                 <span className="fa-ck-jalon-lb">{step.label}</span>
+                <span className="fa-ck-jalon-sub">{step.sub}</span>
               </div>
             ))}
           </div>

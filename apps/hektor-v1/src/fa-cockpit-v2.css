@@ -102,13 +102,13 @@
   cursor: pointer;
   transition: border-color .14s, box-shadow .14s, background .14s;
 }
-.fa-ck-rn:hover { border-color: color-mix(in srgb, var(--fa-brand) 40%, var(--fa-line)); }
+.fa-ck-rn:hover { border-color: color-mix(in srgb, var(--c, var(--fa-brand)) 40%, var(--fa-line)); }
 .fa-ck-rn.is-active {
-  border-color: var(--fa-brand);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--fa-brand) 22%, transparent);
-  background: color-mix(in srgb, var(--fa-brand) 5%, #fff);
+  border-color: var(--c, var(--fa-brand));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--fa-brand)) 22%, transparent);
+  background: color-mix(in srgb, var(--c, var(--fa-brand)) 5%, #fff);
 }
-.fa-ck-rn-ic { width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 9px; background: var(--fa-cream); color: var(--fa-brand-ink); }
+.fa-ck-rn-ic { width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 9px; background: color-mix(in srgb, var(--c, var(--fa-brand)) 13%, #fff); color: var(--c, var(--fa-brand-ink)); }
 .fa-ck-rn-ic svg { width: 18px; height: 18px; }
 .fa-ck-rn-lb { flex: 1; min-width: 0; }
 
@@ -126,6 +126,9 @@
 .fa-ck-jalon:first-child::before { display: none; }
 .fa-ck-jalon-node { position: relative; z-index: 1; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: #fff; border: 2px solid var(--fa-line); color: var(--fa-muted); }
 .fa-ck-jalon-lb { font-size: 12px; font-weight: 600; color: var(--fa-muted); }
+.fa-ck-jalon-sub { font-size: 11px; color: var(--fa-muted); opacity: 0.85; }
+.fa-ck-jalon.is-done .fa-ck-jalon-sub { color: #1f6e44; }
+.fa-ck-jalon.is-cur .fa-ck-jalon-sub { color: var(--fa-brand-ink); font-weight: 700; }
 .fa-ck-jalon.is-done .fa-ck-jalon-node { background: #3fbf7a; border-color: #3fbf7a; color: #fff; }
 .fa-ck-jalon.is-done .fa-ck-jalon-lb { color: var(--fa-ink); }
 .fa-ck-jalon.is-done::before { background: #3fbf7a; }
