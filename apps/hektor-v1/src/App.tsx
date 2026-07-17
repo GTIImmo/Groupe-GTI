@@ -21120,12 +21120,53 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'lebien' ? (
             <div className="fa-ck-rub fa-ck-lebien">
+              {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
+              {props.images.length > 0 ? (
+                <div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
+                  {props.images.slice(0, 5).map((img, i) => {
+                    const isLastMore = i === 4 && props.images.length > 5
+                    return (
+                      <button key={img.url} type="button" className={`fa-ck-gimg${i === 0 ? ' hero' : ''}`} onClick={() => props.onOpenImage?.(img.url)}>
+                        <img src={img.url} alt={img.legend || ''} />
+                        {i === 0 ? (
+                          <span className="fa-ck-gpill">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                            Voir les {props.images.length} photos
+                          </span>
+                        ) : null}
+                        {isLastMore ? <span className="fa-ck-gmore" aria-hidden="true">+{props.images.length - 5}</span> : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+              {/* Bande de statistiques clés (façon v21) */}
+              {(() => {
+                const lbStats = [
+                  { l: 'Surface', v: detailStr('surface_habitable_detail'), u: 'm²' },
+                  { l: 'Terrain', v: detailStr('surface_terrain_detail'), u: 'm²' },
+                  { l: 'Pièces', v: detailStr('nb_pieces'), u: '' },
+                  { l: 'Chambres', v: detailStr('nb_chambres'), u: '' },
+                  { l: 'Étage', v: detailStr('etage_detail'), u: '' },
+                  { l: 'Garage', v: detailStr('garage_box_detail'), u: '' },
+                ].filter((s) => s.v && s.v.trim())
+                return lbStats.length > 0 ? (
+                  <div className="fa-ck-lb-stats">
+                    {lbStats.map((s) => (
+                      <div key={s.l} className="fa-ck-lb-stat"><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
+                    ))}
+                  </div>
+                ) : null
+              })()}
+              {/* Fiche détaillée : vrais champs Hektor (sections + feature cards) */}
+              <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
+              {/* Gestion des photos : vrai composant Console (ajout / synchro Hektor) */}
               <section className="detail-section fa-ck-lb-photos">
+                <div className="fa-ck-lb-manage-h">Gérer les photos</div>
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Les photos ne peuvent pas etre modifiees depuis une fiche d'index leger." />
                   : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               </section>
-              <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
             </div>
           ) : activeTab === 'documents' ? (
             <div className="fa-ck-rub">
