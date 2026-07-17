@@ -20738,6 +20738,19 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const currentTab = CK_RUBRIQUES.find((r) => r.key === activeTab) ?? CK_RUBRIQUES[0]
   const heroPhoto = props.images[0]?.url ?? dossier.photo_url_listing ?? null
   const heroTitle = dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'
+  // Parcours 5 jalons (Avis → Mandat → Offre → Compromis → Vente) dérivé des vrais drapeaux.
+  const pMandatNum = Boolean(String(dossier.numero_mandat ?? '').trim())
+  const pMandatOk = isValidationApproved(dossier.validation_diffusion_state)
+  const pOffre = Boolean(props.detail.offre_id || props.detail.offre_state)
+  const pCompromis = Boolean(props.detail.compromis_id || props.detail.compromis_state)
+  const pVendu = /vendu|vente|clos/i.test(String(dossier.statut_annonce ?? ''))
+  const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo' }> = [
+    { label: 'Avis de valeur', state: 'done' },
+    { label: 'Mandat', state: pMandatNum ? (pMandatOk ? 'done' : 'cur') : 'todo' },
+    { label: 'Offre', state: pOffre ? 'cur' : (pCompromis || pVendu ? 'done' : 'todo') },
+    { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo') },
+    { label: 'Vente', state: pVendu ? 'done' : 'todo' },
+  ]
 
   return (
     <>
@@ -20786,6 +20799,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         </div>
 
         <div className="fa-ck-content">
+          <div className="fa-ck-parcours" aria-label="Parcours du mandat">
+            {parcours.map((step, i) => (
+              <div key={step.label} className={`fa-ck-jalon is-${step.state}`}>
+                <span className="fa-ck-jalon-node">{step.state === 'done' ? '✓' : i + 1}</span>
+                <span className="fa-ck-jalon-lb">{step.label}</span>
+              </div>
+            ))}
+          </div>
           <div className="fa-ck-content-head">
             <span className="fa-ck-content-ic" aria-hidden="true"><DetailIcon type={currentTab.icon} /></span>
             <strong>{currentTab.label}</strong>

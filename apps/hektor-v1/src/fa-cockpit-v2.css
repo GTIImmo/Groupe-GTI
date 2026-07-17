@@ -119,6 +119,19 @@
   padding: 16px 18px;
   min-height: 320px;
 }
+/* Parcours 5 jalons (timeline horizontale) — comme « Vie du mandat » de la maquette. */
+.fa-ck-parcours { display: flex; align-items: flex-start; padding: 2px 4px 18px; margin-bottom: 16px; border-bottom: 1px solid var(--fa-line); }
+.fa-ck-jalon { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; position: relative; text-align: center; }
+.fa-ck-jalon::before { content: ''; position: absolute; top: 15px; left: -50%; width: 100%; height: 2px; background: var(--fa-line); z-index: 0; }
+.fa-ck-jalon:first-child::before { display: none; }
+.fa-ck-jalon-node { position: relative; z-index: 1; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: #fff; border: 2px solid var(--fa-line); color: var(--fa-muted); }
+.fa-ck-jalon-lb { font-size: 12px; font-weight: 600; color: var(--fa-muted); }
+.fa-ck-jalon.is-done .fa-ck-jalon-node { background: #3fbf7a; border-color: #3fbf7a; color: #fff; }
+.fa-ck-jalon.is-done .fa-ck-jalon-lb { color: var(--fa-ink); }
+.fa-ck-jalon.is-done::before { background: #3fbf7a; }
+.fa-ck-jalon.is-cur .fa-ck-jalon-node { background: var(--fa-brand); border-color: var(--fa-brand); color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--fa-brand) 18%, transparent); }
+.fa-ck-jalon.is-cur .fa-ck-jalon-lb { color: var(--fa-brand-ink); font-weight: 700; }
+
 .fa-ck-content-head { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px dashed var(--fa-line); }
 .fa-ck-content-head strong { font-size: 15px; }
 .fa-ck-content-ic { width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--fa-cream); color: var(--fa-brand-ink); }
