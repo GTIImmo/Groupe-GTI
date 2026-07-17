@@ -20707,24 +20707,35 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
 const APP_COCKPIT_V2_ENABLED =
   String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').toLowerCase() === 'true'
 
-// Cockpit v2 — coquille (Lot 1a : châssis + rail + rubrique preuve « Le bien »).
-// Réutilise les composants/handlers existants ; DossierDetailLayoutBase reste 100 % intacte.
-// Les rubriques restantes seront portées en 1b/1c. Rendu uniquement si le flag est ON.
+// Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
+// (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
+const CK_RUBRIQUES: Array<{ key: string; label: string; icon: DetailIconKey }> = [
+  { key: 'lebien', label: 'Le Bien', icon: 'content' },
+  { key: 'estimation', label: 'Estimation', icon: 'priority' },
+  { key: 'mandat', label: 'Mandat', icon: 'mandate' },
+  { key: 'contact', label: 'Contact', icon: 'contact' },
+  { key: 'publicite', label: 'Publicité', icon: 'diffusion' },
+  { key: 'rapprochement', label: 'Rapprochement', icon: 'actions' },
+  { key: 'rendezvous', label: 'Rendez-vous', icon: 'commercial' },
+  { key: 'affaires', label: 'Affaires', icon: 'summary' },
+  { key: 'documents', label: 'Documents', icon: 'hektor' },
+  { key: 'historique', label: 'Historique', icon: 'history' },
+  { key: 'reporting', label: 'Reporting', icon: 'commercial' },
+]
+
+// Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
+// DossierDetailLayoutBase reste 100 % intacte. Rendu uniquement si le flag est ON.
 function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const detailVariant = props.detailVariant ?? 'annonce'
-  const [activeTab, setActiveTab] = useState<DetailTabKey>(detailVariant === 'mandat' ? 'mandate' : 'summary')
+  const [activeTab, setActiveTab] = useState<string>('lebien')
   const [estimEditorOpen, setEstimEditorOpen] = useState(false)
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
   const dossier = props.selectedDossier
-  const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
-  const detailTabsForVariant = isEstimation
-    ? estimationTabs
-    : (detailVariant === 'annonce' ? detailTabs : detailTabs.filter((tab) => tab.key !== 'estimation'))
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
-  const currentTab = detailTabsForVariant.find((tab) => tab.key === activeTab) ?? detailTabsForVariant[0]
+  const currentTab = CK_RUBRIQUES.find((r) => r.key === activeTab) ?? CK_RUBRIQUES[0]
 
   return (
     <>
@@ -20748,15 +20759,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
 
       <div className="fa-ck-body">
         <nav className="fa-ck-rail" aria-label="Rubriques">
-          {detailTabsForVariant.map((tab) => (
+          {CK_RUBRIQUES.map((rub) => (
             <button
-              key={tab.key}
+              key={rub.key}
               type="button"
-              className={`fa-ck-rn ${activeTab === tab.key ? 'is-active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}
+              className={`fa-ck-rn ${activeTab === rub.key ? 'is-active' : ''}`}
+              onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
             >
-              <span className="fa-ck-rn-ic" aria-hidden="true"><DetailIcon type={tab.icon} /></span>
-              <span className="fa-ck-rn-lb">{tab.label}</span>
+              <span className="fa-ck-rn-ic" aria-hidden="true"><DetailIcon type={rub.icon} /></span>
+              <span className="fa-ck-rn-lb">{rub.label}</span>
             </button>
           ))}
         </nav>
@@ -20767,7 +20778,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <strong>{currentTab.label}</strong>
           </div>
 
-          {activeTab === 'content' ? (
+          {activeTab === 'lebien' ? (
             <div className="fa-ck-rub">
               <section className="detail-section">
                 {isLightweightDetail
@@ -20775,6 +20786,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               </section>
               <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
+            </div>
+          ) : activeTab === 'documents' ? (
+            <div className="fa-ck-rub">
               <section className="detail-section">
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
@@ -20785,7 +20799,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub">
               <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
             </div>
-          ) : activeTab === 'mandate' ? (
+          ) : activeTab === 'mandat' ? (
             <div className="fa-ck-rub">
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." />
@@ -20793,7 +20807,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {!isLightweightDetail ? <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} /> : null}
               {!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
             </div>
-          ) : activeTab === 'commercial' ? (
+          ) : activeTab === 'rendezvous' ? (
             <div className="fa-ck-rub">
               <GoogleAgendaAnnonceSection
                 dossier={dossier}
@@ -20808,12 +20822,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 onOpenContact={props.onOpenContact}
                 onHektorActionJobCreated={props.onHektorActionJobCreated}
               />
-              <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
               <AppointmentAnnonceSection dossier={dossier} detail={props.detail} />
+            </div>
+          ) : activeTab === 'affaires' ? (
+            <div className="fa-ck-rub">
+              <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
             </div>
           ) : (
             <div className="fa-ck-todo">
-              <p>Rubrique <strong>« {currentTab.label} »</strong> — integration en cours (Lot 1c : synthese, diffusion, historique, reporting).</p>
+              <p>Rubrique <strong>« {currentTab.label} »</strong> — integration a venir (Contact, Publicite, Historique, Reporting).</p>
             </div>
           )}
         </div>
