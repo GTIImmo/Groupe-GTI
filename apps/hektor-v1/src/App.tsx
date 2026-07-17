@@ -20710,6 +20710,7 @@ const APP_COCKPIT_V2_ENABLED =
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
 const CK_RUBRIQUES: Array<{ key: string; label: string; icon: DetailIconKey }> = [
+  { key: 'synthese', label: 'Synthèse', icon: 'summary' },
   { key: 'lebien', label: 'Le Bien', icon: 'content' },
   { key: 'estimation', label: 'Estimation', icon: 'priority' },
   { key: 'mandat', label: 'Mandat', icon: 'mandate' },
@@ -20727,7 +20728,7 @@ const CK_RUBRIQUES: Array<{ key: string; label: string; icon: DetailIconKey }> =
 // DossierDetailLayoutBase reste 100 % intacte. Rendu uniquement si le flag est ON.
 function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const detailVariant = props.detailVariant ?? 'annonce'
-  const [activeTab, setActiveTab] = useState<string>('lebien')
+  const [activeTab, setActiveTab] = useState<string>('synthese')
   const [estimEditorOpen, setEstimEditorOpen] = useState(false)
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   if (!props.selectedDossier) {
@@ -20751,6 +20752,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo') },
     { label: 'Vente', state: pVendu ? 'done' : 'todo' },
   ]
+  const nbPortails = Number(dossier.nb_portails_actifs) || 0
+  const situationLabel = pVendu ? 'Vendu'
+    : pCompromis ? 'Compromis en cours'
+    : pOffre ? 'Sous offre'
+    : !pMandatNum ? 'Mandat à créer'
+    : !pMandatOk ? 'Mandat signé · à valider'
+    : nbPortails > 0 ? 'Diffusé · en ligne'
+    : 'Validé · à diffuser'
+  const nextLink: { label: string; tab?: string; rapprochement?: boolean } | null = pVendu ? null
+    : (pCompromis || pOffre) ? { label: "Traiter l'affaire", tab: 'affaires' }
+    : !pMandatNum ? { label: 'Créer le mandat', tab: 'mandat' }
+    : !pMandatOk ? { label: 'Ouvrir le mandat', tab: 'mandat' }
+    : nbPortails > 0 ? { label: 'Relancer les acquéreurs', rapprochement: true }
+    : { label: 'Ouvrir la diffusion', tab: 'publicite' }
+  const appts = parseAppointmentRequests(props.detail)
+  const emailContacts = props.contacts.filter((c) => c.email)
 
   return (
     <>
@@ -20812,7 +20829,48 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <strong>{currentTab.label}</strong>
           </div>
 
-          {activeTab === 'lebien' ? (
+          {activeTab === 'synthese' ? (
+            <div className="fa-ck-rub">
+              <div className="fa-ck-pa">
+                <div className="fa-ck-pa-head">
+                  <span className="fa-ck-pa-eye">Prochaine action</span>
+                  <span className="fa-ck-pa-state">{situationLabel}</span>
+                </div>
+                {nextLink ? (
+                  <button type="button" className="fa-ck-pa-link" onClick={nextLink.rapprochement ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(nextLink.tab || 'synthese')}>
+                    <span>{nextLink.label}</span>
+                    <span aria-hidden="true">→</span>
+                  </button>
+                ) : (
+                  <p className="fa-ck-pa-done">Vente finalisée — dossier terminé.</p>
+                )}
+              </div>
+              <div className="fa-ck-acti">
+                <div className="fa-ck-acti-head"><strong>Activité</strong></div>
+                <div className="fa-ck-acti-grid">
+                  <div className="fa-ck-acti-card">
+                    <div className="fa-ck-acti-card-h">Demandes de visite <span>{appts.length}</span></div>
+                    {appts.length > 0
+                      ? <button type="button" className="fa-ck-linkmini" onClick={() => setActiveTab('rendezvous')}>Voir dans Rendez-vous →</button>
+                      : <p className="fa-ck-empty">Aucune demande de visite.</p>}
+                  </div>
+                  <div className="fa-ck-acti-card">
+                    <div className="fa-ck-acti-card-h">Emails <span>{emailContacts.length}</span></div>
+                    {emailContacts.length > 0 ? (
+                      <div className="fa-ck-acti-list">
+                        {emailContacts.slice(0, 3).map((c) => (
+                          <a key={c.id} className="fa-ck-acti-row" href={`mailto:${c.email}`}>
+                            <span className="fa-ck-acti-nm">{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</span>
+                            <span className="fa-ck-acti-em">{c.email}</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : <p className="fa-ck-empty">Aucun contact avec email.</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'lebien' ? (
             <div className="fa-ck-rub">
               <section className="detail-section">
                 {isLightweightDetail

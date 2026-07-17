@@ -137,6 +137,30 @@
 .fa-ck-content-ic { width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--fa-cream); color: var(--fa-brand-ink); }
 .fa-ck-content-ic svg { width: 17px; height: 17px; }
 .fa-ck-rub { display: flex; flex-direction: column; gap: 16px; }
+
+/* Synthèse : Prochaine action + Activité. */
+.fa-ck-pa { border: 1px solid color-mix(in srgb, var(--fa-brand) 18%, var(--fa-line)); border-radius: 16px; padding: 16px 18px; background: linear-gradient(120deg, #fff, color-mix(in srgb, var(--fa-brand) 4%, #fff)); }
+.fa-ck-pa-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.fa-ck-pa-eye { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fa-brand-ink); }
+.fa-ck-pa-state { font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-pa-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--fa-line); background: #fff; border-radius: 12px; padding: 12px 15px; font: inherit; font-size: 14px; font-weight: 700; color: var(--fa-brand-ink); cursor: pointer; transition: border-color .14s, box-shadow .14s; }
+.fa-ck-pa-link:hover { border-color: var(--fa-brand); box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--fa-brand) 55%, transparent); }
+.fa-ck-pa-done { margin: 0; color: var(--fa-muted); font-size: 13.5px; }
+
+.fa-ck-acti-head { margin-bottom: 10px; }
+.fa-ck-acti-head strong { font-size: 15px; }
+.fa-ck-acti-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fa-ck-acti-card { border: 1px solid var(--fa-line); border-radius: 14px; padding: 13px 15px; background: #fff; }
+.fa-ck-acti-card-h { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fa-muted); margin-bottom: 8px; }
+.fa-ck-acti-card-h span { color: var(--fa-brand-ink); font-size: 14px; }
+.fa-ck-acti-list { display: flex; flex-direction: column; gap: 6px; }
+.fa-ck-acti-row { display: flex; flex-direction: column; text-decoration: none; padding: 6px 8px; border-radius: 8px; }
+.fa-ck-acti-row:hover { background: var(--fa-cream); }
+.fa-ck-acti-nm { font-size: 13px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-acti-em { font-size: 12px; color: var(--fa-muted); }
+.fa-ck-empty { margin: 0; font-size: 12.5px; color: var(--fa-muted); }
+.fa-ck-linkmini { border: 0; background: none; color: var(--fa-brand-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+@media (max-width: 1180px) { .fa-ck-acti-grid { grid-template-columns: 1fr; } }
 .fa-ck-todo { padding: 24px; color: var(--fa-muted); background: var(--fa-cream); border-radius: 12px; font-size: 13.5px; line-height: 1.55; }
 .fa-ck-todo strong { color: var(--fa-brand-ink); }
 
