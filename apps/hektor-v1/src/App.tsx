@@ -20753,6 +20753,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
+  const [moreOpen, setMoreOpen] = useState(false)
+  useEffect(() => {
+    if (!moreOpen) return
+    const close = () => setMoreOpen(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [moreOpen])
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
@@ -20856,6 +20863,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const negoName = (dossier.commercial_nom ?? '').trim()
   const negoInitials = negoName ? negoName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') : ''
   const negoRole = ['Négociateur', (dossier.agence_nom ?? '').trim()].filter(Boolean).join(' · ')
+  // Menu ⋯ du topbar (= v26) : Acquéreurs / Réaffecter déplacés + actions réelles (Archiver / Hektor / Supprimer).
+  type CkMoreItem = { label?: string; ico?: string; onClick?: () => void; danger?: boolean; sep?: boolean }
+  const ckMoreItems: CkMoreItem[] = []
+  if (props.onOpenRapprochement && !isLightweightDetail) ckMoreItems.push({ label: 'Acquéreurs', ico: CK_ICON.rapprochement, onClick: () => props.onOpenRapprochement?.(dossier) })
+  if (!isLightweightDetail) ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => setActiveTab('contact') })
+  if (ckMoreItems.length > 0 && ((props.onArchiveAnnonce && !isLightweightDetail) || props.onDeleteAnnonce)) ckMoreItems.push({ sep: true })
+  if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
+  ckMoreItems.push({ label: 'Ouvrir dans Hektor ↗', ico: '<path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>', onClick: () => openHektorAnnonce(String(dossier.hektor_annonce_id)) })
+  if (props.onDeleteAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Supprimer', ico: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', danger: true, onClick: () => props.onDeleteAnnonce?.(dossier) })
   // Compteurs affichés en pastille sur le rail (uniquement quand la donnée existe).
   const rubCount = (key: string): string | null => {
     if (key === 'rendezvous') return appts.length > 0 ? `${appts.length} demande${appts.length > 1 ? 's' : ''}` : null
@@ -20908,13 +20924,23 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <span className="fa-ck-tb-nego-tx"><b>{negoName}</b><em>{negoRole}</em></span>
             </span>
           ) : null}
-          {props.onChangeAnnonceStatus && !isLightweightDetail ? (
-            <button type="button" className="fa-ck-tb-btn" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button>
+          {ckMoreItems.length > 0 ? (
+            <span className={`fa-ck-tb-more${moreOpen ? ' is-open' : ''}`}>
+              <button type="button" className="fa-ck-tb-more-btn" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={moreOpen} onClick={(e) => { e.stopPropagation(); setMoreOpen((v) => !v) }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg>
+              </button>
+              <div className="fa-ck-tb-menu" role="menu">
+                {ckMoreItems.map((it, idx) => it.sep
+                  ? <div key={`sep-${idx}`} className="fa-ck-tb-sep" />
+                  : (
+                    <button key={it.label} type="button" role="menuitem" className={it.danger ? 'is-danger' : ''} onClick={() => { setMoreOpen(false); it.onClick?.() }}>
+                      <CkIcon path={it.ico ?? ''} />{it.label}
+                    </button>
+                  ))}
+              </div>
+            </span>
           ) : null}
-          {props.onOpenRapprochement ? (
-            <button type="button" className="fa-ck-tb-btn fa-ck-tb-btn-brand" onClick={() => props.onOpenRapprochement?.(dossier)}>Acquéreurs</button>
-          ) : null}
-          <button type="button" className="fa-ck-tb-icon" onClick={props.onBack} aria-label="Fermer">
+          <button type="button" className="fa-ck-tb-close" onClick={props.onBack} aria-label="Fermer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
