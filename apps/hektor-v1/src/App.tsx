@@ -20847,12 +20847,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <span className="fa-ck-crumb-rf">{dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{dossier.titre_bien ? ` · ${dossier.titre_bien}` : ''}</span>
         </div>
         <div className="fa-ck-tb-right">
+          <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />Hektor · à jour</span>
           {props.onChangeAnnonceStatus && !isLightweightDetail ? (
             <button type="button" className="fa-ck-tb-btn" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button>
           ) : null}
           {props.onOpenRapprochement ? (
             <button type="button" className="fa-ck-tb-btn fa-ck-tb-btn-brand" onClick={() => props.onOpenRapprochement?.(dossier)}>Acquéreurs</button>
           ) : null}
+          <button type="button" className="fa-ck-tb-icon" onClick={props.onBack} aria-label="Fermer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
         </div>
       </header>
 
