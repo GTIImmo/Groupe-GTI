@@ -20767,6 +20767,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : !pMandatOk ? { label: 'Ouvrir le mandat', tab: 'mandat' }
     : nbPortails > 0 ? { label: 'Relancer les acquéreurs', rapprochement: true }
     : { label: 'Ouvrir la diffusion', tab: 'publicite' }
+  const nextRub = nextLink ? CK_RUBRIQUES.find((r) => r.key === (nextLink.rapprochement ? 'rapprochement' : nextLink.tab)) : undefined
+  const situationDesc = pVendu ? 'Vente finalisée — dossier terminé.'
+    : (pOffre || pCompromis) ? 'Une transaction est en cours — suivez-la dans la rubrique Affaires.'
+    : !pMandatNum ? 'Annonce active mais mandat manquant — créez le mandat.'
+    : !pMandatOk ? 'Mandat en cours de validation — la diffusion se débloque après validation.'
+    : nbPortails > 0 ? `Diffusé sur ${nbPortails} portail(s) actif(s) — relancez les acquéreurs ou ajustez le prix.`
+    : 'Mandat validé — ouvrez la diffusion pour passer en ligne.'
   const appts = parseAppointmentRequests(props.detail)
   const emailContacts = props.contacts.filter((c) => c.email)
   const historiqueItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
@@ -20858,19 +20865,23 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
 
           {activeTab === 'synthese' ? (
             <div className="fa-ck-rub">
-              <div className="fa-ck-pa">
-                <div className="fa-ck-pa-head">
-                  <span className="fa-ck-pa-eye">Prochaine action</span>
-                  <span className="fa-ck-pa-state">{situationLabel}</span>
-                </div>
-                {nextLink ? (
-                  <button type="button" className="fa-ck-pa-link" onClick={nextLink.rapprochement ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(nextLink.tab || 'synthese')}>
-                    <span>{nextLink.label}</span>
-                    <span aria-hidden="true">→</span>
-                  </button>
-                ) : (
-                  <p className="fa-ck-pa-done">Vente finalisée — dossier terminé.</p>
-                )}
+              <div className="fa-ck-pa" style={{ ['--led']: statusLed } as CSSProperties}>
+                <div className="fa-ck-pa-eye"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />Prochaine action</div>
+                <div className="fa-ck-pa-title">{situationLabel}</div>
+                <p className="fa-ck-pa-desc">{situationDesc}</p>
+                {nextLink && nextRub ? (
+                  <div className="fa-ck-pa-nav">
+                    <div className="fa-ck-pa-nav-h">Où continuer</div>
+                    <div className="fa-ck-pa-links">
+                      <button type="button" className="fa-ck-pa-link" style={{ ['--c']: nextRub.color } as CSSProperties} onClick={nextLink.rapprochement ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(nextLink.tab || 'synthese')}>
+                        <span className="fa-ck-pl-ic" aria-hidden="true"><DetailIcon type={nextRub.icon} /></span>
+                        <span className="fa-ck-pl-tx">{nextLink.label}</span>
+                        <span className="fa-ck-pl-rub">{nextRub.label}</span>
+                        <span className="fa-ck-pl-go" aria-hidden="true">→</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
               <div className="fa-ck-acti">
                 <div className="fa-ck-acti-head"><strong>Activité</strong></div>

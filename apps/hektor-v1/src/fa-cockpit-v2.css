@@ -155,14 +155,24 @@
 .fa-ck-content-ic svg { width: 17px; height: 17px; }
 .fa-ck-rub { display: flex; flex-direction: column; gap: 16px; }
 
-/* Synthèse : Prochaine action + Activité. */
-.fa-ck-pa { border: 1px solid color-mix(in srgb, var(--fa-brand) 18%, var(--fa-line)); border-radius: 16px; padding: 16px 18px; background: linear-gradient(120deg, #fff, color-mix(in srgb, var(--fa-brand) 4%, #fff)); }
-.fa-ck-pa-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.fa-ck-pa-eye { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fa-brand-ink); }
-.fa-ck-pa-state { font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600; color: var(--fa-ink); }
-.fa-ck-pa-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--fa-line); background: #fff; border-radius: 12px; padding: 12px 15px; font: inherit; font-size: 14px; font-weight: 700; color: var(--fa-brand-ink); cursor: pointer; transition: border-color .14s, box-shadow .14s; }
-.fa-ck-pa-link:hover { border-color: var(--fa-brand); box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--fa-brand) 55%, transparent); }
-.fa-ck-pa-done { margin: 0; color: var(--fa-muted); font-size: 13.5px; }
+/* Prochaine action — porté du v26 (.pa). */
+.fa-ck-pa { position: relative; overflow: hidden; border-radius: 22px; padding: 16px 22px 14px; isolation: isolate; background: radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--led, #c2125f) 10%, transparent), transparent 58%), linear-gradient(162deg, #fffdfb, #fbf5ee); border: 1px solid #efe3d6; box-shadow: 0 2px 4px rgba(32, 24, 18, .04), 0 34px 62px -34px rgba(32, 24, 18, .34); }
+.fa-ck-pa::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--led, #c2125f), color-mix(in srgb, var(--led, #c2125f) 15%, transparent)); }
+.fa-ck-pa-eye { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--fa-brand-ink); }
+.fa-ck-pa-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--led, #c2125f) 24%, transparent); }
+.fa-ck-pa-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 22px; font-weight: 600; letter-spacing: -.018em; line-height: 1.12; margin: 6px 0 4px; color: var(--fa-ink); }
+.fa-ck-pa-desc { font-size: 13px; line-height: 1.5; color: var(--fa-muted); margin: 0; }
+.fa-ck-pa-nav { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e9dcc5; }
+.fa-ck-pa-nav-h { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--fa-ink); opacity: .7; margin-bottom: 7px; }
+.fa-ck-pa-links { display: flex; flex-direction: column; gap: 2px; }
+.fa-ck-pa-link { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; background: none; border: 0; border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: background .14s; }
+.fa-ck-pa-link:hover { background: color-mix(in srgb, var(--c, var(--fa-brand)) 9%, transparent); }
+.fa-ck-pl-ic { width: 32px; height: 32px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, color-mix(in srgb, var(--c, var(--fa-brand)) 78%, #fff), var(--c, var(--fa-brand))); box-shadow: 0 6px 13px -7px color-mix(in srgb, var(--c, var(--fa-brand)) 80%, transparent); }
+.fa-ck-pl-ic svg { width: 17px; height: 17px; }
+.fa-ck-pl-tx { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-pl-rub { flex: none; font-size: 10.5px; font-weight: 800; color: var(--c, var(--fa-brand)); background: color-mix(in srgb, var(--c, var(--fa-brand)) 12%, transparent); border-radius: 99px; padding: 3px 9px; }
+.fa-ck-pl-go { flex: none; color: var(--c, var(--fa-brand)); font-weight: 800; font-size: 17px; transition: transform .16s; }
+.fa-ck-pa-link:hover .fa-ck-pl-go { transform: translateX(4px); }
 
 .fa-ck-acti-head { margin-bottom: 10px; }
 .fa-ck-acti-head strong { font-size: 15px; }
