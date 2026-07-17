@@ -20736,6 +20736,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const dossier = props.selectedDossier
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
   const currentTab = CK_RUBRIQUES.find((r) => r.key === activeTab) ?? CK_RUBRIQUES[0]
+  const heroPhoto = props.images[0]?.url ?? dossier.photo_url_listing ?? null
+  const heroTitle = dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'
 
   return (
     <>
@@ -20758,6 +20760,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       </header>
 
       <div className="fa-ck-body">
+        <div className="fa-ck-leftcol">
+          <div className="fa-ck-hero">
+            <div className="fa-ck-hero-photo">{heroPhoto ? <img src={heroPhoto} alt={heroTitle} /> : <span className="fa-ck-hero-noimg" aria-hidden="true" />}</div>
+            <strong className="fa-ck-hero-title">{heroTitle}</strong>
+            <div className="fa-ck-hero-addr">{props.address}</div>
+            <div className="fa-ck-hero-price">
+              <span className="fa-ck-hero-price-k">Prix</span>
+              <span className="fa-ck-hero-price-v">{formatPrice(dossier.prix)}</span>
+            </div>
+          </div>
         <nav className="fa-ck-rail" aria-label="Rubriques">
           {CK_RUBRIQUES.map((rub) => (
             <button
@@ -20771,6 +20783,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </button>
           ))}
         </nav>
+        </div>
 
         <div className="fa-ck-content">
           <div className="fa-ck-content-head">
