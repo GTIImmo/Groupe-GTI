@@ -20752,6 +20752,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimEditorOpen, setEstimEditorOpen] = useState(false)
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
+  const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
@@ -20947,17 +20948,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 ) : null}
               </div>
               <div className="fa-ck-acti">
-                <div className="fa-ck-rub-head"><span className="fa-ck-rh-l">Activité</span><span className="fa-ck-rh-cnt">{appts.length + emailContacts.length}</span></div>
+                <div className="fa-ck-rub-head">
+                  <span className="fa-ck-rh-l">Activité</span>
+                  <span className="fa-ck-rh-sub">Acquéreurs &amp; mandant</span>
+                  <div className="fa-ck-afilt">
+                    <button type="button" className={actiFilter === 'tout' ? 'is-on' : ''} onClick={() => setActiFilter('tout')}>Tout</button>
+                    <button type="button" className={actiFilter === 'acq' ? 'is-on' : ''} onClick={() => setActiFilter('acq')}>Acquéreurs</button>
+                    <button type="button" className={actiFilter === 'mandant' ? 'is-on' : ''} onClick={() => setActiFilter('mandant')}>Mandant</button>
+                  </div>
+                </div>
                 <div className="fa-ck-acti-card">
                   <div className="fa-ck-afeed">
-                    {appts.length > 0 ? (
+                    {appts.length > 0 && actiFilter !== 'mandant' ? (
                       <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
                         <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
                         <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
                         <span className="fa-ck-at">à traiter</span>
                       </button>
                     ) : null}
-                    {emailContacts.slice(0, 4).map((c) => (
+                    {emailContacts.filter((c) => actiFilter === 'tout' || (/mandant|propri|owner|vendeur/i.test(c.role || '') ? 'mandant' : 'acq') === actiFilter).slice(0, 4).map((c) => (
                       <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
                         <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><CkIcon path={CK_ICON.mail} /></span>
                         <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>

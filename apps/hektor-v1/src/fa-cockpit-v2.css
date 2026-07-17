@@ -162,6 +162,10 @@
 .fa-ck-rub-head { display: flex; align-items: center; gap: 11px; margin: 6px 0 13px; }
 .fa-ck-rh-l { font-family: 'Fraunces', 'Spectral', serif; font-size: 16px; font-weight: 600; color: var(--fa-ink); }
 .fa-ck-rh-cnt { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); background: #f1eae1; border: 1px solid var(--fa-line); border-radius: 99px; padding: 3px 9px; }
+.fa-ck-rh-sub { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); background: #f1eae1; border: 1px solid var(--fa-line); border-radius: 99px; padding: 3px 9px; }
+.fa-ck-afilt { margin-left: auto; display: inline-flex; background: #f3ece2; border: 1px solid var(--fa-line); border-radius: 9px; padding: 3px; gap: 2px; }
+.fa-ck-afilt button { font: inherit; font-size: 11px; font-weight: 700; border: 0; background: none; color: #8a7f74; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: .14s; }
+.fa-ck-afilt button.is-on { background: #fff; color: var(--fa-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .07); }
 .fa-ck-acti-card { position: relative; overflow: hidden; background: linear-gradient(135deg, #fff, #fdf8f4 60%, #fbf6f8); border: 1px solid var(--fa-line); border-radius: 20px; padding: 8px 18px 16px; box-shadow: 0 26px 52px -34px rgba(24, 18, 14, .32); }
 .fa-ck-afeed { position: relative; margin: 6px 0 2px; }
 .fa-ck-afeed::before { content: ''; position: absolute; left: 18px; top: 16px; bottom: 20px; width: 2px; background: linear-gradient(#ece2d3, #ece2d3 72%, transparent); z-index: 0; }
