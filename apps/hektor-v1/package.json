@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/fraunces": "^5.2.9",
     "@fontsource/hanken-grotesk": "^5.2.8",
     "@fontsource/spectral": "^5.2.8",
     "@supabase/supabase-js": "^2.57.4",

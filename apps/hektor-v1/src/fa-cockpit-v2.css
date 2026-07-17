@@ -162,6 +162,17 @@
 .fa-ck-linkmini { border: 0; background: none; color: var(--fa-brand-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
 @media (max-width: 1180px) { .fa-ck-acti-grid { grid-template-columns: 1fr; } }
 .fa-ck-todo { padding: 24px; color: var(--fa-muted); background: var(--fa-cream); border-radius: 12px; font-size: 13.5px; line-height: 1.55; }
+.fa-ck-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.fa-ck-fact { border: 1px solid var(--fa-line); border-radius: 12px; padding: 12px 14px; background: #fff; display: flex; flex-direction: column; gap: 3px; }
+.fa-ck-fact .k { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fa-muted); }
+.fa-ck-fact .v { font-size: 18px; font-weight: 700; color: var(--fa-ink); }
+.fa-ck-portails { margin: 0; font-size: 13px; color: var(--fa-ink); line-height: 1.5; }
+.fa-ck-histo { display: flex; flex-direction: column; gap: 10px; }
+.fa-ck-histo-row { border: 1px solid var(--fa-line); border-left: 3px solid var(--fa-brand); border-radius: 12px; padding: 11px 14px; background: #fff; }
+.fa-ck-histo-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fa-ck-histo-h strong { font-size: 14px; }
+.fa-ck-histo-h span { font-size: 12px; color: var(--fa-muted); }
+.fa-ck-histo-row p { margin: 4px 0 0; font-size: 13px; color: var(--fa-muted); line-height: 1.5; }
 .fa-ck-todo strong { color: var(--fa-brand-ink); }
 
 @media (max-width: 1180px) {

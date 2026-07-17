@@ -20768,6 +20768,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : { label: 'Ouvrir la diffusion', tab: 'publicite' }
   const appts = parseAppointmentRequests(props.detail)
   const emailContacts = props.contacts.filter((c) => c.email)
+  const historiqueItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
+    .slice()
+    .sort((a, b) => (b.date ? Date.parse(b.date) : 0) - (a.date ? Date.parse(a.date) : 0))
 
   return (
     <>
@@ -20920,9 +20923,56 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub">
               <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
             </div>
+          ) : activeTab === 'contact' ? (
+            <div className="fa-ck-rub">
+              {isLightweightDetail
+                ? <ReadOnlyDetailNotice label="Les contacts ne sont pas modifiables depuis une fiche d'index leger." />
+                : <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+              {props.contacts.length > 0 ? (
+                <div className="fa-ck-acti-list">
+                  {props.contacts.map((c) => (
+                    <div key={c.id} className="fa-ck-acti-row">
+                      <span className="fa-ck-acti-nm">{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</span>
+                      <span className="fa-ck-acti-em">{[c.role, c.email].filter(Boolean).join(' · ')}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
+            </div>
+          ) : activeTab === 'publicite' ? (
+            <div className="fa-ck-rub">
+              <div className="fa-ck-facts">
+                <div className="fa-ck-fact"><span className="k">Diffusable</span><span className="v">{dossier.diffusable === '1' ? 'Oui' : 'Non'}</span></div>
+                <div className="fa-ck-fact"><span className="k">Portails actifs</span><span className="v">{nbPortails}</span></div>
+              </div>
+              {dossier.portails_resume ? <p className="fa-ck-portails">{dossier.portails_resume}</p> : <p className="fa-ck-empty">Aucun portail actif.</p>}
+            </div>
+          ) : activeTab === 'reporting' ? (
+            <div className="fa-ck-rub">
+              <div className="fa-ck-facts">
+                <InfoCard label="Visites / demandes" value={appts.length} />
+                <InfoCard label="Portails actifs" value={nbPortails} />
+                <InfoCard label="Contacts liés" value={props.contacts.length} />
+                <InfoCard label="Prix actuel" value={formatPrice(dossier.prix)} />
+              </div>
+              <PriceChangeHistoryCard source={props.detail} title="Historique des prix" emptyLabel="Aucun changement de prix historisé pour cette annonce." />
+            </div>
+          ) : activeTab === 'historique' ? (
+            <div className="fa-ck-rub">
+              {historiqueItems.length > 0 ? (
+                <div className="fa-ck-histo">
+                  {historiqueItems.map((h) => (
+                    <div key={String(h.id)} className="fa-ck-histo-row">
+                      <div className="fa-ck-histo-h"><strong>{h.title}</strong><span>{h.date ? formatDate(h.date) : ''}</span></div>
+                      {h.body ? <p>{h.body}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="fa-ck-empty">Aucun historique de demande.</p>}
+            </div>
           ) : (
             <div className="fa-ck-todo">
-              <p>Rubrique <strong>« {currentTab.label} »</strong> — integration a venir (Contact, Publicite, Historique, Reporting).</p>
+              <p>Rubrique <strong>« {currentTab.label} »</strong>.</p>
             </div>
           )}
         </div>
