@@ -181,6 +181,16 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     mandat_json: JSON.stringify({
       num: '17125', type: 'ACCORD', dateStart: '15/06/2026', dateEnd: '14/06/2027', statut: 'Valide',
       honorairesVendeur: '18 000 €', taux: '4,6 %',
+      demarches: [
+        { title: 'Validation', sub: 'Confirmer le mandat pour débloquer la diffusion', state: 'ok', badge: 'Demande de validation', act: 'Demander' },
+        { title: 'Baisse de prix', sub: 'Ajuster le prix public de l’annonce', state: 'lock', lockLabel: 'Après validation' },
+        { title: 'Annulation mandat', sub: 'Clôturer et retirer le mandat', state: 'lock', lockLabel: 'Après validation' },
+      ],
+      avenant: {
+        num: '17125',
+        repris: [{ t: 'Mandants (2)', ok: true }, { t: 'Bien & adresse', ok: true }, { t: 'Type ACCORD', ok: true }, { t: 'Durée', ok: true }, { t: 'Honoraires — à confirmer', warn: true }],
+        nouveauxHonos: '16 000 €', dateAvenant: '10/07/2026',
+      },
       signatures: [
         { av: 'IS', tone: 'ok', name: 'Mandat de vente 17125.pdf', sub: 'Envoyé le 12/06 · signé le 14/06 par les mandants', badge: 'Signé', badgeTone: 'ok' },
         { av: 'A', tone: 'wait', name: 'Avenant rectificatif.pdf', sub: 'Envoyé le 08/07 · en attente de signature', badge: 'En attente', badgeTone: 'wait' },

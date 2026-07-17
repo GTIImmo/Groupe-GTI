@@ -21460,7 +21460,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           ) : activeTab === 'mandat' ? (
             <div className="fa-ck-rub fa-ck-mandat">
               {(() => {
-                const m = parseJson<{ num: string; type: string; dateStart: string; dateEnd: string; statut: string; honorairesVendeur?: string; taux?: string; signatures?: Array<{ av: string; tone: string; name: string; sub: string; badge: string; badgeTone: string }> } | null>(detailStr('mandat_json') || 'null', null)
+                const m = parseJson<{ num: string; type: string; dateStart: string; dateEnd: string; statut: string; honorairesVendeur?: string; taux?: string; demarches?: Array<{ title: string; sub: string; state: string; badge?: string; act?: string; lockLabel?: string }>; avenant?: { num: string; repris: Array<{ t: string; ok?: boolean; warn?: boolean }>; nouveauxHonos?: string; dateAvenant?: string }; signatures?: Array<{ av: string; tone: string; name: string; sub: string; badge: string; badgeTone: string }> } | null>(detailStr('mandat_json') || 'null', null)
                 if (!m) return null
                 return (
                   <>
@@ -21472,8 +21472,39 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       <div className="fa-ck-mf"><div className="mk">Échéance</div><div className="mv">{m.dateEnd}</div></div>
                       <div className="fa-ck-mf"><div className="mk">Statut</div><div className="mv ok">{m.statut}</div></div>
                     </div></div>
+                    {m.demarches && m.demarches.length ? (
+                      <>
+                        <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic blue" aria-hidden="true"><CkIcon path={CK_ICON.publicite} /></span><div><div className="fa-ck-pub-t">Démarches</div><div className="fa-ck-pub-s">Demandes soumises à Pauline (direction)</div></div><span className="fa-ck-badge-ok" style={{ background: '#e7edf7', color: '#2c4770', borderColor: '#cfd9ea' }}>à Pauline</span></div>
+                        <div className="fa-ck-pub-card">
+                          <p className="fa-ck-dm-banner">Ces demandes sont <b>envoyées à Pauline</b> (direction) pour validation. Le prix et le statut ne changent <b>qu'après acceptation</b> — rien n'est modifié automatiquement.</p>
+                          {m.demarches.map((d, i) => (
+                            <div key={i} className={`fa-ck-dm-card${d.state === 'lock' ? ' lock' : ''}`}>
+                              <div className="fa-ck-dm-tx"><div className="dm-nm">{d.title}</div><div className="dm-sub">{d.sub}</div></div>
+                              {d.state === 'lock'
+                                ? <span className="fa-ck-dm-state lock">🔒 {d.lockLabel}</span>
+                                : <><span className="fa-ck-dm-state">● {d.badge}</span>{d.act ? <button type="button" className="fa-ck-dm-act" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, props.actionRole ?? 'nego', 'demande_diffusion')}>{d.act}</button> : null}</>}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
                     <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Validation du mandat</div><div className="fa-ck-pub-s">Contrôle &amp; diffusion</div></div></div>
                     <div className="fa-ck-pub-card"><div className="fa-ck-valstate"><div className="vlab">État de validation</div><div className={`vval ${pMandatOk ? 'ok' : 'wait'}`}>{pMandatOk ? 'Validé · confirmé par Hektor' : 'En attente de validation'}</div></div><p className="fa-ck-vnote">L'annonce est validée après contrôle. La validation débloque la diffusion sur les portails.</p></div>
+                    {m.avenant ? (
+                      <>
+                        <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#f7f0e3', color: '#a8814a' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Avenant au mandat</div><div className="fa-ck-pub-s">Modification du prix — sans novation</div></div><span className="fa-ck-badge-wait">Prêt à vérifier</span></div>
+                        <div className="fa-ck-pub-card">
+                          <div className="fa-ck-avband">Avenant lié au mandat n° {m.avenant.num}</div>
+                          <div className="fa-ck-avsub">Informations reprises du mandat (non modifiables)</div>
+                          <div className="fa-ck-repris">{m.avenant.repris.map((r, i) => <span key={i} className={`fa-ck-rp${r.warn ? ' warn' : ' ok'}`}>{r.warn ? '⚠ ' : '✓ '}{r.t}</span>)}</div>
+                          <div className="fa-ck-avsub">À compléter</div>
+                          <div className="fa-ck-hono">
+                            {m.avenant.nouveauxHonos ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Nouveaux honoraires TTC</div><div className="fa-ck-hf-v gold">{m.avenant.nouveauxHonos}</div></div> : null}
+                            {m.avenant.dateAvenant ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Date de l'avenant</div><div className="fa-ck-hf-v">{m.avenant.dateAvenant}</div></div> : null}
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
                     {m.signatures && m.signatures.length ? (
                       <>
                         <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e3f2ea', color: '#2f7d59' }} aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Suivi de signature</div><div className="fa-ck-pub-s">Signature électronique · ImmoSign</div></div></div>
