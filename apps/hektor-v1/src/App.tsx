@@ -20729,19 +20729,21 @@ function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
 }
 
-const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string; color: string }> = [
-  { key: 'synthese', label: 'Synthèse', sub: "Vue d'ensemble", ico: CK_ICON.synthese, color: '#c2125f' },
-  { key: 'lebien', label: 'Le Bien', sub: 'Photos · caractéristiques', ico: CK_ICON.lebien, color: '#a8814a' },
-  { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur', ico: CK_ICON.estimation, color: '#e0952f' },
-  { key: 'mandat', label: 'Mandat', sub: 'N° · signature', ico: CK_ICON.mandat, color: '#9d0f4e' },
-  { key: 'contact', label: 'Contact', sub: 'Mandants · vendeurs', ico: CK_ICON.contact, color: '#3a5a8a' },
-  { key: 'publicite', label: 'Publicité', sub: 'Portails · diffusion', ico: CK_ICON.publicite, color: '#c2125f' },
-  { key: 'rapprochement', label: 'Rapprochement', sub: 'Acquéreurs', ico: CK_ICON.rapprochement, color: '#0f7c8a' },
-  { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes', ico: CK_ICON.rendezvous, color: '#6d4bb5' },
-  { key: 'affaires', label: 'Affaires', sub: 'Offres · compromis', ico: CK_ICON.affaires, color: '#1f6e44' },
-  { key: 'documents', label: 'Documents', sub: 'Pièces du dossier', ico: CK_ICON.documents, color: '#4756a6' },
-  { key: 'historique', label: 'Historique', sub: 'Demandes · suivi', ico: CK_ICON.historique, color: '#8a807a' },
-  { key: 'reporting', label: 'Reporting', sub: 'Indicateurs · prix', ico: CK_ICON.reporting, color: '#a8814a' },
+// Rubriques alignées EXACTEMENT sur le RUBS du v26 (label/sous-libellé/couleur/tuile).
+// 'synthese' n'apparaît PAS dans le rail (= vue par défaut) ; conservée pour l'en-tête de contenu.
+const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string; color: string; bg: string }> = [
+  { key: 'synthese', label: 'Synthèse', sub: "Vue d'ensemble", ico: CK_ICON.synthese, color: '#c2125f', bg: '#f9e7ef' },
+  { key: 'lebien', label: 'Le Bien', sub: 'Photos · descriptif · caractéristiques', ico: CK_ICON.lebien, color: '#b5651d', bg: '#f6e9db' },
+  { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur · cadastre', ico: CK_ICON.estimation, color: '#8a6a2f', bg: '#f4ecd9' },
+  { key: 'mandat', label: 'Mandat', sub: 'Mandat · avenant · signature', ico: CK_ICON.mandat, color: '#9d0f4e', bg: '#f9e7ef' },
+  { key: 'contact', label: 'Contact', sub: 'Mandants · syndic · notaires', ico: CK_ICON.contact, color: '#3a5a8a', bg: '#e7edf7' },
+  { key: 'publicite', label: 'Publicité', sub: 'Portails · QR · diffusion', ico: CK_ICON.publicite, color: '#c2125f', bg: '#f9e7ef' },
+  { key: 'rapprochement', label: 'Rapprochement', sub: 'Acquéreurs · offres · visites', ico: CK_ICON.rapprochement, color: '#0f7c8a', bg: '#daeef1' },
+  { key: 'affaires', label: 'Affaires', sub: 'Offre · compromis · vente', ico: CK_ICON.affaires, color: '#3b7d4f', bg: '#e4f1e8' },
+  { key: 'historique', label: 'Historique', sub: 'Journal · baisse de prix', ico: CK_ICON.historique, color: '#7a6f67', bg: '#f1eae1' },
+  { key: 'reporting', label: 'Reporting mandant', sub: 'KPIs · PDF · envoyer', ico: CK_ICON.reporting, color: '#8a6a2f', bg: '#f4ecd9' },
+  { key: 'documents', label: 'Documents', sub: 'Fichiers · signature · Hektor', ico: CK_ICON.documents, color: '#4756a6', bg: '#e9ebf8' },
+  { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes · disponibilités', ico: CK_ICON.rendezvous, color: '#6d4bb5', bg: '#ece4f8' },
 ]
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
@@ -20789,34 +20791,52 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   ]
   const nbPortails = Number(dossier.nb_portails_actifs) || 0
   const statusLed = pVendu ? '#a86af0' : (pOffre || pCompromis) ? '#3fbf7a' : (pMandatNum && pMandatOk) ? '#3fbf7a' : '#f0a935'
-  // Rail filtré par phase (comme la maquette : « en avant » + « Autres rubriques » repliées).
+  const appts = parseAppointmentRequests(props.detail)
+  // Rail construit EXACTEMENT comme le v26 : featList = Le Bien + [feat de phase] + Rendez-vous + Contact,
+  // chaque item « en avant » portant une pastille de statut (foot) ; puis « Autres rubriques » repliées.
   const ckPhase = pVendu ? 'ven' : (pOffre || pCompromis) ? 'tra' : (pMandatNum && pMandatOk) ? 'dif' : pMandatNum ? 'man' : 'est'
-  const PHASE_FEAT: Record<string, string[]> = {
-    est: ['estimation', 'mandat'],
-    man: ['mandat', 'documents'],
-    dif: ['publicite', 'rapprochement', 'documents'],
-    tra: ['affaires', 'contact'],
-    ven: ['affaires', 'reporting'],
+  type CkFoot = [tone: 'ok' | 'alert' | 'neutral' | 'wait', label: string]
+  const docFoot: CkFoot = ['alert', 'À préparer']
+  const rdvFoot: CkFoot = appts.length > 0 ? ['ok', `${appts.length} demande${appts.length > 1 ? 's' : ''}`] : ['neutral', 'Visites · demandes']
+  const pubFoot: CkFoot = nbPortails > 0 ? ['ok', `${nbPortails} portail${nbPortails > 1 ? 's' : ''}`] : ['neutral', 'Diffusion']
+  const CK_PHASE: Record<string, { feat: Array<[string, CkFoot]>; autre: string[] }> = {
+    est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['documents', 'historique', 'reporting'] },
+    man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['estimation', 'historique', 'reporting'] },
+    dif: { feat: [['publicite', pubFoot], ['rapprochement', ['ok', 'Acquéreurs']], ['documents', docFoot]], autre: ['mandat', 'estimation', 'affaires', 'historique', 'reporting'] },
+    tra: { feat: [['affaires', ['alert', 'Offre / compromis']]], autre: ['documents', 'publicite', 'rapprochement', 'mandat', 'historique', 'reporting'] },
+    ven: { feat: [['affaires', ['neutral', `Vendu · ${formatPrice(dossier.prix)}`]], ['reporting', ['neutral', 'Bilan de vente']]], autre: ['documents', 'mandat', 'historique'] },
   }
-  const featKeys = new Set<string>(['synthese', 'lebien', 'rendezvous', 'contact', ...(PHASE_FEAT[ckPhase] || [])])
-  const featRubs = CK_RUBRIQUES.filter((r) => featKeys.has(r.key))
-  const autreRubs = CK_RUBRIQUES.filter((r) => !featKeys.has(r.key))
-  const renderRn = (rub: (typeof CK_RUBRIQUES)[number], feat: boolean) => (
-    <button
-      key={rub.key}
-      type="button"
-      className={`fa-ck-rn ${activeTab === rub.key ? 'is-active' : ''}${feat ? ' is-feat' : ''}`}
-      style={{ ['--c']: rub.color } as CSSProperties}
-      onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
-    >
-      <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
-      <span className="fa-ck-rn-t">
-        <span className="fa-ck-rn-n">{rub.label}{rubCount(rub.key) ? <span className="fa-ck-rn-badge">{rubCount(rub.key)}</span> : null}</span>
-        <span className="fa-ck-rn-s">{rub.sub}</span>
-      </span>
-      <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
-    </button>
-  )
+  const PH = CK_PHASE[ckPhase] ?? CK_PHASE.dif
+  const featList: Array<[string, CkFoot]> = [
+    ['lebien', ['neutral', 'Photos · caractéristiques']],
+    ...PH.feat,
+    ['rendezvous', rdvFoot],
+    ['contact', ['neutral', 'Mandants · vendeurs']],
+  ]
+  const autreList = PH.autre
+  const horsPerimetre = Math.max(0, 11 - (featList.length + autreList.length))
+  const CK_RUB_MAP: Record<string, (typeof CK_RUBRIQUES)[number]> = Object.fromEntries(CK_RUBRIQUES.map((r) => [r.key, r]))
+  const renderRn = (key: string, foot: CkFoot | null, isFeat: boolean) => {
+    const rub = CK_RUB_MAP[key]
+    if (!rub) return null
+    return (
+      <button
+        key={key}
+        type="button"
+        className={`fa-ck-rn ${activeTab === key ? 'is-active' : ''}${isFeat ? ' is-feat' : ''}`}
+        style={{ ['--c']: rub.color, ['--s']: rub.bg } as CSSProperties}
+        onClick={key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(key)}
+      >
+        <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
+        <span className="fa-ck-rn-t">
+          <span className="fa-ck-rn-n">{rub.label}</span>
+          {foot ? <span className={`fa-ck-rn-st ${foot[0]}`}>{foot[1]}</span> : <span className="fa-ck-rn-s">{rub.sub}</span>}
+        </span>
+        {foot && foot[0] === 'alert' ? <span className="fa-ck-rn-dot alert" aria-hidden="true" /> : null}
+        <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
+      </button>
+    )
+  }
   const situationLabel = pVendu ? 'Vendu'
     : pCompromis ? 'Compromis en cours'
     : pOffre ? 'Sous offre'
@@ -20857,7 +20877,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : !pMandatOk ? 'Mandat en cours de validation — la diffusion se débloque après validation.'
     : nbPortails > 0 ? `Diffusé sur ${nbPortails} portail(s) actif(s) — relancez les acquéreurs ou ajustez le prix.`
     : 'Mandat validé — ouvrez la diffusion pour passer en ligne.'
-  const appts = parseAppointmentRequests(props.detail)
   const emailContacts = props.contacts.filter((c) => c.email)
   // Négociateur (carte topbar) : dérivé des champs réels commercial_nom / agence_nom.
   const negoName = (dossier.commercial_nom ?? '').trim()
@@ -20872,13 +20891,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
   ckMoreItems.push({ label: 'Ouvrir dans Hektor ↗', ico: '<path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>', onClick: () => openHektorAnnonce(String(dossier.hektor_annonce_id)) })
   if (props.onDeleteAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Supprimer', ico: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', danger: true, onClick: () => props.onDeleteAnnonce?.(dossier) })
-  // Compteurs affichés en pastille sur le rail (uniquement quand la donnée existe).
-  const rubCount = (key: string): string | null => {
-    if (key === 'rendezvous') return appts.length > 0 ? `${appts.length} demande${appts.length > 1 ? 's' : ''}` : null
-    if (key === 'contact') return props.contacts.length > 0 ? String(props.contacts.length) : null
-    if (key === 'publicite') return nbPortails > 0 ? `${nbPortails} portail${nbPortails > 1 ? 's' : ''}` : null
-    return null
-  }
   // Horodatage relatif du fil d'activité.
   const relTime = (iso: string): string => {
     if (!iso) return ''
@@ -20973,16 +20985,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-hero-pv">{formatPrice(dossier.prix)}{prixM2 ? <em>{prixM2.toLocaleString('fr-FR')} €/m²</em> : null}</div>
             </div>
           </div>
-        <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{featRubs.length} en avant</span></div>
+        <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{featList.length} en avant · {horsPerimetre} hors périmètre</span></div>
         <nav className="fa-ck-rail" aria-label="Rubriques">
-          {featRubs.map((rub) => renderRn(rub, true))}
-          {autreRubs.length > 0 ? (
+          {featList.map(([k, foot]) => renderRn(k, foot, true))}
+          {autreList.length > 0 ? (
             <>
               <button type="button" className={`fa-ck-rn-more${showAutres ? ' is-open' : ''}`} onClick={() => setShowAutres((v) => !v)}>
-                Autres rubriques <span className="fa-ck-rn-more-c">{autreRubs.length}</span>
+                Autres rubriques <span className="fa-ck-rn-more-c">{autreList.length}</span>
                 <span className="fa-ck-rn-more-ch" aria-hidden="true">▾</span>
               </button>
-              {showAutres ? autreRubs.map((rub) => renderRn(rub, false)) : null}
+              {showAutres ? autreList.map((k) => renderRn(k, null, false)) : null}
             </>
           ) : null}
         </nav>
@@ -21014,6 +21026,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <div className="fa-ck-wc">
           {activeTab !== 'synthese' ? (
             <div className="fa-ck-content-head">
+              <button type="button" className="fa-ck-ch-back" onClick={() => setActiveTab('synthese')} aria-label="Retour à la synthèse">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+                <span>Synthèse</span>
+              </button>
               <span className="fa-ck-content-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
               <strong>{currentTab.label}</strong>
             </div>
