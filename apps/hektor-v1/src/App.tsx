@@ -20813,13 +20813,33 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : !pMandatOk ? 'Mandat signé · à valider'
     : nbPortails > 0 ? 'Diffusé · en ligne'
     : 'Validé · à diffuser'
-  const nextLink: { label: string; tab?: string; rapprochement?: boolean } | null = pVendu ? null
-    : (pCompromis || pOffre) ? { label: "Traiter l'affaire", tab: 'affaires' }
-    : !pMandatNum ? { label: 'Créer le mandat', tab: 'mandat' }
-    : !pMandatOk ? { label: 'Ouvrir le mandat', tab: 'mandat' }
-    : nbPortails > 0 ? { label: 'Relancer les acquéreurs', rapprochement: true }
-    : { label: 'Ouvrir la diffusion', tab: 'publicite' }
-  const nextRub = nextLink ? CK_RUBRIQUES.find((r) => r.key === (nextLink.rapprochement ? 'rapprochement' : nextLink.tab)) : undefined
+  // Actions « prochaine étape » : mixées (métier + navigation), visibles UNIQUEMENT si l'état est
+  // cohérent, 3 maximum. Chaque action route vers la rubrique où elle se réalise (comme la maquette).
+  const hasRappro = Boolean(props.onOpenRapprochement)
+  const nextActions: Array<{ label: string; rubKey: string }> = (
+    pVendu ? []
+    : (pOffre || pCompromis) ? [
+        { label: "Traiter l'affaire", rubKey: 'affaires' },
+        ...(hasRappro ? [{ label: 'Voir les acquéreurs', rubKey: 'rapprochement' }] : []),
+      ]
+    : !pMandatNum ? [
+        { label: 'Créer le mandat', rubKey: 'mandat' },
+      ]
+    : !pMandatOk ? [
+        { label: 'Demander la validation', rubKey: 'mandat' },
+        { label: 'Voir les documents', rubKey: 'documents' },
+      ]
+    : nbPortails > 0 ? [
+        ...(hasRappro ? [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }] : []),
+        { label: 'Faire une baisse de prix', rubKey: 'mandat' },
+        { label: 'Gérer la diffusion', rubKey: 'publicite' },
+      ]
+    : [
+        { label: 'Ouvrir la diffusion', rubKey: 'publicite' },
+        { label: 'Faire une baisse de prix', rubKey: 'mandat' },
+      ]
+  ).slice(0, 3)
+  const runAction = (rubKey: string) => { if (rubKey === 'rapprochement') props.onOpenRapprochement?.(dossier); else setActiveTab(rubKey) }
   const situationDesc = pVendu ? 'Vente finalisée — dossier terminé.'
     : (pOffre || pCompromis) ? 'Une transaction est en cours — suivez-la dans la rubrique Affaires.'
     : !pMandatNum ? 'Annonce active mais mandat manquant — créez le mandat.'
@@ -20937,16 +20957,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-pa" style={{ ['--led']: statusLed } as CSSProperties}>
                 <div className="fa-ck-pa-title"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />{situationLabel}</div>
                 <p className="fa-ck-pa-desc">{situationDesc}</p>
-                {nextLink && nextRub ? (
+                {nextActions.length > 0 ? (
                   <div className="fa-ck-pa-nav">
-                    <div className="fa-ck-pa-nav-h">Où continuer</div>
                     <div className="fa-ck-pa-links">
-                      <button type="button" className="fa-ck-pa-link" style={{ ['--c']: nextRub.color } as CSSProperties} onClick={nextLink.rapprochement ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(nextLink.tab || 'synthese')}>
-                        <span className="fa-ck-pl-ic" aria-hidden="true"><CkIcon path={nextRub.ico} /></span>
-                        <span className="fa-ck-pl-tx">{nextLink.label}</span>
-                        <span className="fa-ck-pl-rub">{nextRub.label}</span>
-                        <span className="fa-ck-pl-go" aria-hidden="true">→</span>
-                      </button>
+                      {nextActions.map((act) => {
+                        const rub = CK_RUBRIQUES.find((r) => r.key === act.rubKey) ?? CK_RUBRIQUES[0]
+                        return (
+                          <button key={act.label} type="button" className="fa-ck-pa-link" style={{ ['--c']: rub.color } as CSSProperties} onClick={() => runAction(act.rubKey)}>
+                            <span className="fa-ck-pl-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
+                            <span className="fa-ck-pl-tx">{act.label}</span>
+                            <span className="fa-ck-pl-rub">{rub.label}</span>
+                            <span className="fa-ck-pl-go" aria-hidden="true">→</span>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 ) : null}
