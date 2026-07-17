@@ -1,0 +1,13 @@
+/* Cockpit v2 — feuille scopée sous .fa-cockpit-v2 (Lot 0 : vide, importée en dernier). */
+/* ⚠ .fa-cockpit-v2 est une classe NEUVE — .fa-cockpit est déjà pris par le cockpit actuel. */
+/* Règle absolue : aucun sélecteur ne doit sortir du scope .fa-cockpit-v2. */
+
+.fa-cockpit-v2 {
+  /* Tokens charte fiche, redéclarés sur la racine.
+     Inertes tant qu'aucun élément ne porte la classe (Lot 0). */
+  --fa-brand: #c2125f;
+  --fa-brand-ink: #9d0f4e;
+  --fa-cream: #f1ece4;
+  --fa-paper: #fbf8f3;
+  --fa-gold: #a8814a;
+}

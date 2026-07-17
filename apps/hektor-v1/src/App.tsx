@@ -20704,7 +20704,20 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
   )
 }
 
-function DossierDetailLayout(props: {
+const APP_COCKPIT_V2_ENABLED =
+  String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').toLowerCase() === 'true'
+
+// Cockpit v2 — bascule drop-in (Lot 0 : fondations invisibles).
+// Le flag est lu et prêt ; tant que le rendu cockpit n'est pas branché, on rend l'existant
+// à l'identique (flag ON ou OFF). Le cockpit sera greffé ici dans un lot ultérieur.
+function DossierDetailLayout(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
+  if (APP_COCKPIT_V2_ENABLED) {
+    // Lot 1+ : return <CockpitDetail {...props} />
+  }
+  return <DossierDetailLayoutBase {...props} />
+}
+
+function DossierDetailLayoutBase(props: {
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
   address: string
