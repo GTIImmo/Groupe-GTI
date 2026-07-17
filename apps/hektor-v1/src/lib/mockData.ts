@@ -139,6 +139,13 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       { date: '2026-06-15', title: 'Demande de diffusion', status: 'Acceptée', tone: 'ok' },
       { date: '2026-06-30', title: 'Baisse de prix (269 000 → 259 000)', status: 'En traitement', tone: 'wait' },
     ]),
+    // Contact (v34) : intervenants diagnostics & syndic.
+    intervenants_json: JSON.stringify([
+      { role: 'Diagnostiqueur', name: 'Diag Immo 42', sub: 'DPE · Amiante · Électricité · Gaz', phone: '04 77 00 00 00' },
+      { role: 'Notaire acquéreur', name: 'Me Bernard', sub: 'Étude Bernard & Associés', phone: '04 77 11 11 11' },
+      { role: 'Notaire vendeur', name: '', sub: '' },
+      { role: 'Syndic', name: '', sub: 'Copropriété — non applicable si maison individuelle' },
+    ]),
     price_change_event_count: 1,
     price_change_last_old_value: 269000,
     price_change_last_new_value: 259000,

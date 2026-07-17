@@ -21326,6 +21326,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   })}
                 </div>
               ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
+              {(() => {
+                const inter = parseJson<Array<{ role: string; name: string; sub?: string; phone?: string }>>(detailStr('intervenants_json') || '[]', [])
+                return inter.length > 0 ? (
+                  <>
+                    <div className="fa-ck-ct-sec"><span className="l">Diagnostics et syndic</span><span className="bar" /><span className="k">Intervenants · console Hektor</span></div>
+                    <div className="fa-ck-inter">
+                      {inter.map((it) => (
+                        <div key={it.role} className="fa-ck-ic-card">
+                          <div className="fa-ck-ic-r">{it.role}</div>
+                          <div className={`fa-ck-ic-n${it.name ? '' : ' empty'}`}>{it.name || 'Non renseigné'}</div>
+                          {it.sub ? <div className="fa-ck-ic-s">{it.sub}</div> : null}
+                          {it.name && it.phone ? <div className="fa-ck-ic-links"><a href={`tel:${it.phone.replace(/\s+/g, '')}`}>Appeler</a></div> : null}
+                          {!it.name ? <span className="fa-ck-ic-add">＋ Ajouter</span> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : null
+              })()}
             </div>
           ) : activeTab === 'publicite' ? (
             <div className="fa-ck-rub fa-ck-pub">

@@ -412,3 +412,17 @@
 .fa-ck-lb-note-av { width: 34px; height: 34px; border-radius: 10px; background: #f7eed9; color: #b07d1c; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
 .fa-ck-lb-note-m { font-size: 11.5px; font-weight: 700; color: var(--fa-muted); margin-bottom: 3px; }
 .fa-ck-lb-note-t { font-size: 13.5px; color: var(--fa-ink-soft, #544b45); line-height: 1.5; }
+
+/* Contact v34 : section Diagnostics & syndic (intervenants) */
+.fa-ck-ct-sec .k { font-size: 9.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--fa-faint, #a89e95); flex: none; }
+.fa-ck-inter { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .fa-ck-inter { grid-template-columns: 1fr; } }
+.fa-ck-ic-card { border: 1px solid var(--fa-line); border-radius: 13px; background: #fff; padding: 13px 15px; }
+.fa-ck-ic-r { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-faint, #a89e95); margin-bottom: 6px; }
+.fa-ck-ic-n { font-size: 13.5px; font-weight: 700; color: var(--fa-ink); }
+.fa-ck-ic-n.empty { color: var(--fa-faint, #a89e95); font-style: italic; font-weight: 600; }
+.fa-ck-ic-s { font-size: 11.5px; color: var(--fa-muted); margin-top: 2px; }
+.fa-ck-ic-links { display: flex; gap: 7px; margin-top: 9px; }
+.fa-ck-ic-links a { font-size: 11px; font-weight: 700; color: var(--fa-ink-soft, #544b45); background: #f6f1ea; border: 1px solid var(--fa-line); border-radius: 8px; padding: 4px 9px; text-decoration: none; }
+.fa-ck-ic-links a:hover { border-color: #3a5a8a; color: #3a5a8a; }
+.fa-ck-ic-add { display: inline-block; font-size: 11px; font-weight: 700; color: #3a5a8a; border-bottom: 1px dashed #cfd9ea; margin-top: 8px; cursor: default; }
