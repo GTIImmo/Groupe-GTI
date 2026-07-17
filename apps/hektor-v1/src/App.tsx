@@ -20884,26 +20884,23 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 ) : null}
               </div>
               <div className="fa-ck-acti">
-                <div className="fa-ck-acti-head"><strong>Activité</strong></div>
-                <div className="fa-ck-acti-grid">
-                  <div className="fa-ck-acti-card">
-                    <div className="fa-ck-acti-card-h">Demandes de visite <span>{appts.length}</span></div>
-                    {appts.length > 0
-                      ? <button type="button" className="fa-ck-linkmini" onClick={() => setActiveTab('rendezvous')}>Voir dans Rendez-vous →</button>
-                      : <p className="fa-ck-empty">Aucune demande de visite.</p>}
-                  </div>
-                  <div className="fa-ck-acti-card">
-                    <div className="fa-ck-acti-card-h">Emails <span>{emailContacts.length}</span></div>
-                    {emailContacts.length > 0 ? (
-                      <div className="fa-ck-acti-list">
-                        {emailContacts.slice(0, 3).map((c) => (
-                          <a key={c.id} className="fa-ck-acti-row" href={`mailto:${c.email}`}>
-                            <span className="fa-ck-acti-nm">{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</span>
-                            <span className="fa-ck-acti-em">{c.email}</span>
-                          </a>
-                        ))}
-                      </div>
-                    ) : <p className="fa-ck-empty">Aucun contact avec email.</p>}
+                <div className="fa-ck-rub-head"><span className="fa-ck-rh-l">Activité</span><span className="fa-ck-rh-cnt">{appts.length + emailContacts.length}</span></div>
+                <div className="fa-ck-acti-card">
+                  <div className="fa-ck-afeed">
+                    {appts.length > 0 ? (
+                      <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
+                        <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><DetailIcon type="commercial" /></span>
+                        <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
+                        <span className="fa-ck-at">à traiter</span>
+                      </button>
+                    ) : null}
+                    {emailContacts.slice(0, 4).map((c) => (
+                      <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
+                        <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><DetailIcon type="contact" /></span>
+                        <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>
+                      </a>
+                    ))}
+                    {appts.length === 0 && emailContacts.length === 0 ? <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p> : null}
                   </div>
                 </div>
               </div>
