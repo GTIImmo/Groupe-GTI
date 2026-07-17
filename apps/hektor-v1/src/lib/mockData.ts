@@ -168,6 +168,15 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       { name: 'Attestation de propriété.pdf', sig: 'À envoyer en signature', badge: 'À préparer', signed: false, type: 'autre', typeLabel: 'Autre' },
       { name: 'Plan des lots.pdf', sig: 'À envoyer en signature', badge: 'À préparer', signed: false, type: 'autre', typeLabel: 'Autre' },
     ]),
+    // Mandat (v22) : n° mandat, dates, honoraires, suivi de signature.
+    mandat_json: JSON.stringify({
+      num: '17125', type: 'ACCORD', dateStart: '15/06/2026', dateEnd: '14/06/2027', statut: 'Valide',
+      honorairesVendeur: '18 000 €', taux: '4,6 %',
+      signatures: [
+        { av: 'IS', tone: 'ok', name: 'Mandat de vente 17125.pdf', sub: 'Envoyé le 12/06 · signé le 14/06 par les mandants', badge: 'Signé', badgeTone: 'ok' },
+        { av: 'A', tone: 'wait', name: 'Avenant rectificatif.pdf', sub: 'Envoyé le 08/07 · en attente de signature', badge: 'En attente', badgeTone: 'wait' },
+      ],
+    }),
     // Estimation (v27) : avis de valeur + KPIs + barème + sources mémorisées.
     estimation_json: JSON.stringify({
       valeur: '259 000 €', prixM2: '3 500 €', basse: '238 000 €', haute: '278 000 €', grade: 'Bon état',

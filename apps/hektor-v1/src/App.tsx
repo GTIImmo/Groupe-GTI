@@ -21437,7 +21437,42 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
             </div>
           ) : activeTab === 'mandat' ? (
-            <div className="fa-ck-rub">
+            <div className="fa-ck-rub fa-ck-mandat">
+              {(() => {
+                const m = parseJson<{ num: string; type: string; dateStart: string; dateEnd: string; statut: string; honorairesVendeur?: string; taux?: string; signatures?: Array<{ av: string; tone: string; name: string; sub: string; badge: string; badgeTone: string }> } | null>(detailStr('mandat_json') || 'null', null)
+                if (!m) return null
+                return (
+                  <>
+                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Mandat de vente</div><div className="fa-ck-pub-s">N° {m.num} · {m.type}</div></div>{pMandatOk ? <span className="fa-ck-badge-ok">Validé</span> : null}</div>
+                    <div className="fa-ck-pub-card"><div className="fa-ck-mandfields">
+                      <div className="fa-ck-mf"><div className="mk">N° mandat</div><div className="mv">{m.num}</div></div>
+                      <div className="fa-ck-mf"><div className="mk">Type</div><div className="mv">{m.type}</div></div>
+                      <div className="fa-ck-mf"><div className="mk">Date début</div><div className="mv">{m.dateStart}</div></div>
+                      <div className="fa-ck-mf"><div className="mk">Échéance</div><div className="mv">{m.dateEnd}</div></div>
+                      <div className="fa-ck-mf"><div className="mk">Statut</div><div className="mv ok">{m.statut}</div></div>
+                    </div></div>
+                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Validation du mandat</div><div className="fa-ck-pub-s">Contrôle &amp; diffusion</div></div></div>
+                    <div className="fa-ck-pub-card"><div className="fa-ck-valstate"><div className="vlab">État de validation</div><div className={`vval ${pMandatOk ? 'ok' : 'wait'}`}>{pMandatOk ? 'Validé · confirmé par Hektor' : 'En attente de validation'}</div></div><p className="fa-ck-vnote">L'annonce est validée après contrôle. La validation débloque la diffusion sur les portails.</p></div>
+                    {m.signatures && m.signatures.length ? (
+                      <>
+                        <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e3f2ea', color: '#2f7d59' }} aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Suivi de signature</div><div className="fa-ck-pub-s">Signature électronique · ImmoSign</div></div></div>
+                        <div className="fa-ck-pub-card">
+                          {m.signatures.map((s, i) => (
+                            <div key={i} className="fa-ck-sigitem"><span className={`fa-ck-sav ${s.tone}`}>{s.av}</span><div className="fa-ck-siginfo"><div className="onm">{s.name}</div><div className="osb">{s.sub}</div></div><span className={`fa-ck-badge-${s.badgeTone === 'ok' ? 'ok' : 'wait'}`}>{s.badge}</span></div>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                    {(m.honorairesVendeur || m.taux) ? (
+                      <>
+                        <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#f7f0e3', color: '#a8814a' }} aria-hidden="true"><CkIcon path={CK_ICON.reporting} /></span><div><div className="fa-ck-pub-t">Honoraires</div><div className="fa-ck-pub-s">Commission d'agence</div></div></div>
+                        <div className="fa-ck-pub-card"><div className="fa-ck-hono">{m.honorairesVendeur ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Honoraires vendeur</div><div className="fa-ck-hf-v gold">{m.honorairesVendeur}</div></div> : null}{m.taux ? <div className="fa-ck-hf"><div className="fa-ck-hf-k">Taux</div><div className="fa-ck-hf-v">{m.taux}</div></div> : null}</div></div>
+                      </>
+                    ) : null}
+                  </>
+                )
+              })()}
+              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Actions mandat (Hektor)</div>
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." />
                 : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
