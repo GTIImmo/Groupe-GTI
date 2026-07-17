@@ -21548,27 +21548,48 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               })()}
             </div>
           ) : activeTab === 'reporting' ? (
-            <div className="fa-ck-rub">
-              <div className="fa-ck-facts">
-                <InfoCard label="Visites / demandes" value={appts.length} />
-                <InfoCard label="Portails actifs" value={nbPortails} />
-                <InfoCard label="Contacts liés" value={props.contacts.length} />
-                <InfoCard label="Prix actuel" value={formatPrice(dossier.prix)} />
+            <div className="fa-ck-rub fa-ck-report">
+              <div className="fa-ck-ct-sec"><span className="l">Reporting propriétaire</span><span className="bar" /><span className="k">Compte-rendu de commercialisation</span></div>
+              <div className="fa-ck-kpis">
+                <div className="fa-ck-kpi"><div className="kl">Vues 30 j</div><div className="kv br">{Number(detailStr('vues_30j')) || 0}</div><svg className="fa-ck-spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,26 18,22 34,24 52,15 70,18 88,9 104,12 120,6 120,30 0,30" fill="rgba(194,18,95,.08)" stroke="none" /><polyline points="0,26 18,22 34,24 52,15 70,18 88,9 104,12 120,6" fill="none" stroke="#c2125f" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+                <div className="fa-ck-kpi"><div className="kl">Visites / demandes</div><div className="kv">{appts.length}</div><div className="ks">RDV pris</div></div>
+                <div className="fa-ck-kpi"><div className="kl">Portails actifs</div><div className="kv">{nbPortails}</div><div className="ks">diffusion</div></div>
+                <div className="fa-ck-kpi"><div className="kl">Contacts liés</div><div className="kv">{props.contacts.length}</div><div className="ks">acquéreurs</div></div>
               </div>
-              <PriceChangeHistoryCard source={props.detail} title="Historique des prix" emptyLabel="Aucun changement de prix historisé pour cette annonce." />
+              {detailStr('report_sent') ? <div className="fa-ck-sentline"><CkIcon path={CK_ICON.mail} />Dernier reporting envoyé au propriétaire le <b>{formatDate(detailStr('report_sent'))}</b>{detailStr('report_opened') ? <> · ouvert le <b>{formatDate(detailStr('report_opened'))}</b></> : null}</div> : null}
+              <div className="fa-ck-ct-sec"><span className="l">Diffusion</span><span className="bar" /><span className="k">Portails actifs</span></div>
+              <div className="fa-ck-pub-card">
+                {ckParsePortals(dossier.portails_resume).map((p) => (
+                  <div key={p.name} className="fa-ck-portal act"><span className="fa-ck-p-logo" style={{ background: p.color }}>{p.abbr}</span><div className="fa-ck-p-id"><div className="fa-ck-p-nm">{p.name}</div></div><span className="fa-ck-p-state on">Actif</span></div>
+                ))}
+              </div>
+              <div className="fa-ck-ct-sec"><span className="l">Historique de prix</span><span className="bar" /></div>
+              <PriceChangeHistoryCard source={props.detail} title="" emptyLabel="Aucun changement de prix historisé pour cette annonce." />
             </div>
           ) : activeTab === 'historique' ? (
-            <div className="fa-ck-rub">
-              {historiqueItems.length > 0 ? (
-                <div className="fa-ck-histo">
-                  {historiqueItems.map((h) => (
-                    <div key={String(h.id)} className="fa-ck-histo-row">
-                      <div className="fa-ck-histo-h"><strong>{h.title}</strong><span>{h.date ? formatDate(h.date) : ''}</span></div>
-                      {h.body ? <p>{h.body}</p> : null}
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="fa-ck-empty">Aucun historique de demande.</p>}
+            <div className="fa-ck-rub fa-ck-histo2">
+              <div className="fa-ck-ct-sec"><span className="l">Historique des demandes</span><span className="bar" /><span className="k">Journal des démarches</span></div>
+              {(() => {
+                const hist = parseJson<Array<{ title: string; type: string; date: string; states?: Array<{ a: string; b: string; tone?: string }>; relance?: string }>>(detailStr('historique_json') || '[]', [])
+                const colorFor = (t: string) => /baisse/i.test(t) ? '#a8814a' : /valid/i.test(t) ? '#2f8a5b' : '#3a5a8a'
+                const entries = hist.length ? hist : historiqueItems.map((h) => ({ title: h.title, type: '', date: h.date ?? '', states: h.status ? [{ a: h.status, b: '', tone: ckRequestPillTone(h.status) }] : [], relance: '' }))
+                return entries.length > 0 ? (
+                  <div className="fa-ck-tline">
+                    {entries.map((e, i) => (
+                      <div key={i} className="fa-ck-tnode" style={{ ['--c']: colorFor(e.type || e.title) } as CSSProperties}>
+                        <span className="fa-ck-tdot" />
+                        <div className="fa-ck-tcard">
+                          <div className="fa-ck-tt">{e.title}<span className="fa-ck-tdate">{[e.type, e.date ? formatDate(e.date) : ''].filter(Boolean).join(' · ')}</span></div>
+                          <div className="fa-ck-tl">
+                            {(e.states ?? []).map((s, j) => <span key={j} className={`fa-ck-hs${s.tone ? ' ' + s.tone : ''}`}>{[s.a, s.b].filter(Boolean).join(' · ')}</span>)}
+                            {e.relance ? <span className="fa-ck-trelance">Relance : {e.relance}</span> : null}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="fa-ck-empty">Aucun historique de demande.</p>
+              })()}
             </div>
           ) : (
             <div className="fa-ck-todo">

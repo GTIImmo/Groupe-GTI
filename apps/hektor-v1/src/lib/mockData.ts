@@ -150,6 +150,16 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     price_change_last_old_value: 269000,
     price_change_last_new_value: 259000,
     price_change_last_detected_at: '2026-06-30T08:00:00Z',
+    // Historique (v27) : journal des demandes filtrable.
+    historique_json: JSON.stringify([
+      { title: 'Bien diffusable non visible', type: 'Diffusion', date: '2026-06-24', states: [{ a: 'pending', b: 'pret_diffusion' }, { a: 'valide', b: 'en_erreur', tone: 'err' }], relance: '—' },
+      { title: 'Demande de baisse de prix', type: 'Baisse de prix', date: '2026-06-20', states: [{ a: 'pending', b: 'a_traiter' }, { a: 'accepte', b: 'applique', tone: 'ok' }], relance: '02/07/2026' },
+      { title: 'Demande de validation', type: 'Diffusion', date: '2026-06-11', states: [{ a: 'pending', b: 'a_valider' }, { a: 'valide', b: 'ok', tone: 'ok' }], relance: '—' },
+    ]),
+    // Reporting (v27) : vues + envoi propriétaire.
+    vues_30j: 148,
+    report_sent: '2026-06-28',
+    report_opened: '2026-06-29',
   },
   5502: {
     surface_habitable_detail: 58,
