@@ -583,3 +583,16 @@
 .fa-ck-siginfo { flex: 1; min-width: 0; }
 .fa-ck-siginfo .onm { font-size: 13.5px; font-weight: 700; color: var(--fa-ink); }
 .fa-ck-siginfo .osb { font-size: 11.5px; color: var(--fa-muted); margin-top: 1px; }
+
+/* Rubrique Rendez-vous (v28) : demandes de visite */
+.fa-ck-rdv { display: flex; flex-direction: column; gap: 4px; }
+.fa-ck-dstatus { font-size: 10.5px; font-weight: 800; border-radius: 99px; padding: 4px 10px; white-space: nowrap; flex: none; margin-left: auto; }
+.fa-ck-dstatus.pending { color: #9a5b05; background: #fdf4e2; }
+.fa-ck-dstatus.contacted { color: #2c4770; background: #e7edf7; }
+.fa-ck-dstatus.confirmed { color: #1f6e44; background: #e6f2ea; }
+.fa-ck-reqro { border: 1px solid var(--fa-line); border-left: 3px solid var(--c, var(--fa-brand)); border-radius: 12px; padding: 11px 14px; margin-bottom: 9px; background: #fff; }
+.fa-ck-reqro:last-child { margin-bottom: 0; }
+.fa-ck-reqro .rr-h { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 800; color: var(--fa-ink); }
+.fa-ck-reqro .rr-h .fa-ck-dstatus { margin-left: 0; }
+.fa-ck-reqro .rr-m { font-size: 11.5px; color: var(--fa-muted); margin-top: 4px; }
+.fa-ck-reqro .rr-msg { font-size: 12.5px; color: var(--fa-ink-soft, #544b45); font-style: italic; margin-top: 5px; }

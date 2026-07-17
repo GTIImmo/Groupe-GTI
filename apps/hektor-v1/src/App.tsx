@@ -21480,7 +21480,30 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
             </div>
           ) : activeTab === 'rendezvous' ? (
-            <div className="fa-ck-rub">
+            <div className="fa-ck-rub fa-ck-rdv">
+              {appts.length > 0 ? (
+                <>
+                  <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e6f2ea', color: '#2f8a5b' }} aria-hidden="true"><CkIcon path={CK_ICON.rendezvous} /></span><div><div className="fa-ck-pub-t">Demandes de visite</div><div className="fa-ck-pub-s">Espace client · issues du rapprochement</div></div><span className="fa-ck-dstatus pending">{appts.filter((a) => String((a as { status?: string }).status ?? 'pending') === 'pending').length} à traiter</span></div>
+                  <div className="fa-ck-pub-card">
+                    {appts.map((a, i) => {
+                      const status = String((a as { status?: string }).status ?? 'pending')
+                      const name = String((a as { visitor_name?: string }).visitor_name ?? 'Client')
+                      const msg = String((a as { message?: string }).message ?? '')
+                      const at = String((a as { requested_at?: string }).requested_at ?? '')
+                      const tone = status === 'confirmed' ? 'confirmed' : status === 'contacted' || status === 'rescheduled' ? 'contacted' : 'pending'
+                      const label = status === 'confirmed' ? 'Confirmée' : tone === 'contacted' ? 'Proposée' : 'Demandée'
+                      return (
+                        <div key={i} className="fa-ck-reqro" style={{ ['--c']: tone === 'confirmed' ? '#2f8a5b' : tone === 'contacted' ? '#3a5a8a' : '#c2701a' } as CSSProperties}>
+                          <div className="rr-h">{name} <span className={`fa-ck-dstatus ${tone}`}>{label}</span></div>
+                          {at ? <div className="rr-m">{status === 'confirmed' ? 'Visite confirmée' : 'Souhaité'} : {formatDate(at)}</div> : null}
+                          {msg ? <div className="rr-msg">« {msg} »</div> : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Agenda &amp; demandes (Google / Hektor)</div>
+                </>
+              ) : null}
               <GoogleAgendaAnnonceSection
                 dossier={dossier}
                 detail={props.detail}
