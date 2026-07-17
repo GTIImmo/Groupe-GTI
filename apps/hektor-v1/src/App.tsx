@@ -20821,14 +20821,26 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         </div>
 
         <div className="fa-ck-content">
-          <div className="fa-ck-parcours" aria-label="Parcours du mandat">
-            {parcours.map((step, i) => (
-              <div key={step.label} className={`fa-ck-jalon is-${step.state}`}>
-                <span className="fa-ck-jalon-node">{step.state === 'done' ? '✓' : i + 1}</span>
-                <span className="fa-ck-jalon-lb">{step.label}</span>
-                <span className="fa-ck-jalon-sub">{step.sub}</span>
-              </div>
-            ))}
+          <div className="fa-ck-timeline">
+            <div className="fa-ck-tl-head">
+              <span className="fa-ck-tl-ey">Vie du mandat</span>
+              {props.onChangeAnnonceStatus && !isLightweightDetail ? (
+                <button type="button" className="fa-ck-tl-status" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
+                  <span className="fa-ck-tl-cur">{situationLabel}</span>
+                  <span className="fa-ck-tl-lbl">Faire évoluer le statut</span>
+                  <span className="fa-ck-tl-go" aria-hidden="true">→</span>
+                </button>
+              ) : null}
+            </div>
+            <div className="fa-ck-tl-row">
+              {parcours.map((step, i) => (
+                <div key={step.label} className={`fa-ck-tl-step ${step.state}`}>
+                  <span className="fa-ck-tl-nd">{step.state === 'done' ? '✓' : i + 1}</span>
+                  <span className="fa-ck-tl-lb">{step.label}</span>
+                  <span className="fa-ck-tl-et">{step.sub}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="fa-ck-content-head">
             <span className="fa-ck-content-ic" aria-hidden="true"><DetailIcon type={currentTab.icon} /></span>
