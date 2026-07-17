@@ -21275,34 +21275,65 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </div>
               <div className="fa-ck-pub-card">
                 {(() => {
-                  const portals = ckParsePortals(dossier.portails_resume)
+                  const det = parseJson<Array<{ name: string; state?: string; sub?: string }>>(detailStr('portails_detail_json') || '[]', [])
+                  const portals = det.length
+                    ? det.map((p) => { const m = ckParsePortals(p.name)[0]; return { name: p.name, sub: p.sub || 'Portail · annonce en ligne', active: (p.state ?? 'active') === 'active', abbr: m?.abbr ?? 'PT', color: m?.color ?? '#9d0f4e' } })
+                    : ckParsePortals(dossier.portails_resume).map((p) => ({ name: p.name, sub: 'Portail · annonce en ligne', active: true, abbr: p.abbr, color: p.color }))
                   return portals.length > 0 ? portals.map((p) => (
-                    <div key={p.name} className="fa-ck-portal act">
-                      <span className="fa-ck-p-logo" style={{ background: p.color }}>{p.abbr}</span>
-                      <div className="fa-ck-p-id"><div className="fa-ck-p-nm">{p.name}</div><div className="fa-ck-p-sb">Portail · annonce en ligne</div></div>
-                      <span className="fa-ck-p-state on">Activée</span>
+                    <div key={p.name} className={`fa-ck-portal${p.active ? ' act' : ''}`}>
+                      <span className="fa-ck-p-logo" style={{ background: p.active ? p.color : '#c3b8ab' }}>{p.abbr}</span>
+                      <div className="fa-ck-p-id"><div className="fa-ck-p-nm">{p.name}</div><div className="fa-ck-p-sb">{p.sub}</div></div>
+                      <span className={`fa-ck-p-state ${p.active ? 'on' : 'off'}`}>{p.active ? 'Activée' : 'Inactive'}</span>
+                      <span className={`fa-ck-cbox${p.active ? ' on' : ''}`} aria-hidden="true">{p.active ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}><path d="M20 6L9 17l-5-5" /></svg> : null}</span>
                     </div>
                   )) : <p className="fa-ck-empty">Aucun portail actif.</p>
                 })()}
               </div>
 
-              {historiqueItems.length > 0 ? (
-                <>
-                  <div className="fa-ck-pub-sec">
-                    <span className="fa-ck-pub-ic gray" aria-hidden="true"><CkIcon path={CK_ICON.affaires} /></span>
-                    <div><div className="fa-ck-pub-t">Dernières demandes</div><div className="fa-ck-pub-s">Diffusion · baisse de prix · annulation</div></div>
-                  </div>
-                  <div className="fa-ck-pub-card">
-                    {historiqueItems.slice(0, 5).map((h) => (
-                      <div key={String(h.id)} className="fa-ck-dreq">
-                        <span className="fa-ck-dreq-d">{h.date ? formatDate(h.date) : ''}</span>
-                        <span className="fa-ck-dreq-t">{h.title}</span>
-                        {h.status ? <span className={`fa-ck-stpill ${ckRequestPillTone(h.status)}`}>{h.status}</span> : null}
+              {(() => {
+                const ap = parseJson<{ add: number; remove: number; ok: number; wait: number; err: number; at?: string } | null>(detailStr('diffusion_apply_json') || 'null', null)
+                return ap ? (
+                  <>
+                    <div className="fa-ck-pub-sec">
+                      <span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.reporting} /></span>
+                      <div><div className="fa-ck-pub-t">Retour d'application</div><div className="fa-ck-pub-s">Exécution du lot Hektor{ap.at ? ` · ${formatDate(ap.at)}` : ''}</div></div>
+                    </div>
+                    <div className="fa-ck-pub-card">
+                      <div className="fa-ck-res-grid">
+                        <div className="fa-ck-rc"><div className="n">{ap.add}</div><div className="l">Ajouts visés</div></div>
+                        <div className="fa-ck-rc"><div className="n">{ap.remove}</div><div className="l">Retraits visés</div></div>
+                        <div className="fa-ck-rc ok"><div className="n">{ap.ok}</div><div className="l">Réussies</div></div>
+                        <div className="fa-ck-rc wait"><div className="n">{ap.wait}</div><div className="l">En attente</div></div>
+                        <div className="fa-ck-rc err"><div className="n">{ap.err}</div><div className="l">Erreurs</div></div>
                       </div>
-                    ))}
-                  </div>
-                </>
-              ) : null}
+                    </div>
+                  </>
+                ) : null
+              })()}
+
+              {(() => {
+                const mockReqs = parseJson<Array<{ date: string; title: string; status: string; tone?: string }>>(detailStr('diffusion_requests_json') || '[]', [])
+                const reqs = mockReqs.length
+                  ? mockReqs.map((r, i) => ({ id: `dq-${i}`, date: r.date, title: r.title, status: r.status, tone: r.tone }))
+                  : historiqueItems.slice(0, 5).map((h) => ({ id: String(h.id), date: h.date ?? '', title: h.title, status: h.status, tone: undefined as string | undefined }))
+                return reqs.length > 0 ? (
+                  <>
+                    <div className="fa-ck-pub-sec">
+                      <span className="fa-ck-pub-ic gray" aria-hidden="true"><CkIcon path={CK_ICON.affaires} /></span>
+                      <div><div className="fa-ck-pub-t">Dernières demandes</div><div className="fa-ck-pub-s">Diffusion · baisse de prix · annulation</div></div>
+                    </div>
+                    <div className="fa-ck-pub-card">
+                      {reqs.map((r) => (
+                        <div key={r.id} className="fa-ck-dreq">
+                          <span className="fa-ck-dreq-d">{r.date ? formatDate(r.date) : ''}</span>
+                          <span className="fa-ck-dreq-t">{r.title}</span>
+                          {r.status ? <span className={`fa-ck-stpill ${r.tone ?? ckRequestPillTone(r.status)}`}>{r.status}</span> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : null
+              })()}
             </div>
           ) : activeTab === 'reporting' ? (
             <div className="fa-ck-rub">

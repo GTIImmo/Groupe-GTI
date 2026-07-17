@@ -29,8 +29,9 @@ export const mockDossiers: Dossier[] = [
     statut_annonce: 'Disponible',
     validation_diffusion_state: 'valide',
     diffusable: '1',
-    nb_portails_actifs: 4,
-    portails_resume: "SeLoger · Leboncoin · Bien'ici · Logic-Immo",
+    nb_portails_actifs: 3,
+    portails_resume: "SeLoger · Leboncoin · Bien'ici",
+    date_maj: '2026-06-15T16:02:00Z',
     etat_visibilite: 'visible',
     alerte_principale: null,
     priority: 'high',
@@ -113,6 +114,18 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     appointment_requests_json: JSON.stringify([
       { id: 'RDV-1', visitor_name: 'Sophie BERNARD', visitor_email: 'sophie.bernard@example.fr', status: 'pending', requested_at: '2026-07-14T10:00:00Z', message: 'Disponible en semaine après 18h.' },
       { id: 'RDV-2', visitor_name: 'Karim ALLAOUI', visitor_email: 'karim.allaoui@example.fr', status: 'pending', requested_at: '2026-07-15T09:30:00Z', message: 'Souhaite visiter ce week-end.' },
+    ]),
+    // Publicité (v36) : détail passerelles (dont une bloquée), retour d'application, demandes.
+    portails_detail_json: JSON.stringify([
+      { name: 'SeLoger', state: 'active', sub: 'Portail national · annonce en ligne' },
+      { name: 'Leboncoin', state: 'active', sub: 'Portail national · annonce en ligne' },
+      { name: "Bien'ici", state: 'active', sub: 'Portail national · annonce en ligne' },
+      { name: 'Le Figaro Immobilier', state: 'blocked', sub: 'Passerelle bloquée côté Hektor · à réactiver' },
+    ]),
+    diffusion_apply_json: JSON.stringify({ add: 1, remove: 0, ok: 3, wait: 1, err: 0, at: '2026-06-15T16:02:00Z' }),
+    diffusion_requests_json: JSON.stringify([
+      { date: '2026-06-15', title: 'Demande de diffusion', status: 'Acceptée', tone: 'ok' },
+      { date: '2026-06-30', title: 'Baisse de prix (269 000 → 259 000)', status: 'En traitement', tone: 'wait' },
     ]),
     price_change_event_count: 1,
     price_change_last_old_value: 269000,
