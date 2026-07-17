@@ -20804,18 +20804,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     <>
     <section className="fa-cockpit-v2 fa-ck-shell" data-detail-variant={detailVariant}>
       <header className="fa-ck-topbar">
-        <button type="button" className="fa-ck-back" onClick={props.onBack}>{'←'} {props.backLabel ?? 'Retour'}</button>
-        <div className="fa-ck-id">
-          <span className="fa-ck-eyebrow">{props.eyebrow ?? 'Dossier annonce'}</span>
-          <strong className="fa-ck-title">{dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'}</strong>
-          <span className="fa-ck-sub">{props.address}</span>
+        <button type="button" className="fa-ck-tb-back" onClick={props.onBack} aria-label={props.backLabel ?? 'Retour'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+        </button>
+        <span className="fa-ck-tb-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+        </span>
+        <div className="fa-ck-crumb">
+          <span className="fa-ck-crumb-ey">{props.eyebrow ?? 'Dossier annonce'}</span>
+          <span className="fa-ck-crumb-rf">{dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{dossier.titre_bien ? ` · ${dossier.titre_bien}` : ''}</span>
         </div>
-        <div className="fa-ck-actions">
+        <div className="fa-ck-tb-right">
           {props.onChangeAnnonceStatus && !isLightweightDetail ? (
-            <button type="button" className="fa-ck-act" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button>
+            <button type="button" className="fa-ck-tb-btn" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>Statut</button>
           ) : null}
           {props.onOpenRapprochement ? (
-            <button type="button" className="fa-ck-act fa-ck-act-brand" onClick={() => props.onOpenRapprochement?.(dossier)}>Acquereurs</button>
+            <button type="button" className="fa-ck-tb-btn fa-ck-tb-btn-brand" onClick={() => props.onOpenRapprochement?.(dossier)}>Acquéreurs</button>
           ) : null}
         </div>
       </header>

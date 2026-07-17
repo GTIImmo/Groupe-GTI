@@ -16,62 +16,40 @@
   --fa-muted: #8a807a;
 }
 
-/* Lot 1a — châssis : topbar + (rail | contenu). */
+/* Châssis panneau — topbar SOMBRE du v26 (pleine largeur) + corps (colonne gauche | contenu). */
 .fa-ck-shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   background: var(--fa-paper);
   color: var(--fa-ink);
-  border-radius: 18px;
-  padding: 16px;
-}
-
-.fa-ck-topbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  background: linear-gradient(120deg, #fff, var(--fa-cream));
   border: 1px solid var(--fa-line);
-  border-radius: 14px;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(32, 24, 18, .05), 0 40px 90px -46px rgba(32, 24, 18, .4);
 }
-.fa-ck-back {
-  flex: none;
-  border: 1px solid var(--fa-line);
-  background: #fff;
-  color: var(--fa-muted);
-  border-radius: 99px;
-  padding: 8px 14px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-.fa-ck-back:hover { color: var(--fa-brand-ink); border-color: var(--fa-brand); }
-.fa-ck-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.fa-ck-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--fa-muted); }
-.fa-ck-title { font-size: 18px; font-weight: 700; color: var(--fa-ink); line-height: 1.15; }
-.fa-ck-sub { font-size: 12.5px; color: var(--fa-muted); }
-.fa-ck-actions { flex: none; display: flex; gap: 8px; }
-.fa-ck-act {
-  border: 1px solid var(--fa-line);
-  background: #fff;
-  color: var(--fa-ink);
-  border-radius: 10px;
-  padding: 8px 14px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-.fa-ck-act:hover { border-color: var(--fa-brand); color: var(--fa-brand-ink); }
-.fa-ck-act-brand { background: var(--fa-brand); border-color: var(--fa-brand); color: #fff; }
-.fa-ck-act-brand:hover { background: var(--fa-brand-ink); color: #fff; }
+.fa-ck-topbar { position: relative; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 15px 20px; background: linear-gradient(112deg, #241c17 0%, #171210 60%); color: #fff; }
+.fa-ck-topbar::before { content: ''; position: absolute; right: -30px; top: -70px; width: 300px; height: 200px; background: radial-gradient(circle at 60% 40%, rgba(194, 18, 95, .3), transparent 62%); pointer-events: none; }
+.fa-ck-topbar > * { position: relative; z-index: 1; }
+.fa-ck-tb-back { width: 40px; height: 40px; border-radius: 12px; flex: none; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .05); color: #d9cdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.fa-ck-tb-back svg { width: 18px; height: 18px; }
+.fa-ck-tb-back:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.fa-ck-tb-badge { width: 42px; height: 42px; border-radius: 13px; flex: none; background: linear-gradient(150deg, #e33b81, #9d0f4e); display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 10px 22px -8px rgba(194, 18, 95, .7); }
+.fa-ck-tb-badge svg { width: 21px; height: 21px; }
+.fa-ck-crumb { flex: 1; min-width: 0; }
+.fa-ck-crumb-ey { display: block; font-size: 9.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #a99c8c; }
+.fa-ck-crumb-rf { display: block; font-family: 'Fraunces', 'Spectral', serif; font-size: 16px; font-weight: 600; color: #fff; letter-spacing: .02em; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-ck-tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.fa-ck-tb-btn { border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); color: #f3ece1; border-radius: 10px; padding: 9px 15px; font: inherit; font-weight: 700; cursor: pointer; transition: .15s; }
+.fa-ck-tb-btn:hover { background: rgba(255, 255, 255, .12); }
+.fa-ck-tb-btn-brand { background: linear-gradient(150deg, #e3407f, #bb1059); border-color: #bb1059; color: #fff; }
+.fa-ck-tb-btn-brand:hover { background: linear-gradient(150deg, #e3407f, #a30f4e); }
 
 .fa-ck-body {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 14px;
   align-items: start;
+  padding: 16px 18px;
 }
 .fa-ck-leftcol { display: flex; flex-direction: column; gap: 14px; }
 
