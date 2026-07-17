@@ -11,6 +11,7 @@ export const mockSummary: DashboardSummary = {
 
 export const mockDossiers: Dossier[] = [
   {
+    // Cas riche n°1 : mandat validé + diffusé (phase « dif ») → parcours partiel, prochaine action « Relancer les acquéreurs ».
     app_dossier_id: 32621,
     hektor_annonce_id: 4,
     photo_url_listing: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=240&q=60',
@@ -18,46 +19,130 @@ export const mockDossiers: Dossier[] = [
     numero_mandat: '17125',
     titre_bien: 'Grand T3 secteur Bellevue avec Garage',
     ville: 'Saint-Etienne',
+    code_postal: '42000',
     type_bien: '2',
-    prix: 78000,
+    prix: 259000,
     commercial_id: '5',
     commercial_nom: 'Melanie LEGRAND',
     negociateur_email: 'melanie.legrand@gti.test',
-    statut_annonce: 'Vendu',
+    statut_annonce: 'Disponible',
     validation_diffusion_state: 'valide',
-    etat_visibilite: 'diffusable_non_visible',
+    diffusable: '1',
+    nb_portails_actifs: 4,
+    portails_resume: "SeLoger · Leboncoin · Bien'ici · Logic-Immo",
+    etat_visibilite: 'visible',
     alerte_principale: null,
     priority: 'high',
     has_open_blocker: false,
     commentaire_resume: '',
     date_relance_prevue: null,
-    dernier_event_type: 'diffusable_non_visible',
-    dernier_work_status: 'pending',
+    dernier_event_type: 'visible',
+    dernier_work_status: 'done',
   },
   {
+    // Cas riche n°2 : offre reçue (phase « tra ») → parcours Offre en cours, prochaine action « Traiter l'affaire ».
     app_dossier_id: 5502,
     hektor_annonce_id: 15,
+    photo_url_listing: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=240&q=60',
     numero_dossier: 'VA1988',
     numero_mandat: '16635',
-    titre_bien: 'T3 loue, ravalement facade vote',
+    titre_bien: 'T3 lumineux avec balcon, quartier Fauriel',
     ville: 'Saint-Etienne',
+    code_postal: '42100',
     type_bien: '2',
-    prix: 69000,
+    prix: 189000,
     commercial_id: '5',
     commercial_nom: 'Melanie LEGRAND',
     negociateur_email: 'melanie.legrand@gti.test',
-    statut_annonce: 'Vendu',
+    statut_annonce: 'Disponible',
     validation_diffusion_state: 'valide',
-    etat_visibilite: 'diffusable_non_visible',
+    diffusable: '1',
+    nb_portails_actifs: 3,
+    portails_resume: 'SeLoger · Leboncoin · Bienici',
+    offre_id: 'OF-2231',
+    offre_state: 'en_cours',
+    etat_visibilite: 'visible',
     alerte_principale: null,
     priority: 'high',
     has_open_blocker: false,
     commentaire_resume: '',
     date_relance_prevue: null,
-    dernier_event_type: 'diffusable_non_visible',
-    dernier_work_status: 'pending',
+    dernier_event_type: 'visible',
+    dernier_work_status: 'done',
   },
 ]
+
+// Payloads détaillés (mock) : injectés par loadDossierDetail quand Supabase est absent, pour
+// exercer les blocs data-dépendants du cockpit (photos, €/m², contacts, RDV, offre, portails).
+function mockImages(seeds: Array<[string, string]>) {
+  return seeds.map(([id, legend]) => ({ url: `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`, legend }))
+}
+export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
+  32621: {
+    surface_habitable_detail: 74,
+    nb_pieces: 3,
+    nb_chambres: 2,
+    etage_detail: '3e étage avec ascenseur',
+    garage_box_detail: 'Garage fermé',
+    adresse_detail: '18 rue de la Bellevue',
+    code_postal_prive_detail: '42000',
+    ville_privee_detail: 'Saint-Etienne',
+    images_json: JSON.stringify(mockImages([
+      ['1505693416388-ac5ce068fe85', 'Séjour'],
+      ['1512917774080-9991f1c4c750', 'Façade'],
+      ['1522708323590-d24dbb6b0267', 'Cuisine'],
+      ['1502672260266-1c1ef2d93688', 'Chambre'],
+      ['1560448204-e02f11c3d0e2', 'Salle de bains'],
+    ])),
+    proprietaires_json: JSON.stringify([
+      {
+        id: 'P-1001', civilite: 'M.', prenom: 'Jean', nom: 'MOREAU', typologie: ['mandant'],
+        coordonnees: { portable: '06 12 34 56 78', email: 'jean.moreau@example.fr' },
+        localite: { localite: { code: '42000', ville: 'Saint-Etienne', adresse: '18 rue de la Bellevue' } },
+      },
+      {
+        id: 'P-1002', civilite: 'Mme', prenom: 'Claire', nom: 'MOREAU', typologie: ['mandant'],
+        coordonnees: { portable: '06 98 76 54 32', email: 'claire.moreau@example.fr' },
+        localite: { localite: { code: '42000', ville: 'Saint-Etienne', adresse: '18 rue de la Bellevue' } },
+      },
+    ]),
+    appointment_requests_json: JSON.stringify([
+      { id: 'RDV-1', visitor_name: 'Sophie BERNARD', visitor_email: 'sophie.bernard@example.fr', status: 'pending', requested_at: '2026-07-14T10:00:00Z', message: 'Disponible en semaine après 18h.' },
+      { id: 'RDV-2', visitor_name: 'Karim ALLAOUI', visitor_email: 'karim.allaoui@example.fr', status: 'pending', requested_at: '2026-07-15T09:30:00Z', message: 'Souhaite visiter ce week-end.' },
+    ]),
+    price_change_event_count: 1,
+    price_change_last_old_value: 269000,
+    price_change_last_new_value: 259000,
+    price_change_last_detected_at: '2026-06-30T08:00:00Z',
+  },
+  5502: {
+    surface_habitable_detail: 58,
+    nb_pieces: 3,
+    nb_chambres: 2,
+    etage_detail: '2e étage',
+    adresse_detail: '7 boulevard Fauriel',
+    code_postal_prive_detail: '42100',
+    ville_privee_detail: 'Saint-Etienne',
+    offre_id: 'OF-2231',
+    offre_state: 'en_cours',
+    etat_transaction: 'offre',
+    images_json: JSON.stringify(mockImages([
+      ['1512917774080-9991f1c4c750', 'Balcon'],
+      ['1502672260266-1c1ef2d93688', 'Séjour'],
+      ['1522708323590-d24dbb6b0267', 'Cuisine'],
+    ])),
+    proprietaires_json: JSON.stringify([
+      {
+        id: 'P-2001', civilite: 'Mme', prenom: 'Isabelle', nom: 'PETIT', typologie: ['mandant'],
+        coordonnees: { portable: '06 22 33 44 55', email: 'isabelle.petit@example.fr' },
+        localite: { localite: { code: '42100', ville: 'Saint-Etienne', adresse: '7 boulevard Fauriel' } },
+      },
+    ]),
+    appointment_requests_json: JSON.stringify([
+      { id: 'RDV-9', visitor_name: 'Thomas GIRAUD', visitor_email: 'thomas.giraud@example.fr', status: 'confirmed', requested_at: '2026-07-12T14:00:00Z', message: 'Deuxième visite avant offre.' },
+    ]),
+  },
+}
 
 export const mockWorkItems: WorkItem[] = [
   {

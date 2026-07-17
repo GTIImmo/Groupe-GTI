@@ -1,5 +1,5 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
-import { mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
+import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
@@ -3763,7 +3763,9 @@ export async function loadWorkItemsPage({
 export async function loadDossierDetail(appDossierId: number): Promise<DetailedDossier | null> {
   if (!hasSupabaseEnv || !supabase) {
     const dossier = mockDossiers.find((item) => item.app_dossier_id === appDossierId)
-    return dossier ? { ...dossier, detail_payload_json: null } : null
+    if (!dossier) return null
+    const payload = mockDetailPayloads[appDossierId]
+    return { ...dossier, detail_payload_json: payload ? JSON.stringify(payload) : null }
   }
 
   const { data: dossierData, error: dossierError } = await supabase
