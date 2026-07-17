@@ -20709,19 +20709,39 @@ const APP_COCKPIT_V2_ENABLED =
 
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
-const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; icon: DetailIconKey; color: string }> = [
-  { key: 'synthese', label: 'Synthèse', sub: "Vue d'ensemble", icon: 'summary', color: '#c2125f' },
-  { key: 'lebien', label: 'Le Bien', sub: 'Photos · caractéristiques', icon: 'content', color: '#a8814a' },
-  { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur', icon: 'priority', color: '#e0952f' },
-  { key: 'mandat', label: 'Mandat', sub: 'N° · signature', icon: 'mandate', color: '#9d0f4e' },
-  { key: 'contact', label: 'Contact', sub: 'Mandants · vendeurs', icon: 'contact', color: '#3a5a8a' },
-  { key: 'publicite', label: 'Publicité', sub: 'Portails · diffusion', icon: 'diffusion', color: '#c2125f' },
-  { key: 'rapprochement', label: 'Rapprochement', sub: 'Acquéreurs', icon: 'actions', color: '#0f7c8a' },
-  { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes', icon: 'commercial', color: '#6d4bb5' },
-  { key: 'affaires', label: 'Affaires', sub: 'Offres · compromis', icon: 'summary', color: '#1f6e44' },
-  { key: 'documents', label: 'Documents', sub: 'Pièces du dossier', icon: 'hektor', color: '#4756a6' },
-  { key: 'historique', label: 'Historique', sub: 'Demandes · suivi', icon: 'history', color: '#8a807a' },
-  { key: 'reporting', label: 'Reporting', sub: 'Indicateurs · prix', icon: 'commercial', color: '#a8814a' },
+// Icônes SVG EXACTES de la maquette v26 (table IC), rendues telles quelles.
+const CK_ICON: Record<string, string> = {
+  synthese: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  lebien: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+  estimation: '<path d="M12 2v20M4 7l8-5 8 5"/>',
+  mandat: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>',
+  contact: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17.5" cy="9.5" r="2.2"/>',
+  publicite: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>',
+  rapprochement: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/>',
+  rendezvous: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 9.5h18"/>',
+  affaires: '<path d="M4 7h16M4 12h10M4 17h6"/>',
+  documents: '<path d="M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-3"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M13 11l8-8"/><path d="M8 13h5M8 17h3"/>',
+  historique: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',
+  reporting: '<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+}
+function CkIcon({ path }: { path: string }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
+}
+
+const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string; color: string }> = [
+  { key: 'synthese', label: 'Synthèse', sub: "Vue d'ensemble", ico: CK_ICON.synthese, color: '#c2125f' },
+  { key: 'lebien', label: 'Le Bien', sub: 'Photos · caractéristiques', ico: CK_ICON.lebien, color: '#a8814a' },
+  { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur', ico: CK_ICON.estimation, color: '#e0952f' },
+  { key: 'mandat', label: 'Mandat', sub: 'N° · signature', ico: CK_ICON.mandat, color: '#9d0f4e' },
+  { key: 'contact', label: 'Contact', sub: 'Mandants · vendeurs', ico: CK_ICON.contact, color: '#3a5a8a' },
+  { key: 'publicite', label: 'Publicité', sub: 'Portails · diffusion', ico: CK_ICON.publicite, color: '#c2125f' },
+  { key: 'rapprochement', label: 'Rapprochement', sub: 'Acquéreurs', ico: CK_ICON.rapprochement, color: '#0f7c8a' },
+  { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes', ico: CK_ICON.rendezvous, color: '#6d4bb5' },
+  { key: 'affaires', label: 'Affaires', sub: 'Offres · compromis', ico: CK_ICON.affaires, color: '#1f6e44' },
+  { key: 'documents', label: 'Documents', sub: 'Pièces du dossier', ico: CK_ICON.documents, color: '#4756a6' },
+  { key: 'historique', label: 'Historique', sub: 'Demandes · suivi', ico: CK_ICON.historique, color: '#8a807a' },
+  { key: 'reporting', label: 'Reporting', sub: 'Indicateurs · prix', ico: CK_ICON.reporting, color: '#a8814a' },
 ]
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
@@ -20828,7 +20848,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               style={{ ['--c']: rub.color } as CSSProperties}
               onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
             >
-              <span className="fa-ck-rn-ic" aria-hidden="true"><DetailIcon type={rub.icon} /></span>
+              <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
               <span className="fa-ck-rn-t"><span className="fa-ck-rn-n">{rub.label}</span><span className="fa-ck-rn-s">{rub.sub}</span></span>
               <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
             </button>
@@ -20859,7 +20879,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           </div>
           <div className="fa-ck-content-head">
-            <span className="fa-ck-content-ic" aria-hidden="true"><DetailIcon type={currentTab.icon} /></span>
+            <span className="fa-ck-content-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
             <strong>{currentTab.label}</strong>
           </div>
 
@@ -20874,7 +20894,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     <div className="fa-ck-pa-nav-h">Où continuer</div>
                     <div className="fa-ck-pa-links">
                       <button type="button" className="fa-ck-pa-link" style={{ ['--c']: nextRub.color } as CSSProperties} onClick={nextLink.rapprochement ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(nextLink.tab || 'synthese')}>
-                        <span className="fa-ck-pl-ic" aria-hidden="true"><DetailIcon type={nextRub.icon} /></span>
+                        <span className="fa-ck-pl-ic" aria-hidden="true"><CkIcon path={nextRub.ico} /></span>
                         <span className="fa-ck-pl-tx">{nextLink.label}</span>
                         <span className="fa-ck-pl-rub">{nextRub.label}</span>
                         <span className="fa-ck-pl-go" aria-hidden="true">→</span>
@@ -20889,14 +20909,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className="fa-ck-afeed">
                     {appts.length > 0 ? (
                       <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
-                        <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><DetailIcon type="commercial" /></span>
+                        <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
                         <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
                         <span className="fa-ck-at">à traiter</span>
                       </button>
                     ) : null}
                     {emailContacts.slice(0, 4).map((c) => (
                       <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
-                        <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><DetailIcon type="contact" /></span>
+                        <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><CkIcon path={CK_ICON.mail} /></span>
                         <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>
                       </a>
                     ))}
