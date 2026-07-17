@@ -20729,6 +20729,35 @@ function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
 }
 
+// Logos/couleurs des portails (rubrique Publicité, façon v36). Fallback = initiales + brand.
+const CK_PORTAL_META: Record<string, { abbr: string; color: string }> = {
+  seloger: { abbr: 'SL', color: '#e2001a' },
+  leboncoin: { abbr: 'LBC', color: '#ff6e14' },
+  bienici: { abbr: 'BI', color: '#00b0a0' },
+  logicimmo: { abbr: 'LOG', color: '#7a1fa0' },
+  logic: { abbr: 'LOG', color: '#7a1fa0' },
+  figaro: { abbr: 'FIG', color: '#1a3a6b' },
+  paruvendu: { abbr: 'PV', color: '#0a7d3b' },
+  avendrealouer: { abbr: 'AVL', color: '#c2125f' },
+}
+function ckParsePortals(resume: string | null | undefined) {
+  return String(resume ?? '')
+    .split(/[·|,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((name) => {
+      const key = name.toLowerCase().replace(/[^a-z]/g, '')
+      const meta = CK_PORTAL_META[key] ?? { abbr: name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'PT', color: '#9d0f4e' }
+      return { name, abbr: meta.abbr, color: meta.color }
+    })
+}
+function ckRequestPillTone(status: string | null | undefined) {
+  const s = String(status ?? '')
+  if (/accept|valid|diffus|approuv|réuss|reuss|\bok\b/i.test(s)) return 'ok'
+  if (/refus|erreur|échec|echec|annul|bloqu/i.test(s)) return 'err'
+  return 'wait'
+}
+
 // Rubriques alignées EXACTEMENT sur le RUBS du v26 (label/sous-libellé/couleur/tuile).
 // 'synthese' n'apparaît PAS dans le rail (= vue par défaut) ; conservée pour l'en-tête de contenu.
 const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string; color: string; bg: string }> = [
@@ -21185,12 +21214,54 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
             </div>
           ) : activeTab === 'publicite' ? (
-            <div className="fa-ck-rub">
-              <div className="fa-ck-facts">
-                <div className="fa-ck-fact"><span className="k">Diffusable</span><span className="v">{dossier.diffusable === '1' ? 'Oui' : 'Non'}</span></div>
-                <div className="fa-ck-fact"><span className="k">Portails actifs</span><span className="v">{nbPortails}</span></div>
+            <div className="fa-ck-rub fa-ck-pub">
+              <div className="fa-ck-pub-sec">
+                <span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.historique} /></span>
+                <div><div className="fa-ck-pub-t">État diffusion</div><div className="fa-ck-pub-s">Vue de contrôle Hektor</div></div>
               </div>
-              {dossier.portails_resume ? <p className="fa-ck-portails">{dossier.portails_resume}</p> : <p className="fa-ck-empty">Aucun portail actif.</p>}
+              <div className="fa-ck-pub-card">
+                <div className="fa-ck-pub-grid">
+                  <div className="fa-ck-sg"><span className="k">Statut Hektor</span><span className="v">{dossier.statut_annonce || '—'}</span></div>
+                  <div className="fa-ck-sg"><span className="k">Diffusable</span><span className={`fa-ck-diff${dossier.diffusable === '1' ? ' on' : ''}`}><span className="dot" />{dossier.diffusable === '1' ? 'Oui' : 'Non'}</span></div>
+                  <div className="fa-ck-sg"><span className="k">Passerelles actives</span><span className="v big">{nbPortails}</span></div>
+                  {dossier.date_maj ? <div className="fa-ck-sg"><span className="k">Dernier enregistrement</span><span className="v">{formatDate(dossier.date_maj)}</span></div> : null}
+                </div>
+              </div>
+
+              <div className="fa-ck-pub-sec">
+                <span className="fa-ck-pub-ic blue" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
+                <div><div className="fa-ck-pub-t">Passerelles</div><div className="fa-ck-pub-s">Portails de diffusion</div></div>
+              </div>
+              <div className="fa-ck-pub-card">
+                {(() => {
+                  const portals = ckParsePortals(dossier.portails_resume)
+                  return portals.length > 0 ? portals.map((p) => (
+                    <div key={p.name} className="fa-ck-portal act">
+                      <span className="fa-ck-p-logo" style={{ background: p.color }}>{p.abbr}</span>
+                      <div className="fa-ck-p-id"><div className="fa-ck-p-nm">{p.name}</div><div className="fa-ck-p-sb">Portail · annonce en ligne</div></div>
+                      <span className="fa-ck-p-state on">Activée</span>
+                    </div>
+                  )) : <p className="fa-ck-empty">Aucun portail actif.</p>
+                })()}
+              </div>
+
+              {historiqueItems.length > 0 ? (
+                <>
+                  <div className="fa-ck-pub-sec">
+                    <span className="fa-ck-pub-ic gray" aria-hidden="true"><CkIcon path={CK_ICON.affaires} /></span>
+                    <div><div className="fa-ck-pub-t">Dernières demandes</div><div className="fa-ck-pub-s">Diffusion · baisse de prix · annulation</div></div>
+                  </div>
+                  <div className="fa-ck-pub-card">
+                    {historiqueItems.slice(0, 5).map((h) => (
+                      <div key={String(h.id)} className="fa-ck-dreq">
+                        <span className="fa-ck-dreq-d">{h.date ? formatDate(h.date) : ''}</span>
+                        <span className="fa-ck-dreq-t">{h.title}</span>
+                        {h.status ? <span className={`fa-ck-stpill ${ckRequestPillTone(h.status)}`}>{h.status}</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </div>
           ) : activeTab === 'reporting' ? (
             <div className="fa-ck-rub">

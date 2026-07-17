@@ -311,3 +311,46 @@
 .fa-ck-cv.locked { color: var(--fa-muted); }
 .fa-ck-lock { font-size: 9px; font-weight: 800; color: var(--fa-faint, #a89e95); background: var(--blue-soft); border-radius: 5px; padding: 1px 5px; letter-spacing: 0; text-transform: none; }
 @media (max-width: 720px) { .fa-ck-ct-grid { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   Rubrique « Publicité » — re-skin scopé vers la maquette v36.
+   Données réelles : statut_annonce, diffusable, nb_portails_actifs,
+   portails_resume, historique des demandes. Affichage lecture seule.
+   ============================================================ */
+.fa-ck-pub { display: flex; flex-direction: column; gap: 4px; }
+.fa-ck-pub-sec { display: flex; align-items: center; gap: 9px; margin: 16px 2px 11px; }
+.fa-ck-pub-sec:first-child { margin-top: 2px; }
+.fa-ck-pub-ic { width: 34px; height: 34px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; }
+.fa-ck-pub-ic svg { width: 18px; height: 18px; }
+.fa-ck-pub-ic.mag { background: var(--fa-brand-soft, #f9e7ef); color: var(--fa-brand); }
+.fa-ck-pub-ic.blue { background: #e7edf7; color: #3a5a8a; }
+.fa-ck-pub-ic.green { background: #e6f2ea; color: #2f8a5b; }
+.fa-ck-pub-ic.gray { background: #f1eae1; color: var(--fa-muted); }
+.fa-ck-pub-t { font-family: 'Fraunces', 'Spectral', serif; font-size: 14.5px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-pub-s { font-size: 11px; color: var(--fa-muted); }
+.fa-ck-pub-card { background: #fff; border: 1px solid var(--fa-line); border-radius: 14px; padding: 15px 16px; }
+.fa-ck-pub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 13px; }
+.fa-ck-sg { display: flex; flex-direction: column; gap: 3px; }
+.fa-ck-sg .k { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--fa-muted); }
+.fa-ck-sg .v { font-size: 14px; font-weight: 700; color: var(--fa-ink); }
+.fa-ck-sg .v.big { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; color: var(--fa-brand-ink); }
+.fa-ck-diff { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 800; color: var(--fa-muted); }
+.fa-ck-diff .dot { width: 9px; height: 9px; border-radius: 50%; background: #c3b8ab; }
+.fa-ck-diff.on { color: #1f6e44; }
+.fa-ck-diff.on .dot { background: #2f8a5b; box-shadow: 0 0 0 3px rgba(47, 138, 91, .18); }
+.fa-ck-portal { display: flex; align-items: center; gap: 13px; border: 1px solid var(--fa-line); border-radius: 12px; padding: 12px 14px; }
+.fa-ck-portal + .fa-ck-portal { margin-top: 9px; }
+.fa-ck-p-logo { width: 40px; height: 40px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12.5px; color: #fff; letter-spacing: .01em; }
+.fa-ck-p-id { flex: 1; min-width: 0; }
+.fa-ck-p-nm { font-size: 13.5px; font-weight: 800; color: var(--fa-ink); }
+.fa-ck-p-sb { font-size: 11.5px; color: var(--fa-muted); }
+.fa-ck-p-state { font-size: 11px; font-weight: 800; flex: none; }
+.fa-ck-p-state.on { color: #1f6e44; }
+.fa-ck-dreq { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--fa-line-soft); }
+.fa-ck-dreq:last-child { border-bottom: 0; }
+.fa-ck-dreq-d { font-size: 11.5px; color: var(--fa-muted); width: 84px; flex: none; }
+.fa-ck-dreq-t { flex: 1; font-size: 13px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-stpill { font-size: 10.5px; font-weight: 800; border-radius: 99px; padding: 4px 10px; white-space: nowrap; flex: none; }
+.fa-ck-stpill.ok { background: #e6f2ea; color: #1f6e44; }
+.fa-ck-stpill.wait { background: #fdf4e2; color: #9a5b05; }
+.fa-ck-stpill.err { background: #fbecec; color: #a33; }
