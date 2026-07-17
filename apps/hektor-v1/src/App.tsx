@@ -20751,6 +20751,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [activeTab, setActiveTab] = useState<string>('synthese')
   const [estimEditorOpen, setEstimEditorOpen] = useState(false)
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
+  const [showAutres, setShowAutres] = useState(false)
   if (!props.selectedDossier) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
@@ -20779,6 +20780,31 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   ]
   const nbPortails = Number(dossier.nb_portails_actifs) || 0
   const statusLed = pVendu ? '#a86af0' : (pOffre || pCompromis) ? '#3fbf7a' : (pMandatNum && pMandatOk) ? '#3fbf7a' : '#f0a935'
+  // Rail filtré par phase (comme la maquette : « en avant » + « Autres rubriques » repliées).
+  const ckPhase = pVendu ? 'ven' : (pOffre || pCompromis) ? 'tra' : (pMandatNum && pMandatOk) ? 'dif' : pMandatNum ? 'man' : 'est'
+  const PHASE_FEAT: Record<string, string[]> = {
+    est: ['estimation', 'mandat'],
+    man: ['mandat', 'documents'],
+    dif: ['publicite', 'rapprochement', 'documents'],
+    tra: ['affaires', 'contact'],
+    ven: ['affaires', 'reporting'],
+  }
+  const featKeys = new Set<string>(['synthese', 'lebien', 'rendezvous', 'contact', ...(PHASE_FEAT[ckPhase] || [])])
+  const featRubs = CK_RUBRIQUES.filter((r) => featKeys.has(r.key))
+  const autreRubs = CK_RUBRIQUES.filter((r) => !featKeys.has(r.key))
+  const renderRn = (rub: (typeof CK_RUBRIQUES)[number], feat: boolean) => (
+    <button
+      key={rub.key}
+      type="button"
+      className={`fa-ck-rn ${activeTab === rub.key ? 'is-active' : ''}${feat ? ' is-feat' : ''}`}
+      style={{ ['--c']: rub.color } as CSSProperties}
+      onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
+    >
+      <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
+      <span className="fa-ck-rn-t"><span className="fa-ck-rn-n">{rub.label}</span><span className="fa-ck-rn-s">{rub.sub}</span></span>
+      <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
+    </button>
+  )
   const situationLabel = pVendu ? 'Vendu'
     : pCompromis ? 'Compromis en cours'
     : pOffre ? 'Sous offre'
@@ -20856,21 +20882,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-hero-pv">{formatPrice(dossier.prix)}{prixM2 ? <em>{prixM2.toLocaleString('fr-FR')} €/m²</em> : null}</div>
             </div>
           </div>
-        <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{CK_RUBRIQUES.length}</span></div>
+        <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{featRubs.length} en avant</span></div>
         <nav className="fa-ck-rail" aria-label="Rubriques">
-          {CK_RUBRIQUES.map((rub) => (
-            <button
-              key={rub.key}
-              type="button"
-              className={`fa-ck-rn ${activeTab === rub.key ? 'is-active' : ''}`}
-              style={{ ['--c']: rub.color } as CSSProperties}
-              onClick={rub.key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(rub.key)}
-            >
-              <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
-              <span className="fa-ck-rn-t"><span className="fa-ck-rn-n">{rub.label}</span><span className="fa-ck-rn-s">{rub.sub}</span></span>
-              <span className="fa-ck-rn-ch" aria-hidden="true">›</span>
-            </button>
-          ))}
+          {featRubs.map((rub) => renderRn(rub, true))}
+          {autreRubs.length > 0 ? (
+            <>
+              <button type="button" className={`fa-ck-rn-more${showAutres ? ' is-open' : ''}`} onClick={() => setShowAutres((v) => !v)}>
+                Autres rubriques <span className="fa-ck-rn-more-c">{autreRubs.length}</span>
+                <span className="fa-ck-rn-more-ch" aria-hidden="true">▾</span>
+              </button>
+              {showAutres ? autreRubs.map((rub) => renderRn(rub, false)) : null}
+            </>
+          ) : null}
         </nav>
         </div>
 
