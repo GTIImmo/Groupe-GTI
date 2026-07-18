@@ -704,3 +704,24 @@
 .fa-ck-savebar-btn:hover { background: rgba(255, 255, 255, .14); }
 .fa-ck-savebar-btn.save { background: linear-gradient(150deg, #e3407f, #bb1059); border-color: #bb1059; color: #fff; }
 .fa-ck-savebar-btn:disabled { opacity: .55; cursor: default; }
+
+/* ===== Modale « Changer le statut annonce » alignée sur la maquette v29 (scopée au flag cockpit) ===== */
+.fa-ck-statusmodal { font-family: 'Hanken Grotesk', 'Inter Variable', Inter, system-ui, sans-serif; overflow: hidden !important; }
+/* header sombre pleine largeur + barre magenta + icône drapeau + X rond */
+.fa-ck-statusmodal .status-change-head { background: linear-gradient(115deg, #241016, #160a10 60%) !important; color: #fff !important; padding: 16px 22px !important; }
+.fa-ck-statusmodal .status-change-head::before { background: #c2125f !important; }
+.fa-ck-statusmodal .status-change-head .eyebrow { color: #d79ab6 !important; font-weight: 800 !important; letter-spacing: .14em !important; }
+.fa-ck-statusmodal .status-change-head h3 { color: #fff !important; font-family: 'Fraunces', 'Spectral', serif !important; }
+.fa-ck-statusmodal .status-change-head .modal-hero-icon { background: linear-gradient(150deg, #e0478d, #9d0f4e) !important; border-color: transparent !important; color: #fff !important; }
+.fa-ck-statusmodal .status-change-head .ghost-button { border-radius: 50% !important; width: 38px !important; height: 38px !important; padding: 0 !important; font-size: 0 !important; border: 1px solid rgba(255, 255, 255, .2) !important; background: rgba(255, 255, 255, .08) !important; color: #fff !important; position: relative; }
+.fa-ck-statusmodal .status-change-head .ghost-button::before { content: "✕"; font-size: 15px; line-height: 1; }
+.fa-ck-statusmodal .status-change-head .ghost-button:hover { background: #fff !important; color: #160a10 !important; }
+/* cartes de choix de statut = radios (puce + sélection magenta) */
+.fa-ck-statusmodal .status-choice-card { position: relative !important; padding-left: 16px !important; }
+.fa-ck-statusmodal .status-choice-card strong { display: inline-flex !important; align-items: center !important; gap: 9px !important; }
+.fa-ck-statusmodal .status-choice-card strong::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #c8bcae; flex: none; transition: .14s; }
+.fa-ck-statusmodal .status-choice-card:hover { border-color: #e0478d !important; }
+.fa-ck-statusmodal .status-choice-card.is-selected { border-color: #c2125f !important; background: #fdf0f6 !important; box-shadow: 0 0 0 3px rgba(194, 18, 95, .12) !important; }
+.fa-ck-statusmodal .status-choice-card.is-selected strong::before { border-color: #c2125f; background: #c2125f; box-shadow: inset 0 0 0 3px #fff; }
+/* bouton principal magenta */
+.fa-ck-statusmodal .status-change-form button[type="submit"], .fa-ck-statusmodal .primary-button { background: linear-gradient(150deg, #e3407f, #bb1059) !important; border-color: #bb1059 !important; color: #fff !important; }

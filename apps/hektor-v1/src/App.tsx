@@ -15949,7 +15949,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : null}
         {statusChangeTarget ? (
           <div className="modal-overlay" onClick={closeStatusChangeModal}>
-            <section className="modal-panel modal-panel-wide status-change-modal" onClick={(event) => event.stopPropagation()}>
+            <section className={`modal-panel modal-panel-wide status-change-modal${APP_COCKPIT_V2_ENABLED ? ' fa-ck-statusmodal' : ''}`} onClick={(event) => event.stopPropagation()}>
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
