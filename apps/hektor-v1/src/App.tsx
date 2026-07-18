@@ -21660,6 +21660,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub fa-ck-contact">
               <div className="fa-ck-ct-toolbar">
                 <span className="fa-ck-ct-strip">Source <b>API AnnonceById</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
+                {!isLightweightDetail ? (
+                  <button type="button" className="fa-ck-ct-editbtn" onClick={() => setHektorEditOpen(true)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    Modifier contacts
+                  </button>
+                ) : null}
               </div>
               <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>
               {isLightweightDetail
