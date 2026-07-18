@@ -21704,8 +21704,44 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           ) : activeTab === 'affaires' ? (
             <div className="fa-ck-rub">
               {(() => {
-                const aff = parseJson<CkAffaire | null>(detailStr('affaire_json') || 'null', null)
-                return aff ? <CkAffaires affaire={aff} /> : <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
+                // Priorité au mock riche (démo) ; sinon on DÉRIVE des vrais champs de transaction
+                // (offre/compromis/vente) → l'Affaires marche en prod, plus de fallback vide.
+                const affMock = parseJson<CkAffaire | null>(detailStr('affaire_json') || 'null', null)
+                const nz = (...keys: string[]) => { for (const k of keys) { const v = detailStr(k).trim(); if (v) return v } return '' }
+                const deriveAffaire = (): CkAffaire => {
+                  const c0 = props.contacts[0]
+                  const vendeur = c0 && (c0.name || c0.lastName)
+                    ? { n: c0.name || `${c0.civility ?? ''} ${c0.firstName ?? ''} ${c0.lastName ?? ''}`.trim(), s: `Vendeur · mandant${c0.sourceId ? ` · Contact ${c0.sourceId}` : ''}`, tel: c0.phone ?? undefined, mail: c0.email ?? undefined }
+                    : null
+                  const net = nz('prix_net_vendeur', 'PRIXNETVENDEUR')
+                  const acqNom = nz('acquereur_offre', 'offre_acquereur', 'nom_acquereur', 'acquereur')
+                  const acqTel = nz('acquereur_tel', 'acquereur_telephone')
+                  const acqMail = nz('acquereur_mail', 'acquereur_email')
+                  const hasC = pCompromis || pVendu
+                  const hasO = pOffre || hasC
+                  const honFai = nz('honoraires_resume', 'honoraires_ttc')
+                  const mood = pOffre && !hasC ? 'warn' : 'ok'
+                  const next = pVendu ? 'Affaire clôturée — établir le bilan de vente dans Reporting mandant.'
+                    : pCompromis ? "Préparer l'acte — suivre les conditions suspensives et la date d'acte."
+                    : pOffre ? "Traiter l'offre — accepter, contre-proposer ou refuser (via l'évolution du statut)."
+                    : nbPortails > 0 ? 'Relancer les acquéreurs rapprochés — aucune proposition en attente.'
+                    : 'Ouvrir la diffusion pour recevoir des offres.'
+                  const chip = pVendu ? '✓ Affaire terminée' : pCompromis ? '✓ Compromis en cours' : pOffre ? '⏱ Offre à traiter' : '✓ Aucun blocage'
+                  return {
+                    banner: { mood, state: situationLabel, next, comment: '', chip },
+                    tl: {
+                      offre: pOffre ? (hasC ? 'done' : 'active') : (hasC ? 'done' : 'pending'),
+                      compromis: pVendu ? 'done' : pCompromis ? 'active' : 'pending',
+                      vente: pVendu ? 'done' : 'pending',
+                    },
+                    offre: hasO ? { montant: nz('montant_offre', 'prix_offre', 'offre_montant') || formatPrice(dossier.prix), net, date: nz('date_offre'), validite: nz('validite_offre'), etat: pOffre && !hasC ? 'Proposition' : 'Acceptée', raw: nz('offre_state') || 'Synchronisé depuis Hektor', acqNom, acqTel, acqMail } : null,
+                    compromis: hasC ? { prix: nz('prix_vente') || formatPrice(dossier.prix), net, dateStart: nz('date_compromis'), dateActe: nz('date_acte', 'date_acte_prevue'), retract: nz('retractation_sru'), sequestre: nz('sequestre', 'montant_sequestre') } : null,
+                    vente: pVendu ? { date: nz('date_vente'), prix: nz('prix_vente') || formatPrice(dossier.prix), honoraires: honFai, commission: nz('taux_honoraires'), notaires: nz('notaires') } : null,
+                    parties: { acq: acqNom ? { n: acqNom, s: 'Acquéreur', tel: acqTel || undefined, mail: acqMail || undefined } : null, notAcq: null, notVend: null, vendeur },
+                    honoraires: honFai ? { fai: honFai, charge: nz('honoraires_charge'), taux: nz('taux_honoraires'), part: '', rendement: '' } : undefined,
+                  }
+                }
+                return <CkAffaires affaire={affMock ?? deriveAffaire()} />
               })()}
             </div>
           ) : activeTab === 'contact' ? (
