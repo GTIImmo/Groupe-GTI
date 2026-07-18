@@ -21391,7 +21391,21 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       {sec.fields.map(([label, k, unit], i) => {
                         const val = detailStr(k).trim()
                         const num = val && val !== '0'
-                        return <div key={i} className={`fa-ck-lb-feat${num ? '' : ' off'}`} style={{ ['--c']: sec.c } as CSSProperties}><span className="fl">{label}</span><span className="fv">{num ? (unit && !/[€m²%]/.test(val) ? `${val} ${unit}` : val) : 'À renseigner'}</span></div>
+                        return (
+                          <div
+                            key={i}
+                            className={`fa-ck-lb-feat${num ? '' : ' off'}${isLightweightDetail ? '' : ' editable'}`}
+                            style={{ ['--c']: sec.c } as CSSProperties}
+                            role={isLightweightDetail ? undefined : 'button'}
+                            tabIndex={isLightweightDetail ? undefined : 0}
+                            title={isLightweightDetail ? undefined : `Modifier — ${label}`}
+                            onClick={isLightweightDetail ? undefined : () => setHektorEditOpen(true)}
+                          >
+                            <span className="fl">{label}</span>
+                            <span className="fv">{num ? (unit && !/[€m²%]/.test(val) ? `${val} ${unit}` : val) : 'À renseigner'}</span>
+                            {isLightweightDetail ? null : <svg className="fa-ck-lb-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
+                          </div>
+                        )
                       })}
                     </div>
                   </div>

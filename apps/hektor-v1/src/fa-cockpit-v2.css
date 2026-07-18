@@ -647,3 +647,9 @@
 .fa-ck-lb-editbtn { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border: 1px solid #bb1059; border-radius: 11px; padding: 9px 16px; cursor: pointer; box-shadow: 0 10px 22px -12px rgba(194, 18, 95, .75); transition: .15s; }
 .fa-ck-lb-editbtn:hover { filter: brightness(1.05); }
 .fa-ck-lb-editbtn svg { width: 15px; height: 15px; }
+
+/* Le Bien : clic-inline sur un champ → ouvre l'éditeur réel (comme .ed-el du v21) */
+.fa-ck-lb-feat.editable { cursor: pointer; position: relative; }
+.fa-ck-lb-feat.editable:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--fa-brand)) 12%, transparent); }
+.fa-ck-lb-pen { width: 13px; height: 13px; color: var(--c, var(--fa-brand)); opacity: 0; flex: none; margin-left: 4px; transition: opacity .14s; }
+.fa-ck-lb-feat.editable:hover .fa-ck-lb-pen { opacity: 1; }
