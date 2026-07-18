@@ -110,7 +110,8 @@
   border-radius: 15px; padding: 10px 12px; cursor: pointer; position: relative;
   transition: .16s; box-shadow: 0 1px 2px rgba(32, 24, 18, .04);
 }
-.fa-ck-rn:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 16px 28px -16px var(--c, var(--fa-brand)); }
+.fa-ck-rn { transition: border-color .16s, box-shadow .16s, transform .16s; }
+.fa-ck-rn:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 16px 28px -16px var(--c, var(--fa-brand)); transform: translateY(-2px); }
 .fa-ck-rn.is-active {
   border-color: var(--c, var(--fa-brand));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--fa-brand)) 24%, transparent), 0 12px 24px -14px color-mix(in srgb, var(--c, var(--fa-brand)) 48%, transparent);
@@ -733,3 +734,49 @@
 .fa-ck-pilotmodal .detail-admin-pilot > .section-header, .fa-ck-pilotmodal .detail-admin-intro { display: none !important; }
 .fa-ck-pilotmodal .detail-admin-pilot { padding: 0 !important; background: transparent !important; border: 0 !important; }
 .fa-ck-pilotmodal .detail-admin-pilot-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+/* ===== Effets animés (façon maquette v26) — scopés au cockpit ===== */
+@keyframes fa-ck-rise { from { opacity: 0; transform: translateY(11px); } to { opacity: 1; transform: none; } }
+@keyframes fa-ck-pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes fa-ck-jalon-pulse {
+  0% { box-shadow: 0 0 0 4px #fff, 0 0 0 4px rgba(194, 18, 95, .5), 0 8px 16px -7px rgba(194, 18, 95, .6); }
+  70%, 100% { box-shadow: 0 0 0 4px #fff, 0 0 0 13px rgba(194, 18, 95, 0), 0 8px 16px -7px rgba(194, 18, 95, .6); }
+}
+@keyframes fa-ck-dotpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 138, 91, .5); } 55% { box-shadow: 0 0 0 6px rgba(47, 138, 91, 0); } }
+
+/* jalon courant : anneau magenta pulsé (comme .aev/anpulse du v26) */
+.fa-cockpit-v2 .fa-ck-tl-step.cur .fa-ck-tl-nd { animation: fa-ck-jalon-pulse 2.2s ease-out infinite; }
+/* entrée en fondu du panneau rubrique (rpIn) */
+.fa-cockpit-v2 .fa-ck-rub { animation: fa-ck-rise .32s cubic-bezier(.22, 1, .36, 1) both; }
+/* prochaine action : liens en cascade (paIn) */
+.fa-cockpit-v2 .fa-ck-pa-link { animation: fa-ck-rise .5s cubic-bezier(.22, 1, .36, 1) both; }
+.fa-cockpit-v2 .fa-ck-pa-link:nth-child(1) { animation-delay: .04s; }
+.fa-cockpit-v2 .fa-ck-pa-link:nth-child(2) { animation-delay: .1s; }
+.fa-cockpit-v2 .fa-ck-pa-link:nth-child(3) { animation-delay: .16s; }
+.fa-cockpit-v2 .fa-ck-pa-link:nth-child(4) { animation-delay: .22s; }
+/* fil d'activité : items en cascade (aevIn) */
+.fa-cockpit-v2 .fa-ck-aev { animation: fa-ck-rise .5s cubic-bezier(.22, 1, .36, 1) both; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(1) { animation-delay: .03s; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(2) { animation-delay: .09s; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(3) { animation-delay: .15s; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(4) { animation-delay: .21s; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(5) { animation-delay: .27s; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(6) { animation-delay: .33s; }
+.fa-cockpit-v2 .fa-ck-aev:nth-child(n+7) { animation-delay: .39s; }
+/* menu ⋯ : pop-in (popIn) */
+.fa-cockpit-v2 .fa-ck-tb-more.is-open .fa-ck-tb-menu { animation: fa-ck-pop .16s cubic-bezier(.22, 1, .36, 1); }
+/* point de statut « en direct » : pulse (pillst/dotbadge) */
+.fa-cockpit-v2 .fa-ck-hero-led, .fa-cockpit-v2 .fa-ck-tb-chip-dot { animation: fa-ck-dotpulse 2s ease-out infinite; }
+/* item d'activité « maintenant » : anneau pulsé sur la pastille */
+.fa-cockpit-v2 .fa-ck-aev.new .fa-ck-an { animation: fa-ck-jalon-pulse 2.2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-cockpit-v2 .fa-ck-tl-step.cur .fa-ck-tl-nd,
+  .fa-cockpit-v2 .fa-ck-rub,
+  .fa-cockpit-v2 .fa-ck-pa-link,
+  .fa-cockpit-v2 .fa-ck-aev,
+  .fa-cockpit-v2 .fa-ck-tb-more.is-open .fa-ck-tb-menu,
+  .fa-cockpit-v2 .fa-ck-hero-led,
+  .fa-cockpit-v2 .fa-ck-tb-chip-dot,
+  .fa-cockpit-v2 .fa-ck-aev.new .fa-ck-an { animation: none !important; }
+}
