@@ -21368,7 +21368,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 return lbStats.length > 0 ? (
                   <div className="fa-ck-lb-stats">
                     {lbStats.map((s) => (
-                      <div key={s.l} className="fa-ck-lb-stat"><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
+                      <div key={s.l} className={`fa-ck-lb-stat${isLightweightDetail ? '' : ' editable'}`} role={isLightweightDetail ? undefined : 'button'} tabIndex={isLightweightDetail ? undefined : 0} title={isLightweightDetail ? undefined : `Modifier — ${s.l}`} onClick={isLightweightDetail ? undefined : () => setHektorEditOpen(true)}><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
                     ))}
                   </div>
                 ) : null

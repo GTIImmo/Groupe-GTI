@@ -653,3 +653,6 @@
 .fa-ck-lb-feat.editable:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--fa-brand)) 12%, transparent); }
 .fa-ck-lb-pen { width: 13px; height: 13px; color: var(--c, var(--fa-brand)); opacity: 0; flex: none; margin-left: 4px; transition: opacity .14s; }
 .fa-ck-lb-feat.editable:hover .fa-ck-lb-pen { opacity: 1; }
+
+.fa-ck-lb-stat.editable { cursor: pointer; }
+.fa-ck-lb-stat.editable:hover { border-color: var(--fa-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fa-brand) 12%, transparent); }
