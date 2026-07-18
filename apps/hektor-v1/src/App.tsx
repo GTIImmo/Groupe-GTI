@@ -20730,17 +20730,52 @@ function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
 }
 
-// Sections « domaine » du Bien (façon v21) : chaque champ mappé sur une clé du détail.
+// Sections « domaine » du Bien (façon v21). Chaque champ = un VRAI nom wizard Hektor
+// (draftAnnonceWizardGroups) → édition en place branchée sur editAnnonceOptimistic.
 const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string; bg: string; ico: string; fields: Array<[string, string, string?]> }> = [
-  { key: 'composition', label: 'Composition', sub: 'Pièces & niveaux', c: '#7a4bb0', bg: '#f1eafc', ico: '<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>', fields: [['Nombre de pièces', 'nb_pieces'], ['Nombre de chambres', 'nb_chambres'], ['Niveaux', 'lb_niveaux'], ['Étage', 'etage_detail'], ['Surface habitable', 'surface_habitable_detail', 'm²'], ['Exposition', 'lb_exposition']] },
-  { key: 'interieur', label: 'Intérieur', sub: 'Pièces & agencement', c: '#b5651d', bg: '#f6e9db', ico: '<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 11a2 2 0 0 1 4 0v3h12v-3a2 2 0 0 1 4 0v6H2z"/>', fields: [['Salles de bain', 'lb_sdb'], ["Salles d'eau", 'lb_sde'], ['WC', 'lb_wc'], ['Surface séjour', 'lb_surface_sejour', 'm²'], ['Cuisine', 'lb_cuisine']] },
-  { key: 'exterieur', label: 'Extérieur & annexes', sub: 'Terrain, garages, terrasses', c: '#3b7d4f', bg: '#e4f1e8', ico: '<path d="M12 2 6 9h4l-3 5h5v6h2v-6h5l-3-5h4z"/>', fields: [['Terrasse', 'lb_terrasse'], ['Surface terrasse', 'lb_surface_terrasse', 'm²'], ['Garage', 'garage_box_detail'], ['Cave', 'lb_cave'], ['Jardin', 'lb_jardin'], ['Surface terrain', 'surface_terrain_detail', 'm²']] },
-  { key: 'construction', label: 'Construction', sub: 'Neuf, normes & garanties', c: '#5a7d3b', bg: '#eaf2e0', ico: '<path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/>', fields: [['Type de bien', 'lb_type_bien'], ['Année de construction', 'lb_annee'], ['État général', 'lb_etat']] },
-  { key: 'confort', label: 'Confort & équipements', sub: 'Chauffage, sécurité, réseaux', c: '#b07d1c', bg: '#f7eed9', ico: '<path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>', fields: [['Chauffage', 'lb_chauffage'], ['Eau', 'lb_eau'], ['Assainissement', 'lb_assainissement'], ['Double vitrage', 'lb_double_vitrage'], ['Ascenseur', 'ascenseur_detail']] },
-  { key: 'prix', label: 'Prix, mandat & honoraires', sub: 'Financier', c: '#8a6a2f', bg: '#f4ecd9', ico: '<circle cx="12" cy="12" r="9"/><path d="M15 8a4 4 0 1 0 0 8M7 10h6M7 14h6"/>', fields: [['Prix public', 'lb_prix_public'], ['Prix net vendeur', 'lb_net_vendeur'], ['Honoraires', 'lb_honoraires'], ['Taxe foncière', 'lb_taxe_fonciere']] },
-  { key: 'dispo', label: 'Disponibilité & visite', sub: 'Libération & clés', c: '#3a5a8a', bg: '#e7edf7', ico: '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/>', fields: [['Disponible', 'lb_disponible'], ['Date libération', 'lb_date_liberation'], ['Moyens de visite', 'lb_visite']] },
-  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'lb_diffusable'], ['Numéro dossier', 'lb_numero_dossier'], ['Date création', 'lb_date_creation']] },
+  { key: 'composition', label: 'Composition', sub: 'Pièces & niveaux', c: '#7a4bb0', bg: '#f1eafc', ico: '<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>', fields: [['Nombre de pièces', 'nbpieces'], ['Nombre de chambres', 'NB_CHAMBRES'], ['Niveaux', 'NB_NIVEAUX'], ['Étage', 'ETAGE'], ['Surface habitable', 'surfappart', 'm²'], ['Exposition', 'EXPOSITION']] },
+  { key: 'interieur', label: 'Intérieur', sub: 'Pièces & agencement', c: '#b5651d', bg: '#f6e9db', ico: '<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 11a2 2 0 0 1 4 0v3h12v-3a2 2 0 0 1 4 0v6H2z"/>', fields: [['Salles de bain', 'NB_SDB'], ["Salles d'eau", 'NB_SE'], ['WC', 'NB_WC'], ['Surface séjour', 'SURF_SEJOUR', 'm²'], ['Cuisine', 'CUISINE']] },
+  { key: 'exterieur', label: 'Extérieur & annexes', sub: 'Terrain, garages, terrasses', c: '#3b7d4f', bg: '#e4f1e8', ico: '<path d="M12 2 6 9h4l-3 5h5v6h2v-6h5l-3-5h4z"/>', fields: [['Terrasse', 'TERRASSE'], ['Surface terrasse', 'SURFACE_TERRASSE', 'm²'], ['Garages', 'GARAGE_BOX'], ['Cave', 'CAVE'], ['Jardin', 'JARDIN-'], ['Surface terrain', 'surfterrain', 'm²']] },
+  { key: 'construction', label: 'Construction', sub: 'Année, normes & état', c: '#5a7d3b', bg: '#eaf2e0', ico: '<path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/>', fields: [['Année de construction', 'ANNEE_CONS'], ['État intérieur', 'etat_interieur'], ['État extérieur', 'etat_exterieur']] },
+  { key: 'confort', label: 'Confort & équipements', sub: 'Chauffage, sécurité, réseaux', c: '#b07d1c', bg: '#f7eed9', ico: '<path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>', fields: [['Type chauffage', 'typeChauff'], ['Eau', 'EAU'], ['Assainissement', 'ASSAINISSEMENT'], ['Double vitrage', 'double_vitrage'], ['Ascenseur', 'ASCENSEUR']] },
+  { key: 'prix', label: 'Prix & charges', sub: 'Financier', c: '#8a6a2f', bg: '#f4ecd9', ico: '<circle cx="12" cy="12" r="9"/><path d="M15 8a4 4 0 1 0 0 8M7 10h6M7 14h6"/>', fields: [['Prix public', 'prix', '€'], ['Prix net vendeur', 'PRIXNETVENDEUR', '€'], ['Taxe foncière', 'TAXE_FONCIERE', '€'], ['Charges', 'CHARGES', '€']] },
+  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
 ]
+// Métadonnées des champs wizard (type/options) indexées par nom, pour l'édition en place.
+const CK_WIZARD_FIELD_BY_NAME: Record<string, DraftAnnonceWizardField> = Object.fromEntries(
+  draftAnnonceWizardGroups.flatMap((g) => g.fields).map((f) => [f.name, f]),
+)
+// Champ éditable EN PLACE (comme .ed-el du v21) : clic → input/select ancré sur le champ.
+function CkInlineField({ label, name, unit, value, edited, readOnly, onSave }: { label: string; name: string; unit?: string; value: string; edited: boolean; readOnly?: boolean; onSave: (name: string, value: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const field = CK_WIZARD_FIELD_BY_NAME[name]
+  const options = field?.options
+  const raw = (value ?? '').trim()
+  const display = !raw ? '' : options ? (options.find((o) => o.value === raw)?.label ?? raw) : (unit && !/[€m²%]/.test(raw) ? `${raw} ${unit}` : raw)
+  const start = () => { if (readOnly) return; setDraft(raw); setEditing(true) }
+  const commit = () => { setEditing(false); if (draft.trim() !== raw) onSave(name, draft.trim()) }
+  return (
+    <div className={`fa-ck-lb-feat${display ? '' : ' off'}${readOnly ? '' : ' editable'}${edited ? ' is-edited' : ''}`}>
+      <span className="fl">{label}</span>
+      {editing ? (
+        options ? (
+          <select className="fa-ck-inline-ed" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false) }}>
+            <option value="">—</option>
+            {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        ) : (
+          <input className="fa-ck-inline-ed" autoFocus type="text" inputMode={field?.inputMode} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }} />
+        )
+      ) : (
+        <span className="fv" role={readOnly ? undefined : 'button'} tabIndex={readOnly ? undefined : 0} title={readOnly ? undefined : `Modifier — ${label}`} onClick={start} onKeyDown={(e) => { if (!readOnly && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); start() } }}>
+          {display || 'À renseigner'}
+          {readOnly ? null : <svg className="fa-ck-lb-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
+        </span>
+      )}
+    </div>
+  )
+}
 
 // Échelle DPE/GES (rubrique Le Bien, façon v21) : barres A→G, lettre active mise en avant.
 function ckDpeLetter(value: number, kind: 'conso' | 'ges') {
@@ -20945,8 +20980,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
-  // Édition en place (Lot 1) : réutilise le VRAI éditeur HektorAnnonceUpdateForm → editAnnonceOptimistic (calque + worker).
-  const [hektorEditOpen, setHektorEditOpen] = useState(false)
+  // Édition EN PLACE (façon v21) : diff local `edited` → un seul editAnnonceOptimistic (calque + worker).
+  const [edited, setEdited] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  // Quand le détail se recharge (read-through / job worker), le calque tient la valeur → on purge le diff local.
+  useEffect(() => { setEdited({}); setSaveMsg(null) }, [props.detail])
   const [moreOpen, setMoreOpen] = useState(false)
   useEffect(() => {
     if (!moreOpen) return
@@ -21072,6 +21111,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : nbPortails > 0 ? `Diffusé sur ${nbPortails} portail(s) actif(s) — relancez les acquéreurs ou ajustez le prix.`
     : 'Mandat validé — ouvrez la diffusion pour passer en ligne.'
   const emailContacts = props.contacts.filter((c) => c.email)
+  // Valeur d'un champ wizard par son nom (overlay-first, via la MÊME fonction que l'éditeur) + diff local.
+  const wizFieldValue = (name: string) => { const f = CK_WIZARD_FIELD_BY_NAME[name]; return f ? wizardDetailValue(dossier, props.detail, f) : '' }
+  const onFieldSave = (name: string, value: string) => setEdited((prev) => ({ ...prev, [name]: value }))
+  const editedCount = Object.keys(edited).length
+  const doSaveEdits = async () => {
+    setSaving(true)
+    setSaveMsg(null)
+    try {
+      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: edited })
+      setSaveMsg('Envoyé — vague vers Hektor (~10 min)')
+    } catch (err) {
+      setSaveMsg(err instanceof Error ? err.message : "Échec de l'enregistrement")
+    } finally {
+      setSaving(false)
+    }
+  }
   // Négociateur (carte topbar) : dérivé des champs réels commercial_nom / agence_nom.
   const negoName = (dossier.commercial_nom ?? '').trim()
   const negoInitials = negoName ? negoName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') : ''
@@ -21303,16 +21358,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'lebien' ? (
             <div className="fa-ck-rub fa-ck-lebien">
-              {/* Édition : bandeau conflit/partiel + bouton « Modifier la fiche » (réutilise l'éditeur réel) */}
+              {/* Bandeau conflit/partiel Hektor (retour du worker). Édition = en place, champ par champ. */}
               {!isLightweightDetail ? <AnnonceEditStatusBanner dossier={dossier} /> : null}
-              {!isLightweightDetail ? (
-                <div className="fa-ck-lb-actions">
-                  <button type="button" className="fa-ck-lb-editbtn" onClick={() => setHektorEditOpen(true)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                    Modifier la fiche
-                  </button>
-                </div>
-              ) : null}
+              {!isLightweightDetail ? <p className="fa-ck-lb-edithint">Clique un champ pour le modifier en place, puis <b>Enregistrer</b> (une vague vers Hektor).</p> : null}
               {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
               {props.images.length > 0 ? (
                 <div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
@@ -21368,7 +21416,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 return lbStats.length > 0 ? (
                   <div className="fa-ck-lb-stats">
                     {lbStats.map((s) => (
-                      <div key={s.l} className={`fa-ck-lb-stat${isLightweightDetail ? '' : ' editable'}`} role={isLightweightDetail ? undefined : 'button'} tabIndex={isLightweightDetail ? undefined : 0} title={isLightweightDetail ? undefined : `Modifier — ${s.l}`} onClick={isLightweightDetail ? undefined : () => setHektorEditOpen(true)}><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
+                      <div key={s.l} className="fa-ck-lb-stat"><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
                     ))}
                   </div>
                 ) : null
@@ -21380,33 +21428,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className="fa-ck-pub-card"><div className="fa-ck-lb-desc" dangerouslySetInnerHTML={{ __html: props.texts[0].html }} /></div>
                 </>
               ) : null}
-              {/* Sections DOMAINE du v21 (Composition/Intérieur/Extérieur/Construction/Confort/Prix/Dispo/Diffusion) */}
+              {/* Sections DOMAINE du v21, éditables EN PLACE (chaque champ = vrai champ wizard Hektor) */}
               {CK_LB_SECTIONS.map((sec) => {
+                const fval = (k: string) => String(edited[k] ?? wizFieldValue(k) ?? '')
                 const total = sec.fields.length
-                const filled = sec.fields.filter(([, k]) => detailStr(k).trim()).length
+                const filled = sec.fields.filter(([, k]) => fval(k).trim() && fval(k).trim() !== '0').length
                 return (
                   <div key={sec.key} className="fa-ck-lb-secwrap">
                     <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: sec.bg, color: sec.c }} aria-hidden="true"><CkIcon path={sec.ico} /></span><div><div className="fa-ck-pub-t">{sec.label}</div><div className="fa-ck-pub-s">{sec.sub}</div></div><span className="fa-ck-lb-cnt" style={{ color: sec.c, background: sec.bg }}>{filled}/{total}</span></div>
-                    <div className="fa-ck-lb-feats">
-                      {sec.fields.map(([label, k, unit], i) => {
-                        const val = detailStr(k).trim()
-                        const num = val && val !== '0'
-                        return (
-                          <div
-                            key={i}
-                            className={`fa-ck-lb-feat${num ? '' : ' off'}${isLightweightDetail ? '' : ' editable'}`}
-                            style={{ ['--c']: sec.c } as CSSProperties}
-                            role={isLightweightDetail ? undefined : 'button'}
-                            tabIndex={isLightweightDetail ? undefined : 0}
-                            title={isLightweightDetail ? undefined : `Modifier — ${label}`}
-                            onClick={isLightweightDetail ? undefined : () => setHektorEditOpen(true)}
-                          >
-                            <span className="fl">{label}</span>
-                            <span className="fv">{num ? (unit && !/[€m²%]/.test(val) ? `${val} ${unit}` : val) : 'À renseigner'}</span>
-                            {isLightweightDetail ? null : <svg className="fa-ck-lb-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
-                          </div>
-                        )
-                      })}
+                    <div className="fa-ck-lb-feats" style={{ ['--c']: sec.c } as CSSProperties}>
+                      {sec.fields.map(([label, k, unit]) => (
+                        <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail} onSave={onFieldSave} />
+                      ))}
                     </div>
                   </div>
                 )
@@ -21660,12 +21693,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub fa-ck-contact">
               <div className="fa-ck-ct-toolbar">
                 <span className="fa-ck-ct-strip">Source <b>API AnnonceById</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
-                {!isLightweightDetail ? (
-                  <button type="button" className="fa-ck-ct-editbtn" onClick={() => setHektorEditOpen(true)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                    Modifier contacts
-                  </button>
-                ) : null}
               </div>
               <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>
               {isLightweightDetail
@@ -21868,31 +21895,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       </div>,
       document.body,
     ) : null}
-    {/* Éditeur de fiche réel (calque optimiste + worker) — même composant que la fiche Base. */}
-    {hektorEditOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
-      <div className="modal-overlay detail-edit-popup-overlay" onClick={() => setHektorEditOpen(false)}>
-        <section className="modal-panel detail-edit-popup" onClick={(event) => event.stopPropagation()}>
-          <div className="detail-edit-popup-head">
-            <div className="detail-edit-popup-icon" aria-hidden="true">M</div>
-            <div>
-              <span>Modification Hektor</span>
-              <h3>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h3>
-              <p>Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.</p>
-              <div className="detail-edit-popup-flow" aria-label="Circuit de mise a jour"><span>App</span><span>PC serveur</span><span>Hektor</span><span>Retour app</span></div>
-            </div>
-            <button className="request-modal-close detail-edit-popup-close" type="button" onClick={() => setHektorEditOpen(false)}>Fermer</button>
-          </div>
-          <div className="detail-edit-popup-grid">
-            <section className="detail-edit-popup-section">
-              <div className="detail-edit-popup-section-head"><span>Annonce</span><strong>Informations du bien</strong></div>
-              <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
-            </section>
-            <section className="detail-edit-popup-section detail-edit-popup-mandants">
-              <div className="detail-edit-popup-section-head"><span>Vendeurs</span><strong>Mandants associes</strong></div>
-              <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
-            </section>
-          </div>
-        </section>
+    {/* Barre d'enregistrement (façon .mfoot v21) : diff local → editAnnonceOptimistic (calque + worker). */}
+    {editedCount > 0 && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
+      <div className="fa-ck-savebar" role="status">
+        <span className="fa-ck-savebar-n">{editedCount}</span>
+        <span className="fa-ck-savebar-tx">champ{editedCount > 1 ? 's' : ''} modifié{editedCount > 1 ? 's' : ''}<em>1 vague vers Hektor</em></span>
+        {saveMsg ? <span className="fa-ck-savebar-msg">{saveMsg}</span> : null}
+        <div className="fa-ck-savebar-acts">
+          <button type="button" className="fa-ck-savebar-btn" onClick={() => { setEdited({}); setSaveMsg(null) }} disabled={saving}>Annuler</button>
+          <button type="button" className="fa-ck-savebar-btn save" onClick={() => void doSaveEdits()} disabled={saving}>{saving ? 'Envoi…' : 'Enregistrer'}</button>
+        </div>
       </div>,
       document.body,
     ) : null}

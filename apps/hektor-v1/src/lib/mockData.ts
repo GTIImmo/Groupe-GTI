@@ -101,6 +101,15 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     dpe_conso: 210,
     dpe_ges: 35,
     ascenseur_detail: 'Oui',
+    // Calque optimiste (mock) : peuple les champs wizard lus par wizardDetailValue (overlay-first).
+    app_optimistic_overlay: {
+      nbpieces: '3', NB_CHAMBRES: '2', NB_NIVEAUX: '1', ETAGE: '3', surfappart: '74',
+      NB_SDB: '1', NB_SE: '1', NB_WC: '1', SURF_SEJOUR: '28',
+      TERRASSE: 'OUI', SURFACE_TERRASSE: '8', 'GARAGE_BOX': '1', CAVE: 'OUI', 'JARDIN-': 'NON', surfterrain: '',
+      ANNEE_CONS: '1972', double_vitrage: 'OUI', ASCENSEUR: 'OUI',
+      prix: '259000', PRIXNETVENDEUR: '246000', TAXE_FONCIERE: '980', CHARGES: '0',
+      NO_DOSSIER: 'VA1926', dateenr: '11/06/2026',
+    },
     // Le Bien (v21) : champs par section domaine.
     lb_niveaux: '1', lb_exposition: 'Sud-Ouest', lb_surface_sejour: '28',
     lb_sdb: '1', lb_sde: '1', lb_wc: '1', lb_cuisine: 'Équipée · four, plaque, hotte',
