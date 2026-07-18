@@ -21005,6 +21005,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Quand le détail se recharge (read-through / job worker), le calque tient la valeur → on purge le diff local.
   useEffect(() => { setEdited({}); setSaveMsg(null) }, [props.detail])
   const [moreOpen, setMoreOpen] = useState(false)
+  const [pilotageOpen, setPilotageOpen] = useState(false)
   useEffect(() => {
     if (!moreOpen) return
     const close = () => setMoreOpen(false)
@@ -21153,6 +21154,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   type CkMoreItem = { label?: string; ico?: string; onClick?: () => void; danger?: boolean; sep?: boolean }
   const ckMoreItems: CkMoreItem[] = []
   if (props.onOpenRapprochement && !isLightweightDetail) ckMoreItems.push({ label: 'Acquéreurs', ico: CK_ICON.rapprochement, onClick: () => props.onOpenRapprochement?.(dossier) })
+  if ((props.allowMarkValidation || props.allowMarkDiffusable) && !isLightweightDetail) ckMoreItems.push({ label: 'Pilotage', ico: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/>', onClick: () => setPilotageOpen(true) })
   if (!isLightweightDetail) ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => setActiveTab('contact') })
   if (ckMoreItems.length > 0 && ((props.onArchiveAnnonce && !isLightweightDetail) || props.onDeleteAnnonce)) ckMoreItems.push({ sep: true })
   if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
@@ -21942,6 +21944,50 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <button type="button" className="fa-ck-savebar-btn save" onClick={() => void doSaveEdits()} disabled={saving}>{saving ? 'Envoi…' : 'Enregistrer'}</button>
         </div>
       </div>,
+      document.body,
+    ) : null}
+    {/* Modale « Pilotage de l'annonce » (façon v32) : réutilise le VRAI panneau admin (validation + diffusion). */}
+    {pilotageOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
+      (() => {
+        const vDraft = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
+        const vObserved = props.validationObserved ?? vDraft
+        const vSaved = props.validationSaved ?? vDraft
+        const dDraft = props.diffusableDraft ?? isDiffusableValue(dossier.diffusable)
+        const dObserved = props.diffusableObserved ?? isDiffusableValue(dossier.diffusable)
+        const dSaved = props.diffusableSaved ?? dDraft
+        return (
+          <div className="modal-overlay" onClick={() => setPilotageOpen(false)}>
+            <section className="modal-panel modal-panel-wide status-change-modal fa-ck-statusmodal fa-ck-pilotmodal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-head status-change-head">
+                <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Pilotage Hektor</p>
+                  <h3>Pilotage de l'annonce</h3>
+                </div>
+                <button className="ghost-button button-subtle" type="button" onClick={() => setPilotageOpen(false)}>Fermer</button>
+              </div>
+              <div className="fa-ck-pilotbody">
+                <p className="fa-ck-pilotnote">Ces deux commutateurs pilotent directement Hektor. La validation du mandat débloque la diffusion ; chaque bascule génère un job de synchronisation.</p>
+                <DetailAdminPilotPanel
+                  allowValidation={props.allowMarkValidation}
+                  allowDiffusable={props.allowMarkDiffusable}
+                  validationActive={isValidationApproved(vDraft)}
+                  validationObserved={isValidationApproved(vObserved)}
+                  validationPending={Boolean(props.markValidationPending)}
+                  validationSyncPending={vSaved !== vObserved}
+                  diffusableActive={dDraft}
+                  diffusableObserved={dObserved}
+                  diffusablePending={Boolean(props.markDiffusablePending)}
+                  diffusableSyncPending={dSaved !== dObserved}
+                  onSetValidation={props.onSetValidation}
+                  onSetDiffusable={props.onSetDiffusable}
+                  onOpenHektor={() => openHektorAnnonce(String(dossier.hektor_annonce_id))}
+                />
+              </div>
+            </section>
+          </div>
+        )
+      })(),
       document.body,
     ) : null}
     </>
