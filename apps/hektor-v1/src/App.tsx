@@ -20749,6 +20749,14 @@ const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string
   { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Titre annonce', 'titre'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
   { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Code postal', 'codepublique'], ['Ville', 'villepublique'], ['Adresse / complément', 'ADRESSE_COMPL'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
 ]
+// Champs en LECTURE SEULE dans l'édition en place : non écrits par le chemin optimiste.
+// Vérifié dans le worker (console_job_worker.js) : la quasi-totalité des champs de la fiche
+// EST poussable (HEKTOR_WIZARD_COMMON_FIELDS pour prix/honoraires/taxes/localisation/titre ;
+// HEKTOR_WIZARD_FIELDS_BY_PROFILE pour composition/intérieur/etc. ; le chauffage a même un
+// contrôleur dédié applyHektorChauffage). Seul `diffusable` est bloqué front
+// (hektorUnsupportedDirectUpdateWizardFields) et se pilote via le toggle Publicité / la modale
+// Pilotage — donc affiché mais non éditable en saisie libre.
+const CK_NON_PUSHABLE_INLINE = new Set<string>(['diffusable'])
 // Métadonnées des champs wizard (type/options) indexées par nom, pour l'édition en place.
 const CK_WIZARD_FIELD_BY_NAME: Record<string, DraftAnnonceWizardField> = Object.fromEntries(
   draftAnnonceWizardGroups.flatMap((g) => g.fields).map((f) => [f.name, f]),
@@ -21463,7 +21471,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: sec.bg, color: sec.c }} aria-hidden="true"><CkIcon path={sec.ico} /></span><div><div className="fa-ck-pub-t">{sec.label}</div><div className="fa-ck-pub-s">{sec.sub}</div></div><span className="fa-ck-lb-cnt" style={{ color: sec.c, background: sec.bg }}>{filled}/{total}</span></div>
                     <div className="fa-ck-lb-feats" style={{ ['--c']: sec.c } as CSSProperties}>
                       {sec.fields.map(([label, k, unit]) => (
-                        <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail} onSave={onFieldSave} />
+                        <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail || CK_NON_PUSHABLE_INLINE.has(k)} onSave={onFieldSave} />
                       ))}
                     </div>
                   </div>
