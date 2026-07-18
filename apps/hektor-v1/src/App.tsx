@@ -21075,12 +21075,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : pOffre ? 'Sous offre'
     : !pMandatNum ? 'Mandat à créer'
     : !pMandatOk ? 'Mandat signé · à valider'
-    : nbPortails > 0 ? 'Diffusé · en ligne'
+    : nbPortails > 0 ? "En ligne — en attente d'offre"
     : 'Validé · à diffuser'
   // Actions « prochaine étape » : mixées (métier + navigation), visibles UNIQUEMENT si l'état est
   // cohérent, 3 maximum. Chaque action route vers la rubrique où elle se réalise (comme la maquette).
   const hasRappro = Boolean(props.onOpenRapprochement)
-  const nextActions: Array<{ label: string; rubKey: string }> = (
+  const nextActions: Array<{ label: string; rubKey: string; badge?: string }> = (
     pVendu ? []
     : (pOffre || pCompromis) ? [
         { label: "Traiter l'affaire", rubKey: 'affaires' },
@@ -21095,12 +21095,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       ]
     : nbPortails > 0 ? [
         ...(hasRappro ? [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }] : []),
-        { label: 'Faire une baisse de prix', rubKey: 'mandat' },
+        { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' },
         { label: 'Gérer la diffusion', rubKey: 'publicite' },
       ]
     : [
         { label: 'Ouvrir la diffusion', rubKey: 'publicite' },
-        { label: 'Faire une baisse de prix', rubKey: 'mandat' },
+        { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' },
       ]
   ).slice(0, 3)
   const runAction = (rubKey: string) => { if (rubKey === 'rapprochement') props.onOpenRapprochement?.(dossier); else setActiveTab(rubKey) }
@@ -21108,7 +21108,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : (pOffre || pCompromis) ? 'Une transaction est en cours — suivez-la dans la rubrique Affaires.'
     : !pMandatNum ? 'Annonce active mais mandat manquant — créez le mandat.'
     : !pMandatOk ? 'Mandat en cours de validation — la diffusion se débloque après validation.'
-    : nbPortails > 0 ? `Diffusé sur ${nbPortails} portail(s) actif(s) — relancez les acquéreurs ou ajustez le prix.`
+    : nbPortails > 0 ? `Diffusé · ${nbPortails} portail(s) actif(s) · aucune offre. Relancez ou ajustez le prix si le rythme faiblit.`
     : 'Mandat validé — ouvrez la diffusion pour passer en ligne.'
   const emailContacts = props.contacts.filter((c) => c.email)
   // Valeur d'un champ wizard par son nom (overlay-first, via la MÊME fonction que l'éditeur) + diff local.
@@ -21298,7 +21298,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                           <button key={act.label} type="button" className="fa-ck-pa-link" style={{ ['--c']: rub.color } as CSSProperties} onClick={() => runAction(act.rubKey)}>
                             <span className="fa-ck-pl-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
                             <span className="fa-ck-pl-tx">{act.label}</span>
-                            <span className="fa-ck-pl-rub">{rub.label}</span>
+                            <span className="fa-ck-pl-rub">{act.badge ?? rub.label}</span>
                             <span className="fa-ck-pl-go" aria-hidden="true">→</span>
                           </button>
                         )

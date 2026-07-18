@@ -197,7 +197,7 @@
 .fa-ck-pl-ic { width: 32px; height: 32px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, color-mix(in srgb, var(--c, var(--fa-brand)) 78%, #fff), var(--c, var(--fa-brand))); box-shadow: 0 6px 13px -7px color-mix(in srgb, var(--c, var(--fa-brand)) 80%, transparent); }
 .fa-ck-pl-ic svg { width: 17px; height: 17px; }
 .fa-ck-pl-tx { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--fa-ink); }
-.fa-ck-pl-rub { flex: none; font-size: 10.5px; font-weight: 800; color: var(--c, var(--fa-brand)); background: color-mix(in srgb, var(--c, var(--fa-brand)) 12%, transparent); border-radius: 99px; padding: 3px 9px; }
+.fa-ck-pl-rub { flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--c, var(--fa-brand)); background: color-mix(in srgb, var(--c, var(--fa-brand)) 12%, transparent); border-radius: 99px; padding: 4px 10px; }
 .fa-ck-pl-go { flex: none; color: var(--c, var(--fa-brand)); font-weight: 800; font-size: 17px; transition: transform .16s; }
 .fa-ck-pa-link:hover .fa-ck-pl-go { transform: translateX(4px); }
 
