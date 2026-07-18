@@ -102,23 +102,42 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     dpe_ges: 35,
     ascenseur_detail: 'Oui',
     // Calque optimiste (mock) : peuple les champs wizard lus par wizardDetailValue (overlay-first).
+    // Overlay optimiste = vrais champs wizard Hektor (rendu « plein » de la fiche Le Bien, façon v21).
     app_optimistic_overlay: {
-      nbpieces: '3', NB_CHAMBRES: '2', NB_NIVEAUX: '1', ETAGE: '3', surfappart: '74',
-      NB_SDB: '1', NB_SE: '1', NB_WC: '1', SURF_SEJOUR: '28',
-      TERRASSE: 'OUI', SURFACE_TERRASSE: '8', 'GARAGE_BOX': '1', CAVE: 'OUI', 'JARDIN-': 'NON', surfterrain: '',
-      ANNEE_CONS: '1972', double_vitrage: 'OUI', ASCENSEUR: 'OUI',
-      prix: '259000', PRIXNETVENDEUR: '246000', TAXE_FONCIERE: '980', CHARGES: '0',
-      NO_DOSSIER: 'VA1926', dateenr: '11/06/2026',
+      // Composition
+      nbpieces: '3', NB_CHAMBRES: '2', NB_NIVEAUX: '1', ETAGE: '3', surfappart: '74', SURF_CARREZ: '74', EXPOSITION: 'Sud-Ouest', vuee: 'Dégagée',
+      // Intérieur
+      NB_SDB: '1', NB_SE: '1', NB_WC: '1', SURF_SEJOUR: '28', CUISINE: 'Équipée', CUISINE_EQUIPEMENT: 'Four, plaque, hotte', cheminee: 'NON', Particularites: 'Balcon exposé sud',
+      // Extérieur & annexes
+      MURS_MITOYENS: 'NON', NB_ETAGES: '4', CAVE: 'OUI', SURFACE_CAVE: '6', BALCON: 'OUI', NB_BALCON: '1', SURFACE_BALCON: '5',
+      TERRASSE: 'OUI', NB_TERRASSE: '1', SURFACE_TERRASSE: '8', 'GARAGE_BOX': '1', SURFACE_GARAGE: '15', NB_PARK_INT: '1', NB_PARK_EXT: '0',
+      'JARDIN-': 'NON', surfterrain: '', SHON: '', terrain_arbore: 'NON', terrain_constructible: 'NON', terrain_viabilise: 'OUI',
+      // Construction
+      ANNEE_CONS: '1972', etat_interieur: 'Bon état', etat_exterieur: 'Bon état', garantie_decennale: 'NON', assurance_dommages_ouvrage: 'NON', certificat_conformite: 'NON', declaration_achevement_travaux: 'NON',
+      // Piscine (appartement → masquée via condField PISCINE-)
+      'PISCINE-': 'NON',
+      // Confort & équipements
+      formatChauff: 'Individuel', typeChauff: 'Gaz', energieChauff: 'Gaz de ville', ASCENSEUR: 'OUI', ACCES_HANDI: 'NON', climatisation: 'NON',
+      EAU: 'Ville', ASSAINISSEMENT: 'Tout à l’égout', DISTRIBUTION_EAU: 'Individuelle', ENERGIE_EAU: 'Gaz',
+      volets_elctriques: 'OUI', double_vitrage: 'OUI', triple_vitrage: 'NON', cable: 'OUI', porte_blindee: 'NON',
+      interphone: 'OUI', visiophone: 'NON', alarme: 'NON', digicode: 'OUI', detecteur_fumee: 'OUI', gardien: 'NON',
+      // Copropriété (affichée via condField copropriete=OUI)
+      copropriete: 'OUI', copropriete_lot: '42', copropriete_nb_lot: '36', copropriete_quote_part: '120/1000', montant_fonds_travaux: '1 200', copropriete_plan_sauvegarde: 'NON', copropriete_statut_syndicat: 'Sans procédure',
+      // Diagnostics & énergie
+      diagnostiqueur: 'Diag Immo 42', dpe_date: '15/05/2026', dpe_cons: '210', dpe_ges: '32', dpe_couts_min: '980', dpe_couts_max: '1 380', dpe_annee_reference: '2021',
+      diag_amiante: 'OUI', diag_amiante_date: '15/05/2026', diag_termites: 'NON', diag_termites_date: '', diag_plomb: 'OUI', diag_plomb_date: '15/05/2026',
+      diag_electrique: 'OUI', diag_electrique_date: '15/05/2026', diag_gaz: 'OUI', diag_loi_carrez: 'OUI', diag_risques_nat_tech: 'OUI', diag_assainissement: 'NON',
+      // Prix, mandat & honoraires
+      prix: '259000', PRIXNETVENDEUR: '246000', _selecterHonoraires2: 'Charge acquéreur', _tauxHonoraire2: '13000', _pourcentHonoraire2: '5,28',
+      _selecterHonoraires3: '', _tauxHonoraire3: '', masque: '', ESTIMATION_MONTANT: '265000', ESTIMATION_DATE: '11/06/2026',
+      TRAVAUX: 'Rafraîchissement peintures', DEPOT_GARANTIE: '', TAXE_FONCIERE: '980', TAXE_HABITATION: '', CHARGES: '1 320', CHARGES_DETAIL: 'Eau froide, entretien parties communes, ascenseur',
+      // Disponibilité & visite
+      DISPO: 'OUI', DATE_LIBER: '01/10/2026', DATE_DISPO: '01/10/2026', CLES: 'À l’agence', moyens_visite: 'Sur RDV · bon de visite',
+      // Diffusion
+      diffusable: 'OUI', titre: 'Grand T3 secteur Bellevue avec garage', NO_DOSSIER: 'VA1926', dateenr: '11/06/2026',
+      // Localisation & secteur
+      codepublique: '42000', villepublique: 'Saint-Etienne', ADRESSE_COMPL: '18 rue de la Bellevue', TRANSPORT: 'Tram T1 · 300 m', PROXIMITE: 'Commerces, écoles, parc', ENVIRONNEMENT: 'Quartier résidentiel calme', latitude: '45.4397', longitude: '4.3872',
     },
-    // Le Bien (v21) : champs par section domaine.
-    lb_niveaux: '1', lb_exposition: 'Sud-Ouest', lb_surface_sejour: '28',
-    lb_sdb: '1', lb_sde: '1', lb_wc: '1', lb_cuisine: 'Équipée · four, plaque, hotte',
-    lb_terrasse: 'Oui', lb_surface_terrasse: '8', lb_cave: 'Oui', lb_jardin: 'Non',
-    lb_type_bien: 'Appartement', lb_annee: '1972', lb_etat: 'Bon état',
-    lb_chauffage: 'Individuel · gaz', lb_eau: 'Ville', lb_assainissement: 'Tout à l’égout', lb_double_vitrage: 'Oui',
-    lb_prix_public: '259 000 €', lb_net_vendeur: '246 000 €', lb_honoraires: '13 000 €', lb_taxe_fonciere: '980 €',
-    lb_disponible: 'Sous 3 mois', lb_date_liberation: '01/10/2026', lb_visite: 'Sur RDV · bon de visite',
-    lb_diffusable: 'Oui', lb_numero_dossier: 'VA1926', lb_date_creation: '11/06/2026',
     notes_json: JSON.stringify([
       { type: 'Note interne', date: '2026-06-12', content: 'Vendeurs disponibles pour les visites en semaine après 17 h. Prévoir un bon de visite systématique.' },
       { type: 'Note interne', date: '2026-06-28', content: 'Prix légèrement au-dessus du marché — envisager une baisse si pas d’offre sous 3 semaines.' },
