@@ -100,6 +100,16 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     texte_principal_html: '<p><b>Exclusivité — secteur Bellevue.</b> Grand T3 de 74 m² au 3e étage avec ascenseur, très lumineux, séjour traversant ouvrant sur balcon, deux chambres et cuisine équipée. Garage fermé en sous-sol.</p><p>Proche commerces, écoles et transports. Copropriété bien tenue, faibles charges. Idéal premier achat ou investissement locatif.</p>',
     dpe_conso: 210,
     dpe_ges: 35,
+    ascenseur_detail: 'Oui',
+    // Le Bien (v21) : champs par section domaine.
+    lb_niveaux: '1', lb_exposition: 'Sud-Ouest', lb_surface_sejour: '28',
+    lb_sdb: '1', lb_sde: '1', lb_wc: '1', lb_cuisine: 'Équipée · four, plaque, hotte',
+    lb_terrasse: 'Oui', lb_surface_terrasse: '8', lb_cave: 'Oui', lb_jardin: 'Non',
+    lb_type_bien: 'Appartement', lb_annee: '1972', lb_etat: 'Bon état',
+    lb_chauffage: 'Individuel · gaz', lb_eau: 'Ville', lb_assainissement: 'Tout à l’égout', lb_double_vitrage: 'Oui',
+    lb_prix_public: '259 000 €', lb_net_vendeur: '246 000 €', lb_honoraires: '13 000 €', lb_taxe_fonciere: '980 €',
+    lb_disponible: 'Sous 3 mois', lb_date_liberation: '01/10/2026', lb_visite: 'Sur RDV · bon de visite',
+    lb_diffusable: 'Oui', lb_numero_dossier: 'VA1926', lb_date_creation: '11/06/2026',
     notes_json: JSON.stringify([
       { type: 'Note interne', date: '2026-06-12', content: 'Vendeurs disponibles pour les visites en semaine après 17 h. Prévoir un bon de visite systématique.' },
       { type: 'Note interne', date: '2026-06-28', content: 'Prix légèrement au-dessus du marché — envisager une baisse si pas d’offre sous 3 semaines.' },

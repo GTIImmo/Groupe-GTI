@@ -20730,6 +20730,18 @@ function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
 }
 
+// Sections « domaine » du Bien (façon v21) : chaque champ mappé sur une clé du détail.
+const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string; bg: string; ico: string; fields: Array<[string, string, string?]> }> = [
+  { key: 'composition', label: 'Composition', sub: 'Pièces & niveaux', c: '#7a4bb0', bg: '#f1eafc', ico: '<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>', fields: [['Nombre de pièces', 'nb_pieces'], ['Nombre de chambres', 'nb_chambres'], ['Niveaux', 'lb_niveaux'], ['Étage', 'etage_detail'], ['Surface habitable', 'surface_habitable_detail', 'm²'], ['Exposition', 'lb_exposition']] },
+  { key: 'interieur', label: 'Intérieur', sub: 'Pièces & agencement', c: '#b5651d', bg: '#f6e9db', ico: '<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 11a2 2 0 0 1 4 0v3h12v-3a2 2 0 0 1 4 0v6H2z"/>', fields: [['Salles de bain', 'lb_sdb'], ["Salles d'eau", 'lb_sde'], ['WC', 'lb_wc'], ['Surface séjour', 'lb_surface_sejour', 'm²'], ['Cuisine', 'lb_cuisine']] },
+  { key: 'exterieur', label: 'Extérieur & annexes', sub: 'Terrain, garages, terrasses', c: '#3b7d4f', bg: '#e4f1e8', ico: '<path d="M12 2 6 9h4l-3 5h5v6h2v-6h5l-3-5h4z"/>', fields: [['Terrasse', 'lb_terrasse'], ['Surface terrasse', 'lb_surface_terrasse', 'm²'], ['Garage', 'garage_box_detail'], ['Cave', 'lb_cave'], ['Jardin', 'lb_jardin'], ['Surface terrain', 'surface_terrain_detail', 'm²']] },
+  { key: 'construction', label: 'Construction', sub: 'Neuf, normes & garanties', c: '#5a7d3b', bg: '#eaf2e0', ico: '<path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/>', fields: [['Type de bien', 'lb_type_bien'], ['Année de construction', 'lb_annee'], ['État général', 'lb_etat']] },
+  { key: 'confort', label: 'Confort & équipements', sub: 'Chauffage, sécurité, réseaux', c: '#b07d1c', bg: '#f7eed9', ico: '<path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>', fields: [['Chauffage', 'lb_chauffage'], ['Eau', 'lb_eau'], ['Assainissement', 'lb_assainissement'], ['Double vitrage', 'lb_double_vitrage'], ['Ascenseur', 'ascenseur_detail']] },
+  { key: 'prix', label: 'Prix, mandat & honoraires', sub: 'Financier', c: '#8a6a2f', bg: '#f4ecd9', ico: '<circle cx="12" cy="12" r="9"/><path d="M15 8a4 4 0 1 0 0 8M7 10h6M7 14h6"/>', fields: [['Prix public', 'lb_prix_public'], ['Prix net vendeur', 'lb_net_vendeur'], ['Honoraires', 'lb_honoraires'], ['Taxe foncière', 'lb_taxe_fonciere']] },
+  { key: 'dispo', label: 'Disponibilité & visite', sub: 'Libération & clés', c: '#3a5a8a', bg: '#e7edf7', ico: '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/>', fields: [['Disponible', 'lb_disponible'], ['Date libération', 'lb_date_liberation'], ['Moyens de visite', 'lb_visite']] },
+  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'lb_diffusable'], ['Numéro dossier', 'lb_numero_dossier'], ['Date création', 'lb_date_creation']] },
+]
+
 // Échelle DPE/GES (rubrique Le Bien, façon v21) : barres A→G, lettre active mise en avant.
 function ckDpeLetter(value: number, kind: 'conso' | 'ges') {
   const t = kind === 'conso' ? [70, 110, 180, 250, 330, 420] : [6, 11, 30, 50, 70, 100]
@@ -21356,6 +21368,23 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className="fa-ck-pub-card"><div className="fa-ck-lb-desc" dangerouslySetInnerHTML={{ __html: props.texts[0].html }} /></div>
                 </>
               ) : null}
+              {/* Sections DOMAINE du v21 (Composition/Intérieur/Extérieur/Construction/Confort/Prix/Dispo/Diffusion) */}
+              {CK_LB_SECTIONS.map((sec) => {
+                const total = sec.fields.length
+                const filled = sec.fields.filter(([, k]) => detailStr(k).trim()).length
+                return (
+                  <div key={sec.key} className="fa-ck-lb-secwrap">
+                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: sec.bg, color: sec.c }} aria-hidden="true"><CkIcon path={sec.ico} /></span><div><div className="fa-ck-pub-t">{sec.label}</div><div className="fa-ck-pub-s">{sec.sub}</div></div><span className="fa-ck-lb-cnt" style={{ color: sec.c, background: sec.bg }}>{filled}/{total}</span></div>
+                    <div className="fa-ck-lb-feats">
+                      {sec.fields.map(([label, k, unit], i) => {
+                        const val = detailStr(k).trim()
+                        const num = val && val !== '0'
+                        return <div key={i} className={`fa-ck-lb-feat${num ? '' : ' off'}`} style={{ ['--c']: sec.c } as CSSProperties}><span className="fl">{label}</span><span className="fv">{num ? (unit && !/[€m²%]/.test(val) ? `${val} ${unit}` : val) : 'À renseigner'}</span></div>
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
               {/* Diagnostics & énergie : échelles DPE / GES (façon v21) */}
               {(() => {
                 const conso = Number(detailStr('dpe_conso') || detailStr('dpe_cons'))
@@ -21370,7 +21399,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </>
                 ) : null
               })()}
-              {/* Fiche détaillée : vrais champs Hektor (sections + feature cards) */}
+              {/* Détail complet : vrais champs Hektor (complément, données réelles) */}
+              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Détail complet (Hektor)</div>
               <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
               {/* Localisation (façon v21) */}
               {props.address ? (

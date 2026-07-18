@@ -629,3 +629,15 @@
 .fa-ck-msc.v .mci { background: linear-gradient(150deg, #e6f3ec, #d7ecdf); color: #2f8a5b; }
 .fa-ck-msc .mct { font-size: 13.5px; font-weight: 700; color: var(--fa-ink); } .fa-ck-msc .mcs { font-size: 11.5px; color: var(--fa-muted); }
 .fa-ck-msc .mca { margin-left: auto; font-size: 9px; font-weight: 800; color: #9a5b05; background: #fbefd8; border: 1px solid #f0dcae; border-radius: 99px; padding: 2px 8px; flex: none; }
+
+/* Le Bien v21 : sections domaine (feature cards) */
+.fa-ck-lb-secwrap { display: contents; }
+.fa-ck-lb-cnt { margin-left: auto; font-size: 11px; font-weight: 800; border-radius: 99px; padding: 4px 11px; }
+.fa-ck-lb-feats { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-bottom: 4px; }
+.fa-ck-lb-feat { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--fa-line); border-radius: 14px; background: #fff; transition: .16s; }
+.fa-ck-lb-feat:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(24, 18, 14, .28); }
+.fa-ck-lb-feat .fl { font-size: 13px; font-weight: 700; color: var(--fa-ink); line-height: 1.2; }
+.fa-ck-lb-feat .fv { font-size: 13px; color: var(--fa-ink-soft, #544b45); font-weight: 700; margin-left: auto; text-align: right; }
+.fa-ck-lb-feat.off { border-style: dashed; background: #fdfbf8; }
+.fa-ck-lb-feat.off .fl { color: var(--fa-muted); }
+.fa-ck-lb-feat.off .fv { color: var(--fa-faint, #a89e95); font-style: italic; font-weight: 600; }
