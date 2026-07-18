@@ -314,15 +314,17 @@
 .fa-ck-ct-role { font-size: 11.5px; color: var(--blue-ink); font-weight: 700; }
 .fa-ck-ct-badge { font-size: 10px; font-weight: 800; border-radius: 99px; padding: 4px 10px; background: var(--blue-soft); color: var(--blue-ink); white-space: nowrap; flex: none; }
 .fa-ck-ct-acts { display: flex; gap: 7px; flex: none; }
-.fa-ck-ct-a { font: inherit; font-size: 11.5px; font-weight: 700; border: 1px solid var(--fa-line); background: #fff; border-radius: 9px; padding: 6px 10px; cursor: pointer; color: var(--fa-ink-soft, #544b45); text-decoration: none; transition: .14s; }
-.fa-ck-ct-a:hover { border-color: var(--blue); color: var(--blue); }
+.fa-ck-ct-a { font: inherit; font-size: 11.5px; font-weight: 700; border: 1px solid var(--fa-line); background: #fff; border-radius: 9px; padding: 6px 10px; cursor: pointer; color: var(--fa-ink-soft, #544b45); text-decoration: none; transition: .14s; display: inline-flex; align-items: center; gap: 5px; }
+.fa-ck-ct-a svg { width: 13px; height: 13px; }
+.fa-ck-ct-a:hover { border-color: #3a5a8a; color: #3a5a8a; }
 .fa-ck-ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 22px; padding: 15px 16px; }
 .fa-ck-cg { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .fa-ck-cg.full { grid-column: 1 / -1; }
 .fa-ck-ck { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--fa-muted); display: flex; align-items: center; gap: 5px; }
 .fa-ck-cv { font-size: 13px; font-weight: 600; color: var(--fa-ink); }
 .fa-ck-cv.locked { color: var(--fa-muted); }
-.fa-ck-lock { font-size: 9px; font-weight: 800; color: var(--fa-faint, #a89e95); background: var(--blue-soft); border-radius: 5px; padding: 1px 5px; letter-spacing: 0; text-transform: none; }
+.fa-ck-lock { font-size: 9px; font-weight: 800; color: var(--fa-faint, #a89e95); letter-spacing: 0; text-transform: none; display: inline-flex; align-items: center; gap: 3px; }
+.fa-ck-lock svg { width: 9px; height: 9px; }
 @media (max-width: 720px) { .fa-ck-ct-grid { grid-template-columns: 1fr; } }
 
 /* ============================================================
@@ -351,6 +353,12 @@
 .fa-ck-diff .dot { width: 9px; height: 9px; border-radius: 50%; background: #c3b8ab; }
 .fa-ck-diff.on { color: #1f6e44; }
 .fa-ck-diff.on .dot { background: #2f8a5b; box-shadow: 0 0 0 3px rgba(47, 138, 91, .18); }
+.fa-ck-difftoggle { display: inline-flex; align-items: center; gap: 8px; }
+.fa-ck-tg { width: 34px; height: 19px; border-radius: 99px; background: #d8cfc1; position: relative; flex: none; transition: background .16s; }
+.fa-ck-tg::after { content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .28); transition: left .16s; }
+.fa-ck-tg.on { background: #2f8a5b; }
+.fa-ck-tg.on::after { left: 17px; }
+.fa-ck-tg-lbl { font-size: 12.5px; font-weight: 700; color: var(--fa-ink-soft, #544b45); }
 .fa-ck-portal { display: flex; align-items: center; gap: 13px; border: 1px solid var(--fa-line); border-radius: 12px; padding: 12px 14px; }
 .fa-ck-portal + .fa-ck-portal { margin-top: 9px; }
 .fa-ck-p-logo { width: 40px; height: 40px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12.5px; color: #fff; letter-spacing: .01em; }
@@ -431,14 +439,16 @@
 .fa-ck-inter { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 720px) { .fa-ck-inter { grid-template-columns: 1fr; } }
 .fa-ck-ic-card { border: 1px solid var(--fa-line); border-radius: 13px; background: #fff; padding: 13px 15px; }
-.fa-ck-ic-r { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-faint, #a89e95); margin-bottom: 6px; }
+.fa-ck-ic-r { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-faint, #a89e95); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.fa-ck-ic-r svg { width: 13px; height: 13px; color: #3a5a8a; }
 .fa-ck-ic-n { font-size: 13.5px; font-weight: 700; color: var(--fa-ink); }
 .fa-ck-ic-n.empty { color: var(--fa-faint, #a89e95); font-style: italic; font-weight: 600; }
 .fa-ck-ic-s { font-size: 11.5px; color: var(--fa-muted); margin-top: 2px; }
 .fa-ck-ic-links { display: flex; gap: 7px; margin-top: 9px; }
-.fa-ck-ic-links a { font-size: 11px; font-weight: 700; color: var(--fa-ink-soft, #544b45); background: #f6f1ea; border: 1px solid var(--fa-line); border-radius: 8px; padding: 4px 9px; text-decoration: none; }
-.fa-ck-ic-links a:hover { border-color: #3a5a8a; color: #3a5a8a; }
-.fa-ck-ic-add { display: inline-block; font-size: 11px; font-weight: 700; color: #3a5a8a; border-bottom: 1px dashed #cfd9ea; margin-top: 8px; cursor: default; }
+.fa-ck-ic-links a, .fa-ck-ic-links button { font: inherit; font-size: 11px; font-weight: 700; color: var(--fa-ink-soft, #544b45); background: #f6f1ea; border: 1px solid var(--fa-line); border-radius: 8px; padding: 4px 9px; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.fa-ck-ic-links a svg, .fa-ck-ic-links button svg { width: 11px; height: 11px; }
+.fa-ck-ic-links a:hover, .fa-ck-ic-links button:hover { border-color: #3a5a8a; color: #3a5a8a; }
+.fa-ck-ic-add { display: inline-block; font: inherit; font-size: 11px; font-weight: 700; color: #3a5a8a; background: none; border: 0; border-bottom: 1px dashed #cfd9ea; padding: 0 0 1px; margin-top: 8px; cursor: pointer; }
 
 /* ============================================================
    Rubrique « Affaires » — re-skin scopé vers la maquette v31.

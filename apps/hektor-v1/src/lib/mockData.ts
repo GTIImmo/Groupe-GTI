@@ -135,11 +135,13 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
         id: 'P-1001', civilite: 'M.', prenom: 'Jean', nom: 'MOREAU', typologie: ['mandant'],
         coordonnees: { portable: '06 12 34 56 78', email: 'jean.moreau@example.fr' },
         localite: { localite: { code: '42000', ville: 'Saint-Etienne', adresse: '18 rue de la Bellevue' } },
+        commentaires: 'Vendeur motivé, disponible en semaine après 17 h.', datemaj: '2026-06-15',
       },
       {
         id: 'P-1002', civilite: 'Mme', prenom: 'Claire', nom: 'MOREAU', typologie: ['mandant'],
         coordonnees: { portable: '06 98 76 54 32', email: 'claire.moreau@example.fr' },
         localite: { localite: { code: '42000', ville: 'Saint-Etienne', adresse: '18 rue de la Bellevue' } },
+        commentaires: 'Co-vendeur (indivision) — passer par M. MOREAU en priorité.', datemaj: '2026-06-15',
       },
     ]),
     appointment_requests_json: JSON.stringify([
@@ -263,6 +265,7 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
         id: 'P-2001', civilite: 'Mme', prenom: 'Isabelle', nom: 'PETIT', typologie: ['mandant'],
         coordonnees: { portable: '06 22 33 44 55', email: 'isabelle.petit@example.fr' },
         localite: { localite: { code: '42100', ville: 'Saint-Etienne', adresse: '7 boulevard Fauriel' } },
+        commentaires: 'Vendeuse motivée, disponible en semaine après 17 h.', datemaj: '2026-07-08',
       },
     ]),
     appointment_requests_json: JSON.stringify([

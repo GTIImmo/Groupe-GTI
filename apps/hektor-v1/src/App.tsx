@@ -21716,7 +21716,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'C'
                     const addr = [c.address, [c.postalCode, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')
                     const ctField = (k: string, v: string | null | undefined, locked?: boolean, full?: boolean) => v && String(v).trim()
-                      ? <div className={`fa-ck-cg${full ? ' full' : ''}`}><span className="fa-ck-ck">{k}{locked ? <span className="fa-ck-lock">lié</span> : null}</span><span className={`fa-ck-cv${locked ? ' locked' : ''}`}>{v}</span></div>
+                      ? <div className={`fa-ck-cg${full ? ' full' : ''}`}><span className="fa-ck-ck">{k}{locked ? <span className="fa-ck-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>lié</span> : null}</span><span className={`fa-ck-cv${locked ? ' locked' : ''}`}>{v}</span></div>
                       : null
                     return (
                       <div key={c.id} className="fa-ck-ct-card">
@@ -21725,9 +21725,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                           <div className="fa-ck-ct-idw"><div className="fa-ck-ct-nm">{name}</div>{c.role ? <div className="fa-ck-ct-role">{c.role}</div> : null}</div>
                           {c.sourceId ? <span className="fa-ck-ct-badge">Contact {c.sourceId}</span> : null}
                           <div className="fa-ck-ct-acts">
-                            {c.phone ? <a className="fa-ck-ct-a" href={`tel:${c.phone.replace(/\s+/g, '')}`}>Appeler</a> : null}
-                            {c.email ? <a className="fa-ck-ct-a" href={`mailto:${c.email}`}>E-mail</a> : null}
-                            {c.sourceId && props.onOpenContact ? <button type="button" className="fa-ck-ct-a" onClick={() => props.onOpenContact?.(c.sourceId ?? '')}>Fiche</button> : null}
+                            {c.phone ? <a className="fa-ck-ct-a" href={`tel:${c.phone.replace(/\s+/g, '')}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg>Appeler</a> : null}
+                            {c.email ? <a className="fa-ck-ct-a" href={`mailto:${c.email}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>E-mail</a> : null}
+                            {c.sourceId && props.onOpenContact ? <button type="button" className="fa-ck-ct-a" onClick={() => props.onOpenContact?.(c.sourceId ?? '')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>Fiche contact</button> : null}
                           </div>
                         </div>
                         <div className="fa-ck-ct-grid">
@@ -21746,17 +21746,35 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
               {(() => {
                 const inter = parseJson<Array<{ role: string; name: string; sub?: string; phone?: string }>>(detailStr('intervenants_json') || '[]', [])
+                const roleIcon = (role: string) => {
+                  const r = role.toLowerCase()
+                  if (/diag/.test(r)) return <><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></>
+                  if (/syndic/.test(r)) return <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+                  return <path d="M3 21h18M6 21V9l6-4 6 4v12M10 21v-5h4v5" />
+                }
+                const addLabel = (role: string) => {
+                  const r = role.toLowerCase()
+                  if (/notaire/.test(r)) return `＋ Ajouter le ${role.toLowerCase()}`
+                  if (/syndic/.test(r)) return '＋ Ajouter un syndic'
+                  return `＋ Ajouter ${role.toLowerCase()}`
+                }
                 return inter.length > 0 ? (
                   <>
                     <div className="fa-ck-ct-sec"><span className="l">Diagnostics et syndic</span><span className="bar" /><span className="k">Intervenants · console Hektor</span></div>
                     <div className="fa-ck-inter">
                       {inter.map((it) => (
                         <div key={it.role} className="fa-ck-ic-card">
-                          <div className="fa-ck-ic-r">{it.role}</div>
+                          <div className="fa-ck-ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">{roleIcon(it.role)}</svg>{it.role}</div>
                           <div className={`fa-ck-ic-n${it.name ? '' : ' empty'}`}>{it.name || 'Non renseigné'}</div>
                           {it.sub ? <div className="fa-ck-ic-s">{it.sub}</div> : null}
-                          {it.name && it.phone ? <div className="fa-ck-ic-links"><a href={`tel:${it.phone.replace(/\s+/g, '')}`}>Appeler</a></div> : null}
-                          {!it.name ? <span className="fa-ck-ic-add">＋ Ajouter</span> : null}
+                          {it.name ? (
+                            <div className="fa-ck-ic-links">
+                              {it.phone ? <a href={`tel:${it.phone.replace(/\s+/g, '')}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg>Appeler</a> : null}
+                              <button type="button">Fiche</button>
+                            </div>
+                          ) : (
+                            <button type="button" className="fa-ck-ic-add">{addLabel(it.role)}</button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -21773,9 +21791,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-pub-card">
                 <div className="fa-ck-pub-grid">
                   <div className="fa-ck-sg"><span className="k">Statut Hektor</span><span className="v">{dossier.statut_annonce || '—'}</span></div>
-                  <div className="fa-ck-sg"><span className="k">Diffusable</span><span className={`fa-ck-diff${dossier.diffusable === '1' ? ' on' : ''}`}><span className="dot" />{dossier.diffusable === '1' ? 'Oui' : 'Non'}</span></div>
+                  <div className="fa-ck-sg"><span className="k">Diffusable</span><div className="fa-ck-difftoggle"><span className={`fa-ck-tg${dossier.diffusable === '1' ? ' on' : ''}`} aria-hidden="true" /><span className="fa-ck-tg-lbl">{dossier.diffusable === '1' ? 'Oui' : 'Non'}</span></div></div>
                   <div className="fa-ck-sg"><span className="k">Passerelles actives</span><span className="v big">{nbPortails}</span></div>
-                  {dossier.date_maj ? <div className="fa-ck-sg"><span className="k">Dernier enregistrement</span><span className="v">{formatDate(dossier.date_maj)}</span></div> : null}
+                  {dossier.date_maj ? (() => { const m = /T(\d{2}):(\d{2})/.exec(dossier.date_maj ?? ''); return <div className="fa-ck-sg"><span className="k">Dernier enregistrement</span><span className="v" style={{ fontWeight: 600 }}>{formatDate(dossier.date_maj)}{m ? ` · ${m[1]}:${m[2]}` : ''}</span></div> })() : null}
                 </div>
               </div>
 
