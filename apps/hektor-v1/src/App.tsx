@@ -21307,7 +21307,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           {activeTab === 'synthese' ? (
             <div className="fa-ck-rub">
               <div className="fa-ck-pa" style={{ ['--led']: statusLed } as CSSProperties}>
-                <div className="fa-ck-pa-title"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />{situationLabel}</div>
+                <div className="fa-ck-pa-title"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />{situationLabel}<svg className="fa-ck-pa-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></svg></div>
                 <p className="fa-ck-pa-desc">{situationDesc}</p>
                 {nextActions.length > 0 ? (
                   <div className="fa-ck-pa-nav">
