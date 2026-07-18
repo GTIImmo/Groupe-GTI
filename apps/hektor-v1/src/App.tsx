@@ -20846,8 +20846,9 @@ function CkParty({ role, p }: { role: string; p?: CkParty | null }) {
       {p.s ? <div className="fa-ck-pa-sub">{p.s}</div> : null}
       {(p.tel || p.mail) ? (
         <div className="fa-ck-pa-links">
-          {p.tel ? <a href={`tel:${p.tel.replace(/\s+/g, '')}`}>Appeler</a> : null}
-          {p.mail ? <a href={`mailto:${p.mail}`}>E-mail</a> : null}
+          {p.tel ? <a href={`tel:${p.tel.replace(/\s+/g, '')}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg>Appeler</a> : null}
+          {p.mail ? <a href={`mailto:${p.mail}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>E-mail</a> : null}
+          <a href="#" onClick={(e) => e.preventDefault()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>Fiche</a>
         </div>
       ) : null}
     </div>
@@ -20863,17 +20864,25 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
   const o = affaire.offre, c = affaire.compromis, v = affaire.vente
   return (
     <div className="fa-ck-aff">
-      {affaire.banner ? (
-        <div className={`fa-ck-aff-banner ${affaire.banner.mood ?? 'ok'}`}>
-          <span className="fa-ck-ab-ic" aria-hidden="true"><CkIcon path={CK_ICON.affaires} /></span>
+      {affaire.banner ? (() => {
+        const mood = affaire.banner.mood ?? 'ok'
+        const chipTone = mood === 'warn' ? 'amber' : mood === 'block' ? 'red' : 'green'
+        return (
+        <div className={`fa-ck-aff-banner ${mood}`}>
+          <span className="fa-ck-ab-ic" aria-hidden="true">
+            {mood === 'warn' || mood === 'block'
+              ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></svg>
+              : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 7h16M4 12h10M4 17h6" /><circle cx="17.5" cy="16.5" r="3.2" /></svg>}
+          </span>
           <div className="fa-ck-ab-tx">
             <div className="fa-ck-ab-state">{affaire.banner.state}</div>
-            {affaire.banner.next ? <div className="fa-ck-ab-next">{affaire.banner.next}</div> : null}
-            {affaire.banner.comment ? <div className="fa-ck-ab-cm">{affaire.banner.comment}</div> : null}
+            {affaire.banner.next ? <div className="fa-ck-ab-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg><span><b>Prochaine action :</b> {affaire.banner.next}</span></div> : null}
+            {affaire.banner.comment ? <div className="fa-ck-ab-cm">« {affaire.banner.comment} »</div> : null}
           </div>
-          {affaire.banner.chip ? <span className="fa-ck-ab-chip">{affaire.banner.chip}</span> : null}
+          {affaire.banner.chip ? <div className="fa-ck-ab-chips"><span className={`fa-ck-ab-chip ${chipTone}`}>{affaire.banner.chip}</span></div> : null}
         </div>
-      ) : null}
+        )
+      })() : null}
 
       <div className="fa-ck-ct-sec"><span className="l">Parcours de l'affaire</span><span className="bar" /><span className="k">Offre · Compromis · Vente</span></div>
       <div className="fa-ck-tl3">
@@ -20943,7 +20952,8 @@ function ckParsePortals(resume: string | null | undefined) {
     .filter(Boolean)
     .map((name) => {
       const key = name.toLowerCase().replace(/[^a-z]/g, '')
-      const meta = CK_PORTAL_META[key] ?? { abbr: name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'PT', color: '#9d0f4e' }
+      const metaKey = Object.keys(CK_PORTAL_META).find((k) => key.includes(k))
+      const meta = (metaKey ? CK_PORTAL_META[metaKey] : null) ?? { abbr: name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'PT', color: '#9d0f4e' }
       return { name, abbr: meta.abbr, color: meta.color }
     })
 }
@@ -21771,9 +21781,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
 
               <div className="fa-ck-pub-sec">
                 <span className="fa-ck-pub-ic blue" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
-                <div><div className="fa-ck-pub-t">Passerelles</div><div className="fa-ck-pub-s">Portails de diffusion</div></div>
+                <div><div className="fa-ck-pub-t">Passerelles</div><div className="fa-ck-pub-s">Sélection des portails</div></div>
               </div>
               <div className="fa-ck-pub-card">
+                <p className="fa-ck-pnote">Coche uniquement les portails à laisser actifs. L'enregistrement pousse l'état vers Hektor (Diffusable + ajout/retrait des passerelles).</p>
                 {(() => {
                   const det = parseJson<Array<{ name: string; state?: string; sub?: string }>>(detailStr('portails_detail_json') || '[]', [])
                   const portals = det.length
@@ -21781,7 +21792,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     : ckParsePortals(dossier.portails_resume).map((p) => ({ name: p.name, sub: 'Portail · annonce en ligne', active: true, abbr: p.abbr, color: p.color }))
                   return portals.length > 0 ? portals.map((p) => (
                     <div key={p.name} className={`fa-ck-portal${p.active ? ' act' : ''}`}>
-                      <span className="fa-ck-p-logo" style={{ background: p.active ? p.color : '#c3b8ab' }}>{p.abbr}</span>
+                      <span className="fa-ck-p-logo" style={{ background: p.color }}>{p.abbr}</span>
                       <div className="fa-ck-p-id"><div className="fa-ck-p-nm">{p.name}</div><div className="fa-ck-p-sb">{p.sub}</div></div>
                       <span className={`fa-ck-p-state ${p.active ? 'on' : 'off'}`}>{p.active ? 'Activée' : 'Inactive'}</span>
                       <span className={`fa-ck-cbox${p.active ? ' on' : ''}`} aria-hidden="true">{p.active ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}><path d="M20 6L9 17l-5-5" /></svg> : null}</span>

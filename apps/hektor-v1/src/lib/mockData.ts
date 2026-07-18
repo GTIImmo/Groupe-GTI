@@ -165,6 +165,16 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       { role: 'Notaire vendeur', name: '', sub: '' },
       { role: 'Syndic', name: '', sub: 'Copropriété — non applicable si maison individuelle' },
     ]),
+    // Affaires (v31) : aucune offre en cours (annonce en ligne, en attente d'offre).
+    affaire_json: JSON.stringify({
+      banner: { mood: 'ok', state: "En ligne — en attente d'offre", next: 'Relancer les acquéreurs rapprochés — 0 proposition en attente.', comment: '', chip: '✓ Aucun blocage' },
+      tl: { offre: 'pending', compromis: 'pending', vente: 'pending' },
+      offre: null,
+      compromis: null,
+      vente: null,
+      parties: { acq: null, notAcq: null, notVend: null, vendeur: { n: 'M. & Mme MOREAU', s: 'Mandants · vendeurs · Contact 18542', tel: '0612345678', mail: 'jean.moreau@example.fr' } },
+      honoraires: { fai: '12 500 € TTC', charge: 'Acquéreur', taux: '4,83 % TTC', part: '100 % agence', rendement: '4,1 %' },
+    }),
     price_change_event_count: 1,
     price_change_last_old_value: 269000,
     price_change_last_new_value: 259000,
@@ -258,6 +268,18 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     appointment_requests_json: JSON.stringify([
       { id: 'RDV-9', visitor_name: 'Thomas GIRAUD', visitor_email: 'thomas.giraud@example.fr', status: 'confirmed', requested_at: '2026-07-12T14:00:00Z', message: 'Deuxième visite avant offre.' },
     ]),
+    // Mandat (v22) sur ce dossier aussi.
+    mandat_json: JSON.stringify({
+      num: '16635', type: 'ACCORD', dateStart: '03/06/2026', dateEnd: '02/06/2027', statut: 'Valide',
+      honorairesVendeur: '9 000 €', taux: '4,94 %',
+      demarches: [
+        { title: 'Validation', sub: 'Confirmer le mandat pour débloquer la diffusion', state: 'ok', badge: 'Validé', act: 'Voir' },
+        { title: 'Baisse de prix', sub: 'Ajuster le prix public de l’annonce', state: 'ok', badge: 'À traiter', act: 'Demander' },
+        { title: 'Annulation mandat', sub: 'Clôturer et retirer le mandat', state: 'lock', lockLabel: 'Après validation' },
+      ],
+      avenant: { num: '16635', repris: [{ t: 'Mandants (1)', ok: true }, { t: 'Bien & adresse', ok: true }, { t: 'Type ACCORD', ok: true }, { t: 'Durée', ok: true }, { t: 'Honoraires — à confirmer', warn: true }], nouveauxHonos: '8 000 €', dateAvenant: '12/07/2026' },
+      signatures: [{ av: 'IS', tone: 'ok', name: 'Mandat de vente 16635.pdf', sub: 'Signé le 05/06 par Mme PETIT', badge: 'Signé', badgeTone: 'ok' }],
+    }),
     // Affaires (v31) : offre en cours (compromis/vente à venir).
     affaire_json: JSON.stringify({
       banner: { mood: 'warn', state: 'Offre en cours', next: "Traiter l'offre — accepter, contre-proposer ou refuser (via l'évolution du statut).", comment: 'Acquéreur motivé ; financement en cours de validation bancaire.', chip: '⏱ Réponse attendue < 48 h' },
@@ -266,7 +288,7 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       compromis: null,
       vente: null,
       parties: { acq: { n: 'M. Durand', s: 'Acquéreur · Contact 61924', tel: '0612345678', mail: 'm.durand@email.fr' }, notAcq: null, notVend: null, vendeur: { n: 'Mme Isabelle PETIT', s: 'Vendeur · mandant · Contact 18543', tel: '0622334455', mail: 'isabelle.petit@example.fr' } },
-      honoraires: { fai: '9 000 € TTC', charge: 'Acquéreur', taux: '4,94 % TTC', part: '60 % agence · 40 % apporteur', rendement: '4,6 %' },
+      honoraires: { fai: '9 000 € TTC', charge: 'Acquéreur', taux: '4,94 % TTC', part: '60 % / 40 %', rendement: '4,6 %' },
     }),
   },
 }
