@@ -21405,13 +21405,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               })()}
               {/* Bande de statistiques clés (façon v21) */}
               {(() => {
+                const expo = (() => { const f = CK_WIZARD_FIELD_BY_NAME['EXPOSITION']; const raw = wizFieldValue('EXPOSITION'); return raw && f?.options ? (f.options.find((o) => o.value === raw)?.label ?? raw) : raw })()
                 const lbStats = [
-                  { l: 'Surface', v: detailStr('surface_habitable_detail'), u: 'm²' },
-                  { l: 'Terrain', v: detailStr('surface_terrain_detail'), u: 'm²' },
-                  { l: 'Pièces', v: detailStr('nb_pieces'), u: '' },
-                  { l: 'Chambres', v: detailStr('nb_chambres'), u: '' },
-                  { l: 'Étage', v: detailStr('etage_detail'), u: '' },
-                  { l: 'Garage', v: detailStr('garage_box_detail'), u: '' },
+                  { l: 'Surface', v: wizFieldValue('surfappart'), u: 'm²' },
+                  { l: 'Terrain', v: wizFieldValue('surfterrain'), u: 'm²' },
+                  { l: 'Pièces', v: wizFieldValue('nbpieces'), u: '' },
+                  { l: 'Chambres', v: wizFieldValue('NB_CHAMBRES'), u: '' },
+                  { l: "Salles d'eau", v: wizFieldValue('NB_SE'), u: '' },
+                  { l: 'Exposition', v: expo, u: '' },
                 ].filter((s) => s.v && s.v.trim() && s.v.trim() !== '0')
                 return lbStats.length > 0 ? (
                   <div className="fa-ck-lb-stats">
