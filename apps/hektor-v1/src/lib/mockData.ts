@@ -274,6 +274,12 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
     offre_id: 'OF-2231',
     offre_state: 'en_cours',
     etat_transaction: 'offre',
+    // Champs de transaction réels (mêmes noms que la fiche Base) — pour exercer la dérivation Affaires.
+    offre_montant: 182000,
+    offre_event_date: '2026-07-12',
+    offre_raw_status: 'En attente de réponse vendeur',
+    offre_acquereur_nom: 'M. Durand',
+    prix_net_vendeur: 173000,
     images_json: JSON.stringify(mockImages([
       ['1512917774080-9991f1c4c750', 'Balcon'],
       ['1502672260266-1c1ef2d93688', 'Séjour'],
