@@ -20945,6 +20945,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
+  // Édition en place (Lot 1) : réutilise le VRAI éditeur HektorAnnonceUpdateForm → editAnnonceOptimistic (calque + worker).
+  const [hektorEditOpen, setHektorEditOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   useEffect(() => {
     if (!moreOpen) return
@@ -21301,6 +21303,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'lebien' ? (
             <div className="fa-ck-rub fa-ck-lebien">
+              {/* Édition : bandeau conflit/partiel + bouton « Modifier la fiche » (réutilise l'éditeur réel) */}
+              {!isLightweightDetail ? <AnnonceEditStatusBanner dossier={dossier} /> : null}
+              {!isLightweightDetail ? (
+                <div className="fa-ck-lb-actions">
+                  <button type="button" className="fa-ck-lb-editbtn" onClick={() => setHektorEditOpen(true)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    Modifier la fiche
+                  </button>
+                </div>
+              ) : null}
               {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
               {props.images.length > 0 ? (
                 <div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
@@ -21833,6 +21845,34 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
           <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
         </div>
+      </div>,
+      document.body,
+    ) : null}
+    {/* Éditeur de fiche réel (calque optimiste + worker) — même composant que la fiche Base. */}
+    {hektorEditOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
+      <div className="modal-overlay detail-edit-popup-overlay" onClick={() => setHektorEditOpen(false)}>
+        <section className="modal-panel detail-edit-popup" onClick={(event) => event.stopPropagation()}>
+          <div className="detail-edit-popup-head">
+            <div className="detail-edit-popup-icon" aria-hidden="true">M</div>
+            <div>
+              <span>Modification Hektor</span>
+              <h3>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h3>
+              <p>Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.</p>
+              <div className="detail-edit-popup-flow" aria-label="Circuit de mise a jour"><span>App</span><span>PC serveur</span><span>Hektor</span><span>Retour app</span></div>
+            </div>
+            <button className="request-modal-close detail-edit-popup-close" type="button" onClick={() => setHektorEditOpen(false)}>Fermer</button>
+          </div>
+          <div className="detail-edit-popup-grid">
+            <section className="detail-edit-popup-section">
+              <div className="detail-edit-popup-section-head"><span>Annonce</span><strong>Informations du bien</strong></div>
+              <HektorAnnonceUpdateForm dossier={dossier} detail={props.detail} fieldPanel onCancel={() => setHektorEditOpen(false)} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
+            </section>
+            <section className="detail-edit-popup-section detail-edit-popup-mandants">
+              <div className="detail-edit-popup-section-head"><span>Vendeurs</span><strong>Mandants associes</strong></div>
+              <HektorMandantContactForm dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
+            </section>
+          </div>
+        </section>
       </div>,
       document.body,
     ) : null}

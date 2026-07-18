@@ -641,3 +641,9 @@
 .fa-ck-lb-feat.off { border-style: dashed; background: #fdfbf8; }
 .fa-ck-lb-feat.off .fl { color: var(--fa-muted); }
 .fa-ck-lb-feat.off .fv { color: var(--fa-faint, #a89e95); font-style: italic; font-weight: 600; }
+
+/* Le Bien : action « Modifier la fiche » (ouvre l'éditeur réel → calque optimiste) */
+.fa-ck-lb-actions { display: flex; justify-content: flex-end; }
+.fa-ck-lb-editbtn { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border: 1px solid #bb1059; border-radius: 11px; padding: 9px 16px; cursor: pointer; box-shadow: 0 10px 22px -12px rgba(194, 18, 95, .75); transition: .15s; }
+.fa-ck-lb-editbtn:hover { filter: brightness(1.05); }
+.fa-ck-lb-editbtn svg { width: 15px; height: 15px; }
