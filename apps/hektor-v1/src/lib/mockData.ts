@@ -73,6 +73,30 @@ export const mockDossiers: Dossier[] = [
     dernier_event_type: 'visible',
     dernier_work_status: 'done',
   },
+  {
+    // Cas n°3 : SOUS COMPROMIS (façon dossier réel V690062167).
+    app_dossier_id: 7801, hektor_annonce_id: 21,
+    photo_url_listing: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=240&q=60',
+    numero_dossier: 'VM7801', numero_mandat: '18542', titre_bien: 'Maison de caractère avec terrain', ville: 'Dunières', code_postal: '43220',
+    type_bien: '1', prix: 228000, commercial_id: '5', commercial_nom: 'Nadege PEYRARD', agence_nom: 'Groupe GTI Dunières',
+    negociateur_email: 'melanie.legrand@gti.test', statut_annonce: 'Sous compromis', validation_diffusion_state: 'valide', diffusable: '1',
+    nb_portails_actifs: 3, portails_resume: 'SeLoger · Leboncoin · Bienici',
+    offre_id: 'OF-7801', offre_state: 'accepte', compromis_id: 'CP-7801', compromis_state: 'en_cours',
+    etat_visibilite: 'visible', alerte_principale: null, priority: 'high', has_open_blocker: false,
+    commentaire_resume: '', date_relance_prevue: null, dernier_event_type: 'visible', dernier_work_status: 'done',
+  },
+  {
+    // Cas n°4 : VENDU (parcours complet).
+    app_dossier_id: 7802, hektor_annonce_id: 22,
+    photo_url_listing: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=240&q=60',
+    numero_dossier: 'VV7802', numero_mandat: '19001', titre_bien: 'Villa avec piscine et jardin', ville: 'Saint-Etienne', code_postal: '42100',
+    type_bien: '1', prix: 415000, commercial_id: '5', commercial_nom: 'Melanie LEGRAND', agence_nom: 'GTI Saint-Etienne',
+    negociateur_email: 'melanie.legrand@gti.test', statut_annonce: 'Vendu', validation_diffusion_state: 'valide', diffusable: '0',
+    nb_portails_actifs: 0, portails_resume: '',
+    offre_id: 'OF-7802', offre_state: 'accepte', compromis_id: 'CP-7802', compromis_state: 'signe', vente_id: 'VT-7802',
+    etat_visibilite: 'visible', alerte_principale: null, priority: 'normal', has_open_blocker: false,
+    commentaire_resume: '', date_relance_prevue: null, dernier_event_type: 'visible', dernier_work_status: 'done',
+  },
 ]
 
 // Payloads détaillés (mock) : injectés par loadDossierDetail quand Supabase est absent, pour
@@ -319,6 +343,33 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       honoraires: { fai: '9 000 € TTC', charge: 'Acquéreur', taux: '4,94 % TTC', part: '60 % / 40 %', rendement: '4,6 %' },
     }),
   },
+  // Détail COMPROMIS (7801) — vrais champs de transaction, pas d'affaire_json → exerce la dérivation.
+  7801: {
+    date_avis: '2026-05-20', date_mandat: '2026-06-01', adresse_detail: '6 rue du stade', code_postal_prive_detail: '43220', ville_privee_detail: 'Dunières',
+    texte_principal_html: '<p><b>Maison de caractère</b> avec terrain, au centre de Dunières. Beaux volumes, jardin clos.</p>',
+    dpe_conso: 180, dpe_ges: 28,
+    offre_id: 'OF-7801', offre_state: 'accepte', offre_montant: 224000, offre_event_date: '2026-06-25', offre_raw_status: 'Offre acceptée', offre_acquereur_nom: 'M. & Mme Rouyer',
+    compromis_id: 'CP-7801', compromis_state: 'en_cours', compromis_sequestre: 22800, date_signature_acte: '2026-09-15', compromis_date_start: '2026-07-05',
+    prix_net_vendeur: 213000, etat_transaction: 'compromis',
+    images_json: JSON.stringify(mockImages([['1568605114967-8130f3a36994', 'Façade'], ['1570129477492-45c003edd2be', 'Séjour'], ['1512917774080-9991f1c4c750', 'Jardin']])),
+    proprietaires_json: JSON.stringify([
+      { id: 'P-7801', civilite: 'M.', prenom: 'Julien', nom: 'SAURA', typologie: ['mandant'], coordonnees: { portable: '06 47 77 36 25', email: 'julien.saura@example.fr' }, localite: { localite: { code: '43220', ville: 'Dunières', adresse: '6 rue du stade' } }, commentaires: 'Vendeur pressé, souhaite conclure avant l’automne.', datemaj: '2026-07-01' },
+    ]),
+  },
+  // Détail VENDU (7802) — offre + compromis + vente renseignés.
+  7802: {
+    date_avis: '2026-03-10', date_mandat: '2026-03-20', adresse_detail: '12 chemin des Vignes', code_postal_prive_detail: '42100', ville_privee_detail: 'Saint-Etienne',
+    texte_principal_html: '<p><b>Villa avec piscine</b> et jardin paysager. Prestations haut de gamme.</p>',
+    dpe_conso: 145, dpe_ges: 22,
+    offre_id: 'OF-7802', offre_state: 'accepte', offre_montant: 415000, offre_event_date: '2026-05-02', offre_raw_status: 'Offre acceptée', offre_acquereur_nom: 'M. & Mme Durand',
+    compromis_id: 'CP-7802', compromis_state: 'signe', compromis_sequestre: 41500, date_signature_acte: '2026-06-30', compromis_date_start: '2026-05-15',
+    vente_id: 'VT-7802', vente_prix: 415000, vente_date: '2026-06-30', vente_honoraires: 18000, vente_commission_agence: 4.34,
+    prix_net_vendeur: 397000, etat_transaction: 'vente', statut_annonce: 'Vendu',
+    images_json: JSON.stringify(mockImages([['1570129477492-45c003edd2be', 'Villa'], ['1512917774080-9991f1c4c750', 'Piscine']])),
+    proprietaires_json: JSON.stringify([
+      { id: 'P-7802', civilite: 'Mme', prenom: 'Sophie', nom: 'BERNARD', typologie: ['mandant'], coordonnees: { portable: '06 12 12 12 12', email: 'sophie.bernard@example.fr' }, localite: { localite: { code: '42100', ville: 'Saint-Etienne', adresse: '12 chemin des Vignes' } } },
+    ]),
+  },
 }
 
 export const mockWorkItems: WorkItem[] = [
@@ -412,6 +463,24 @@ export const mockMandats: MandatRecord[] = [
     vente_id: null,
     source_updated_at: '2026-07-12T10:30:00Z',
     refreshed_at: '2026-07-13T08:30:00Z',
+  },
+  {
+    app_dossier_id: 7801, hektor_annonce_id: 21,
+    photo_url_listing: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=240&q=60',
+    archive: '0', diffusable: '1', nb_portails_actifs: 3, has_diffusion_error: false, portails_resume: 'SeLoger · Leboncoin · Bienici',
+    numero_dossier: 'VM7801', numero_mandat: '18542', titre_bien: 'Maison de caractère avec terrain', ville: 'Dunières', type_bien: 'Maison', prix: 228000,
+    commercial_id: '5', commercial_nom: 'Nadege PEYRARD', negociateur_email: 'melanie.legrand@gti.test', agence_nom: 'Groupe GTI Dunières',
+    statut_annonce: 'Sous compromis', priority: 'high', offre_id: 'OF-7801', compromis_id: 'CP-7801', vente_id: null,
+    source_updated_at: '2026-07-05T10:30:00Z', refreshed_at: '2026-07-06T08:30:00Z',
+  },
+  {
+    app_dossier_id: 7802, hektor_annonce_id: 22,
+    photo_url_listing: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=240&q=60',
+    archive: '0', diffusable: '0', nb_portails_actifs: 0, has_diffusion_error: false, portails_resume: '',
+    numero_dossier: 'VV7802', numero_mandat: '19001', titre_bien: 'Villa avec piscine et jardin', ville: 'Saint-Etienne', type_bien: 'Maison', prix: 415000,
+    commercial_id: '5', commercial_nom: 'Melanie LEGRAND', negociateur_email: 'melanie.legrand@gti.test', agence_nom: 'GTI Saint-Etienne',
+    statut_annonce: 'Vendu', priority: 'normal', offre_id: 'OF-7802', compromis_id: 'CP-7802', vente_id: 'VT-7802',
+    source_updated_at: '2026-06-30T10:30:00Z', refreshed_at: '2026-07-01T08:30:00Z',
   },
 ]
 
