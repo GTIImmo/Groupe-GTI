@@ -26241,7 +26241,7 @@ function AppointmentAnnonceSection(props: {
               {requests.map((item, index) => (
                 <article key={String(item.id ?? index)} className="timeline-card">
                   <strong>{item.client_nom ?? 'Client sans nom'} · {appointmentStatusLabel(item.status)}</strong>
-                  <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` â†’ ${formatDate(item.requested_end_at)}` : ''}</span>
+                  <span>{formatDate(item.requested_start_at)}{item.requested_end_at ? ` → ${formatDate(item.requested_end_at)}` : ''}</span>
                   <span>{item.client_telephone ?? item.client_email ?? '-'}</span>
                   <p>{item.message ?? 'Sans message client.'}</p>
                 </article>
@@ -32537,7 +32537,7 @@ function PriceChangeHistoryCard({
           {events.map((entry, index) => (
             <article key={`price-history-${index}-${entry.detected_at ?? 'na'}`} className="timeline-card price-history-card">
               <div className="price-history-head">
-                <strong>{formatPrice(entry.old_value)} â†’ {formatPrice(entry.new_value)}</strong>
+                <strong>{formatPrice(entry.old_value)} → {formatPrice(entry.new_value)}</strong>
                 <span>{priceChangeSourceLabel(entry.source_kind)}</span>
               </div>
               <div className="price-history-meta">

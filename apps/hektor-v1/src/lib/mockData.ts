@@ -134,7 +134,7 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       // Disponibilité & visite
       DISPO: 'OUI', DATE_LIBER: '01/10/2026', DATE_DISPO: '01/10/2026', CLES: 'À l’agence', moyens_visite: 'Sur RDV · bon de visite',
       // Diffusion
-      diffusable: 'OUI', titre: 'Grand T3 secteur Bellevue avec garage', NO_DOSSIER: 'VA1926', dateenr: '11/06/2026',
+      diffusable: 'Oui', titre: 'Grand T3 secteur Bellevue avec garage', NO_DOSSIER: 'VA1926', dateenr: '11/06/2026',
       // Localisation & secteur
       codepublique: '42000', villepublique: 'Saint-Etienne', ADRESSE_COMPL: '18 rue de la Bellevue', TRANSPORT: 'Tram T1 · 300 m', PROXIMITE: 'Commerces, écoles, parc', ENVIRONNEMENT: 'Quartier résidentiel calme', latitude: '45.4397', longitude: '4.3872',
     },
