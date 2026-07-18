@@ -1,5 +1,5 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
-import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
+import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase } from './supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
@@ -2624,7 +2624,8 @@ export type RapprochementForDossierRow = {
  * donc toute proposition/statut tracé depuis cet écran apparaît aussi côté acquéreur.
  */
 export async function loadRapprochementsForDossier(appDossierId: number): Promise<RapprochementForDossierRow[]> {
-  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  if (!hasSupabaseEnv || !supabase) return (mockRapprochementsForDossier[appDossierId] ?? []) as RapprochementForDossierRow[]
+  if (appDossierId == null) return []
   const { data, error } = await supabase.rpc('app_get_rapprochements_for_dossier', {
     p_dossier_id: appDossierId,
   })
@@ -2640,7 +2641,15 @@ export type RapprochementCount = { app_dossier_id: number; n_total: number; n_no
  */
 export async function loadRapprochementCounts(appDossierIds: number[]): Promise<Map<number, RapprochementCount>> {
   const ids = Array.from(new Set(appDossierIds.filter((x) => x != null)))
-  if (!hasSupabaseEnv || !supabase || ids.length === 0) return new Map()
+  if (ids.length === 0) return new Map()
+  if (!hasSupabaseEnv || !supabase) {
+    const map = new Map<number, RapprochementCount>()
+    for (const id of ids) {
+      const rows = mockRapprochementsForDossier[id] ?? []
+      map.set(id, { app_dossier_id: id, n_total: rows.length, n_non_proposes: rows.filter((r) => !r.statut || (r.statut !== 'propose' && r.statut !== 'visite' && r.statut !== 'ecarte')).length })
+    }
+    return map
+  }
   const { data, error } = await supabase.rpc('app_count_rapprochements_for_dossiers', { p_dossier_ids: ids })
   if (error) throw new Error(error.message ?? 'Unable to load rapprochement counts')
   const map = new Map<number, RapprochementCount>()

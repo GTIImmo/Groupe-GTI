@@ -476,3 +476,41 @@ export const mockDiffusionTargets: DiffusionTarget[] = [
     last_apply_error: null,
   },
 ]
+
+// Acquéreurs correspondants (écran Rapprochement v35) — démo locale.
+// Shape = RapprochementForDossierRow (api.ts) ; api.ts caste. statut : null=À contacter,
+// 'propose'/'visite'=En cours, 'ecarte'=Écarté.
+function rapRow(o: {
+  key: string; nom: string; prenom: string; phone: string; email: string; score: number;
+  villes: string[]; type: string; prixMax: number; surfMin: number; piecesMin?: number;
+  statut?: 'propose' | 'visite' | 'ecarte' | null; channel?: string; reason?: string; seen?: string; proposedAt?: string;
+}): Record<string, unknown> {
+  return {
+    contact_search_key: o.key, hektor_contact_id: o.key, display_name: `${o.prenom} ${o.nom}`, nom: o.nom, prenom: o.prenom,
+    email: o.email, phone: o.phone, search_index: 1,
+    villes_json: Object.fromEntries(o.villes.map((v, i) => [String(42000 + i), v])),
+    types_json: { [o.type === 'Maison' ? '1' : '2']: o.type },
+    criteres_json: {}, prix_min: null, prix_max: o.prixMax, surface_min: o.surfMin, pieces_min: o.piecesMin ?? null,
+    chambre_min: null, surface_terrain_min: null,
+    owner_negociateur_email: 'melanie.legrand@gti.test', owner_commercial_nom: 'Melanie LEGRAND', agence_nom: 'GTI Saint-Etienne',
+    score: o.score, components: null,
+    statut: o.statut ?? null, statut_channel: o.channel ?? null, statut_reason: o.reason ?? null,
+    proposed_at: o.proposedAt ?? null, first_seen_at: o.seen ?? '2026-07-16T09:00:00Z', computed_at: '2026-07-18T07:00:00Z',
+  }
+}
+
+export const mockRapprochementsForDossier: Record<number, Array<Record<string, unknown>>> = {
+  32621: [
+    rapRow({ key: 'rap-c-6101', nom: 'ROUYER', prenom: 'Loïc', phone: '06 47 77 36 25', email: 'loic.rouyer@email.fr', score: 96, villes: ['Saint-Etienne', 'Saint-Priest', 'La Talaudière', 'Villars'], type: 'Appartement', prixMax: 280000, surfMin: 65, piecesMin: 3 }),
+    rapRow({ key: 'rap-c-6102', nom: 'BAUZA', prenom: 'Mireille & Patrick', phone: '06 11 22 33 44', email: 'bauza.mp@email.fr', score: 93, villes: ['Saint-Etienne', 'Saint-Chamond', 'Sorbiers'], type: 'Appartement', prixMax: 300000, surfMin: 70, piecesMin: 3 }),
+    rapRow({ key: 'rap-c-6103', nom: 'CARRET', prenom: 'Roland', phone: '06 55 44 33 22', email: 'carret.r@email.fr', score: 89, villes: ['Saint-Etienne', 'Roche-la-Molière'], type: 'Appartement', prixMax: 270000, surfMin: 60, piecesMin: 3 }),
+    rapRow({ key: 'rap-c-6104', nom: 'ESTEVE', prenom: 'Sophie', phone: '06 78 90 12 34', email: 'sophie.esteve@email.fr', score: 85, villes: ['Saint-Etienne'], type: 'Appartement', prixMax: 265000, surfMin: 70, piecesMin: 3, statut: 'propose', channel: 'email', proposedAt: '2026-07-17T10:00:00Z' }),
+    rapRow({ key: 'rap-c-6105', nom: 'MOREL', prenom: 'Karim', phone: '06 33 22 11 00', email: 'karim.morel@email.fr', score: 81, villes: ['Saint-Etienne', 'Firminy'], type: 'Appartement', prixMax: 250000, surfMin: 60 }),
+    rapRow({ key: 'rap-c-6106', nom: 'FAURE', prenom: 'Julie', phone: '06 90 80 70 60', email: 'julie.faure@email.fr', score: 78, villes: ['Saint-Etienne'], type: 'Appartement', prixMax: 240000, surfMin: 55, statut: 'ecarte', reason: 'Budget insuffisant' }),
+  ],
+  5502: [
+    rapRow({ key: 'rap-c-6201', nom: 'GIRAUD', prenom: 'Thomas', phone: '06 12 12 12 12', email: 'thomas.giraud@email.fr', score: 94, villes: ['Saint-Etienne', 'Saint-Priest'], type: 'Appartement', prixMax: 200000, surfMin: 60, piecesMin: 3 }),
+    rapRow({ key: 'rap-c-6202', nom: 'LAMBERT', prenom: 'Nadia', phone: '06 21 21 21 21', email: 'nadia.lambert@email.fr', score: 88, villes: ['Saint-Etienne'], type: 'Appartement', prixMax: 195000, surfMin: 58, piecesMin: 3 }),
+    rapRow({ key: 'rap-c-6203', nom: 'DURAND', prenom: 'M. & Mme', phone: '06 12 34 56 78', email: 'm.durand@email.fr', score: 90, villes: ['Saint-Etienne'], type: 'Appartement', prixMax: 190000, surfMin: 60, piecesMin: 3, statut: 'propose', channel: 'email', proposedAt: '2026-07-12T09:00:00Z' }),
+  ],
+}
