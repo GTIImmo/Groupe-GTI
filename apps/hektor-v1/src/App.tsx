@@ -21306,11 +21306,33 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     ven: { feat: [['affaires', ['neutral', `Vendu · ${formatPrice(dossier.prix)}`]], ['reporting', ['neutral', 'Bilan de vente']]], autre: ['documents', 'mandat', 'historique'] },
   }
   const PH = CK_PHASE[ckPhase] ?? CK_PHASE.dif
+  // Chips « à surveiller » (spec §4 règle 1, objet PHASES.watch de la maquette).
+  // La maquette porte des chaînes de démo (« Portail Figaro bloqué ») : ici on les
+  // DÉRIVE de signaux réels, sinon ce serait un bandeau décoratif de plus.
+  const ckWatch: Array<{ label: string; rubKey: string }> = [
+    ...(Boolean((dossier as Record<string, unknown>)['has_diffusion_error']) ? [{ label: 'Diffusion en erreur', rubKey: 'publicite' }] : []),
+    ...(mandatEchu ? [{ label: 'Mandat échu', rubKey: 'mandat' }] : []),
+    ...(annulEnCours ? [{ label: "Annulation en cours", rubKey: 'mandat' }] : []),
+    ...(!pMandatNum && !estEstimation ? [{ label: 'Mandat manquant', rubKey: 'mandat' }] : []),
+    ...(pOffre ? [{ label: "Offre à traiter", rubKey: 'affaires' }] : []),
+    ...(appts.length > 0 ? [{ label: `${appts.length} demande${appts.length > 1 ? 's' : ''} de visite`, rubKey: 'rendezvous' }] : []),
+  ].slice(0, 3)
+  // Lot 4 : le rail doit porter mandants·N et diagnostics DPE-GES, pas des
+  // sous-titres génériques. Les deux signaux sont déjà disponibles.
+  const nbMandants = props.contacts.length
+  const contactFoot: CkFoot = nbMandants > 0
+    ? ['ok', `${nbMandants} mandant${nbMandants > 1 ? 's' : ''}`]
+    : ['alert', 'Aucun mandant']
+  const dpeVal = Number(detailStr('dpe_conso') || detailStr('dpe_cons'))
+  const gesVal = Number(detailStr('dpe_ges'))
+  const lebienFoot: CkFoot = (dpeVal > 0 || gesVal > 0)
+    ? ['neutral', `DPE ${dpeVal > 0 ? ckDpeLetter(dpeVal, 'conso') : '—'} · GES ${gesVal > 0 ? ckDpeLetter(gesVal, 'ges') : '—'}`]
+    : ['alert', 'Diagnostics manquants']
   const featList: Array<[string, CkFoot]> = [
-    ['lebien', ['neutral', 'Photos · caractéristiques']],
+    ['lebien', lebienFoot],
     ...PH.feat,
     ['rendezvous', rdvFoot],
-    ['contact', ['neutral', 'Mandants · vendeurs']],
+    ['contact', contactFoot],
   ]
   const autreList = PH.autre
   const horsPerimetre = Math.max(0, 11 - (featList.length + autreList.length))
@@ -21481,6 +21503,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           </div>
         <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{featList.length} en avant · {horsPerimetre} hors périmètre</span></div>
+        {ckWatch.length > 0 ? (
+          <div className="fa-ck-watch">
+            {ckWatch.map((w) => (
+              <button key={w.label} type="button" className="fa-ck-achip" onClick={() => goRub(w.rubKey)}>
+                <span className="fa-ck-achip-d" aria-hidden="true" />{w.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <nav className="fa-ck-rail" aria-label="Rubriques">
           {featList.map(([k, foot]) => renderRn(k, foot, true))}
           {autreList.length > 0 ? (
