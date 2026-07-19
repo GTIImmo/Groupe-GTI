@@ -21873,7 +21873,34 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           ) : activeTab === 'documents' ? (
             <div className="fa-ck-rub fa-ck-documents">
               {(() => {
-                const docs = parseJson<Array<{ name: string; sig: string; badge: string; signed?: boolean; type: string; typeLabel: string }>>(detailStr('documents_json') || '[]', [])
+                type CkDoc = { name: string; sig: string; badge: string; signed?: boolean; type: string; typeLabel: string }
+                const docsMock = parseJson<CkDoc[]>(detailStr('documents_json') || '[]', [])
+                // Prod-ready (audit §5 ter) : la liste habillée dérive des VRAIS documents Console
+                // (ckDocs, déjà chargés) quand le mock est absent — au lieu de disparaître en prod.
+                const docTypeOf = (name: string): [string, string] => {
+                  const n = name.toLowerCase()
+                  if (/avenant/.test(n)) return ['avenant', 'Avenant']
+                  if (/mandat/.test(n)) return ['mandat', 'Mandat']
+                  if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
+                  if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
+                  if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
+                  return ['autre', 'Document']
+                }
+                const docsReal: CkDoc[] = ckDocs.map((d) => {
+                  const name = String(d.document_name ?? 'Document')
+                  const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature
+                  const st = sig?.status
+                  const [type, typeLabel] = docTypeOf(name)
+                  const signed = st === 'signed'
+                  const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
+                    : st === 'pending' ? 'En attente de signature'
+                    : st === 'to_send' ? 'À envoyer en signature'
+                    : st === 'cancelled' ? 'Signature annulée'
+                    : ''
+                  const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : 'Indexé'
+                  return { name, sig: sigLabel, badge, signed, type, typeLabel }
+                })
+                const docs = docsMock.length ? docsMock : docsReal
                 if (!docs.length) return null
                 const toPrep = docs.filter((d) => !d.signed).length
                 const signed = docs.filter((d) => d.signed).length
