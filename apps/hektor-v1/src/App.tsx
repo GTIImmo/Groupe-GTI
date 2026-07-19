@@ -21920,7 +21920,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       <div className="fa-ck-mf"><div className="mk">Date début</div><div className="mv">{m.dateStart}</div></div>
                       <div className="fa-ck-mf"><div className="mk">Échéance</div><div className="mv">{m.dateEnd}</div></div>
                       <div className="fa-ck-mf"><div className="mk">Statut</div><div className="mv ok">{m.statut}</div></div>
-                    </div></div>
+                    </div>
+                    {/* Actions d'en-tête de la maquette (v22?view=mandat) : elles amènent sur les
+                        outils RÉELS rendus plus bas (éditeur de document / avenant), au lieu de
+                        dupliquer leur logique. */}
+                    {!isLightweightDetail ? (
+                      <div className="fa-ck-report-actions" style={{ margin: '14px 0 0' }}>
+                        <button type="button" className="fa-ck-rep-btn" onClick={() => document.getElementById('fa-ck-mandat-tools')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>Préparer un avenant</button>
+                        <button type="button" className="fa-ck-rep-btn" onClick={() => document.getElementById('fa-ck-mandat-tools')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>Éditer le document</button>
+                        <button type="button" className="fa-ck-rep-btn" onClick={() => openHektorAnnonce(String(dossier.hektor_annonce_id))}>Ouvrir Hektor</button>
+                      </div>
+                    ) : null}
+                    </div>
                     {/* Démarches — RÉUTILISE le modèle métier réel (buildMandatActionModel), comme
                         l'impose le plan §4 « RESTYLER, mêmes onClick ». La table statique précédente
                         envoyait 'demande_diffusion' EN DUR pour les trois cartes (la baisse de prix
@@ -21945,7 +21956,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       </>
                     ) : null}
                     <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Validation du mandat</div><div className="fa-ck-pub-s">Contrôle &amp; diffusion</div></div></div>
-                    <div className="fa-ck-pub-card"><div className="fa-ck-valstate"><div className="vlab">État de validation</div><div className={`vval ${pMandatOk ? 'ok' : 'wait'}`}>{pMandatOk ? 'Validé · confirmé par Hektor' : 'En attente de validation'}</div></div><p className="fa-ck-vnote">L'annonce est validée après contrôle. La validation débloque la diffusion sur les portails.</p></div>
+                    <div className="fa-ck-pub-card"><div className="fa-ck-valstate"><div className="vlab">État de validation</div><div className={`vval ${pMandatOk ? 'ok' : 'wait'}`}>{pMandatOk ? 'Validé · confirmé par Hektor' : 'En attente de validation'}</div></div><p className="fa-ck-vnote">L'annonce est validée après contrôle. La validation débloque la diffusion sur les portails.</p>
+                      {/* Le bascule Activé/Désactivé de la maquette : on ouvre le panneau
+                          Pilotage RÉEL (DetailAdminPilotPanel), qui porte déjà validation et
+                          diffusion — plutôt que de recoder un toggle à côté. */}
+                      {(props.allowMarkValidation || props.allowMarkDiffusable) && !isLightweightDetail ? (
+                        <div className="fa-ck-report-actions" style={{ marginTop: 12, marginBottom: 0 }}>
+                          <button type="button" className="fa-ck-rep-btn primary" onClick={() => setPilotageOpen(true)}>Activer / désactiver</button>
+                        </div>
+                      ) : null}</div>
                     {m.avenant ? (
                       <>
                         <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#f7f0e3', color: '#a8814a' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Avenant au mandat</div><div className="fa-ck-pub-s">Modification du prix — sans novation</div></div><span className="fa-ck-badge-wait">Prêt à vérifier</span></div>
@@ -21980,7 +21999,66 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </>
                 )
               })()}
-              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Actions mandat (Hektor)</div>
+              {/* Sections manquantes vs la maquette v22?view=mandat (audit §4) :
+                  « Mandants / propriétaires » et « Intervenants ». On réutilise les mêmes
+                  données que la rubrique Contact ; les actions d'édition y renvoient. */}
+              {props.contacts.length > 0 ? (
+                <>
+                  <div className="fa-ck-pub-sec">
+                    <span className="fa-ck-pub-ic blue" aria-hidden="true"><CkIcon path={CK_ICON.contact} /></span>
+                    <div><div className="fa-ck-pub-t">Mandants / propriétaires</div><div className="fa-ck-pub-s">{props.contacts.length} contact{props.contacts.length > 1 ? 's' : ''} lié{props.contacts.length > 1 ? 's' : ''}</div></div>
+                  </div>
+                  <div className="fa-ck-pub-card">
+                    {props.contacts.map((c) => {
+                      const nom = c.name || `${c.civility ?? ''} ${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'
+                      const ini = nom.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'C'
+                      return (
+                        <div key={c.id} className="fa-ck-sigitem">
+                          <span className="fa-ck-sav ok">{ini}</span>
+                          <div className="fa-ck-siginfo"><div className="onm">{nom}</div><div className="osb">{c.role || 'Mandant'}</div></div>
+                          <div className="fa-ck-mp-acts">
+                            {c.email ? <a className="fa-ck-rep-btn" href={`mailto:${c.email}`}>Email</a> : null}
+                            {c.phone ? <a className="fa-ck-rep-btn" href={`tel:${c.phone.replace(/\s+/g, '')}`}>Tél</a> : null}
+                            {c.sourceId && props.onOpenContact ? <button type="button" className="fa-ck-rep-btn" onClick={() => props.onOpenContact?.(c.sourceId ?? '')}>Fiche</button> : null}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div className="fa-ck-report-actions" style={{ marginTop: 12, marginBottom: 0 }}>
+                      <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('contact')}>Modifier les contacts</button>
+                      <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('contact')}>Ajouter un mandant</button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+              {(() => {
+                const inter = parseJson<Array<{ role: string; name: string; sub?: string; phone?: string }>>(detailStr('intervenants_json') || '[]', [])
+                if (!inter.length) return null
+                return (
+                  <>
+                    <div className="fa-ck-pub-sec">
+                      <span className="fa-ck-pub-ic" style={{ background: '#f7f0e3', color: '#a8814a' }} aria-hidden="true"><CkIcon path={CK_ICON.contact} /></span>
+                      <div><div className="fa-ck-pub-t">Intervenants</div><div className="fa-ck-pub-s">Diagnostiqueur · notaire · syndic</div></div>
+                    </div>
+                    <div className="fa-ck-pub-card">
+                      {inter.map((it) => (
+                        <div key={it.role} className="fa-ck-sigitem">
+                          <div className="fa-ck-siginfo"><div className="onm">{it.name || 'Non renseigné'}</div><div className="osb">{it.role}{it.sub ? ` · ${it.sub}` : ''}</div></div>
+                          <div className="fa-ck-mp-acts">
+                            {it.phone ? <a className="fa-ck-rep-btn" href={`tel:${it.phone.replace(/\s+/g, '')}`}>Tél</a> : null}
+                            <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('contact')}>Fiche</button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="fa-ck-report-actions" style={{ marginTop: 12, marginBottom: 0 }}>
+                        <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('contact')}>Ajouter un intervenant</button>
+                        {props.onOpenContact ? <button type="button" className="fa-ck-rep-btn" onClick={() => props.onOpenContact?.('')}>Ouvrir l'annuaire</button> : null}
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+              <div className="fa-ck-lb-manage-h" id="fa-ck-mandat-tools" style={{ marginTop: 18 }}>Actions mandat (Hektor)</div>
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." />
                 : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
