@@ -19,6 +19,22 @@
   --fa-muted: #8a807a;
 }
 
+/* Fix largeur (grand écran) : selon l'écran hôte, le panneau détail peut s'étirer plein écran
+   (écran Annonces) ou n'être pas centré. Le cockpit veut une largeur « maquette » centrée.
+   On cible le panneau QUI CONTIENT le cockpit (:has) et on le contraint, comme la .mpanel v26. */
+@media (min-width: 900px) {
+  .modal-panel-detail:has(.fa-cockpit-v2) {
+    width: min(1280px, calc(100vw - 48px)) !important;
+    max-width: 1280px !important;
+    margin-inline: auto !important;
+    border-radius: 22px !important;
+  }
+}
+/* Repli sans :has (navigateurs anciens) — le shell lui-même se contraint et se centre. */
+@media (min-width: 900px) {
+  .fa-ck-shell { max-width: 1280px; margin-inline: auto; width: 100%; }
+}
+
 /* Châssis panneau — topbar SOMBRE du v26 (pleine largeur) + corps (colonne gauche | contenu). */
 .fa-ck-shell {
   display: flex;
