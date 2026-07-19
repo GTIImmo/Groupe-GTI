@@ -21096,7 +21096,71 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—', date: detailStr('date_vente') },
   ]
   const nbPortails = Number(dossier.nb_portails_actifs) || 0
-  const statusLed = pVendu ? '#a86af0' : (pOffre || pCompromis) ? '#3fbf7a' : (pMandatNum && pMandatOk) ? '#3fbf7a' : '#f0a935'
+  // ── Sous-états d'annonce — calqué sur STAGES de la maquette v26 ──────────────
+  // La maquette encode 18 sous-états avec, pour chacun : un libellé (sw), une
+  // couleur de LED, un texte de focus (t/p) et les liens de prochaine action (btns).
+  // Le cockpit n'en résolvait que 7, en dur. On passe à une table.
+  // NON résolus ici (documenté, pas oublié) : man_edite / man_signature et le cycle
+  // avenant (av_edite / av_signature / av_valider) dépendent du statut de SIGNATURE
+  // qui vit dans ConsoleDocument.metadata_json.signature — un fetch Console que le
+  // cockpit ne fait pas encore. Ils retombent proprement sur man_valider / dif_actif.
+  const dossierRec = dossier as Record<string, unknown>
+  const mandatDateFin = dossierRec['mandat_date_fin'] == null ? '' : String(dossierRec['mandat_date_fin']).trim()
+  const mandatEchu = pMandatNum && Boolean(mandatDateFin) && !isMandateEndDateStillValid(mandatDateFin)
+  const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
+  const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
+  const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
+  const ckStage = pVendu ? 'vendu'
+    : estArchive ? 'archive'
+    : pCompromis ? 'compromis'
+    : pOffre ? 'offre'
+    : annulEnCours ? 'mandat_annul'
+    : mandatEchu ? 'mandat_echu'
+    : !pMandatNum ? (estEstimation ? 'est_cours' : 'man_creer')
+    : !pMandatOk ? 'man_valider'
+    : nbPortails > 0 ? 'dif_actif'
+    : 'dif_ouvrir'
+  type CkStageDef = { label: string; desc: string; led: string; btns: Array<{ label: string; rubKey: string; badge?: string }> }
+  const CK_STAGES: Record<string, CkStageDef> = {
+    est_cours: { label: 'Estimation · en cours', led: '#f0a935',
+      desc: "Avis de valeur en cours. Complétez la valeur retenue avant de l'envoyer au client.",
+      btns: [{ label: "Éditer l'avis de valeur", rubKey: 'estimation' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
+    est_envoye: { label: 'Estimation · avis envoyé', led: '#f0a935',
+      desc: "Avis de valeur envoyé. Dès l'accord du propriétaire, générez le mandat.",
+      btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "L'avis de valeur", rubKey: 'estimation' }] },
+    man_creer: { label: 'Mandat à créer', led: '#f0a935',
+      desc: 'Annonce active mais mandat manquant — générez le n° de mandat et préparez le document.',
+      btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
+    man_valider: { label: 'Mandat · à valider', led: '#1f63b8',
+      desc: "Mandat en cours de validation — la validation par l'admin débloque la diffusion.",
+      btns: [{ label: 'Demander la validation', rubKey: 'mandat' }, { label: 'Voir les documents', rubKey: 'documents' }] },
+    dif_ouvrir: { label: 'Validé · à diffuser', led: '#3fbf7a',
+      desc: 'Mandat validé — activez la diffusion sur les portails pour passer en ligne.',
+      btns: [{ label: 'Ouvrir la diffusion', rubKey: 'publicite' }, { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' }] },
+    dif_actif: { label: "En ligne — en attente d'offre", led: '#3fbf7a',
+      desc: `Diffusé · ${nbPortails} portail(s) actif(s) · aucune offre. Relancez ou ajustez le prix si le rythme faiblit.`,
+      btns: [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }, { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' }, { label: 'Gérer la diffusion', rubKey: 'publicite' }] },
+    mandat_echu: { label: 'Mandat · échéance dépassée', led: '#e0952f',
+      desc: `L'échéance du mandat est dépassée${mandatDateFin ? ` (${formatDate(mandatDateFin)})` : ''}. Refaites ou prorogez le mandat pour poursuivre légalement la commercialisation ; suspendez la diffusion en attendant.`,
+      btns: [{ label: 'Renouveler le mandat', rubKey: 'mandat' }, { label: 'Suspendre la diffusion', rubKey: 'publicite' }, { label: 'Contacter le mandant', rubKey: 'contact' }] },
+    mandat_annul: { label: 'Mandat · annulation en cours', led: '#c2701a',
+      desc: "Demande d'annulation soumise à la direction. Les actions commerciales sont gelées jusqu'à la décision ; suivez la demande.",
+      btns: [{ label: 'Suivre la demande', rubKey: 'historique' }, { label: 'Le mandat', rubKey: 'mandat' }, { label: 'Contacter le mandant', rubKey: 'contact' }] },
+    offre: { label: 'Sous offre', led: '#3fbf7a',
+      desc: "Une offre est en cours — suivez-la dans la rubrique Affaires.",
+      btns: [{ label: "Traiter l'affaire", rubKey: 'affaires' }, { label: 'Voir les acquéreurs', rubKey: 'rapprochement' }] },
+    compromis: { label: 'Sous compromis', led: '#3fbf7a',
+      desc: 'Compromis en cours — suivez les échéances et les pièces dans Affaires.',
+      btns: [{ label: "Traiter l'affaire", rubKey: 'affaires' }, { label: 'Voir les documents', rubKey: 'documents' }] },
+    vendu: { label: 'Vendu', led: '#a86af0',
+      desc: 'Vente finalisée — dossier terminé.',
+      btns: [{ label: 'Bilan de vente', rubKey: 'reporting' }, { label: "Voir l'affaire", rubKey: 'affaires' }] },
+    archive: { label: 'Archivée', led: '#8a807a',
+      desc: "Annonce archivée — plus de diffusion ni d'action commerciale.",
+      btns: [{ label: "Voir l'historique", rubKey: 'historique' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
+  }
+  const ckStageDef = CK_STAGES[ckStage] ?? CK_STAGES.dif_actif
+  const statusLed = ckStageDef.led
   const appts = parseAppointmentRequests(props.detail)
   // Rail construit EXACTEMENT comme le v26 : featList = Le Bien + [feat de phase] + Rendez-vous + Contact,
   // chaque item « en avant » portant une pastille de statut (foot) ; puis « Autres rubriques » repliées.
@@ -21149,46 +21213,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       </button>
     )
   }
-  const situationLabel = pVendu ? 'Vendu'
-    : pCompromis ? 'Compromis en cours'
-    : pOffre ? 'Sous offre'
-    : !pMandatNum ? 'Mandat à créer'
-    : !pMandatOk ? 'Mandat signé · à valider'
-    : nbPortails > 0 ? "En ligne — en attente d'offre"
-    : 'Validé · à diffuser'
-  // Actions « prochaine étape » : mixées (métier + navigation), visibles UNIQUEMENT si l'état est
-  // cohérent, 3 maximum. Chaque action route vers la rubrique où elle se réalise (comme la maquette).
+  // Libellé, description et liens de prochaine action viennent tous du sous-état
+  // résolu (CK_STAGES) — plus de cascade en dur dupliquée trois fois.
+  const situationLabel = ckStageDef.label
+  const situationDesc = ckStageDef.desc
   const hasRappro = Boolean(props.onOpenRapprochement)
-  const nextActions: Array<{ label: string; rubKey: string; badge?: string }> = (
-    pVendu ? []
-    : (pOffre || pCompromis) ? [
-        { label: "Traiter l'affaire", rubKey: 'affaires' },
-        ...(hasRappro ? [{ label: 'Voir les acquéreurs', rubKey: 'rapprochement' }] : []),
-      ]
-    : !pMandatNum ? [
-        { label: 'Créer le mandat', rubKey: 'mandat' },
-      ]
-    : !pMandatOk ? [
-        { label: 'Demander la validation', rubKey: 'mandat' },
-        { label: 'Voir les documents', rubKey: 'documents' },
-      ]
-    : nbPortails > 0 ? [
-        ...(hasRappro ? [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }] : []),
-        { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' },
-        { label: 'Gérer la diffusion', rubKey: 'publicite' },
-      ]
-    : [
-        { label: 'Ouvrir la diffusion', rubKey: 'publicite' },
-        { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' },
-      ]
-  ).slice(0, 3)
-  const runAction = (rubKey: string) => { if (rubKey === 'rapprochement') props.onOpenRapprochement?.(dossier); else setActiveTab(rubKey) }
-  const situationDesc = pVendu ? 'Vente finalisée — dossier terminé.'
-    : (pOffre || pCompromis) ? 'Une transaction est en cours — suivez-la dans la rubrique Affaires.'
-    : !pMandatNum ? 'Annonce active mais mandat manquant — créez le mandat.'
-    : !pMandatOk ? 'Mandat en cours de validation — la diffusion se débloque après validation.'
-    : nbPortails > 0 ? `Diffusé · ${nbPortails} portail(s) actif(s) · aucune offre. Relancez ou ajustez le prix si le rythme faiblit.`
-    : 'Mandat validé — ouvrez la diffusion pour passer en ligne.'
+  const nextActions = ckStageDef.btns
+    .filter((b) => (b.rubKey === 'rapprochement' ? hasRappro : true))
+    .slice(0, 3)
+  const runAction = (rubKey: string) => goRub(rubKey)
   const emailContacts = props.contacts.filter((c) => c.email)
   // Valeur d'un champ wizard par son nom (overlay-first, via la MÊME fonction que l'éditeur) + diff local.
   const wizFieldValue = (name: string) => { const f = CK_WIZARD_FIELD_BY_NAME[name]; return f ? wizardDetailValue(dossier, props.detail, f) : '' }
