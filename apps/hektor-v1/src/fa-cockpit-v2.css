@@ -1490,3 +1490,41 @@
 }
 .fa-cockpit-v2 .fa-ck-histofilt button.is-on span { color: var(--ck-ac); background: #fff; }
 
+
+/* Raccourcis d'activité (objet `sc` de la maquette v26) — 3 actions par sous-état. */
+.fa-cockpit-v2 .fa-ck-acti-sc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--fa-line-soft);
+}
+.fa-cockpit-v2 .fa-ck-ascut {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fa-ink);
+  background: #fff;
+  border: 1px solid var(--fa-line);
+  border-radius: 11px;
+  padding: 8px 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.fa-cockpit-v2 .fa-ck-ascut svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.fa-cockpit-v2 .fa-ck-ascut:hover { border-color: var(--fa-brand); color: var(--fa-brand-ink); }
+.fa-cockpit-v2 .fa-ck-ascut.primary {
+  background: var(--fa-brand);
+  border-color: var(--fa-brand);
+  color: #fff;
+}
+.fa-cockpit-v2 .fa-ck-ascut.primary:hover { filter: brightness(1.08); color: #fff; }
+

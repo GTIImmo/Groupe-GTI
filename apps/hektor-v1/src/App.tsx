@@ -21181,56 +21181,56 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : nbPortails > 0 ? 'dif_actif'
     : 'dif_ouvrir'
   // `ro` = lecture seule (§4 règle 5) ; `frozen` = actions gelées (§6 Lot 2).
-  type CkStageDef = { label: string; desc: string; led: string; ro?: boolean; roban?: string; frozen?: string; btns: Array<{ label: string; rubKey: string; badge?: string; dem?: 'validation' | 'price' | 'cancel' }> }
+  type CkStageDef = { label: string; desc: string; led: string; ro?: boolean; roban?: string; frozen?: string; sub?: string; sc?: Array<{ label: string; rubKey: string }>; btns: Array<{ label: string; rubKey: string; badge?: string; dem?: 'validation' | 'price' | 'cancel' }> }
   const CK_STAGES: Record<string, CkStageDef> = {
-    est_cours: { label: "Compléter l'avis de valeur", led: '#f0a935',
+    est_cours: { sub: "Estimation en cours · prospection", sc: [{ label: "Éditer l'avis", rubKey: 'estimation' }, { label: "Planifier la R2", rubKey: 'rendezvous' }, { label: "Écrire au vendeur", rubKey: 'contact' }], label: "Compléter l'avis de valeur", led: '#f0a935',
       desc: 'Visite R1 faite, renseignez la valeur retenue avant l’envoi.',
       btns: [{ label: "Éditer l'avis de valeur", rubKey: 'estimation' }, { label: 'Planifier la visite R2', rubKey: 'rendezvous' }] },
-    est_envoye: { label: 'Avis envoyé — créer le mandat', led: '#f0a935',
+    est_envoye: { sub: "Avis envoyé · suivi propriétaire", sc: [{ label: "Créer le mandat", rubKey: 'mandat' }, { label: "Relancer le propriétaire", rubKey: 'reporting' }, { label: "Écrire au vendeur", rubKey: 'contact' }], label: 'Avis envoyé — créer le mandat', led: '#f0a935',
       desc: "Dès l'accord du propriétaire, générez le mandat.",
       btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "Revoir l'avis de valeur", rubKey: 'estimation' }] },
-    man_creer: { label: 'Créer le mandat', led: '#f0a935',
+    man_creer: { sub: "Mandat à créer · suivi propriétaire", sc: [{ label: "Créer le mandat", rubKey: 'mandat' }, { label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Créer le mandat', led: '#f0a935',
       desc: 'Annonce active mais mandat manquant.',
       btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
     // ── Crans du document (§1) : édité → Envoyer · envoyé → Relancer · signé → Valider
-    man_edite: { label: 'Mandat édité — à envoyer', led: '#1f63b8',
+    man_edite: { sub: "Mandat édité · à envoyer", sc: [{ label: "Envoyer à la signature", rubKey: 'mandat' }, { label: "Planifier la signature", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Mandat édité — à envoyer', led: '#1f63b8',
       desc: 'Document rédigé, envoyez-le à la signature (ImmoSign).',
       btns: [{ label: 'Envoyer le mandat à la signature', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
-    man_signature: { label: 'En signature — suivre / relancer', led: '#1f63b8',
+    man_signature: { sub: "Mandat en signature · suivi propriétaire", sc: [{ label: "Relancer la signature", rubKey: 'mandat' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'En signature — suivre / relancer', led: '#1f63b8',
       desc: 'En attente de signature du mandant.',
       btns: [{ label: 'Relancer la signature', rubKey: 'mandat' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    av_edite: { label: 'Avenant édité — à envoyer', led: '#1f63b8',
+    av_edite: { sub: "Avenant de baisse · à envoyer", sc: [{ label: "Envoyer à la signature", rubKey: 'mandat' }, { label: "Planifier la signature", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Avenant édité — à envoyer', led: '#1f63b8',
       desc: "Avenant de baisse rédigé. Envoyez-le à la signature du mandant ; la validation direction interviendra après signature.",
       btns: [{ label: "Envoyer l'avenant à la signature", rubKey: 'mandat' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    av_signature: { label: 'Avenant envoyé à la signature', led: '#1f63b8',
+    av_signature: { sub: "Avenant en signature · commercialisation", sc: [{ label: "Relancer la signature", rubKey: 'mandat' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Avenant envoyé à la signature', led: '#1f63b8',
       desc: 'En attente de signature du mandant.',
       btns: [{ label: "Relancer la signature de l'avenant", rubKey: 'mandat' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    av_valider: { label: 'Signé — faire valider la baisse', led: '#1f63b8',
+    av_valider: { sub: "Avenant signé · baisse à valider", sc: [{ label: "Demander la validation", rubKey: 'mandat' }, { label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Signé — faire valider la baisse', led: '#1f63b8',
       desc: 'La validation applique le nouveau prix et met à jour la diffusion.',
       btns: [{ label: "Demander la validation de l'avenant", rubKey: 'mandat', badge: '→ Direction', dem: 'price' }, { label: "Revoir l'avenant", rubKey: 'mandat' }] },
-    man_valider: { label: 'Signé — faire valider', led: '#1f63b8',
+    man_valider: { sub: "Mandat signé · à valider", sc: [{ label: "Demander la validation", rubKey: 'mandat' }, { label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Signé — faire valider', led: '#1f63b8',
       desc: 'La validation par la direction débloque la diffusion.',
       btns: [{ label: 'Demander la validation', rubKey: 'mandat', badge: '→ Direction', dem: 'validation' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
-    dif_ouvrir: { label: 'Ouvrir la diffusion', led: '#3fbf7a',
+    dif_ouvrir: { sub: "Commercialisation · acquéreurs & mandant", sc: [{ label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Ouvrir la diffusion', led: '#3fbf7a',
       desc: 'Activez les portails pour passer en ligne.',
       btns: [{ label: 'Ouvrir la diffusion', rubKey: 'publicite' }, { label: 'Rapprocher les acquéreurs', rubKey: 'rapprochement' }, { label: 'Demander une baisse', rubKey: 'mandat', badge: '→ Direction', dem: 'price' }] },
-    dif_actif: { label: "En ligne — en attente d'offre", led: '#3fbf7a',
+    dif_actif: { sub: "Commercialisation · acquéreurs & mandant", sc: [{ label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: "En ligne — en attente d'offre", led: '#3fbf7a',
       desc: `Diffusé · ${nbPortails} portail(s) actif(s) · aucune offre. Relancez ou ajustez le prix si le rythme faiblit.`,
       btns: [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }, { label: "Demander la validation d'une baisse", rubKey: 'mandat', badge: '→ Direction', dem: 'price' }, { label: 'Gérer la diffusion', rubKey: 'publicite' }] },
-    mandat_echu: { label: 'Mandat · échéance dépassée', led: '#e0952f',
+    mandat_echu: { sub: "Mandat échu · à renouveler", sc: [{ label: "Refaire le mandat", rubKey: 'mandat' }, { label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Mandat · échéance dépassée', led: '#e0952f',
       desc: `L'échéance du mandat est dépassée${mandatDateFin ? ` (${formatDate(mandatDateFin)})` : ''}. Refaites ou prorogez le mandat pour poursuivre légalement la commercialisation ; suspendez la diffusion en attendant.`,
       btns: [{ label: 'Refaire / proroger le mandat', rubKey: 'mandat' }, { label: 'Suspendre la diffusion', rubKey: 'publicite' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    mandat_annul: { label: 'Annulation en cours', led: '#c2701a',
+    mandat_annul: { sub: "Annulation du mandat · en cours", sc: [{ label: "Suivre la demande", rubKey: 'mandat' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Annulation en cours', led: '#c2701a',
       frozen: 'Actions commerciales gelées jusqu’à la décision de la direction.',
       desc: "Demande d'annulation soumise à la direction. Les actions commerciales sont gelées jusqu'à la décision ; suivez la demande.",
       btns: [{ label: "Suivre la demande d'annulation", rubKey: 'mandat', badge: '→ Direction', dem: 'cancel' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    offre: { label: 'Offre reçue', led: '#3fbf7a',
+    offre: { sub: "Offre en cours · acquéreurs & mandant", sc: [{ label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Offre reçue', led: '#3fbf7a',
       desc: 'Étudiez avec le vendeur, acceptez ou contre-proposez.',
       btns: [{ label: "Traiter l'offre", rubKey: 'affaires' }, { label: 'Prévenir le vendeur', rubKey: 'contact' }] },
-    offre_ref: { label: 'Offre refusée — relancer', led: '#3fbf7a',
+    offre_ref: { sub: "Offre refusée · relance acquéreurs", sc: [{ label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Offre refusée — relancer', led: '#3fbf7a',
       desc: "L'annonce repasse en Actif. Relancez les acquéreurs ou ajustez le prix.",
       btns: [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }, { label: 'Demander une baisse', rubKey: 'mandat', badge: '→ Direction', dem: 'price' }, { label: 'Gérer la diffusion', rubKey: 'publicite' }] },
-    compromis: { label: 'Compromis en cours', led: '#3fbf7a',
+    compromis: { sub: "Compromis · suivi des conditions", sc: [{ label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Compromis en cours', led: '#3fbf7a',
       desc: "Suivez les conditions suspensives jusqu'à l'acte.",
       btns: [{ label: 'Suivre le compromis', rubKey: 'affaires' }, { label: 'Vérifier les pièces', rubKey: 'documents' }, { label: 'Prévenir le vendeur', rubKey: 'contact' }] },
     vendu: { label: 'Vendu', led: '#a86af0', ro: true,
@@ -21575,7 +21575,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-acti">
                 <div className="fa-ck-rub-head">
                   <span className="fa-ck-rh-l">Activité</span>
-                  <span className="fa-ck-rh-sub">Acquéreurs &amp; mandant</span>
+                  <span className="fa-ck-rh-sub">{ckStageDef.sub ?? 'Acquéreurs & mandant'}</span>
                   <div className="fa-ck-afilt">
                     <button type="button" className={actiFilter === 'tout' ? 'is-on' : ''} onClick={() => setActiFilter('tout')}>Tout</button>
                     <button type="button" className={actiFilter === 'acq' ? 'is-on' : ''} onClick={() => setActiFilter('acq')}>Acquéreurs</button>
@@ -21632,6 +21632,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       </div>
                     )
                   })()}
+                {/* Raccourcis d'activité (objet `sc` de la maquette) : 3 actions propres au
+                    sous-état, la première mise en avant. Elles ouvrent la rubrique concernée. */}
+                {ckStageDef.sc && ckStageDef.sc.length > 0 && !ckStageDef.ro ? (
+                  <div className="fa-ck-acti-sc">
+                    {ckStageDef.sc.map((a, i) => (
+                      <button key={a.label} type="button" className={`fa-ck-ascut${i === 0 ? ' primary' : ''}`} onClick={() => goRub(a.rubKey)}>
+                        <CkIcon path={CK_ICON[a.rubKey] ?? CK_ICON.mail} />{a.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
                 </div>
               </div>
             </div>
