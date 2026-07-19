@@ -21305,6 +21305,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   if (!isLightweightDetail) ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => setActiveTab('contact') })
   if (ckMoreItems.length > 0 && ((props.onArchiveAnnonce && !isLightweightDetail) || props.onDeleteAnnonce)) ckMoreItems.push({ sep: true })
   if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
+  // Régression corrigée (audit §5 bis #11) : le désarchivage existait dans l'ancienne fiche
+  // et n'avait pas été repris — une annonce archivée devenait donc irrécupérable ici.
+  if (props.onRestoreAnnonce && !isLightweightDetail && estArchive) ckMoreItems.push({ label: 'Désarchiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9"/><path d="M12 18v-6M9 15l3-3 3 3"/>', onClick: () => props.onRestoreAnnonce?.(dossier) })
   ckMoreItems.push({ label: 'Ouvrir dans Hektor ↗', ico: '<path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>', onClick: () => openHektorAnnonce(String(dossier.hektor_annonce_id)) })
   if (props.onDeleteAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Supprimer', ico: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', danger: true, onClick: () => props.onDeleteAnnonce?.(dossier) })
   // Horodatage relatif du fil d'activité.
@@ -22102,7 +22105,29 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'reporting' ? (
             <div className="fa-ck-rub fa-ck-report">
+              {/* Régression corrigée (audit §5 bis #15) : « Aperçu / PDF » et « Envoyer au
+                  propriétaire » existent dans l'ancienne fiche et n'étaient pas repris ici.
+                  Mêmes handlers que la Base : window.print() et onOpenContact / mailto. */}
               <div className="fa-ck-ct-sec"><span className="l">Reporting propriétaire</span><span className="bar" /><span className="k">Compte-rendu de commercialisation</span></div>
+              {(() => {
+                const owner = props.contacts.find((c) => /mandant|propri|owner|vendeur/i.test(c.role || '')) ?? props.contacts[0]
+                const ownerEmail = owner?.email || ''
+                const ownerDirId = owner ? detailContactDirectoryId(owner) : null
+                const subject = `Compte-rendu d'activité - ${dossier.titre_bien || dossier.numero_dossier || 'votre bien'}`
+                return (
+                  <div className="fa-ck-report-actions">
+                    <button type="button" className="fa-ck-rep-btn" onClick={() => window.print()}>Aperçu / PDF</button>
+                    {ownerDirId && props.onOpenContact ? (
+                      <button type="button" className="fa-ck-rep-btn primary" onClick={() => props.onOpenContact?.(ownerDirId)}>Envoyer au propriétaire</button>
+                    ) : (
+                      <a
+                        className={`fa-ck-rep-btn primary${ownerEmail ? '' : ' is-disabled'}`}
+                        href={ownerEmail ? `mailto:${ownerEmail}?subject=${encodeURIComponent(subject)}` : undefined}
+                      >Envoyer au propriétaire</a>
+                    )}
+                  </div>
+                )
+              })()}
               <div className="fa-ck-kpis">
                 <div className="fa-ck-kpi"><div className="kl">Vues 30 j</div><div className="kv br">{Number(detailStr('vues_30j')) || 0}</div><svg className="fa-ck-spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,26 18,22 34,24 52,15 70,18 88,9 104,12 120,6 120,30 0,30" fill="rgba(194,18,95,.08)" stroke="none" /><polyline points="0,26 18,22 34,24 52,15 70,18 88,9 104,12 120,6" fill="none" stroke="#c2125f" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg></div>
                 <div className="fa-ck-kpi"><div className="kl">Visites / demandes</div><div className="kv">{appts.length}</div><div className="ks">RDV pris</div></div>
