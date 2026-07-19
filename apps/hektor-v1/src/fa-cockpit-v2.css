@@ -1561,3 +1561,6 @@
   flex: none;
 }
 
+
+/* Acteur d'un événement du fil réel (négociateur, contact). */
+.fa-cockpit-v2 .fa-ck-aactor { color: var(--fa-muted); font-weight: 600; }

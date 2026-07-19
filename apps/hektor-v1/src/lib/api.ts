@@ -2633,6 +2633,24 @@ export async function loadRapprochementsForDossier(appDossierId: number): Promis
   return (data ?? []) as RapprochementForDossierRow[]
 }
 
+/** Fil d'activité du cockpit : événements réels du dossier, agrégés par la RPC
+ *  app_cockpit_activite (rapprochement, RDV, coup de cœur, relance, proposition,
+ *  démarches direction…). Champs TEXTE (lead/rest), jamais de HTML → affichés échappés. */
+export type CockpitActiviteRow = {
+  kind: string
+  aud: 'acq' | 'mandant' | string
+  at: string
+  lead: string
+  rest: string | null
+  actor: string | null
+}
+export async function loadCockpitActivite(appDossierId: number, limit = 30): Promise<CockpitActiviteRow[]> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return []
+  const { data, error } = await supabase.rpc('app_cockpit_activite', { p_app_dossier_id: appDossierId, p_limit: limit })
+  if (error) throw new Error(error.message ?? 'Unable to load cockpit activite')
+  return (data ?? []) as CockpitActiviteRow[]
+}
+
 export type RapprochementCount = { app_dossier_id: number; n_total: number; n_non_proposes: number }
 
 /**

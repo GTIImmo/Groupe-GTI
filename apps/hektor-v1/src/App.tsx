@@ -61,6 +61,8 @@ import {
   updateDiffusionRequest,
   verifyPriceDropOnHektor,
   loadConsoleDocuments,
+  loadCockpitActivite,
+  type CockpitActiviteRow,
   loadConsolePhotos,
   createPrepareConsoleDocumentJob,
   createUploadDocumentToHektorJob,
@@ -20767,6 +20769,23 @@ const CK_ACTI_RUB: Record<string, string> = {
   historique: 'historique',
   lebien: 'lebien',
 }
+// KMAP du fil réel : type d'événement (RPC) → icône, couleurs, rubrique cible, audience.
+// Équivalent de l'objet KMAP de la maquette v26.
+const CK_ACTI_KMAP: Record<string, { ic: string; nc: string; nb: string; rub: string }> = {
+  match:    { ic: 'rapprochement', nc: '#0f7c8a', nb: '#daeef1', rub: 'rapprochement' },
+  lead:     { ic: 'mail',         nc: '#c2701a', nb: '#fdf0dd', rub: 'rapprochement' },
+  rdv:      { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
+  visitreq: { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
+  like:     { ic: 'heart',        nc: '#c2125f', nb: '#f9e7ef', rub: 'rapprochement' },
+  relance:  { ic: 'mail',         nc: '#9a5b05', nb: '#fdf4e2', rub: 'rapprochement' },
+  offer:    { ic: 'affaires',     nc: '#1f6e44', nb: '#e4f1e8', rub: 'affaires' },
+  email:    { ic: 'mail',         nc: '#3a5a8a', nb: '#e7edf7', rub: 'contact' },
+  mandat:   { ic: 'mandat',       nc: '#9d0f4e', nb: '#f9e7ef', rub: 'mandat' },
+  doc:      { ic: 'documents',    nc: '#4756a6', nb: '#e9ebf8', rub: 'documents' },
+  price:    { ic: 'publicite',    nc: '#c2125f', nb: '#f9e7ef', rub: 'mandat' },
+  requalif: { ic: 'historique',   nc: '#8a807a', nb: '#f1eae1', rub: 'historique' },
+  reporting:{ ic: 'reporting',    nc: '#a8814a', nb: '#f4ecd9', rub: 'reporting' },
+}
 // Verbe attendu par rubrique (aligné sur les libellés de la maquette).
 const CK_ACTI_LABEL: Record<string, string> = {
   mandat: 'Suivre', rendezvous: 'Ouvrir', documents: 'Préparer', reporting: 'Voir',
@@ -21069,6 +21088,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // « mandat édité » / « en signature » / « signé » — et donc des VERBES faux
   // au regard du principe §1 (« le verbe suit la position du document »).
   const [ckDocs, setCkDocs] = useState<ConsoleDocument[]>([])
+  // Fil d'activité RÉEL (RPC app_cockpit_activite) : agrège les événements du dossier.
+  // Remplace le fallback pauvre quand il n'y a pas de mock activite_json.
+  const [ckActi, setCkActi] = useState<CockpitActiviteRow[]>([])
   // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
   // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
   const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
@@ -21096,6 +21118,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     void loadConsoleDocuments(id)
       .then((rows) => { if (!cancelled) setCkDocs(rows) })
       .catch(() => { if (!cancelled) setCkDocs([]) })
+    return () => { cancelled = true }
+  }, [dossier?.app_dossier_id])
+  useEffect(() => {
+    const id = dossier?.app_dossier_id
+    if (!id) { setCkActi([]); return }
+    let cancelled = false
+    void loadCockpitActivite(id, 30)
+      .then((rows) => { if (!cancelled) setCkActi(rows) })
+      .catch(() => { if (!cancelled) setCkActi([]) })
     return () => { cancelled = true }
   }, [dossier?.app_dossier_id])
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
@@ -21658,24 +21689,27 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         </div>
                       )
                     }
+                    // Fil RÉEL (RPC app_cockpit_activite) : événements du dossier, agrégés.
+                    // Rendu ÉCHAPPÉ (lead/rest sont du texte, jamais du HTML) → pas d'injection.
+                    const feed = ckActi.filter((e) => actiFilter === 'tout' || e.aud === actiFilter)
                     return (
                       <div className="fa-ck-afeed">
-                        {appts.length > 0 && actiFilter !== 'mandant' ? (
-                          <button type="button" className="fa-ck-aev" onClick={() => setActiveTab('rendezvous')}>
-                            <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
-                            <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
-                            <span className="fa-ck-at">{lastApptAt ? relTime(lastApptAt) : 'à traiter'}</span>
-                            <span className="fa-ck-aq">Ouvrir</span>
-                          </button>
-                        ) : null}
-                        {emailContacts.filter((c) => actiFilter === 'tout' || (/mandant|propri|owner|vendeur/i.test(c.role || '') ? 'mandant' : 'acq') === actiFilter).slice(0, 4).map((c) => (
-                          <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
-                            <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><CkIcon path={CK_ICON.mail} /></span>
-                            <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>
-                            <span className="fa-ck-aq">Écrire</span>
-                          </a>
-                        ))}
-                        {appts.length === 0 && emailContacts.length === 0 ? <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p> : null}
+                        {feed.length > 0 ? feed.map((e, i) => {
+                          const km = CK_ACTI_KMAP[e.kind] ?? CK_ACTI_KMAP.email
+                          const target = km.rub
+                          const openable = target !== 'rapprochement' ? CK_RUB_MAP[target] : true
+                          const row = (
+                            <>
+                              <span className="fa-ck-an" style={{ ['--nb']: km.nb, ['--nc']: km.nc } as CSSProperties}><CkIcon path={CK_ICON[km.ic] ?? CK_ICON.mail} /></span>
+                              <div className="fa-ck-atx"><div className="fa-ck-al"><b>{e.lead}</b>{e.rest ? <> — {e.rest}</> : null}{e.actor ? <span className="fa-ck-aactor"> · {e.actor}</span> : null}</div></div>
+                              <span className="fa-ck-at">{e.at ? relTime(e.at) : ''}</span>
+                              {openable ? <span className="fa-ck-aq">{CK_ACTI_LABEL[target] ?? 'Ouvrir'}</span> : null}
+                            </>
+                          )
+                          return openable
+                            ? <button key={i} type="button" className="fa-ck-aev" onClick={() => goRub(target)} title={`Ouvrir ${CK_RUB_MAP[target]?.label ?? 'Rapprochement'}`}>{row}</button>
+                            : <div key={i} className="fa-ck-aev">{row}</div>
+                        }) : <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p>}
                       </div>
                     )
                   })()}
