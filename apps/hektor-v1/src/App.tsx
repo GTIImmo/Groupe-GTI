@@ -20705,7 +20705,7 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
 }
 
 const APP_COCKPIT_V2_ENABLED =
-  String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').toLowerCase() === 'true'
+  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').trim().toLowerCase())
 
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
