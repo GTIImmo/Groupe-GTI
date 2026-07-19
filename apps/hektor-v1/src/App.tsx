@@ -21601,7 +21601,24 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           ) : activeTab === 'mandat' ? (
             <div className="fa-ck-rub fa-ck-mandat">
               {(() => {
-                const m = parseJson<{ num: string; type: string; dateStart: string; dateEnd: string; statut: string; honorairesVendeur?: string; taux?: string; demarches?: Array<{ title: string; sub: string; state: string; badge?: string; act?: string; lockLabel?: string }>; avenant?: { num: string; repris: Array<{ t: string; ok?: boolean; warn?: boolean }>; nouveauxHonos?: string; dateAvenant?: string }; signatures?: Array<{ av: string; tone: string; name: string; sub: string; badge: string; badgeTone: string }> } | null>(detailStr('mandat_json') || 'null', null)
+                type CkMandat = { num: string; type: string; dateStart: string; dateEnd: string; statut: string; honorairesVendeur?: string; taux?: string; demarches?: Array<{ title: string; sub: string; state: string; badge?: string; act?: string; lockLabel?: string }>; avenant?: { num: string; repris: Array<{ t: string; ok?: boolean; warn?: boolean }>; nouveauxHonos?: string; dateAvenant?: string }; signatures?: Array<{ av: string; tone: string; name: string; sub: string; badge: string; badgeTone: string }> }
+                const mandatMock = parseJson<CkMandat | null>(detailStr('mandat_json') || 'null', null)
+                // Priorité au mock riche ; sinon DÉRIVE des vrais champs mandat (prod-ready, plus de rubrique vide).
+                const numMandat = String(dossier.numero_mandat ?? '').trim()
+                const md = dossier as Record<string, unknown>
+                const mdStr = (k: string) => { const v = md[k]; return v == null ? '' : String(v).trim() }
+                const m: CkMandat | null = mandatMock ?? (numMandat ? {
+                  num: numMandat,
+                  type: mdStr('mandat_type') || 'Mandat de vente',
+                  dateStart: (mdStr('mandat_date_debut') || detailStr('date_mandat')) ? formatDate(mdStr('mandat_date_debut') || detailStr('date_mandat')) : '',
+                  dateEnd: mdStr('mandat_date_fin') ? formatDate(mdStr('mandat_date_fin')) : '',
+                  statut: pMandatOk ? 'Valide' : 'À valider',
+                  demarches: [
+                    { title: 'Validation', sub: 'Confirmer le mandat pour débloquer la diffusion', state: pMandatOk ? 'ok' : 'todo', badge: pMandatOk ? 'Validé' : 'À valider', act: pMandatOk ? undefined : 'Demander' },
+                    { title: 'Baisse de prix', sub: "Ajuster le prix public de l'annonce", state: pMandatOk ? 'ok' : 'lock', badge: 'À traiter', act: pMandatOk ? 'Demander' : undefined, lockLabel: 'Après validation' },
+                    { title: 'Annulation mandat', sub: 'Clôturer et retirer le mandat', state: pMandatOk ? 'ok' : 'lock', badge: 'À traiter', lockLabel: 'Après validation' },
+                  ],
+                } : null)
                 if (!m) return null
                 return (
                   <>
