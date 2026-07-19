@@ -1132,3 +1132,138 @@
 .fa-cockpit-v2 .fa-ck-rdv .button-primary:disabled,
 .fa-ck-rdvmodal .button-primary:disabled { opacity: 0.55; }
 
+
+/* ============================================================================
+   Fil d'activité : puce d'action par ligne (maquette v26, .aq)
+   Chaque ligne du fil mène désormais à sa rubrique. La puce est l'affordance :
+   discrète au repos, révélée au survol, remplie à l'accent au survol direct.
+   ========================================================================== */
+.fa-cockpit-v2 .fa-ck-aq {
+  opacity: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--fa-line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 11px;
+  color: var(--fa-brand-ink);
+  flex: none;
+  align-self: center;
+  transform: translateX(5px);
+  transition: opacity .16s, transform .16s, background .16s, border-color .16s, color .16s;
+}
+.fa-cockpit-v2 .fa-ck-aev:hover .fa-ck-aq,
+.fa-cockpit-v2 .fa-ck-aev:focus-visible .fa-ck-aq {
+  opacity: 1;
+  transform: none;
+}
+.fa-cockpit-v2 .fa-ck-aev:hover .fa-ck-aq {
+  border-color: var(--fa-brand);
+  background: var(--fa-brand);
+  color: #fff;
+}
+/* La ligne entière est cliquable : on le montre au clavier aussi. */
+.fa-cockpit-v2 button.fa-ck-aev:focus-visible,
+.fa-cockpit-v2 a.fa-ck-aev:focus-visible {
+  outline: 2px solid var(--fa-brand);
+  outline-offset: 2px;
+  background: #fbf6f1;
+}
+/* Tactile / écrans sans survol : la puce reste visible, sinon l'action est invisible. */
+@media (hover: none) {
+  .fa-cockpit-v2 .fa-ck-aq { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fa-cockpit-v2 .fa-ck-aq { transition: none; }
+}
+
+
+/* ============================================================================
+   Généralisation de l'habillage à TOUTES les rubriques
+   ----------------------------------------------------------------------------
+   Les mêmes composants réels (detail-section / detail-card / info-grid /
+   console-documents / button-primary…) reviennent dans Documents, Contact,
+   Publicité, Estimation, Reporting, Historique. Plutôt que de les traiter une
+   par une, on pose l'habillage sur .fa-ck-rub et on donne à chaque rubrique son
+   accent (couleurs RUBS de la maquette v26).
+   ========================================================================== */
+.fa-cockpit-v2 .fa-ck-rub      { --ck-ac: #c2125f; --ck-ac-bg: #f9e7ef; --ck-ac-bd: #eecada; }
+.fa-cockpit-v2 .fa-ck-lebien   { --ck-ac: #b5651d; --ck-ac-bg: #f6e9db; --ck-ac-bd: #ecd9c0; }
+.fa-cockpit-v2 .fa-ck-estim    { --ck-ac: #8a6a2f; --ck-ac-bg: #f4ecd9; --ck-ac-bd: #e6d8b8; }
+.fa-cockpit-v2 .fa-ck-contact  { --ck-ac: #3a5a8a; --ck-ac-bg: #e7edf7; --ck-ac-bd: #cfd9ea; }
+.fa-cockpit-v2 .fa-ck-pub      { --ck-ac: #c2125f; --ck-ac-bg: #f9e7ef; --ck-ac-bd: #eecada; }
+.fa-cockpit-v2 .fa-ck-documents{ --ck-ac: #4756a6; --ck-ac-bg: #e9ebf8; --ck-ac-bd: #d2d7ef; }
+.fa-cockpit-v2 .fa-ck-histo2   { --ck-ac: #7a6f67; --ck-ac-bg: #f1eae1; --ck-ac-bd: #e0d5c8; }
+.fa-cockpit-v2 .fa-ck-report   { --ck-ac: #8a6a2f; --ck-ac-bg: #f4ecd9; --ck-ac-bd: #e6d8b8; }
+
+/* Cartes plates, sans ombre ni double encadré, dans toutes les rubriques */
+.fa-cockpit-v2 .fa-ck-rub .detail-section,
+.fa-cockpit-v2 .fa-ck-rub .detail-card,
+.fa-cockpit-v2 .fa-ck-rub .console-documents-body,
+.fa-cockpit-v2 .fa-ck-rub .console-upload-card {
+  background: #fff;
+  border: 1px solid var(--fa-line);
+  border-radius: 16px;
+  box-shadow: none;
+}
+.fa-cockpit-v2 .fa-ck-rub .detail-section > .detail-card {
+  border: 0; border-radius: 0; padding: 0; background: transparent;
+}
+
+/* Titres de section homogènes (serif, comme les rubriques déjà conformes) */
+.fa-cockpit-v2 .fa-ck-rub .detail-section-title,
+.fa-cockpit-v2 .fa-ck-rub .console-documents-title {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--fa-ink);
+}
+.fa-cockpit-v2 .fa-ck-rub .detail-section-icon,
+.fa-cockpit-v2 .fa-ck-rub .console-documents-title-icon,
+.fa-cockpit-v2 .fa-ck-rub .console-upload-card-icon {
+  background: var(--ck-ac-bg); color: var(--ck-ac); border-radius: 11px;
+}
+
+/* Tuiles d'info alignées sur les KPI de Le Bien */
+.fa-cockpit-v2 .fa-ck-rub .info-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px;
+}
+.fa-cockpit-v2 .fa-ck-rub .info-card {
+  background: var(--fa-paper); border: 1px solid var(--fa-line-soft);
+  border-radius: 12px; padding: 10px 13px; box-shadow: none;
+}
+.fa-cockpit-v2 .fa-ck-rub .detail-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--fa-muted);
+}
+
+/* Boutons : accent de la rubrique. Le !important répond à
+   `.app-shell-modern .button-primary { background:#c5005f !important }`. */
+.fa-cockpit-v2 .fa-ck-rub .button-primary,
+.fa-cockpit-v2 .fa-ck-rub .ghost-button.button-primary {
+  background: var(--ck-ac) !important;
+  border-color: var(--ck-ac) !important;
+  color: #fff !important;
+  border-radius: 11px; font-weight: 700; box-shadow: none;
+}
+.fa-cockpit-v2 .fa-ck-rub .ghost-button,
+.fa-cockpit-v2 .fa-ck-rub .button-subtle {
+  background: #fff; border: 1px solid var(--fa-line); border-radius: 11px;
+  color: var(--fa-ink); font-weight: 700; box-shadow: none;
+}
+
+/* Listes de documents : lignes à plat séparées d'un filet */
+.fa-cockpit-v2 .fa-ck-rub .console-document-row {
+  background: transparent; border: 0; border-top: 1px solid var(--fa-line-soft);
+  border-radius: 0; box-shadow: none; padding: 11px 0;
+}
+.fa-cockpit-v2 .fa-ck-rub .console-documents-list > *:first-child .console-document-row { border-top: 0; }
+.fa-cockpit-v2 .fa-ck-rub .empty-state {
+  background: var(--fa-paper); border: 1px dashed var(--fa-line);
+  border-radius: 12px; color: var(--fa-muted); font-size: 12.5px;
+}
+/* Zone de dépôt de fichier : pointillé sobre, accent au survol */
+.fa-cockpit-v2 .fa-ck-rub .console-upload-dropzone {
+  border: 1px dashed var(--fa-line); border-radius: 14px; background: var(--fa-paper);
+}
+.fa-cockpit-v2 .fa-ck-rub .console-upload-dropzone:hover { border-color: var(--ck-ac); }
+

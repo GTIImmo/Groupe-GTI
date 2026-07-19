@@ -3080,7 +3080,7 @@ function HektorMandantContactForm(props: {
         <button className="hektor-mandant-add-card" type="button" onClick={() => setOpen(true)}>
           <span aria-hidden="true">+</span>
           <strong>Ajouter un mandant</strong>
-          <small>Nouveau contact Hektor associe a cette annonce</small>
+          <small>Nouveau contact Hektor associé à cette annonce</small>
         </button>
       ) : null}
       {open ? (
@@ -3383,7 +3383,7 @@ function HektorMandatNumberForm(props: {
             <span className="hektor-inline-icon" aria-hidden="true">#</span>
             <div>
               <strong>Generer le N° mandat Hektor</strong>
-              <small>Le prochain numero est reserve par Hektor au moment de l envoi.</small>
+              <small>Le prochain numéro est réservé par Hektor au moment de l'envoi.</small>
             </div>
           </div>
           <div className="hektor-inline-grid hektor-mandat-number-grid">
@@ -6282,9 +6282,30 @@ function requestStatusLabel(value: string | null | undefined) {
   if (value === 'pending') return 'Nouvelle demande'
   if (value === 'in_progress') return 'En cours de traitement'
   if (value === 'waiting_commercial') return 'Retour nego demande'
-  if (value === 'accepted') return 'Acceptee'
-  if (value === 'refused') return 'Refusee'
+  if (value === 'accepted') return 'Acceptée'
+  if (value === 'refused') return 'Refusée'
   return value ?? '-'
+}
+
+// Journal des démarches (cockpit) : les états venaient de la base en CLAIR
+// (`pret_diffusion`, `en_erreur`, `a_traiter`…) et s'affichaient tels quels.
+// On les rend lisibles ; un code inconnu retombe sur une mise en forme correcte
+// plutôt que sur le brut (underscores → espaces, 1re lettre en capitale).
+const CK_STATE_LABEL: Record<string, string> = {
+  pending: 'En attente', in_progress: 'En cours', accepted: 'Acceptée', refused: 'Refusée',
+  accepte: 'Acceptée', refuse: 'Refusée', valide: 'Validée', invalide: 'Invalide',
+  a_traiter: 'À traiter', a_valider: 'À valider', traite: 'Traitée',
+  pret_diffusion: 'Prêt pour diffusion', en_erreur: 'En erreur', applique: 'Appliquée',
+  ok: 'OK', ko: 'Échec', annule: 'Annulée', expire: 'Expirée',
+  waiting_commercial: 'Retour négociateur demandé',
+}
+function ckStateLabel(value: string | null | undefined) {
+  const v = String(value ?? '').trim()
+  if (!v) return ''
+  const hit = CK_STATE_LABEL[v.toLowerCase()]
+  if (hit) return hit
+  const soft = v.replace(/_/g, ' ')
+  return soft.charAt(0).toUpperCase() + soft.slice(1)
 }
 
 function requestStatusRank(value: string | null | undefined) {
@@ -9765,7 +9786,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
           <span className="console-documents-title-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
           <span>
             <strong>Documents Hektor Console</strong>
-            <small>Ajouter, consulter et preparer les documents</small>
+            <small>Ajouter, consulter et préparer les documents</small>
           </span>
         </span>
         <div className="console-documents-summary">
@@ -9784,7 +9805,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
             <span className="console-upload-card-icon" aria-hidden="true"><DetailIcon type="actions" /></span>
             <div>
               <strong>Ajouter un document</strong>
-              <small>Le fichier sera envoye dans Hektor puis indexe dans l'app.</small>
+              <small>Le fichier sera envoyé dans Hektor puis indexé dans l'app.</small>
             </div>
           </div>
 
@@ -15654,7 +15675,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <div className="draft-mandant-active-area">
                           <div className="draft-mandant-active-head">
                             <strong>Creer un mandant</strong>
-                            <span>Le contact sera cree puis associe a l'annonce</span>
+                            <span>Le contact sera créé puis associé à l'annonce</span>
                             <button type="button" onClick={() => selectDraftMandantChoice('none')}>Fermer</button>
                           </div>
                         <div className="draft-mandant-fields">
@@ -15830,7 +15851,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <select value={archiveSubChoice} onChange={(event) => setArchiveSubChoice(event.target.value as ArchiveHektorAnnonceSubChoice)}>
                           <option value="agence">Vendu par l'agence</option>
                           <option value="confrere">Vendu par un confrere</option>
-                          <option value="proprietaire">Vendu par le proprietaire</option>
+                          <option value="proprietaire">Vendu par le propriétaire</option>
                         </select>
                       </label>
                       <label className="filter-field">
@@ -15849,7 +15870,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span>Cause</span>
                       <select value={archiveSubChoice} onChange={(event) => setArchiveSubChoice(event.target.value as ArchiveHektorAnnonceSubChoice)}>
                         <option value="concurence">Parti a la concurrence</option>
-                        <option value="vendre_seule">Le proprietaire vend seul</option>
+                        <option value="vendre_seule">Le propriétaire vend seul</option>
                         <option value="annuler_vente">Vente annulee</option>
                         <option value="non_renouvele">Mandat non renouvele</option>
                         <option value="mandat_non_obtenu">Mandat non obtenu</option>
@@ -16065,7 +16086,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </label>
                   </section>
                 ) : (
-                  <p className="status-change-note">Le statut Actif est envoye directement a Hektor puis la fiche est resynchronisee.</p>
+                  <p className="status-change-note">Le statut Actif est envoyé directement à Hektor puis la fiche est resynchronisée.</p>
                 )}
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Annuler</button>
@@ -20729,6 +20750,28 @@ const CK_ICON: Record<string, string> = {
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   heart: '<path d="M12 21s-7-4.5-9.3-9A5 5 0 0 1 12 5.5 5 5 0 0 1 21.3 12c-2.3 4.5-9.3 9-9.3 9z"/>',
 }
+// Fil d'activité : chaque ligne mène à une rubrique (maquette v26 → openRub).
+// Le flux peut fournir sa cible (`rub`) ; sinon on la dérive de l'icône, pour que
+// le fil reste cliquable même sur les données réelles (pas seulement le mock).
+const CK_ACTI_RUB: Record<string, string> = {
+  mandat: 'mandat', sign: 'mandat',
+  rendezvous: 'rendezvous', rdv: 'rendezvous', agenda: 'rendezvous',
+  documents: 'documents', doc: 'documents',
+  reporting: 'reporting',
+  contact: 'contact', mail: 'contact',
+  publicite: 'publicite',
+  rapprochement: 'rapprochement', heart: 'rapprochement', requalif: 'rapprochement',
+  estimation: 'estimation',
+  affaires: 'affaires',
+  historique: 'historique',
+  lebien: 'lebien',
+}
+// Verbe attendu par rubrique (aligné sur les libellés de la maquette).
+const CK_ACTI_LABEL: Record<string, string> = {
+  mandat: 'Suivre', rendezvous: 'Ouvrir', documents: 'Préparer', reporting: 'Voir',
+  contact: 'Écrire', publicite: 'Gérer', rapprochement: 'Rapprocher',
+  estimation: 'Voir', affaires: 'Voir', historique: 'Voir', lebien: 'Voir',
+}
 function CkIcon({ path }: { path: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" dangerouslySetInnerHTML={{ __html: path }} />
 }
@@ -21079,6 +21122,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const autreList = PH.autre
   const horsPerimetre = Math.max(0, 11 - (featList.length + autreList.length))
   const CK_RUB_MAP: Record<string, (typeof CK_RUBRIQUES)[number]> = Object.fromEntries(CK_RUBRIQUES.map((r) => [r.key, r]))
+  // Navigation rubrique partagée : le rail, le bloc « Prochaine action » ET le fil
+  // d'activité doivent ouvrir une rubrique de la même façon (Rapprochement = overlay).
+  const goRub = (key: string) => {
+    if (key === 'rapprochement') props.onOpenRapprochement?.(dossier)
+    else setActiveTab(key)
+  }
   const renderRn = (key: string, foot: CkFoot | null, isFeat: boolean) => {
     const rub = CK_RUB_MAP[key]
     if (!rub) return null
@@ -21088,7 +21137,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         type="button"
         className={`fa-ck-rn ${activeTab === key ? 'is-active' : ''}${isFeat ? ' is-feat' : ''}`}
         style={{ ['--c']: rub.color, ['--s']: rub.bg } as CSSProperties}
-        onClick={key === 'rapprochement' ? () => props.onOpenRapprochement?.(dossier) : () => setActiveTab(key)}
+        onClick={() => goRub(key)}
       >
         <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
         <span className="fa-ck-rn-t">
@@ -21350,18 +21399,30 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 </div>
                 <div className="fa-ck-acti-card">
                   {(() => {
-                    const evts = parseJson<Array<{ icon: string; aud: string; nb: string; nc: string; time: string; html: string; new?: boolean; over?: boolean }>>(detailStr('activite_json') || '[]', [])
+                    const evts = parseJson<Array<{ icon: string; aud: string; nb: string; nc: string; time: string; html: string; new?: boolean; over?: boolean; act?: string; rub?: string }>>(detailStr('activite_json') || '[]', [])
                     if (evts.length > 0) {
                       const shown = evts.filter((e) => actiFilter === 'tout' || e.aud === actiFilter)
                       return (
                         <div className="fa-ck-afeed">
-                          {shown.length > 0 ? shown.map((e, i) => (
-                            <div key={i} className={`fa-ck-aev${e.new ? ' new' : ''}${e.over ? ' over' : ''}`}>
-                              <span className="fa-ck-an" style={{ ['--nb']: e.nb, ['--nc']: e.nc } as CSSProperties}><CkIcon path={CK_ICON[e.icon] ?? CK_ICON.mail} /></span>
-                              <div className="fa-ck-atx"><div className="fa-ck-al" dangerouslySetInnerHTML={{ __html: e.html }} /></div>
-                              <span className="fa-ck-at">{e.time}</span>
-                            </div>
-                          )) : <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité pour ce filtre.</p>}
+                          {shown.length > 0 ? shown.map((e, i) => {
+                            // La maquette v26 attache à CHAQUE ligne une action qui ouvre la rubrique
+                            // concernée (openRub). Le fil local était inerte : on rebranche.
+                            // Cible explicite si le flux la fournit, sinon dérivée de l'icône.
+                            const target = e.rub || CK_ACTI_RUB[e.icon] || ''
+                            const label = e.act || (target ? CK_ACTI_LABEL[target] ?? 'Ouvrir' : '')
+                            const row = (
+                              <>
+                                <span className="fa-ck-an" style={{ ['--nb']: e.nb, ['--nc']: e.nc } as CSSProperties}><CkIcon path={CK_ICON[e.icon] ?? CK_ICON.mail} /></span>
+                                <div className="fa-ck-atx"><div className="fa-ck-al" dangerouslySetInnerHTML={{ __html: e.html }} /></div>
+                                <span className="fa-ck-at">{e.time}</span>
+                                {target ? <span className="fa-ck-aq">{label}</span> : null}
+                              </>
+                            )
+                            const cls = `fa-ck-aev${e.new ? ' new' : ''}${e.over ? ' over' : ''}`
+                            return target && CK_RUB_MAP[target]
+                              ? <button key={i} type="button" className={cls} onClick={() => goRub(target)} title={`Ouvrir ${CK_RUB_MAP[target].label}`}>{row}</button>
+                              : <div key={i} className={cls}>{row}</div>
+                          }) : <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité pour ce filtre.</p>}
                         </div>
                       )
                     }
@@ -21372,12 +21433,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                             <span className="fa-ck-an" style={{ ['--nb']: '#ece4f8', ['--nc']: '#6d4bb5' } as CSSProperties}><CkIcon path={CK_ICON.rendezvous} /></span>
                             <div className="fa-ck-atx"><div className="fa-ck-al"><b>{appts.length} demande{appts.length > 1 ? 's' : ''} de visite</b> — à traiter dans Rendez-vous</div></div>
                             <span className="fa-ck-at">{lastApptAt ? relTime(lastApptAt) : 'à traiter'}</span>
+                            <span className="fa-ck-aq">Ouvrir</span>
                           </button>
                         ) : null}
                         {emailContacts.filter((c) => actiFilter === 'tout' || (/mandant|propri|owner|vendeur/i.test(c.role || '') ? 'mandant' : 'acq') === actiFilter).slice(0, 4).map((c) => (
                           <a key={c.id} className="fa-ck-aev" href={`mailto:${c.email}`}>
                             <span className="fa-ck-an" style={{ ['--nb']: '#e7edf7', ['--nc']: '#3a5a8a' } as CSSProperties}><CkIcon path={CK_ICON.mail} /></span>
                             <div className="fa-ck-atx"><div className="fa-ck-al"><b>{c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'}</b> · {c.email}</div></div>
+                            <span className="fa-ck-aq">Écrire</span>
                           </a>
                         ))}
                         {appts.length === 0 && emailContacts.length === 0 ? <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p> : null}
@@ -21931,7 +21994,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         <div key={r.id} className="fa-ck-dreq">
                           <span className="fa-ck-dreq-d">{r.date ? formatDate(r.date) : ''}</span>
                           <span className="fa-ck-dreq-t">{r.title}</span>
-                          {r.status ? <span className={`fa-ck-stpill ${r.tone ?? ckRequestPillTone(r.status)}`}>{r.status}</span> : null}
+                          {r.status ? <span className={`fa-ck-stpill ${r.tone ?? ckRequestPillTone(r.status)}`}>{ckStateLabel(r.status)}</span> : null}
                         </div>
                       ))}
                     </div>
@@ -21973,7 +22036,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         <div className="fa-ck-tcard">
                           <div className="fa-ck-tt">{e.title}<span className="fa-ck-tdate">{[e.type, e.date ? formatDate(e.date) : ''].filter(Boolean).join(' · ')}</span></div>
                           <div className="fa-ck-tl">
-                            {(e.states ?? []).map((s, j) => <span key={j} className={`fa-ck-hs${s.tone ? ' ' + s.tone : ''}`}>{[s.a, s.b].filter(Boolean).join(' · ')}</span>)}
+                            {(e.states ?? []).map((s, j) => <span key={j} className={`fa-ck-hs${s.tone ? ' ' + s.tone : ''}`}>{[ckStateLabel(s.a), ckStateLabel(s.b)].filter(Boolean).join(' · ')}</span>)}
                             {e.relance ? <span className="fa-ck-trelance">Relance : {e.relance}</span> : null}
                           </div>
                         </div>
@@ -26176,7 +26239,7 @@ function GoogleAgendaAnnonceSection(props: {
                             </button>
                           ))}
                         </div>
-                      ) : <p className="empty-state">Aucun creneau assez long pour la duree choisie.</p>}
+                      ) : <p className="empty-state">Aucun créneau assez long pour la durée choisie.</p>}
                     </div>
                     <div className={`google-agenda-period-grid is-${agendaMode}`}>
                       {agendaDayPlans.map((plan) => (
@@ -26235,7 +26298,7 @@ function GoogleAgendaAnnonceSection(props: {
               <section className="google-agenda-panel google-agenda-links-panel">
                 <div className="google-agenda-panel-head">
                   <span>Annonce GTI</span>
-                  <strong>Rendez-vous deja lies</strong>
+                  <strong>Rendez-vous déjà liés</strong>
                 </div>
                 {activeEvents.length > 0 ? (
                   <div className="google-agenda-event-list">
@@ -26895,7 +26958,7 @@ function MobileDossierDetail(props: {
               </div>
             ))}
           </div>
-        ) : <p className="mobile-detail-muted">Aucun portail actif detecte.</p>}
+        ) : <p className="mobile-detail-muted">Aucun portail actif détecté.</p>}
         {requestItems.length > 0 ? (
           <div className="mobile-detail-timeline">
             {requestItems.map((item) => (
@@ -28691,7 +28754,7 @@ function HektorContactIdentityForm(props: {
       </div>
       {duplicateCandidates.length > 0 ? (
         <div className="contact-duplicate-warning">
-          <strong>Doublon possible detecte</strong>
+          <strong>Doublon possible détecté</strong>
           <span>Controlez avant validation. Un second clic cree quand meme la demande.</span>
           <div>
             {duplicateCandidates.slice(0, 4).map((candidate) => (
@@ -30780,7 +30843,7 @@ function GoogleAgendaContactModal(props: {
                         </button>
                       ))}
                     </div>
-                  ) : <p className="empty-state">Aucun creneau assez long pour la duree choisie.</p>}
+                  ) : <p className="empty-state">Aucun créneau assez long pour la durée choisie.</p>}
                 </div>
                 <div className={`google-agenda-period-grid is-${agendaMode}`}>
                   {agendaDayPlans.map((plan) => (
@@ -32655,7 +32718,7 @@ function PriceChangeHistoryCard({
               </div>
               <div className="price-history-meta">
                 <span>Maj Hektor : {formatDate(priceChangeAnchorDate(entry))}</span>
-                {entry.detected_at && entry.detected_at !== entry.source_updated_at ? <span>Detecte : {formatDate(entry.detected_at)}</span> : null}
+                {entry.detected_at && entry.detected_at !== entry.source_updated_at ? <span>Détecté : {formatDate(entry.detected_at)}</span> : null}
                 {entry.numero_mandat ? <span>Mandat {entry.numero_mandat}</span> : null}
               </div>
             </article>
