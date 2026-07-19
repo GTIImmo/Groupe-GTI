@@ -3374,7 +3374,7 @@ function HektorMandatNumberForm(props: {
         <button className={`hektor-mandat-number-card ${hasMandat ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
           <span aria-hidden="true">{hasMandat ? 'N' : '#'}</span>
           <strong>{hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le N° mandat'}</strong>
-          <small>{hasMandat ? 'Numero deja present dans l app.' : props.contacts.length ? 'Hektor attribue automatiquement le prochain numero.' : 'Ajoute un mandant avant cette etape.'}</small>
+          <small>{hasMandat ? "Numéro déjà présent dans l'app." : props.contacts.length ? 'Hektor attribue automatiquement le prochain numéro.' : 'Ajoutez un mandant avant cette étape.'}</small>
         </button>
       ) : null}
       {open ? (
@@ -4490,7 +4490,7 @@ function MandatDocumentEditor(props: {
   })
   const isAvenant = docMode === 'avenant'
   const documentTitle = isAvenant ? 'Avenant au mandat' : 'Mandat de vente'
-  const documentActionLabel = isAvenant ? 'Preparer avenant' : 'Preparer le mandat'
+  const documentActionLabel = isAvenant ? 'Préparer avenant' : 'Préparer le mandat'
   const missingFields = [
     !draft.numeroMandat ? 'numero mandat' : '',
     !draft.mandantsLibelle && draft.mandants.every((mandant) => !mandatMandantDisplayName(mandant)) ? 'mandant' : '',
@@ -4673,7 +4673,7 @@ function MandatDocumentEditor(props: {
         <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
         <div>
           <strong>{documentTitle}</strong>
-          <small>{missingFields.length ? `${missingFields.length} element${missingFields.length > 1 ? 's' : ''} a completer avant signature` : 'Document pret a verifier avant signature'}</small>
+          <small>{missingFields.length ? `${missingFields.length} élément${missingFields.length > 1 ? 's' : ''} à compléter avant signature` : 'Document prêt à vérifier avant signature'}</small>
         </div>
         <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((value) => !value)}>
           {open ? 'Retour fiche' : documentActionLabel}
@@ -4830,7 +4830,7 @@ function MandatDocumentEditor(props: {
               <div className="mandat-document-panel">
                 <div className="mandat-document-checklist">
                   <strong>Controle avant document final</strong>
-                  <p>{missingFields.length ? `Champs obligatoires a completer : ${missingFields.join(', ')}.` : 'Toutes les donnees principales sont renseignees.'}</p>
+                  <p>{missingFields.length ? `Champs obligatoires à compléter : ${missingFields.join(', ')}.` : 'Toutes les données principales sont renseignées.'}</p>
                   <p>{draft.mandants.length} mandant{draft.mandants.length > 1 ? 's' : ''} dans le document. Le modele complet source est utilise pour le rendu imprimable.</p>
                   <p>{selectedSignatureRecipients.length} destinataire{selectedSignatureRecipients.length > 1 ? 's' : ''} prepare{selectedSignatureRecipients.length > 1 ? 's' : ''} pour ImmoSign.</p>
                 </div>
@@ -15744,7 +15744,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <button className="ghost-button button-subtle" type="button" onClick={() => moveDraftAnnonceStep(-1)} disabled={draftAnnoncePending || draftAnnonceScanPending || draftAnnonceStepIndex === 0}>Retour</button>
                     {draftAnnonceStep === 'diffusion' ? (
                       <button className="ghost-button button-primary" type="submit" disabled={draftAnnoncePending || draftAnnonceScanPending || !draftAnnonceAgency.trim() || !selectedDraftNegotiator}>
-                        {draftAnnoncePending ? 'Creation...' : 'Creer l annonce'}
+                        {draftAnnoncePending ? 'Création...' : 'Creer l annonce'}
                       </button>
                     ) : (
                       <button className="ghost-button button-primary" type="button" onClick={() => moveDraftAnnonceStep(1)} disabled={draftAnnoncePending || draftAnnonceScanPending}>Suivant</button>
@@ -18272,7 +18272,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </label>
                   <div className="hero-actions">
                     <button className="ghost-button" type="button" onClick={() => setUserToolOpen(false)}>Annuler</button>
-                    <button type="submit" disabled={userToolLoading}>{userToolLoading ? 'Creation...' : 'Creer l utilisateur'}</button>
+                    <button type="submit" disabled={userToolLoading}>{userToolLoading ? 'Création...' : 'Creer l utilisateur'}</button>
                   </div>
                 </form>
               </section>
@@ -21612,7 +21612,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   type: mdStr('mandat_type') || 'Mandat de vente',
                   dateStart: (mdStr('mandat_date_debut') || detailStr('date_mandat')) ? formatDate(mdStr('mandat_date_debut') || detailStr('date_mandat')) : '',
                   dateEnd: mdStr('mandat_date_fin') ? formatDate(mdStr('mandat_date_fin')) : '',
-                  statut: pMandatOk ? 'Valide' : 'À valider',
+                  statut: pMandatOk ? 'Validé' : 'À valider',
                   demarches: [
                     { title: 'Validation', sub: 'Confirmer le mandat pour débloquer la diffusion', state: pMandatOk ? 'ok' : 'todo', badge: pMandatOk ? 'Validé' : 'À valider', act: pMandatOk ? undefined : 'Demander' },
                     { title: 'Baisse de prix', sub: "Ajuster le prix public de l'annonce", state: pMandatOk ? 'ok' : 'lock', badge: 'À traiter', act: pMandatOk ? 'Demander' : undefined, lockLabel: 'Après validation' },
@@ -25131,11 +25131,11 @@ function GoogleAgendaGlobalEventModal(props: {
                 <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
               </label>
               <label className="filter-field">
-                <span>Debut</span>
+                <span>Début</span>
                 <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
               </label>
               <label className="filter-field">
-                <span>Duree</span>
+                <span>Durée</span>
                 <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
                   {hasCustomDuration ? <option value={durationMinutes}>{durationMinutes} min</option> : null}
                   <option value="30">30 min</option>
@@ -25150,7 +25150,7 @@ function GoogleAgendaGlobalEventModal(props: {
                 <input value={location} onChange={(inputEvent) => setLocation(inputEvent.target.value)} />
               </label>
               <label className="filter-field google-agenda-field-wide">
-                <span>Invites</span>
+                <span>Invités</span>
                 <input value={attendeesText} onChange={(inputEvent) => handleAttendeesTextChange(inputEvent.target.value)} placeholder="client@email.fr" />
               </label>
               <div className="google-agenda-field-wide google-agenda-invitee-selected google-agenda-global-invitees">
@@ -25168,7 +25168,7 @@ function GoogleAgendaGlobalEventModal(props: {
                       )
                     })}
                   </div>
-                ) : <p className="empty-state">Aucun invite ajoute.</p>}
+                ) : <p className="empty-state">Aucun invité ajouté.</p>}
               </div>
               <label className="filter-field google-agenda-field-wide">
                 <span>Description</span>
@@ -25187,10 +25187,10 @@ function GoogleAgendaGlobalEventModal(props: {
               ) : null}
               <div className="modal-actions google-agenda-actions">
                 <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckAvailability()} disabled={availabilityPending || pending || !canUseCalendarEmail}>
-                  {availabilityPending ? 'Verification...' : 'Verifier dispo'}
+                  {availabilityPending ? 'Vérification...' : 'Vérifier dispo'}
                 </button>
                 <button className="ghost-button button-primary" type="submit" disabled={pending || !canSubmit}>
-                  {pending ? (isEditingGoogleGlobalEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleGlobalEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
+                  {pending ? (isEditingGoogleGlobalEvent ? 'Enregistrement...' : 'Création...') : isEditingGoogleGlobalEvent ? 'Enregistrer le RDV' : 'Créer RDV Google'}
                 </button>
               </div>
             </form>
@@ -25966,7 +25966,7 @@ function GoogleAgendaAnnonceSection(props: {
           <span className="detail-label">Rendez-vous Google</span>
           <div className="info-grid">
             <InfoCard label="Agenda" value={calendarEmail || '-'} />
-            <InfoCard label="RDV lies" value={String(activeEvents.length)} />
+            <InfoCard label="RDV liés" value={String(activeEvents.length)} />
             <InfoCard label="Prochain RDV" value={nextLinkedEvent ? formatDateTime(nextLinkedEvent.starts_at) : '-'} />
           </div>
         </div>
@@ -25978,7 +25978,7 @@ function GoogleAgendaAnnonceSection(props: {
         </div>
       </article>
       {modalOpen && typeof document !== 'undefined' ? createPortal(
-        <div className="modal-overlay google-agenda-modal-overlay" onClick={handleCloseGoogleAgendaModal}>
+        <div className={`modal-overlay google-agenda-modal-overlay${APP_COCKPIT_V2_ENABLED ? ' fa-ck-rdvmodal' : ''}`} onClick={handleCloseGoogleAgendaModal}>
           <section className="modal-panel google-agenda-modal" onClick={(event) => event.stopPropagation()}>
             <div className="google-agenda-modal-head">
               <div>
@@ -25997,7 +25997,7 @@ function GoogleAgendaAnnonceSection(props: {
             <div className="google-agenda-modal-layout">
               <section className="google-agenda-panel google-agenda-planner-panel">
                 <div className="google-agenda-panel-head">
-                  <span>{isEditingGoogleAgendaEvent ? 'Modification' : 'Creation'}</span>
+                  <span>{isEditingGoogleAgendaEvent ? 'Modification' : 'Création'}</span>
                   <strong>{isEditingGoogleAgendaEvent ? 'Modifier le RDV' : 'Planifier un RDV'}</strong>
                 </div>
                 <form className="google-agenda-form" onSubmit={handleSubmitGoogleAgendaEvent}>
@@ -26018,11 +26018,11 @@ function GoogleAgendaAnnonceSection(props: {
                     <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
                   </label>
                   <label className="filter-field">
-                    <span>Debut</span>
+                    <span>Début</span>
                     <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
                   </label>
                   <label className="filter-field">
-                    <span>Duree</span>
+                    <span>Durée</span>
                     <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
                       {hasCustomDuration ? <option value={durationMinutes}>{durationMinutes} min</option> : null}
                       <option value="30">30 min</option>
@@ -26037,15 +26037,15 @@ function GoogleAgendaAnnonceSection(props: {
                     <input value={location} onChange={(inputEvent) => setLocation(inputEvent.target.value)} />
                   </label>
                   <label className="filter-field google-agenda-field-wide">
-                    <span>Invites</span>
+                    <span>Invités</span>
                     <input value={attendeesText} onChange={(inputEvent) => handleAttendeesTextChange(inputEvent.target.value)} placeholder="client@email.fr" />
                   </label>
                   {isVisit && attendeeEmails.length === 0 ? (
-                    <p className="google-agenda-warning">Pour une visite, ajoute au moins un contact invite afin de preparer le bon de visite.</p>
+                    <p className="google-agenda-warning">Pour une visite, ajoutez au moins un contact invité afin de préparer le bon de visite.</p>
                   ) : null}
                   <div className="google-agenda-field-wide google-agenda-invitees">
                     <div className="google-agenda-invitee-selected">
-                      <span className="detail-label">Invites selectionnes</span>
+                      <span className="detail-label">Invités sélectionnés</span>
                       {attendeeEmails.length > 0 ? (
                         <div className="google-agenda-invitee-chip-row">
                           {attendeeEmails.map((email) => {
@@ -26059,11 +26059,11 @@ function GoogleAgendaAnnonceSection(props: {
                             )
                           })}
                         </div>
-                      ) : <p className="empty-state">Aucun invite ajoute.</p>}
+                      ) : <p className="empty-state">Aucun invité ajouté.</p>}
                     </div>
                     <div className="google-agenda-invitee-tools">
                       <div>
-                        <span className="detail-label">Contacts lies a l'annonce</span>
+                        <span className="detail-label">Contacts liés à l'annonce</span>
                         {linkedRelationContactsLoading ? <p className="empty-state">Chargement contacts lies...</p> : null}
                         {linkedRelationContactsError ? <p className="google-agenda-error">{linkedRelationContactsError}</p> : null}
                         {linkedAgendaContacts.length > 0 ? (
@@ -26081,7 +26081,7 @@ function GoogleAgendaAnnonceSection(props: {
                         ) : !linkedRelationContactsLoading ? <p className="empty-state">Aucun contact lie trouve.</p> : null}
                       </div>
                       <div>
-                        <span className="detail-label">Recherche etendue</span>
+                        <span className="detail-label">Recherche étendue</span>
                         <div className="google-agenda-contact-search">
                           <input value={contactSearch} onChange={(inputEvent) => setContactSearch(inputEvent.target.value)} placeholder="Nom, email, telephone..." />
                           {props.canManageContacts ? (
@@ -26133,10 +26133,10 @@ function GoogleAgendaAnnonceSection(props: {
                       </button>
                     ) : null}
                     <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckGoogleAgendaAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
-                      {availabilityPending ? 'Verification...' : 'Verifier dispo'}
+                      {availabilityPending ? 'Vérification...' : 'Vérifier dispo'}
                     </button>
                     <button className="ghost-button button-primary" type="submit" disabled={pending || !canUseCalendarEmail || !canSubmitGoogleAgendaEvent}>
-                      {pending ? (isEditingGoogleAgendaEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleAgendaEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
+                      {pending ? (isEditingGoogleAgendaEvent ? 'Enregistrement...' : 'Création...') : isEditingGoogleAgendaEvent ? 'Enregistrer le RDV' : 'Créer RDV Google'}
                     </button>
                   </div>
                 </form>
@@ -26144,8 +26144,8 @@ function GoogleAgendaAnnonceSection(props: {
               <section className="google-agenda-panel google-agenda-day-panel">
                 <div className="google-agenda-panel-head google-agenda-day-head">
                   <div>
-                    <span>Agenda negociateur</span>
-                    <strong>{agendaMode === 'week' ? 'Occupation semaine' : 'Occupation journee'}</strong>
+                    <span>Agenda négociateur</span>
+                    <strong>{agendaMode === 'week' ? 'Occupation semaine' : 'Occupation journée'}</strong>
                     <small>{googleAgendaRangeLabel(agendaDate, agendaMode)}</small>
                   </div>
                   <div className="google-agenda-day-actions">
@@ -26229,7 +26229,7 @@ function GoogleAgendaAnnonceSection(props: {
                       ))}
                     </div>
                   </>
-                ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
+                ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Cliquez sur Actualiser pour voir les plages libres et occupées.'}</p>}
               </section>
               {activeEvents.length > 0 || loading ? (
               <section className="google-agenda-panel google-agenda-links-panel">
@@ -26337,7 +26337,7 @@ function AppointmentAnnonceSection(props: {
           <div className="info-grid">
             <InfoCard label="Mode" value="QR annonce vitrine" />
             <InfoCard label="ID annonce" value={props.dossier?.hektor_annonce_id ?? '-'} />
-            <InfoCard label="Negociateur" value={props.dossier?.commercial_nom ?? '-'} />
+            <InfoCard label="Négociateur" value={props.dossier?.commercial_nom ?? '-'} />
             <InfoCard label="ID nego" value={appointmentNegociateurId} />
             <InfoCard label="Email nego" value={appointmentEmail} />
             <InfoCard label="Agence" value={props.dossier?.agence_nom ?? '-'} />
@@ -30612,7 +30612,7 @@ function GoogleAgendaContactModal(props: {
         <div className="google-agenda-modal-head">
           <div>
             <span className="eyebrow">Google Agenda</span>
-            <h3>{isEditingGoogleContactEvent ? 'Modifier RDV Google' : 'Creer RDV Google'}</h3>
+            <h3>{isEditingGoogleContactEvent ? 'Modifier RDV Google' : 'Créer RDV Google'}</h3>
             <p>{contactLabel}</p>
           </div>
           <button className="request-modal-close" type="button" onClick={props.onClose}>Fermer</button>
@@ -30699,11 +30699,11 @@ function GoogleAgendaContactModal(props: {
                 <input value={summary} onChange={(inputEvent) => setSummary(inputEvent.target.value)} required />
               </label>
               <label className="filter-field">
-                <span>Debut</span>
+                <span>Début</span>
                 <input value={startAt} onChange={(inputEvent) => setStartAt(inputEvent.target.value)} type="datetime-local" required />
               </label>
               <label className="filter-field">
-                <span>Duree</span>
+                <span>Durée</span>
                 <select value={durationMinutes} onChange={(inputEvent) => setDurationMinutes(inputEvent.target.value)}>
                   {hasCustomDuration ? <option value={durationMinutes}>{durationMinutes} min</option> : null}
                   <option value="30">30 min</option>
@@ -30738,10 +30738,10 @@ function GoogleAgendaContactModal(props: {
               ) : null}
               <div className="modal-actions google-agenda-actions">
                 <button className="ghost-button button-subtle" type="button" onClick={() => void handleCheckAvailability()} disabled={availabilityPending || pending || !canCheckAvailability}>
-                  {availabilityPending ? 'Verification...' : 'Verifier dispo'}
+                  {availabilityPending ? 'Vérification...' : 'Vérifier dispo'}
                 </button>
                 <button className="ghost-button button-primary" type="submit" disabled={pending || !canSubmit}>
-                  {pending ? (isEditingGoogleContactEvent ? 'Enregistrement...' : 'Creation...') : isEditingGoogleContactEvent ? 'Enregistrer le RDV' : 'Creer RDV Google'}
+                  {pending ? (isEditingGoogleContactEvent ? 'Enregistrement...' : 'Création...') : isEditingGoogleContactEvent ? 'Enregistrer le RDV' : 'Créer RDV Google'}
                 </button>
               </div>
             </form>
@@ -30833,7 +30833,7 @@ function GoogleAgendaContactModal(props: {
                   ))}
                 </div>
               </>
-            ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Clique sur Actualiser pour voir les plages libres et occupees.'}</p>}
+            ) : <p className="empty-state">{dayAvailabilityPending ? 'Chargement agenda...' : 'Cliquez sur Actualiser pour voir les plages libres et occupées.'}</p>}
             <div className="info-grid google-agenda-global-summary">
               <InfoCard label="Contact" value={contactLabel} />
               <InfoCard label="Bien" value={selectedAnnonce ? ownerAnnonceOptionTitle(selectedAnnonce) : '-'} />

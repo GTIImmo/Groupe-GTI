@@ -797,3 +797,338 @@
   .fa-cockpit-v2 .fa-ck-tb-chip-dot,
   .fa-cockpit-v2 .fa-ck-aev.new .fa-ck-an { animation: none !important; }
 }
+
+/* ============================================================================
+   LOT — Rubriques MANDAT & RENDEZ-VOUS : habillage des composants RÉELS
+   ----------------------------------------------------------------------------
+   Constat : la partie déjà « cockpit » de ces 2 rubriques était conforme, mais
+   les composants réutilisés (GoogleAgendaAnnonceSection, HektorMandatNumberForm,
+   MandatDocumentEditor, MandatSignatureTracker) gardaient leur habillage d'origine
+   → rupture visuelle nette avec la maquette (v28 agenda / v33 éditeur de mandat).
+   Ici : UNIQUEMENT de l'habillage, scopé. Aucun markup ni handler touché.
+   ========================================================================== */
+
+/* Accents de rubrique (maquette v26, objet RUBS) */
+.fa-cockpit-v2 .fa-ck-rdv    { --ck-ac: #6d4bb5; --ck-ac-bg: #ece4f8; --ck-ac-bd: #d9cbf1; }
+.fa-cockpit-v2 .fa-ck-mandat { --ck-ac: #9d0f4e; --ck-ac-bg: #f9e7ef; --ck-ac-bd: #eecada; }
+
+/* --- Neutralisation du chrome d'origine : cartes plates, plus de double encadré --- */
+.fa-cockpit-v2 .fa-ck-rdv .detail-section,
+.fa-cockpit-v2 .fa-ck-rdv .detail-card,
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-panel,
+.fa-cockpit-v2 .fa-ck-mandat .console-documents-body {
+  background: #fff;
+  border: 1px solid var(--fa-line);
+  border-radius: 16px;
+  box-shadow: none;
+}
+/* la carte interne d'une section ne re-dessine pas un cadre (dé-imbrication) */
+.fa-cockpit-v2 .fa-ck-rdv .detail-section > .detail-card {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+/* le bug le plus voyant : barre noire de 5px a gauche de « Rendez-vous Google » */
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-entry-card,
+.fa-cockpit-v2 .fa-ck-rdv .detail-card.google-agenda-entry-card {
+  border-left: 3px solid var(--ck-ac);
+}
+
+/* --- Titres de section : même écriture que les rubriques déjà faites --- */
+.fa-cockpit-v2 .fa-ck-rdv .detail-section-title,
+.fa-cockpit-v2 .fa-ck-mandat .console-documents-title,
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fa-ink);
+}
+.fa-cockpit-v2 .fa-ck-rdv .detail-section-icon,
+.fa-cockpit-v2 .fa-ck-mandat .console-documents-title-icon,
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-icon {
+  background: var(--ck-ac-bg);
+  color: var(--ck-ac);
+  border-radius: 11px;
+}
+
+/* --- Libellés fins et espacés --- */
+.fa-cockpit-v2 .fa-ck-rdv .detail-label,
+.fa-cockpit-v2 .fa-ck-mandat .avenant-ro-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fa-muted);
+}
+
+/* --- Tuiles d'info : même gabarit que les KPI de « Le Bien » --- */
+.fa-cockpit-v2 .fa-ck-rdv .info-grid,
+.fa-cockpit-v2 .fa-ck-mandat .avenant-ro-grid,
+.fa-cockpit-v2 .fa-ck-mandat .hektor-mandat-number-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.fa-cockpit-v2 .fa-ck-rdv .info-card,
+.fa-cockpit-v2 .fa-ck-mandat .avenant-ro-field {
+  background: var(--fa-paper);
+  border: 1px solid var(--fa-line-soft);
+  border-radius: 12px;
+  padding: 10px 13px;
+  box-shadow: none;
+}
+.fa-cockpit-v2 .fa-ck-rdv .info-card > *:last-child,
+.fa-cockpit-v2 .fa-ck-mandat .avenant-ro-value {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fa-ink);
+  margin-top: 3px;
+}
+
+/* --- Boutons : l'accent suit la rubrique (le RDV etait magenta, il est violet) --- */
+.fa-cockpit-v2 .fa-ck-rdv .button-primary,
+.fa-cockpit-v2 .fa-ck-mandat .button-primary {
+  background: var(--ck-ac);
+  border-color: var(--ck-ac);
+  border-radius: 11px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.fa-cockpit-v2 .fa-ck-rdv .button-primary:hover,
+.fa-cockpit-v2 .fa-ck-mandat .button-primary:hover { filter: brightness(1.08); }
+.fa-cockpit-v2 .fa-ck-rdv .ghost-button,
+.fa-cockpit-v2 .fa-ck-rdv .button-subtle,
+.fa-cockpit-v2 .fa-ck-mandat .ghost-button,
+.fa-cockpit-v2 .fa-ck-mandat .button-subtle {
+  background: #fff;
+  border: 1px solid var(--fa-line);
+  border-radius: 11px;
+  color: var(--fa-ink);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+/* --- Listes d'evenements / documents : lignes plates separees par un filet --- */
+.fa-cockpit-v2 .fa-ck-rdv .timeline-card,
+.fa-cockpit-v2 .fa-ck-mandat .console-document-row {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--fa-line-soft);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 11px 0;
+}
+.fa-cockpit-v2 .fa-ck-rdv .timeline-list > *:first-child .timeline-card,
+.fa-cockpit-v2 .fa-ck-mandat .console-documents-list > *:first-child .console-document-row { border-top: 0; }
+.fa-cockpit-v2 .fa-ck-rdv .empty-state,
+.fa-cockpit-v2 .fa-ck-mandat .empty-state {
+  background: var(--fa-paper);
+  border: 1px dashed var(--fa-line);
+  border-radius: 12px;
+  color: var(--fa-muted);
+  font-size: 12.5px;
+}
+
+/* --- Mandat : onglets de l'editeur, ecriture v33 (Mandants · Bien · Prix…) --- */
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-tabs,
+.fa-cockpit-v2 .fa-ck-mandat .mandat-doc-type-switch {
+  gap: 4px;
+  border-bottom: 1px solid var(--fa-line-soft);
+}
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-tabs button {
+  border-radius: 10px 10px 0 0;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-tabs button[aria-selected='true'],
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-tabs button.is-active {
+  color: var(--ck-ac);
+  box-shadow: inset 0 -2px 0 var(--ck-ac);
+  background: var(--ck-ac-bg);
+}
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-mandant-card {
+  background: var(--ck-ac-bg);
+  border: 1px solid var(--ck-ac-bd);
+  border-radius: 13px;
+}
+
+/* ============================================================================
+   Modale « Rendez-vous Google » (v28/v30)
+   Portalisee dans <body> : elle ne peut pas heriter de .fa-cockpit-v2, d'ou la
+   classe marqueur .fa-ck-rdvmodal posee cote JSX quand le flag cockpit est ON
+   (meme patron que .fa-ck-statusmodal). Inerte flag OFF.
+   ========================================================================== */
+.fa-ck-rdvmodal { --ck-ac: #6d4bb5; --ck-ac-bg: #ece4f8; --ck-ac-bd: #d9cbf1; }
+.fa-ck-rdvmodal .google-agenda-modal {
+  font-family: 'Hanken Grotesk', 'Inter Variable', Inter, system-ui, sans-serif;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid #e7ddd0;
+}
+/* En-tete sombre + pastille icone, comme toutes les modales de rubrique */
+.fa-ck-rdvmodal .google-agenda-modal-head {
+  background: linear-gradient(135deg, #2a1b3d 0%, #3d2757 60%, #4a2f68 100%);
+  color: #fff;
+  padding: 18px 22px;
+}
+.fa-ck-rdvmodal .google-agenda-modal-head * { color: #fff; }
+.fa-ck-rdvmodal .google-agenda-modal-head > *:first-child {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+/* Bandeau meta sous l'en-tete (Agenda · Commercial · Mandat · RDV lies) */
+.fa-ck-rdvmodal .google-agenda-modal-meta {
+  background: #fbf8f3;
+  border-bottom: 1px solid #e7ddd0;
+  gap: 10px;
+  padding: 12px 22px;
+}
+.fa-ck-rdvmodal .google-agenda-modal-meta > * {
+  background: #fff;
+  border: 1px solid #f0e8dc;
+  border-radius: 12px;
+  padding: 9px 13px;
+}
+.fa-ck-rdvmodal .google-agenda-modal-layout { gap: 16px; padding: 18px 22px 22px; }
+.fa-ck-rdvmodal .google-agenda-panel {
+  background: #fff;
+  border: 1px solid #e7ddd0;
+  border-radius: 16px;
+  box-shadow: none;
+}
+.fa-ck-rdvmodal .google-agenda-panel h2,
+.fa-ck-rdvmodal .google-agenda-panel h3 {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.fa-ck-rdvmodal input,
+.fa-ck-rdvmodal select,
+.fa-ck-rdvmodal textarea {
+  border: 1px solid #e7ddd0;
+  border-radius: 11px;
+  font-family: inherit;
+}
+.fa-ck-rdvmodal input:focus,
+.fa-ck-rdvmodal select:focus,
+.fa-ck-rdvmodal textarea:focus {
+  border-color: var(--ck-ac);
+  outline: 2px solid var(--ck-ac-bg);
+  outline-offset: 0;
+}
+.fa-ck-rdvmodal .button-primary {
+  background: var(--ck-ac);
+  border-color: var(--ck-ac);
+  border-radius: 11px;
+  font-weight: 700;
+}
+.fa-ck-rdvmodal .ghost-button {
+  background: #fff;
+  border: 1px solid #e7ddd0;
+  border-radius: 11px;
+  font-weight: 700;
+  color: #211a16;
+}
+
+
+/* --- Correctifs de passe 2 (constatés à l'écran) --------------------------- */
+
+/* Le CTA cumule .ghost-button ET .button-primary : mes deux règles se
+   neutralisaient (même spécificité), le bouton restait magenta. Règle dédiée. */
+.fa-cockpit-v2 .fa-ck-rdv .ghost-button.button-primary,
+.fa-ck-rdvmodal .ghost-button.button-primary {
+  background: var(--ck-ac);
+  border-color: var(--ck-ac);
+  color: #fff;
+  border-radius: 11px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.fa-cockpit-v2 .fa-ck-mandat .ghost-button.button-primary {
+  background: var(--ck-ac);
+  border-color: var(--ck-ac);
+  color: #fff;
+}
+
+/* Valeurs longues (emails, adresses) : la serif 15px cassait sur 2 lignes.
+   On garde la serif pour les valeurs courtes, sans-serif compacte au-delà. */
+.fa-cockpit-v2 .fa-ck-rdv .info-card > *:last-child {
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.fa-cockpit-v2 .fa-ck-rdv .info-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+/* Le filet violet appartient à la carte, pas au libellé interne : on redonne
+   de l'air pour que « Rendez-vous Google » ne colle plus au trait. */
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-entry-card { padding-left: 16px; }
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-entry-card > div:first-child > .detail-label { display: block; margin-bottom: 8px; }
+
+
+/* Passe 3 : les œils-de-bœuf des panneaux de la modale RDV restaient magenta
+   (accent global de l'app) alors que la rubrique Rendez-vous est violette. */
+.fa-ck-rdvmodal .google-agenda-panel > * > span:first-child,
+.fa-ck-rdvmodal .google-agenda-panel span.eyebrow {
+  color: var(--ck-ac);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+/* La barre d'actions flottait par-dessus la liste des invités : on l'assoit. */
+.fa-ck-rdvmodal .google-agenda-actions {
+  background: #fbf8f3;
+  border-top: 1px solid #e7ddd0;
+  padding: 12px 16px;
+  margin-top: 8px;
+  border-radius: 0 0 16px 16px;
+}
+
+
+/* Passe 4 — RÉGRESSION corrigée : .mandat-document-editor-head a un fond SOMBRE.
+   Ma règle de titre lui avait imposé une encre foncée → texte illisible.
+   On garde la serif (cohérence maquette) mais en blanc, comme l'original. */
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head { color: #fff; }
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head * { color: #fff; }
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head small,
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head p { color: rgba(255, 255, 255, 0.78); }
+/* le CTA du bandeau reste blanc sur sombre (contraste inverse) */
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head .ghost-button,
+.fa-cockpit-v2 .fa-ck-mandat .mandat-document-editor-head .button-subtle {
+  background: #fff;
+  color: #211a16;
+  border-color: transparent;
+}
+
+
+/* Passe 5 — le CTA de la rubrique restait magenta malgré une spécificité plus forte.
+   Cause identifiée via CDP (CSS.getMatchedStylesForNode) :
+     .app-shell-modern .button-primary { background: #c5005f !important; }
+   Un !important global de l'app : aucune règle normale ne pouvait le battre.
+   C'est le SEUL endroit de cette feuille où !important est justifié (on répond
+   à un !important existant, on n'en introduit pas un par confort). */
+.fa-cockpit-v2 .fa-ck-rdv .ghost-button.button-primary,
+.fa-cockpit-v2 .fa-ck-rdv .button-primary {
+  background: var(--ck-ac) !important;
+  border-color: var(--ck-ac) !important;
+  color: #fff !important;
+}
+.fa-cockpit-v2 .fa-ck-mandat .ghost-button.button-primary,
+.fa-cockpit-v2 .fa-ck-mandat .button-primary {
+  background: var(--ck-ac) !important;
+  border-color: var(--ck-ac) !important;
+  color: #fff !important;
+}
+.fa-ck-rdvmodal .ghost-button.button-primary,
+.fa-ck-rdvmodal .button-primary {
+  background: var(--ck-ac) !important;
+  border-color: var(--ck-ac) !important;
+  color: #fff !important;
+}
+/* le bouton désactivé doit rester lisible comme tel */
+.fa-cockpit-v2 .fa-ck-rdv .button-primary:disabled,
+.fa-ck-rdvmodal .button-primary:disabled { opacity: 0.55; }
+
