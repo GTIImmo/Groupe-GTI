@@ -1395,3 +1395,59 @@
 .fa-cockpit-v2 .fa-ck-pa-frozen > span:first-child { flex: none; font-size: 14px; }
 .fa-cockpit-v2 .fa-ck-pa-ro .fa-ck-rep-btn { margin-left: auto; flex: none; }
 
+
+/* ============================================================================
+   Rendez-vous à plat (maquette v28) — Planifier / Occupation journée / RDV liés
+   sortis de la modale et rendus dans la page. Le composant est le MÊME ;
+   seul son enveloppe change (prop `inline`).
+   ========================================================================== */
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline { margin-top: 12px; }
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: 0;
+}
+@media (max-width: 1180px) {
+  .fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-modal-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-panel {
+  background: #fff;
+  border: 1px solid var(--fa-line);
+  border-radius: 16px;
+  box-shadow: none;
+  min-width: 0;
+}
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-panel-head > span {
+  color: var(--ck-ac);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-panel-head > strong {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+/* les contrôles Jour / Semaine / date / Actualiser doivent tenir sans déborder */
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-panel-head,
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .google-agenda-day-controls {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline input,
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline select,
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline textarea {
+  max-width: 100%;
+  border: 1px solid var(--fa-line);
+  border-radius: 11px;
+}
+.fa-cockpit-v2 .fa-ck-rdv .google-agenda-inline .modal-actions {
+  background: var(--fa-paper);
+  border-top: 1px solid var(--fa-line-soft);
+  border-radius: 0 0 16px 16px;
+  padding: 12px 14px;
+}
+

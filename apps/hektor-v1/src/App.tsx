@@ -22091,6 +22091,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 </>
               ) : null}
               <GoogleAgendaAnnonceSection
+                inline
                 dossier={dossier}
                 detail={props.detail}
                 contacts={props.contacts}
@@ -25848,6 +25849,10 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
 }
 
 function GoogleAgendaAnnonceSection(props: {
+  /* `inline` : rend Planifier / Occupation journée / RDV liés À PLAT dans la page
+     (maquette v28) au lieu de les enfermer derrière la modale. Défaut = modale,
+     donc l'ancienne fiche et les autres appels ne changent pas d'un iota. */
+  inline?: boolean
   dossier: Dossier | null
   detail: DossierDetailPayload
   contacts: DetailContact[]
@@ -25861,6 +25866,7 @@ function GoogleAgendaAnnonceSection(props: {
   onHektorActionJobCreated?: (job: ConsoleJob) => void
 }) {
   const dossier = props.dossier
+  const inlineAgenda = Boolean(props.inline)
   const appDossierId = dossier?.app_dossier_id ?? null
   const hektorAnnonceId = dossier?.hektor_annonce_id ?? null
   const defaultCalendarEmail = resolveGoogleWorkspaceCalendarEmail({
@@ -25955,7 +25961,7 @@ function GoogleAgendaAnnonceSection(props: {
   }, [agendaMode, calendarEmail])
 
   useEffect(() => {
-    if (!modalOpen) return
+    if (!modalOpen && !inlineAgenda) return
     const search = contactSearch.trim()
     const scopedCalendarEmail = calendarEmail.trim().toLowerCase()
     const hektorContactSearchOwner = findContactHektorOption(props.hektorNegotiators ?? [], {
@@ -26001,7 +26007,7 @@ function GoogleAgendaAnnonceSection(props: {
   }, [calendarEmail, contactSearch, dossier?.agence_nom, dossier?.commercial_id, dossier?.negociateur_email, modalOpen, props.hektorNegotiators])
 
   useEffect(() => {
-    if (!modalOpen || (!appDossierId && !hektorAnnonceId)) {
+    if ((!modalOpen && !inlineAgenda) || (!appDossierId && !hektorAnnonceId)) {
       setLinkedRelationContactOptions([])
       setLinkedRelationContactsLoading(false)
       setLinkedRelationContactsError(null)
@@ -26400,14 +26406,17 @@ function GoogleAgendaAnnonceSection(props: {
         </div>
         <div className="google-agenda-entry-actions">
           {!canUseCalendarEmail ? <p className="google-agenda-error">Agenda Google Workspace requis.</p> : null}
-          <button className="ghost-button button-primary" type="button" onClick={handleOpenGoogleAgendaModal}>
-            Ouvrir les RDV Google
-          </button>
+          {!inlineAgenda ? (
+            <button className="ghost-button button-primary" type="button" onClick={handleOpenGoogleAgendaModal}>
+              Ouvrir les RDV Google
+            </button>
+          ) : null}
         </div>
       </article>
-      {modalOpen && typeof document !== 'undefined' ? createPortal(
-        <div className={`modal-overlay google-agenda-modal-overlay${APP_COCKPIT_V2_ENABLED ? ' fa-ck-rdvmodal' : ''}`} onClick={handleCloseGoogleAgendaModal}>
-          <section className="modal-panel google-agenda-modal" onClick={(event) => event.stopPropagation()}>
+      {(modalOpen || inlineAgenda) && typeof document !== 'undefined' ? (() => {
+        const agendaBody = (
+          <>
+            {!inlineAgenda ? (
             <div className="google-agenda-modal-head">
               <div>
                 <span className="eyebrow">Google Agenda</span>
@@ -26416,12 +26425,17 @@ function GoogleAgendaAnnonceSection(props: {
               </div>
               <button className="request-modal-close" type="button" onClick={handleCloseGoogleAgendaModal}>Fermer</button>
             </div>
-            <div className="google-agenda-modal-meta">
-              <span><strong>Agenda</strong>{calendarEmail || '-'}</span>
-              <span><strong>Commercial</strong>{dossier?.commercial_nom || '-'}</span>
-              <span><strong>Mandat</strong>{dossier?.numero_mandat || '-'}</span>
-              <span><strong>RDV lies</strong>{activeEvents.length}</span>
-            </div>
+            ) : null}
+            {/* En inline la carte « Rendez-vous Google » juste au-dessus porte déjà
+                ces informations : on évite le doublon. */}
+            {!inlineAgenda ? (
+              <div className="google-agenda-modal-meta">
+                <span><strong>Agenda</strong>{calendarEmail || '-'}</span>
+                <span><strong>Commercial</strong>{dossier?.commercial_nom || '-'}</span>
+                <span><strong>Mandat</strong>{dossier?.numero_mandat || '-'}</span>
+                <span><strong>RDV liés</strong>{activeEvents.length}</span>
+              </div>
+            ) : null}
             <div className="google-agenda-modal-layout">
               <section className="google-agenda-panel google-agenda-planner-panel">
                 <div className="google-agenda-panel-head">
@@ -26738,10 +26752,18 @@ function GoogleAgendaAnnonceSection(props: {
                 />
               </ContactWorkflowModal>
             ) : null}
-          </section>
-        </div>,
-        document.body,
-      ) : null}
+          </>
+        )
+        // Inline (cockpit, maquette v28) : à plat dans la page. Sinon : modale, inchangé.
+        return inlineAgenda
+          ? <div className="google-agenda-inline">{agendaBody}</div>
+          : createPortal(
+              <div className={`modal-overlay google-agenda-modal-overlay${APP_COCKPIT_V2_ENABLED ? ' fa-ck-rdvmodal' : ''}`} onClick={handleCloseGoogleAgendaModal}>
+                <section className="modal-panel google-agenda-modal" onClick={(event) => event.stopPropagation()}>{agendaBody}</section>
+              </div>,
+              document.body,
+            )
+      })() : null}
     </section>
   )
 }
