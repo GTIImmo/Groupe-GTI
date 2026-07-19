@@ -20725,11 +20725,11 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
   )
 }
 
-// TEMP DEBUG (branche cockpit-v2 preview uniquement) : forcé à true pour isoler si le souci
-// vient de la variable d'env Vercel ou d'autre chose. À REVERTIR après diagnostic.
-const APP_COCKPIT_V2_ENABLED = true
-// const APP_COCKPIT_V2_ENABLED =
-//   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').trim().toLowerCase())
+// Garde-fou n° 2 du plan : flag réversible, OFF par défaut, bascule par variable Vercel
+// SANS redéploiement de code. (Il avait été forcé à `true` pour un debug de preview :
+// c'était le garde-fou lui-même qui sautait, le rollback n'était plus possible.)
+const APP_COCKPIT_V2_ENABLED =
+  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').trim().toLowerCase())
 
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
@@ -21060,6 +21060,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   useEffect(() => { setEdited({}); setSaveMsg(null) }, [props.detail])
   const [moreOpen, setMoreOpen] = useState(false)
   const [pilotageOpen, setPilotageOpen] = useState(false)
+  // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
+  // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
+  const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
+  useEffect(() => {
+    if (!ckDemFocus || activeTab !== 'mandat') return
+    const node = document.getElementById(`fa-ck-dm-${ckDemFocus}`)
+    node?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const t = window.setTimeout(() => setCkDemFocus(null), 2600)
+    return () => window.clearTimeout(t)
+  }, [ckDemFocus, activeTab])
   useEffect(() => {
     if (!moreOpen) return
     const close = () => setMoreOpen(false)
@@ -21120,7 +21130,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : !pMandatOk ? 'man_valider'
     : nbPortails > 0 ? 'dif_actif'
     : 'dif_ouvrir'
-  type CkStageDef = { label: string; desc: string; led: string; btns: Array<{ label: string; rubKey: string; badge?: string }> }
+  type CkStageDef = { label: string; desc: string; led: string; btns: Array<{ label: string; rubKey: string; badge?: string; dem?: 'validation' | 'price' | 'cancel' }> }
   const CK_STAGES: Record<string, CkStageDef> = {
     est_cours: { label: 'Estimation · en cours', led: '#f0a935',
       desc: "Avis de valeur en cours. Complétez la valeur retenue avant de l'envoyer au client.",
@@ -21133,19 +21143,19 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
     man_valider: { label: 'Mandat · à valider', led: '#1f63b8',
       desc: "Mandat en cours de validation — la validation par l'admin débloque la diffusion.",
-      btns: [{ label: 'Demander la validation', rubKey: 'mandat' }, { label: 'Voir les documents', rubKey: 'documents' }] },
+      btns: [{ label: 'Demander la validation', rubKey: 'mandat', badge: '→ Direction', dem: 'validation' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
     dif_ouvrir: { label: 'Validé · à diffuser', led: '#3fbf7a',
       desc: 'Mandat validé — activez la diffusion sur les portails pour passer en ligne.',
-      btns: [{ label: 'Ouvrir la diffusion', rubKey: 'publicite' }, { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' }] },
+      btns: [{ label: 'Ouvrir la diffusion', rubKey: 'publicite' }, { label: 'Rapprocher les acquéreurs', rubKey: 'rapprochement' }, { label: 'Demander une baisse', rubKey: 'mandat', badge: '→ Direction', dem: 'price' }] },
     dif_actif: { label: "En ligne — en attente d'offre", led: '#3fbf7a',
       desc: `Diffusé · ${nbPortails} portail(s) actif(s) · aucune offre. Relancez ou ajustez le prix si le rythme faiblit.`,
-      btns: [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }, { label: "Faire une baisse de prix — éditer l'avenant", rubKey: 'mandat', badge: 'Édition' }, { label: 'Gérer la diffusion', rubKey: 'publicite' }] },
+      btns: [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }, { label: "Demander la validation d'une baisse", rubKey: 'mandat', badge: '→ Direction', dem: 'price' }, { label: 'Gérer la diffusion', rubKey: 'publicite' }] },
     mandat_echu: { label: 'Mandat · échéance dépassée', led: '#e0952f',
       desc: `L'échéance du mandat est dépassée${mandatDateFin ? ` (${formatDate(mandatDateFin)})` : ''}. Refaites ou prorogez le mandat pour poursuivre légalement la commercialisation ; suspendez la diffusion en attendant.`,
-      btns: [{ label: 'Renouveler le mandat', rubKey: 'mandat' }, { label: 'Suspendre la diffusion', rubKey: 'publicite' }, { label: 'Contacter le mandant', rubKey: 'contact' }] },
+      btns: [{ label: 'Refaire / proroger le mandat', rubKey: 'mandat' }, { label: 'Suspendre la diffusion', rubKey: 'publicite' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
     mandat_annul: { label: 'Mandat · annulation en cours', led: '#c2701a',
       desc: "Demande d'annulation soumise à la direction. Les actions commerciales sont gelées jusqu'à la décision ; suivez la demande.",
-      btns: [{ label: 'Suivre la demande', rubKey: 'historique' }, { label: 'Le mandat', rubKey: 'mandat' }, { label: 'Contacter le mandant', rubKey: 'contact' }] },
+      btns: [{ label: "Suivre la demande d'annulation", rubKey: 'mandat', badge: '→ Direction', dem: 'cancel' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
     offre: { label: 'Sous offre', led: '#3fbf7a',
       desc: "Une offre est en cours — suivez-la dans la rubrique Affaires.",
       btns: [{ label: "Traiter l'affaire", rubKey: 'affaires' }, { label: 'Voir les acquéreurs', rubKey: 'rapprochement' }] },
@@ -21161,6 +21171,49 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   }
   const ckStageDef = CK_STAGES[ckStage] ?? CK_STAGES.dif_actif
   const statusLed = ckStageDef.led
+
+  // ── Démarches : on RÉUTILISE le modèle métier réel (plan §4 « mêmes onClick ») ────
+  // Avant : table statique dont les 3 boutons appelaient tous 'demande_diffusion' en dur
+  // (la baisse de prix ouvrait la mauvaise demande) et dont l'annulation n'avait jamais
+  // d'action. buildMandatActionModel porte déjà les bons types et les bonnes gardes.
+  const ckActionModel = buildMandatActionModel({
+    mandat: dossier,
+    role: props.actionRole ?? 'nego',
+    requests: props.actionRequests ?? [],
+    currentRequest: props.currentActionRequest,
+    onOpenRequestModal: props.onOpenRequestModal ?? (() => undefined),
+    onOpenDiffusionModal: props.onOpenDiffusionModal ?? (() => undefined),
+  })
+  const ckItem = (key: string) => ckActionModel.items.find((i) => i.key === key)
+  const fire = (item: MandatActionItemModel | undefined) =>
+    item ? () => item.onClick({ stopPropagation: () => undefined }) : undefined
+  type CkDem = { key: string; dem: 'validation' | 'price' | 'cancel'; title: string; sub: string; stateLabel: string; actLabel: string; locked: boolean; onClick?: () => void }
+  const itValidation = ckItem('validation')
+  const itPrice = ckItem('price-drop')
+  const itCancel = ckItem('mandate-cancellation')
+  const ckDemarches: CkDem[] = !ckActionModel.hasMandat ? [] : [
+    {
+      key: 'validation', dem: 'validation', title: 'Validation',
+      sub: 'Confirmer le mandat pour débloquer la diffusion',
+      stateLabel: itValidation ? itValidation.stateLabel : 'Validé',
+      actLabel: itValidation?.stateLabel ?? '', locked: false,
+      onClick: fire(itValidation),
+    },
+    {
+      key: 'price', dem: 'price', title: 'Baisse de prix',
+      sub: "Ajuster le prix public de l'annonce",
+      stateLabel: itPrice?.stateLabel ?? 'À traiter',
+      actLabel: itPrice?.stateLabel ?? '', locked: !itPrice,
+      onClick: fire(itPrice),
+    },
+    {
+      key: 'cancel', dem: 'cancel', title: 'Annulation mandat',
+      sub: 'Clôturer et retirer le mandat',
+      stateLabel: itCancel?.stateLabel ?? 'À traiter',
+      actLabel: itCancel?.stateLabel ?? '', locked: !itCancel,
+      onClick: fire(itCancel),
+    },
+  ]
   const appts = parseAppointmentRequests(props.detail)
   // Rail construit EXACTEMENT comme le v26 : featList = Le Bien + [feat de phase] + Rendez-vous + Contact,
   // chaque item « en avant » portant une pastille de statut (foot) ; puis « Autres rubriques » repliées.
@@ -21188,9 +21241,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const CK_RUB_MAP: Record<string, (typeof CK_RUBRIQUES)[number]> = Object.fromEntries(CK_RUBRIQUES.map((r) => [r.key, r]))
   // Navigation rubrique partagée : le rail, le bloc « Prochaine action » ET le fil
   // d'activité doivent ouvrir une rubrique de la même façon (Rapprochement = overlay).
-  const goRub = (key: string) => {
-    if (key === 'rapprochement') props.onOpenRapprochement?.(dossier)
-    else setActiveTab(key)
+  const goRub = (key: string, dem?: string) => {
+    if (key === 'rapprochement') { props.onOpenRapprochement?.(dossier); return }
+    setActiveTab(key)
+    setCkDemFocus(dem ?? null)
   }
   const renderRn = (key: string, foot: CkFoot | null, isFeat: boolean) => {
     const rub = CK_RUB_MAP[key]
@@ -21221,7 +21275,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const nextActions = ckStageDef.btns
     .filter((b) => (b.rubKey === 'rapprochement' ? hasRappro : true))
     .slice(0, 3)
-  const runAction = (rubKey: string) => goRub(rubKey)
+  const runAction = (rubKey: string, dem?: string) => goRub(rubKey, dem)
   const emailContacts = props.contacts.filter((c) => c.email)
   // Valeur d'un champ wizard par son nom (overlay-first, via la MÊME fonction que l'éditeur) + diff local.
   const wizFieldValue = (name: string) => { const f = CK_WIZARD_FIELD_BY_NAME[name]; return f ? wizardDetailValue(dossier, props.detail, f) : '' }
@@ -21408,7 +21462,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       {nextActions.map((act) => {
                         const rub = CK_RUBRIQUES.find((r) => r.key === act.rubKey) ?? CK_RUBRIQUES[0]
                         return (
-                          <button key={act.label} type="button" className="fa-ck-pa-link" style={{ ['--c']: rub.color } as CSSProperties} onClick={() => runAction(act.rubKey)}>
+                          <button key={act.label} type="button" className="fa-ck-pa-link" style={{ ['--c']: rub.color } as CSSProperties} onClick={() => runAction(act.rubKey, act.dem)}>
                             <span className="fa-ck-pl-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
                             <span className="fa-ck-pl-tx">{act.label}</span>
                             <span className="fa-ck-pl-rub">{act.badge ?? rub.label}</span>
@@ -21417,6 +21471,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         )
                       })}
                     </div>
+                    {/* Note Direction (spec §4) : visible UNIQUEMENT si un lien démarche est présent. */}
+                    {nextActions.some((a) => a.dem) ? (
+                      <p className="fa-ck-pa-note">Les demandes <b>→ Direction</b> sont soumises à Pauline : le prix et le statut ne changent qu'après acceptation.</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -21726,17 +21784,24 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       <div className="fa-ck-mf"><div className="mk">Échéance</div><div className="mv">{m.dateEnd}</div></div>
                       <div className="fa-ck-mf"><div className="mk">Statut</div><div className="mv ok">{m.statut}</div></div>
                     </div></div>
-                    {m.demarches && m.demarches.length ? (
+                    {/* Démarches — RÉUTILISE le modèle métier réel (buildMandatActionModel), comme
+                        l'impose le plan §4 « RESTYLER, mêmes onClick ». La table statique précédente
+                        envoyait 'demande_diffusion' EN DUR pour les trois cartes (la baisse de prix
+                        ouvrait donc la mauvaise demande) et l'annulation n'était jamais déclenchable. */}
+                    {ckDemarches.length ? (
                       <>
                         <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic blue" aria-hidden="true"><CkIcon path={CK_ICON.publicite} /></span><div><div className="fa-ck-pub-t">Démarches</div><div className="fa-ck-pub-s">Demandes soumises à Pauline (direction)</div></div><span className="fa-ck-badge-ok" style={{ background: '#e7edf7', color: '#2c4770', borderColor: '#cfd9ea' }}>à Pauline</span></div>
                         <div className="fa-ck-pub-card">
                           <p className="fa-ck-dm-banner">Ces demandes sont <b>envoyées à Pauline</b> (direction) pour validation. Le prix et le statut ne changent <b>qu'après acceptation</b> — rien n'est modifié automatiquement.</p>
-                          {m.demarches.map((d, i) => (
-                            <div key={i} className={`fa-ck-dm-card${d.state === 'lock' ? ' lock' : ''}`}>
+                          {ckDemarches.map((d) => (
+                            <div key={d.key} id={`fa-ck-dm-${d.dem}`} className={`fa-ck-dm-card${d.locked ? ' lock' : ''}${ckDemFocus === d.dem ? ' fa-ck-dm-focus' : ''}`}>
                               <div className="fa-ck-dm-tx"><div className="dm-nm">{d.title}</div><div className="dm-sub">{d.sub}</div></div>
-                              {d.state === 'lock'
-                                ? <span className="fa-ck-dm-state lock">🔒 {d.lockLabel}</span>
-                                : <><span className="fa-ck-dm-state">● {d.badge}</span>{d.act ? <button type="button" className="fa-ck-dm-act" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, props.actionRole ?? 'nego', 'demande_diffusion')}>{d.act}</button> : null}</>}
+                              {d.locked
+                                ? <span className="fa-ck-dm-state lock">🔒 Après validation</span>
+                                : <>
+                                    <span className="fa-ck-dm-state">● {d.stateLabel}</span>
+                                    {d.onClick ? <button type="button" className="fa-ck-dm-act" onClick={d.onClick}>{d.actLabel}</button> : null}
+                                  </>}
                             </div>
                           ))}
                         </div>

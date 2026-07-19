@@ -1267,3 +1267,35 @@
 }
 .fa-cockpit-v2 .fa-ck-rub .console-upload-dropzone:hover { border-color: var(--ck-ac); }
 
+
+/* ============================================================================
+   Démarches — note « → Direction » et pré-focus (spec §4 + Lot 2)
+   Un lien de prochaine action portant un type de démarche ouvre la rubrique
+   Mandat ET surligne la carte concernée (validation / baisse / annulation).
+   ========================================================================== */
+.fa-cockpit-v2 .fa-ck-pa-note {
+  margin: 12px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fa-muted);
+}
+.fa-cockpit-v2 .fa-ck-pa-note b { color: #1f63b8; font-weight: 800; }
+
+.fa-cockpit-v2 .fa-ck-dm-card { scroll-margin-block: 90px; }
+.fa-cockpit-v2 .fa-ck-dm-focus {
+  border-color: #1f63b8;
+  background: #f2f6fc;
+  animation: fa-ck-dem-pulse 2.4s cubic-bezier(.22, 1, .36, 1) 1;
+}
+@keyframes fa-ck-dem-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(31, 99, 184, .45); }
+  60%  { box-shadow: 0 0 0 10px rgba(31, 99, 184, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(31, 99, 184, 0); }
+}
+/* Le tag « → Direction » des liens de prochaine action prend la couleur Direction. */
+.fa-cockpit-v2 .fa-ck-pa-link .fa-ck-pl-rub { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-cockpit-v2 .fa-ck-dm-focus { animation: none; }
+}
+
