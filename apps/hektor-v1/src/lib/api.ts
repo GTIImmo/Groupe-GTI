@@ -1364,7 +1364,7 @@ export function hasOffreAchatEnCours(item: {
   return item.offre_id != null && (lastType === 'proposition' || lastType === 'accepte')
 }
 
-function hasOffreAchatRefusee(item: {
+export function hasOffreAchatRefusee(item: {
   offre_id?: string | number | null
   offre_last_proposition_type?: string | null
   offre_state?: string | null

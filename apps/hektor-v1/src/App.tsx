@@ -134,6 +134,7 @@ import {
   loadRapprochementCounts,
   type RapprochementCount,
   hasOffreAchatEnCours,
+  hasOffreAchatRefusee,
   hasCompromisEnCours,
   setBienStatut,
   findContactDuplicateCandidates,
@@ -21092,8 +21093,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Parcours 5 jalons (Avis → Mandat → Offre → Compromis → Vente) dérivé des vrais drapeaux.
   const pMandatNum = Boolean(String(dossier.numero_mandat ?? '').trim())
   const pMandatOk = isValidationApproved(dossier.validation_diffusion_state)
-  const pOffre = Boolean(props.detail.offre_id || props.detail.offre_state)
-  const pCompromis = Boolean(props.detail.compromis_id || props.detail.compromis_state)
+  // On utilise les helpers métier existants (api.ts) au lieu d'un simple test
+  // d'existence : une offre REFUSÉE ne doit pas laisser l'annonce « sous offre ».
+  const pOffre = hasOffreAchatEnCours(props.detail)
+  const pOffreRefusee = hasOffreAchatRefusee(props.detail)
+  const pCompromis = hasCompromisEnCours(props.detail)
   const pVendu = /vendu|vente|clos/i.test(String(dossier.statut_annonce ?? ''))
   const detailStr = (k: string) => { const v = (props.detail as Record<string, unknown>)[k]; return v == null ? '' : String(v) }
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
@@ -21120,32 +21124,38 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
+  // Avis envoyé : la spec §3 distingue « avis en cours » et « avis envoyé »
+  // (date d'envoi présente). date_avis est déjà lu pour la timeline.
+  const avisEnvoye = Boolean(detailStr('date_avis').trim())
   const ckStage = pVendu ? 'vendu'
     : estArchive ? 'archive'
     : pCompromis ? 'compromis'
     : pOffre ? 'offre'
     : annulEnCours ? 'mandat_annul'
     : mandatEchu ? 'mandat_echu'
-    : !pMandatNum ? (estEstimation ? 'est_cours' : 'man_creer')
+    : !pMandatNum ? (estEstimation ? (avisEnvoye ? 'est_envoye' : 'est_cours') : 'man_creer')
     : !pMandatOk ? 'man_valider'
+    // Offre refusée → l'annonce repasse en Actif : on relance, on ne « traite » plus.
+    : pOffreRefusee ? 'offre_ref'
     : nbPortails > 0 ? 'dif_actif'
     : 'dif_ouvrir'
-  type CkStageDef = { label: string; desc: string; led: string; btns: Array<{ label: string; rubKey: string; badge?: string; dem?: 'validation' | 'price' | 'cancel' }> }
+  // `ro` = lecture seule (§4 règle 5) ; `frozen` = actions gelées (§6 Lot 2).
+  type CkStageDef = { label: string; desc: string; led: string; ro?: boolean; roban?: string; frozen?: string; btns: Array<{ label: string; rubKey: string; badge?: string; dem?: 'validation' | 'price' | 'cancel' }> }
   const CK_STAGES: Record<string, CkStageDef> = {
-    est_cours: { label: 'Estimation · en cours', led: '#f0a935',
-      desc: "Avis de valeur en cours. Complétez la valeur retenue avant de l'envoyer au client.",
-      btns: [{ label: "Éditer l'avis de valeur", rubKey: 'estimation' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
-    est_envoye: { label: 'Estimation · avis envoyé', led: '#f0a935',
-      desc: "Avis de valeur envoyé. Dès l'accord du propriétaire, générez le mandat.",
-      btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "L'avis de valeur", rubKey: 'estimation' }] },
-    man_creer: { label: 'Mandat à créer', led: '#f0a935',
-      desc: 'Annonce active mais mandat manquant — générez le n° de mandat et préparez le document.',
-      btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
-    man_valider: { label: 'Mandat · à valider', led: '#1f63b8',
-      desc: "Mandat en cours de validation — la validation par l'admin débloque la diffusion.",
+    est_cours: { label: "Compléter l'avis de valeur", led: '#f0a935',
+      desc: 'Visite R1 faite, renseignez la valeur retenue avant l’envoi.',
+      btns: [{ label: "Éditer l'avis de valeur", rubKey: 'estimation' }, { label: 'Planifier la visite R2', rubKey: 'rendezvous' }] },
+    est_envoye: { label: 'Avis envoyé — créer le mandat', led: '#f0a935',
+      desc: "Dès l'accord du propriétaire, générez le mandat.",
+      btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: "Revoir l'avis de valeur", rubKey: 'estimation' }] },
+    man_creer: { label: 'Créer le mandat', led: '#f0a935',
+      desc: 'Annonce active mais mandat manquant.',
+      btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
+    man_valider: { label: 'Signé — faire valider', led: '#1f63b8',
+      desc: 'La validation par la direction débloque la diffusion.',
       btns: [{ label: 'Demander la validation', rubKey: 'mandat', badge: '→ Direction', dem: 'validation' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
-    dif_ouvrir: { label: 'Validé · à diffuser', led: '#3fbf7a',
-      desc: 'Mandat validé — activez la diffusion sur les portails pour passer en ligne.',
+    dif_ouvrir: { label: 'Ouvrir la diffusion', led: '#3fbf7a',
+      desc: 'Activez les portails pour passer en ligne.',
       btns: [{ label: 'Ouvrir la diffusion', rubKey: 'publicite' }, { label: 'Rapprocher les acquéreurs', rubKey: 'rapprochement' }, { label: 'Demander une baisse', rubKey: 'mandat', badge: '→ Direction', dem: 'price' }] },
     dif_actif: { label: "En ligne — en attente d'offre", led: '#3fbf7a',
       desc: `Diffusé · ${nbPortails} portail(s) actif(s) · aucune offre. Relancez ou ajustez le prix si le rythme faiblit.`,
@@ -21153,19 +21163,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     mandat_echu: { label: 'Mandat · échéance dépassée', led: '#e0952f',
       desc: `L'échéance du mandat est dépassée${mandatDateFin ? ` (${formatDate(mandatDateFin)})` : ''}. Refaites ou prorogez le mandat pour poursuivre légalement la commercialisation ; suspendez la diffusion en attendant.`,
       btns: [{ label: 'Refaire / proroger le mandat', rubKey: 'mandat' }, { label: 'Suspendre la diffusion', rubKey: 'publicite' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    mandat_annul: { label: 'Mandat · annulation en cours', led: '#c2701a',
+    mandat_annul: { label: 'Annulation en cours', led: '#c2701a',
+      frozen: 'Actions commerciales gelées jusqu’à la décision de la direction.',
       desc: "Demande d'annulation soumise à la direction. Les actions commerciales sont gelées jusqu'à la décision ; suivez la demande.",
       btns: [{ label: "Suivre la demande d'annulation", rubKey: 'mandat', badge: '→ Direction', dem: 'cancel' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
-    offre: { label: 'Sous offre', led: '#3fbf7a',
-      desc: "Une offre est en cours — suivez-la dans la rubrique Affaires.",
-      btns: [{ label: "Traiter l'affaire", rubKey: 'affaires' }, { label: 'Voir les acquéreurs', rubKey: 'rapprochement' }] },
-    compromis: { label: 'Sous compromis', led: '#3fbf7a',
-      desc: 'Compromis en cours — suivez les échéances et les pièces dans Affaires.',
-      btns: [{ label: "Traiter l'affaire", rubKey: 'affaires' }, { label: 'Voir les documents', rubKey: 'documents' }] },
-    vendu: { label: 'Vendu', led: '#a86af0',
+    offre: { label: 'Offre reçue', led: '#3fbf7a',
+      desc: 'Étudiez avec le vendeur, acceptez ou contre-proposez.',
+      btns: [{ label: "Traiter l'offre", rubKey: 'affaires' }, { label: 'Prévenir le vendeur', rubKey: 'contact' }] },
+    offre_ref: { label: 'Offre refusée — relancer', led: '#3fbf7a',
+      desc: "L'annonce repasse en Actif. Relancez les acquéreurs ou ajustez le prix.",
+      btns: [{ label: 'Relancer les acquéreurs', rubKey: 'rapprochement' }, { label: 'Demander une baisse', rubKey: 'mandat', badge: '→ Direction', dem: 'price' }, { label: 'Gérer la diffusion', rubKey: 'publicite' }] },
+    compromis: { label: 'Compromis en cours', led: '#3fbf7a',
+      desc: "Suivez les conditions suspensives jusqu'à l'acte.",
+      btns: [{ label: 'Suivre le compromis', rubKey: 'affaires' }, { label: 'Vérifier les pièces', rubKey: 'documents' }, { label: 'Prévenir le vendeur', rubKey: 'contact' }] },
+    vendu: { label: 'Vendu', led: '#a86af0', ro: true,
+      roban: 'Dossier terminé — lecture seule. Aucune action commerciale ni démarche.',
       desc: 'Vente finalisée — dossier terminé.',
       btns: [{ label: 'Bilan de vente', rubKey: 'reporting' }, { label: "Voir l'affaire", rubKey: 'affaires' }] },
-    archive: { label: 'Archivée', led: '#8a807a',
+    archive: { label: 'Archivée', led: '#8a807a', ro: true,
+      roban: 'Annonce archivée — lecture seule. Désarchivez-la pour pouvoir l’éditer.',
       desc: "Annonce archivée — plus de diffusion ni d'action commerciale.",
       btns: [{ label: "Voir l'historique", rubKey: 'historique' }, { label: "Voir l'annonce", rubKey: 'lebien' }] },
   }
@@ -21426,7 +21442,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <div className="fa-ck-timeline">
             <div className="fa-ck-tl-head">
               <span className="fa-ck-tl-ey">Vie du mandat</span>
-              {props.onChangeAnnonceStatus && !isLightweightDetail ? (
+              {props.onChangeAnnonceStatus && !isLightweightDetail && !ckStageDef.ro ? (
                 <button type="button" className="fa-ck-tl-status" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
                   <span className="fa-ck-tl-cur">{situationLabel}</span>
                   <span className="fa-ck-tl-lbl">Faire évoluer le statut</span>
@@ -21462,7 +21478,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-pa" style={{ ['--led']: statusLed } as CSSProperties}>
                 <div className="fa-ck-pa-title"><span className="fa-ck-pa-dot" style={{ background: statusLed }} />{situationLabel}<svg className="fa-ck-pa-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></svg></div>
                 <p className="fa-ck-pa-desc">{situationDesc}</p>
-                {nextActions.length > 0 ? (
+                {/* Lecture seule (spec §4 règle 5) : sur Vendu / Archivée, le bloc « Prochaine
+                    action » est REMPLACÉ par un bandeau — aucune action, aucune démarche. */}
+                {ckStageDef.ro ? (
+                  <div className="fa-ck-pa-ro">
+                    <span aria-hidden="true">🔒</span>
+                    <span>{ckStageDef.roban}</span>
+                    {ckStage === 'archive' && props.onRestoreAnnonce && !isLightweightDetail ? (
+                      <button type="button" className="fa-ck-rep-btn" onClick={() => props.onRestoreAnnonce?.(dossier)}>Désarchiver</button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {/* Gel (spec §6 Lot 2) : annulation soumise à la direction → actions gelées. */}
+                {ckStageDef.frozen ? (
+                  <div className="fa-ck-pa-frozen"><span aria-hidden="true">❄</span><span>{ckStageDef.frozen}</span></div>
+                ) : null}
+                {!ckStageDef.ro && nextActions.length > 0 ? (
                   <div className="fa-ck-pa-nav">
                     <div className="fa-ck-pa-links">
                       {nextActions.map((act) => {

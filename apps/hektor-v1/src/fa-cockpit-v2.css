@@ -1363,3 +1363,35 @@
 /* Édition d'un mandant existant — régression §5 bis #3. */
 .fa-cockpit-v2 .fa-ck-ct-edit { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--fa-line-soft); }
 
+
+/* ============================================================================
+   Lecture seule (§4 règle 5) et gel des actions (§6 Lot 2)
+   Sur Vendu / Archivée le bloc « Prochaine action » cède la place à un bandeau ;
+   sur une annulation en cours, une bannière signale le gel.
+   ========================================================================== */
+.fa-cockpit-v2 .fa-ck-pa-ro,
+.fa-cockpit-v2 .fa-ck-pa-frozen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 15px;
+  border-radius: 13px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.fa-cockpit-v2 .fa-ck-pa-ro {
+  background: #f2f0ee;
+  border: 1px solid #e0d9d1;
+  color: #5a534d;
+}
+.fa-cockpit-v2 .fa-ck-pa-frozen {
+  background: #fdf3e6;
+  border: 1px solid #f0dcc0;
+  color: #8a5a12;
+}
+.fa-cockpit-v2 .fa-ck-pa-ro > span:first-child,
+.fa-cockpit-v2 .fa-ck-pa-frozen > span:first-child { flex: none; font-size: 14px; }
+.fa-cockpit-v2 .fa-ck-pa-ro .fa-ck-rep-btn { margin-left: auto; flex: none; }
+
