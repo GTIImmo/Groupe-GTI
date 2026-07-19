@@ -21061,6 +21061,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   useEffect(() => { setEdited({}); setSaveMsg(null) }, [props.detail])
   const [moreOpen, setMoreOpen] = useState(false)
   const [pilotageOpen, setPilotageOpen] = useState(false)
+  // ── Palier 2 (plan §8.4) : crans de SIGNATURE du document ────────────────────
+  // L'état de signature n'est pas sur l'annonce, il vit dans
+  // ConsoleDocument.metadata_json.signature. Le panneau Documents le charge déjà ;
+  // le cockpit ne le faisait pas, d'où l'impossibilité de distinguer
+  // « mandat édité » / « en signature » / « signé » — et donc des VERBES faux
+  // au regard du principe §1 (« le verbe suit la position du document »).
+  const [ckDocs, setCkDocs] = useState<ConsoleDocument[]>([])
   // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
   // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
   const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
@@ -21081,6 +21088,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     return <section className="panel"><p className="empty-state">Aucun dossier selectionne.</p></section>
   }
   const dossier = props.selectedDossier
+  useEffect(() => {
+    const id = dossier?.app_dossier_id
+    if (!id) { setCkDocs([]); return }
+    let cancelled = false
+    void loadConsoleDocuments(id)
+      .then((rows) => { if (!cancelled) setCkDocs(rows) })
+      .catch(() => { if (!cancelled) setCkDocs([]) })
+    return () => { cancelled = true }
+  }, [dossier?.app_dossier_id])
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
   const currentTab = CK_RUBRIQUES.find((r) => r.key === activeTab) ?? CK_RUBRIQUES[0]
   const heroPhoto = props.images[0]?.url ?? dossier.photo_url_listing ?? null
@@ -21124,6 +21140,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
+  // Position du document signable (spec §1). Séparation avenant / mandat par le
+  // préfixe de libellé — point de robustesse documenté au plan §8.5, pas un blocage.
+  const ckSigStatus = (match: RegExp, exclude?: RegExp) => {
+    const doc = ckDocs.find((d) => {
+      const name = `${d.document_name ?? ''} ${d.document_type ?? ''}`
+      if (exclude && exclude.test(name)) return false
+      return match.test(name)
+    })
+    return (doc?.metadata_json as { signature?: SignatureMeta } | null)?.signature?.status ?? null
+  }
+  const mandatSig = ckSigStatus(/mandat/i, /avenant/i)
+  const avenantSig = ckSigStatus(/avenant/i)
+  // L'avenant est « validé » quand la démarche baisse de prix est acceptée : le
+  // cycle se termine et l'annonce revient en Diffusé · Actif (arbitrage §6.1).
+  const baisseAcceptee = (props.requestHistoryPriceDrop ?? []).some((r) => /accept/i.test(String((r as { status?: string }).status ?? '')))
+  const avenantEnCours = !baisseAcceptee && Boolean(avenantSig) && avenantSig !== 'cancelled'
   // Avis envoyé : la spec §3 distingue « avis en cours » et « avis envoyé »
   // (date d'envoi présente). date_avis est déjà lu pour la timeline.
   const avisEnvoye = Boolean(detailStr('date_avis').trim())
@@ -21134,7 +21166,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     : annulEnCours ? 'mandat_annul'
     : mandatEchu ? 'mandat_echu'
     : !pMandatNum ? (estEstimation ? (avisEnvoye ? 'est_envoye' : 'est_cours') : 'man_creer')
-    : !pMandatOk ? 'man_valider'
+    // Crans du mandat AVANT validation : le verbe suit la position du document (§1).
+    : !pMandatOk ? (mandatSig === 'to_send' ? 'man_edite'
+      : mandatSig === 'pending' ? 'man_signature'
+      : 'man_valider')
+    // Cycle avenant (miroir du mandat) : prioritaire sur l'état de diffusion tant
+    // que la baisse n'est pas validée par la direction.
+    : avenantEnCours ? (avenantSig === 'to_send' ? 'av_edite'
+      : avenantSig === 'pending' ? 'av_signature'
+      : 'av_valider')
     // Offre refusée → l'annonce repasse en Actif : on relance, on ne « traite » plus.
     : pOffreRefusee ? 'offre_ref'
     : nbPortails > 0 ? 'dif_actif'
@@ -21151,6 +21191,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     man_creer: { label: 'Créer le mandat', led: '#f0a935',
       desc: 'Annonce active mais mandat manquant.',
       btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
+    // ── Crans du document (§1) : édité → Envoyer · envoyé → Relancer · signé → Valider
+    man_edite: { label: 'Mandat édité — à envoyer', led: '#1f63b8',
+      desc: 'Document rédigé, envoyez-le à la signature (ImmoSign).',
+      btns: [{ label: 'Envoyer le mandat à la signature', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
+    man_signature: { label: 'En signature — suivre / relancer', led: '#1f63b8',
+      desc: 'En attente de signature du mandant.',
+      btns: [{ label: 'Relancer la signature', rubKey: 'mandat' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
+    av_edite: { label: 'Avenant édité — à envoyer', led: '#1f63b8',
+      desc: "Avenant de baisse rédigé. Envoyez-le à la signature du mandant ; la validation direction interviendra après signature.",
+      btns: [{ label: "Envoyer l'avenant à la signature", rubKey: 'mandat' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
+    av_signature: { label: 'Avenant envoyé à la signature', led: '#1f63b8',
+      desc: 'En attente de signature du mandant.',
+      btns: [{ label: "Relancer la signature de l'avenant", rubKey: 'mandat' }, { label: 'Prévenir le mandant', rubKey: 'contact' }] },
+    av_valider: { label: 'Signé — faire valider la baisse', led: '#1f63b8',
+      desc: 'La validation applique le nouveau prix et met à jour la diffusion.',
+      btns: [{ label: "Demander la validation de l'avenant", rubKey: 'mandat', badge: '→ Direction', dem: 'price' }, { label: "Revoir l'avenant", rubKey: 'mandat' }] },
     man_valider: { label: 'Signé — faire valider', led: '#1f63b8',
       desc: 'La validation par la direction débloque la diffusion.',
       btns: [{ label: 'Demander la validation', rubKey: 'mandat', badge: '→ Direction', dem: 'validation' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
