@@ -3094,7 +3094,7 @@ function HektorMandantContactForm(props: {
       </div>
       <div className="hektor-inline-grid">
         <label className="is-small">
-          <span>Civilite</span>
+          <span>Civilité</span>
           <select value={civility} onChange={(event) => setCivility(event.target.value)}>
             <option value="">-</option>
             <option value="M.">M.</option>
@@ -3107,7 +3107,7 @@ function HektorMandantContactForm(props: {
           <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Nom" required />
         </label>
         <label>
-          <span>Prenom</span>
+          <span>Prénom</span>
           <input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Prenom" />
         </label>
         <label>
@@ -3115,7 +3115,7 @@ function HektorMandantContactForm(props: {
           <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="email@exemple.fr" required />
         </label>
         <label>
-          <span>Telephone</span>
+          <span>Téléphone</span>
           <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
         </label>
         <label>
@@ -3229,7 +3229,7 @@ function HektorMandantContactEditForm(props: {
         <form onSubmit={handleSubmit}>
           <div className="hektor-inline-grid">
             <label className="is-small">
-              <span>Civilite</span>
+              <span>Civilité</span>
               <select value={civility} onChange={(event) => setCivility(event.target.value)}>
                 <option value="">-</option>
                 <option value="M.">M.</option>
@@ -3242,7 +3242,7 @@ function HektorMandantContactEditForm(props: {
               <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
             </label>
             <label>
-              <span>Prenom</span>
+              <span>Prénom</span>
               <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
             </label>
             <label>
@@ -3250,7 +3250,7 @@ function HektorMandantContactEditForm(props: {
               <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
             </label>
             <label>
-              <span>Telephone</span>
+              <span>Téléphone</span>
               <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" />
             </label>
             <label>
@@ -4749,12 +4749,12 @@ function MandatDocumentEditor(props: {
                         {draft.mandants.length > 1 ? <button className="ghost-button button-subtle" type="button" onClick={() => removeMandant(index)}>Retirer</button> : null}
                       </div>
                       <div className="mandat-document-form-grid">
-                        <label><span>Civilite</span><input value={mandant.civilite} onChange={(event) => updateMandant(index, 'civilite', event.target.value)} /></label>
+                        <label><span>Civilité</span><input value={mandant.civilite} onChange={(event) => updateMandant(index, 'civilite', event.target.value)} /></label>
                         <label><span>Qualite</span><input value={mandant.qualite} onChange={(event) => updateMandant(index, 'qualite', event.target.value)} /></label>
-                        <label><span>Prenom</span><input value={mandant.prenom} onChange={(event) => updateMandant(index, 'prenom', event.target.value)} /></label>
+                        <label><span>Prénom</span><input value={mandant.prenom} onChange={(event) => updateMandant(index, 'prenom', event.target.value)} /></label>
                         <label><span>Nom</span><input value={mandant.nom} onChange={(event) => updateMandant(index, 'nom', event.target.value)} /></label>
                         <label className="is-wide"><span>Adresse</span><input value={mandant.adresse} onChange={(event) => updateMandant(index, 'adresse', event.target.value)} /></label>
-                        <label><span>Telephone</span><input value={mandant.telephone} onChange={(event) => updateMandant(index, 'telephone', event.target.value)} /></label>
+                        <label><span>Téléphone</span><input value={mandant.telephone} onChange={(event) => updateMandant(index, 'telephone', event.target.value)} /></label>
                         <label><span>Email</span><input value={mandant.email} onChange={(event) => updateMandant(index, 'email', event.target.value)} /></label>
                       </div>
                     </section>
@@ -4818,7 +4818,7 @@ function MandatDocumentEditor(props: {
                         <label><span>Role</span><input value={recipient.role} onChange={(event) => updateSignatureRecipient(index, 'role', event.target.value)} /></label>
                         <label><span>Canal</span><select value={recipient.mode} onChange={(event) => updateSignatureRecipient(index, 'mode', event.target.value as MandatSignatureRecipient['mode'])}><option value="email">Email</option><option value="sms">SMS</option><option value="email_sms">Email + SMS</option></select></label>
                         <label><span>Email</span><input value={recipient.email} onChange={(event) => updateSignatureRecipient(index, 'email', event.target.value)} /></label>
-                        <label><span>Telephone</span><input value={recipient.telephone} onChange={(event) => updateSignatureRecipient(index, 'telephone', event.target.value)} /></label>
+                        <label><span>Téléphone</span><input value={recipient.telephone} onChange={(event) => updateSignatureRecipient(index, 'telephone', event.target.value)} /></label>
                       </div>
                     </section>
                   ))}
@@ -6567,7 +6567,7 @@ function matterportStateLabel(value: string | null | undefined) {
 function matterportVisibilityLabel(value: string | null | undefined) {
   const normalized = (value ?? '').trim().toLowerCase()
   if (normalized === 'public') return 'Public'
-  if (normalized === 'private') return 'Prive'
+  if (normalized === 'private') return 'Privé'
   if (normalized === 'unlisted') return 'Non liste'
   if (normalized === 'password') return 'Mot de passe'
   if (normalized === 'mixed') return 'Visibilite mixte'
@@ -8582,7 +8582,7 @@ function consoleDocumentStatusLabel(status: ConsoleDocument['storage_status']) {
 }
 
 function consoleDocumentVisibilityLabel(value: ConsoleDocumentVisibility | null | undefined) {
-  if (value === 'private') return 'Prive'
+  if (value === 'private') return 'Privé'
   if (value === 'shared') return 'Partage'
   return 'Console'
 }
@@ -10100,7 +10100,7 @@ function ConsolePhotosPanel({
           </label>
           <div className="console-photo-visibility" role="radiogroup" aria-label="Visibilite photo Hektor">
             <button className={photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(true)} disabled={uploadPending}>Visible</button>
-            <button className={!photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(false)} disabled={uploadPending}>Masquee</button>
+            <button className={!photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(false)} disabled={uploadPending}>Masquée</button>
           </div>
           <button className="console-photo-upload-submit" type="submit" disabled={uploadPending || !photoFile}>
             <span aria-hidden="true"><DetailIcon type="photo" /></span>
@@ -10119,7 +10119,7 @@ function ConsolePhotosPanel({
             return (
               <button key={photo.id} className={`console-photo-tile ${photo.visible ? 'is-visible' : 'is-hidden'}`} type="button" onClick={() => onOpenImage?.(photo.url_hd || url)}>
                 <img src={url} alt={photo.legend || dossier.titre_bien} />
-                <span className="console-photo-badge">{photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquee'}</span>
+                <span className="console-photo-badge">{photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquée'}</span>
                 {photo.legend ? <small>{photo.legend}</small> : null}
               </button>
             )
@@ -15522,7 +15522,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               <img src={photo.previewUrl} alt={`Photo ${index + 1}`} />
                               <div className="draft-annonce-photo-info">
                                 <strong>{photo.file.name}</strong>
-                                <span>{Math.max(1, Math.round(photo.file.size / 1024))} Ko - {photo.visible ? 'Visible' : 'Masquee'}</span>
+                                <span>{Math.max(1, Math.round(photo.file.size / 1024))} Ko - {photo.visible ? 'Visible' : 'Masquée'}</span>
                               </div>
                               <div className="draft-annonce-photo-controls">
                                 <button className="ghost-button button-subtle" type="button" onClick={() => toggleDraftAnnoncePhotoVisible(photo.id)} disabled={draftAnnoncePending}>
@@ -15680,7 +15680,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </div>
                         <div className="draft-mandant-fields">
                           <label className="filter-field is-small">
-                            <span>Civilite</span>
+                            <span>Civilité</span>
                             <select value={draftMandantCivility} onChange={(event) => setDraftMandantCivility(event.target.value)}>
                               <option value="">-</option>
                               <option value="M.">M.</option>
@@ -15693,7 +15693,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <input data-draft-mandant-lastname value={draftMandantLastName} onChange={(event) => setDraftMandantLastName(event.target.value)} placeholder="Nom du vendeur" />
                           </label>
                           <label className="filter-field">
-                            <span>Prenom</span>
+                            <span>Prénom</span>
                             <input value={draftMandantFirstName} onChange={(event) => setDraftMandantFirstName(event.target.value)} placeholder="Prenom" />
                           </label>
                           <label className="filter-field">
@@ -15701,7 +15701,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <input value={draftMandantEmail} onChange={(event) => setDraftMandantEmail(event.target.value)} type="email" placeholder="email@exemple.fr" />
                           </label>
                           <label className="filter-field">
-                            <span>Telephone</span>
+                            <span>Téléphone</span>
                             <input value={draftMandantPhone} onChange={(event) => setDraftMandantPhone(event.target.value)} inputMode="tel" placeholder="Portable" />
                           </label>
                           <label className="filter-field draft-annonce-field-wide">
@@ -18259,7 +18259,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <div className="panel-head"><div><p className="eyebrow">Creation</p><h3>Nouvel utilisateur</h3></div></div>
                 <form className="filter-grid" onSubmit={handleCreateAppUser}>
                   <label className="filter-field">
-                    <span>Prenom</span>
+                    <span>Prénom</span>
                     <input value={newUserFirstName} onChange={(event) => setNewUserFirstName(event.target.value)} required />
                   </label>
                   <label className="filter-field">
@@ -18320,7 +18320,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <div className="panel-head"><div><p className="eyebrow">Edition</p><h3>Modifier l utilisateur</h3></div></div>
                   <form className="filter-grid" onSubmit={handleUpdateAppUser}>
                     <label className="filter-field">
-                      <span>Prenom</span>
+                      <span>Prénom</span>
                       <input value={editUserFirstName} onChange={(event) => setEditUserFirstName(event.target.value)} required />
                     </label>
                     <label className="filter-field">
@@ -21171,6 +21171,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   }
   const ckStageDef = CK_STAGES[ckStage] ?? CK_STAGES.dif_actif
   const statusLed = ckStageDef.led
+  // Visite virtuelle : même source que l'ancienne fiche (matterport_groups_json).
+  const ckMatterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
+  const ckMatterportCount = ckMatterportGroups.reduce((n, g) => n + (g.models?.length ?? 0), 0)
 
   // ── Démarches : on RÉUTILISE le modèle métier réel (plan §4 « mêmes onClick ») ────
   // Avant : table statique dont les 3 boutons appelaient tous 'demande_diffusion' en dur
@@ -21584,9 +21587,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       <div><div className="mct">{docs.length} document{docs.length > 1 ? 's' : ''}</div><div className="mcs">Ajouter · préparer</div></div>
                       {toPrep > 0 ? <span className="mca">{toPrep} à préparer</span> : null}
                     </button>
-                    <button type="button" className="fa-ck-msc v">
+                    {/* Régression corrigée (audit §5 bis #6) : cette tuile n'avait AUCUN onClick.
+                        Elle amène désormais sur la section Matterport réelle, rendue plus bas. */}
+                    <button type="button" className="fa-ck-msc v" onClick={() => document.getElementById('fa-ck-matterport')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
                       <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
-                      <div><div className="mct">Visite virtuelle</div><div className="mcs">Matterport 3D · ajouter</div></div>
+                      <div><div className="mct">Visite virtuelle</div><div className="mcs">{ckMatterportCount > 0 ? `${ckMatterportCount} visite${ckMatterportCount > 1 ? 's' : ''} liée${ckMatterportCount > 1 ? 's' : ''}` : 'Matterport 3D · ajouter'}</div></div>
                     </button>
                   </div>
                 )
@@ -21675,6 +21680,41 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Les photos ne peuvent pas etre modifiees depuis une fiche d'index leger." />
                   : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+                {/* Régression corrigée (audit §5 bis #6) : la visite virtuelle Matterport
+                    n'était pas rendue du tout dans le cockpit. On rend le vrai contenu
+                    (groupes + modèles) avec MatterportModelActions, mêmes handlers. */}
+                <div className="fa-ck-lb-manage-h" id="fa-ck-matterport" style={{ marginTop: 18 }}>Visite virtuelle (Matterport)</div>
+                {ckMatterportGroups.length > 0 ? (
+                  <div className="fa-ck-pub-card fa-ck-mp">
+                    {ckMatterportGroups.map((group) => {
+                      const models = group.models ?? []
+                      const single = models.length <= 1
+                      return (
+                        <div key={group.id} className="fa-ck-mp-grp">
+                          <div className="fa-ck-mp-head">
+                            <div>
+                              <strong>{group.group_label || (group.numero_mandat ? `Mandat ${group.numero_mandat}` : 'Groupe Matterport')}</strong>
+                              <span>{models.length} visite{models.length > 1 ? 's' : ''} liée{models.length > 1 ? 's' : ''}</span>
+                            </div>
+                            <span className="fa-ck-docbadge">{matterportStateLabel(group.group_state)}</span>
+                          </div>
+                          {models.map((model) => (
+                            <div key={model.matterport_model_id} className="fa-ck-mp-row">
+                              <div className="fa-ck-mp-main">
+                                <strong>{matterportModelLabel(model.label, model.matterport_name, single)}</strong>
+                                <span>{model.matterport_name || model.matterport_model_id}</span>
+                              </div>
+                              <div className="fa-ck-mp-acts">
+                                <span className="fa-ck-docbadge">{matterportVisibilityLabel(model.visibility)}</span>
+                                {!isLightweightDetail ? <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} compact /> : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : <p className="fa-ck-empty">Aucune visite Matterport liée à cette annonce.</p>}
               </section>
             </div>
           ) : activeTab === 'documents' ? (
@@ -21978,6 +22018,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                           {ctField('Adresse', addr, false, true)}
                           {ctField('Commentaire', c.comment, false, true)}
                         </div>
+                        {/* Régression corrigée (audit §5 bis #3) : l'ancienne fiche permet de
+                            MODIFIER un mandant existant ; le cockpit ne le permettait pas du tout.
+                            On rend le composant réel (autonome, variante compacte), mêmes handlers. */}
+                        {!isLightweightDetail ? (
+                          <div className="fa-ck-ct-edit">
+                            <HektorMandantContactEditForm
+                              dossier={dossier}
+                              contact={c}
+                              compact
+                              onJobCreated={props.onHektorActionJobCreated}
+                              onMissingNegotiator={props.onMissingNegotiator}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     )
                   })}
@@ -23140,7 +23194,7 @@ function DossierDetailLayoutBase(props: {
                             <strong>{primaryContact.sourceId || '-'}</strong>
                           </div>
                           <div className="detail-entity-line">
-                            <span>Telephone</span>
+                            <span>Téléphone</span>
                             <strong>{primaryContact.phone ? <a href={`tel:${primaryContact.phone}`} className="detail-contact-link">{primaryContact.phone}</a> : '-'}</strong>
                           </div>
                           <div className="detail-entity-line">
@@ -23199,7 +23253,7 @@ function DossierDetailLayoutBase(props: {
                                   <strong>{contact.sourceId || '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line">
-                                  <span>Telephone</span>
+                                  <span>Téléphone</span>
                                   <strong>{contact.phone ? <a href={`tel:${contact.phone}`} className="detail-contact-link">{contact.phone}</a> : '-'}</strong>
                                 </div>
                                 <div className="detail-entity-line">
@@ -28938,7 +28992,7 @@ function HektorContactIdentityForm(props: {
         ) : (
           <>
             <label className="is-small">
-              <span>Civilite</span>
+              <span>Civilité</span>
               <select value={civility} onChange={(event) => setCivility(event.target.value)}>
                 <option value="">-</option>
                 {isPartnerKind ? <option value="Me.">Me.</option> : null}
@@ -28953,7 +29007,7 @@ function HektorContactIdentityForm(props: {
               <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
             </label>
             <label>
-              <span>Prenom</span>
+              <span>Prénom</span>
               <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
             </label>
           </>
@@ -30341,7 +30395,7 @@ function estimationDossierHtml(item: Pick<MandatRecord, 'titre_bien' | 'ville' |
         <tr><th>Bien</th><td>${visitVoucherEditableHtml(propertyTitle)}</td></tr>
         <tr><th>Type</th><td>${visitVoucherEditableHtml(safeText(item.type_bien), 'a completer')}</td></tr>
         <tr><th>Localite</th><td>${visitVoucherEditableHtml(propertyLocalite, 'a completer')}</td></tr>
-        ${reference ? `<tr><th>Reference</th><td>${escapeHtml(reference)}</td></tr>` : ''}
+        ${reference ? `<tr><th>Référence</th><td>${escapeHtml(reference)}</td></tr>` : ''}
       </tbody>
     </table>
     <section class="value-box">

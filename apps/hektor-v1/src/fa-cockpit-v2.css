@@ -1340,3 +1340,26 @@
   .fa-cockpit-v2 .fa-ck-timeline { display: none !important; }
 }
 
+
+/* Visite virtuelle (Matterport) — rendue dans Le Bien, régression §5 bis #6. */
+.fa-cockpit-v2 .fa-ck-mp-grp { border-top: 1px solid var(--fa-line-soft); padding-top: 12px; margin-top: 12px; }
+.fa-cockpit-v2 .fa-ck-mp-grp:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.fa-cockpit-v2 .fa-ck-mp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.fa-cockpit-v2 .fa-ck-mp-head strong {
+  display: block; font-family: 'Fraunces', 'Spectral', serif;
+  font-size: 14.5px; font-weight: 600; color: var(--fa-ink);
+}
+.fa-cockpit-v2 .fa-ck-mp-head span { font-size: 11.5px; color: var(--fa-muted); }
+.fa-cockpit-v2 .fa-ck-mp-head .fa-ck-docbadge { margin-left: auto; }
+.fa-cockpit-v2 .fa-ck-mp-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 0; border-top: 1px dashed var(--fa-line-soft);
+}
+.fa-cockpit-v2 .fa-ck-mp-main { flex: 1; min-width: 0; }
+.fa-cockpit-v2 .fa-ck-mp-main strong { display: block; font-size: 13px; font-weight: 700; color: var(--fa-ink); }
+.fa-cockpit-v2 .fa-ck-mp-main span { font-size: 11px; color: var(--fa-muted); overflow-wrap: anywhere; }
+.fa-cockpit-v2 .fa-ck-mp-acts { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Édition d'un mandant existant — régression §5 bis #3. */
+.fa-cockpit-v2 .fa-ck-ct-edit { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--fa-line-soft); }
+
