@@ -21053,6 +21053,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
+  const [histoFilter, setHistoFilter] = useState<string>('tout')
   // Édition EN PLACE (façon v21) : diff local `edited` → un seul editAnnonceOptimistic (calque + worker).
   const [edited, setEdited] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -21887,6 +21888,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 )
               })()}
               <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Éditeur d'avis de valeur (outil réel)</div>
+              {/* Raccourci de la maquette v27?view=E : « Générer le PDF de l'avis » existe
+                  déjà DANS l'éditeur (createGenerateEstimationPdfJob) — il était juste un
+                  clic plus loin. On l'expose ici, il ouvre le même outil. */}
+              {!isLightweightDetail ? (
+                <div className="fa-ck-report-actions">
+                  <button type="button" className="fa-ck-rep-btn primary" onClick={() => setEstimEditorOpen(true)}>Générer le PDF de l'avis</button>
+                </div>
+              ) : null}
               <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
             </div>
           ) : activeTab === 'mandat' ? (
@@ -22393,8 +22402,30 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {(() => {
                 const hist = parseJson<Array<{ title: string; type: string; date: string; states?: Array<{ a: string; b: string; tone?: string }>; relance?: string }>>(detailStr('historique_json') || '[]', [])
                 const colorFor = (t: string) => /baisse/i.test(t) ? '#a8814a' : /valid/i.test(t) ? '#2f8a5b' : '#3a5a8a'
-                const entries = hist.length ? hist : historiqueItems.map((h) => ({ title: h.title, type: '', date: h.date ?? '', states: h.status ? [{ a: h.status, b: '', tone: ckRequestPillTone(h.status) }] : [], relance: '' }))
+                const typeOf = (e: { title: string; type: string }) => {
+                  const t = `${e.type} ${e.title}`.toLowerCase()
+                  if (/baisse|prix/.test(t)) return 'price'
+                  if (/annul/.test(t)) return 'cancel'
+                  return 'diff'
+                }
+                const all = hist.length ? hist : historiqueItems.map((h) => ({ title: h.title, type: '', date: h.date ?? '', states: h.status ? [{ a: h.status, b: '', tone: ckRequestPillTone(h.status) }] : [], relance: '' }))
+                const entries = histoFilter === 'tout' ? all : all.filter((e) => typeOf(e) === histoFilter)
+                const countOf = (k: string) => k === 'tout' ? all.length : all.filter((e) => typeOf(e) === k).length
+                // Filtres de la maquette v27?view=H. Les compteurs portent sur les entrées
+                // RÉELLEMENT affichées (mock riche ou demandes réelles), pas sur les props
+                // — sinon ils annonceraient 0 devant une liste garnie.
+                const filtres = (
+                  <div className="fa-ck-histofilt">
+                    {([['tout', 'Tout'], ['diff', 'Diffusion'], ['price', 'Baisse de prix'], ['cancel', 'Annulation']] as Array<[string, string]>).map(([k, lbl]) => (
+                      <button key={k} type="button" className={histoFilter === k ? 'is-on' : ''} onClick={() => setHistoFilter(k)}>
+                        {lbl}<span>{countOf(k)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
                 return entries.length > 0 ? (
+                  <>
+                  {filtres}
                   <div className="fa-ck-tline">
                     {entries.map((e, i) => (
                       <div key={i} className="fa-ck-tnode" style={{ ['--c']: colorFor(e.type || e.title) } as CSSProperties}>
@@ -22409,7 +22440,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       </div>
                     ))}
                   </div>
-                ) : <p className="fa-ck-empty">Aucun historique de demande.</p>
+                  </>
+                ) : <>{filtres}<p className="fa-ck-empty">Aucun historique de demande.</p></>
               })()}
             </div>
           ) : (

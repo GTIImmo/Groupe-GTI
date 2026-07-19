@@ -1451,3 +1451,42 @@
   padding: 12px 14px;
 }
 
+
+/* Filtres de l'Historique (maquette v27?view=H) — Tout / Diffusion / Baisse / Annulation. */
+.fa-cockpit-v2 .fa-ck-histofilt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+.fa-cockpit-v2 .fa-ck-histofilt button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fa-muted);
+  background: #fff;
+  border: 1px solid var(--fa-line);
+  border-radius: 99px;
+  padding: 6px 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.fa-cockpit-v2 .fa-ck-histofilt button span {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--fa-muted);
+  background: var(--fa-cream);
+  border-radius: 99px;
+  padding: 1px 7px;
+}
+.fa-cockpit-v2 .fa-ck-histofilt button:hover { border-color: var(--ck-ac); color: var(--fa-ink); }
+.fa-cockpit-v2 .fa-ck-histofilt button.is-on {
+  color: #fff;
+  background: var(--ck-ac);
+  border-color: var(--ck-ac);
+}
+.fa-cockpit-v2 .fa-ck-histofilt button.is-on span { color: var(--ck-ac); background: #fff; }
+
