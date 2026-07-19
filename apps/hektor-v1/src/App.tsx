@@ -21652,7 +21652,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     <div className="fa-ck-pub-card"><div className="fa-ck-lb-energy">
                       {conso > 0 ? <CkDpeScale label="DPE · conso" value={conso} unit="kWh/m²/an" kind="conso" /> : null}
                       {ges > 0 ? <CkDpeScale label="GES · émissions" value={ges} unit="kg CO₂/m²/an" kind="ges" /> : null}
-                    </div></div>
+                    </div>
+                    {/* Régression corrigée (audit §5 bis #5) : les vignettes officielles
+                        DPE/GES (DpeGesVignettes) n'étaient pas rendues — le cockpit n'avait
+                        que ses barres maison. On rend les deux : barres + vignettes réelles. */}
+                    {hasDpeGesVignettes(props.detail) ? (
+                      <div className="fa-ck-lb-vignettes"><DpeGesVignettes detail={props.detail} compact /></div>
+                    ) : null}
+                    </div>
                   </>
                 ) : null
               })()}
@@ -21978,6 +21985,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 }
                 return <CkAffaires affaire={affMock ?? deriveAffaire()} />
               })()}
+              {/* Régression corrigée (audit §5 bis #4) : les propositions acquéreurs
+                  (DossierPropositionsSection) n'étaient pas rendues dans le cockpit.
+                  Composant autonome (il charge ses lignes), mêmes props que la Base. */}
+              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Propositions acquéreurs</div>
+              <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
             </div>
           ) : activeTab === 'contact' ? (
             <div className="fa-ck-rub fa-ck-contact">
@@ -22080,6 +22092,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-pub-sec">
                 <span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.historique} /></span>
                 <div><div className="fa-ck-pub-t">État diffusion</div><div className="fa-ck-pub-s">Vue de contrôle Hektor</div></div>
+                {/* Régression corrigée (audit §5 bis #10) : onOpenDiffusionModal n'était JAMAIS
+                    appelé dans le cockpit — la rubrique Publicité était en lecture seule, alors
+                    que la maquette v36 porte « Activer la diffusion et appliquer ». */}
+                {props.onOpenDiffusionModal && !isLightweightDetail ? (
+                  <button
+                    type="button"
+                    className="fa-ck-rep-btn primary"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => props.onOpenDiffusionModal?.(dossier.app_dossier_id)}
+                  >Gérer la diffusion</button>
+                ) : null}
               </div>
               <div className="fa-ck-pub-card">
                 <div className="fa-ck-pub-grid">
