@@ -21143,13 +21143,29 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
   // Position du document signable (spec §1). Séparation avenant / mandat par le
   // préfixe de libellé — point de robustesse documenté au plan §8.5, pas un blocage.
+  //
+  // GARDE-FOU (audit base 2026-07-20) : le bloc `signature.status` n'est fiable QUE
+  // s'il porte un `procedure_id` — c.-à-d. une vraie procédure ImmoSign pilotée par
+  // l'app. Mesuré en prod : 731 mandats existent, mais seuls 2 documents ont une
+  // procédure ; les 106 `to_send` restants ont procedure_id=null et ne sont PAS
+  // « édités à envoyer » — c'est la valeur par DÉFAUT pour un document dont l'app
+  // ignore le vrai statut (mandat signé côté Hektor, jamais rapatrié). Sans ce
+  // garde-fou, le cockpit afficherait « Mandat édité — à envoyer » sur un mandat en
+  // réalité signé. On n'accepte donc le statut que si une procédure existe ;
+  // sinon on renvoie null → repli sur man_valider / dif (comportement sûr).
   const ckSigStatus = (match: RegExp, exclude?: RegExp) => {
     const doc = ckDocs.find((d) => {
       const name = `${d.document_name ?? ''} ${d.document_type ?? ''}`
       if (exclude && exclude.test(name)) return false
       return match.test(name)
     })
-    return (doc?.metadata_json as { signature?: SignatureMeta } | null)?.signature?.status ?? null
+    const sig = (doc?.metadata_json as { signature?: SignatureMeta } | null)?.signature
+    if (!sig) return null
+    const hasProcedure = sig.procedure_id != null && String(sig.procedure_id).trim() !== ''
+    // Un statut « signé » reste fiable même sans procédure (il porte signed_at) ;
+    // mais « to_send » / « pending » sans procédure = défaut non fiable → ignoré.
+    if (!hasProcedure && sig.status !== 'signed') return null
+    return sig.status ?? null
   }
   const mandatSig = ckSigStatus(/mandat/i, /avenant/i)
   const avenantSig = ckSigStatus(/avenant/i)
