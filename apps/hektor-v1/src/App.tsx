@@ -20704,8 +20704,11 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
   )
 }
 
-const APP_COCKPIT_V2_ENABLED =
-  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').trim().toLowerCase())
+// TEMP DEBUG (branche cockpit-v2 preview uniquement) : forcé à true pour isoler si le souci
+// vient de la variable d'env Vercel ou d'autre chose. À REVERTIR après diagnostic.
+const APP_COCKPIT_V2_ENABLED = true
+// const APP_COCKPIT_V2_ENABLED =
+//   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').trim().toLowerCase())
 
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
