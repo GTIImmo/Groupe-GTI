@@ -20785,6 +20785,10 @@ const CK_ACTI_KMAP: Record<string, { ic: string; nc: string; nb: string; rub: st
   price:    { ic: 'publicite',    nc: '#c2125f', nb: '#f9e7ef', rub: 'mandat' },
   requalif: { ic: 'historique',   nc: '#8a807a', nb: '#f1eae1', rub: 'historique' },
   reporting:{ ic: 'reporting',    nc: '#a8814a', nb: '#f4ecd9', rub: 'reporting' },
+  // Signature ImmoSign (mandat signé / envoyé / annulé) — vert, comme la maquette.
+  sign:     { ic: 'mandat',       nc: '#2f7d59', nb: '#e3f2ea', rub: 'mandat' },
+  // Estimation (avis généré / mis à jour) — brun-doré, ouvre la rubrique Estimation.
+  estimopen:{ ic: 'estimation',   nc: '#8a6a2f', nb: '#f4ecd9', rub: 'estimation' },
 }
 // Verbe attendu par rubrique (aligné sur les libellés de la maquette).
 const CK_ACTI_LABEL: Record<string, string> = {
