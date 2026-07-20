@@ -21096,6 +21096,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Fil d'activité RÉEL (RPC app_cockpit_activite) : agrège les événements du dossier.
   // Remplace le fallback pauvre quand il n'y a pas de mock activite_json.
   const [ckActi, setCkActi] = useState<CockpitActiviteRow[]>([])
+  // Nombre d'acquéreurs rapprochés (moteur de scoring, RPC app_get_rapprochements_for_dossier).
+  // Source AUTORITATIVE identique au listing Mandats : le rail « Rapprochement » doit porter ce
+  // compteur (la maquette v26 affiche « N acquéreur » dans le foot de la rubrique).
+  const [ckAcq, setCkAcq] = useState<RapprochementCount | null>(null)
   // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
   // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
   const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
@@ -21132,6 +21136,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     void loadCockpitActivite(id, 30)
       .then((rows) => { if (!cancelled) setCkActi(rows) })
       .catch(() => { if (!cancelled) setCkActi([]) })
+    return () => { cancelled = true }
+  }, [dossier?.app_dossier_id])
+  useEffect(() => {
+    const id = dossier?.app_dossier_id
+    if (!id) { setCkAcq(null); return }
+    let cancelled = false
+    void loadRapprochementCounts([id])
+      .then((m) => { if (!cancelled) setCkAcq(m.get(id) ?? null) })
+      .catch(() => { if (!cancelled) setCkAcq(null) })
     return () => { cancelled = true }
   }, [dossier?.app_dossier_id])
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
@@ -21350,10 +21363,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const docFoot: CkFoot = ['alert', 'À préparer']
   const rdvFoot: CkFoot = appts.length > 0 ? ['ok', `${appts.length} demande${appts.length > 1 ? 's' : ''}`] : ['neutral', 'Visites · demandes']
   const pubFoot: CkFoot = nbPortails > 0 ? ['ok', `${nbPortails} portail${nbPortails > 1 ? 's' : ''}`] : ['neutral', 'Diffusion']
+  // Foot Rapprochement : le VRAI nombre d'acquéreurs rapprochés (n_total), comme la maquette v26.
+  // Sans compteur, la rubrique n'affichait qu'« Acquéreurs » — le nombre manquait (retour Frédéric).
+  const nbAcq = ckAcq?.n_total ?? 0
+  const acqFoot: CkFoot = nbAcq > 0
+    ? ['ok', `${nbAcq} acquéreur${nbAcq > 1 ? 's' : ''}`]
+    : ['neutral', 'Aucun acquéreur']
   const CK_PHASE: Record<string, { feat: Array<[string, CkFoot]>; autre: string[] }> = {
     est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['documents', 'historique', 'reporting'] },
     man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['estimation', 'historique', 'reporting'] },
-    dif: { feat: [['publicite', pubFoot], ['rapprochement', ['ok', 'Acquéreurs']], ['documents', docFoot]], autre: ['mandat', 'estimation', 'affaires', 'historique', 'reporting'] },
+    dif: { feat: [['publicite', pubFoot], ['rapprochement', acqFoot], ['documents', docFoot]], autre: ['mandat', 'estimation', 'affaires', 'historique', 'reporting'] },
     tra: { feat: [['affaires', ['alert', 'Offre / compromis']]], autre: ['documents', 'publicite', 'rapprochement', 'mandat', 'historique', 'reporting'] },
     ven: { feat: [['affaires', ['neutral', `Vendu · ${formatPrice(dossier.prix)}`]], ['reporting', ['neutral', 'Bilan de vente']]], autre: ['documents', 'mandat', 'historique'] },
   }
