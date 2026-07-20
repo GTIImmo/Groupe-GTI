@@ -21062,6 +21062,10 @@ function ckRequestPillTone(status: string | null | undefined) {
 const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string; color: string; bg: string }> = [
   { key: 'synthese', label: 'Synthèse', sub: "Vue d'ensemble", ico: CK_ICON.synthese, color: '#c2125f', bg: '#f9e7ef' },
   { key: 'lebien', label: 'Le Bien', sub: 'Photos · descriptif · caractéristiques', ico: CK_ICON.lebien, color: '#b5651d', bg: '#f6e9db' },
+  // « Médias & pièces » (maquette v21) : rendu ici en RUBRIQUE + page, comme les autres, plutôt
+  // qu'en tiroir latéral — l'app n'a pas de composant tiroir et une page reste cohérente avec
+  // le reste du cockpit. Regroupe ce qui était éparpillé : photos, documents, visite virtuelle.
+  { key: 'medias', label: 'Médias & pièces', sub: 'Photos · documents · visite 3D', ico: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 21"/>', color: '#7a4bb0', bg: '#f1eafc' },
   { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur · cadastre', ico: CK_ICON.estimation, color: '#8a6a2f', bg: '#f4ecd9' },
   { key: 'mandat', label: 'Mandat', sub: 'Mandat · avenant · signature', ico: CK_ICON.mandat, color: '#9d0f4e', bg: '#f9e7ef' },
   { key: 'contact', label: 'Contact', sub: 'Mandants · syndic · notaires', ico: CK_ICON.contact, color: '#3a5a8a', bg: '#e7edf7' },
@@ -21113,6 +21117,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // sauvegarde (editAnnonceOptimistic), pour ne pas créer un second comportement.
   const [ckPieces, setCkPieces] = useState<HektorCompositionPieceDraft[]>(() => buildHektorCompositionPiecesFromDetail(props.detail))
   const [ckPieceDraft, setCkPieceDraft] = useState<HektorCompositionPieceDraft>(() => createEmptyHektorCompositionPieceDraft())
+  // Onglet courant de la rubrique « Médias & pièces » (Photos / Documents / Visite 3D).
+  const [ckMediaTab, setCkMediaTab] = useState<'photos' | 'docs' | 'visite'>('photos')
   // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
   // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
   const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
@@ -21387,10 +21393,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // reprend la même règle que la rubrique Documents (non signé = à préparer).
   const ckDocCount = ckDocs.length
   const ckDocToPrep = ckDocs.filter((d) => (d.metadata_json as { signature?: SignatureMeta } | null)?.signature?.status !== 'signed').length
-  const openMatterport = () => {
-    setActiveTab('lebien')
-    window.setTimeout(() => document.getElementById('fa-ck-matterport')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80)
-  }
+  // Tous les points d'entrée média (pictos du hero, tuiles de « Le Bien », photos de la mosaïque)
+  // convergent désormais vers UNE page, sur le bon onglet — au lieu de partir à trois endroits.
+  const goMedia = (tab: 'photos' | 'docs' | 'visite') => { setCkMediaTab(tab); setActiveTab('medias') }
   const CK_PHASE: Record<string, { feat: Array<[string, CkFoot]>; autre: string[] }> = {
     est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['documents', 'historique', 'reporting'] },
     man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['estimation', 'historique', 'reporting'] },
@@ -21421,8 +21426,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const lebienFoot: CkFoot = (dpeVal > 0 || gesVal > 0)
     ? ['neutral', `DPE ${dpeVal > 0 ? ckDpeLetter(dpeVal, 'conso') : '—'} · GES ${gesVal > 0 ? ckDpeLetter(gesVal, 'ges') : '—'}`]
     : ['alert', 'Diagnostics manquants']
+  // « Médias & pièces » juste après « Le Bien » : c'est là qu'on va après avoir vu la fiche.
+  const mediaFoot: CkFoot = ckDocToPrep > 0
+    ? ['alert', `${ckDocToPrep} à préparer`]
+    : ['neutral', `${props.images.length} photo${props.images.length > 1 ? 's' : ''} · ${ckDocCount} doc${ckDocCount > 1 ? 's' : ''}`]
   const featList: Array<[string, CkFoot]> = [
     ['lebien', lebienFoot],
+    ['medias', mediaFoot],
     ...PH.feat,
     ['rendezvous', rdvFoot],
     ['contact', contactFoot],
@@ -21628,22 +21638,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   avec leurs pictos, chacun ouvrant son bloc dédié. */}
               <div className="fa-ck-media-bar">
                 <button
-                  type="button" className="fa-ck-mb" onClick={() => goRub('lebien')}
-                  title={`${props.images.length} photo${props.images.length > 1 ? 's' : ''} — ouvrir la galerie`}
+                  type="button" className="fa-ck-mb" onClick={() => goMedia('photos')}
+                  title={`${props.images.length} photo${props.images.length > 1 ? 's' : ''} — ouvrir Médias & pièces`}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                   {props.images.length}
                 </button>
                 <button
-                  type="button" className="fa-ck-mb" onClick={() => goRub('documents')}
-                  title={`${ckDocCount} document${ckDocCount > 1 ? 's' : ''}${ckDocToPrep > 0 ? ` · ${ckDocToPrep} à préparer` : ''} — ouvrir les documents`}
+                  type="button" className="fa-ck-mb" onClick={() => goMedia('docs')}
+                  title={`${ckDocCount} document${ckDocCount > 1 ? 's' : ''}${ckDocToPrep > 0 ? ` · ${ckDocToPrep} à préparer` : ''} — ouvrir Médias & pièces`}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                   {ckDocCount}
                   {ckDocToPrep > 0 ? <span className="fa-ck-mb-al">{ckDocToPrep}</span> : null}
                 </button>
                 <button
-                  type="button" className="fa-ck-mb" onClick={openMatterport}
+                  type="button" className="fa-ck-mb" onClick={() => goMedia('visite')}
                   title={ckMatterportCount > 0 ? `${ckMatterportCount} visite virtuelle liée${ckMatterportCount > 1 ? 's' : ''}` : 'Visite virtuelle (Matterport)'}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z" /><path d="m3 7 9 5 9-5" /><path d="M12 12v10" /></svg>
@@ -21857,7 +21867,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   {props.images.slice(0, 5).map((img, i) => {
                     const isLastMore = i === 4 && props.images.length > 5
                     return (
-                      <button key={img.url} type="button" className={`fa-ck-gimg${i === 0 ? ' hero' : ''}`} onClick={() => props.onOpenImage?.(img.url)}>
+                      <button key={img.url} type="button" className={`fa-ck-gimg${i === 0 ? ' hero' : ''}`} onClick={() => goMedia('photos')}>
                         <img src={img.url} alt={img.legend || ''} />
                         {i === 0 ? (
                           <span className="fa-ck-gpill">
@@ -21871,30 +21881,24 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   })}
                 </div>
               ) : null}
-              {/* Raccourcis médias (façon v21) : photos · documents · visite virtuelle */}
-              {(() => {
-                const docs = parseJson<Array<{ signed?: boolean }>>(detailStr('documents_json') || '[]', [])
-                const toPrep = docs.filter((d) => !d.signed).length
-                return (
-                  <div className="fa-ck-mshorts">
-                    <button type="button" className="fa-ck-msc p" onClick={() => props.images[0] && props.onOpenImage?.(props.images[0].url)}>
-                      <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span>
-                      <div><div className="mct">{props.images.length} photo{props.images.length > 1 ? 's' : ''}</div><div className="mcs">Gérer · ajouter · réordonner</div></div>
-                    </button>
-                    <button type="button" className="fa-ck-msc d" onClick={() => setActiveTab('documents')}>
-                      <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
-                      <div><div className="mct">{docs.length} document{docs.length > 1 ? 's' : ''}</div><div className="mcs">Ajouter · préparer</div></div>
-                      {toPrep > 0 ? <span className="mca">{toPrep} à préparer</span> : null}
-                    </button>
-                    {/* Régression corrigée (audit §5 bis #6) : cette tuile n'avait AUCUN onClick.
-                        Elle amène désormais sur la section Matterport réelle, rendue plus bas. */}
-                    <button type="button" className="fa-ck-msc v" onClick={() => document.getElementById('fa-ck-matterport')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
-                      <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
-                      <div><div className="mct">Visite virtuelle</div><div className="mcs">{ckMatterportCount > 0 ? `${ckMatterportCount} visite${ckMatterportCount > 1 ? 's' : ''} liée${ckMatterportCount > 1 ? 's' : ''}` : 'Matterport 3D · ajouter'}</div></div>
-                    </button>
-                  </div>
-                )
-              })()}
+              {/* Raccourcis médias (façon v21) : les 3 ouvrent la rubrique « Médias & pièces »
+                  sur le bon onglet. Le comptage des documents vient de ckDocs — MÊME source que
+                  les pictos du hero (auparavant les deux comptaient différemment). */}
+              <div className="fa-ck-mshorts">
+                <button type="button" className="fa-ck-msc p" onClick={() => goMedia('photos')}>
+                  <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span>
+                  <div><div className="mct">{props.images.length} photo{props.images.length > 1 ? 's' : ''}</div><div className="mcs">Gérer · ajouter</div></div>
+                </button>
+                <button type="button" className="fa-ck-msc d" onClick={() => goMedia('docs')}>
+                  <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
+                  <div><div className="mct">{ckDocCount} document{ckDocCount > 1 ? 's' : ''}</div><div className="mcs">Ajouter · préparer</div></div>
+                  {ckDocToPrep > 0 ? <span className="mca">{ckDocToPrep} à préparer</span> : null}
+                </button>
+                <button type="button" className="fa-ck-msc v" onClick={() => goMedia('visite')}>
+                  <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
+                  <div><div className="mct">Visite virtuelle</div><div className="mcs">{ckMatterportCount > 0 ? `${ckMatterportCount} visite${ckMatterportCount > 1 ? 's' : ''} liée${ckMatterportCount > 1 ? 's' : ''}` : 'Matterport 3D · ajouter'}</div></div>
+                </button>
+              </div>
               {/* Bande de statistiques clés (façon v21) */}
               {(() => {
                 const expo = (() => { const f = CK_WIZARD_FIELD_BY_NAME['EXPOSITION']; const raw = wizFieldValue('EXPOSITION'); return raw && f?.options ? (f.options.find((o) => o.value === raw)?.label ?? raw) : raw })()
@@ -22004,48 +22008,94 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 </>
               ) : null}
-              {/* Gestion des photos : vrai composant Console (ajout / synchro Hektor) */}
-              <section className="detail-section fa-ck-lb-photos">
-                <div className="fa-ck-lb-manage-h">Gérer les photos</div>
-                {isLightweightDetail
-                  ? <ReadOnlyDetailNotice label="Les photos ne peuvent pas etre modifiees depuis une fiche d'index leger." />
-                  : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
-                {/* Régression corrigée (audit §5 bis #6) : la visite virtuelle Matterport
-                    n'était pas rendue du tout dans le cockpit. On rend le vrai contenu
-                    (groupes + modèles) avec MatterportModelActions, mêmes handlers. */}
-                <div className="fa-ck-lb-manage-h" id="fa-ck-matterport" style={{ marginTop: 18 }}>Visite virtuelle (Matterport)</div>
-                {ckMatterportGroups.length > 0 ? (
-                  <div className="fa-ck-pub-card fa-ck-mp">
-                    {ckMatterportGroups.map((group) => {
-                      const models = group.models ?? []
-                      const single = models.length <= 1
-                      return (
-                        <div key={group.id} className="fa-ck-mp-grp">
-                          <div className="fa-ck-mp-head">
-                            <div>
-                              <strong>{group.group_label || (group.numero_mandat ? `Mandat ${group.numero_mandat}` : 'Groupe Matterport')}</strong>
-                              <span>{models.length} visite{models.length > 1 ? 's' : ''} liée{models.length > 1 ? 's' : ''}</span>
+            </div>
+          ) : activeTab === 'medias' ? (
+            /* « Médias & pièces » — rubrique + page (choix de Frédéric plutôt qu'un tiroir
+               latéral : l'app n'a pas de composant tiroir, et une page reste cohérente avec les
+               autres rubriques). Regroupe ce qui partait auparavant à trois endroits. */
+            <div className="fa-ck-rub fa-ck-medias">
+              <div className="fa-ck-mtabs" role="tablist">
+                <button type="button" role="tab" aria-selected={ckMediaTab === 'photos'} className={`fa-ck-mtab${ckMediaTab === 'photos' ? ' on' : ''}`} onClick={() => setCkMediaTab('photos')}>
+                  Photos<span className="n">{props.images.length}</span>
+                </button>
+                <button type="button" role="tab" aria-selected={ckMediaTab === 'docs'} className={`fa-ck-mtab${ckMediaTab === 'docs' ? ' on' : ''}`} onClick={() => setCkMediaTab('docs')}>
+                  Documents<span className="n">{ckDocCount}</span>
+                </button>
+                <button type="button" role="tab" aria-selected={ckMediaTab === 'visite'} className={`fa-ck-mtab${ckMediaTab === 'visite' ? ' on' : ''}`} onClick={() => setCkMediaTab('visite')}>
+                  Visite 3D{ckMatterportCount > 0 ? <span className="n">{ckMatterportCount}</span> : null}
+                </button>
+              </div>
+
+              {ckMediaTab === 'photos' ? (
+                <section className="detail-section fa-ck-lb-photos">
+                  {isLightweightDetail
+                    ? <ReadOnlyDetailNotice label="Les photos ne peuvent pas etre modifiees depuis une fiche d'index leger." />
+                    : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+                </section>
+              ) : ckMediaTab === 'docs' ? (
+                <section className="detail-section">
+                  {/* Liste de lecture rapide (façon v21). La préparation, la signature et l'ajout
+                      restent dans la rubrique Documents : on ne duplique pas l'outillage. */}
+                  {ckDocs.length > 0 ? (
+                    <div className="fa-ck-pub-card fa-ck-mdocs">
+                      {ckDocs.map((d) => {
+                        const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature
+                        const signed = sig?.status === 'signed'
+                        const cloud = Boolean(d.storage_bucket) && String(d.storage_status ?? '').toLowerCase() !== 'missing'
+                        return (
+                          <div key={d.id} className="fa-ck-mdoc">
+                            <span className="fa-ck-mdoc-ic" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /></svg>
+                            </span>
+                            <div className="fa-ck-mdoc-tx">
+                              <div className="dn">{d.document_name ?? 'Document'}</div>
+                              <div className="dm">{cloud ? 'Cloud' : 'À préparer'}</div>
                             </div>
-                            <span className="fa-ck-docbadge">{matterportStateLabel(group.group_state)}</span>
+                            <span className={`fa-ck-mpill ${signed ? 'ok' : 'warn'}`}>{signed ? 'Signé' : 'À préparer'}</span>
                           </div>
-                          {models.map((model) => (
-                            <div key={model.matterport_model_id} className="fa-ck-mp-row">
-                              <div className="fa-ck-mp-main">
-                                <strong>{matterportModelLabel(model.label, model.matterport_name, single)}</strong>
-                                <span>{model.matterport_name || model.matterport_model_id}</span>
-                              </div>
-                              <div className="fa-ck-mp-acts">
-                                <span className="fa-ck-docbadge">{matterportVisibilityLabel(model.visibility)}</span>
-                                {!isLightweightDetail ? <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} compact /> : null}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
+                  ) : <p className="fa-ck-empty">Aucun document pour cette annonce.</p>}
+                  <div className="fa-ck-mfoot">
+                    <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Ajouter · préparer · signer</button>
                   </div>
-                ) : <p className="fa-ck-empty">Aucune visite Matterport liée à cette annonce.</p>}
-              </section>
+                </section>
+              ) : (
+                <section className="detail-section" id="fa-ck-matterport">
+                  {ckMatterportGroups.length > 0 ? (
+                    <div className="fa-ck-pub-card fa-ck-mp">
+                      {ckMatterportGroups.map((group) => {
+                        const models = group.models ?? []
+                        const single = models.length <= 1
+                        return (
+                          <div key={group.id} className="fa-ck-mp-grp">
+                            <div className="fa-ck-mp-head">
+                              <div>
+                                <strong>{group.group_label || (group.numero_mandat ? `Mandat ${group.numero_mandat}` : 'Groupe Matterport')}</strong>
+                                <span>{models.length} visite{models.length > 1 ? 's' : ''} liée{models.length > 1 ? 's' : ''}</span>
+                              </div>
+                              <span className="fa-ck-docbadge">{matterportStateLabel(group.group_state)}</span>
+                            </div>
+                            {models.map((model) => (
+                              <div key={model.matterport_model_id} className="fa-ck-mp-row">
+                                <div className="fa-ck-mp-main">
+                                  <strong>{matterportModelLabel(model.label, model.matterport_name, single)}</strong>
+                                  <span>{model.matterport_name || model.matterport_model_id}</span>
+                                </div>
+                                <div className="fa-ck-mp-acts">
+                                  <span className="fa-ck-docbadge">{matterportVisibilityLabel(model.visibility)}</span>
+                                  {!isLightweightDetail ? <MatterportModelActions dossier={dossier} model={model} onJobCreated={props.onHektorActionJobCreated} compact /> : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : <p className="fa-ck-empty">Aucune visite Matterport liée à cette annonce.</p>}
+                </section>
+              )}
             </div>
           ) : activeTab === 'documents' ? (
             <div className="fa-ck-rub fa-ck-documents">
