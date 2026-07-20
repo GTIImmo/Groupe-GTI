@@ -19543,16 +19543,12 @@ function MandatRegisterScreen(props: {
   // state : juste de la présentation à partir de données déjà chargées).
   const mdApproved = isValidationApproved(selectedDetail?.validation_diffusion_state)
   const mdDiffusable = isDiffusableValue(selectedDetail?.diffusable)
-  const mdDebutDate = selectedDetail?.mandat_date_debut ? new Date(selectedDetail.mandat_date_debut) : null
-  const mdFinDate = selectedDetail?.mandat_date_fin ? new Date(selectedDetail.mandat_date_fin) : null
-  const mdDatesValid = Boolean(mdDebutDate && mdFinDate && !Number.isNaN(mdDebutDate.getTime()) && !Number.isNaN(mdFinDate.getTime()) && mdFinDate.getTime() > mdDebutDate.getTime())
-  const mdDayMs = 86400000
-  const mdNowMs = Date.now()
-  const mdDureeJours = mdDatesValid ? Math.round((mdFinDate!.getTime() - mdDebutDate!.getTime()) / mdDayMs) : 0
-  const mdDureeMois = mdDatesValid ? Math.max(1, Math.round(mdDureeJours / 30.44)) : null
-  const mdEcouleJours = mdDatesValid ? Math.min(mdDureeJours, Math.max(0, Math.round((mdNowMs - mdDebutDate!.getTime()) / mdDayMs))) : 0
-  const mdPct = mdDatesValid ? Math.max(0, Math.min(100, Math.round((mdEcouleJours / mdDureeJours) * 100))) : 0
-  const mdJoursRestants = mdDatesValid ? Math.max(0, Math.round((mdFinDate!.getTime() - mdNowMs) / mdDayMs)) : null
+  // Calcul partagé avec le cockpit (computeMandatTiming) : une seule règle, pas deux.
+  const mdTiming = computeMandatTiming(selectedDetail?.mandat_date_debut, selectedDetail?.mandat_date_fin)
+  const mdDatesValid = mdTiming.valid
+  const mdDureeMois = mdTiming.dureeMois
+  const mdPct = mdTiming.pct
+  const mdJoursRestants = mdTiming.joursRestants
   const mdAddress = selectedDetail ? String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '') : ''
   // Props STABLES pour l'editeur d'avenant. Sans memoisation, chaque re-render de
   // l'app (poll des jobs Hektor ~5s en prod) recree ces objets -> l'initialDraft
@@ -19741,7 +19737,10 @@ function MandatRegisterScreen(props: {
         >
           <section
             id="mandat-detail-root"
-            className="modal-panel modal-panel-detail mandate-register-modal"
+            /* `md-root` : le design du détail mandat était scopé sur l'ID, donc inutilisable
+               ailleurs. Re-scopé sur cette classe pour être partagé avec la rubrique Mandat du
+               cockpit. L'ID est conservé (aucun JS n'en dépend, mais on ne casse rien). */
+            className="modal-panel modal-panel-detail mandate-register-modal md-root"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="md-panel">
@@ -20808,6 +20807,27 @@ function CkIcon({ path }: { path: string }) {
 // Sections de la fiche « Le Bien », alignées sur la maquette v21 mais peuplées avec
 // les VRAIS champs du formulaire d'édition Hektor (draftAnnonceWizardGroups) → prod-ready.
 // condField : la section n'apparaît que si ce champ vaut « oui » (Piscine, Copropriété).
+// Chronologie du mandat (durée, part écoulée, jours restants). Extrait du détail mandat du
+// registre pour être partagé avec le cockpit : une seule règle de calcul, pas deux.
+type MandatTiming = { valid: boolean; dureeJours: number; dureeMois: number | null; pct: number; joursRestants: number | null }
+function computeMandatTiming(debut: string | null | undefined, fin: string | null | undefined): MandatTiming {
+  const d = debut ? new Date(debut) : null
+  const f = fin ? new Date(fin) : null
+  const valid = Boolean(d && f && !Number.isNaN(d.getTime()) && !Number.isNaN(f.getTime()) && f.getTime() > d.getTime())
+  if (!valid || !d || !f) return { valid: false, dureeJours: 0, dureeMois: null, pct: 0, joursRestants: null }
+  const dayMs = 86400000
+  const now = Date.now()
+  const dureeJours = Math.round((f.getTime() - d.getTime()) / dayMs)
+  const ecoule = Math.min(dureeJours, Math.max(0, Math.round((now - d.getTime()) / dayMs)))
+  return {
+    valid: true,
+    dureeJours,
+    dureeMois: Math.max(1, Math.round(dureeJours / 30.44)),
+    pct: Math.max(0, Math.min(100, Math.round((ecoule / dureeJours) * 100))),
+    joursRestants: Math.max(0, Math.round((f.getTime() - now) / dayMs)),
+  }
+}
+
 const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string; bg: string; ico: string; condField?: string; fields: Array<[string, string, string?]> }> = [
   { key: 'composition', label: 'Composition', sub: 'Pièces & niveaux', c: '#7a4bb0', bg: '#f1eafc', ico: '<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>', fields: [['Nombre de pièces', 'nbpieces'], ['Chambres', 'NB_CHAMBRES'], ['Niveaux', 'NB_NIVEAUX'], ['Étage', 'ETAGE'], ['Surface habitable', 'surfappart', 'm²'], ['Surface Carrez', 'SURF_CARREZ', 'm²'], ['Exposition', 'EXPOSITION'], ['Vue', 'vuee'], ['Dernier étage', 'DERNIER_ETAGE'], ['Indication étage', 'floorState'], ['Résidence', 'RESIDENCE'], ['Type résidence', 'TYPE_RESIDENCE'], ['Immeuble', 'immeuble']] },
   { key: 'interieur', label: 'Intérieur', sub: 'Pièces & agencement', c: '#b5651d', bg: '#f6e9db', ico: '<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 11a2 2 0 0 1 4 0v3h12v-3a2 2 0 0 1 4 0v6H2z"/>', fields: [['Salles de bain', 'NB_SDB'], ["Salles d'eau", 'NB_SE'], ['WC', 'NB_WC'], ['Surface séjour', 'SURF_SEJOUR', 'm²'], ['Cuisine', 'CUISINE'], ['Équipement cuisine', 'CUISINE_EQUIPEMENT'], ['Cheminée', 'cheminee'], ['Particularités', 'Particularites'], ['Clearing', 'clearing']] },
@@ -21207,6 +21227,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const dossierRec = dossier as Record<string, unknown>
   const mandatDateFin = dossierRec['mandat_date_fin'] == null ? '' : String(dossierRec['mandat_date_fin']).trim()
   const mandatEchu = pMandatNum && Boolean(mandatDateFin) && !isMandateEndDateStillValid(mandatDateFin)
+  // Chronologie du mandat, calculée avec la MÊME règle que le détail mandat du registre.
+  const mandatDateDebut = dossierRec['mandat_date_debut'] == null ? '' : String(dossierRec['mandat_date_debut']).trim()
+  const ckMandatTiming = computeMandatTiming(mandatDateDebut, mandatDateFin)
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
@@ -21704,6 +21727,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <div className="fa-ck-timeline">
             <div className="fa-ck-tl-head">
               <span className="fa-ck-tl-ey">Vie du mandat</span>
+              {/* Rappel du temps restant du mandat, au même niveau que la barre de sous-état.
+                  Reprend la jauge du détail mandat du registre (même calcul, même code couleur) :
+                  ambre sous 60 jours, rouge si échu. Cliquable → rubrique Mandat. */}
+              {ckMandatTiming.valid && pMandatNum ? (
+                <button
+                  type="button"
+                  className={`fa-ck-tl-mandat${mandatEchu ? ' is-over' : (ckMandatTiming.joursRestants ?? 999) <= 60 ? ' is-soon' : ''}`}
+                  onClick={() => goRub('mandat')}
+                  title={`Mandat ${mandatEchu ? 'échu' : 'en cours'} — échéance le ${formatDate(mandatDateFin)}`}
+                >
+                  <span className="fa-ck-tl-mandat-v">
+                    {mandatEchu ? 'Échu' : <>{ckMandatTiming.joursRestants}<span className="u"> j</span></>}
+                  </span>
+                  <span className="fa-ck-tl-mandat-tx">
+                    <span className="k">{mandatEchu ? 'Mandat expiré' : 'Mandat · restant'}</span>
+                    <span className="fa-ck-tl-mandat-tr" aria-hidden="true"><i style={{ width: `${ckMandatTiming.pct}%` }} /></span>
+                  </span>
+                </button>
+              ) : null}
               {props.onChangeAnnonceStatus && !isLightweightDetail && !ckStageDef.ro ? (
                 <button type="button" className="fa-ck-tl-status" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
                   {/* Audit visuel §13 : pastille de couleur de l'état, qui manquait. */}
@@ -22267,7 +22309,33 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
             </div>
           ) : activeTab === 'mandat' ? (
-            <div className="fa-ck-rub fa-ck-mandat">
+            /* `md-root` : réutilise le design du détail mandat du registre (chiffres clés +
+               cycle de vie), re-scopé de l'ID vers cette classe pour être partageable. */
+            <div className="fa-ck-rub fa-ck-mandat md-root">
+              {ckMandatTiming.valid && pMandatNum ? (
+                <div className="fa-ck-mdblock">
+                  <div className="md-figures">
+                    <div className="md-fig"><div className="v brand">{formatPrice(Number(dossierRec['mandat_montant'] ?? dossier.prix ?? 0) || null)}</div><div className="k">Montant</div></div>
+                    <div className="md-fig"><div className="v">{ckMandatTiming.dureeMois} <span className="u">mois</span></div><div className="k">Durée</div></div>
+                    <div className="md-fig"><div className="v">{ckMandatTiming.pct} <span className="u">%</span></div><div className="k">Temps écoulé</div></div>
+                    <div className="md-fig"><div className={`v ${mandatEchu ? 'amber' : 'amber'}`}>{mandatEchu ? '0' : ckMandatTiming.joursRestants} <span className="u">j</span></div><div className="k">Jours restants</div></div>
+                  </div>
+                  <div className="md-lifecycle">
+                    <div className="md-lc-top">
+                      <span className="md-lc-label">Cycle de vie du mandat</span>
+                      <span className="md-lc-rem">échéance le {formatDate(mandatDateFin)} · ~{ckMandatTiming.dureeMois} mois</span>
+                    </div>
+                    <div className="md-lc-track">
+                      <div className="md-lc-fill" style={{ width: `${ckMandatTiming.pct}%` }} />
+                      <div className="md-lc-today" style={{ left: `${ckMandatTiming.pct}%` }}><span className="md-lc-today-lab">Aujourd'hui</span></div>
+                    </div>
+                    <div className="md-lc-ends">
+                      <div className="md-lc-end"><span className="ek">Signature</span><span className="ev">{formatDate(mandatDateDebut)}</span></div>
+                      <div className="md-lc-end r"><span className="ek">Échéance</span><span className="ev">{formatDate(mandatDateFin)}</span></div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               {(() => {
                 type CkMandat = { num: string; type: string; dateStart: string; dateEnd: string; statut: string; honorairesVendeur?: string; taux?: string; demarches?: Array<{ title: string; sub: string; state: string; badge?: string; act?: string; lockLabel?: string }>; avenant?: { num: string; repris: Array<{ t: string; ok?: boolean; warn?: boolean }>; nouveauxHonos?: string; dateAvenant?: string }; signatures?: Array<{ av: string; tone: string; name: string; sub: string; badge: string; badgeTone: string }> }
                 const mandatMock = parseJson<CkMandat | null>(detailStr('mandat_json') || 'null', null)

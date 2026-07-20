@@ -239,6 +239,36 @@
 .fa-ck-tl-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
 .fa-ck-tl-ey { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #a89e95; }
 .fa-ck-tl-status { margin-left: auto; font: inherit; display: inline-flex; align-items: center; gap: 11px; background: #fff; border: 1px solid #e9dcc5; border-radius: 999px; padding: 6px 8px 6px 7px; cursor: pointer; box-shadow: 0 14px 30px -18px rgba(24, 18, 14, .3), 0 2px 5px rgba(24, 18, 14, .05); transition: .2s; }
+/* Bloc chiffres clés + cycle de vie repris du détail mandat du registre (classes md-*). */
+.fa-ck-mandat .fa-ck-mdblock { margin-bottom: 18px; }
+
+/* ===== Rappel « temps restant du mandat », au niveau de la barre de sous-état =====
+   Même calcul et même code couleur que la jauge du détail mandat du registre. */
+.fa-ck-tl-mandat {
+  display: inline-flex; align-items: center; gap: 10px; flex: none; cursor: pointer;
+  background: linear-gradient(120deg, #fff, #fdf7f1);
+  border: 1px solid var(--fa-gold-line); border-radius: 99px;
+  padding: 6px 15px 6px 12px; margin-right: 10px;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.fa-ck-tl-mandat:hover { border-color: var(--fa-gold); box-shadow: 0 14px 26px -14px rgba(24, 18, 14, .35); transform: translateY(-1px); }
+.fa-ck-tl-mandat-v {
+  font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600;
+  line-height: 1; color: var(--fa-gold); font-variant-numeric: tabular-nums;
+}
+.fa-ck-tl-mandat-v .u { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 700; }
+.fa-ck-tl-mandat-tx { display: flex; flex-direction: column; gap: 4px; min-width: 92px; }
+.fa-ck-tl-mandat-tx .k { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--fa-muted); }
+.fa-ck-tl-mandat-tr { display: block; height: 4px; border-radius: 99px; background: #efe6da; overflow: hidden; }
+.fa-ck-tl-mandat-tr i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #c79a4f, var(--fa-gold)); }
+/* Sous 60 jours : ambre. Échu : rouge. */
+.fa-ck-tl-mandat.is-soon { border-color: #f0dcae; background: linear-gradient(120deg, #fffdf7, #fbf3e2); }
+.fa-ck-tl-mandat.is-soon .fa-ck-tl-mandat-v { color: #9a5b05; }
+.fa-ck-tl-mandat.is-soon .fa-ck-tl-mandat-tr i { background: linear-gradient(90deg, #e0a33f, #c2701a); }
+.fa-ck-tl-mandat.is-over { border-color: #e8c3c3; background: linear-gradient(120deg, #fffafa, #fbeeee); }
+.fa-ck-tl-mandat.is-over .fa-ck-tl-mandat-v { color: #a3272c; font-size: 15px; }
+.fa-ck-tl-mandat.is-over .fa-ck-tl-mandat-tr i { background: linear-gradient(90deg, #d06a6a, #a3272c); }
+
 /* Audit visuel §12 : la pastille de statut doit se SOULEVER au survol et la flèche avancer. */
 .fa-ck-tl-status:hover { border-color: var(--fa-gold); box-shadow: 0 24px 44px -18px rgba(24, 18, 14, .4), 0 3px 6px rgba(24, 18, 14, .08); transform: translateY(-2px); }
 .fa-ck-tl-status:hover .fa-ck-tl-go { box-shadow: 0 10px 20px -8px rgba(194, 18, 95, .8), inset 0 1px 0 rgba(255, 255, 255, .35); }
