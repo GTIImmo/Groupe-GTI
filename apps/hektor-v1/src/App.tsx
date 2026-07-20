@@ -21724,13 +21724,26 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           </div>
           <div className="fa-ck-wc">
           {activeTab !== 'synthese' ? (
-            <div className="fa-ck-content-head">
-              <button type="button" className="fa-ck-ch-back" onClick={() => setActiveTab('synthese')} aria-label="Retour à la synthèse">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
-                <span>Synthèse</span>
+            /* Barre d'en-tête de rubrique de la v26 (.rp-bar) : bouton de retour, médaillon
+               À LA COULEUR de la rubrique, nom en Fraunces + sous-titre, réf et fermeture.
+               Remplace le filet de texte gris qui ne disait ni où on est, ni comment ressortir. */
+            <div className="fa-ck-rp-bar" style={{ ['--c']: currentTab.color } as CSSProperties}>
+              <button type="button" className="fa-ck-rp-back" onClick={() => setActiveTab('synthese')} title="Retour au cockpit (Échap)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                <span>Retour au cockpit</span>
               </button>
-              <span className="fa-ck-content-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
-              <strong>{currentTab.label}</strong>
+              <span className="fa-ck-rp-sep" aria-hidden="true" />
+              <span className="fa-ck-rp-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
+              <div className="fa-ck-rp-tt">
+                <span className="fa-ck-rp-name">{currentTab.label}</span>
+                <span className="fa-ck-rp-sub">{currentTab.sub}</span>
+              </div>
+              {dossier.numero_dossier || dossier.hektor_annonce_id ? (
+                <span className="fa-ck-rp-ref">RÉF. <b>{dossier.numero_dossier ?? dossier.hektor_annonce_id}</b></span>
+              ) : null}
+              <button type="button" className="fa-ck-rp-x" onClick={() => setActiveTab('synthese')} title="Fermer la rubrique" aria-label="Fermer la rubrique">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
             </div>
           ) : null}
 
