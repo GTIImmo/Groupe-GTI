@@ -21077,6 +21077,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [showAutres, setShowAutres] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
   const [histoFilter, setHistoFilter] = useState<string>('tout')
+  const [docFilter, setDocFilter] = useState<string>('tous')
   // Édition EN PLACE (façon v21) : diff local `edited` → un seul editAnnonceOptimistic (calque + worker).
   const [edited, setEdited] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -21911,7 +21912,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           ) : activeTab === 'documents' ? (
             <div className="fa-ck-rub fa-ck-documents">
               {(() => {
-                type CkDoc = { name: string; sig: string; badge: string; signed?: boolean; type: string; typeLabel: string }
+                type CkDoc = { name: string; sig: string; badge: string; signed?: boolean; cloud?: boolean; type: string; typeLabel: string }
                 const docsMock = parseJson<CkDoc[]>(detailStr('documents_json') || '[]', [])
                 // Prod-ready (audit §5 ter) : la liste habillée dérive des VRAIS documents Console
                 // (ckDocs, déjà chargés) quand le mock est absent — au lieu de disparaître en prod.
@@ -21936,15 +21937,28 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     : st === 'cancelled' ? 'Signature annulée'
                     : ''
                   const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : 'Indexé'
-                  return { name, sig: sigLabel, badge, signed, type, typeLabel }
+                  const cloud = Boolean(d.storage_bucket) && String(d.storage_status ?? '').toLowerCase() !== 'missing'
+                  return { name, sig: sigLabel, badge, signed, cloud, type, typeLabel }
                 })
-                const docs = docsMock.length ? docsMock : docsReal
-                if (!docs.length) return null
-                const toPrep = docs.filter((d) => !d.signed).length
-                const signed = docs.filter((d) => d.signed).length
+                const all = docsMock.length ? docsMock : docsReal
+                if (!all.length) return null
+                // Filtres de la maquette v27?view=D : Tous / À préparer / Signés / Cloud, avec compteurs.
+                const cntAll = all.length
+                const cntPrep = all.filter((d) => !d.signed).length
+                const cntSigned = all.filter((d) => d.signed).length
+                const cntCloud = all.filter((d) => d.cloud).length
+                const docs = docFilter === 'prep' ? all.filter((d) => !d.signed)
+                  : docFilter === 'signed' ? all.filter((d) => d.signed)
+                  : docFilter === 'cloud' ? all.filter((d) => d.cloud)
+                  : all
                 return (
                   <>
-                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Documents Hektor Console</div><div className="fa-ck-pub-s">Ajouter, consulter et préparer</div></div><div className="fa-ck-doccount"><span className="dc">{docs.length} docs</span><span className="dc">{signed} cloud</span>{toPrep ? <span className="dc warn">{toPrep} à préparer</span> : null}</div></div>
+                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Documents Hektor Console</div><div className="fa-ck-pub-s">Ajouter, consulter et préparer</div></div></div>
+                    <div className="fa-ck-histofilt fa-ck-docfilt">
+                      {([['tous', 'Tous', cntAll], ['prep', 'À préparer', cntPrep], ['signed', 'Signés', cntSigned], ['cloud', 'Cloud', cntCloud]] as Array<[string, string, number]>).map(([k, lbl, n]) => (
+                        <button key={k} type="button" className={docFilter === k ? 'is-on' : ''} onClick={() => setDocFilter(k)}>{lbl}<span>{n}</span></button>
+                      ))}
+                    </div>
                     <div className="fa-ck-doclist">
                       {docs.map((d, i) => (
                         <div key={i} className="fa-ck-docitem">
