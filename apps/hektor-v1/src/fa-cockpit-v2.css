@@ -41,6 +41,10 @@
     width: min(1280px, calc(100vw - 48px)) !important;
     max-width: 1280px !important;
     margin-inline: auto !important;
+    /* Le panneau est une GRILLE : sa piste `auto` se dimensionnait sur le max-width du shell
+       (1280px) et débordait donc du conteneur réel (~1220px avec la barre de défilement) —
+       le contenu était coupé à droite, dont le bouton ✕ de la barre de rubrique. */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 /* CARTE DU COCKPIT (audit visuel §1). Le shell ne redouble volontairement PAS carte/ombre/clip
@@ -68,7 +72,9 @@
 }
 /* Repli sans :has (navigateurs anciens) — le shell lui-même se contraint et se centre. */
 @media (min-width: 900px) {
-  .fa-ck-shell { max-width: 1280px; margin-inline: auto; width: 100%; }
+  /* `min(1280px, 100%)` et non `1280px` : sinon le shell impose sa largeur à la piste de
+     grille du panneau et déborde quand la place disponible est plus petite. */
+  .fa-ck-shell { max-width: min(1280px, 100%); margin-inline: auto; width: 100%; min-width: 0; }
 }
 
 /* Châssis panneau — topbar SOMBRE du v26 (pleine largeur) + corps (colonne gauche | contenu). */
@@ -98,7 +104,10 @@
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.02'/%3E%3C/svg%3E");
 }
 .fa-ck-topbar { position: relative; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 15px 20px; background: linear-gradient(112deg, #241c17 0%, #171210 60%); color: #fff; }
-.fa-ck-topbar::before { content: ''; position: absolute; right: -30px; top: -70px; width: 300px; height: 200px; background: radial-gradient(circle at 60% 40%, rgba(194, 18, 95, .3), transparent 62%); pointer-events: none; }
+/* `right: 0` et non `-30px` : la topbar n'est pas clippée (le shell est en overflow visible,
+   choix anti-jank), donc un halo débordant créait 30px de défilement horizontal. On ne peut pas
+   clipper la topbar sans couper le menu ⋯ qui s'y déploie. */
+.fa-ck-topbar::before { content: ''; position: absolute; right: 0; top: -70px; width: 300px; height: 200px; background: radial-gradient(circle at 60% 40%, rgba(194, 18, 95, .3), transparent 62%); pointer-events: none; }
 .fa-ck-topbar > * { position: relative; z-index: 1; }
 .fa-ck-tb-back { width: 40px; height: 40px; border-radius: 12px; flex: none; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .05); color: #d9cdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .fa-ck-tb-back svg { width: 18px; height: 18px; }
