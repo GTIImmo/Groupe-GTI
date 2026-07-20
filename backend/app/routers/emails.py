@@ -148,13 +148,16 @@ def download_estimation(token: str, request: Request, settings: Settings = Depen
     payload = email_tokens.verify_token(token, _secret(settings))
     if not payload or payload.get("a") != email_tokens.ACTION_ESTIMATION:
         return HTMLResponse(_page("Lien expiré", "Ce lien de téléchargement n'est plus valide. Contactez votre conseiller Groupe GTI."), status_code=410)
+    app_dossier_id = payload.get("d")
     try:
+        # bien_id = app_dossier_id : sans lui l'événement de téléchargement de l'avis
+        # est orphelin (non rattaché au dossier) et invisible dans le fil d'activité.
         EmailTrackingService(settings).record_event(
             envoi_id=str(payload.get("e") or ""), action=email_tokens.ACTION_ESTIMATION,
-            ip=_client_ip(request), user_agent=request.headers.get("user-agent"))
+            ip=_client_ip(request), user_agent=request.headers.get("user-agent"),
+            bien_id=int(app_dossier_id) if app_dossier_id else None)
     except Exception:
         pass  # le tracking ne doit jamais empêcher le téléchargement
-    app_dossier_id = payload.get("d")
     signed = None
     if app_dossier_id:
         try:

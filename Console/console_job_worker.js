@@ -3628,6 +3628,12 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
     if (target) {
       const cur = (target.metadata_json && target.metadata_json.signature) || {};
       if (cur.status !== sig.status || cur.procedure_id !== sig.procedure_id || cur.signed_at !== sig.signed_at) {
+        // Date d'ENVOI en signature : figee la 1re fois que l'app constate le passage
+        // a 'pending' (procedure ImmoSign creee), puis PRESERVEE aux syncs suivants.
+        // updated_at bouge a chaque changement ; sent_at reste la date d'envoi constatee.
+        // (Hektor n'expose pas de date d'envoi ; c'est la meilleure source disponible.)
+        if (cur.sent_at) sig.sent_at = cur.sent_at;
+        else if (sig.status === "pending") sig.sent_at = new Date().toISOString();
         const md = { ...(target.metadata_json || {}), signature: sig };
         await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(target.id)}`, {
           method: "PATCH",

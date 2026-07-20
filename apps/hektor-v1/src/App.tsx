@@ -8623,7 +8623,7 @@ function sigIcon(kind: 'check' | 'clock' | 'pen' | 'x') {
   return <svg {...common}><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
 }
 
-type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null }
+type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null }
 
 // Pastille d'etat de signature, partagee par le bloc Documents et le suivi mandat.
 function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
