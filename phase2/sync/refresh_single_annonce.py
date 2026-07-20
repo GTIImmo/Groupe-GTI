@@ -63,7 +63,15 @@ def normalize_text(value: Any) -> str | None:
 
 
 def storage_mandat_id(annonce_id: str, mandat_id: str) -> str:
-    return f"{annonce_id}:{mandat_id}"
+    """Identifiant stocke pour un mandat.
+
+    Historiquement compose ('<annonce>:<mandat>') pour contourner la reutilisation
+    d'identifiants par Hektor. La cle primaire portant desormais le couple
+    (annonce, mandat), l'identifiant reprend sa forme native : c'est celle qu'attendent
+    les jointures de build_case_index et les colonnes hektor_mandat_id des
+    offres, compromis et ventes.
+    """
+    return mandat_id
 
 
 def iter_mandat_items(payload: Any) -> Iterable[dict[str, Any]]:
@@ -127,23 +135,10 @@ def replace_mandats_for_annonce(conn: sqlite3.Connection, annonce_id: str, manda
 
     conn.executemany(
         """
-        INSERT INTO hektor_mandat(
+        INSERT OR REPLACE INTO hektor_mandat(
             hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement, date_debut, date_fin,
             date_cloture, montant, mandants_texte, note, raw_json, synced_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(hektor_mandat_id) DO UPDATE SET
-            hektor_annonce_id = excluded.hektor_annonce_id,
-            numero = excluded.numero,
-            type = excluded.type,
-            date_enregistrement = excluded.date_enregistrement,
-            date_debut = excluded.date_debut,
-            date_fin = excluded.date_fin,
-            date_cloture = excluded.date_cloture,
-            montant = excluded.montant,
-            mandants_texte = excluded.mandants_texte,
-            note = excluded.note,
-            raw_json = excluded.raw_json,
-            synced_at = excluded.synced_at
         """,
         rows,
     )

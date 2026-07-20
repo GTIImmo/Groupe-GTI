@@ -114,9 +114,14 @@ CREATE TABLE IF NOT EXISTS hektor_annonce_detail (
     synced_at TEXT NOT NULL
 );
 
+-- Cle primaire sur le couple (annonce, mandat) : Hektor reutilise des identifiants
+-- bas pour des mandats recents, et une cle portee par le seul identifiant faisait
+-- s'ecraser deux mandats distincts sans erreur ni trace.
+-- hektor_annonce_id est NOT NULL car SQLite laisse NULL dans une colonne de cle
+-- primaire, ce qui ferait echouer toute detection de conflit.
 CREATE TABLE IF NOT EXISTS hektor_mandat (
-    hektor_mandat_id TEXT PRIMARY KEY,
-    hektor_annonce_id TEXT,
+    hektor_mandat_id TEXT NOT NULL,
+    hektor_annonce_id TEXT NOT NULL DEFAULT '',
     numero TEXT,
     type TEXT,
     date_enregistrement TEXT,
@@ -127,7 +132,8 @@ CREATE TABLE IF NOT EXISTS hektor_mandat (
     mandants_texte TEXT,
     note TEXT,
     raw_json TEXT NOT NULL,
-    synced_at TEXT NOT NULL
+    synced_at TEXT NOT NULL,
+    PRIMARY KEY (hektor_annonce_id, hektor_mandat_id)
 );
 
 CREATE TABLE IF NOT EXISTS hektor_contact (

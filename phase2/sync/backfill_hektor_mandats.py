@@ -15,7 +15,8 @@ def normalize_text(value: object) -> str | None:
 
 
 def storage_mandat_id(annonce_id: str, mandat_id: str) -> str:
-    return f"{annonce_id}:{mandat_id}"
+    """Identifiant natif Hektor : l'unicite est portee par le couple (annonce, mandat)."""
+    return mandat_id
 
 
 def main() -> int:
@@ -45,35 +46,29 @@ def main() -> int:
             if not isinstance(mandats, list):
                 continue
 
+            # On ne supprime qu'une fois certain d'avoir de quoi reposer : sinon une
+            # annonce dont le JSON ne porte aucun mandat exploitable perdrait les siens.
+            exploitables = [
+                item
+                for item in mandats
+                if isinstance(item, dict)
+                and normalize_text(item.get("id") or item.get("idMandat") or item.get("mandat_id"))
+            ]
+            if not exploitables:
+                continue
+
             con.execute("DELETE FROM hektor_mandat WHERE hektor_annonce_id = ?", (annonce_id,))
             annonces_touched += 1
 
-            for item in mandats:
-                if not isinstance(item, dict):
-                    continue
+            for item in exploitables:
                 mandat_id = normalize_text(item.get("id") or item.get("idMandat") or item.get("mandat_id"))
-                if not mandat_id:
-                    continue
                 mandat_storage_id = storage_mandat_id(annonce_id, mandat_id)
                 con.execute(
                     """
-                    INSERT INTO hektor_mandat(
+                    INSERT OR REPLACE INTO hektor_mandat(
                         hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement, date_debut, date_fin,
                         date_cloture, montant, mandants_texte, note, raw_json, synced_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT(hektor_mandat_id) DO UPDATE SET
-                        hektor_annonce_id = excluded.hektor_annonce_id,
-                        numero = excluded.numero,
-                        type = excluded.type,
-                        date_enregistrement = excluded.date_enregistrement,
-                        date_debut = excluded.date_debut,
-                        date_fin = excluded.date_fin,
-                        date_cloture = excluded.date_cloture,
-                        montant = excluded.montant,
-                        mandants_texte = excluded.mandants_texte,
-                        note = excluded.note,
-                        raw_json = excluded.raw_json,
-                        synced_at = CURRENT_TIMESTAMP
                     """,
                     (
                         mandat_storage_id,

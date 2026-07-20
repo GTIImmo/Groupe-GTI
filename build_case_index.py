@@ -250,6 +250,9 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
             NULLIF(v.hektor_mandat_id, ''),
             NULLIF(v.hektor_mandat_id, '0')
         )
+        -- Un identifiant de mandat n'est unique qu'au sein d'une annonce : sans cette
+        -- condition, la jointure pourrait ramener le mandat d'une autre annonce.
+        AND CAST(md.hektor_annonce_id AS TEXT) = CAST(ids.hektor_annonce_id AS TEXT)
     LEFT JOIN mandat_ranked mf
         ON (
             mf.hektor_annonce_id = ids.hektor_annonce_id

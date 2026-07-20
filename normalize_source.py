@@ -537,7 +537,9 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
             "sync_annonce_contact_link",
         ):
             conn.execute(f"DELETE FROM {table}")
-        conn.execute("DELETE FROM hektor_mandat WHERE hektor_annonce_id IS NOT NULL")
+        # Les mandats orphelins (aucune annonce resolue) sont epargnes. Ils portent
+        # desormais '' plutot que NULL, la colonne faisant partie de la cle primaire.
+        conn.execute("DELETE FROM hektor_mandat WHERE COALESCE(hektor_annonce_id, '') <> ''")
         conn.commit()
         return
 
@@ -580,7 +582,7 @@ def prune_annonce_scope(conn: sqlite3.Connection, active_annonce_ids: set[str]) 
     conn.execute(
         """
         DELETE FROM hektor_mandat
-        WHERE hektor_annonce_id IS NOT NULL
+        WHERE COALESCE(hektor_annonce_id, '') <> ''
           AND NOT EXISTS (
               SELECT 1
               FROM temp_active_annonce_scope s
@@ -705,8 +707,9 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
         )
         seen_ids.add(mandat_id)
         previous_row = conn.execute(
-            "SELECT montant, hektor_annonce_id, numero, synced_at FROM hektor_mandat WHERE hektor_mandat_id = ?",
-            (mandat_id,),
+            "SELECT montant, hektor_annonce_id, numero, synced_at FROM hektor_mandat"
+            " WHERE hektor_mandat_id = ? AND hektor_annonce_id = ?",
+            (mandat_id, hektor_annonce_id or ""),
         ).fetchone()
         previous_montant = parse_numeric_value(previous_row["montant"]) if previous_row else None
         next_montant = parse_numeric_value(first_present(source.get("montant"), item.get("montant")))
@@ -737,27 +740,21 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
             )
         conn.execute(
             """
-            INSERT INTO hektor_mandat(
+            -- La cle primaire porte le couple (annonce, mandat) : Hektor reutilise des
+            -- identifiants bas pour des mandats recents, et la cle nue les faisait
+            -- s'ecraser entre eux. INSERT OR REPLACE ne nomme aucune colonne de conflit,
+            -- il vaut donc pour l'ancien comme pour le nouveau schema, et l'insertion
+            -- fournit les 13 colonnes : le remplacement equivaut au DO UPDATE precedent.
+            INSERT OR REPLACE INTO hektor_mandat(
                 hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement, date_debut, date_fin, date_cloture,
                 montant, mandants_texte, note, raw_json, synced_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(hektor_mandat_id) DO UPDATE SET
-                hektor_annonce_id = excluded.hektor_annonce_id,
-                numero = excluded.numero,
-                type = excluded.type,
-                date_enregistrement = excluded.date_enregistrement,
-                date_debut = excluded.date_debut,
-                date_fin = excluded.date_fin,
-                date_cloture = excluded.date_cloture,
-                montant = excluded.montant,
-                mandants_texte = excluded.mandants_texte,
-                note = excluded.note,
-                raw_json = excluded.raw_json,
-                synced_at = excluded.synced_at
             """,
             (
                 mandat_id,
-                hektor_annonce_id,
+                # Colonne de cle primaire : jamais NULL, sans quoi SQLite laisserait
+                # coexister plusieurs lignes (NULL, X) sans jamais detecter le conflit.
+                hektor_annonce_id or "",
                 first_present(source.get("numero"), item.get("numero")),
                 first_present(source.get("type"), item.get("type")),
                 first_present(source.get("dateEnregistrement"), source.get("debut"), item.get("dateEnregistrement"), item.get("debut")),
@@ -785,8 +782,9 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
             or mandat_numero_to_annonce.get(mandat_numero)
         )
         previous_row = conn.execute(
-            "SELECT montant, hektor_annonce_id, numero, synced_at FROM hektor_mandat WHERE hektor_mandat_id = ?",
-            (mandat_id,),
+            "SELECT montant, hektor_annonce_id, numero, synced_at FROM hektor_mandat"
+            " WHERE hektor_mandat_id = ? AND hektor_annonce_id = ?",
+            (mandat_id, hektor_annonce_id or ""),
         ).fetchone()
         previous_montant = parse_numeric_value(previous_row["montant"]) if previous_row else None
         next_montant = parse_numeric_value(first_present(source.get("montant"), relation_item.get("montant")))
@@ -817,27 +815,21 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
             )
         conn.execute(
             """
-            INSERT INTO hektor_mandat(
+            -- La cle primaire porte le couple (annonce, mandat) : Hektor reutilise des
+            -- identifiants bas pour des mandats recents, et la cle nue les faisait
+            -- s'ecraser entre eux. INSERT OR REPLACE ne nomme aucune colonne de conflit,
+            -- il vaut donc pour l'ancien comme pour le nouveau schema, et l'insertion
+            -- fournit les 13 colonnes : le remplacement equivaut au DO UPDATE precedent.
+            INSERT OR REPLACE INTO hektor_mandat(
                 hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement, date_debut, date_fin, date_cloture,
                 montant, mandants_texte, note, raw_json, synced_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(hektor_mandat_id) DO UPDATE SET
-                hektor_annonce_id = excluded.hektor_annonce_id,
-                numero = excluded.numero,
-                type = excluded.type,
-                date_enregistrement = excluded.date_enregistrement,
-                date_debut = excluded.date_debut,
-                date_fin = excluded.date_fin,
-                date_cloture = excluded.date_cloture,
-                montant = excluded.montant,
-                mandants_texte = excluded.mandants_texte,
-                note = excluded.note,
-                raw_json = excluded.raw_json,
-                synced_at = excluded.synced_at
             """,
             (
                 mandat_id,
-                hektor_annonce_id,
+                # Colonne de cle primaire : jamais NULL, sans quoi SQLite laisserait
+                # coexister plusieurs lignes (NULL, X) sans jamais detecter le conflit.
+                hektor_annonce_id or "",
                 first_present(source.get("numero"), relation_item.get("numero")),
                 first_present(source.get("type"), relation_item.get("type")),
                 first_present(source.get("dateEnregistrement"), source.get("debut"), relation_item.get("dateEnregistrement"), relation_item.get("debut")),
