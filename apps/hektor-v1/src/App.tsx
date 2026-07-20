@@ -21119,6 +21119,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [ckPieceDraft, setCkPieceDraft] = useState<HektorCompositionPieceDraft>(() => createEmptyHektorCompositionPieceDraft())
   // Onglet courant de la rubrique « Médias & pièces » (Photos / Documents / Visite 3D).
   const [ckMediaTab, setCkMediaTab] = useState<'photos' | 'docs' | 'visite'>('photos')
+  const [ckMpCopied, setCkMpCopied] = useState(false)
   // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
   // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
   const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
@@ -21331,6 +21332,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Visite virtuelle : même source que l'ancienne fiche (matterport_groups_json).
   const ckMatterportGroups = parseJson<MatterportGroup[]>(props.detail.matterport_groups_json, [])
   const ckMatterportCount = ckMatterportGroups.reduce((n, g) => n + (g.models?.length ?? 0), 0)
+  // Modèle mis en avant pour l'aperçu de l'onglet Visite 3D : le principal, sinon le premier.
+  // Son matterport_url est la VRAIE URL du modèle (ouverture + copie du lien) — aucun bouton factice.
+  const ckMpModels = ckMatterportGroups.flatMap((g) => g.models ?? [])
+  const ckMpPrimary = ckMpModels.find((m) => m.is_primary && m.matterport_url) ?? ckMpModels.find((m) => m.matterport_url) ?? null
 
   // ── Démarches : on RÉUTILISE le modèle métier réel (plan §4 « mêmes onClick ») ────
   // Avant : table statique dont les 3 boutons appelaient tous 'demande_diffusion' en dur
@@ -22076,6 +22081,31 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 </section>
               ) : (
                 <section className="detail-section" id="fa-ck-matterport">
+                  {/* Aperçu façon maquette. L'aperçu utilise la photo du bien (Matterport n'expose
+                      pas de vignette dans nos données) ; en revanche les deux actions sont RÉELLES :
+                      matterport_url pour l'ouverture, et la même URL pour la copie. */}
+                  {ckMpPrimary?.matterport_url ? (
+                    <div className="fa-ck-mpv">
+                      <a className="fa-ck-mpv-shot" href={ckMpPrimary.matterport_url} target="_blank" rel="noreferrer" title="Ouvrir la visite virtuelle">
+                        {heroPhoto ? <img src={heroPhoto} alt="" /> : <span className="fa-ck-mpv-noimg" aria-hidden="true" />}
+                        <span className="fa-ck-mpv-play" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                        </span>
+                      </a>
+                      <div className="fa-ck-mpv-acts">
+                        <a className="fa-ck-mpv-btn brand" href={ckMpPrimary.matterport_url} target="_blank" rel="noreferrer">Ouvrir Matterport</a>
+                        <button
+                          type="button" className="fa-ck-mpv-btn"
+                          onClick={() => {
+                            const url = ckMpPrimary.matterport_url
+                            void navigator.clipboard?.writeText(url)
+                              .then(() => { setCkMpCopied(true); window.setTimeout(() => setCkMpCopied(false), 1800) })
+                              .catch(() => setCkMpCopied(false))
+                          }}
+                        >{ckMpCopied ? 'Lien copié ✓' : 'Copier le lien'}</button>
+                      </div>
+                    </div>
+                  ) : null}
                   {ckMatterportGroups.length > 0 ? (
                     <div className="fa-ck-pub-card fa-ck-mp">
                       {ckMatterportGroups.map((group) => {

@@ -373,6 +373,34 @@
 .fa-ck-mfoot { display: flex; justify-content: flex-end; margin-top: 14px; }
 .fa-ck-medias .fa-ck-empty { padding: 22px 8px; text-align: center; }
 
+/* ----- Onglet Visite 3D : aperçu façon v21 (16/9 + bouton lecture) ----- */
+.fa-ck-mpv { margin-bottom: 16px; }
+.fa-ck-mpv-shot {
+  position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden;
+  border-radius: 14px; border: 1px solid var(--fa-line); background: #000;
+}
+.fa-ck-mpv-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .85; }
+.fa-ck-mpv-noimg { position: absolute; inset: 0; background: linear-gradient(135deg, #2a2018, #4a3a2a); }
+.fa-ck-mpv-play {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+}
+.fa-ck-mpv-play svg { width: 24px; height: 24px; color: var(--fa-brand); margin-left: 3px; }
+.fa-ck-mpv-play::before {
+  content: ''; position: absolute; width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255, 255, 255, .92); box-shadow: 0 10px 26px -10px rgba(0, 0, 0, .5);
+}
+.fa-ck-mpv-play svg { position: relative; z-index: 1; }
+.fa-ck-mpv-shot:hover .fa-ck-mpv-play::before { background: #fff; transform: scale(1.05); }
+.fa-ck-mpv-play::before { transition: transform .18s ease, background .18s ease; }
+.fa-ck-mpv-acts { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.fa-ck-mpv-btn {
+  font-size: 12.5px; font-weight: 700; border: 1px solid var(--fa-line); background: #fff;
+  color: var(--fa-ink-soft); border-radius: 9px; padding: 8px 13px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+}
+.fa-ck-mpv-btn.brand { background: linear-gradient(150deg, #e3407f, #bb1059); border-color: #bb1059; color: #fff; }
+.fa-ck-mpv-btn:hover { border-color: var(--fa-brand); }
+
 /* ----- Onglet Photos : re-skin du VRAI panneau Console vers le rendu de la v21 -----
    On ne réécrit pas le composant (upload, synchro Hektor, visibilité restent les siens) :
    on l'habille par CSS scopé, comme pour les autres rubriques re-skinnées. */
