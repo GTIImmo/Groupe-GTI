@@ -2635,6 +2635,7 @@ const hektorFinancialFieldKeys = new Set<HektorAdvancedFieldKey>([
 const hektorUnsupportedDirectUpdateWizardFields = new Set(['diffusable'])
 
 function HektorCompositionPiecesEditor(props: {
+  kicker?: string
   title: string
   subtitle?: string
   pieces: HektorCompositionPieceDraft[]
@@ -2693,7 +2694,9 @@ function HektorCompositionPiecesEditor(props: {
   return (
     <section className={`hektor-composition-editor ${props.className ?? ''}`}>
       <div className="draft-annonce-section-title hektor-composition-title">
-        <span>Page 4</span>
+        {/* « Page 4 » a du sens dans le wizard de création (étape 4) ; hors wizard (cockpit),
+            l'appelant passe son propre libellé. */}
+        <span>{props.kicker ?? 'Page 4'}</span>
         <strong>{props.title}</strong>
       </div>
       {props.subtitle ? <p className="hektor-composition-subtitle">{props.subtitle}</p> : null}
@@ -20806,17 +20809,17 @@ function CkIcon({ path }: { path: string }) {
 // les VRAIS champs du formulaire d'édition Hektor (draftAnnonceWizardGroups) → prod-ready.
 // condField : la section n'apparaît que si ce champ vaut « oui » (Piscine, Copropriété).
 const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string; bg: string; ico: string; condField?: string; fields: Array<[string, string, string?]> }> = [
-  { key: 'composition', label: 'Composition', sub: 'Pièces & niveaux', c: '#7a4bb0', bg: '#f1eafc', ico: '<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>', fields: [['Nombre de pièces', 'nbpieces'], ['Chambres', 'NB_CHAMBRES'], ['Niveaux', 'NB_NIVEAUX'], ['Étage', 'ETAGE'], ['Surface habitable', 'surfappart', 'm²'], ['Surface Carrez', 'SURF_CARREZ', 'm²'], ['Exposition', 'EXPOSITION'], ['Vue', 'vuee']] },
-  { key: 'interieur', label: 'Intérieur', sub: 'Pièces & agencement', c: '#b5651d', bg: '#f6e9db', ico: '<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 11a2 2 0 0 1 4 0v3h12v-3a2 2 0 0 1 4 0v6H2z"/>', fields: [['Salles de bain', 'NB_SDB'], ["Salles d'eau", 'NB_SE'], ['WC', 'NB_WC'], ['Surface séjour', 'SURF_SEJOUR', 'm²'], ['Cuisine', 'CUISINE'], ['Équipement cuisine', 'CUISINE_EQUIPEMENT'], ['Cheminée', 'cheminee'], ['Particularités', 'Particularites']] },
-  { key: 'exterieur', label: 'Extérieur & annexes', sub: 'Terrain, garages, terrasses', c: '#3b7d4f', bg: '#e4f1e8', ico: '<path d="M12 2 6 9h4l-3 5h5v6h2v-6h5l-3-5h4z"/>', fields: [['Murs mitoyens', 'MURS_MITOYENS'], ['Nombre étages', 'NB_ETAGES'], ['Cave', 'CAVE'], ['Surface cave', 'SURFACE_CAVE', 'm²'], ['Balcon', 'BALCON'], ['Nombre balcons', 'NB_BALCON'], ['Surface balcon', 'SURFACE_BALCON', 'm²'], ['Terrasse', 'TERRASSE'], ['Nombre terrasses', 'NB_TERRASSE'], ['Surface terrasse', 'SURFACE_TERRASSE', 'm²'], ['Garages', 'GARAGE_BOX'], ['Surface garage', 'SURFACE_GARAGE', 'm²'], ['Parking intérieur', 'NB_PARK_INT'], ['Parking extérieur', 'NB_PARK_EXT'], ['Jardin', 'JARDIN-'], ['Surface jardin', 'SURFACE_JARDIN', 'm²'], ['Surface terrain', 'surfterrain', 'm²'], ['SHON', 'SHON', 'm²'], ['Terrain arboré', 'terrain_arbore'], ['Terrain constructible', 'terrain_constructible'], ['Terrain viabilisé', 'terrain_viabilise']] },
+  { key: 'composition', label: 'Composition', sub: 'Pièces & niveaux', c: '#7a4bb0', bg: '#f1eafc', ico: '<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>', fields: [['Nombre de pièces', 'nbpieces'], ['Chambres', 'NB_CHAMBRES'], ['Niveaux', 'NB_NIVEAUX'], ['Étage', 'ETAGE'], ['Surface habitable', 'surfappart', 'm²'], ['Surface Carrez', 'SURF_CARREZ', 'm²'], ['Exposition', 'EXPOSITION'], ['Vue', 'vuee'], ['Dernier étage', 'DERNIER_ETAGE'], ['Indication étage', 'floorState'], ['Résidence', 'RESIDENCE'], ['Type résidence', 'TYPE_RESIDENCE'], ['Immeuble', 'immeuble']] },
+  { key: 'interieur', label: 'Intérieur', sub: 'Pièces & agencement', c: '#b5651d', bg: '#f6e9db', ico: '<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 11a2 2 0 0 1 4 0v3h12v-3a2 2 0 0 1 4 0v6H2z"/>', fields: [['Salles de bain', 'NB_SDB'], ["Salles d'eau", 'NB_SE'], ['WC', 'NB_WC'], ['Surface séjour', 'SURF_SEJOUR', 'm²'], ['Cuisine', 'CUISINE'], ['Équipement cuisine', 'CUISINE_EQUIPEMENT'], ['Cheminée', 'cheminee'], ['Particularités', 'Particularites'], ['Clearing', 'clearing']] },
+  { key: 'exterieur', label: 'Extérieur & annexes', sub: 'Terrain, garages, terrasses', c: '#3b7d4f', bg: '#e4f1e8', ico: '<path d="M12 2 6 9h4l-3 5h5v6h2v-6h5l-3-5h4z"/>', fields: [['Murs mitoyens', 'MURS_MITOYENS'], ['Nombre étages', 'NB_ETAGES'], ['Cave', 'CAVE'], ['Surface cave', 'SURFACE_CAVE', 'm²'], ['Balcon', 'BALCON'], ['Nombre balcons', 'NB_BALCON'], ['Surface balcon', 'SURFACE_BALCON', 'm²'], ['Terrasse', 'TERRASSE'], ['Nombre terrasses', 'NB_TERRASSE'], ['Surface terrasse', 'SURFACE_TERRASSE', 'm²'], ['Garages', 'GARAGE_BOX'], ['Surface garage', 'SURFACE_GARAGE', 'm²'], ['Parking intérieur', 'NB_PARK_INT'], ['Parking extérieur', 'NB_PARK_EXT'], ['Jardin', 'JARDIN-'], ['Surface jardin', 'SURFACE_JARDIN', 'm²'], ['Surface terrain', 'surfterrain', 'm²'], ['SHON', 'SHON', 'm²'], ['Terrain arboré', 'terrain_arbore'], ['Terrain constructible', 'terrain_constructible'], ['Terrain viabilisé', 'terrain_viabilise'], ['Terrain piscinable', 'terrain_piscinable'], ['Surface constructible', 'terrain_surface_constructible', 'm²'], ['Raccordement eau', 'terrain_raccordement_eau'], ['Raccordement électricité', 'terrain_raccordement_electricite'], ['Raccordement gaz', 'terrain_raccordement_gaz'], ['Raccordement téléphone', 'terrain_raccordement_telephone']] },
   { key: 'construction', label: 'Construction récente', sub: 'Neuf, normes & garanties', c: '#5a7d3b', bg: '#eaf2e0', ico: '<path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/>', fields: [['Année de construction', 'ANNEE_CONS'], ['État intérieur', 'etat_interieur'], ['État extérieur', 'etat_exterieur'], ['Garantie décennale', 'garantie_decennale'], ['Assurance dommages-ouvrage', 'assurance_dommages_ouvrage'], ['Certificat de conformité', 'certificat_conformite'], ['Déclaration achèvement', 'declaration_achevement_travaux']] },
   { key: 'piscine', label: 'Piscine', sub: 'Bassin & équipements', c: '#0f7c8a', bg: '#daeef1', condField: 'PISCINE-', ico: '<path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>', fields: [['Piscine', 'PISCINE-'], ['Type', 'PISCINE_TYPE'], ['Nature', 'PISCINE_NATURE'], ['Dimensions', 'PISCINE_DIMENSIONS'], ['Traitement', 'PISCINE_TRAITEMENT'], ['Chauffée', 'PISCINE_CHAUFFEE'], ['Couverte', 'PISCINE_COUVERTE'], ['Pool house', 'POOL_HOUSE'], ['Détails', 'PISCINE_DETAILS']] },
-  { key: 'confort', label: 'Confort & équipements', sub: 'Chauffage, sécurité, réseaux', c: '#b07d1c', bg: '#f7eed9', ico: '<path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>', fields: [['Format chauffage', 'formatChauff'], ['Type chauffage', 'typeChauff'], ['Énergie chauffage', 'energieChauff'], ['Ascenseur', 'ASCENSEUR'], ['Accès handicapé', 'ACCES_HANDI'], ['Climatisation', 'climatisation'], ['Eau', 'EAU'], ['Assainissement', 'ASSAINISSEMENT'], ['Distribution eau', 'DISTRIBUTION_EAU'], ['Énergie eau', 'ENERGIE_EAU'], ['Volets électriques', 'volets_elctriques'], ['Double vitrage', 'double_vitrage'], ['Triple vitrage', 'triple_vitrage'], ['Fibre optique', 'cable'], ['Porte blindée', 'porte_blindee'], ['Interphone', 'interphone'], ['Visiophone', 'visiophone'], ['Alarme', 'alarme'], ['Digicode', 'digicode'], ['Détecteur fumée', 'detecteur_fumee'], ['Gardien', 'gardien']] },
-  { key: 'copropriete', label: 'Copropriété', sub: 'Lots & charges', c: '#4756a6', bg: '#e9ebf8', condField: 'copropriete', ico: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01"/>', fields: [['Copropriété', 'copropriete'], ['Lot', 'copropriete_lot'], ['Nombre de lots', 'copropriete_nb_lot'], ['Quote-part', 'copropriete_quote_part'], ['Fonds travaux', 'montant_fonds_travaux', '€'], ['Plan sauvegarde', 'copropriete_plan_sauvegarde'], ['Statut syndicat', 'copropriete_statut_syndicat']] },
-  { key: 'diagnostics', label: 'Diagnostics & énergie', sub: 'DPE, GES & diagnostics', c: '#2f8a5b', bg: '#e6f3ec', ico: '<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>', fields: [['Diagnostiqueur', 'diagnostiqueur'], ['Date DPE', 'dpe_date'], ['DPE consommation', 'dpe_cons'], ['GES', 'dpe_ges'], ['Coût énergie min', 'dpe_couts_min', '€'], ['Coût énergie max', 'dpe_couts_max', '€'], ['Année référence DPE', 'dpe_annee_reference'], ['Amiante', 'diag_amiante'], ['Date amiante', 'diag_amiante_date'], ['Termites', 'diag_termites'], ['Date termites', 'diag_termites_date'], ['Plomb', 'diag_plomb'], ['Date plomb', 'diag_plomb_date'], ['Électrique', 'diag_electrique'], ['Date électrique', 'diag_electrique_date'], ['Gaz', 'diag_gaz'], ['Loi Carrez', 'diag_loi_carrez'], ['Risques naturels', 'diag_risques_nat_tech'], ['Assainissement (diag)', 'diag_assainissement']] },
-  { key: 'prix', label: 'Prix, mandat & honoraires', sub: 'Financier', c: '#8a6a2f', bg: '#f4ecd9', ico: '<circle cx="12" cy="12" r="9"/><path d="M15 8a4 4 0 1 0 0 8M7 10h6M7 14h6"/>', fields: [['Prix public', 'prix', '€'], ['Prix net vendeur', 'PRIXNETVENDEUR', '€'], ['Honoraires acquéreur', '_selecterHonoraires2'], ['Montant hon. acquéreur', '_tauxHonoraire2', '€'], ['% hon. acquéreur', '_pourcentHonoraire2', '%'], ['Honoraires vendeur', '_selecterHonoraires3'], ['Montant hon. vendeur', '_tauxHonoraire3', '€'], ['Masquer le prix', 'masque'], ['Montant estimation', 'ESTIMATION_MONTANT', '€'], ['Date estimation', 'ESTIMATION_DATE'], ['Travaux', 'TRAVAUX'], ['Dépôt garantie', 'DEPOT_GARANTIE', '€'], ['Taxe foncière', 'TAXE_FONCIERE', '€'], ['Taxe habitation', 'TAXE_HABITATION', '€'], ['Charges', 'CHARGES', '€'], ['Détail charges', 'CHARGES_DETAIL']] },
+  { key: 'confort', label: 'Confort & équipements', sub: 'Chauffage, sécurité, réseaux', c: '#b07d1c', bg: '#f7eed9', ico: '<path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>', fields: [['Format chauffage', 'formatChauff'], ['Type chauffage', 'typeChauff'], ['Énergie chauffage', 'energieChauff'], ['Ascenseur', 'ASCENSEUR'], ['Accès handicapé', 'ACCES_HANDI'], ['Climatisation', 'climatisation'], ['Spécification climatisation', 'climatisationspec'], ['Eau', 'EAU'], ['Assainissement', 'ASSAINISSEMENT'], ['Distribution eau', 'DISTRIBUTION_EAU'], ['Énergie eau', 'ENERGIE_EAU'], ['Volets électriques', 'volets_elctriques'], ['Double vitrage', 'double_vitrage'], ['Triple vitrage', 'triple_vitrage'], ['Fibre optique', 'cable'], ['Porte blindée', 'porte_blindee'], ['Interphone', 'interphone'], ['Visiophone', 'visiophone'], ['Alarme', 'alarme'], ['Digicode', 'digicode'], ['Détecteur fumée', 'detecteur_fumee'], ['Gardien', 'gardien']] },
+  { key: 'copropriete', label: 'Copropriété', sub: 'Lots & charges', c: '#4756a6', bg: '#e9ebf8', condField: 'copropriete', ico: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01"/>', fields: [['Copropriété', 'copropriete'], ['Lot', 'copropriete_lot'], ['Nombre de lots', 'copropriete_nb_lot'], ['Quote-part', 'copropriete_quote_part'], ['Fonds travaux', 'montant_fonds_travaux', '€'], ['Plan sauvegarde', 'copropriete_plan_sauvegarde'], ['Statut syndicat', 'copropriete_statut_syndicat'], ['Syndic', 'syndic']] },
+  { key: 'diagnostics', label: 'Diagnostics & énergie', sub: 'DPE, GES & diagnostics', c: '#2f8a5b', bg: '#e6f3ec', ico: '<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>', fields: [['Diagnostiqueur', 'diagnostiqueur'], ['Date DPE', 'dpe_date'], ['DPE consommation', 'dpe_cons'], ['GES', 'dpe_ges'], ['Coût énergie min', 'dpe_couts_min', '€'], ['Coût énergie max', 'dpe_couts_max', '€'], ['Année référence DPE', 'dpe_annee_reference'], ['Amiante', 'diag_amiante'], ['Date amiante', 'diag_amiante_date'], ['Termites', 'diag_termites'], ['Date termites', 'diag_termites_date'], ['Plomb', 'diag_plomb'], ['Date plomb', 'diag_plomb_date'], ['Électrique', 'diag_electrique'], ['Date électrique', 'diag_electrique_date'], ['Gaz', 'diag_gaz'], ['Loi Carrez', 'diag_loi_carrez'], ['Risques naturels', 'diag_risques_nat_tech'], ['Assainissement (diag)', 'diag_assainissement'], ['Date gaz', 'diag_gaz_date'], ['Date loi Carrez', 'diag_loi_carrez_date'], ['Date risques', 'diag_risques_nat_tech_date'], ['Date assainissement', 'diag_assainissement_date'], ['Commentaire amiante', 'diag_amiante_commentaire'], ['Commentaire termites', 'diag_termites_commentaire'], ['Commentaire plomb', 'diag_plomb_commentaire'], ['Commentaire électrique', 'diag_electrique_commentaire'], ['Commentaire gaz', 'diag_gaz_commentaire'], ['Commentaire loi Carrez', 'diag_loi_carrez_commentaire'], ['Commentaire risques', 'diag_risques_nat_tech_commentaire'], ['Commentaire assainissement', 'diag_assainissement_commentaire'], ['DPE non concerné', 'dpe_non_concerne'], ['DPE vierge', 'dpe_vierge'], ['DPE altitude', 'isDpeAltitude'], ['Énergie finale', 'valeurEnergieFinale']] },
+  { key: 'prix', label: 'Prix, mandat & honoraires', sub: 'Financier', c: '#8a6a2f', bg: '#f4ecd9', ico: '<circle cx="12" cy="12" r="9"/><path d="M15 8a4 4 0 1 0 0 8M7 10h6M7 14h6"/>', fields: [['Prix public', 'prix', '€'], ['Prix net vendeur', 'PRIXNETVENDEUR', '€'], ['Honoraires acquéreur', '_selecterHonoraires2'], ['Montant hon. acquéreur', '_tauxHonoraire2', '€'], ['% hon. acquéreur', '_pourcentHonoraire2', '%'], ['Honoraires vendeur', '_selecterHonoraires3'], ['Montant hon. vendeur', '_tauxHonoraire3', '€'], ['Masquer le prix', 'masque'], ['Montant estimation', 'ESTIMATION_MONTANT', '€'], ['Date estimation', 'ESTIMATION_DATE'], ['Travaux', 'TRAVAUX'], ['Dépôt garantie', 'DEPOT_GARANTIE', '€'], ['Taxe foncière', 'TAXE_FONCIERE', '€'], ['Taxe habitation', 'TAXE_HABITATION', '€'], ['Charges', 'CHARGES', '€'], ['Détail charges', 'CHARGES_DETAIL'], ['Détail hon. acquéreur', '_detailHonoraire2'], ['% hon. vendeur', '_pourcentHonoraire3', '%'], ['Détail hon. vendeur', '_detailHonoraire3'], ['Charge locative', 'Loc_ChargeLocative', '€'], ['Estimation loyer', 'Loc_EstimationLoyer', '€'], ['Occupation locative', 'Loc_Occupation'], ['Rendement brut', 'Loc_RendementBrut', '%']] },
   { key: 'dispo', label: 'Disponibilité & visite', sub: 'Libération & clés', c: '#3a5a8a', bg: '#e7edf7', ico: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', fields: [['Disponible', 'DISPO'], ['Date libération', 'DATE_LIBER'], ['Date disponibilité', 'DATE_DISPO'], ['Clés', 'CLES'], ['Moyens de visite', 'moyens_visite']] },
-  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Titre annonce', 'titre'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
+  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Titre annonce', 'titre'], ['Texte annonce', 'corps'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
   { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Code postal', 'codepublique'], ['Ville', 'villepublique'], ['Adresse / complément', 'ADRESSE_COMPL'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
 ]
 // Champs en LECTURE SEULE dans l'édition en place : non écrits par le chemin optimiste.
@@ -20850,6 +20853,10 @@ function CkInlineField({ label, name, unit, value, edited, readOnly, onSave }: {
             <option value="">—</option>
             {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        ) : field?.multiline ? (
+          // Champs longs (commentaires de diagnostic, texte d'annonce, détail des honoraires) :
+          // une ligne unique ne suffit pas. Entrée insère un saut de ligne, Échap annule.
+          <textarea className="fa-ck-inline-ed fa-ck-inline-ta" autoFocus rows={4} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false) }} />
         ) : (
           <input className="fa-ck-inline-ed" autoFocus type="text" inputMode={field?.inputMode} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }} />
         )
@@ -21100,6 +21107,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Source AUTORITATIVE identique au listing Mandats : le rail « Rapprochement » doit porter ce
   // compteur (la maquette v26 affiche « N acquéreur » dans le foot de la rubrique).
   const [ckAcq, setCkAcq] = useState<RapprochementCount | null>(null)
+  // Composition des pièces : régression corrigée. Le cockpit avait perdu l'éditeur pièce à pièce
+  // qu'offrait la modale « Modifier l'annonce » (HektorAnnonceUpdateForm) — donc plus aucun moyen
+  // d'ajouter ou corriger une pièce. On reprend la MÊME machinerie et le MÊME chemin de
+  // sauvegarde (editAnnonceOptimistic), pour ne pas créer un second comportement.
+  const [ckPieces, setCkPieces] = useState<HektorCompositionPieceDraft[]>(() => buildHektorCompositionPiecesFromDetail(props.detail))
+  const [ckPieceDraft, setCkPieceDraft] = useState<HektorCompositionPieceDraft>(() => createEmptyHektorCompositionPieceDraft())
   // Pré-focus démarche (spec Lot 2) : un lien « → Direction » porte son type de démarche ;
   // à l'ouverture de la rubrique Mandat on surligne et on scrolle sur la bonne carte.
   const [ckDemFocus, setCkDemFocus] = useState<string | null>(null)
@@ -21369,6 +21382,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const acqFoot: CkFoot = nbAcq > 0
     ? ['ok', `${nbAcq} acquéreur${nbAcq > 1 ? 's' : ''}`]
     : ['neutral', 'Aucun acquéreur']
+  // Media-bar du hero (maquette v26, .media-bar / .mb) : 3 raccourcis Photos · Documents ·
+  // Visite virtuelle, chacun avec son picto, qui ouvrent le bloc dédié. Le badge « à préparer »
+  // reprend la même règle que la rubrique Documents (non signé = à préparer).
+  const ckDocCount = ckDocs.length
+  const ckDocToPrep = ckDocs.filter((d) => (d.metadata_json as { signature?: SignatureMeta } | null)?.signature?.status !== 'signed').length
+  const openMatterport = () => {
+    setActiveTab('lebien')
+    window.setTimeout(() => document.getElementById('fa-ck-matterport')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80)
+  }
   const CK_PHASE: Record<string, { feat: Array<[string, CkFoot]>; autre: string[] }> = {
     est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['documents', 'historique', 'reporting'] },
     man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['estimation', 'historique', 'reporting'] },
@@ -21448,13 +21470,61 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const emailContacts = props.contacts.filter((c) => c.email)
   // Valeur d'un champ wizard par son nom (overlay-first, via la MÊME fonction que l'éditeur) + diff local.
   const wizFieldValue = (name: string) => { const f = CK_WIZARD_FIELD_BY_NAME[name]; return f ? wizardDetailValue(dossier, props.detail, f) : '' }
+  // Filtre par TYPE DE BIEN (profil Hektor résolu depuis offre_type.idtype) : l'ancienne modale
+  // n'affichait que les champs pertinents — un terrain ne se voit pas proposer « salles de bain ».
+  // On réutilise exactement le même filtre, pour ne pas créer une seconde vérité.
+  const ckProfileKind = hektorPropertyProfileKindForDetail(dossier, props.detail)
+  // GARDE-FOU : sans idtype Hektor, le repli est TEXTUEL — or type_bien est un CODE ('2'), donc
+  // il ne matcherait rien et retomberait sur le profil « other » (18 champs), ce qui masquerait
+  // ~110 champs. C'est exactement la régression qu'on corrige. On ne filtre donc QUE si le type
+  // est réellement connu ; sinon on affiche tout (afficher en trop < masquer).
+  // Idem pour le profil « other » (types Autre / Cabanon / Viager) : il n'expose que 18 champs.
+  // Choix de Frédéric : sur ces types, on affiche TOUT plutôt que de brider la saisie.
+  const ckHasRealTypeId = Boolean(rawDetailProp(props.detail, 'offre_type', 'idtype'))
+  const ckProfileFields = ckHasRealTypeId && ckProfileKind !== 'other'
+    ? new Set(
+        filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, ckProfileKind)
+          .flatMap((s) => s.fields.map((f) => f.name)),
+      )
+    : null
+  // Handlers de l'éditeur de pièces — repris à l'identique de HektorAnnonceUpdateForm.
+  const ckAddPieceDraft = () => {
+    if (!hektorCompositionPieceHasContent(ckPieceDraft)) return
+    setCkPieces((current) => [...current, createEmptyHektorCompositionPieceDraft({
+      ...ckPieceDraft,
+      localId: '',
+      typeLabel: ckPieceDraft.typeLabel || hektorCompositionPieceTypeLabel(ckPieceDraft.idTypePiece),
+    })])
+    setCkPieceDraft(createEmptyHektorCompositionPieceDraft())
+  }
+  const ckUpdatePiece = (localId: string, key: HektorCompositionPieceDraftKey, value: string) => {
+    setCkPieces((current) => current.map((piece) => piece.localId === localId ? {
+      ...piece,
+      [key]: value,
+      typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : piece.typeLabel,
+    } : piece))
+  }
+  const ckRemovePiece = (localId: string) => {
+    setCkPieces((current) => current.flatMap((piece) => {
+      if (piece.localId !== localId) return [piece]
+      return piece.idPiece ? [{ ...piece, deleted: true }] : []
+    }))
+  }
+  const ckRestorePiece = (localId: string) => {
+    setCkPieces((current) => current.map((piece) => piece.localId === localId ? { ...piece, deleted: false } : piece))
+  }
+  const ckChangedPieces = () => buildChangedHektorCompositionPieces(ckPieces, buildHektorCompositionPiecesFromDetail(props.detail))
   const onFieldSave = (name: string, value: string) => setEdited((prev) => ({ ...prev, [name]: value }))
-  const editedCount = Object.keys(edited).length
+  // Le compteur « à enregistrer » doit inclure les pièces, sinon une modification de composition
+  // seule ne déclencherait jamais la barre d'enregistrement.
+  const editedCount = Object.keys(edited).length + ckChangedPieces().length
   const doSaveEdits = async () => {
     setSaving(true)
     setSaveMsg(null)
     try {
-      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: edited })
+      // Champs ET pièces dans le MÊME appel : un seul job worker débouché, comme la modale
+      // d'origine (deux appels séparés se conflictualisaient via date_maj).
+      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: edited, compositionPieces: ckChangedPieces() })
       setSaveMsg('Envoyé — vague vers Hektor (~10 min)')
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Échec de l'enregistrement")
@@ -21554,14 +21624,32 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-hero-grad" aria-hidden="true" />
               <span className="fa-ck-hero-sb"><span className="fa-ck-hero-led" style={{ background: statusLed }} />{dossier.statut_annonce || 'Annonce'}</span>
               <span className="fa-ck-hero-rf">Réf. {dossier.numero_dossier ?? dossier.hektor_annonce_id ?? ''}</span>
-              {props.images.length > 0 ? (
-                <div className="fa-ck-media-bar">
-                  <span className="fa-ck-mb">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
-                    {props.images.length} photo{props.images.length > 1 ? 's' : ''}
-                  </span>
-                </div>
-              ) : null}
+              {/* Media-bar de la maquette v26 : 3 raccourcis (Photos · Documents · Visite virtuelle)
+                  avec leurs pictos, chacun ouvrant son bloc dédié. */}
+              <div className="fa-ck-media-bar">
+                <button
+                  type="button" className="fa-ck-mb" onClick={() => goRub('lebien')}
+                  title={`${props.images.length} photo${props.images.length > 1 ? 's' : ''} — ouvrir la galerie`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                  {props.images.length}
+                </button>
+                <button
+                  type="button" className="fa-ck-mb" onClick={() => goRub('documents')}
+                  title={`${ckDocCount} document${ckDocCount > 1 ? 's' : ''}${ckDocToPrep > 0 ? ` · ${ckDocToPrep} à préparer` : ''} — ouvrir les documents`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                  {ckDocCount}
+                  {ckDocToPrep > 0 ? <span className="fa-ck-mb-al">{ckDocToPrep}</span> : null}
+                </button>
+                <button
+                  type="button" className="fa-ck-mb" onClick={openMatterport}
+                  title={ckMatterportCount > 0 ? `${ckMatterportCount} visite virtuelle liée${ckMatterportCount > 1 ? 's' : ''}` : 'Visite virtuelle (Matterport)'}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z" /><path d="m3 7 9 5 9-5" /><path d="M12 12v10" /></svg>
+                  3D
+                </button>
+              </div>
             </div>
             <div className="fa-ck-hero-title">{heroTitle}</div>
             <div className="fa-ck-hero-addr">
@@ -21831,7 +21919,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 if (!sec.condField) return true
                 const v = String(edited[sec.condField] ?? wizFieldValue(sec.condField) ?? '').trim()
                 return /^(oui|1|true|vrai)/i.test(v)
-              }).map((sec) => {
+              })
+                // Ne garder que les champs pertinents pour le type de bien, puis retirer les
+                // sections devenues vides (ex. « Copropriété » sur un terrain).
+                .map((sec) => (ckProfileFields ? { ...sec, fields: sec.fields.filter(([, k]) => ckProfileFields.has(k)) } : sec))
+                .filter((sec) => sec.fields.length > 0)
+                .map((sec) => {
                 const fval = (k: string) => String(edited[k] ?? wizFieldValue(k) ?? '')
                 const total = sec.fields.length
                 const filled = sec.fields.filter(([, k]) => fval(k).trim() && fval(k).trim() !== '0').length
@@ -21846,6 +21939,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 )
               })}
+              {/* Composition des pièces — pièce à pièce, comme dans Hektor (régression corrigée :
+                  cet éditeur n'existait que dans l'ancienne modale « Modifier l'annonce »). */}
+              {!isLightweightDetail ? (
+                <div className="fa-ck-lb-secwrap fa-ck-lb-pieces">
+                  <HektorCompositionPiecesEditor
+                    kicker="Composition"
+                    title="Composition des pièces"
+                    subtitle="Ajoute ou corrige les pièces une par une, comme dans Hektor. Enregistre en bas de page."
+                    pieces={ckPieces}
+                    draft={ckPieceDraft}
+                    disabled={saving}
+                    onDraftChange={(key, value) => setCkPieceDraft((prev) => ({ ...prev, [key]: value, typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : prev.typeLabel }))}
+                    onAddDraft={ckAddPieceDraft}
+                    onPieceChange={ckUpdatePiece}
+                    onRemovePiece={ckRemovePiece}
+                    onRestorePiece={ckRestorePiece}
+                  />
+                </div>
+              ) : null}
               {/* Diagnostics & énergie : échelles DPE / GES (façon v21) */}
               {(() => {
                 const conso = Number(detailStr('dpe_conso') || detailStr('dpe_cons'))

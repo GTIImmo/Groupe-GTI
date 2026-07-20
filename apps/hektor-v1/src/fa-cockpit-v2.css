@@ -106,7 +106,15 @@
 .fa-ck-media-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; gap: 6px; }
 .fa-ck-mb { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .55); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px; padding: 7px 6px; }
 .fa-ck-mb svg { width: 14px; height: 14px; }
-.fa-ck-hero-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; margin-top: 15px; color: var(--fa-ink); }
+/* Media-bar v26 : les 3 raccourcis sont cliquables (Photos · Documents · Visite virtuelle). */
+.fa-ck-mb { position: relative; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.fa-ck-mb:hover { background: rgba(20, 14, 10, .72); border-color: rgba(255, 255, 255, .4); }
+.fa-ck-mb:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* Pastille « à préparer » (équivalent .mb .al de la maquette). */
+.fa-ck-mb-al { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; border-radius: 99px; background: #d98324; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 1.5px solid var(--fa-paper); }
+/* Titre de l'annonce sous la photo : réduit (24 → 19px), les vrais titres sont longs et
+   débordaient sur 6 lignes en colonne étroite / mobile. */
+.fa-ck-hero-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin-top: 15px; color: var(--fa-ink); }
 .fa-ck-hero-addr { margin-top: 8px; color: var(--fa-muted); font-size: 13px; display: flex; align-items: flex-start; gap: 7px; font-weight: 500; }
 .fa-ck-hero-addr svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: #a89e95; }
 .fa-ck-hero-price { position: relative; overflow: hidden; margin-top: 12px; padding: 10px 15px; background: linear-gradient(135deg, #fff, #fdf1f5); border: 1px solid #f1d8e4; border-radius: 15px; box-shadow: 0 14px 30px -22px rgba(194, 18, 95, .5); }
