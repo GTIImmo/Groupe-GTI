@@ -217,7 +217,23 @@ ORDER BY
     hektor_annonce_id
 """.replace("__ANNONCES_SCOPE_WHERE__", ANNONCES_SCOPE_WHERE)
 
+# app_archive_annonce_index_current a pour cle hektor_annonce_id : il lui faut
+# exactement une ligne par annonce. Or app_view_generale peut en porter plusieurs
+# pour la meme annonce (fan-out de la jointure mandat sur la condition OR). Deux
+# lignes de meme cle dans un meme lot font echouer l'upsert cote Postgres
+# ("ON CONFLICT DO UPDATE command cannot affect row a second time"), ce qui
+# interrompt tout le push. On ne retient donc que la ligne la plus recente.
 SQL_ARCHIVE_ANNONCE_INDEX_BASE = """
+WITH archive_ranked AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY hektor_annonce_id
+               ORDER BY COALESCE(date_maj, '') DESC,
+                        CAST(app_dossier_id AS INTEGER) DESC
+           ) AS archive_rn
+    FROM app_view_generale
+    WHERE COALESCE(archive, '0') = '1'
+)
 SELECT
     CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
     CAST(app_dossier_id AS INTEGER) AS app_archive_id,
@@ -248,8 +264,8 @@ SELECT
     CASE WHEN detail_statut_name IS NOT NULL THEN 1 ELSE 0 END AS has_local_detail,
     NULL AS local_detail_updated_at,
     photo_url_listing
-FROM app_view_generale
-WHERE COALESCE(archive, '0') = '1'
+FROM archive_ranked
+WHERE archive_rn = 1
 ORDER BY
     COALESCE(date_maj, '') DESC,
     hektor_annonce_id DESC
