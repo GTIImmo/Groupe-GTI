@@ -22334,6 +22334,41 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       <div className="md-lc-end r"><span className="ek">Échéance</span><span className="ev">{formatDate(mandatDateFin)}</span></div>
                     </div>
                   </div>
+                  {/* « Tous les champs du mandat » : le repliable du détail mandat du registre,
+                      mêmes champs, même design. Replié par défaut, il n'alourdit pas la rubrique. */}
+                  {(() => {
+                    const lignes: Array<[string, string]> = [
+                      ['Numéro', String(dossier.numero_mandat ?? '-') || '-'],
+                      ['Type', String(dossierRec['mandat_type'] ?? dossierRec['mandat_type_source'] ?? '-') || '-'],
+                      ['Début', formatDate(mandatDateDebut) || '-'],
+                      ['Fin', formatDate(mandatDateFin) || '-'],
+                      ['Montant', formatPrice(Number(dossierRec['mandat_montant'] ?? dossier.prix ?? 0) || null) || '-'],
+                      ['Validation', String(dossierRec['validation_diffusion_state'] ?? '-') || '-'],
+                      ['Diffusable', isDiffusableValue(dossier.diffusable) ? 'Oui' : 'Non'],
+                      ['Commercial', String(dossier.commercial_nom ?? '-') || '-'],
+                      ['Agence', String(dossier.agence_nom ?? '-') || '-'],
+                    ]
+                    return (
+                      <details className="md-fold">
+                        <summary>
+                          <span className="fs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 5h18M3 12h18M3 19h18" /></svg></span>
+                          <span>Tous les champs du mandat<span className="fs-sub">Numéro, type, dates, validation, négociateur…</span></span>
+                          <span className="md-fold-count">{lignes.length} champs</span>
+                          <svg className="md-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div className="md-fold-body">
+                          <div className="md-fgrid">
+                            {lignes.map(([label, value]) => (
+                              <div className={`md-fcell${label === 'Montant' ? ' hl' : ''}`} key={`ck-md-${label}`}>
+                                <span className="md-fk">{label}</span>
+                                <span className={`md-fv${label === 'Montant' ? ' brand' : ''}`}>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </details>
+                    )
+                  })()}
                 </div>
               ) : null}
               {(() => {
