@@ -264,9 +264,28 @@ SELECT
         __SQL_NORMALIZE_SRC_MANDAT_TYPE__,
         __SQL_NORMALIZE_M_TYPE__
     ) AS mandat_type,
-    COALESCE(NULLIF(TRIM(src.mandat_date_debut), ''), m.date_debut) AS mandat_date_debut,
-    COALESCE(NULLIF(TRIM(src.mandat_date_fin), ''), m.date_fin) AS mandat_date_fin,
-    COALESCE(NULLIF(TRIM(src.mandat_date_cloture), ''), m.date_cloture) AS mandat_date_cloture,
+    -- Repli sur le bloc mandats du DÉTAIL de l'annonce (det.mandats_json), qui est la source
+    -- qu'utilise déjà le registre des mandats. Motif : la table hektor_mandat dépend d'un
+    -- rapatriement global séparé (list_mandats) qui peut cesser de tourner sans rien signaler —
+    -- c'est arrivé le 30/03/2026, et le LEFT JOIN échouait alors EN SILENCE, laissant les dates
+    -- à NULL sur 147 dossiers. Le détail, lui, arrive avec chaque annonce : il est toujours là.
+    -- Ajouté en DERNIER recours dans le COALESCE : quand une date est déjà résolue, rien ne
+    -- change. Aucune régression possible par construction.
+    COALESCE(
+        NULLIF(TRIM(src.mandat_date_debut), ''),
+        m.date_debut,
+        __SQL_MANDAT_DETAIL_FALLBACK__('$.debut')
+    ) AS mandat_date_debut,
+    COALESCE(
+        NULLIF(TRIM(src.mandat_date_fin), ''),
+        m.date_fin,
+        __SQL_MANDAT_DETAIL_FALLBACK__('$.fin')
+    ) AS mandat_date_fin,
+    COALESCE(
+        NULLIF(TRIM(src.mandat_date_cloture), ''),
+        m.date_cloture,
+        __SQL_MANDAT_DETAIL_FALLBACK__('$.cloture')
+    ) AS mandat_date_cloture,
     m.numero AS mandat_numero_source,
     __SQL_NORMALIZE_M_TYPE__ AS mandat_type_source,
     m.date_enregistrement AS mandat_date_enregistrement,
@@ -417,6 +436,17 @@ CREATE INDEX idx_view_generale_commercial ON app_view_generale(commercial_id);
 CREATE INDEX idx_view_generale_diffusion ON app_view_generale(validation_diffusion_state, etat_visibilite);
 """
 
+# Repli mandat depuis le DÉTAIL de l'annonce : on retrouve, dans det.mandats_json, l'entrée dont
+# le numéro correspond à celui porté par l'annonce (src.no_mandat), et on en extrait le champ voulu.
+# Même source que le registre des mandats — voir le commentaire au niveau des colonnes de dates.
+SQL_MANDAT_DETAIL_FALLBACK = """(
+        SELECT NULLIF(TRIM(COALESCE(json_extract(je.value, '__PATH__'), '')), '')
+        FROM json_each(COALESCE(det.mandats_json, '[]')) je
+        WHERE COALESCE(TRIM(json_extract(je.value, '$.numero')), '') = COALESCE(TRIM(src.no_mandat), '')
+          AND COALESCE(TRIM(src.no_mandat), '') <> ''
+        LIMIT 1
+    )"""
+
 SQL_REFRESH_VUE_GENERALE = (
     SQL_REFRESH_VUE_GENERALE
     .replace("__SQL_VALIDATION_DIFFUSION_GENERALE__", SQL_VALIDATION_DIFFUSION_GENERALE)
@@ -424,4 +454,8 @@ SQL_REFRESH_VUE_GENERALE = (
     .replace("__SQL_ALERTE_PRINCIPALE__", SQL_ALERTE_PRINCIPALE)
     .replace("__SQL_NORMALIZE_SRC_MANDAT_TYPE__", SQL_NORMALIZE_MANDAT_TYPE.replace("__VALUE__", "src.mandat_type"))
     .replace("__SQL_NORMALIZE_M_TYPE__", SQL_NORMALIZE_MANDAT_TYPE.replace("__VALUE__", "m.type"))
+    .replace("__SQL_MANDAT_DETAIL_FALLBACK__('$.debut')", SQL_MANDAT_DETAIL_FALLBACK.replace("__PATH__", "$.debut"))
+    .replace("__SQL_MANDAT_DETAIL_FALLBACK__('$.fin')", SQL_MANDAT_DETAIL_FALLBACK.replace("__PATH__", "$.fin"))
+    .replace("__SQL_MANDAT_DETAIL_FALLBACK__('$.cloture')", SQL_MANDAT_DETAIL_FALLBACK.replace("__PATH__", "$.cloture"))
 )
+assert "__SQL_MANDAT_DETAIL_FALLBACK__" not in SQL_REFRESH_VUE_GENERALE, "repli mandat non substitué"
