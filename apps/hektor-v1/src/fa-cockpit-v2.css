@@ -11,13 +11,27 @@
   --fa-brand: #c2125f;
   --fa-brand-ink: #9d0f4e;
   --fa-cream: #f1ece4;
-  --fa-paper: #fbf8f3;
+  /* Audit visuel §9 : ces tokens n'étaient PAS redéclarés dans le scope cockpit — tout tombait
+     sur des valeurs de repli légèrement différentes (gris plus froids, rose plus pâle), soit une
+     dérive systématique de la palette sur des dizaines d'éléments. Valeurs alignées sur la v26. */
+  --fa-paper: #fbf7f0;
   --fa-gold: #a8814a;
-  --fa-line: #e7ddd0;
+  --fa-line: #eae1d7;
   --fa-line-soft: #f0e8dc;
-  --fa-ink: #211a16;
+  --fa-ink: #1c1815;
   --fa-muted: #8a807a;
+  --fa-ink-soft: #544b45;
+  --fa-faint: #a89e95;
+  --fa-brand-soft: #f9e7ef;
+  --fa-gold-soft: #f6efe1;
+  --fa-gold-line: #e9dcc5;
+  /* Audit visuel §10 : sans ça, sur WebKit toute la typo est rendue plus grasse et moins nette
+     que la maquette — c'est diffus mais ça pèse beaucoup dans l'impression « moins fin ». */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+/* Audit visuel §19 : sélection de texte aux couleurs de la marque (v26 l.26). */
+.fa-cockpit-v2 ::selection { background: var(--fa-brand-soft); }
 
 /* Fix largeur (grand écran) : selon l'écran hôte, le panneau détail peut s'étirer plein écran
    (écran Annonces) ou n'être pas centré. Le cockpit veut une largeur « maquette » centrée.
@@ -27,8 +41,30 @@
     width: min(1280px, calc(100vw - 48px)) !important;
     max-width: 1280px !important;
     margin-inline: auto !important;
-    border-radius: 22px !important;
   }
+}
+/* CARTE DU COCKPIT (audit visuel §1). Le shell ne redouble volontairement PAS carte/ombre/clip
+   (anti-jank, cf. plus bas) : c'est donc le panneau HÔTE qui porte la carte. Or layout-overrides.css
+   lui impose un cadre gris-bleu froid (#f7f8f8 + bordure et ombre grises, rayon 8px) autour d'un
+   intérieur crème — la charte est cassée dès le bord. On rétablit ici la carte « papier » de la v26,
+   uniquement quand le panneau contient le cockpit. */
+@media (min-width: 768px) {
+  .modal-panel-detail:has(.fa-cockpit-v2) {
+    background: #fbf7f0 !important;
+    border: 1px solid #eae1d7 !important;
+    border-radius: 26px !important;
+    box-shadow: 0 1px 2px rgba(32, 24, 18, .05), 0 40px 90px -46px rgba(32, 24, 18, .4) !important;
+  }
+}
+/* Fond de page (audit visuel §2) : la v26 pose deux lueurs de marque derrière la carte —
+   magenta en haut-droite, or en bas-gauche. Ici le cockpit vit dans une modale : on superpose
+   ces deux lueurs au voile existant plutôt que de supprimer l'assombrissement. */
+.modal-overlay:has(.fa-cockpit-v2) {
+  background:
+    radial-gradient(70% 45% at 100% -5%, rgba(194, 18, 95, .16), transparent 55%),
+    radial-gradient(60% 40% at -5% 105%, rgba(168, 129, 74, .16), transparent 55%),
+    radial-gradient(circle at top, rgba(15, 76, 92, .12), transparent 30%),
+    rgba(12, 19, 28, .44);
 }
 /* Repli sans :has (navigateurs anciens) — le shell lui-même se contraint et se centre. */
 @media (min-width: 900px) {
@@ -48,6 +84,18 @@
   border-radius: 0;
   overflow: visible;
   box-shadow: none;
+  /* Support de la texture de grain (audit visuel §7). */
+  position: relative;
+}
+/* Audit visuel §7 : très léger grain « papier » (.panel::after de la v26). C'est lui qui évite
+   que les grandes plages crème paraissent parfaitement lisses / numériques. */
+.fa-ck-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.02'/%3E%3C/svg%3E");
 }
 .fa-ck-topbar { position: relative; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 15px 20px; background: linear-gradient(112deg, #241c17 0%, #171210 60%); color: #fff; }
 .fa-ck-topbar::before { content: ''; position: absolute; right: -30px; top: -70px; width: 300px; height: 200px; background: radial-gradient(circle at 60% 40%, rgba(194, 18, 95, .3), transparent 62%); pointer-events: none; }
@@ -100,18 +148,19 @@
 .fa-ck-hero-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .fa-ck-hero-noimg { position: absolute; inset: 0; background: linear-gradient(135deg, #2a2018, #4a3a2a); }
 .fa-ck-hero-grad { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 14, 10, .18), transparent 34%, transparent 60%, rgba(20, 14, 10, .45)); }
-.fa-ck-hero-sb { position: absolute; top: 11px; left: 11px; display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .44); border: 1px solid rgba(255, 255, 255, .28); padding: 5px 11px; border-radius: 99px; }
+.fa-ck-hero-sb { position: absolute; top: 11px; left: 11px; display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .44); border: 1px solid rgba(255, 255, 255, .28); padding: 5px 11px; border-radius: 99px; backdrop-filter: blur(6px); }
 .fa-ck-hero-led { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255, 255, 255, .2); }
-.fa-ck-hero-rf { position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .44); border: 1px solid rgba(255, 255, 255, .22); padding: 3px 9px; border-radius: 99px; }
+.fa-ck-hero-rf { position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .44); border: 1px solid rgba(255, 255, 255, .22); padding: 3px 9px; border-radius: 99px; backdrop-filter: blur(6px); }
 .fa-ck-media-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; gap: 6px; }
-.fa-ck-mb { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .55); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px; padding: 7px 6px; }
+.fa-ck-mb { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .55); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px; padding: 7px 6px; backdrop-filter: blur(6px); }
 .fa-ck-mb svg { width: 14px; height: 14px; }
 /* Media-bar v26 : les 3 raccourcis sont cliquables (Photos · Documents · Visite virtuelle). */
 .fa-ck-mb { position: relative; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
 .fa-ck-mb:hover { background: rgba(20, 14, 10, .72); border-color: rgba(255, 255, 255, .4); }
 .fa-ck-mb:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 /* Pastille « à préparer » (équivalent .mb .al de la maquette). */
-.fa-ck-mb-al { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; border-radius: 99px; background: #d98324; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 1.5px solid var(--fa-paper); }
+/* Audit visuel §16 : ton d'alerte de la v26 (terre brûlée), pas l'orange saturé hors palette. */
+.fa-ck-mb-al { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; border-radius: 99px; background: #c2512a; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 1.5px solid var(--fa-paper); }
 /* Titre de l'annonce sous la photo : réduit (24 → 19px), les vrais titres sont longs et
    débordaient sur 6 lignes en colonne étroite / mobile. */
 .fa-ck-hero-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin-top: 15px; color: var(--fa-ink); }
@@ -121,7 +170,9 @@
 .fa-ck-hero-price::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(var(--fa-brand), var(--fa-gold)); }
 .fa-ck-hero-pl { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #b57fa0; }
 .fa-ck-hero-pv { font-family: 'Fraunces', 'Spectral', serif; font-size: 28px; font-weight: 600; color: var(--fa-brand); line-height: 1.05; margin-top: 2px; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 10px; }
-.fa-ck-hero-pv em { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-style: normal; font-size: 12px; font-weight: 700; color: var(--fa-gold); background: color-mix(in srgb, var(--fa-gold) 12%, #fff); border: 1px solid var(--fa-line); padding: 4px 9px; border-radius: 8px; }
+/* Audit visuel §17 : le badge €/m² doit garder son liseré DORÉ (il fait écho au liseré
+   brand→or juste à sa gauche) ; il était retombé sur un gris. */
+.fa-ck-hero-pv em { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-style: normal; font-size: 12px; font-weight: 700; color: var(--fa-gold); background: var(--fa-gold-soft); border: 1px solid var(--fa-gold-line); padding: 4px 9px; border-radius: 8px; }
 
 /* Rail — porté de la maquette v26 (.rn) : tuile d'icône pleine couleur + nom + sous-titre + chevron. */
 .fa-ck-rnav-h { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 11px; padding: 0 2px; }
@@ -135,7 +186,11 @@
   transition: .16s; box-shadow: 0 1px 2px rgba(32, 24, 18, .04);
 }
 .fa-ck-rn { transition: border-color .16s, box-shadow .16s, transform .16s; }
-.fa-ck-rn:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 16px 28px -16px var(--c, var(--fa-brand)); transform: translateY(-2px); }
+/* Audit visuel §12 : dans la v26 l'item du rail GLISSE vers le contenu (translateX) et son
+   chevron prend la couleur de la rubrique. L'app faisait un translateY et laissait le chevron gris. */
+.fa-ck-rn:hover { border-color: var(--c, var(--fa-brand)); box-shadow: 0 16px 28px -16px var(--c, var(--fa-brand)); transform: translateX(3px); }
+.fa-ck-rn:hover .fa-ck-rn-ch { color: var(--c, var(--fa-brand)); transform: translateX(2px); }
+.fa-ck-rn-ch { transition: color .18s ease, transform .18s ease; }
 .fa-ck-rn.is-active {
   border-color: var(--c, var(--fa-brand));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--fa-brand)) 24%, transparent), 0 12px 24px -14px color-mix(in srgb, var(--c, var(--fa-brand)) 48%, transparent);
@@ -175,10 +230,19 @@
 .fa-ck-tl-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
 .fa-ck-tl-ey { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #a89e95; }
 .fa-ck-tl-status { margin-left: auto; font: inherit; display: inline-flex; align-items: center; gap: 11px; background: #fff; border: 1px solid #e9dcc5; border-radius: 999px; padding: 6px 8px 6px 7px; cursor: pointer; box-shadow: 0 14px 30px -18px rgba(24, 18, 14, .3), 0 2px 5px rgba(24, 18, 14, .05); transition: .2s; }
-.fa-ck-tl-status:hover { border-color: var(--fa-gold); box-shadow: 0 24px 44px -18px rgba(24, 18, 14, .4); }
-.fa-ck-tl-cur { display: inline-flex; align-items: center; font-size: 11px; font-weight: 800; color: #544b45; background: linear-gradient(120deg, #fbf6ef, #f7f0e3); border: 1px solid #e9dcc5; border-radius: 99px; padding: 5px 12px; white-space: nowrap; }
+/* Audit visuel §12 : la pastille de statut doit se SOULEVER au survol et la flèche avancer. */
+.fa-ck-tl-status:hover { border-color: var(--fa-gold); box-shadow: 0 24px 44px -18px rgba(24, 18, 14, .4), 0 3px 6px rgba(24, 18, 14, .08); transform: translateY(-2px); }
+.fa-ck-tl-status:hover .fa-ck-tl-go { box-shadow: 0 10px 20px -8px rgba(194, 18, 95, .8), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-ck-tl-status:hover .fa-ck-tl-go svg { transform: translateX(2px); }
+.fa-ck-tl-status { transition: border-color .24s ease, box-shadow .24s ease, transform .24s ease; }
+.fa-ck-tl-go svg { transition: transform .24s ease; }
+/* §13 : gap pour la pastille LED de couleur, qui manquait dans la pastille d'état. */
+.fa-ck-tl-cur { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; color: var(--fa-ink-soft); background: linear-gradient(120deg, #fbf6ef, #f7f0e3); border: 1px solid var(--fa-gold-line); border-radius: 99px; padding: 5px 12px 5px 9px; letter-spacing: .02em; white-space: nowrap; }
+.fa-ck-tl-cur-pd { width: 7px; height: 7px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px rgba(0, 0, 0, .03); }
 .fa-ck-tl-lbl { font-size: 12.5px; font-weight: 700; color: var(--fa-brand-ink); white-space: nowrap; }
-.fa-ck-tl-go { width: 28px; height: 28px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: linear-gradient(150deg, #e3407f, #bb1059); color: #fff; box-shadow: 0 6px 14px -6px rgba(194, 18, 95, .7); }
+/* §12 : 30px comme la v26, avec le reflet interne qui donne le relief. */
+.fa-ck-tl-go { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: linear-gradient(150deg, #e3407f, #bb1059); color: #fff; box-shadow: 0 6px 14px -6px rgba(194, 18, 95, .7), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-ck-tl-go svg { width: 15px; height: 15px; }
 .fa-ck-tl-row { display: flex; position: relative; }
 .fa-ck-tl-step { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; gap: 5px; padding: 0 4px; }
 .fa-ck-tl-step::before { content: ''; position: absolute; top: 15px; right: 50%; width: 100%; height: 3px; background: var(--fa-line); border-radius: 3px; }
@@ -194,7 +258,9 @@
 .fa-ck-tl-step.cur .fa-ck-tl-et { color: var(--fa-brand-ink); }
 .fa-ck-tl-step.done .fa-ck-tl-et { color: #2f8a5b; }
 .fa-ck-tl-step.todo .fa-ck-tl-et { color: #c3b8ad; }
-.fa-ck-tl-dt { font-size: 10px; font-weight: 600; color: #b3a89e; margin-top: 1px; letter-spacing: .01em; }
+/* Audit visuel §21 : graisse et couleur de la v26, + chiffres tabulaires pour que les dates
+   du parcours s'alignent verticalement (elles ne s'alignaient pas). */
+.fa-ck-tl-dt { font-size: 10px; font-weight: 700; color: var(--fa-faint); margin-top: 1px; font-variant-numeric: tabular-nums; }
 
 .fa-ck-content-head { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px dashed var(--fa-line); }
 .fa-ck-content-head strong { font-size: 15px; }
@@ -209,6 +275,9 @@
 /* Prochaine action — porté du v26 (.pa). */
 .fa-ck-pa { position: relative; overflow: hidden; border-radius: 22px; padding: 16px 22px 14px; isolation: isolate; background: radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--led, #c2125f) 10%, transparent), transparent 58%), linear-gradient(162deg, #fffdfb, #fbf5ee); border: 1px solid #efe3d6; box-shadow: 0 2px 4px rgba(32, 24, 18, .04), 0 34px 62px -34px rgba(32, 24, 18, .34); }
 .fa-ck-pa::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--led, #c2125f), color-mix(in srgb, var(--led, #c2125f) 15%, transparent)); }
+/* Audit visuel §3 : l'auréole colorée du bloc « Prochaine action » (.pa-glow de la v26), teintée
+   par la couleur de l'état. Sans elle il ne reste qu'un radial à 10 %, nettement plus plat. */
+.fa-ck-pa::after { content: ''; position: absolute; right: -70px; top: -90px; width: 360px; height: 280px; z-index: -1; pointer-events: none; background: radial-gradient(circle at 60% 45%, color-mix(in srgb, var(--led, #c2125f) 17%, transparent), transparent 60%); }
 .fa-ck-pa-eye { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--fa-brand-ink); }
 .fa-ck-pa-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--led, #c2125f) 24%, transparent); }
 .fa-ck-pa-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 22px; font-weight: 600; letter-spacing: -.018em; line-height: 1.12; margin: 0 0 4px; color: var(--fa-ink); display: flex; align-items: center; gap: 10px; }
@@ -223,12 +292,16 @@
 .fa-ck-pl-ic { width: 32px; height: 32px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, color-mix(in srgb, var(--c, var(--fa-brand)) 78%, #fff), var(--c, var(--fa-brand))); box-shadow: 0 6px 13px -7px color-mix(in srgb, var(--c, var(--fa-brand)) 80%, transparent); }
 .fa-ck-pl-ic svg { width: 17px; height: 17px; }
 .fa-ck-pl-tx { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--fa-ink); }
-.fa-ck-pl-rub { flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--c, var(--fa-brand)); background: color-mix(in srgb, var(--c, var(--fa-brand)) 12%, transparent); border-radius: 99px; padding: 4px 10px; }
+/* Audit visuel §12 : le badge d'action de la v26 porte un CERNE teinté (.pl-tag) — sans lui il
+   paraît fade et se distingue mal. Taille alignée sur la maquette (10px). */
+.fa-ck-pl-rub { flex: none; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--c, var(--fa-brand)); background: color-mix(in srgb, var(--c, var(--fa-brand)) 13%, transparent); border: 1px solid color-mix(in srgb, var(--c, var(--fa-brand)) 26%, transparent); border-radius: 99px; padding: 3px 9px; }
 .fa-ck-pl-go { flex: none; color: var(--c, var(--fa-brand)); font-weight: 800; font-size: 17px; transition: transform .16s; }
 .fa-ck-pa-link:hover .fa-ck-pl-go { transform: translateX(4px); }
 
 /* Activité — porté du v26 (.acti-card / .afeed / .aev). */
-.fa-ck-rub-head { display: flex; align-items: center; gap: 11px; margin: 6px 0 13px; }
+/* Audit visuel §20 : la v26 laisse ~30px de respiration avant « Activité » ; on était à ~22px,
+   les deux blocs se lisaient comme un seul. */
+.fa-ck-rub-head { display: flex; align-items: center; gap: 11px; margin: 24px 0 13px; }
 .fa-ck-rh-l { font-family: 'Fraunces', 'Spectral', serif; font-size: 16px; font-weight: 600; color: var(--fa-ink); }
 .fa-ck-rh-cnt { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); background: #f1eae1; border: 1px solid var(--fa-line); border-radius: 99px; padding: 3px 9px; }
 .fa-ck-rh-sub { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); background: #f1eae1; border: 1px solid var(--fa-line); border-radius: 99px; padding: 3px 9px; }
@@ -236,6 +309,9 @@
 .fa-ck-afilt button { font: inherit; font-size: 11px; font-weight: 700; border: 0; background: none; color: #8a7f74; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: .14s; }
 .fa-ck-afilt button.is-on { background: #fff; color: var(--fa-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .07); }
 .fa-ck-acti-card { position: relative; overflow: hidden; background: linear-gradient(135deg, #fff, #fdf8f4 60%, #fbf6f8); border: 1px solid var(--fa-line); border-radius: 20px; padding: 8px 18px 16px; box-shadow: 0 26px 52px -34px rgba(24, 18, 14, .32); }
+/* Audit visuel §4 : halo rose d'angle de la carte Activité (.acti-card::before de la v26).
+   Sans lui la carte se lit comme un simple rectangle dégradé. */
+.fa-ck-acti-card::before { content: ''; position: absolute; right: -50px; top: -60px; width: 230px; height: 180px; pointer-events: none; background: radial-gradient(circle at 60% 40%, rgba(194, 18, 95, .06), transparent 62%); }
 .fa-ck-afeed { position: relative; margin: 6px 0 2px; }
 .fa-ck-afeed-h { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--fa-brand-ink); padding: 2px 8px 6px; }
 .fa-ck-afeed::before { content: ''; position: absolute; left: 18px; top: 16px; bottom: 20px; width: 2px; background: linear-gradient(#ece2d3, #ece2d3 72%, transparent); z-index: 0; }
@@ -790,8 +866,11 @@
 .fa-cockpit-v2 .fa-ck-aev:nth-child(n+7) { animation-delay: .39s; }
 /* menu ⋯ : pop-in (popIn) */
 .fa-cockpit-v2 .fa-ck-tb-more.is-open .fa-ck-tb-menu { animation: fa-ck-pop .16s cubic-bezier(.22, 1, .36, 1); }
-/* point de statut « en direct » : pulse (pillst/dotbadge) */
-.fa-cockpit-v2 .fa-ck-hero-led, .fa-cockpit-v2 .fa-ck-tb-chip-dot { animation: fa-ck-dotpulse 2s ease-out infinite; }
+/* Audit visuel §14 et §15 — ANOMALIES corrigées, pas seulement de l'esthétique :
+   la LED du hero et la pastille de synchro pulsaient en permanence avec un halo VERT en dur,
+   quel que soit le statut réel — donc un halo vert sur une annonce en alerte rouge : faux signal.
+   Dans la v26 la LED du hero est STATIQUE, et seule la variante « en attente » de la chip de
+   synchro pulse (variante que l'app n'a pas encore). On retire donc les deux pulsations. */
 /* item d'activité « maintenant » : anneau pulsé sur la pastille */
 .fa-cockpit-v2 .fa-ck-aev.new .fa-ck-an { animation: fa-ck-jalon-pulse 2.2s ease-out infinite; }
 
@@ -1389,10 +1468,32 @@
   line-height: 1.5;
   font-weight: 600;
 }
+/* Audit visuel §8 : la v26 pose ici un bloc DORÉ (dégradé, liseré latéral 4px, rayon 18,
+   médaillon 40px, titre à empattements) — l'app l'avait réduit à une bande grise plate.
+   C'est l'écran d'une annonce Vendue ou Archivée : il doit rester soigné. */
 .fa-cockpit-v2 .fa-ck-pa-ro {
-  background: #f2f0ee;
-  border: 1px solid #e0d9d1;
-  color: #5a534d;
+  background: linear-gradient(120deg, #f4eee5, #faf5ec);
+  border: 1px solid var(--fa-gold-line);
+  border-left: 4px solid var(--fa-gold);
+  border-radius: 18px;
+  padding: 17px 20px;
+  gap: 13px;
+  color: var(--fa-ink-soft);
+}
+.fa-cockpit-v2 .fa-ck-pa-ro-ic {
+  width: 40px; height: 40px; flex: none; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--fa-gold-soft);
+  border: 1px solid var(--fa-gold-line);
+  color: var(--fa-gold);
+}
+.fa-cockpit-v2 .fa-ck-pa-ro-ic svg { width: 19px; height: 19px; }
+.fa-cockpit-v2 .fa-ck-pa-ro-tx {
+  font-family: 'Fraunces', 'Spectral', serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--fa-ink);
 }
 .fa-cockpit-v2 .fa-ck-pa-frozen {
   background: #fdf3e6;
@@ -1529,9 +1630,11 @@
   flex: none;
 }
 .fa-cockpit-v2 .fa-ck-ascut:hover { border-color: var(--fa-brand); color: var(--fa-brand-ink); }
+/* Audit visuel §12 : dégradé de la v26 au lieu d'un aplat — le raccourci principal avait perdu
+   son relief. */
 .fa-cockpit-v2 .fa-ck-ascut.primary {
-  background: var(--fa-brand);
-  border-color: var(--fa-brand);
+  background: linear-gradient(150deg, #e3407f, #bb1059);
+  border-color: #bb1059;
   color: #fff;
 }
 .fa-cockpit-v2 .fa-ck-ascut.primary:hover { filter: brightness(1.08); color: #fff; }

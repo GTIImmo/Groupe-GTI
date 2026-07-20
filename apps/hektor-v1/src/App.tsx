@@ -21691,9 +21691,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <span className="fa-ck-tl-ey">Vie du mandat</span>
               {props.onChangeAnnonceStatus && !isLightweightDetail && !ckStageDef.ro ? (
                 <button type="button" className="fa-ck-tl-status" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
-                  <span className="fa-ck-tl-cur">{situationLabel}</span>
-                  <span className="fa-ck-tl-lbl">Faire évoluer le statut</span>
-                  <span className="fa-ck-tl-go" aria-hidden="true">→</span>
+                  {/* Audit visuel §13 : pastille de couleur de l'état, qui manquait. */}
+                  <span className="fa-ck-tl-cur"><span className="fa-ck-tl-cur-pd" style={{ background: statusLed }} aria-hidden="true" />{situationLabel}</span>
+                  <span className="fa-ck-tl-lbl">Faire évoluer le statut de l'annonce</span>
+                  {/* §12 : flèche vectorielle au lieu du caractère « → », pour pouvoir l'animer. */}
+                  <span className="fa-ck-tl-go" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+                  </span>
                 </button>
               ) : null}
             </div>
@@ -21729,8 +21733,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     action » est REMPLACÉ par un bandeau — aucune action, aucune démarche. */}
                 {ckStageDef.ro ? (
                   <div className="fa-ck-pa-ro">
-                    <span aria-hidden="true">🔒</span>
-                    <span>{ckStageDef.roban}</span>
+                    {/* Audit visuel §8 : médaillon doré + cadenas vectoriel, au lieu d'un emoji. */}
+                    <span className="fa-ck-pa-ro-ic" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                    </span>
+                    <span className="fa-ck-pa-ro-tx">{ckStageDef.roban}</span>
                     {ckStage === 'archive' && props.onRestoreAnnonce && !isLightweightDetail ? (
                       <button type="button" className="fa-ck-rep-btn" onClick={() => props.onRestoreAnnonce?.(dossier)}>Désarchiver</button>
                     ) : null}
