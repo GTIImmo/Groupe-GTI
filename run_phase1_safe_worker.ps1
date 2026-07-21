@@ -30,6 +30,11 @@ Invoke-Step -Label "sync_raw annonces" -Arguments @(
     "--detail-limit", "0"
 )
 
+# "mandats" est conserve ICI, contrairement au run quotidien qui l'a retire le
+# 21/07/2026 : ce script est un rapatriement COMPLET (--max-pages 0), et ListMandat
+# reste le seul moyen de retelecharger les 6 490 mandats historiques (n 1 a 18339,
+# jusqu'au 30/01/2026) si l'on repartait d'une base vide. En revanche il n'apporte
+# rien en quotidien, ne renvoyant plus aucun mandat posterieur a cette date.
 Invoke-Step -Label "sync_raw complementary resources" -Arguments @(
     "sync_raw.py",
     "--resources", "agences", "negos", "contacts", "mandats", "offres", "compromis", "ventes", "broadcasts",

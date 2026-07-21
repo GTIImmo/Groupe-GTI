@@ -202,10 +202,26 @@ Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"
 Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SupabaseSinceWatermark=$SupabaseSinceWatermark AllowStaleSupabaseDeletes=$AllowStaleSupabaseDeletes SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError SkipHektorChauffage=$SkipHektorChauffage HektorChauffageScope=$HektorChauffageScope HektorChauffageLimit=$HektorChauffageLimit HektorChauffageStaleDays=$HektorChauffageStaleDays HektorChauffageDelaySeconds=$HektorChauffageDelaySeconds HektorChauffageBatchSize=$HektorChauffageBatchSize HektorChauffageBatchPauseSeconds=$HektorChauffageBatchPauseSeconds HektorChauffageForce=$HektorChauffageForce HektorChauffageSkipJobCheck=$HektorChauffageSkipJobCheck RunConsoleMissingFields=$RunConsoleMissingFields SkipConsoleMissingFields=$SkipConsoleMissingFields ConsoleMissingFieldsAnnonceScope=$ConsoleMissingFieldsAnnonceScope ConsoleMissingFieldsLimit=$ConsoleMissingFieldsLimit ConsoleMissingFieldsStaleDays=$ConsoleMissingFieldsStaleDays ConsoleMissingFieldsDelaySeconds=$ConsoleMissingFieldsDelaySeconds ConsoleMissingFieldsBatchSize=$ConsoleMissingFieldsBatchSize ConsoleMissingFieldsBatchPauseSeconds=$ConsoleMissingFieldsBatchPauseSeconds ConsoleMissingFieldsForce=$ConsoleMissingFieldsForce ConsoleMissingFieldsSkipJobCheck=$ConsoleMissingFieldsSkipJobCheck PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly MatterportPushMode=$MatterportPushMode"
 
+# La ressource "mandats" a ete retiree le 21/07/2026. Elle declenchait deux appels
+# qui n'apportent plus rien :
+#   - ListMandat : n'expose que les mandats n 1 a 18339 (dernier au 30/01/2026) et
+#     s'arrete la. Verifie par appels reels, sur 7 fenetres de dates jusqu'a
+#     2000-01-01 -> 2099-12-31, et confirme par le rapatriement complet du 30/03/2026
+#     (6 490 mandats, aucun posterieur au 30/01). Les 392 mandats plus recents
+#     (n 18340 a 18767) n'y figurent pas. Redemander ces 25 pages chaque nuit ne
+#     ramenait donc que des mandats deja en base.
+#   - MandatById : gele depuis le 21/05/2026 faute de nouveaux identifiants a traiter,
+#     et redondant (memes champs que MandatsByIdAnnonce).
+# Aucune donnee n'est perdue : les reponses ListMandat deja stockees ne sont jamais
+# purgees (prune_raw_listing_pages ne s'applique qu'aux listings d'annonces), et
+# normalize_source continue de les lire pour alimenter les 23 644 mandats anciens.
+# La fraicheur des mandats vient entierement de MandatsByIdAnnonce, appele avec le
+# detail de chaque annonce (voir sync_annonce_details_with_mandats), ainsi que du
+# read-through -- tous deux inchanges.
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
     "--mode", "update",
-    "--resources", "negos", "annonces", "contacts", "mandats", "offres", "compromis", "ventes", "broadcasts",
+    "--resources", "negos", "annonces", "contacts", "offres", "compromis", "ventes", "broadcasts",
     "--max-pages", [string]$DailyRawMaxPages,
     "--missing-only"
 ) -WorkerKey "phase1.sync_raw"
