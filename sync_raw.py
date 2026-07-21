@@ -757,6 +757,13 @@ def sync_generic_details(
     limit: Optional[int],
     missing_only: bool,
 ) -> None:
+    """Rapatrie la fiche detaillee de chaque element d'un listing (ResourceById).
+
+    SANS APPELANT depuis le 21/07/2026 : son seul usage etait la descente fiche par
+    fiche des mandats (MandatById), retiree car cette route renvoie un autre mandat
+    que celui demande. Conservee telle quelle : elle reste valable pour toute
+    ressource dont la route detail fonctionne.
+    """
     detail_cfg = DETAIL_CONFIG[resource_name]
     object_ids = collect_ids_from_raw_many(conn, listing_endpoint_names, limit=limit)
     if missing_only:
@@ -1321,6 +1328,10 @@ def resolve_generic_max_pages(args: argparse.Namespace, resource_name: str, boot
 
 
 def resolve_generic_detail_limit(args: argparse.Namespace, resource_name: str, bootstrap: bool) -> Optional[int]:
+    """Plafond de fiches detaillees a rapatrier pour une ressource.
+
+    SANS APPELANT depuis le 21/07/2026, en meme temps que sync_generic_details.
+    """
     if bootstrap or args.mode != "update":
         return None if args.detail_limit == 0 else args.detail_limit
     if resource_name == "mandats":
@@ -1478,20 +1489,23 @@ def main() -> int:
                     resolve_generic_max_pages(args, resource_name, bootstrap),
                 )
                 sync_missing_negos_by_id(conn, run_id, client, settings)
-            if resource_name == "mandats":
-                mandat_detail_sources = [config["effective_endpoint_name"]]
-                if "annonces" in args.resources:
-                    mandat_detail_sources.append(MANDAT_RELATION_CONFIG["endpoint_name"])
-                sync_generic_details(
-                    conn,
-                    run_id,
-                    client,
-                    settings,
-                    mandat_detail_sources,
-                    resource_name,
-                    resolve_generic_detail_limit(args, resource_name, bootstrap),
-                    missing_only=args.missing_only,
-                )
+            # Le rapatriement des fiches mandat une par une (MandatById) a ete retire
+            # le 21/07/2026. Cette route est inexploitable : elle renvoie un AUTRE mandat
+            # que celui demande -- 0 concordance sur 8 essais -- parce que Hektor recycle
+            # ses identifiants internes en repartant de 1 (501, 503, 509, 513...), qui
+            # percutent ceux d'anciens mandats. Exemple : MandatById(513) rend le mandat
+            # n 16938 de 2024, alors que l'identifiant 513 designe aujourd'hui le n 18767.
+            #
+            # Les 10 987 payloads qu'elle avait produits ont ete supprimes le meme jour.
+            # Comme l'etape tournait en mode "ce qui manque", la relancer les recreerait
+            # tous : ~6 500 appels pour reconstituer des donnees fausses.
+            #
+            # ListMandat (le listing) est conserve : il reste le seul moyen de
+            # retelecharger les 6 490 mandats historiques (n 1 a 18339) depuis une base
+            # vide. Seule la descente fiche par fiche disparait -- elle n'apportait rien
+            # que le listing ne contienne deja.
+            #
+            # La fraicheur des mandats vient du detail de l'annonce (AnnonceById.mandats).
 
         update_sync_run_progress(conn, run_id, current_step="finalizing", progress_done=1, progress_total=1, progress_unit="step")
         finish_sync_run(conn, run_id, "success", notes="bootstrap" if bootstrap else None)
