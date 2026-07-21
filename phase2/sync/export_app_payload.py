@@ -1073,12 +1073,24 @@ def normalize_register_mandat_type(value: object) -> str | None:
     if not text:
         return None
     lowered = text.lower()
+    # L'ordre est significatif, et doit rester aligne sur SQL_NORMALIZE_MANDAT_TYPE
+    # (phase2/pipeline/view_generale.py), sans quoi le registre et la fiche annonce
+    # classent differemment le meme mandat.
+    #
+    # "mandat de vente" etait teste en meme temps que "non exclusif" : un libelle
+    # comme "Mandat de vente exclusif en cas de demarchage" etait donc classe SIMPLE,
+    # le test sur "exclusif" n'etant jamais atteint. 107 mandats exclusifs
+    # apparaissaient ainsi en SIMPLE au registre, alors que la fiche les donnait
+    # justes. Un exclusif presente comme simple n'est pas une nuance d'affichage :
+    # les deux n'ont pas les memes effets juridiques.
     if "semi-exclusif" in lowered:
         return "ACCORD"
-    if "non exclusif" in lowered or "mandat de vente" in lowered:
+    if "non exclusif" in lowered:
         return "SIMPLE"
     if "exclusif" in lowered:
         return "EXCLUSIF"
+    if "mandat de vente" in lowered:
+        return "SIMPLE"
     if lowered == "simple":
         return "SIMPLE"
     if lowered == "exclusif":
