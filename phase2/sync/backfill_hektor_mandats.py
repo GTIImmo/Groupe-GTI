@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
+# Meme variable que hektor_pipeline.common : permet d'eprouver l'etape sur une copie
+# de la base avant de la laisser tourner dans le run quotidien.
+HEKTOR_DB = Path(os.getenv("HEKTOR_DB_PATH", "") or (ROOT / "data" / "hektor.sqlite"))
 
 
 def normalize_text(value: object) -> str | None:
@@ -46,8 +49,6 @@ def main() -> int:
             if not isinstance(mandats, list):
                 continue
 
-            # On ne supprime qu'une fois certain d'avoir de quoi reposer : sinon une
-            # annonce dont le JSON ne porte aucun mandat exploitable perdrait les siens.
             exploitables = [
                 item
                 for item in mandats
@@ -57,7 +58,10 @@ def main() -> int:
             if not exploitables:
                 continue
 
-            con.execute("DELETE FROM hektor_mandat WHERE hektor_annonce_id = ?", (annonce_id,))
+            # Filet purement ADDITIF : on ne supprime rien. mandats_json ne porte que les
+            # mandats vus par MandatsByIdAnnonce ; normalize_source, lui, en tire aussi du
+            # listing global. Purger l'annonce avant de reposer ce seul JSON appauvrissait
+            # la table (mesure : 6 mandats actifs dates perdus sur un run complet).
             annonces_touched += 1
 
             for item in exploitables:

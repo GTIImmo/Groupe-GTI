@@ -252,12 +252,14 @@ else {
     Write-RunLog "SKIP contact details delta"
 }
 
-# Filet mandats : normalize_source purge hektor_mandat puis la reconstruit depuis les
-# payloads bruts, or MandatsByIdAnnonce n'a ete appele que pour une fraction des annonces.
-# hektor_annonce_detail.mandats_json, lui, est permanent en local et porte la meme donnee
-# (c'est la source du registre des mandats). On le reverse dans hektor_mandat avant que
-# build_case_index ne la lise, sans aucun appel API.
-Invoke-Step -Label "backfill mandats depuis mandats_json" -Arguments @(
+# Filet mandats, purement ADDITIF : depuis que la cle primaire porte le couple
+# (annonce, mandat), normalize_source reconstruit hektor_mandat correctement tout seul
+# -- mesure sur copie : 1 seule annonce active sans dates, sans cette etape.
+# Elle ne sert donc que de securite : hektor_annonce_detail.mandats_json vit dans une
+# table permanente, la ou les reponses brutes d'API peuvent etre purgees. Le jour ou
+# cela arrive, les mandats sont rattrapes ici. Cout : ~1 seconde.
+# Optionnelle a dessein : une simple securite ne doit jamais interrompre le run.
+Invoke-OptionalStepWithRetry -Label "backfill mandats depuis mandats_json" -Arguments @(
     "phase2\sync\backfill_hektor_mandats.py"
 ) -WorkerKey "phase1.backfill_mandats"
 
