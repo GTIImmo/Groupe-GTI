@@ -50,7 +50,15 @@ ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
     "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis', 'Estimation')"
 )
-REGISTRE_SCOPE_STATUTS = ("Actif", "Sous offre", "Sous compromis", "Vendu", "Clos")
+# "Estimation" ajoute le 21/07/2026. Le registre des mandats est un document legal :
+# tout mandat signe doit y figurer, quel que soit le statut commercial de l'annonce.
+# Or 139 annonces en statut Estimation portent un vrai mandat, avec ses deux dates
+# (75 SIMPLE, 39 EXCLUSIF, 13 ACCORD, 12 sans type), du 2012 au 07/07/2026 -- elles
+# etaient absentes du registre alors que le detail annonce les affichait.
+# Le perimetre passe de 44 040 a 56 681 annonces balayees, mais n'ajoute que
+# +139 lignes : les 12 502 estimations sans mandat n'en produisent aucune, la
+# construction ne retenant que les annonces portant un mandat.
+REGISTRE_SCOPE_STATUTS = ("Actif", "Sous offre", "Sous compromis", "Vendu", "Clos", "Estimation")
 REGISTRE_SCOPE_SQL = ",".join(f"'{value}'" for value in REGISTRE_SCOPE_STATUTS)
 
 
