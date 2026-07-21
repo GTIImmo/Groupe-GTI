@@ -19532,7 +19532,7 @@ function MandatRegisterScreen(props: {
     ['Type', selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'] as [string, string],
     ['Debut', formatDate(selectedDetail.mandat_date_debut)] as [string, string],
     ['Fin', formatDate(selectedDetail.mandat_date_fin)] as [string, string],
-    ['Montant', formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)] as [string, string],
+    ['Montant', formatPrice(selectedDetail.prix ?? selectedDetail.mandat_montant)] as [string, string],
     ['Validation', selectedDetail.validation_diffusion_state ?? '-'] as [string, string],
     ['Diffusable', mandateRegisterDiffusableLabel(selectedDetail.diffusable)] as [string, string],
     ['Commercial', selectedDetail.commercial_nom ?? '-'] as [string, string],
@@ -19683,7 +19683,7 @@ function MandatRegisterScreen(props: {
                         <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
                         <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
                         <td className="register-col-amount">
-                          <strong className="register-amount">{formatPrice(item.mandat_montant ?? item.prix)}</strong>
+                          <strong className="register-amount">{formatPrice(item.prix ?? item.mandat_montant)}</strong>
                           {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
                         </td>
                         <td className="register-col-mandants">
@@ -19800,7 +19800,7 @@ function MandatRegisterScreen(props: {
                       {String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}
                     </div>
                     <div className="md-price">
-                      <span className="amount">{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</span>
+                      <span className="amount">{formatPrice(selectedDetail.prix ?? selectedDetail.mandat_montant)}</span>
                       {mandateRegisterObjectLabel(selectedDetail) !== '-' ? <span className="tag">{mandateRegisterObjectLabel(selectedDetail)}</span> : null}
                     </div>
                     <div className="md-rblock">
@@ -19919,7 +19919,7 @@ function MandatRegisterScreen(props: {
                     </div>
                     <div className="md-mod primary">
                       <div className="md-figures">
-                        <div className="md-fig"><div className="v brand">{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</div><div className="k">Montant</div></div>
+                        <div className="md-fig"><div className="v brand">{formatPrice(selectedDetail.prix ?? selectedDetail.mandat_montant)}</div><div className="k">Montant</div></div>
                         <div className="md-fig"><div className="v">{mdDureeMois !== null ? <>{mdDureeMois} <span className="u">mois</span></> : '-'}</div><div className="k">Durée</div></div>
                         <div className="md-fig"><div className="v">{mdDatesValid ? <>{mdPct} <span className="u">%</span></> : '-'}</div><div className="k">Temps écoulé</div></div>
                         <div className="md-fig"><div className="v amber">{mdJoursRestants !== null ? <>{mdJoursRestants} <span className="u">j</span></> : '-'}</div><div className="k">Jours restants</div></div>
@@ -19999,7 +19999,7 @@ function MandatRegisterScreen(props: {
                         ) : (
                           <article className="md-ver">
                             <div className="md-ver-h"><span className="md-ver-t">Version courante</span><span className="md-pill green" style={{ marginLeft: 'auto' }}><span className="d" />En cours</span></div>
-                            <div className="md-ver-meta">{mandateRegisterObjectLabel(selectedDetail)} · {formatDate(selectedDetail.mandat_date_debut)} → {formatDate(selectedDetail.mandat_date_fin)} · <b>{formatPrice(selectedDetail.mandat_montant ?? selectedDetail.prix)}</b></div>
+                            <div className="md-ver-meta">{mandateRegisterObjectLabel(selectedDetail)} · {formatDate(selectedDetail.mandat_date_debut)} → {formatDate(selectedDetail.mandat_date_fin)} · <b>{formatPrice(selectedDetail.prix ?? selectedDetail.mandat_montant)}</b></div>
                             <div className="md-ver-owner">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>
                               Mandant : {selectedMandantsLabel || '-'}
@@ -22315,7 +22315,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {ckMandatTiming.valid && pMandatNum ? (
                 <div className="fa-ck-mdblock">
                   <div className="md-figures">
-                    <div className="md-fig"><div className="v brand">{formatPrice(Number(dossierRec['mandat_montant'] ?? dossier.prix ?? 0) || null)}</div><div className="k">Montant</div></div>
+                    <div className="md-fig"><div className="v brand">{formatPrice(Number(dossier.prix ?? dossierRec['mandat_montant'] ?? 0) || null)}</div><div className="k">Montant</div></div>
                     <div className="md-fig"><div className="v">{ckMandatTiming.dureeMois} <span className="u">mois</span></div><div className="k">Durée</div></div>
                     <div className="md-fig"><div className="v">{ckMandatTiming.pct} <span className="u">%</span></div><div className="k">Temps écoulé</div></div>
                     <div className="md-fig"><div className={`v ${mandatEchu ? 'amber' : 'amber'}`}>{mandatEchu ? '0' : ckMandatTiming.joursRestants} <span className="u">j</span></div><div className="k">Jours restants</div></div>
@@ -22342,7 +22342,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       ['Type', String(dossierRec['mandat_type'] ?? dossierRec['mandat_type_source'] ?? '-') || '-'],
                       ['Début', formatDate(mandatDateDebut) || '-'],
                       ['Fin', formatDate(mandatDateFin) || '-'],
-                      ['Montant', formatPrice(Number(dossierRec['mandat_montant'] ?? dossier.prix ?? 0) || null) || '-'],
+                      ['Montant', formatPrice(Number(dossier.prix ?? dossierRec['mandat_montant'] ?? 0) || null) || '-'],
                       ['Validation', String(dossierRec['validation_diffusion_state'] ?? '-') || '-'],
                       ['Diffusable', isDiffusableValue(dossier.diffusable) ? 'Oui' : 'Non'],
                       ['Commercial', String(dossier.commercial_nom ?? '-') || '-'],
@@ -28168,7 +28168,7 @@ function MobileRegisterCards(props: {
             </div>
           </div>
           <div className="mobile-card-grid">
-            <div><span className="mobile-mini-label">Montant</span><strong>{formatPrice(item.mandat_montant ?? item.prix)}</strong></div>
+            <div><span className="mobile-mini-label">Montant</span><strong>{formatPrice(item.prix ?? item.mandat_montant)}</strong></div>
             <div><span className="mobile-mini-label">Fin</span><strong>{formatDate(item.mandat_date_fin)}</strong></div>
           </div>
           <div className="mobile-status-row">
