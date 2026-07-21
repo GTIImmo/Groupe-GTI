@@ -129,9 +129,20 @@ def replace_mandats_for_annonce(conn: sqlite3.Connection, annonce_id: str, manda
             )
         )
 
-    conn.execute("DELETE FROM hektor_mandat WHERE hektor_annonce_id = ?", (annonce_id,))
     if not rows:
+        # Hektor ne renvoie AUCUN mandat pour cette annonce : on ne supprime rien.
+        #
+        # La suppression precedait ce test, si bien qu'une reponse vide detruisait le
+        # mandat local sans rien reposer. Or l'API perd reellement des mandats : les
+        # annonces de fevrier 2026 n'en renvoient plus aucun alors qu'ils existent
+        # (76 cas, combles a la main par le fichier XLSX). Un simple rafraichissement
+        # de fiche effacait donc la seule trace locale de ces mandats.
+        #
+        # Compromis assume : un mandat reellement supprime cote Hektor sera conserve
+        # ici. Mieux vaut une ligne perimee qu'une perte silencieuse et definitive.
         return
+
+    conn.execute("DELETE FROM hektor_mandat WHERE hektor_annonce_id = ?", (annonce_id,))
 
     conn.executemany(
         """
