@@ -476,10 +476,25 @@ def main() -> int:
         key_data = ((detail_payload.get("data") or {}).get("keyData") or {}) if isinstance(detail_payload.get("data"), dict) else {}
         refresh_validation_state(conn, client, settings, annonce_id, key_data.get("NO_DOSSIER"))
 
-        mandats_payload = client.get_json(
-            "/Api/Mandat/MandatsByIdAnnonce/",
-            params={"idAnnonce": annonce_id, "version": settings.api_version},
+        # Les mandats viennent du detail de l'annonce, deja recupere ci-dessus.
+        #
+        # L'appel MandatsByIdAnnonce a ete retire le 21/07/2026 : verifie par appels
+        # reels, il ne renvoie plus RIEN pour un mandat posterieur a janvier 2026
+        # (n 18299 encore servi, n 18549 et au-dela : liste vide), alors que
+        # AnnonceById.mandats porte la meme donnee et reste a jour. Meme frontiere que
+        # ListMandat, fige au n 18339 / 30-01-2026 : les trois routes du referentiel
+        # mandats de Hektor s'arretent ensemble. Sur les mandats anterieurs, les deux
+        # sources etaient identiques -- l'appel n'apportait donc jamais rien de plus.
+        #
+        # On continue d'ecrire l'enregistrement brut 'mandats_by_annonce', que
+        # normalize_source lit pour construire ses relation_items : le contrat en aval
+        # est inchange, seule la provenance l'est.
+        mandat_items = (
+            list(iter_mandat_items({"data": {"mandats": (detail_payload.get("data") or {}).get("mandats")}}))
+            if isinstance(detail_payload.get("data"), dict)
+            else []
         )
+        mandats_payload = {"data": mandat_items}
         upsert_raw_response(
             conn,
             run_id=run_id,
@@ -487,15 +502,10 @@ def main() -> int:
             object_type="mandat_by_annonce",
             object_id=annonce_id,
             page=None,
-            params={"idAnnonce": annonce_id, "version": settings.api_version},
+            params={"idAnnonce": annonce_id, "source": "annonce_detail.mandats"},
             payload=mandats_payload,
             http_status=200,
         )
-        mandat_items = list(iter_mandat_items(mandats_payload))
-        if not mandat_items and isinstance(detail_payload.get("data"), dict):
-            mandat_items = list(iter_mandat_items({"data": {"mandats": (detail_payload.get("data") or {}).get("mandats")}}))
-            if mandat_items:
-                mandats_payload = {"data": mandat_items}
         replace_mandats_for_annonce(conn, annonce_id, mandat_items)
 
         # La diffusion PAR BIEN vient de hektor_broadcast_listing (source list_broadcasts
