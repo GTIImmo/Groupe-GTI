@@ -58,10 +58,11 @@ def main() -> int:
             if not exploitables:
                 continue
 
-            # Filet purement ADDITIF : on ne supprime rien. mandats_json ne porte que les
-            # mandats vus par MandatsByIdAnnonce ; normalize_source, lui, en tire aussi du
-            # listing global. Purger l'annonce avant de reposer ce seul JSON appauvrissait
-            # la table (mesure : 6 mandats actifs dates perdus sur un run complet).
+            # Filet purement ADDITIF : on ne supprime rien. mandats_json provient du
+            # detail de l'annonce (AnnonceById.mandats, cf. normalize_source), alors que
+            # normalize_source alimente aussi hektor_mandat depuis le listing global.
+            # Purger l'annonce avant de reposer ce seul JSON appauvrissait la table
+            # (mesure : 6 mandats actifs dates perdus sur un run complet).
             annonces_touched += 1
 
             for item in exploitables:
