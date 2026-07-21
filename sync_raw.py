@@ -993,6 +993,147 @@ def sync_contact_listing_variant(
     return changed_ids, max_seen_date
 
 
+def fetch_annonce_detail_once(
+    conn,
+    run_id: int,
+    client: HektorClient,
+    settings: Settings,
+    annonce_id: str,
+) -> bool:
+    """Rapatrie le detail d'une annonce. Retourne False si l'appel a echoue.
+
+    Ne marque JAMAIS l'annonce comme synchronisee : c'est a l'appelant de decider,
+    une fois qu'il sait si les etapes suivantes ont abouti.
+    """
+    detail_cfg = DETAIL_CONFIG["annonces"]
+    params = {detail_cfg["id_param"]: annonce_id, "version": settings.api_version}
+    try:
+        payload = client.get_json(detail_cfg["path"], params=params)
+    except Exception as exc:
+        log_sync_error(
+            conn,
+            run_id=run_id,
+            stage="sync_raw",
+            endpoint_name=detail_cfg["endpoint_name"],
+            object_type=detail_cfg["object_type"],
+            object_id=annonce_id,
+            page=None,
+            error_message=str(exc),
+        )
+        return False
+    upsert_raw_response(
+        conn,
+        run_id=run_id,
+        endpoint_name=detail_cfg["endpoint_name"],
+        object_type=detail_cfg["object_type"],
+        object_id=annonce_id,
+        page=None,
+        params=params,
+        payload=payload,
+        http_status=200,
+    )
+    replace_annonce_contact_links(conn, annonce_id, payload)
+    return True
+
+
+def fetch_mandats_for_annonce_once(
+    conn,
+    run_id: int,
+    client: HektorClient,
+    settings: Settings,
+    annonce_id: str,
+) -> bool:
+    """Rapatrie les mandats d'une annonce. Retourne False si l'appel a echoue."""
+    params = {MANDAT_RELATION_CONFIG["target_param"]: annonce_id, "version": settings.api_version}
+    try:
+        payload = client.get_json(MANDAT_RELATION_CONFIG["path"], params=params)
+    except Exception as exc:
+        log_sync_error(
+            conn,
+            run_id=run_id,
+            stage="sync_raw",
+            endpoint_name=MANDAT_RELATION_CONFIG["endpoint_name"],
+            object_type=MANDAT_RELATION_CONFIG["object_type"],
+            object_id=annonce_id,
+            page=None,
+            error_message=str(exc),
+        )
+        return False
+    upsert_raw_response(
+        conn,
+        run_id=run_id,
+        endpoint_name=MANDAT_RELATION_CONFIG["endpoint_name"],
+        object_type=MANDAT_RELATION_CONFIG["object_type"],
+        object_id=annonce_id,
+        page=None,
+        params=params,
+        payload=payload,
+        http_status=200,
+    )
+    return True
+
+
+def sync_annonce_details_with_mandats(
+    conn,
+    run_id: int,
+    client: HektorClient,
+    settings: Settings,
+    detail_ids: list[str],
+    delay_seconds: float = 0.1,
+) -> None:
+    """Traite chaque annonce de bout en bout : detail, puis mandats, puis marquage.
+
+    Les deux etapes etaient auparavant deux boucles successives, et l'annonce etait
+    marquee « a jour » des la fin de la premiere. Quand la seconde s'interrompait --
+    le 09/07/2026, apres 609 annonces sur 22 219 -- les 21 610 restantes gardaient
+    leur marque sans avoir jamais eu leurs mandats, et le delta ne les reproposait
+    plus jamais. Marquer seulement quand les deux etapes ont abouti rend l'interruption
+    rattrapable : le run suivant reprend exactement la ou celui-ci s'est arrete.
+
+    C'est d'autant plus important que MandatsByIdAnnonce est la seule source a jour
+    des mandats -- ListMandat ne renvoie plus rien apres le 30/01/2026.
+    """
+    total_objects = len(detail_ids)
+    detail_cfg = DETAIL_CONFIG["annonces"]
+    update_sync_run_progress(
+        conn,
+        run_id,
+        current_step="detail",
+        current_resource="annonces",
+        current_endpoint=detail_cfg["endpoint_name"],
+        current_object_id=None,
+        current_page=None,
+        progress_done=0,
+        progress_total=total_objects,
+        progress_unit="objects",
+    )
+    for index, annonce_id in enumerate(detail_ids, start=1):
+        if not fetch_annonce_detail_once(conn, run_id, client, settings, annonce_id):
+            conn.commit()
+            continue
+        sleep_brief(delay_seconds)
+        if not fetch_mandats_for_annonce_once(conn, run_id, client, settings, annonce_id):
+            # Detail en base, mandats manquants : on ne marque pas, l'annonce
+            # repassera au prochain run plutot que d'etre oubliee.
+            conn.commit()
+            continue
+        mark_annonce_detail_synced(conn, annonce_id)
+        update_sync_run_progress(
+            conn,
+            run_id,
+            current_step="detail_with_mandats",
+            current_resource="annonces",
+            current_endpoint=detail_cfg["endpoint_name"],
+            current_object_id=annonce_id,
+            current_page=None,
+            progress_done=index,
+            progress_total=total_objects,
+            progress_unit="objects",
+        )
+        conn.commit()
+        sleep_brief(delay_seconds)
+
+
 def sync_annonce_details(
     conn,
     run_id: int,
@@ -1016,33 +1157,8 @@ def sync_annonce_details(
         progress_unit="objects",
     )
     for index, annonce_id in enumerate(detail_ids, start=1):
-        params = {detail_cfg["id_param"]: annonce_id, "version": settings.api_version}
-        try:
-            payload = client.get_json(detail_cfg["path"], params=params)
-        except Exception as exc:
-            log_sync_error(
-                conn,
-                run_id=run_id,
-                stage="sync_raw",
-                endpoint_name=detail_cfg["endpoint_name"],
-                object_type=detail_cfg["object_type"],
-                object_id=annonce_id,
-                page=None,
-                error_message=str(exc),
-            )
+        if not fetch_annonce_detail_once(conn, run_id, client, settings, annonce_id):
             continue
-        upsert_raw_response(
-            conn,
-            run_id=run_id,
-            endpoint_name=detail_cfg["endpoint_name"],
-            object_type=detail_cfg["object_type"],
-            object_id=annonce_id,
-            page=None,
-            params=params,
-            payload=payload,
-            http_status=200,
-        )
-        replace_annonce_contact_links(conn, annonce_id, payload)
         mark_annonce_detail_synced(conn, annonce_id)
         update_sync_run_progress(
             conn,
@@ -1082,32 +1198,8 @@ def sync_mandats_by_annonce(
         progress_unit="objects",
     )
     for index, annonce_id in enumerate(annonce_ids, start=1):
-        params = {MANDAT_RELATION_CONFIG["target_param"]: annonce_id, "version": settings.api_version}
-        try:
-            payload = client.get_json(MANDAT_RELATION_CONFIG["path"], params=params)
-        except Exception as exc:
-            log_sync_error(
-                conn,
-                run_id=run_id,
-                stage="sync_raw",
-                endpoint_name=MANDAT_RELATION_CONFIG["endpoint_name"],
-                object_type=MANDAT_RELATION_CONFIG["object_type"],
-                object_id=annonce_id,
-                page=None,
-                error_message=str(exc),
-            )
+        if not fetch_mandats_for_annonce_once(conn, run_id, client, settings, annonce_id):
             continue
-        upsert_raw_response(
-            conn,
-            run_id=run_id,
-            endpoint_name=MANDAT_RELATION_CONFIG["endpoint_name"],
-            object_type=MANDAT_RELATION_CONFIG["object_type"],
-            object_id=annonce_id,
-            page=None,
-            params=params,
-            payload=payload,
-            http_status=200,
-        )
         update_sync_run_progress(
             conn,
             run_id,
@@ -1142,7 +1234,19 @@ def configure_generic_resources(args: argparse.Namespace, bootstrap: bool) -> Di
     for resource_name in ("mandats", "offres", "compromis", "ventes"):
         configs[resource_name]["effective_endpoint_name"] = configs[resource_name]["update_endpoint_name"]
 
-    configs["mandats"]["extra_params"]["sort"] = "id"
+    # Tri par date de debut, comme les offres ("date") et les compromis ("dateStart").
+    # Le tri par "id" ne reflete pas le temps : ListMandat et MandatsByIdAnnonce
+    # numerotent dans deux espaces distincts, si bien qu'un mandat recent peut porter
+    # un identifiant bas et rester hors d'atteinte du plafond de pages.
+    # Champs verifies contre l'API : "beginDate", "debut", "date" et "dateStart"
+    # renvoient une liste vide ; seul "dateDebut" trie reellement (ASC part de
+    # 2020-01-02, DESC du mandat le plus recent disponible).
+    # Attention : cela n'elargit PAS la couverture. Mesure du 21/07/2026 : ListMandat
+    # ne renvoie aucun mandat debutant apres le 2026-01-30, quelle que soit la fenetre,
+    # alors que la base en connait 392 plus recents via MandatsByIdAnnonce. Le filet par
+    # listing est donc inoperant tant que cette source reste figee cote Hektor : la
+    # fraicheur des mandats repose entierement sur l'appel par annonce.
+    configs["mandats"]["extra_params"]["sort"] = "dateDebut"
     configs["mandats"]["extra_params"]["way"] = "DESC"
     configs["compromis"]["extra_params"]["sort"] = "dateStart"
     configs["compromis"]["extra_params"]["way"] = "DESC"
@@ -1301,8 +1405,7 @@ def main() -> int:
                     print(f"Skip {skipped} brouillon(s) isDraft au fetch detail (AnnonceById renvoie vide)")
 
         if "annonces" in args.resources and detail_ids:
-            sync_annonce_details(conn, run_id, client, settings, detail_ids)
-            sync_mandats_by_annonce(conn, run_id, client, settings, detail_ids)
+            sync_annonce_details_with_mandats(conn, run_id, client, settings, detail_ids)
 
         generic_configs = configure_generic_resources(args, bootstrap=bootstrap)
         for resource_name in ("agences", "negos", "mandats", "offres", "compromis", "ventes", "broadcasts"):

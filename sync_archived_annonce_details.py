@@ -20,9 +20,8 @@ from sync_raw import (
     load_annonce_state_map,
     prune_raw_listing_pages,
     set_meta_value,
-    sync_annonce_details,
+    sync_annonce_details_with_mandats,
     sync_annonce_listing_variant,
-    sync_mandats_by_annonce,
 )
 
 
@@ -192,8 +191,7 @@ def main() -> int:
         total = len(detail_ids)
         done = 0
         for batch in iter_batches(detail_ids, args.batch_size):
-            sync_annonce_details(conn, run_id, client, settings, batch)
-            sync_mandats_by_annonce(conn, run_id, client, settings, batch)
+            sync_annonce_details_with_mandats(conn, run_id, client, settings, batch)
             done += len(batch)
             update_sync_run_progress(
                 conn,
