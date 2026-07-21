@@ -10,9 +10,17 @@ from phase2.pipeline.view_common import (
 SQL_NORMALIZE_MANDAT_TYPE = """
 CASE
     WHEN __VALUE__ IS NULL OR TRIM(__VALUE__) = '' THEN NULL
+    -- L'ordre est significatif : ces conditions sont evaluees de haut en bas.
+    -- '%non exclusif%' DOIT preceder '%exclusif%', sinon un libelle comme
+    -- "Mandat de vente non exclusif en cas de demarchage" est capte par la regle
+    -- '%exclusif%' et classe EXCLUSIF alors qu'il est SIMPLE. Ce defaut affectait
+    -- 164 mandats, presentes comme exclusifs dans le detail annonce tandis que le
+    -- registre -- qui passe par normalize_register_mandat_type, correct -- les
+    -- affichait en SIMPLE. Un mandat simple presente comme exclusif n'est pas une
+    -- nuance d'affichage : les deux n'ont pas les memes effets juridiques.
     WHEN LOWER(TRIM(__VALUE__)) LIKE '%semi-exclusif%' THEN 'ACCORD'
-    WHEN LOWER(TRIM(__VALUE__)) LIKE '%exclusif%' THEN 'EXCLUSIF'
     WHEN LOWER(TRIM(__VALUE__)) LIKE '%non exclusif%' THEN 'SIMPLE'
+    WHEN LOWER(TRIM(__VALUE__)) LIKE '%exclusif%' THEN 'EXCLUSIF'
     WHEN LOWER(TRIM(__VALUE__)) LIKE '%mandat de vente%' THEN 'SIMPLE'
     WHEN LOWER(TRIM(__VALUE__)) = 'simple' THEN 'SIMPLE'
     WHEN LOWER(TRIM(__VALUE__)) = 'exclusif' THEN 'EXCLUSIF'
