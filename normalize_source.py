@@ -649,17 +649,35 @@ def upsert_annonce_details(conn: sqlite3.Connection) -> None:
 
 def upsert_mandats(conn: sqlite3.Connection) -> None:
     annonce_detail_map = latest_detail_map(fetch_latest_raw_payloads(conn, "annonce_detail"))
-    detail_map = latest_detail_map(fetch_latest_raw_payloads(conn, "mandat_detail"))
     mandat_id_to_annonce, mandat_numero_to_annonce = load_annonce_mandat_links(conn)
 
+    # Les mandats viennent du DETAIL DE L'ANNONCE (AnnonceById.mandats).
+    #
+    # Cette fonction lisait auparavant deux autres sources, toutes deux abandonnees
+    # le 21/07/2026 apres verification par appels reels :
+    #   - les payloads 'mandat_detail' (MandatById), figes au 21/05 : cette route
+    #     renvoie un AUTRE mandat que celui demande (0 concordance sur 8 essais),
+    #     car Hektor recycle ses identifiants internes. Ils servaient ici a enrichir
+    #     par 'source.update(detail_item)', donc a ECRASER numero, type, dates et
+    #     montant par ceux d'un mandat homonyme. 310 des 392 mandats recents y etaient
+    #     exposes.
+    #   - les payloads 'mandats_by_annonce' (MandatsByIdAnnonce), qui ne renvoient plus
+    #     rien pour un mandat posterieur a janvier 2026.
+    #
+    # AnnonceById.mandats porte la meme donnee, reste a jour, et est deja la source de
+    # hektor_annonce_detail.mandats_json (donc du registre des mandats).
+    #
+    # Limite connue : relation_items reste indexe par identifiant de mandat, or celui-ci
+    # est recycle. Deux annonces partageant un identifiant s'ecrasent donc ici. Un seul
+    # cas mesure a ce jour (id 513, annonces 1876 et 62649), mais le nombre augmentera
+    # tant que Hektor recyclera. L'unicite reelle est portee par le couple (annonce,
+    # numero) -- c'est deja la cle du registre.
     relation_items: Dict[str, Dict[str, Any]] = {}
-    for row in fetch_latest_raw_payloads(conn, "mandats_by_annonce"):
-        payload = json.loads(row["payload_json"])
-        annonce_id = str(row["object_id"] or "").strip()
-        data = payload.get("data") or []
-        if not isinstance(data, list):
+    for annonce_id, detail_data in annonce_detail_map.items():
+        mandats = (detail_data or {}).get("mandats")
+        if not isinstance(mandats, list):
             continue
-        for item in data:
+        for item in mandats:
             if not isinstance(item, dict):
                 continue
             mandat_id = str(item.get("id") or "").strip()
@@ -693,7 +711,7 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
     seen_ids: set[str] = set()
 
     for item in iter_listing_items_for_endpoints(conn, MANDAT_ENDPOINTS):
-        detail_item = detail_map.get(str(item.get("id") or "").strip(), item)
+        detail_item = item
         mandat_id = str(detail_item.get("id") or item.get("id") or "").strip()
         relation_item = relation_items.get(mandat_id, {})
         source = dict(item)
@@ -772,9 +790,8 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
     for mandat_id, relation_item in relation_items.items():
         if mandat_id in seen_ids:
             continue
-        detail_item = detail_map.get(mandat_id, relation_item)
+        detail_item = relation_item
         source = dict(relation_item)
-        source.update(detail_item)
         mandat_numero = str(first_present(source.get("numero"), relation_item.get("numero")) or "").strip()
         hektor_annonce_id = (
                 normalized_id(source.get("idAnnonce"))

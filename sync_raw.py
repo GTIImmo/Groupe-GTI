@@ -1032,6 +1032,24 @@ def fetch_annonce_detail_once(
         payload=payload,
         http_status=200,
     )
+    # Le bloc mandats est extrait du detail plutot que redemande a
+    # MandatsByIdAnnonce : cette route ne renvoie plus rien pour un mandat posterieur
+    # a janvier 2026 (referentiel Hektor fige au n 18339), alors que AnnonceById.mandats
+    # porte la meme donnee et reste a jour. On conserve l'enregistrement brut
+    # 'mandats_by_annonce' pour ne rien changer en aval, seule sa provenance change.
+    data = payload.get("data") if isinstance(payload, dict) else None
+    mandats = (data or {}).get("mandats") if isinstance(data, dict) else None
+    upsert_raw_response(
+        conn,
+        run_id=run_id,
+        endpoint_name=MANDAT_RELATION_CONFIG["endpoint_name"],
+        object_type=MANDAT_RELATION_CONFIG["object_type"],
+        object_id=annonce_id,
+        page=None,
+        params={"idAnnonce": annonce_id, "source": "annonce_detail.mandats"},
+        payload={"data": mandats if isinstance(mandats, list) else []},
+        http_status=200,
+    )
     replace_annonce_contact_links(conn, annonce_id, payload)
     return True
 
@@ -1108,13 +1126,13 @@ def sync_annonce_details_with_mandats(
         progress_unit="objects",
     )
     for index, annonce_id in enumerate(detail_ids, start=1):
+        # Un seul appel : le detail porte deja le bloc mandats, que
+        # fetch_annonce_detail_once enregistre au passage. Le second appel
+        # (MandatsByIdAnnonce) a ete retire le 21/07/2026, la route ne renvoyant plus
+        # rien pour un mandat posterieur a janvier 2026. L'entrelacement introduit le
+        # matin meme perd de ce fait sa raison d'etre : avec un appel unique, une
+        # annonce ne peut plus etre marquee « a jour » sans ses mandats.
         if not fetch_annonce_detail_once(conn, run_id, client, settings, annonce_id):
-            conn.commit()
-            continue
-        sleep_brief(delay_seconds)
-        if not fetch_mandats_for_annonce_once(conn, run_id, client, settings, annonce_id):
-            # Detail en base, mandats manquants : on ne marque pas, l'annonce
-            # repassera au prochain run plutot que d'etre oubliee.
             conn.commit()
             continue
         mark_annonce_detail_synced(conn, annonce_id)
