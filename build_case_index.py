@@ -100,10 +100,15 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
     ),
     mandat_ranked AS (
         SELECT *,
+               -- hektor_annonce_id vaut '' et non NULL depuis que la colonne fait
+               -- partie de la cle primaire (SQLite y accepterait NULL, ce qui
+               -- desactiverait toute detection de conflit). Les tests doivent donc
+               -- porter sur la chaine vide : sans NULLIF, tous les mandats orphelins
+               -- tomberaient dans une meme partition '' et un seul survivrait.
                ROW_NUMBER() OVER (
-                   PARTITION BY COALESCE(hektor_annonce_id, numero)
+                   PARTITION BY COALESCE(NULLIF(hektor_annonce_id, ''), numero)
                    ORDER BY
-                       CASE WHEN hektor_annonce_id IS NOT NULL THEN 0 ELSE 1 END,
+                       CASE WHEN COALESCE(hektor_annonce_id, '') <> '' THEN 0 ELSE 1 END,
                        COALESCE(date_debut, date_enregistrement, synced_at) DESC
                ) AS rn
         FROM hektor_mandat
@@ -257,7 +262,10 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
         ON (
             mf.hektor_annonce_id = ids.hektor_annonce_id
             OR (
-                mf.hektor_annonce_id IS NULL
+                -- Repli : rattacher par numero un mandat dont l'annonce n'a pas ete
+                -- resolue. Le test etait 'IS NULL', devenu toujours faux depuis que
+                -- la colonne est NOT NULL DEFAULT ''.
+                COALESCE(mf.hektor_annonce_id, '') = ''
                 AND mf.numero = a.no_mandat
             )
         )
