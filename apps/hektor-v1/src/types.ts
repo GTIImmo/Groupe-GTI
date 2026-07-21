@@ -182,6 +182,13 @@ export type Dossier = {
   negociateur_email?: string | null
   agence_nom?: string | null
   mandants_texte?: string | null
+  // Champs mandat portes par app_dossiers_current. Ils etaient lus dans le cockpit
+  // via un cast (dossierRec['mandat_montant']), donc hors controle du compilateur :
+  // rien ne signalait qu'ils n'etaient jamais recopies depuis l'index leger.
+  mandat_type?: string | null
+  mandat_date_debut?: string | null
+  mandat_date_fin?: string | null
+  mandat_montant?: number | string | null
   statut_annonce: string | null
   validation_diffusion_state?: string | null
   price_change_event_count?: number | null

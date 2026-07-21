@@ -2019,6 +2019,15 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
     has_detail_cache: false,
     detail_cache_expires_at: null,
     mandants_texte: row.mandants_texte ?? null,
+    // Ces quatre champs sont bien demandes a la base (voir indexSelect et les
+    // archive/historical/brouillonIndexSelect) mais n'etaient pas recopies ici :
+    // le cockpit retombait donc sur dossier.prix. Visible sur le mandat 18765,
+    // dont le montant (85 000) s'affichait au registre et nulle part sur la fiche,
+    // le prix de l'annonce valant 0.
+    mandat_type: row.mandat_type ?? null,
+    mandat_date_debut: row.mandat_date_debut ?? null,
+    mandat_date_fin: row.mandat_date_fin ?? null,
+    mandat_montant: row.mandat_montant ?? null,
   }
 }
 
@@ -2032,10 +2041,12 @@ function dossierToMandatRecord(row: Dossier & { mandants_texte?: string | null }
     portails_resume: row.portails_resume ?? null,
     agence_nom: row.agence_nom ?? null,
     validation_diffusion_state: row.validation_diffusion_state ?? null,
-    mandat_type: null,
-    mandat_date_debut: null,
-    mandat_date_fin: null,
-    mandat_montant: null,
+    // Le spread ...row apporte deja ces champs : les forcer a null vidait le bloc
+    // mandat des ecrans alimentes par ce chemin (fiches archivees notamment).
+    mandat_type: row.mandat_type ?? null,
+    mandat_date_debut: row.mandat_date_debut ?? null,
+    mandat_date_fin: row.mandat_date_fin ?? null,
+    mandat_montant: row.mandat_montant ?? null,
     mandants_texte: row.mandants_texte ?? null,
     priority: row.priority ?? 'normal',
     offre_id: row.offre_id == null ? null : String(row.offre_id),
