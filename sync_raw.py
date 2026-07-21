@@ -257,14 +257,41 @@ def load_draft_annonce_ids(conn) -> set:
     hektor_annonce_draft_state, alimente par le balayage GraphQL (phase2/sync/sync_hektor_drafts.py).
     Le REST (AnnonceById) renvoie du vide sur ces brouillons -> on les saute au fetch detail
     pour eviter des erreurs de sync et des appels API inutiles. Renvoie un set vide si la table
-    n'existe pas encore (feature brouillon non deployee) -> comportement historique inchange."""
+    n'existe pas encore (feature brouillon non deployee) -> comportement historique inchange.
+
+    EXCEPTION : un brouillon dont la date_maj du listing REST est POSTERIEURE au datemaj
+    releve lors de son marquage n'est pas exclu -- il a evolue depuis qu'on l'a classe.
+
+    Motif : le balayage GraphQL ne sait trier que par date de CREATION (l'enumeration
+    n'accepte que LATEST et OLDEST, verifie contre l'API), et son mode delta s'arrete au
+    watermark. Une annonce creee en juin puis validee en juillet sort donc de sa fenetre :
+    elle reste marquee brouillon jusqu'au balayage complet, qui n'a lieu qu'une nuit sur
+    sept. Cas rencontre le 21/07/2026 : l'annonce 62488, validee avec un mandat de
+    120 000 EUR (n 18769), serait restee invisible du run pendant une semaine.
+
+    Le test sur les deux dates cible exactement ce trou. Un brouillon ordinaire, encore
+    dans la fenetre du delta, voit son marquage rafraichi en meme temps que le listing :
+    ses deux dates restent egales, il continue d'etre exclu -- ce qui preserve le motif
+    d'origine du filtre (eviter les erreurs et le throttle sur des brouillons vides).
+    Mesure du 21/07 : 8 brouillons modifies dans la journee, 0 retenu par ce test."""
     has_table = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hektor_annonce_draft_state'"
     ).fetchone()
     if not has_table:
         return set()
     rows = conn.execute(
-        "SELECT hektor_annonce_id FROM hektor_annonce_draft_state WHERE COALESCE(is_draft, 0) = 1"
+        """
+        SELECT d.hektor_annonce_id
+        FROM hektor_annonce_draft_state d
+        LEFT JOIN hektor_annonce a
+               ON CAST(a.hektor_annonce_id AS TEXT) = CAST(d.hektor_annonce_id AS TEXT)
+        WHERE COALESCE(d.is_draft, 0) = 1
+          AND NOT (
+                COALESCE(a.date_maj, '') <> ''
+            AND COALESCE(d.datemaj, '') <> ''
+            AND COALESCE(a.date_maj, '') > COALESCE(d.datemaj, '')
+          )
+        """
     ).fetchall()
     return {str(row[0]).strip() for row in rows if str(row[0]).strip()}
 
