@@ -486,7 +486,12 @@ def main() -> int:
 
     try:
         indexed_rows = run_case_index_for_annonce(hektor_annonce_id)
-        con = sqlite3.connect(PHASE2_DB)
+        # timeout=30 : attendre que le run quotidien libere la base plutot que
+        # d'abandonner apres 5 s (defaut SQLite). refresh_views tient le verrou une
+        # vingtaine de secondes lors du DROP/CREATE des vues -- un read-through
+        # concurrent echouait sinon en "database is locked". Convention du projet
+        # (hektor_pipeline/common.py:194).
+        con = sqlite3.connect(PHASE2_DB, timeout=30)
         try:
             ensure_schema(con)
             app_dossier_id = sync_target_app_dossier(con, hektor_annonce_id)

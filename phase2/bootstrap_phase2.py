@@ -246,7 +246,10 @@ def seed_work_items(con: sqlite3.Connection) -> None:
 
 
 def main() -> None:
-    con = sqlite3.connect(PHASE2_DB)
+    # timeout=30 : attendre le verrou plutot que d'abandonner apres 5 s (defaut).
+    # Convention du projet (hektor_pipeline/common.py:194) ; evite les
+    # "database is locked" quand un read-through tourne pendant le run.
+    con = sqlite3.connect(PHASE2_DB, timeout=30)
     try:
         ensure_schema(con)
         reconcile_app_dossier(con)
