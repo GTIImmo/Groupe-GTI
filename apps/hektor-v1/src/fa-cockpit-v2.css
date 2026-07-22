@@ -518,7 +518,14 @@
 .fa-ck-al { font-size: 12.8px; line-height: 1.45; color: var(--fa-muted); }
 .fa-ck-al b { color: var(--fa-ink); font-weight: 700; }
 .fa-ck-at { font-size: 10.5px; font-weight: 700; color: #a89e95; white-space: nowrap; flex: none; padding-top: 6px; }
-.fa-ck-aev.new .fa-ck-an { box-shadow: 0 0 0 4px #fff, 0 0 0 6px color-mix(in srgb, var(--nc, var(--fa-brand)) 22%, transparent), 0 6px 14px -8px var(--nc, var(--fa-brand)); }
+/* Première ligne du fil : le picto pulse (halo qui s'étend puis s'efface), façon v26.
+   Le halo reprend la couleur de l'événement (--nc). */
+@keyframes fa-ck-anpulse {
+  0%        { box-shadow: 0 0 0 4px #fff, 0 0 0 4px color-mix(in srgb, var(--nc, var(--fa-brand)) 50%, transparent), 0 6px 14px -8px var(--nc, var(--fa-brand)); }
+  70%, 100% { box-shadow: 0 0 0 4px #fff, 0 0 0 13px transparent, 0 6px 14px -8px var(--nc, var(--fa-brand)); }
+}
+.fa-ck-aev.new .fa-ck-an { animation: fa-ck-anpulse 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .fa-ck-aev.new .fa-ck-an { animation: none; box-shadow: 0 0 0 4px #fff, 0 0 0 6px color-mix(in srgb, var(--nc, var(--fa-brand)) 22%, transparent), 0 6px 14px -8px var(--nc, var(--fa-brand)); } }
 .fa-ck-aev.new::after { content: 'maintenant'; position: absolute; left: 44px; top: -2px; font-size: 8.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #bb1059; }
 .fa-ck-aev.new .fa-ck-atx { padding-top: 9px; }
 .fa-ck-aev.over .fa-ck-at { color: #9a5b05; }

@@ -20774,12 +20774,14 @@ const CK_ACTI_RUB: Record<string, string> = {
 // KMAP du fil réel : type d'événement (RPC) → icône, couleurs, rubrique cible, audience.
 // Équivalent de l'objet KMAP de la maquette v26.
 const CK_ACTI_KMAP: Record<string, { ic: string; nc: string; nb: string; rub: string }> = {
-  match:    { ic: 'rapprochement', nc: '#0f7c8a', nb: '#daeef1', rub: 'rapprochement' },
-  lead:     { ic: 'mail',         nc: '#c2701a', nb: '#fdf0dd', rub: 'rapprochement' },
+  // Les événements « acquéreur » ouvrent la rubrique CONTACT (et non Rapprochement) :
+  // depuis le fil, on va au contact concerné plutôt qu'au moteur de rapprochement.
+  match:    { ic: 'rapprochement', nc: '#0f7c8a', nb: '#daeef1', rub: 'contact' },
+  lead:     { ic: 'mail',         nc: '#c2701a', nb: '#fdf0dd', rub: 'contact' },
   rdv:      { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
   visitreq: { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
-  like:     { ic: 'heart',        nc: '#c2125f', nb: '#f9e7ef', rub: 'rapprochement' },
-  relance:  { ic: 'mail',         nc: '#9a5b05', nb: '#fdf4e2', rub: 'rapprochement' },
+  like:     { ic: 'heart',        nc: '#c2125f', nb: '#f9e7ef', rub: 'contact' },
+  relance:  { ic: 'mail',         nc: '#9a5b05', nb: '#fdf4e2', rub: 'contact' },
   offer:    { ic: 'affaires',     nc: '#1f6e44', nb: '#e4f1e8', rub: 'affaires' },
   email:    { ic: 'mail',         nc: '#3a5a8a', nb: '#e7edf7', rub: 'contact' },
   mandat:   { ic: 'mandat',       nc: '#9d0f4e', nb: '#f9e7ef', rub: 'mandat' },
@@ -21948,9 +21950,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                               {openable ? <span className="fa-ck-aq">{CK_ACTI_LABEL[target] ?? 'Ouvrir'}</span> : null}
                             </>
                           )
+                          // La ligne la plus récente (i===0) porte la classe `new` :
+                          // picto animé (halo pulsé) + badge « maintenant », façon maquette v26.
+                          const cls = `fa-ck-aev${i === 0 ? ' new' : ''}`
                           return openable
-                            ? <button key={i} type="button" className="fa-ck-aev" onClick={() => goRub(target)} title={`Ouvrir ${CK_RUB_MAP[target]?.label ?? 'Rapprochement'}`}>{row}</button>
-                            : <div key={i} className="fa-ck-aev">{row}</div>
+                            ? <button key={i} type="button" className={cls} onClick={() => goRub(target)} title={`Ouvrir ${CK_RUB_MAP[target]?.label ?? 'Rapprochement'}`}>{row}</button>
+                            : <div key={i} className={cls}>{row}</div>
                         }) : <p className="fa-ck-empty" style={{ padding: '12px 8px' }}>Aucune activité récente pour cette annonce.</p>}
                       </div>
                     )
