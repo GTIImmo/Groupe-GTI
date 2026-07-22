@@ -21208,13 +21208,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
   // Colonne de gauche repliable (façon maquette v26 + side-rail du listing) : préférence persistée.
-  const [railCollapsed, setRailCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem('fa-ck-rail-collapsed') === '1'
-  })
-  useEffect(() => {
-    if (typeof window !== 'undefined') window.localStorage.setItem('fa-ck-rail-collapsed', railCollapsed ? '1' : '0')
-  }, [railCollapsed])
+  // Colonne de gauche repliable — 100 % manuelle, toujours ouverte au chargement
+  // (pas de masque automatique ni de mémorisation qui la garderait repliée).
+  const [railCollapsed, setRailCollapsed] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
   const [histoFilter, setHistoFilter] = useState<string>('tout')
   const [docFilter, setDocFilter] = useState<string>('tous')

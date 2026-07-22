@@ -2014,3 +2014,36 @@
 .fa-ck-contact .fa-ck-ct-grid { gap: 13px 24px; padding: 16px 18px; }
 .fa-ck-contact .fa-ck-cv { font-size: 13.5px; }
 @media (max-width: 560px) { .fa-ck-contact .fa-ck-ct-a.is-open { margin-left: 0; } }
+
+/* ============================================================
+   Affinages navigation rail (retours captures) : picto retour,
+   bouton de repli, badge notif recentré, bloc Collaborateur + ⋯
+   ============================================================ */
+/* Picto de retour : TOUJOURS la flèche (même en rubrique), libellé mis en avant */
+.fa-ck-rail-brand.is-inrub .fa-ck-rb-back { display: flex; }
+.fa-ck-rail-brand.is-inrub .fa-ck-rb-home { display: none; }
+.fa-ck-rail-brand { padding: 9px 12px; background: linear-gradient(120deg, #fff, #fdf1f6); border-color: var(--fa-gold-line); box-shadow: 0 7px 16px -13px rgba(194, 18, 95, .55); }
+.fa-ck-rail-brand:hover { border-color: color-mix(in srgb, var(--fa-brand) 42%, var(--fa-gold-line)); box-shadow: 0 11px 24px -12px rgba(194, 18, 95, .6); }
+.fa-ck-rb-ey { color: var(--fa-brand); font-size: 10px; }
+.fa-ck-rb-t { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.fa-ck-body.is-rail-min .fa-ck-rail-brand { background: none; border-color: transparent; box-shadow: none; }
+
+/* Bouton de repli MANUEL bien plus visible (poignée magenta) */
+.fa-ck-rail-toggle { top: 16px; right: -15px; width: 32px; height: 42px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--fa-brand) 28%, var(--fa-line)); background: linear-gradient(155deg, #fff, #fbeaf1); color: var(--fa-brand); box-shadow: 0 12px 24px -9px rgba(194, 18, 95, .5); }
+.fa-ck-rail-toggle svg { width: 18px; height: 18px; }
+.fa-ck-rail-toggle:hover { background: linear-gradient(155deg, var(--fa-brand), #9d0f4e); color: #fff; border-color: transparent; transform: translateX(1px) scale(1.06); box-shadow: 0 14px 28px -9px rgba(194, 18, 95, .7); }
+
+/* Badge de notif recentré sur le picto en mode replié (top-droite de l'icône) */
+.fa-ck-body.is-rail-min .fa-ck-rn-dot { position: absolute; top: 7px; left: 50%; transform: translateX(13px); margin: 0; }
+.fa-ck-body.is-rail-min .fa-ck-rn-dot.alert { box-shadow: 0 0 0 2.5px #fff; }
+
+/* Bloc Collaborateur : carte unique cohérente, ⋯ intégré à droite (ouvert + replié) */
+.fa-ck-rail-foot .fa-ck-rf-row { border: 1px solid var(--fa-gold-line); border-radius: 15px; background: linear-gradient(135deg, #fff, #fdf6f1); box-shadow: 0 9px 22px -15px rgba(32, 24, 18, .6); padding: 7px 8px 7px 9px; gap: 6px; }
+.fa-ck-rail-foot .fa-ck-tb-nego { flex: 1; min-width: 0; border: 0; background: none; box-shadow: none; padding: 3px; gap: 11px; }
+.fa-ck-rail-foot .fa-ck-tb-nego-av { width: 42px; height: 42px; border-radius: 12px; font-size: 13.5px; box-shadow: 0 8px 16px -8px rgba(194, 18, 95, .55), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fa-ck-rail-foot .fa-ck-tb-nego-tx b { font-size: 14px; font-weight: 800; }
+.fa-ck-rail-foot .fa-ck-tb-more { flex: none; }
+.fa-ck-rail-foot .fa-ck-tb-more-btn { width: 34px; height: 34px; padding: 0; border-radius: 10px; border: 1px solid var(--fa-line); background: #fff; color: var(--fa-muted); box-shadow: 0 4px 10px -6px rgba(32, 24, 18, .4); }
+.fa-ck-rail-foot .fa-ck-tb-more-btn:hover { background: var(--fa-brand-soft); color: var(--fa-brand-ink); border-color: color-mix(in srgb, var(--fa-brand) 30%, var(--fa-gold-line)); }
+/* replié : la carte redevient un simple avatar centré */
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-rf-row { border: 0; background: none; box-shadow: none; padding: 0; justify-content: center; }
