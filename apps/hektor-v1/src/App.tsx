@@ -20774,14 +20774,12 @@ const CK_ACTI_RUB: Record<string, string> = {
 // KMAP du fil réel : type d'événement (RPC) → icône, couleurs, rubrique cible, audience.
 // Équivalent de l'objet KMAP de la maquette v26.
 const CK_ACTI_KMAP: Record<string, { ic: string; nc: string; nb: string; rub: string }> = {
-  // Les événements « acquéreur » ouvrent la rubrique CONTACT (et non Rapprochement) :
-  // depuis le fil, on va au contact concerné plutôt qu'au moteur de rapprochement.
-  match:    { ic: 'rapprochement', nc: '#0f7c8a', nb: '#daeef1', rub: 'contact' },
-  lead:     { ic: 'mail',         nc: '#c2701a', nb: '#fdf0dd', rub: 'contact' },
+  match:    { ic: 'rapprochement', nc: '#0f7c8a', nb: '#daeef1', rub: 'rapprochement' },
+  lead:     { ic: 'mail',         nc: '#c2701a', nb: '#fdf0dd', rub: 'rapprochement' },
   rdv:      { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
   visitreq: { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
-  like:     { ic: 'heart',        nc: '#c2125f', nb: '#f9e7ef', rub: 'contact' },
-  relance:  { ic: 'mail',         nc: '#9a5b05', nb: '#fdf4e2', rub: 'contact' },
+  like:     { ic: 'heart',        nc: '#c2125f', nb: '#f9e7ef', rub: 'rapprochement' },
+  relance:  { ic: 'mail',         nc: '#9a5b05', nb: '#fdf4e2', rub: 'rapprochement' },
   offer:    { ic: 'affaires',     nc: '#1f6e44', nb: '#e4f1e8', rub: 'affaires' },
   email:    { ic: 'mail',         nc: '#3a5a8a', nb: '#e7edf7', rub: 'contact' },
   mandat:   { ic: 'mandat',       nc: '#9d0f4e', nb: '#f9e7ef', rub: 'mandat' },
@@ -20791,8 +20789,10 @@ const CK_ACTI_KMAP: Record<string, { ic: string; nc: string; nb: string; rub: st
   reporting:{ ic: 'reporting',    nc: '#a8814a', nb: '#f4ecd9', rub: 'reporting' },
   // Signature ImmoSign (mandat signé / envoyé / annulé) — vert, comme la maquette.
   sign:     { ic: 'mandat',       nc: '#2f7d59', nb: '#e3f2ea', rub: 'mandat' },
-  // Estimation (avis généré / mis à jour) — brun-doré, ouvre la rubrique Estimation.
-  estimopen:{ ic: 'estimation',   nc: '#8a6a2f', nb: '#f4ecd9', rub: 'estimation' },
+  // Estimation (avis généré / envoyé / consulté) — brun-doré. Ouvre la rubrique
+  // CONTACT : quand le propriétaire agit sur son avis de valeur, le négociateur va
+  // à la fiche du mandant (pour le rappeler), pas à la rubrique Estimation.
+  estimopen:{ ic: 'estimation',   nc: '#8a6a2f', nb: '#f4ecd9', rub: 'contact' },
 }
 // Verbe attendu par rubrique (aligné sur les libellés de la maquette).
 const CK_ACTI_LABEL: Record<string, string> = {
