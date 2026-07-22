@@ -15313,6 +15313,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span className="gcc-go" aria-hidden="true">→</span>
                     </button>
                   </div>
+                  <a className="gcc-download" href="/patron-fiche-saisie.html" target="_blank" rel="noreferrer">
+                    <span className="gcc-dl-ic" aria-hidden="true">📄</span>
+                    <span className="gcc-dl-tx"><strong>Télécharger le patron vierge</strong><small>À imprimer, remplir à la main, puis photographier</small></span>
+                    <span className="gcc-dl-go" aria-hidden="true">↓</span>
+                  </a>
                   <button type="button" className="gcc-cancel" onClick={() => setCreateFlow('closed')}>Annuler</button>
                 </>
               ) : (

@@ -2186,6 +2186,14 @@
 .gti-cc .gcc-primary:hover:not(:disabled) { filter: brightness(1.06); }
 .gti-cc .gcc-primary:disabled { opacity: .55; cursor: default; }
 @media (max-width: 480px) { .gti-cc .gcc-nego { grid-template-columns: 1fr; } .gti-cc .gcc-actions { flex-direction: column; } }
+/* Lien de téléchargement du patron vierge (écran IA) */
+.gti-cc .gcc-download { display: flex; align-items: center; gap: 11px; margin-top: 14px; padding: 11px 14px; border-radius: 13px; border: 1px dashed var(--fa-gold-line, #e7e0d5); background: #fdfaf6; text-decoration: none; text-align: left; transition: border-color .15s, background .15s; }
+.gti-cc .gcc-download:hover { border-color: var(--fa-brand, #c2125f); background: #fff; }
+.gti-cc .gcc-dl-ic { font-size: 22px; flex: none; }
+.gti-cc .gcc-dl-tx { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.gti-cc .gcc-dl-tx strong { font-size: 13.5px; font-weight: 700; color: var(--fa-ink, #1f1c1a); }
+.gti-cc .gcc-dl-tx small { font-size: 11px; color: var(--fa-muted, #8a7d6f); margin-top: 1px; }
+.gti-cc .gcc-dl-go { color: var(--fa-brand, #c2125f); font-weight: 800; font-size: 16px; flex: none; }
 
 /* ============================================================
    Modale de création manuelle — passe design moderne (charte GTI).
