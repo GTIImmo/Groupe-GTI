@@ -2081,3 +2081,39 @@
 .fa-ck-rail-toggle { top: 14px; right: -15px; width: 30px; height: 42px; border-radius: 11px; border: 1px solid color-mix(in srgb, var(--fa-brand) 26%, var(--fa-line)); background: linear-gradient(#fff, #fbf1f6); color: var(--fa-brand); box-shadow: 0 8px 18px -8px rgba(32, 24, 18, .38); }
 .fa-ck-rail-toggle svg { width: 18px; height: 18px; }
 .fa-ck-rail-toggle:hover { background: linear-gradient(#fff, #f6e2ec); border-color: var(--fa-brand); color: var(--fa-brand); transform: translateX(1px) scale(1.06); box-shadow: 0 11px 22px -8px rgba(194, 18, 95, .42); }
+
+/* ============================================================
+   Jauge du mandat : couleur continue VERT (loin du terme) → ROUGE (proche),
+   pilotée par --mg-c (calculée sur les jours restants). Surclasse is-soon/is-over.
+   ============================================================ */
+.fa-ck-tl-mandat[style] .fa-ck-tl-mandat-tr i,
+.fa-ck-tl-mandat.is-soon .fa-ck-tl-mandat-tr i,
+.fa-ck-tl-mandat.is-over .fa-ck-tl-mandat-tr i {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mg-c, var(--fa-gold)) 48%, #fff), var(--mg-c, var(--fa-gold)));
+}
+.fa-ck-tl-mandat[style] .fa-ck-tl-mandat-v,
+.fa-ck-tl-mandat.is-soon .fa-ck-tl-mandat-v,
+.fa-ck-tl-mandat.is-over .fa-ck-tl-mandat-v { color: var(--mg-c, #7a5a1e); }
+.fa-ck-tl-mandat[style] { border-color: color-mix(in srgb, var(--mg-c, var(--fa-gold-line)) 34%, var(--fa-gold-line)); }
+
+/* ============================================================
+   Bouton RETOUR héroïque réutilisable (pastille magenta « ‹ Retour » animée).
+   Utilisé sur la fiche contact ET l'overlay Rapprochement. Non scopé + !important
+   pour surclasser les .btn.icon des topbars sombres.
+   ============================================================ */
+.gti-back-hero {
+  display: inline-flex !important; align-items: center !important; justify-content: center;
+  width: auto !important; height: 40px !important; padding: 0 15px 0 12px !important; gap: 7px !important;
+  border-radius: 99px !important; border: 1px solid transparent !important;
+  background: linear-gradient(150deg, #e8437f, #a01050) !important; color: #fff !important;
+  font: inherit; font-weight: 800 !important; font-size: 12.5px !important; cursor: pointer; white-space: nowrap;
+  animation: fcx-back-halo 3s ease-in-out infinite;
+}
+.gti-back-hero svg { width: 18px !important; height: 18px !important; animation: fa-ck-retour 3s ease-in-out infinite; }
+.gti-back-hero span { line-height: 1; }
+.gti-back-hero:hover { filter: brightness(1.08); color: #fff !important; }
+.gti-back-hero:hover, .gti-back-hero:hover svg { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .gti-back-hero, .gti-back-hero svg { animation: none !important; }
+  .gti-back-hero { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85); }
+}

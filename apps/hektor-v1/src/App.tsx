@@ -21862,6 +21862,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 <button
                   type="button"
                   className={`fa-ck-tl-mandat${mandatEchu ? ' is-over' : (ckMandatTiming.joursRestants ?? 999) <= 60 ? ' is-soon' : ''}`}
+                  style={{ ['--mg-c']: `hsl(${Math.round(Math.max(0, Math.min(130, ((mandatEchu ? 0 : (ckMandatTiming.joursRestants ?? 999)) / 120) * 130)))}, 68%, 42%)` } as CSSProperties}
                   onClick={() => goRub('mandat')}
                   title={`Mandat ${mandatEchu ? 'échu' : 'en cours'} — échéance le ${formatDate(mandatDateFin)}`}
                 >
