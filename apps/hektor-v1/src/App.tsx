@@ -10742,7 +10742,7 @@ export default function App() {
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
   const [draftAnnonceModalOpen, setDraftAnnonceModalOpen] = useState(false)
   // Fenêtre de choix avant création : 'choice' (Manuel / IA) puis 'ia' (2 agents). Simple aiguillage.
-  const [createFlow, setCreateFlow] = useState<'closed' | 'choice' | 'ia'>('closed')
+  const [createFlow, setCreateFlow] = useState<'closed' | 'choice' | 'ia' | 'ia-result'>('closed')
   const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
   const [draftAnnonceScanPending, setDraftAnnonceScanPending] = useState(false)
   const [draftAnnonceScanInputVersion, setDraftAnnonceScanInputVersion] = useState(0)
@@ -13289,9 +13289,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     dismissHektorActionPopup(job.id)
   }
 
-  async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (draftAnnonceStep !== 'diffusion') {
+  async function handleCreateDraftAnnonce(event: FormEvent<HTMLFormElement> | null, opts?: { skipStepGate?: boolean }) {
+    event?.preventDefault()
+    if (!opts?.skipStepGate && draftAnnonceStep !== 'diffusion') {
       moveDraftAnnonceStep(1)
       return
     }
@@ -15292,7 +15292,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </div>
                   <button type="button" className="gcc-cancel" onClick={() => setCreateFlow('closed')}>Annuler</button>
                 </>
-              ) : (
+              ) : createFlow === 'ia' ? (
                 <>
                   <div className="gcc-head">
                     <button type="button" className="gcc-back" onClick={() => setCreateFlow('choice')} aria-label="Retour">‹</button>
@@ -15305,7 +15305,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span className="gcc-emoji" aria-hidden="true">📷</span>
                       <div className="gcc-agent-tx"><strong>Scanner la fiche</strong><small>Photo(s) → OCR → pré-remplissage</small></div>
                       <span className="gcc-go" aria-hidden="true">→</span>
-                      <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { setCreateFlow('closed'); openDraftAnnonceModal(); void handleDraftAnnonceScanFile(event) }} />
+                      <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { openDraftAnnonceModal(); setDraftAnnonceModalOpen(false); setCreateFlow('ia-result'); void handleDraftAnnonceScanFile(event) }} />
                     </label>
                     <button type="button" className="gcc-agent" onClick={() => { setCreateFlow('closed'); openDraftAnnonceModal() }}>
                       <span className="gcc-emoji" aria-hidden="true">✨</span>
@@ -15314,6 +15314,55 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </button>
                   </div>
                   <button type="button" className="gcc-cancel" onClick={() => setCreateFlow('closed')}>Annuler</button>
+                </>
+              ) : (
+                <>
+                  <div className="gcc-head">
+                    <span className="gcc-spark" aria-hidden="true">📸</span>
+                    <h3>Fiche analysée</h3>
+                    <p>{draftAnnonceScanPending ? 'Lecture OCR en cours…' : (draftAnnonceScanMessage ?? 'Champs récupérés depuis la fiche.')}</p>
+                  </div>
+                  {draftAnnonceScanReview.length > 0 ? (
+                    <div className="gcc-review">
+                      <span className="gcc-review-h">À vérifier · {draftAnnonceScanReview.length}</span>
+                      <div className="gcc-review-tags">{draftAnnonceScanReview.slice(0, 8).map((r) => <span key={r.key} className="gcc-review-tag">{r.label}</span>)}</div>
+                    </div>
+                  ) : null}
+                  <div className="gcc-nego">
+                    <label className="filter-field">
+                      <span>Agence</span>
+                      <select value={draftAnnonceAgency} onChange={(event) => setDraftAnnonceAgency(event.target.value)}>
+                        <option value="">Choisir</option>
+                        {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
+                      </select>
+                    </label>
+                    <label className="filter-field">
+                      <span>Négociateur</span>
+                      <select value={draftAnnonceNegotiatorId} onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)} disabled={profile?.role === 'commercial'}>
+                        <option value="">{profile?.role === 'commercial' ? 'Accès personnel' : 'Choisir'}</option>
+                        {draftNegotiatorOptions.map((negotiator) => <option key={negotiator.idUser} value={negotiator.idUser}>{negotiator.label}{negotiator.agenceNom ? ` · ${negotiator.agenceNom}` : ''}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="gcc-redac">
+                    <RedacteurPanel
+                      propertyData={buildDraftAnnonceRedacteurData()}
+                      onAccept={(result) => {
+                        const parts: string[] = []
+                        if (result.accroche.trim()) parts.push(result.accroche.trim())
+                        if (result.description.trim()) parts.push(result.description.trim())
+                        if (result.highlights.length) parts.push('Points forts :\n' + result.highlights.map((h) => `- ${h}`).join('\n'))
+                        const body = parts.join('\n\n')
+                        if (result.title) { setDraftAnnonceTitle(result.title); updateDraftAnnonceWizardField('titre', result.title) }
+                        if (body) { setDraftAnnonceAdvanced((current) => ({ ...current, description: body })); updateDraftAnnonceWizardField('corps', body) }
+                        setNoticeMessage('IA : titre et texte remplis.')
+                      }}
+                    />
+                  </div>
+                  <div className="gcc-actions">
+                    <button type="button" className="gcc-secondary" onClick={() => { setCreateFlow('closed'); setDraftAnnonceModalOpen(true) }}>Détailler dans l'assistant</button>
+                    <button type="button" className="gcc-primary" disabled={draftAnnonceScanPending || draftAnnoncePending} onClick={() => { setCreateFlow('closed'); void handleCreateDraftAnnonce(null, { skipStepGate: true }) }}>Créer l'estimation</button>
+                  </div>
                 </>
               )}
             </section>

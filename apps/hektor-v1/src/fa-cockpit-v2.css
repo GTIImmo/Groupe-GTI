@@ -2168,3 +2168,21 @@
 .gti-cc .gcc-cancel { margin-top: 16px; border: 0; background: none; color: var(--fa-muted, #8a7d6f); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px; }
 .gti-cc .gcc-cancel:hover { color: var(--fa-ink, #1f1c1a); }
 @media (max-width: 480px) { .gti-cc .gcc-cards { grid-template-columns: 1fr; } }
+/* Vue résultat du scan IA (compacte, fluide) */
+.gti-cc { max-height: 88vh; overflow-y: auto; }
+.gti-cc .gcc-review { margin-bottom: 14px; text-align: left; padding: 10px 12px; border-radius: 12px; background: #fdf7ec; border: 1px solid #f0e0c2; }
+.gti-cc .gcc-review-h { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #9a5b05; }
+.gti-cc .gcc-review-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.gti-cc .gcc-review-tag { font-size: 11px; font-weight: 600; color: #7a5a1e; background: #fff; border: 1px solid #f0e0c2; border-radius: 99px; padding: 3px 9px; }
+.gti-cc .gcc-nego { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; text-align: left; }
+.gti-cc .gcc-nego .filter-field { display: flex; flex-direction: column; gap: 4px; }
+.gti-cc .gcc-nego .filter-field span { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-muted, #8a7d6f); }
+.gti-cc .gcc-nego select { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--fa-line, #e7e0d5); background: #fff; font: inherit; font-size: 13px; }
+.gti-cc .gcc-redac { text-align: left; margin-bottom: 16px; }
+.gti-cc .gcc-actions { display: flex; gap: 10px; }
+.gti-cc .gcc-secondary { flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid var(--fa-line, #e7e0d5); background: #fff; font: inherit; font-weight: 700; font-size: 13px; color: var(--fa-ink, #1f1c1a); cursor: pointer; }
+.gti-cc .gcc-secondary:hover { border-color: var(--fa-muted, #8a7d6f); }
+.gti-cc .gcc-primary { flex: 1.4; padding: 12px; border-radius: 12px; border: 0; background: linear-gradient(150deg, #2f8a5b, #1c7a4a); color: #fff; font: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; box-shadow: 0 10px 22px -10px rgba(47, 138, 91, .8); }
+.gti-cc .gcc-primary:hover:not(:disabled) { filter: brightness(1.06); }
+.gti-cc .gcc-primary:disabled { opacity: .55; cursor: default; }
+@media (max-width: 480px) { .gti-cc .gcc-nego { grid-template-columns: 1fr; } .gti-cc .gcc-actions { flex-direction: column; } }
