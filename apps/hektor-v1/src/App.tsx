@@ -21186,7 +21186,7 @@ const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string
   // « Médias & pièces » (maquette v21) : rendu ici en RUBRIQUE + page, comme les autres, plutôt
   // qu'en tiroir latéral — l'app n'a pas de composant tiroir et une page reste cohérente avec
   // le reste du cockpit. Regroupe ce qui était éparpillé : photos, documents, visite virtuelle.
-  { key: 'medias', label: 'Médias & pièces', sub: 'Photos · documents · visite 3D', ico: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 21"/>', color: '#7a4bb0', bg: '#f1eafc' },
+  { key: 'medias', label: 'Média et Documents', sub: 'Photos · documents · signature · visite 3D', ico: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 21"/>', color: '#7a4bb0', bg: '#f1eafc' },
   { key: 'estimation', label: 'Estimation', sub: 'Avis de valeur · cadastre', ico: CK_ICON.estimation, color: '#8a6a2f', bg: '#f4ecd9' },
   { key: 'mandat', label: 'Mandat', sub: 'Mandat · avenant · signature', ico: CK_ICON.mandat, color: '#9d0f4e', bg: '#f9e7ef' },
   { key: 'contact', label: 'Contact', sub: 'Mandants · syndic · notaires', ico: CK_ICON.contact, color: '#3a5a8a', bg: '#e7edf7' },
@@ -21563,14 +21563,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const mediaFoot: CkFoot = ckDocToPrep > 0
     ? ['alert', `${ckDocToPrep} à préparer`]
     : ['neutral', `${props.images.length} photo${props.images.length > 1 ? 's' : ''} · ${ckDocCount} doc${ckDocCount > 1 ? 's' : ''}`]
-  const featList: Array<[string, CkFoot]> = [
+  const featList: Array<[string, CkFoot]> = ([
     ['lebien', lebienFoot],
     ['medias', mediaFoot],
     ...PH.feat,
     ['rendezvous', rdvFoot],
     ['contact', contactFoot],
-  ]
-  const autreList = PH.autre
+  ] as Array<[string, CkFoot]>).filter(([k]) => k !== 'documents')
+  // « Documents » est fusionné dans « Média et Documents » (onglet Documents) : retiré du rail.
+  const autreList = PH.autre.filter((k) => k !== 'documents')
   const horsPerimetre = Math.max(0, 11 - (featList.length + autreList.length))
   const CK_RUB_MAP: Record<string, (typeof CK_RUBRIQUES)[number]> = Object.fromEntries(CK_RUBRIQUES.map((r) => [r.key, r]))
   // Navigation rubrique partagée : le rail, le bloc « Prochaine action » ET le fil
@@ -21602,6 +21603,79 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       </button>
     )
   }
+  // Contenu riche « Documents » — extrait pour être partagé entre la rubrique
+  // unifiée « Média et Documents » (onglet Documents) et tout lien direct.
+  const renderDocumentsPane = () => (
+    <div className="fa-ck-rub fa-ck-documents">
+      {(() => {
+        type CkDoc = { name: string; sig: string; badge: string; signed?: boolean; cloud?: boolean; type: string; typeLabel: string }
+        const docsMock = parseJson<CkDoc[]>(detailStr('documents_json') || '[]', [])
+        const docTypeOf = (name: string): [string, string] => {
+          const n = name.toLowerCase()
+          if (/avenant/.test(n)) return ['avenant', 'Avenant']
+          if (/mandat/.test(n)) return ['mandat', 'Mandat']
+          if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
+          if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
+          if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
+          return ['autre', 'Document']
+        }
+        const docsReal: CkDoc[] = ckDocs.map((d) => {
+          const name = String(d.document_name ?? 'Document')
+          const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature
+          const st = sig?.status
+          const [type, typeLabel] = docTypeOf(name)
+          const signed = st === 'signed'
+          const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
+            : st === 'pending' ? 'En attente de signature'
+            : st === 'to_send' ? 'À envoyer en signature'
+            : st === 'cancelled' ? 'Signature annulée'
+            : ''
+          const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : 'Indexé'
+          const cloud = Boolean(d.storage_bucket) && String(d.storage_status ?? '').toLowerCase() !== 'missing'
+          return { name, sig: sigLabel, badge, signed, cloud, type, typeLabel }
+        })
+        const all = docsMock.length ? docsMock : docsReal
+        if (!all.length) return null
+        const cntAll = all.length
+        const cntPrep = all.filter((d) => !d.signed).length
+        const cntSigned = all.filter((d) => d.signed).length
+        const cntCloud = all.filter((d) => d.cloud).length
+        const docs = docFilter === 'prep' ? all.filter((d) => !d.signed)
+          : docFilter === 'signed' ? all.filter((d) => d.signed)
+          : docFilter === 'cloud' ? all.filter((d) => d.cloud)
+          : all
+        return (
+          <>
+            <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Documents Hektor Console</div><div className="fa-ck-pub-s">Ajouter, consulter et préparer</div></div></div>
+            <div className="fa-ck-histofilt fa-ck-docfilt">
+              {([['tous', 'Tous', cntAll], ['prep', 'À préparer', cntPrep], ['signed', 'Signés', cntSigned], ['cloud', 'Cloud', cntCloud]] as Array<[string, string, number]>).map(([k, lbl, n]) => (
+                <button key={k} type="button" className={docFilter === k ? 'is-on' : ''} onClick={() => setDocFilter(k)}>{lbl}<span>{n}</span></button>
+              ))}
+            </div>
+            <div className="fa-ck-doclist">
+              {docs.map((d, i) => (
+                <div key={i} className="fa-ck-docitem">
+                  <span className="fa-ck-dfic" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
+                  <div className="fa-ck-dinfo">
+                    <div className="fa-ck-dnm-row"><span className="fa-ck-dnm">{d.name}</span><span className={`fa-ck-dtype ${d.type}`}>{d.typeLabel}</span></div>
+                    <div className="fa-ck-dmeta">document · Privé</div>
+                    <div className={`fa-ck-docsig${d.signed ? ' signed' : ''}`}>{d.sig}</div>
+                  </div>
+                  <div className="fa-ck-dright"><span className={`fa-ck-docbadge${d.signed ? ' ok' : ''}`}>{d.badge}</span></div>
+                </div>
+              ))}
+            </div>
+          </>
+        )
+      })()}
+      <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Outil documents (Console Hektor)</div>
+      <section className="detail-section">
+        {isLightweightDetail
+          ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
+          : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+      </section>
+    </div>
+  )
   // Libellé, description et liens de prochaine action viennent tous du sous-état
   // résolu (CK_STAGES) — plus de cascade en dur dupliquée trois fois.
   const situationLabel = ckStageDef.label
@@ -22211,34 +22285,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     : <ConsolePhotosPanel dossier={dossier} apiImages={props.images} onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
                 </section>
               ) : ckMediaTab === 'docs' ? (
-                <section className="detail-section">
-                  {/* Liste de lecture rapide (façon v21). La préparation, la signature et l'ajout
-                      restent dans la rubrique Documents : on ne duplique pas l'outillage. */}
-                  {ckDocs.length > 0 ? (
-                    <div className="fa-ck-pub-card fa-ck-mdocs">
-                      {ckDocs.map((d) => {
-                        const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature
-                        const signed = sig?.status === 'signed'
-                        const cloud = Boolean(d.storage_bucket) && String(d.storage_status ?? '').toLowerCase() !== 'missing'
-                        return (
-                          <div key={d.id} className="fa-ck-mdoc">
-                            <span className="fa-ck-mdoc-ic" aria-hidden="true">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /></svg>
-                            </span>
-                            <div className="fa-ck-mdoc-tx">
-                              <div className="dn">{d.document_name ?? 'Document'}</div>
-                              <div className="dm">{cloud ? 'Cloud' : 'À préparer'}</div>
-                            </div>
-                            <span className={`fa-ck-mpill ${signed ? 'ok' : 'warn'}`}>{signed ? 'Signé' : 'À préparer'}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : <p className="fa-ck-empty">Aucun document pour cette annonce.</p>}
-                  <div className="fa-ck-mfoot">
-                    <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Ajouter · préparer · signer</button>
-                  </div>
-                </section>
+                renderDocumentsPane()
               ) : (
                 <section className="detail-section" id="fa-ck-matterport">
                   {/* Aperçu façon maquette. L'aperçu utilise la photo du bien (Matterport n'expose
@@ -22301,78 +22348,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               )}
             </div>
           ) : activeTab === 'documents' ? (
-            <div className="fa-ck-rub fa-ck-documents">
-              {(() => {
-                type CkDoc = { name: string; sig: string; badge: string; signed?: boolean; cloud?: boolean; type: string; typeLabel: string }
-                const docsMock = parseJson<CkDoc[]>(detailStr('documents_json') || '[]', [])
-                // Prod-ready (audit §5 ter) : la liste habillée dérive des VRAIS documents Console
-                // (ckDocs, déjà chargés) quand le mock est absent — au lieu de disparaître en prod.
-                const docTypeOf = (name: string): [string, string] => {
-                  const n = name.toLowerCase()
-                  if (/avenant/.test(n)) return ['avenant', 'Avenant']
-                  if (/mandat/.test(n)) return ['mandat', 'Mandat']
-                  if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
-                  if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
-                  if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
-                  return ['autre', 'Document']
-                }
-                const docsReal: CkDoc[] = ckDocs.map((d) => {
-                  const name = String(d.document_name ?? 'Document')
-                  const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature
-                  const st = sig?.status
-                  const [type, typeLabel] = docTypeOf(name)
-                  const signed = st === 'signed'
-                  const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
-                    : st === 'pending' ? 'En attente de signature'
-                    : st === 'to_send' ? 'À envoyer en signature'
-                    : st === 'cancelled' ? 'Signature annulée'
-                    : ''
-                  const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : 'Indexé'
-                  const cloud = Boolean(d.storage_bucket) && String(d.storage_status ?? '').toLowerCase() !== 'missing'
-                  return { name, sig: sigLabel, badge, signed, cloud, type, typeLabel }
-                })
-                const all = docsMock.length ? docsMock : docsReal
-                if (!all.length) return null
-                // Filtres de la maquette v27?view=D : Tous / À préparer / Signés / Cloud, avec compteurs.
-                const cntAll = all.length
-                const cntPrep = all.filter((d) => !d.signed).length
-                const cntSigned = all.filter((d) => d.signed).length
-                const cntCloud = all.filter((d) => d.cloud).length
-                const docs = docFilter === 'prep' ? all.filter((d) => !d.signed)
-                  : docFilter === 'signed' ? all.filter((d) => d.signed)
-                  : docFilter === 'cloud' ? all.filter((d) => d.cloud)
-                  : all
-                return (
-                  <>
-                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Documents Hektor Console</div><div className="fa-ck-pub-s">Ajouter, consulter et préparer</div></div></div>
-                    <div className="fa-ck-histofilt fa-ck-docfilt">
-                      {([['tous', 'Tous', cntAll], ['prep', 'À préparer', cntPrep], ['signed', 'Signés', cntSigned], ['cloud', 'Cloud', cntCloud]] as Array<[string, string, number]>).map(([k, lbl, n]) => (
-                        <button key={k} type="button" className={docFilter === k ? 'is-on' : ''} onClick={() => setDocFilter(k)}>{lbl}<span>{n}</span></button>
-                      ))}
-                    </div>
-                    <div className="fa-ck-doclist">
-                      {docs.map((d, i) => (
-                        <div key={i} className="fa-ck-docitem">
-                          <span className="fa-ck-dfic" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
-                          <div className="fa-ck-dinfo">
-                            <div className="fa-ck-dnm-row"><span className="fa-ck-dnm">{d.name}</span><span className={`fa-ck-dtype ${d.type}`}>{d.typeLabel}</span></div>
-                            <div className="fa-ck-dmeta">document · Privé</div>
-                            <div className={`fa-ck-docsig${d.signed ? ' signed' : ''}`}>{d.sig}</div>
-                          </div>
-                          <div className="fa-ck-dright"><span className={`fa-ck-docbadge${d.signed ? ' ok' : ''}`}>{d.badge}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )
-              })()}
-              <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Outil documents (Console Hektor)</div>
-              <section className="detail-section">
-                {isLightweightDetail
-                  ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
-                  : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
-              </section>
-            </div>
+            renderDocumentsPane()
           ) : activeTab === 'estimation' ? (
             <div className="fa-ck-rub fa-ck-estim">
               {(() => {
