@@ -2072,3 +2072,12 @@
   #fcx-root .btn.fcx-back, #fcx-root .btn.fcx-back svg { animation: none !important; }
   #fcx-root .btn.fcx-back { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85); }
 }
+
+/* ============================================================
+   Anti-confusion : le bouton de repli ne doit PAS ressembler au bouton retour.
+   → onglet CLAIR à accent magenta + picto « panneau » (barre + chevron),
+     distinct de la pastille magenta pleine du retour.
+   ============================================================ */
+.fa-ck-rail-toggle { top: 14px; right: -15px; width: 30px; height: 42px; border-radius: 11px; border: 1px solid color-mix(in srgb, var(--fa-brand) 26%, var(--fa-line)); background: linear-gradient(#fff, #fbf1f6); color: var(--fa-brand); box-shadow: 0 8px 18px -8px rgba(32, 24, 18, .38); }
+.fa-ck-rail-toggle svg { width: 18px; height: 18px; }
+.fa-ck-rail-toggle:hover { background: linear-gradient(#fff, #f6e2ec); border-color: var(--fa-brand); color: var(--fa-brand); transform: translateX(1px) scale(1.06); box-shadow: 0 11px 22px -8px rgba(194, 18, 95, .42); }

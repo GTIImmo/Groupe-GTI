@@ -21722,7 +21722,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       <div className={`fa-ck-body${railCollapsed ? ' is-rail-min' : ''}`}>
         <div className="fa-ck-leftcol">
           <button type="button" className="fa-ck-rail-toggle" onClick={() => setRailCollapsed((v) => !v)} title={railCollapsed ? 'Déplier le panneau' : 'Réduire le panneau'} aria-label={railCollapsed ? 'Déplier le panneau' : 'Réduire le panneau'}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="m13 6-6 6 6 6" /><path d="m19 6-6 6 6 6" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 4v16" /><path d="m16 8-4 4 4 4" /></svg>
           </button>
           <button
             type="button"
