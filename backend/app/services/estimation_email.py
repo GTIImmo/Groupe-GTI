@@ -16,6 +16,8 @@ from ..settings import Settings
 from . import email_tokens
 from .rapprochement_email import (
     BRAND,
+    FONT_BODY,
+    FONT_DISPLAY,
     LEGAL_LINE,
     _button,
     _clean_text,
@@ -111,34 +113,82 @@ def render_estimation_email(
 
     nego_nom = _clean_text(negociateur.get("nom")) or "Votre conseiller Groupe GTI"
     nego_agence = _clean_text(negociateur.get("agence")) or "Groupe GTI"
-    nego_contact = " · ".join(p for p in (_clean_text(negociateur.get("tel")), _clean_text(negociateur.get("email"))) if p)
+    nego_email = _clean_text(negociateur.get("email"))
 
-    # Le montant n'apparaît PAS : on incite à cliquer pour découvrir la valeur.
-    teaser = email_lead(
-        "Pour des raisons de confidentialité, le détail de la valeur figure uniquement "
-        "dans le document. Cliquez ci-dessous pour le découvrir."
+    # ── Carte « bien estimé » : contexte (type · ville) SANS révéler le prix. ──
+    bien_type = (_clean_text(bien.get("type")) or "Bien").strip()
+    bien_label = " · ".join(p for p in (bien_type, ville) if p) or bien_type
+    bien_card = (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        f'style="background:{BRAND["paper"]};border:1px solid {BRAND["line_warm"]};border-radius:14px;margin:18px 0 4px">'
+        f'<tr>'
+        f'<td width="60" align="center" valign="middle" style="padding:14px 0 14px 14px">'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        f'<td width="44" height="44" align="center" valign="middle" bgcolor="{BRAND["surface"]}" '
+        f'style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-radius:11px;font-size:20px">🏡</td>'
+        f'</tr></table></td>'
+        f'<td valign="middle" style="padding:14px 16px">'
+        f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;font-weight:bold">Le bien estimé</div>'
+        f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:16px;margin-top:2px">{_esc(bien_label)}</div>'
+        f'</td></tr></table>'
     )
 
-    sign_html = (
-        f"Une question sur cette estimation ? Répondez simplement à cet email, je vous rappelle.<br>"
-        f"<strong>{_esc(nego_nom)}</strong> — {_esc(nego_agence)}"
-        + (f"<br>{_esc(nego_contact)}" if nego_contact else "")
+    # ── Encart confidentialité : le montant n'apparaît que dans le PDF. ──
+    lock_card = (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        f'style="background:{BRAND["magenta_soft"]};border:1px solid #f6d9e6;border-radius:13px;margin:16px 0 2px">'
+        f'<tr>'
+        f'<td width="34" valign="top" style="padding:14px 0 14px 16px;font-size:16px">🔒</td>'
+        f'<td valign="middle" style="padding:14px 16px 14px 6px">'
+        f'<span style="color:{BRAND["ink_soft"]};font-family:{FONT_BODY};font-size:13.5px;line-height:1.6">'
+        f'Pour des raisons de confidentialité, <strong style="color:{BRAND["magenta_strong"]}">la valeur détaillée '
+        f'figure uniquement dans votre document.</strong> Découvrez-la en un clic ci-dessous.'
+        f'</span></td></tr></table>'
     )
+
+    # ── Signature premium : pastille initiales + coordonnées. ──
+    initials = ("".join(w[0] for w in nego_nom.split()[:2] if w).upper() or "GTI")[:2]
+    sig_card = (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        f'style="border-top:1px solid {BRAND["line_warm"]}"><tr><td style="padding-top:20px">'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        f'<td width="46" height="46" align="center" valign="middle" bgcolor="{BRAND["magenta"]}" '
+        f'style="background:{BRAND["magenta"]};border-radius:50%;color:#ffffff;font-family:{FONT_DISPLAY};font-size:17px;font-weight:600">{_esc(initials)}</td>'
+        f'<td valign="middle" style="padding-left:13px">'
+        f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_BODY};font-size:15px;font-weight:bold">{_esc(nego_nom)}</div>'
+        f'<div style="color:{BRAND["ink_mute"]};font-family:{FONT_BODY};font-size:13px;margin-top:1px">{_esc(nego_agence)}</div>'
+        + (f'<div style="font-family:{FONT_BODY};font-size:13px;margin-top:3px">'
+           f'<a href="mailto:{_esc(nego_email)}" style="color:{BRAND["magenta"]};text-decoration:none;font-weight:bold">{_esc(nego_email)}</a></div>' if nego_email else '')
+        + f'</td></tr></table></td></tr></table>'
+    )
+    sig_q = (
+        f'<div style="color:{BRAND["ink_mute"]};font-family:{FONT_BODY};font-size:13.5px;line-height:1.6;'
+        f'font-style:italic;margin-top:16px">Une question sur cette estimation ? Répondez simplement à cet '
+        f'email, je vous rappelle.</div>'
+    )
+    reassurance = (
+        f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:12px;letter-spacing:.2px">'
+        f'🔒&nbsp; Document PDF sécurisé · lien valable 60 jours</div>'
+    )
+
+    greeting_html = f'<strong style="color:{BRAND["ink_warm"]}">{_esc(greeting)}</strong><br>{_esc(intro)}'
 
     inner = (
         f'<tr><td class="gti-pad" style="padding:6px 6px 0">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="gti-card" '
-        f'style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-radius:14px">'
-        f'<tr><td style="padding:26px 26px 4px">'
+        f'style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-radius:16px">'
+        f'<tr><td class="gti-pad" style="padding:30px 30px 4px">'
         f'{email_eyebrow("Votre estimation")}'
         f'{email_title(subject)}'
-        f'{email_lead(_esc(greeting) + "<br>" + _esc(intro))}'
-        f'{teaser}'
+        f'{bien_card}'
+        f'{email_lead(greeting_html)}'
+        f'{lock_card}'
         f'</td></tr>'
-        f'<tr><td align="center" style="padding:18px 26px 6px">'
-        f'{_button(download_url, "Découvrir la valeur de mon bien (PDF)", bg=BRAND["magenta"], fg=BRAND["on_brand"])}'
+        f'<tr><td align="center" style="padding:22px 30px 6px">'
+        f'{_button(download_url, "Découvrir mon estimation", bg=BRAND["magenta"], fg=BRAND["on_brand"], arrow=True, mso_width=230)}'
         f'</td></tr>'
-        f'<tr><td style="padding:6px 26px 26px">{email_lead(sign_html)}</td></tr>'
+        f'<tr><td align="center" style="padding:0 30px 10px">{reassurance}</td></tr>'
+        f'<tr><td class="gti-pad" style="padding:8px 30px 28px">{sig_card}{sig_q}</td></tr>'
         f'</table></td></tr>'
         + (f'<tr><td style="font-size:0;line-height:0">{pixel}</td></tr>' if pixel else "")
     )
@@ -153,7 +203,7 @@ def render_estimation_email(
         "Le détail de la valeur figure dans le document à télécharger :",
         f"Découvrir la valeur de mon bien (PDF) : {download_url}",
         "",
-        f"{nego_nom} — {nego_agence}" + (f" — {nego_contact}" if nego_contact else ""),
+        f"{nego_nom} — {nego_agence}" + (f" — {nego_email}" if nego_email else ""),
         "",
         LEGAL_LINE,
     ]

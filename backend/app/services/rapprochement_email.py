@@ -204,16 +204,27 @@ def build_bien_view(dossier: dict[str, Any], detail: dict[str, Any]) -> dict[str
 
 
 # --- Boutons bulletproof (MSO/VML + a) ----------------------------------------
-def _button(href: str, label: str, *, bg: str, fg: str, border: str | None = None) -> str:
+def _button(href: str, label: str, *, bg: str, fg: str, border: str | None = None,
+            arrow: bool = False, mso_width: int = 220) -> str:
+    """Bouton CTA bulletproof.
+
+    Padding-based hors Outlook : le libellé reste sur UNE ligne quelle que soit sa
+    longueur (l'ancienne version imposait width:210px + line-height:44px, d'où le
+    retour à la ligne disgracieux d'un label long comme « Découvrir la valeur… »).
+    VML à largeur fixe pour Outlook (`mso_width`). `arrow=True` ajoute une flèche →
+    (masquée sur Outlook, qui ne rend pas l'entité de façon fiable).
+    """
     border = border or bg
     href_e = _esc(href)
+    label_e = _esc(label)
+    arw = ' &#8594;' if arrow else ''
     return f"""<!--[if mso]>
-<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{href_e}" style="height:46px;v-text-anchor:middle;width:210px;" arcsize="50%" strokecolor="{border}" fillcolor="{bg}">
-<w:anchorlock/><center style="color:{fg};font-family:Georgia,serif;font-size:14px;font-weight:bold;">{_esc(label)}</center>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{href_e}" style="height:52px;v-text-anchor:middle;width:{mso_width}px;" arcsize="26%" strokecolor="{border}" fillcolor="{bg}">
+<w:anchorlock/><center style="color:{fg};font-family:{FONT_BODY};font-size:15px;font-weight:bold;">{label_e}</center>
 </v:roundrect>
 <![endif]-->
 <!--[if !mso]><!-- -->
-<a href="{href_e}" style="background:{bg};border:1px solid {border};border-radius:26px;color:{fg};display:inline-block;font-family:{FONT_BODY};font-size:14px;font-weight:bold;letter-spacing:.3px;line-height:44px;text-align:center;text-decoration:none;width:210px;-webkit-text-size-adjust:none;mso-hide:all;">{_esc(label)}</a>
+<a href="{href_e}" style="background:{bg};border:1px solid {border};border-radius:13px;color:{fg};display:inline-block;font-family:{FONT_BODY};font-size:15px;font-weight:bold;letter-spacing:.2px;line-height:1;padding:17px 34px;text-align:center;text-decoration:none;-webkit-text-size-adjust:none;mso-hide:all;">{label_e}{arw}</a>
 <!--<![endif]-->"""
 
 
@@ -249,19 +260,21 @@ EMAIL_HEAD = (
 
 def email_header(*, tag: str | None = None) -> str:
     """En-tête premium : filet magenta signature + logo réel sur encre chaude + lockup domaine."""
+    # Tag (« Estimation »…) en pastille bordée à droite. Le border-radius dégrade
+    # proprement en angles droits sur Outlook.
     tag_cell = (
-        f'<td align="right" style="vertical-align:middle;padding:18px 24px;white-space:nowrap">'
-        f'<span style="color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;'
-        f'letter-spacing:2.5px;text-transform:uppercase">{_esc(tag)}</span></td>'
+        f'<td align="right" style="vertical-align:middle;padding:20px 24px;white-space:nowrap">'
+        f'<span style="display:inline-block;color:#cfc8bd;font-family:{FONT_BODY};font-size:10px;'
+        f'font-weight:bold;letter-spacing:2.5px;text-transform:uppercase;'
+        f'border:1px solid rgba(207,200,189,.3);border-radius:20px;padding:7px 14px">{_esc(tag)}</span></td>'
     ) if tag else ''
     return (
         f'<tr><td class="gti-pad" style="padding:2px 6px 20px">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-        f'bgcolor="{BRAND["ink_warm"]}" style="background:{BRAND["ink_warm"]};border-radius:12px;overflow:hidden">'
-        f'<tr><td colspan="2" style="font-size:0;line-height:0;height:3px;background:{BRAND["magenta"]}">&nbsp;</td></tr>'
-        f'<tr><td align="left" style="vertical-align:middle;padding:20px 24px">'
+        f'bgcolor="{BRAND["ink_warm"]}" style="background:{BRAND["ink_warm"]};border-radius:14px;overflow:hidden">'
+        f'<tr><td colspan="2" style="font-size:0;line-height:0;height:4px;background:{BRAND["magenta"]}">&nbsp;</td></tr>'
+        f'<tr><td align="left" style="vertical-align:middle;padding:22px 24px">'
         f'<img src="{LOGO_URL}" height="46" alt="Groupe GTI" style="display:block;border:0;height:46px;width:auto">'
-        f'<div style="color:#8f877b;font-family:{FONT_BODY};font-size:9.5px;letter-spacing:3px;margin-top:9px">{EMAIL_TAGLINE}</div>'
         f'</td>{tag_cell}</tr></table></td></tr>'
     )
 
