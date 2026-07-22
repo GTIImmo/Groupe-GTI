@@ -21809,6 +21809,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ) : null}
             </nav>
           </div>
+          {activeTab === 'synthese' ? (
           <div className="fa-ck-timeline">
             <div className="fa-ck-tl-head">
               <span className="fa-ck-tl-ey">Vie du mandat</span>
@@ -21854,6 +21855,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ))}
             </div>
           </div>
+          ) : null}
           <div className="fa-ck-wc">
 
           {activeTab === 'synthese' ? (
