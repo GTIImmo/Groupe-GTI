@@ -2229,3 +2229,6 @@
 .draft-annonce-form .filter-field input:focus, .draft-annonce-form .filter-field select:focus, .draft-annonce-form .filter-field textarea:focus { outline: none !important; border-color: #c2125f !important; box-shadow: 0 0 0 3px rgba(194, 18, 95, .12) !important; }
 /* Page-head (récap étape) : carte crème */
 .draft-annonce-page-head { border: 1px solid var(--fa-gold-line, #e7e0d5) !important; border-radius: 16px !important; background: linear-gradient(120deg, #fff, #fdf6f1) !important; }
+/* Rédacteur IA : pleine largeur dans la grille de la modale (il était coincé sur 1 colonne étroite) */
+.draft-annonce-form .redac-panel { grid-column: 1 / -1 !important; }
+.draft-annonce-form .redac-sub { max-width: none; }
