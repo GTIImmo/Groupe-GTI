@@ -1989,3 +1989,28 @@
 @media (prefers-reduced-motion: reduce) {
   .fa-ck-rail-brand .fa-ck-rb-mark { animation: none !important; }
 }
+
+/* ============================================================
+   Rubrique Contact — refresh moderne (cartes premium, actions claires)
+   ============================================================ */
+.fa-ck-contact .fa-ck-ct-list { gap: 15px; }
+.fa-ck-contact .fa-ck-ct-card { border: 1px solid var(--fa-gold-line); border-radius: 18px; background: #fff; box-shadow: 0 1px 2px rgba(32, 24, 18, .04), 0 22px 44px -30px rgba(32, 24, 18, .5); transition: box-shadow .18s, transform .18s, border-color .18s; }
+.fa-ck-contact .fa-ck-ct-card:hover { transform: translateY(-2px); border-color: var(--ck-ac-bd); box-shadow: 0 1px 2px rgba(32, 24, 18, .05), 0 30px 56px -30px rgba(58, 90, 138, .5); }
+.fa-ck-contact .fa-ck-ct-top { gap: 13px; padding: 16px 18px; background: linear-gradient(115deg, var(--ck-ac-bg), #fff 70%); border-bottom: 1px solid var(--fa-line-soft); align-items: center; flex-wrap: wrap; }
+.fa-ck-contact .fa-ck-ct-av { width: 50px; height: 50px; border-radius: 15px; font-size: 16px; box-shadow: 0 10px 22px -10px rgba(58, 90, 138, .75), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fa-ck-contact .fa-ck-ct-nm { font-size: 16.5px; font-weight: 800; letter-spacing: -.01em; }
+.fa-ck-contact .fa-ck-ct-role { font-size: 12px; margin-top: 1px; }
+.fa-ck-contact .fa-ck-ct-badge { align-self: center; }
+/* Rangée d'actions nette, "Ouvrir la fiche" en primaire */
+.fa-ck-contact .fa-ck-ct-acts { width: 100%; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.fa-ck-contact .fa-ck-ct-a { font-size: 12px; font-weight: 700; padding: 8px 13px; border-radius: 10px; }
+.fa-ck-contact .fa-ck-ct-a svg { width: 14px; height: 14px; }
+.fa-ck-contact .fa-ck-ct-a.is-call:hover { border-color: #2f8a5b; color: #2f8a5b; background: rgba(47, 138, 91, .06); }
+.fa-ck-contact .fa-ck-ct-a.is-mail { border-color: var(--ck-ac-bd); color: var(--ck-ac); background: var(--ck-ac-bg); }
+.fa-ck-contact .fa-ck-ct-a.is-mail:hover { background: #fff; }
+.fa-ck-contact .fa-ck-ct-a.is-open { margin-left: auto; border-color: transparent; color: #fff; background: linear-gradient(150deg, #4f74ad, #33507d); box-shadow: 0 8px 18px -9px rgba(51, 80, 125, .8); }
+.fa-ck-contact .fa-ck-ct-a.is-open:hover { filter: brightness(1.07); color: #fff; }
+/* Grille de coordonnées plus lisible */
+.fa-ck-contact .fa-ck-ct-grid { gap: 13px 24px; padding: 16px 18px; }
+.fa-ck-contact .fa-ck-cv { font-size: 13.5px; }
+@media (max-width: 560px) { .fa-ck-contact .fa-ck-ct-a.is-open { margin-left: 0; } }
