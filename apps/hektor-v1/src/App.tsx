@@ -10651,6 +10651,11 @@ export default function App() {
   const [contactDirectLookupId, setContactDirectLookupId] = useState<string | null>(null)
   const [selectedContactRelations, setSelectedContactRelations] = useState<AppContactRelation[]>([])
   const [selectedContactSearches, setSelectedContactSearches] = useState<AppContactSearch[]>([])
+  // Fiche contact ouverte EN POP-UP par-dessus une fiche annonce (retour = fermeture → revient au bien).
+  const [annonceContactId, setAnnonceContactId] = useState<string | null>(null)
+  const [annonceContact, setAnnonceContact] = useState<AppContact | null>(null)
+  const [annonceContactRelations, setAnnonceContactRelations] = useState<AppContactRelation[]>([])
+  const [annonceContactSearches, setAnnonceContactSearches] = useState<AppContactSearch[]>([])
   const [contactStats, setContactStats] = useState<ContactStats>({ total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 })
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
@@ -11693,6 +11698,23 @@ export default function App() {
     }
   }, [session, dataFilters, dataScope, screen, contactPage, contactDirectLookupId, dataReloadKey])
 
+  // Chargement autonome de la fiche contact affichée en pop-up par-dessus une annonce.
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) return
+    const id = String(annonceContactId ?? '').trim()
+    if (!id) { setAnnonceContact(null); setAnnonceContactRelations([]); setAnnonceContactSearches([]); return }
+    let cancelled = false
+    Promise.all([loadContactById(id), loadContactRelations(id), loadContactSearches(id)])
+      .then(([contact, relations, searches]) => {
+        if (cancelled) return
+        setAnnonceContact(contact ?? null)
+        setAnnonceContactRelations(relations)
+        setAnnonceContactSearches(searches)
+      })
+      .catch((error) => { if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement de la fiche contact') })
+    return () => { cancelled = true }
+  }, [annonceContactId, session])
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     if (screen !== 'contacts' || !selectedContactId) {
@@ -12088,6 +12110,10 @@ export default function App() {
   function openContactDirectory(contactId: string | null | undefined) {
     const normalizedId = String(contactId ?? '').trim()
     if (!normalizedId) return
+    // Si une fiche annonce (détail bien) est ouverte, on affiche la fiche contact
+    // EN POP-UP par-dessus l'annonce : sa fermeture revient au bien (retour contextuel).
+    // Sinon (depuis le listing / ailleurs), comportement historique → écran Contacts.
+    if (detailOpen) { setAnnonceContactId(normalizedId); return }
     setScreen('contacts')
     setDetailOpen(false)
     setSelectedContactId(normalizedId)
@@ -16629,6 +16655,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
             </section>
           </div>
+        ) : null}
+
+        {annonceContact ? (
+          <ContactDetailPopup
+            contact={annonceContact}
+            relations={annonceContactRelations}
+            searches={annonceContactSearches}
+            canManageContacts={canManageContacts}
+            canDeleteContacts={isAdmin}
+            hektorUserEmail={contactHektorUserEmail}
+            hektorUserId={contactHektorUserId}
+            hektorNegotiators={hektorNegotiators}
+            profileRole={profile?.role ?? null}
+            sessionEmail={sessionEmail}
+            onJobCreated={rememberHektorActionJob}
+            onContactDeleted={(c) => { setAnnonceContactId(null); handleOptimisticContactDeleted(c) }}
+            onClose={() => setAnnonceContactId(null)}
+            onOpenDossier={(id) => { setAnnonceContactId(null); setScreen('mandats'); setSelectedMandatId(id); setSelectedDossierId(id); setDetailOpen(true) }}
+            onOpenRechercheAcquereur={(search) => { setAnnonceContactId(null); setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
+          />
         ) : null}
 
         <RechercheAcquereur
