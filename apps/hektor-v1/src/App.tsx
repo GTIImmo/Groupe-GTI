@@ -15307,11 +15307,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span className="gcc-go" aria-hidden="true">→</span>
                       <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { openDraftAnnonceModal(); setDraftAnnonceModalOpen(false); setCreateFlow('ia-result'); void handleDraftAnnonceScanFile(event) }} />
                     </label>
-                    <button type="button" className="gcc-agent" onClick={() => { setCreateFlow('closed'); openDraftAnnonceModal() }}>
-                      <span className="gcc-emoji" aria-hidden="true">✨</span>
-                      <div className="gcc-agent-tx"><strong>Rédacteur IA</strong><small>Génère le titre et la description</small></div>
-                      <span className="gcc-go" aria-hidden="true">→</span>
-                    </button>
                   </div>
                   <a className="gcc-download" href="/patron-fiche-saisie.html" target="_blank" rel="noreferrer">
                     <span className="gcc-dl-ic" aria-hidden="true">📄</span>
@@ -15462,27 +15457,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span>Titre / repere interne</span>
                       <input value={draftAnnonceTitle} onChange={(event) => setDraftAnnonceTitle(event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
                     </label>
-                    <RedacteurPanel
-                      propertyData={buildDraftAnnonceRedacteurData()}
-                      onAccept={(result) => {
-                        // Corps = accroche + descriptif + points forts (les 4 sorties fondues
-                        // dans le texte diffuse, puisque l'annonce n'a qu'une zone de texte).
-                        const parts: string[] = []
-                        if (result.accroche.trim()) parts.push(result.accroche.trim())
-                        if (result.description.trim()) parts.push(result.description.trim())
-                        if (result.highlights.length) parts.push('Points forts :\n' + result.highlights.map((h) => `- ${h}`).join('\n'))
-                        const body = parts.join('\n\n')
-                        if (result.title) {
-                          setDraftAnnonceTitle(result.title)               // #1 Titre / repere interne
-                          updateDraftAnnonceWizardField('titre', result.title) // #3 Titre annonce (diffusion)
-                        }
-                        if (body) {
-                          setDraftAnnonceAdvanced((current) => ({ ...current, description: body })) // #2 Description (Detail app)
-                          updateDraftAnnonceWizardField('corps', body)     // #4 Texte annonce (diffusion)
-                        }
-                        setNoticeMessage('IA : titre (repere + annonce) et texte (description + texte annonce) remplis. Verifie avant creation.')
-                      }}
-                    />
                   </section>
                     <section className="draft-annonce-section draft-annonce-scan-section">
                       <div className="draft-annonce-section-title">
@@ -15884,6 +15858,31 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : null}
                 {draftAnnonceStep === 'diffusion' ? (
                   <>
+                    <section className="draft-annonce-section draft-annonce-section-redac">
+                      <div className="draft-annonce-section-title">
+                        <span>IA</span>
+                        <strong>Rédiger avec l'IA</strong>
+                      </div>
+                      <RedacteurPanel
+                        propertyData={buildDraftAnnonceRedacteurData()}
+                        onAccept={(result) => {
+                          const parts: string[] = []
+                          if (result.accroche.trim()) parts.push(result.accroche.trim())
+                          if (result.description.trim()) parts.push(result.description.trim())
+                          if (result.highlights.length) parts.push('Points forts :\n' + result.highlights.map((h) => `- ${h}`).join('\n'))
+                          const body = parts.join('\n\n')
+                          if (result.title) {
+                            setDraftAnnonceTitle(result.title)
+                            updateDraftAnnonceWizardField('titre', result.title)
+                          }
+                          if (body) {
+                            setDraftAnnonceAdvanced((current) => ({ ...current, description: body }))
+                            updateDraftAnnonceWizardField('corps', body)
+                          }
+                          setNoticeMessage('IA : titre (repere + annonce) et texte (description + texte annonce) remplis. Verifie avant creation.')
+                        }}
+                      />
+                    </section>
                     {draftAnnonceAdvancedSections.slice(0, 1).map(renderDraftAnnonceAdvancedSection)}
                     {draftAnnonceDiffusionGroups.map(renderDraftAnnonceWizardSection)}
                     <section className="draft-annonce-review-panel">

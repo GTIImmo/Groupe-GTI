@@ -2232,6 +2232,8 @@
 /* Rédacteur IA : pleine largeur dans la grille de la modale (il était coincé sur 1 colonne étroite) */
 .draft-annonce-form .redac-panel { grid-column: 1 / -1 !important; }
 .draft-annonce-form .redac-sub { max-width: none; }
+/* Bloc OCR « Fiche papier » masqué dans la modale manuelle (l'OCR se fait via le flux IA) */
+.draft-annonce-scan-section { display: none !important; }
 
 /* Statut du scan OCR (écran IA compact) : bien visible */
 .gti-cc .gcc-scan-status { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border-radius: 13px; font-size: 13.5px; font-weight: 700; text-align: left; color: #1c7a4a; background: #e9f4ee; border: 1px solid #cfe8da; }
