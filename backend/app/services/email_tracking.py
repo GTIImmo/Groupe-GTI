@@ -160,6 +160,7 @@ class EmailTrackingService:
             self._touch_click(envoi_id, now, action, bien_id, reason=reason)
         elif evt_type == "download":
             self._touch_download(envoi_id, now)
+            self._notify_nego_estimation(envoi_id, bien_id)
         elif evt_type == "unsub":
             self._touch_unsub(envoi_id, now, ip)
         self._recompute_score(envoi_id)
@@ -211,6 +212,43 @@ class EmailTrackingService:
         if env.get("statut") in (None, "brouillon", "envoye", "ouvert"):
             patch["statut"] = "clique"
         self._patch("app_email_envoi", {"id": f"eq.{envoi_id}"}, patch)
+
+    def _notify_nego_estimation(self, envoi_id: str, app_dossier_id: Any) -> None:
+        """Cloche du négociateur : le propriétaire a consulté son avis de valeur (clic sur
+        le lien PDF de l'email). In-app UNIQUEMENT (pas d'email — non nécessaire).
+
+        Même mécanisme que « demande de visite » (espace_visite._cloche_nego) : on écrit
+        une ligne app_notification pour le négociateur en charge du dossier ; la cloche du
+        front l'affiche telle quelle. Le fil d'activité du cockpit, lui, montre déjà
+        « Avis de valeur ouvert par le propriétaire » via app_email_event (type=download).
+
+        Best-effort : n'échoue JAMAIS le tracking (le clic doit toujours rediriger vers le
+        PDF). L'anti-doublon repose sur l'index unique partiel
+        (negociateur_email, app_dossier_id, type) WHERE read_at IS NULL : tant que le
+        négociateur n'a pas lu la notification, un nouveau clic n'en recrée pas (l'INSERT
+        en conflit lève, et l'exception est absorbée ici).
+        """
+        if not app_dossier_id:
+            return
+        try:
+            rows = self._get("app_dossiers_current", {
+                "select": "negociateur_email,titre_bien",
+                "app_dossier_id": f"eq.{app_dossier_id}", "limit": "1"})
+            dossier = rows[0] if rows else {}
+            nego = (dossier.get("negociateur_email") or "").strip()
+            if not nego:
+                return  # dossier sans négociateur résolu : rien à notifier
+            titre = (dossier.get("titre_bien") or "votre bien").strip()
+            self._insert("app_notification", {
+                "negociateur_email": nego,
+                "type": "estimation_consultee",
+                "title": "Avis de valeur consulté",
+                "app_dossier_id": app_dossier_id,
+                "body": f"Le propriétaire a ouvert son estimation « {titre} ».",
+                "payload": {"source": "estimation", "envoi_id": envoi_id},
+            }, prefer="return=minimal")
+        except Exception:
+            pass  # doublon (index partiel), négo introuvable, réseau… : jamais bloquant
 
     def _touch_unsub(self, envoi_id: str, now: str, ip: str | None) -> None:
         env = self._envoi(envoi_id) or {}
