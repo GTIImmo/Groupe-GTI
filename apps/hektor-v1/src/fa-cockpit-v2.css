@@ -2186,3 +2186,38 @@
 .gti-cc .gcc-primary:hover:not(:disabled) { filter: brightness(1.06); }
 .gti-cc .gcc-primary:disabled { opacity: .55; cursor: default; }
 @media (max-width: 480px) { .gti-cc .gcc-nego { grid-template-columns: 1fr; } .gti-cc .gcc-actions { flex-direction: column; } }
+
+/* ============================================================
+   Modale de création manuelle — passe design moderne (charte GTI).
+   Surclasse le thème teal/marine daté (défini en !important dans styles.css).
+   Visuel/ergonomie uniquement.
+   ============================================================ */
+/* Panneau + fond crème */
+.draft-annonce-modal { border-radius: 22px !important; border-color: var(--fa-gold-line, #e7e0d5) !important; background: var(--fa-paper, #fdfbf7) !important; box-shadow: 0 40px 90px -46px rgba(32, 24, 18, .55) !important; }
+.draft-annonce-form { background: var(--fa-paper, #fdfbf7) !important; padding: 18px 24px 0 !important; }
+/* Header : dégradé sombre + glow magenta (façon cockpit), titre Fraunces */
+.draft-annonce-head { background: linear-gradient(112deg, #241c17 0%, #171210 62%) !important; min-height: 78px !important; position: relative; overflow: hidden; }
+.draft-annonce-head::after { content: ''; position: absolute; right: -30px; top: -70px; width: 300px; height: 200px; background: radial-gradient(circle at 60% 40%, rgba(194, 18, 95, .32), transparent 62%); pointer-events: none; }
+.draft-annonce-head > * { position: relative; z-index: 1; }
+.draft-annonce-head .eyebrow { color: #d98cb4 !important; letter-spacing: .16em !important; }
+.draft-annonce-head h3 { color: #fff !important; font-family: 'Fraunces', 'Spectral', serif !important; font-size: 22px !important; font-weight: 600 !important; }
+.draft-annonce-head .modal-hero-icon { background: linear-gradient(150deg, #e33b81, #9d0f4e) !important; }
+/* Stepper : pastilles modernes, actif magenta, fait = vert */
+.draft-annonce-step { border: 1px solid var(--fa-gold-line, #e7e0d5) !important; border-radius: 13px !important; background: #fff !important; color: #1f1c1a !important; box-shadow: 0 8px 18px -12px rgba(32, 24, 18, .35) !important; transition: transform .14s, box-shadow .14s, border-color .14s !important; }
+.draft-annonce-step:hover:not(:disabled) { transform: translateY(-1px) !important; border-color: #e9b7cf !important; }
+.draft-annonce-step.is-active { border-color: transparent !important; background: linear-gradient(150deg, #e8437f, #a01050) !important; color: #fff !important; box-shadow: 0 14px 28px -12px rgba(194, 18, 95, .7) !important; }
+.draft-annonce-step.is-done { border-color: #cfe8da !important; background: #f0f8f3 !important; }
+.draft-annonce-step-number { border-radius: 10px !important; background: #f5ece2 !important; color: #1f1c1a !important; font-weight: 800 !important; }
+.draft-annonce-step.is-active .draft-annonce-step-number { background: rgba(255, 255, 255, .22) !important; color: #fff !important; }
+.draft-annonce-step.is-done .draft-annonce-step-number { background: #d9efe3 !important; color: #1c7a4a !important; }
+.draft-annonce-step-copy strong { font-weight: 700 !important; }
+.draft-annonce-step.is-active .draft-annonce-step-copy small { color: rgba(255, 255, 255, .82) !important; }
+/* Barre de progression : dégradé magenta */
+.draft-annonce-progress { background: #efe6da !important; height: 5px !important; }
+.draft-annonce-progress span { background: linear-gradient(90deg, #e8437f, #a01050) !important; }
+/* Champs : plus lisibles, focus magenta */
+.draft-annonce-form .filter-field span { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-muted, #8a7d6f); }
+.draft-annonce-form .filter-field input, .draft-annonce-form .filter-field select, .draft-annonce-form .filter-field textarea { border: 1.5px solid var(--fa-gold-line, #e7e0d5) !important; border-radius: 11px !important; font-size: 14px !important; background: #fff !important; transition: border-color .15s, box-shadow .15s !important; }
+.draft-annonce-form .filter-field input:focus, .draft-annonce-form .filter-field select:focus, .draft-annonce-form .filter-field textarea:focus { outline: none !important; border-color: #c2125f !important; box-shadow: 0 0 0 3px rgba(194, 18, 95, .12) !important; }
+/* Page-head (récap étape) : carte crème */
+.draft-annonce-page-head { border: 1px solid var(--fa-gold-line, #e7e0d5) !important; border-radius: 16px !important; background: linear-gradient(120deg, #fff, #fdf6f1) !important; }
