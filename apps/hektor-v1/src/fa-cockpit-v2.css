@@ -2240,3 +2240,7 @@
 .gti-cc .gcc-scan-status.is-loading .gcc-scan-dot { background: #e08a3c; animation: gcc-scan-pulse 1s ease-in-out infinite; }
 @keyframes gcc-scan-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .gti-cc .gcc-scan-status.is-loading .gcc-scan-dot { animation: none; } }
+/* Sécurité : avertissement avant création (ex. e-mail vendeur manquant) */
+.gti-cc .gcc-warn { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 12px; padding: 11px 13px; border-radius: 12px; text-align: left; font-size: 12.5px; font-weight: 600; line-height: 1.42; color: #8a4b00; background: #fdf3e0; border: 1px solid #f0dcbe; }
+.gti-cc .gcc-warn-ic { flex: none; font-size: 15px; line-height: 1.2; }
+.gti-cc .gcc-warn strong { color: #6e3c00; }

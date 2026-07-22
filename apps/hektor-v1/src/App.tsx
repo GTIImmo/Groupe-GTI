@@ -15367,9 +15367,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       }}
                     />
                   </div>
+                  {draftMandantChoice === 'new' && draftMandantLastName.trim() !== '' && draftMandantEmail.trim() === '' ? (
+                    <div className="gcc-warn">
+                      <span className="gcc-warn-ic" aria-hidden="true">⚠️</span>
+                      <span>Le <strong>vendeur</strong> a été lu, mais son <strong>e-mail manque</strong> (il n'est pas sur la fiche papier). Ajoute-le via « Détailler dans l'assistant » avant de créer — sinon la création sera bloquée.</span>
+                    </div>
+                  ) : null}
                   <div className="gcc-actions">
                     <button type="button" className="gcc-secondary" onClick={() => { setCreateFlow('closed'); setDraftAnnonceModalOpen(true) }}>Détailler dans l'assistant</button>
-                    <button type="button" className="gcc-primary" disabled={draftAnnonceScanPending || draftAnnoncePending} onClick={() => { setCreateFlow('closed'); void handleCreateDraftAnnonce(null, { skipStepGate: true }) }}>Créer l'estimation</button>
+                    <button type="button" className="gcc-primary" disabled={draftAnnonceScanPending || draftAnnoncePending || (draftMandantChoice === 'new' && draftMandantLastName.trim() !== '' && draftMandantEmail.trim() === '')} onClick={() => { setCreateFlow('closed'); void handleCreateDraftAnnonce(null, { skipStepGate: true }) }}>Créer l'estimation</button>
                   </div>
                 </>
               )}
