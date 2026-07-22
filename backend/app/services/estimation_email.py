@@ -70,7 +70,13 @@ def render_estimation_email(
     )
     unsub_url = f"{base}/r/u/{email_tokens.make_unsub_token(envoi_id=envoi_id, secret=secret)}" if base else None
 
-    name = " ".join(p for p in (civilite, prenom) if p).strip() or _clean_text(proprietaire_nom)
+    # « Bonjour M. <NOM DE FAMILLE> » : on s'adresse par le nom, pas le prénom
+    # (« Bonjour M. Gerphagnon », jamais « Bonjour M. Frédéric »). Un nom tout en
+    # capitales (fréquent depuis Hektor) est remis en casse Titre pour l'affichage.
+    _nom = _clean_text(proprietaire_nom)
+    if _nom and _nom == _nom.upper():
+        _nom = _nom.title()
+    name = " ".join(p for p in (civilite, _nom) if p).strip() or _nom or _clean_text(prenom)
     greeting = f"Bonjour {name}," if name else "Bonjour,"
     subject = "Votre estimation est disponible"
     preheader = "Le détail de la valeur de votre bien, à consulter en un clic."
@@ -92,8 +98,8 @@ def render_estimation_email(
         desc += f" de {surf} m²"
     if pcs:
         desc += f" ({pcs} pièces)"
-    if ville:
-        desc += f" à {ville}"
+    # La commune n'est plus ajoutée à l'intro (demande Frédéric) : « votre appartement »
+    # et non « votre appartement à Le Puy-en-Velay ».
 
     # Deux variantes (toutes deux après visite) — aucune ne révèle le prix.
     if variante == "succession":
@@ -114,24 +120,6 @@ def render_estimation_email(
     nego_nom = _clean_text(negociateur.get("nom")) or "Votre conseiller Groupe GTI"
     nego_agence = _clean_text(negociateur.get("agence")) or "Groupe GTI"
     nego_email = _clean_text(negociateur.get("email"))
-
-    # ── Carte « bien estimé » : contexte (type · ville) SANS révéler le prix. ──
-    bien_type = (_clean_text(bien.get("type")) or "Bien").strip()
-    bien_label = " · ".join(p for p in (bien_type, ville) if p) or bien_type
-    bien_card = (
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-        f'style="background:{BRAND["paper"]};border:1px solid {BRAND["line_warm"]};border-radius:14px;margin:18px 0 4px">'
-        f'<tr>'
-        f'<td width="60" align="center" valign="middle" style="padding:14px 0 14px 14px">'
-        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
-        f'<td width="44" height="44" align="center" valign="middle" bgcolor="{BRAND["surface"]}" '
-        f'style="background:{BRAND["surface"]};border:1px solid {BRAND["line_warm"]};border-radius:11px;font-size:20px">🏡</td>'
-        f'</tr></table></td>'
-        f'<td valign="middle" style="padding:14px 16px">'
-        f'<div style="color:{BRAND["muted_warm"]};font-family:{FONT_BODY};font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;font-weight:bold">Le bien estimé</div>'
-        f'<div style="color:{BRAND["ink_warm"]};font-family:{FONT_DISPLAY};font-size:16px;margin-top:2px">{_esc(bien_label)}</div>'
-        f'</td></tr></table>'
-    )
 
     # ── Encart confidentialité : le montant n'apparaît que dans le PDF. ──
     lock_card = (
@@ -180,7 +168,6 @@ def render_estimation_email(
         f'<tr><td class="gti-pad" style="padding:30px 30px 4px">'
         f'{email_eyebrow("Votre estimation")}'
         f'{email_title(subject)}'
-        f'{bien_card}'
         f'{email_lead(greeting_html)}'
         f'{lock_card}'
         f'</td></tr>'
