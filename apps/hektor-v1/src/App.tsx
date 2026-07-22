@@ -20839,7 +20839,10 @@ const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string
   { key: 'diagnostics', label: 'Diagnostics & énergie', sub: 'DPE, GES & diagnostics', c: '#2f8a5b', bg: '#e6f3ec', ico: '<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>', fields: [['Diagnostiqueur', 'diagnostiqueur'], ['Date DPE', 'dpe_date'], ['DPE consommation', 'dpe_cons'], ['GES', 'dpe_ges'], ['Coût énergie min', 'dpe_couts_min', '€'], ['Coût énergie max', 'dpe_couts_max', '€'], ['Année référence DPE', 'dpe_annee_reference'], ['Amiante', 'diag_amiante'], ['Date amiante', 'diag_amiante_date'], ['Termites', 'diag_termites'], ['Date termites', 'diag_termites_date'], ['Plomb', 'diag_plomb'], ['Date plomb', 'diag_plomb_date'], ['Électrique', 'diag_electrique'], ['Date électrique', 'diag_electrique_date'], ['Gaz', 'diag_gaz'], ['Loi Carrez', 'diag_loi_carrez'], ['Risques naturels', 'diag_risques_nat_tech'], ['Assainissement (diag)', 'diag_assainissement'], ['Date gaz', 'diag_gaz_date'], ['Date loi Carrez', 'diag_loi_carrez_date'], ['Date risques', 'diag_risques_nat_tech_date'], ['Date assainissement', 'diag_assainissement_date'], ['Commentaire amiante', 'diag_amiante_commentaire'], ['Commentaire termites', 'diag_termites_commentaire'], ['Commentaire plomb', 'diag_plomb_commentaire'], ['Commentaire électrique', 'diag_electrique_commentaire'], ['Commentaire gaz', 'diag_gaz_commentaire'], ['Commentaire loi Carrez', 'diag_loi_carrez_commentaire'], ['Commentaire risques', 'diag_risques_nat_tech_commentaire'], ['Commentaire assainissement', 'diag_assainissement_commentaire'], ['DPE non concerné', 'dpe_non_concerne'], ['DPE vierge', 'dpe_vierge'], ['DPE altitude', 'isDpeAltitude'], ['Énergie finale', 'valeurEnergieFinale']] },
   { key: 'prix', label: 'Prix, mandat & honoraires', sub: 'Financier', c: '#8a6a2f', bg: '#f4ecd9', ico: '<circle cx="12" cy="12" r="9"/><path d="M15 8a4 4 0 1 0 0 8M7 10h6M7 14h6"/>', fields: [['Prix public', 'prix', '€'], ['Prix net vendeur', 'PRIXNETVENDEUR', '€'], ['Honoraires acquéreur', '_selecterHonoraires2'], ['Montant hon. acquéreur', '_tauxHonoraire2', '€'], ['% hon. acquéreur', '_pourcentHonoraire2', '%'], ['Honoraires vendeur', '_selecterHonoraires3'], ['Montant hon. vendeur', '_tauxHonoraire3', '€'], ['Masquer le prix', 'masque'], ['Montant estimation', 'ESTIMATION_MONTANT', '€'], ['Date estimation', 'ESTIMATION_DATE'], ['Travaux', 'TRAVAUX'], ['Dépôt garantie', 'DEPOT_GARANTIE', '€'], ['Taxe foncière', 'TAXE_FONCIERE', '€'], ['Taxe habitation', 'TAXE_HABITATION', '€'], ['Charges', 'CHARGES', '€'], ['Détail charges', 'CHARGES_DETAIL'], ['Détail hon. acquéreur', '_detailHonoraire2'], ['% hon. vendeur', '_pourcentHonoraire3', '%'], ['Détail hon. vendeur', '_detailHonoraire3'], ['Charge locative', 'Loc_ChargeLocative', '€'], ['Estimation loyer', 'Loc_EstimationLoyer', '€'], ['Occupation locative', 'Loc_Occupation'], ['Rendement brut', 'Loc_RendementBrut', '%']] },
   { key: 'dispo', label: 'Disponibilité & visite', sub: 'Libération & clés', c: '#3a5a8a', bg: '#e7edf7', ico: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', fields: [['Disponible', 'DISPO'], ['Date libération', 'DATE_LIBER'], ['Date disponibilité', 'DATE_DISPO'], ['Clés', 'CLES'], ['Moyens de visite', 'moyens_visite']] },
-  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Titre annonce', 'titre'], ['Texte annonce', 'corps'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
+  // Titre annonce ('titre') et Texte annonce ('corps') ont ete remontes en tete de
+  // « Le Bien » (bloc « L'annonce »), Hektor n'ayant qu'une seule zone de texte : les
+  // laisser aussi ici les afficherait deux fois. La section ne garde que ce qui lui est propre.
+  { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
   { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Code postal', 'codepublique'], ['Ville', 'villepublique'], ['Adresse / complément', 'ADRESSE_COMPL'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
 ]
 // Champs en LECTURE SEULE dans l'édition en place : non écrits par le chemin optimiste.
@@ -20885,6 +20888,56 @@ function CkInlineField({ label, name, unit, value, edited, readOnly, onSave }: {
           {display || 'À renseigner'}
           {readOnly ? null : <svg className="fa-ck-lb-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
         </span>
+      )}
+    </div>
+  )
+}
+
+// Descriptif de l'annonce : editable en place comme les autres champs, mais rendu
+// riche en lecture (le texte est du HTML). L'edition porte sur le champ Hektor `corps`
+// (le texte principal), pousse en texte brut -- Hektor n'a qu'une seule zone de texte,
+// donc pas de descriptif distinct d'un « texte publicite ». Le worker le route via
+// postHektorPrincipalTextUpdate (title + description) ; le read-through le rafraichit.
+function CkDescField({ html, rawValue, edited, readOnly, onSave }: { html: string; rawValue: string; edited: boolean; readOnly?: boolean; onSave: (name: string, value: string) => void }) {
+  const toText = (v: string) => (v || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '- ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const start = () => { if (readOnly) return; setDraft(toText(rawValue)); setEditing(true) }
+  const commit = () => { setEditing(false); const next = draft.trim(); if (next !== toText(rawValue)) onSave('corps', next) }
+  return (
+    <div className={`fa-ck-lb-descwrap${readOnly ? '' : ' editable'}${edited ? ' is-edited' : ''}`}>
+      {editing ? (
+        <textarea className="fa-ck-inline-ed fa-ck-inline-ta fa-ck-lb-descta" autoFocus rows={8} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false) }} />
+      ) : (
+        <>
+          <div
+            className={`fa-ck-lb-desc${html ? '' : ' off'}`}
+            role={readOnly ? undefined : 'button'}
+            tabIndex={readOnly ? undefined : 0}
+            title={readOnly ? undefined : 'Modifier le descriptif'}
+            onClick={start}
+            onKeyDown={(e) => { if (!readOnly && e.key === 'Enter') { e.preventDefault(); start() } }}
+            {...(html ? { dangerouslySetInnerHTML: { __html: html } } : { children: 'À renseigner' })}
+          />
+          {readOnly ? null : (
+            <button type="button" className="fa-ck-lb-descpen" onClick={start} aria-label="Modifier le descriptif">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+            </button>
+          )}
+        </>
       )}
     </div>
   )
@@ -21978,13 +22031,21 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 ) : null
               })()}
-              {/* Description (façon v21) */}
-              {props.texts.length > 0 ? (
-                <>
-                  <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span><div><div className="fa-ck-pub-t">Description</div><div className="fa-ck-pub-s">Le texte de l'annonce</div></div></div>
-                  <div className="fa-ck-pub-card"><div className="fa-ck-lb-desc" dangerouslySetInnerHTML={{ __html: props.texts[0].html }} /></div>
-                </>
-              ) : null}
+              {/* L'annonce : titre + descriptif, éditables en place (champs Hektor `titre`
+                  et `corps` = le texte principal). Remontés ici depuis « Diffusion » pour
+                  tenir le titre et le descriptif au début de « Le Bien ». Le rendu du
+                  descriptif édité est optimiste (texte échappé + <br>) jusqu'au read-through. */}
+              <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span><div><div className="fa-ck-pub-t">L'annonce</div><div className="fa-ck-pub-s">Titre & descriptif diffusés</div></div></div>
+              <div className="fa-ck-pub-card fa-ck-lb-annonce">
+                <CkInlineField label="Titre de l'annonce" name="titre" value={String(edited['titre'] ?? wizFieldValue('titre') ?? '')} edited={'titre' in edited} readOnly={isLightweightDetail} onSave={onFieldSave} />
+                <CkDescField
+                  html={'corps' in edited ? escapeHtml(String(edited['corps'] ?? '')).replace(/\n/g, '<br>') : (props.texts[0]?.html ?? '')}
+                  rawValue={String(edited['corps'] ?? wizFieldValue('corps') ?? '')}
+                  edited={'corps' in edited}
+                  readOnly={isLightweightDetail}
+                  onSave={onFieldSave}
+                />
+              </div>
               {/* Sections DOMAINE du v21, éditables EN PLACE (chaque champ = vrai champ wizard Hektor) */}
               {CK_LB_SECTIONS.filter((sec) => {
                 if (!sec.condField) return true

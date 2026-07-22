@@ -710,6 +710,20 @@
 /* --- Le Bien v21 : description, DPE, localisation, notes --- */
 .fa-ck-lb-desc { font-size: 15px; line-height: 1.75; color: var(--fa-ink-soft, #544b45); }
 .fa-ck-lb-desc p { margin: 0 0 13px; } .fa-ck-lb-desc p:last-child { margin: 0; } .fa-ck-lb-desc p:first-of-type { color: var(--fa-ink); } .fa-ck-lb-desc b { color: var(--fa-ink); }
+
+/* Bloc « L'annonce » : titre (fa-ck-lb-feat) + descriptif éditable en place. */
+.fa-ck-lb-annonce { display: flex; flex-direction: column; gap: 12px; }
+.fa-ck-lb-descwrap { position: relative; }
+.fa-ck-lb-descwrap.editable .fa-ck-lb-desc { cursor: pointer; border-radius: 12px; padding: 4px 40px 4px 6px; margin: -4px -6px; transition: .16s; }
+.fa-ck-lb-descwrap.editable .fa-ck-lb-desc:hover,
+.fa-ck-lb-descwrap.editable .fa-ck-lb-desc:focus-visible { background: var(--fa-brand-soft, #f6efe6); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--fa-brand, #b5651d) 12%, transparent); }
+.fa-ck-lb-desc.off { color: var(--fa-faint, #a89e95); font-style: italic; }
+.fa-ck-lb-descwrap.is-edited .fa-ck-lb-desc { box-shadow: inset 3px 0 0 var(--fa-brand, #b5651d); }
+.fa-ck-lb-descpen { position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--fa-line); border-radius: 9px; background: #fff; color: var(--fa-muted); cursor: pointer; opacity: 0; transition: .16s; }
+.fa-ck-lb-descwrap:hover .fa-ck-lb-descpen, .fa-ck-lb-descwrap:focus-within .fa-ck-lb-descpen { opacity: 1; }
+.fa-ck-lb-descpen:hover { color: var(--fa-brand, #b5651d); border-color: var(--fa-brand, #b5651d); }
+.fa-ck-lb-descpen svg { width: 15px; height: 15px; }
+.fa-ck-lb-descta { width: 100%; min-height: 180px; resize: vertical; line-height: 1.6; }
 .fa-ck-lb-energy { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .fa-ck-lb-energy { grid-template-columns: 1fr; } }
 .fa-ck-dpe-t { font-size: 12px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--fa-muted); margin-bottom: 12px; }
