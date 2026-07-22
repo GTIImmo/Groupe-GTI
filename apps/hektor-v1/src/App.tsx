@@ -21161,6 +21161,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [estimEditorOpen, setEstimEditorOpen] = useState(false)
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
+  // Colonne de gauche repliable (façon maquette v26 + side-rail du listing) : préférence persistée.
+  const [railCollapsed, setRailCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('fa-ck-rail-collapsed') === '1'
+  })
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('fa-ck-rail-collapsed', railCollapsed ? '1' : '0')
+  }, [railCollapsed])
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
   const [histoFilter, setHistoFilter] = useState<string>('tout')
   const [docFilter, setDocFilter] = useState<string>('tous')
@@ -21539,6 +21547,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         type="button"
         className={`fa-ck-rn ${activeTab === key ? 'is-active' : ''}${isFeat ? ' is-feat' : ''}`}
         style={{ ['--c']: rub.color, ['--s']: rub.bg } as CSSProperties}
+        data-name={rub.label}
         onClick={() => goRub(key)}
       >
         <span className="fa-ck-rn-ic" aria-hidden="true"><CkIcon path={rub.ico} /></span>
@@ -21668,49 +21677,27 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   return (
     <>
     <section className="fa-cockpit-v2 fa-ck-shell" data-detail-variant={detailVariant}>
-      <header className="fa-ck-topbar">
-        <button type="button" className="fa-ck-tb-back" onClick={props.onBack} aria-label={props.backLabel ?? 'Retour'}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
-        </button>
-        <span className="fa-ck-tb-badge" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
-        </span>
-        <div className="fa-ck-crumb">
-          <span className="fa-ck-crumb-ey">{props.eyebrow ?? 'Dossier annonce'}</span>
-          <span className="fa-ck-crumb-rf">{dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{dossier.titre_bien ? ` · ${dossier.titre_bien}` : ''}</span>
-        </div>
-        <div className="fa-ck-tb-right">
-          <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />Hektor · à jour</span>
-          {negoName ? (
-            <span className="fa-ck-tb-nego" title={negoRole}>
-              <span className="fa-ck-tb-nego-av" aria-hidden="true">{negoInitials}</span>
-              <span className="fa-ck-tb-nego-tx"><b>{negoName}</b><em>{negoRole}</em></span>
-            </span>
-          ) : null}
-          {ckMoreItems.length > 0 ? (
-            <span className={`fa-ck-tb-more${moreOpen ? ' is-open' : ''}`}>
-              <button type="button" className="fa-ck-tb-more-btn" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={moreOpen} onClick={(e) => { e.stopPropagation(); setMoreOpen((v) => !v) }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg>
-              </button>
-              <div className="fa-ck-tb-menu" role="menu">
-                {ckMoreItems.map((it, idx) => it.sep
-                  ? <div key={`sep-${idx}`} className="fa-ck-tb-sep" />
-                  : (
-                    <button key={it.label} type="button" role="menuitem" className={it.danger ? 'is-danger' : ''} onClick={() => { setMoreOpen(false); it.onClick?.() }}>
-                      <CkIcon path={it.ico ?? ''} />{it.label}
-                    </button>
-                  ))}
-              </div>
-            </span>
-          ) : null}
-          <button type="button" className="fa-ck-tb-close" onClick={props.onBack} aria-label="Fermer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
-        </div>
-      </header>
-
-      <div className="fa-ck-body">
+      <div className={`fa-ck-body${railCollapsed ? ' is-rail-min' : ''}`}>
         <div className="fa-ck-leftcol">
+          <button type="button" className="fa-ck-rail-toggle" onClick={() => setRailCollapsed((v) => !v)} title={railCollapsed ? 'Déplier le panneau' : 'Réduire le panneau'} aria-label={railCollapsed ? 'Déplier le panneau' : 'Réduire le panneau'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="m13 6-6 6 6 6" /><path d="m19 6-6 6 6 6" /></svg>
+          </button>
+          <button
+            type="button"
+            className={`fa-ck-rail-brand${activeTab !== 'synthese' ? ' is-inrub' : ''}`}
+            onClick={() => { if (activeTab !== 'synthese') setActiveTab('synthese'); else props.onBack() }}
+            title={activeTab !== 'synthese' ? 'Retour au cockpit du dossier' : 'Retour aux annonces'}
+            data-tip={activeTab !== 'synthese' ? 'Retour au cockpit' : 'Retour aux annonces'}
+          >
+            <span className="fa-ck-rb-mark" aria-hidden="true">
+              <span className="fa-ck-rb-ic fa-ck-rb-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg></span>
+              <span className="fa-ck-rb-ic fa-ck-rb-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.6" /><rect x="13" y="3" width="8" height="8" rx="1.6" /><rect x="13" y="13" width="8" height="8" rx="1.6" /><rect x="3" y="13" width="8" height="8" rx="1.6" /></svg></span>
+            </span>
+            <span className="fa-ck-rb-tx">
+              <span className="fa-ck-rb-ey">{activeTab !== 'synthese' ? 'Retour au' : 'Retour'}</span>
+              <span className="fa-ck-rb-t">{activeTab !== 'synthese' ? 'Cockpit' : 'Aux annonces'}</span>
+            </span>
+          </button>
           <div className="fa-ck-hero">
             <div className="fa-ck-hero-photo">
               {heroPhoto ? <img src={heroPhoto} alt={heroTitle} /> : <span className="fa-ck-hero-noimg" aria-hidden="true" />}
@@ -21776,9 +21763,52 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </>
           ) : null}
         </nav>
+        <div className="fa-ck-rail-foot">
+          <div className="fa-ck-rf-head"><span className="fa-ck-rf-hic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.4" /><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6" /></svg></span>Collaborateur</div>
+          <div className="fa-ck-rf-row">
+            {negoName ? (
+              <span className="fa-ck-tb-nego" title={negoRole}>
+                <span className="fa-ck-tb-nego-av" aria-hidden="true">{negoInitials}</span>
+                <span className="fa-ck-tb-nego-tx"><b>{negoName}</b><em>{negoRole}</em></span>
+              </span>
+            ) : null}
+            {ckMoreItems.length > 0 ? (
+              <span className={`fa-ck-tb-more${moreOpen ? ' is-open' : ''}`}>
+                <button type="button" className="fa-ck-tb-more-btn" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={moreOpen} onClick={(e) => { e.stopPropagation(); setMoreOpen((v) => !v) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg>
+                </button>
+                <div className="fa-ck-tb-menu" role="menu">
+                  {ckMoreItems.map((it, idx) => it.sep
+                    ? <div key={`sep-${idx}`} className="fa-ck-tb-sep" />
+                    : (
+                      <button key={it.label} type="button" role="menuitem" className={it.danger ? 'is-danger' : ''} onClick={() => { setMoreOpen(false); it.onClick?.() }}>
+                        <CkIcon path={it.ico ?? ''} />{it.label}
+                      </button>
+                    ))}
+                </div>
+              </span>
+            ) : null}
+          </div>
+          <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />Hektor · à jour</span>
+        </div>
         </div>
 
         <div className="fa-ck-content">
+          <div className="fa-ck-wbar">
+            <nav className="fa-ck-wb-crumb" aria-label="Fil d'ariane">
+              <button type="button" className="fa-ck-wbc-seg" onClick={props.onBack} title="Retour aux annonces">Annonces</button>
+              <span className="fa-ck-wbc-sep" aria-hidden="true">›</span>
+              <button type="button" className="fa-ck-wbc-seg fa-ck-wbc-doss" onClick={() => setActiveTab('synthese')} title="Cockpit du dossier">
+                {dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{dossier.titre_bien ? ` · ${dossier.titre_bien}` : ''}
+              </button>
+              {activeTab !== 'synthese' ? (
+                <span className="fa-ck-wbc-tail" style={{ ['--c']: currentTab.color } as CSSProperties}>
+                  <span className="fa-ck-wbc-sep" aria-hidden="true">›</span>
+                  <span className="fa-ck-wbc-cur">{currentTab.label}</span>
+                </span>
+              ) : null}
+            </nav>
+          </div>
           <div className="fa-ck-timeline">
             <div className="fa-ck-tl-head">
               <span className="fa-ck-tl-ey">Vie du mandat</span>
@@ -21825,29 +21855,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           </div>
           <div className="fa-ck-wc">
-          {activeTab !== 'synthese' ? (
-            /* Barre d'en-tête de rubrique de la v26 (.rp-bar) : bouton de retour, médaillon
-               À LA COULEUR de la rubrique, nom en Fraunces + sous-titre, réf et fermeture.
-               Remplace le filet de texte gris qui ne disait ni où on est, ni comment ressortir. */
-            <div className="fa-ck-rp-bar" style={{ ['--c']: currentTab.color } as CSSProperties}>
-              <button type="button" className="fa-ck-rp-back" onClick={() => setActiveTab('synthese')} title="Retour au cockpit (Échap)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-                <span>Retour au cockpit</span>
-              </button>
-              <span className="fa-ck-rp-sep" aria-hidden="true" />
-              <span className="fa-ck-rp-ic" aria-hidden="true"><CkIcon path={currentTab.ico} /></span>
-              <div className="fa-ck-rp-tt">
-                <span className="fa-ck-rp-name">{currentTab.label}</span>
-                <span className="fa-ck-rp-sub">{currentTab.sub}</span>
-              </div>
-              {dossier.numero_dossier || dossier.hektor_annonce_id ? (
-                <span className="fa-ck-rp-ref">RÉF. <b>{dossier.numero_dossier ?? dossier.hektor_annonce_id}</b></span>
-              ) : null}
-              <button type="button" className="fa-ck-rp-x" onClick={() => setActiveTab('synthese')} title="Fermer la rubrique" aria-label="Fermer la rubrique">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-              </button>
-            </div>
-          ) : null}
 
           {activeTab === 'synthese' ? (
             <div className="fa-ck-rub">

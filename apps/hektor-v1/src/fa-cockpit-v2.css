@@ -1891,3 +1891,101 @@
 
 /* Acteur d'un événement du fil réel (négociateur, contact). */
 .fa-cockpit-v2 .fa-ck-aactor { color: var(--fa-muted); font-weight: 600; }
+
+/* ============================================================
+   LOT 1 — Colonne de gauche repliable + contrôle de retour
+   (port de la maquette v26 : repli fluide, picto retour↔cockpit)
+   ============================================================ */
+/* Repli fluide de la grille */
+.fa-ck-body { transition: grid-template-columns .4s cubic-bezier(.33, 1, .68, 1); }
+.fa-ck-body.is-rail-min { grid-template-columns: 74px minmax(0, 1fr); }
+.fa-ck-leftcol { position: relative; transition: padding .4s cubic-bezier(.33, 1, .68, 1); }
+.fa-ck-body.is-rail-min .fa-ck-leftcol { padding: 16px 10px 22px; }
+.fa-ck-rn { transition: border-color .16s, box-shadow .16s, transform .16s, padding .34s cubic-bezier(.33, 1, .68, 1); }
+
+/* Contrôle de retour (haut du rail) : picto retour (cockpit) ↔ picto cockpit (rubrique) */
+.fa-ck-rail-brand { display: flex; align-items: center; gap: 11px; width: 100%; margin: 0 0 4px; padding: 8px 10px; border: 1px solid transparent; border-radius: 14px; background: none; cursor: pointer; text-align: left; transition: background .16s, border-color .16s, box-shadow .16s; }
+.fa-ck-rail-brand:hover { background: linear-gradient(120deg, #fff, #fdf5f0); border-color: var(--fa-gold-line); box-shadow: 0 6px 16px -11px rgba(32, 24, 18, .5); }
+.fa-ck-rb-mark { position: relative; width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #fff; background: linear-gradient(150deg, #e8437f, #a01050); box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75); }
+.fa-ck-rb-ic { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.fa-ck-rb-ic svg { width: 20px; height: 20px; }
+.fa-ck-rb-home { display: none; }
+.fa-ck-rail-brand.is-inrub .fa-ck-rb-back { display: none; }
+.fa-ck-rail-brand.is-inrub .fa-ck-rb-home { display: flex; }
+.fa-ck-rb-tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; }
+.fa-ck-rb-ey { font-size: 9.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: #b08a72; }
+.fa-ck-rb-t { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--fa-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Bouton de repli (poignée double-chevron sur le bord) */
+.fa-ck-rail-toggle { position: absolute; top: 20px; right: -14px; z-index: 6; width: 28px; height: 34px; border-radius: 10px; border: 1px solid var(--fa-line); background: linear-gradient(#fff, #fbf3ee); color: var(--fa-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px -7px rgba(32, 24, 18, .4); transition: border-color .18s, color .18s, transform .18s, box-shadow .18s; }
+.fa-ck-rail-toggle:hover { border-color: var(--fa-brand); color: var(--fa-brand); transform: translateX(1px) scale(1.05); box-shadow: 0 10px 22px -8px rgba(194, 18, 95, .5); }
+.fa-ck-rail-toggle svg { width: 16px; height: 16px; transition: transform .32s cubic-bezier(.33, 1, .68, 1); }
+.fa-ck-body.is-rail-min .fa-ck-rail-toggle svg { transform: rotate(180deg); }
+
+/* État replié : on masque hero/libellés, on centre les pictos, tooltips au survol */
+.fa-ck-body.is-rail-min .fa-ck-hero,
+.fa-ck-body.is-rail-min .fa-ck-rnav-h,
+.fa-ck-body.is-rail-min .fa-ck-watch,
+.fa-ck-body.is-rail-min .fa-ck-rb-tx,
+.fa-ck-body.is-rail-min .fa-ck-rn-t,
+.fa-ck-body.is-rail-min .fa-ck-rn-ch,
+.fa-ck-body.is-rail-min .fa-ck-rn-more { display: none; }
+.fa-ck-body.is-rail-min .fa-ck-rail-brand { justify-content: center; gap: 0; padding: 6px 0; }
+.fa-ck-body.is-rail-min .fa-ck-rn { justify-content: center; padding: 9px 0; gap: 0; position: relative; }
+.fa-ck-body.is-rail-min .fa-ck-rn:hover { transform: none; }
+.fa-ck-body.is-rail-min .fa-ck-rn::after { content: attr(data-name); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); background: #241d17; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 11px; border-radius: 9px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .14s; z-index: 40; box-shadow: 0 12px 26px -12px rgba(0, 0, 0, .55); }
+.fa-ck-body.is-rail-min .fa-ck-rn:hover::after { opacity: 1; }
+/* le rail passe au-dessus du contenu pour que les tooltips repliés s'affichent par-dessus */
+.fa-ck-body.is-rail-min .fa-ck-leftcol { z-index: 4; }
+
+/* ============================================================
+   LOT 2 — Négociateur en bas de la colonne (bandeau supprimé)
+   ============================================================ */
+.fa-ck-rail-foot { margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--fa-line-soft); display: flex; flex-direction: column; gap: 9px; }
+.fa-ck-rf-head { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: var(--fa-muted); padding: 0 2px; }
+.fa-ck-rf-hic { width: 24px; height: 24px; flex: none; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, #e8437f, #a01050); box-shadow: 0 5px 12px -6px rgba(194, 18, 95, .7); }
+.fa-ck-rf-hic svg { width: 14px; height: 14px; }
+.fa-ck-rf-row { display: flex; align-items: center; gap: 8px; }
+/* négociateur : passage en thème clair */
+.fa-ck-rail-foot .fa-ck-tb-nego { flex: 1; min-width: 0; gap: 10px; padding: 9px 10px; border-radius: 13px; border: 1px solid var(--fa-gold-line); background: linear-gradient(135deg, #fff, #fdf6f1); box-shadow: 0 6px 16px -12px rgba(32, 24, 18, .5); }
+.fa-ck-rail-foot .fa-ck-tb-nego-av { width: 40px; height: 40px; border-radius: 11px; font-size: 13px; }
+.fa-ck-rail-foot .fa-ck-tb-nego-tx b { color: var(--fa-ink); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; }
+.fa-ck-rail-foot .fa-ck-tb-nego-tx em { color: var(--fa-muted); font-size: 11px; }
+/* chip Hektor : lisible sur fond clair */
+.fa-ck-rail-foot .fa-ck-tb-chip { align-self: flex-start; color: #1c7a4a; background: rgba(47, 138, 91, .12); border-color: rgba(47, 138, 91, .28); }
+.fa-ck-rail-foot .fa-ck-tb-chip-dot { background: #2f8a5b; }
+/* menu ⋯ : bouton clair + ouverture vers le haut */
+.fa-ck-rail-foot .fa-ck-tb-more { flex: none; }
+.fa-ck-rail-foot .fa-ck-tb-more-btn { border: 1px solid var(--fa-line); background: #fff; color: var(--fa-muted); }
+.fa-ck-rail-foot .fa-ck-tb-more-btn:hover { background: var(--fa-brand-soft); color: var(--fa-brand-ink); border-color: var(--fa-gold-line); }
+.fa-ck-rail-foot .fa-ck-tb-menu { right: auto; left: 0; top: auto; bottom: calc(100% + 9px); }
+/* replié : pied réduit à l'avatar centré */
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-rf-head,
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-chip,
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-nego-tx,
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-more { display: none; }
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-rf-row { justify-content: center; }
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-nego { flex: none; padding: 2px; border: 0; background: none; box-shadow: none; }
+
+/* ============================================================
+   LOT 3 — Fil d'ariane léger en tête du contenu (cockpit + rubrique)
+   ============================================================ */
+.fa-ck-wbar { padding: 2px 2px 0; margin-bottom: 10px; }
+.fa-ck-wb-crumb { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.fa-ck-wbc-seg { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: var(--fa-muted); cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: background .14s, color .14s; }
+.fa-ck-wbc-seg:hover { background: var(--fa-brand-soft); color: var(--fa-brand-ink); }
+.fa-ck-wbc-doss { color: var(--fa-ink-soft); }
+.fa-ck-wbc-tail { display: inline-flex; align-items: center; gap: 5px; }
+.fa-ck-wbc-sep { color: #cbbdae; font-weight: 700; font-size: 13px; }
+.fa-ck-wbc-cur { font-weight: 800; color: var(--c, var(--fa-brand)); padding: 4px 5px; }
+
+/* ============================================================
+   LOT 4 — Animation d'attention sur le bouton retour (accueil/cockpit)
+   ============================================================ */
+@keyframes fa-ck-retour { 0%, 52%, 100% { transform: translateX(0); } 62% { transform: translateX(-4px); } 70% { transform: translateX(0); } 78% { transform: translateX(-3px); } 86% { transform: translateX(0); } }
+@keyframes fa-ck-retourhalo { 0%, 48% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 0 rgba(232, 67, 127, .55); } 74% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 11px rgba(232, 67, 127, 0); } 100% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 0 rgba(232, 67, 127, 0); } }
+.fa-ck-rail-brand .fa-ck-rb-mark { animation: fa-ck-retour 3s ease-in-out infinite, fa-ck-retourhalo 3s ease-in-out infinite; }
+.fa-ck-rail-brand:hover .fa-ck-rb-mark { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .fa-ck-rail-brand .fa-ck-rb-mark { animation: none !important; }
+}
