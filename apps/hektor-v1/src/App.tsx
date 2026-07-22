@@ -15324,8 +15324,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <>
                   <div className="gcc-head">
                     <span className="gcc-spark" aria-hidden="true">📸</span>
-                    <h3>Fiche analysée</h3>
-                    <p>{draftAnnonceScanPending ? 'Lecture OCR en cours…' : (draftAnnonceScanMessage ?? 'Champs récupérés depuis la fiche.')}</p>
+                    <h3>{draftAnnonceScanPending ? 'Analyse de la fiche…' : 'Fiche analysée'}</h3>
+                  </div>
+                  <div className={`gcc-scan-status${draftAnnonceScanPending ? ' is-loading' : ''}`}>
+                    <span className="gcc-scan-dot" aria-hidden="true" />
+                    <span>{draftAnnonceScanPending ? 'Lecture OCR en cours… (jusqu\'à ~20 s pour plusieurs pages)' : (draftAnnonceScanMessage ?? 'Champs récupérés depuis la fiche.')}</span>
                   </div>
                   {draftAnnonceScanReview.length > 0 ? (
                     <div className="gcc-review">

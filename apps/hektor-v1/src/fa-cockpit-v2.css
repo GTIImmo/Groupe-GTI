@@ -2232,3 +2232,11 @@
 /* Rédacteur IA : pleine largeur dans la grille de la modale (il était coincé sur 1 colonne étroite) */
 .draft-annonce-form .redac-panel { grid-column: 1 / -1 !important; }
 .draft-annonce-form .redac-sub { max-width: none; }
+
+/* Statut du scan OCR (écran IA compact) : bien visible */
+.gti-cc .gcc-scan-status { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border-radius: 13px; font-size: 13.5px; font-weight: 700; text-align: left; color: #1c7a4a; background: #e9f4ee; border: 1px solid #cfe8da; }
+.gti-cc .gcc-scan-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: #2f8a5b; }
+.gti-cc .gcc-scan-status.is-loading { color: #a1572a; background: #fdf3e6; border-color: #f0dcbe; }
+.gti-cc .gcc-scan-status.is-loading .gcc-scan-dot { background: #e08a3c; animation: gcc-scan-pulse 1s ease-in-out infinite; }
+@keyframes gcc-scan-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .gti-cc .gcc-scan-status.is-loading .gcc-scan-dot { animation: none; } }
