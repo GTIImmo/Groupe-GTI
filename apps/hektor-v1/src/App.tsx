@@ -32723,7 +32723,7 @@ function ContactDetailPopup(props: {
 
           <header className="topbar" data-screen-label="En-tête fiche contact">
             <div className="tb-left">
-              <button className="btn icon" type="button" aria-label="Retour" onClick={props.onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg></button>
+              <button className="btn fcx-back" type="button" aria-label="Retour" onClick={props.onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg><span>Retour</span></button>
               <span className="tb-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>
               <div className="crumb"><span className="ey">Fiche contact</span><span className="ref">{contactFullName}</span></div>
             </div>

@@ -2047,3 +2047,28 @@
 .fa-ck-rail-foot .fa-ck-tb-more-btn:hover { background: var(--fa-brand-soft); color: var(--fa-brand-ink); border-color: color-mix(in srgb, var(--fa-brand) 30%, var(--fa-gold-line)); }
 /* replié : la carte redevient un simple avatar centré */
 .fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-rf-row { border: 0; background: none; box-shadow: none; padding: 0; justify-content: center; }
+
+/* ============================================================
+   Fiche contact (ContactDetailPopup) — bouton RETOUR marqué + animé
+   (visible depuis l'annonce ET depuis le listing). Scopé #fcx-root.
+   ============================================================ */
+#fcx-root .btn.fcx-back {
+  width: auto !important; height: 40px !important; padding: 0 15px 0 12px !important;
+  gap: 7px !important; border-radius: 99px !important; border: 1px solid transparent !important;
+  background: linear-gradient(150deg, #e8437f, #a01050) !important; color: #fff !important;
+  font-weight: 800 !important; font-size: 12.5px !important;
+  animation: fcx-back-halo 3s ease-in-out infinite;
+}
+#fcx-root .btn.fcx-back svg { width: 18px !important; height: 18px !important; animation: fa-ck-retour 3s ease-in-out infinite; }
+#fcx-root .btn.fcx-back span { line-height: 1; }
+#fcx-root .btn.fcx-back:hover { filter: brightness(1.08); color: #fff !important; }
+#fcx-root .btn.fcx-back:hover, #fcx-root .btn.fcx-back:hover svg { animation-play-state: paused; }
+@keyframes fcx-back-halo {
+  0%, 48% { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85), 0 0 0 0 rgba(232, 67, 127, .55); }
+  74% { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85), 0 0 0 10px rgba(232, 67, 127, 0); }
+  100% { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85), 0 0 0 0 rgba(232, 67, 127, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fcx-root .btn.fcx-back, #fcx-root .btn.fcx-back svg { animation: none !important; }
+  #fcx-root .btn.fcx-back { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85); }
+}
