@@ -10741,6 +10741,8 @@ export default function App() {
   const [requestModalType, setRequestModalType] = useState<BusinessRequestType>('demande_diffusion')
   const [requestModalPriceValue, setRequestModalPriceValue] = useState('')
   const [draftAnnonceModalOpen, setDraftAnnonceModalOpen] = useState(false)
+  // Fenêtre de choix avant création : 'choice' (Manuel / IA) puis 'ia' (2 agents). Simple aiguillage.
+  const [createFlow, setCreateFlow] = useState<'closed' | 'choice' | 'ia'>('closed')
   const [draftAnnoncePending, setDraftAnnoncePending] = useState(false)
   const [draftAnnonceScanPending, setDraftAnnonceScanPending] = useState(false)
   const [draftAnnonceScanInputVersion, setDraftAnnonceScanInputVersion] = useState(0)
@@ -15265,6 +15267,58 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenReady={() => void openCachedLightweightDetail()}
           />
         ) : null}
+        {createFlow !== 'closed' ? (
+          <div className="modal-overlay" onClick={() => setCreateFlow('closed')}>
+            <section className="modal-panel gti-cc" onClick={(event) => event.stopPropagation()}>
+              {createFlow === 'choice' ? (
+                <>
+                  <div className="gcc-head">
+                    <span className="gcc-spark" aria-hidden="true">✨</span>
+                    <h3>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</h3>
+                    <p>Comment veux-tu la créer ?</p>
+                  </div>
+                  <div className="gcc-cards">
+                    <button type="button" className="gcc-card gcc-manual" onClick={() => { setCreateFlow('closed'); openDraftAnnonceModal() }}>
+                      <span className="gcc-emoji" aria-hidden="true">✍️</span>
+                      <strong>Manuellement</strong>
+                      <small>Je remplis le formulaire moi-même</small>
+                    </button>
+                    <button type="button" className="gcc-card gcc-ia" onClick={() => setCreateFlow('ia')}>
+                      <span className="gcc-tag" aria-hidden="true">IA</span>
+                      <span className="gcc-emoji" aria-hidden="true">📸</span>
+                      <strong>Par photo, avec l'IA</strong>
+                      <small>Un agent lit ma fiche et pré-remplit</small>
+                    </button>
+                  </div>
+                  <button type="button" className="gcc-cancel" onClick={() => setCreateFlow('closed')}>Annuler</button>
+                </>
+              ) : (
+                <>
+                  <div className="gcc-head">
+                    <button type="button" className="gcc-back" onClick={() => setCreateFlow('choice')} aria-label="Retour">‹</button>
+                    <span className="gcc-spark" aria-hidden="true">🤖</span>
+                    <h3>Création assistée par IA</h3>
+                    <p>Choisis ton agent</p>
+                  </div>
+                  <div className="gcc-agents">
+                    <label className="gcc-agent">
+                      <span className="gcc-emoji" aria-hidden="true">📷</span>
+                      <div className="gcc-agent-tx"><strong>Scanner la fiche</strong><small>Photo(s) → OCR → pré-remplissage</small></div>
+                      <span className="gcc-go" aria-hidden="true">→</span>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { setCreateFlow('closed'); openDraftAnnonceModal(); void handleDraftAnnonceScanFile(event) }} />
+                    </label>
+                    <button type="button" className="gcc-agent" onClick={() => { setCreateFlow('closed'); openDraftAnnonceModal() }}>
+                      <span className="gcc-emoji" aria-hidden="true">✨</span>
+                      <div className="gcc-agent-tx"><strong>Rédacteur IA</strong><small>Génère le titre et la description</small></div>
+                      <span className="gcc-go" aria-hidden="true">→</span>
+                    </button>
+                  </div>
+                  <button type="button" className="gcc-cancel" onClick={() => setCreateFlow('closed')}>Annuler</button>
+                </>
+              )}
+            </section>
+          </div>
+        ) : null}
         {draftAnnonceModalOpen ? (
           <div className="modal-overlay" onClick={closeDraftAnnonceModal}>
             <section className="modal-panel modal-panel-wide draft-annonce-modal" onClick={(event) => event.stopPropagation()}>
@@ -16977,7 +17031,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <div className="mobile-command-actions">
             {screen === 'contacts'
               ? canManageContacts ? <button className="mobile-draft-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
-              : canCreateHektorDraftAnnonce ? <button className="mobile-draft-button" type="button" onClick={openDraftAnnonceModal}>Nouveau</button> : null}
+              : canCreateHektorDraftAnnonce ? <button className="mobile-draft-button" type="button" onClick={() => setCreateFlow('choice')}>Nouveau</button> : null}
             <button type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Fermer filtres' : 'Filtres'}</button>
             <button
               className={`mobile-stats-toggle ${mobileStatsOpen ? 'is-active' : ''}`}
@@ -17440,7 +17494,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <div className="hero-actions">
                   {screen === 'contacts'
                     ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
-                    : canCreateHektorDraftAnnonce ? <button className={`ghost-button button-primary draft-annonce-open-button ${screen === 'estimations' ? 'estim-new-btn' : ''}`.trim()} type="button" onClick={openDraftAnnonceModal}>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</button> : null}
+                    : canCreateHektorDraftAnnonce ? <button className={`ghost-button button-primary draft-annonce-open-button ${screen === 'estimations' ? 'estim-new-btn' : ''}`.trim()} type="button" onClick={() => setCreateFlow('choice')}>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</button> : null}
                   <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Reinitialiser</button>
                 </div>
