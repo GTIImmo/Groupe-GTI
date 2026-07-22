@@ -2117,3 +2117,21 @@
   .gti-back-hero, .gti-back-hero svg { animation: none !important; }
   .gti-back-hero { box-shadow: 0 10px 24px -11px rgba(194, 18, 95, .85); }
 }
+
+/* ============================================================
+   Collaborateur : le ⋯ ne chevauche plus le texte (agence tronquée proprement)
+   + accès aux « fonctions diverses » soigné en colonne dépliée ET repliée.
+   ============================================================ */
+/* Dépliée : la carte clippe, l'agence passe en ellipsis, le ⋯ reste à droite */
+.fa-ck-rail-foot .fa-ck-rf-row { align-items: center; }
+.fa-ck-rail-foot .fa-ck-tb-nego { overflow: hidden; }
+.fa-ck-rail-foot .fa-ck-tb-nego-tx { min-width: 0; overflow: hidden; }
+.fa-ck-rail-foot .fa-ck-tb-nego-tx b,
+.fa-ck-rail-foot .fa-ck-tb-nego-tx em { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-ck-rail-foot .fa-ck-tb-more { flex: none; align-self: center; }
+.fa-ck-rail-foot .fa-ck-tb-more-btn { width: 34px; height: 34px; box-shadow: 0 4px 10px -6px rgba(32, 24, 18, .4); }
+/* Repliée : avatar + ⋯ empilés et centrés ; le menu s'ouvre à droite du rail étroit */
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-rf-row { flex-direction: column; gap: 8px; }
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-more { display: flex; }
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-more-btn { width: 32px; height: 32px; }
+.fa-ck-body.is-rail-min .fa-ck-rail-foot .fa-ck-tb-menu { left: calc(100% + 8px); right: auto; top: auto; bottom: 0; }
