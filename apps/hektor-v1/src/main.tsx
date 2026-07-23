@@ -32,6 +32,7 @@ import './nav-icons-v2.css'
 import './estimation-listing-v2.css'
 import './annuaire-contacts-v2.css'
 import './fa-cockpit-v2.css'
+import './contact-detail-v2.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

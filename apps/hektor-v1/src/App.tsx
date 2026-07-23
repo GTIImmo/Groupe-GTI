@@ -124,6 +124,12 @@ import {
   loadConsoleJobsByIds,
   loadContactRelations,
   loadContactSearches,
+  loadContactActivite,
+  type ContactActivityItem,
+  loadRelancesForContact,
+  createRelanceForContact,
+  setRelanceStatus,
+  type RelanceRow,
   loadContactById,
   loadContactsPage,
   loadContactStats,
@@ -20898,6 +20904,12 @@ function ReadOnlyDetailNotice({ label }: { label: string }) {
 const APP_COCKPIT_V2_ENABLED =
   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_COCKPIT_V2_ENABLED ?? '').trim().toLowerCase())
 
+// Fiche Contact v2 (refonte maquette detail-contact-v30) — même garde-fou : flag réversible,
+// OFF par défaut, lu au BUILD par Vite (bascule Vercel = redéploiement/rebuild). Flag OFF =>
+// ContactDetailPopupV2 jamais monté, feuille .fa-contact-v2 inerte : fiche actuelle inchangée.
+const APP_CONTACT_V2_ENABLED =
+  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_CONTACT_V2_ENABLED ?? '').trim().toLowerCase())
+
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
 // Icônes SVG EXACTES de la maquette v26 (table IC), rendues telles quelles.
@@ -32415,7 +32427,7 @@ function ContactEditModalV2(props: {
   )
 }
 
-function ContactDetailPopup(props: {
+function ContactDetailPopupBase(props: {
   contact: AppContact
   relations: AppContactRelation[]
   searches: AppContactSearch[]
@@ -33352,6 +33364,1066 @@ function ContactDetailPopup(props: {
       ) : null}
     </div>
   )
+}
+
+// ── Fiche Contact v2 (refonte maquette detail-contact-v30) ────────────────────
+// Composant JUMEAU : mêmes props que ...Base, JSX = maquette (page unique « 360 »).
+// Lot 0 = échafaudage : coquille scopée .fa-contact-v2 (overlay + rail + hero + grille
+// vide). Les rubriques (recherches, annonces liées, activité, à faire…) sont branchées
+// aux lots suivants. Rien ici ne s'affiche tant que VITE_APP_CONTACT_V2_ENABLED est OFF.
+function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0]) {
+  // ── États dupliqués depuis ...Base (sous-ensemble requis par la colonne gauche + modales) ──
+  const [editing, setEditing] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletePending, setDeletePending] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [googleContactAgendaOpen, setGoogleContactAgendaOpen] = useState(false)
+  const [googleContactAgendaEditingEvent, setGoogleContactAgendaEditingEvent] = useState<GoogleCalendarEventLink | null>(null)
+  const [googleContactAgendaDeletingId, setGoogleContactAgendaDeletingId] = useState<string | null>(null)
+  const [googleContactAgendaPrintingId, setGoogleContactAgendaPrintingId] = useState<string | null>(null)
+  const [googleContactEvents, setGoogleContactEvents] = useState<GoogleCalendarEventLink[]>([])
+  const [googleContactEventsLoading, setGoogleContactEventsLoading] = useState(false)
+  const [googleContactEventsError, setGoogleContactEventsError] = useState<string | null>(null)
+  const [contactEmailComposerOpen, setContactEmailComposerOpen] = useState(false)
+  // ── Emails Gmail (GAP 2 — lecture des fils + réponse via ContactEmailThreadCard) ──
+  const [contactEmailMessages, setContactEmailMessages] = useState<GoogleWorkspaceContactEmailMessage[]>([])
+  const [contactEmailMessagesLoading, setContactEmailMessagesLoading] = useState(false)
+  const [contactEmailMessagesError, setContactEmailMessagesError] = useState<string | null>(null)
+  const [contactEmailMessagesLoaded, setContactEmailMessagesLoaded] = useState(false)
+  const [contactActionsOpen, setContactActionsOpen] = useState(false)
+  // ── Segmented control de la bande « Activité & relation » : Fil | Rendez-vous | Échanges ──
+  const [activityView, setActivityView] = useState<'fil' | 'rdv' | 'echanges'>('fil')
+  // ── États recherches (dupliqués depuis ...Base, Lot 2) ──
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
+  const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
+  const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
+  const contactSearchKind = contactSearchIdentity.contactKind ?? 'acquereur'
+  // ── États Lots 4 & 5 : fil d'activité + relances « À faire » + formulaire « Planifier » ──
+  const [contactActivity, setContactActivity] = useState<ContactActivityItem[]>([])
+  const [contactActivityLoading, setContactActivityLoading] = useState(false)
+  const [activityFilter, setActivityFilter] = useState('all')
+  const [contactRelances, setContactRelances] = useState<RelanceRow[]>([])
+  const [contactRelancesLoading, setContactRelancesLoading] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
+  const [planLabel, setPlanLabel] = useState('')
+  const [planDate, setPlanDate] = useState('')
+  const [planSearchKey, setPlanSearchKey] = useState('')
+  const [planPending, setPlanPending] = useState(false)
+
+  // ── Valeurs dérivées (mêmes calculs que ...Base) ──
+  const selectedRoles = contactJsonList(props.contact.relation_roles_json)
+  const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
+  const selectedArchivedSearches = props.searches.filter((search) => !contactBool(search.is_active))
+  const orderedSearches = [...selectedActiveSearches, ...selectedArchivedSearches]
+  const roleLabels = selectedRoles.map((role) => contactDirectoryRoleLabel(role))
+  const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
+  const contactFullName = `${props.contact.civilite ? `${props.contact.civilite} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
+  const contactLocation = [props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'
+  const contactEmail = (props.contact.email ?? '').trim()
+  const contactPhone = (props.contact.phone_primary ?? '').trim()
+  const contactPhoneSecondary = (props.contact.phone_secondary ?? '').trim()
+  const contactAddress = (props.contact.adresse ?? '').trim()
+  const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
+  const isArchived = contactArchiveLabel(props.contact) === 'Archive'
+  const isEligibleApp = contactBool(props.contact.supabase_sync_eligible)
+  // ── Sévérité doublon (GAP 4) + données Hektor (GAP 3) — mêmes dérivations que ...Base ──
+  const hasSeverity = Boolean(props.contact.duplicate_max_severity)
+  const severityLabel = contactSeverityLabel(props.contact.duplicate_max_severity)
+  const hasDetail = contactBool(props.contact.has_contact_detail)
+  const syncDate = props.contact.contact_detail_synced_at ? formatDate(props.contact.contact_detail_synced_at) : null
+  // ── RDV Google (GAP 1) — mêmes dérivations que ...Base ──
+  const activeGoogleContactEvents = googleContactEvents.filter((event) => event.status !== 'deleted')
+  const sortedGoogleEvents = [...activeGoogleContactEvents].sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())
+  const upcomingGoogleEvents = sortedGoogleEvents.filter((event) => new Date(event.starts_at).getTime() >= Date.now())
+  const nextGoogleContactEvent = upcomingGoogleEvents[0] ?? null
+  const nextGoogleEventLabel = nextGoogleContactEvent ? formatDateTime(nextGoogleContactEvent.starts_at) : null
+  // ── Emails Gmail (GAP 2) — compte sujet Gmail Workspace, même dérivation que ...Base ──
+  const contactGmailSubjectEmail = resolveGoogleWorkspaceCalendarEmail({
+    emails: [props.contact.negociateur_email, props.sessionEmail],
+    commercialId: props.contact.hektor_negociateur_id,
+    label: props.contact.commercial_nom,
+    hektorNegotiators: props.hektorNegotiators,
+  })
+
+  // ── Ambiance par rôle (précédence mandant > vendeur/propriétaire > acquéreur* > acheteur) ──
+  const normalizedRoles = selectedRoles.map((role) => role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())
+  const typeClass = normalizedRoles.includes('mandant')
+    ? 'ty-mandant'
+    : normalizedRoles.some((role) => role === 'vendeur' || role === 'proprietaire')
+      ? 'ty-vendeur'
+      : normalizedRoles.some((role) => role.startsWith('acquereur'))
+        ? 'ty-acq'
+        : normalizedRoles.includes('acheteur')
+          ? 'ty-acheteur'
+          : 'ty-acq'
+  const typeClassLabel = typeClass === 'ty-mandant' ? 'Mandant' : typeClass === 'ty-vendeur' ? 'Vendeur' : typeClass === 'ty-acheteur' ? 'Acheteur' : 'Acquéreur'
+  const dominantTypeLabel = roleLabels[0] || typeClassLabel
+  // Couleur d'une pastille de rôle (contacts hybrides) — même normalisation NFD que relationRowClass.
+  const roleColor = (role: string) => {
+    const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    if (normalized === 'mandant') return '#c2125f'
+    if (normalized === 'vendeur' || normalized === 'proprietaire') return '#c2701a'
+    if (normalized.startsWith('acquereur')) return '#2f7c86'
+    if (normalized === 'acheteur') return '#2f8a5b'
+    return '#2f7c86'
+  }
+
+  // ── Qualité de la fiche (Lot 6) — mêmes champs dérivés que ...Base ──
+  const duplicateCount = props.contact.duplicate_group_count ?? 0
+  const candidateId = props.contact.duplicate_primary_candidate_id ?? null
+  const completeness = props.contact.completeness_score ?? null
+
+  // ── Biens & mandats liés (Lot 3) — dédup par bien, copie verbatim de ...Base ──
+  const linkedRelations = (() => {
+    const seen = new Set<string>()
+    const out: AppContactRelation[] = []
+    for (const relation of props.relations) {
+      const key = String(relation.app_dossier_id ?? '').trim() || String(relation.hektor_annonce_id ?? '').trim()
+      if (key && seen.has(key)) continue
+      if (key) seen.add(key)
+      out.push(relation)
+    }
+    return out
+  })()
+  const linkedDistinctCount = linkedRelations.length
+  // Couleur de ligne selon la relation (--rc via classe) : mandant #c2125f, vendeur/propriétaire #c2701a,
+  // acquéreur* #2f7c86, acheteur #2f8a5b, défaut #c2701a (= r-vendeur). Même normalisation NFD que ...Base.
+  const relationRowClass = (role: string) => {
+    const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    if (normalized === 'mandant') return 'r-mandant'
+    if (normalized === 'vendeur' || normalized === 'proprietaire') return 'r-vendeur'
+    if (normalized.startsWith('acquereur')) return 'r-acq'
+    if (normalized === 'acheteur') return 'r-acheteur'
+    return 'r-vendeur'
+  }
+
+  // ── Réinitialisation au changement de contact (comme ...Base) ──
+  useEffect(() => {
+    setEditing(Boolean(props.initialEditing) && Boolean(props.canManageContacts))
+    setDeleteOpen(false)
+    setDeleteReason('')
+    setDeleteConfirmText('')
+    setDeleteError(null)
+    setDeletePending(false)
+    setGoogleContactAgendaOpen(false)
+    setGoogleContactAgendaEditingEvent(null)
+    setGoogleContactAgendaDeletingId(null)
+    setGoogleContactAgendaPrintingId(null)
+    setContactEmailComposerOpen(false)
+    setContactEmailMessages([])
+    setContactEmailMessagesError(null)
+    setContactEmailMessagesLoading(false)
+    setContactEmailMessagesLoaded(false)
+    setActivityView('fil')
+    setContactActionsOpen(false)
+    setSearchModalOpen(false)
+    setEditingSearch(null)
+    setSearchDeletePending(null)
+    setActivityFilter('all')
+    setPlanOpen(false)
+    setPlanLabel('')
+    setPlanDate('')
+    setPlanSearchKey('')
+    setPlanPending(false)
+  }, [props.contact.hektor_contact_id])
+
+  // ── Suppression (archivage) d'une recherche — copie verbatim de ...Base ──
+  async function handleDeleteContactSearch(search: AppContactSearch) {
+    if (!props.canManageContacts) return
+    if (typeof window !== 'undefined' && !window.confirm('Archiver cette recherche dans Hektor ? Elle disparaîtra des recherches actives.')) return
+    setSearchDeletePending(search.contact_search_key)
+    try {
+      const job = await createDeleteHektorContactSearchJob({ contactId: props.contact.hektor_contact_id, searchIndex: search.search_index })
+      props.onJobCreated?.(job)
+    } catch (error) {
+      if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Suppression de la recherche impossible.')
+    } finally {
+      setSearchDeletePending(null)
+    }
+  }
+
+  // ── Chargement des RDV Google (nécessaire aux callbacks de la modale RDV) ──
+  useEffect(() => {
+    let cancelled = false
+    setGoogleContactEvents([])
+    setGoogleContactEventsError(null)
+    setGoogleContactEventsLoading(true)
+    loadGoogleCalendarEventLinks({
+      hektorContactId: props.contact.hektor_contact_id,
+      limit: 25,
+    })
+      .then((rows) => {
+        if (!cancelled) setGoogleContactEvents(rows)
+      })
+      .catch((error) => {
+        if (!cancelled) setGoogleContactEventsError(error instanceof Error ? error.message : 'Chargement RDV Google impossible.')
+      })
+      .finally(() => {
+        if (!cancelled) setGoogleContactEventsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [props.contact.hektor_contact_id])
+
+  const reloadGoogleContactEvents = useCallback(async () => {
+    setGoogleContactEvents([])
+    setGoogleContactEventsError(null)
+    setGoogleContactEventsLoading(true)
+    try {
+      const rows = await loadGoogleCalendarEventLinks({
+        hektorContactId: props.contact.hektor_contact_id,
+        limit: 25,
+      })
+      setGoogleContactEvents(rows)
+    } catch (error) {
+      setGoogleContactEventsError(error instanceof Error ? error.message : 'Chargement RDV Google impossible.')
+    } finally {
+      setGoogleContactEventsLoading(false)
+    }
+  }, [props.contact.hektor_contact_id])
+
+  function handleGoogleContactAgendaCreated() {
+    void reloadGoogleContactEvents()
+  }
+
+  function handleOpenCreateGoogleContactAgenda() {
+    setGoogleContactAgendaEditingEvent(null)
+    setGoogleContactAgendaOpen(true)
+  }
+
+  function handleGoogleContactAgendaUpdated(event: GoogleCalendarEventLink | null) {
+    if (event) setGoogleContactAgendaEditingEvent(event)
+    void reloadGoogleContactEvents()
+  }
+
+  // ── GAP 1 — édition / suppression / bon de visite d'un RDV (copie verbatim de ...Base) ──
+  function handleOpenEditGoogleContactAgenda(event: GoogleCalendarEventLink) {
+    setGoogleContactAgendaEditingEvent(event)
+    setGoogleContactAgendaOpen(true)
+  }
+
+  async function handleDeleteGoogleContactAgenda(event: GoogleCalendarEventLink) {
+    if (!window.confirm(`Supprimer ce RDV Google : ${event.summary} ?`)) return
+    setGoogleContactAgendaDeletingId(event.id)
+    setGoogleContactEventsError(null)
+    try {
+      await deleteGoogleCalendarEvent(event.id, { sendUpdates: 'all' })
+      await reloadGoogleContactEvents()
+    } catch (error) {
+      setGoogleContactEventsError(error instanceof Error ? error.message : 'Suppression RDV Google impossible.')
+    } finally {
+      setGoogleContactAgendaDeletingId(null)
+    }
+  }
+
+  async function handleOpenVisitVoucherPrint(event: GoogleCalendarEventLink) {
+    const printWindow = window.open('', '_blank')
+    writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml())
+    setGoogleContactAgendaPrintingId(event.id)
+    setGoogleContactEventsError(null)
+    let photoUrl: string | null = null
+    try {
+      photoUrl = await loadVisitVoucherPhotoUrl(event, props.relations)
+    } catch (error) {
+      console.warn('Visit voucher photo loading failed', error)
+    } finally {
+      openVisitVoucherPrint(props.contact, event, props.relations, photoUrl, printWindow)
+      setGoogleContactAgendaPrintingId(null)
+    }
+  }
+
+  // ── GAP 2 — lecture des fils Gmail (copie verbatim de ...Base) ──
+  const reloadContactEmailMessages = useCallback(async () => {
+    setContactEmailMessagesError(null)
+    if (!contactEmail) {
+      setContactEmailMessages([])
+      setContactEmailMessagesLoaded(true)
+      setContactEmailMessagesError('Email contact manquant.')
+      return
+    }
+    if (!isGoogleWorkspaceEmail(contactGmailSubjectEmail)) {
+      setContactEmailMessages([])
+      setContactEmailMessagesLoaded(true)
+      setContactEmailMessagesError('Compte Gmail Workspace requis pour lire les echanges.')
+      return
+    }
+    setContactEmailMessagesLoading(true)
+    try {
+      const rows = await loadGoogleWorkspaceContactEmailMessages({
+        subjectEmail: contactGmailSubjectEmail,
+        contactEmail,
+        maxResults: 20,
+        hektorContactId: props.contact.hektor_contact_id,
+      })
+      setContactEmailMessages(rows)
+    } catch (error) {
+      setContactEmailMessagesError(error instanceof Error ? error.message : 'Chargement emails Gmail impossible.')
+    } finally {
+      setContactEmailMessagesLoaded(true)
+      setContactEmailMessagesLoading(false)
+    }
+  }, [contactEmail, contactGmailSubjectEmail, props.contact.hektor_contact_id])
+
+  // ── GAP 2 — chargement paresseux des emails à la 1re ouverture de la vue « Échanges » ──
+  useEffect(() => {
+    if (activityView !== 'echanges' || contactEmailMessagesLoaded || contactEmailMessagesLoading) return
+    void reloadContactEmailMessages()
+  }, [activityView, contactEmailMessagesLoaded, contactEmailMessagesLoading, reloadContactEmailMessages])
+
+  const handleDeleteContact = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!props.canDeleteContacts) return
+    if (deleteConfirmText.trim() !== expectedDeleteConfirm) {
+      setDeleteError(`Confirmation incorrecte. Tape exactement : ${expectedDeleteConfirm}`)
+      return
+    }
+    setDeletePending(true)
+    setDeleteError(null)
+    try {
+      const job = await createDeleteHektorContactJob({
+        contactId: props.contact.hektor_contact_id,
+        reason: deleteReason,
+        confirmText: deleteConfirmText,
+        priority: 6,
+      })
+      props.onJobCreated?.(job)
+      props.onContactDeleted?.(props.contact)
+      props.onClose()
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Suppression contact impossible.')
+    } finally {
+      setDeletePending(false)
+    }
+  }
+
+  // ── Lots 4 & 5 : chargement du fil d'activité + des relances « À faire » ──
+  useEffect(() => {
+    let cancelled = false
+    setContactActivity([])
+    setContactActivityLoading(true)
+    setContactRelances([])
+    setContactRelancesLoading(true)
+    loadContactActivite(props.contact.hektor_contact_id)
+      .then((rows) => { if (!cancelled) setContactActivity(rows) })
+      .catch(() => { if (!cancelled) setContactActivity([]) })
+      .finally(() => { if (!cancelled) setContactActivityLoading(false) })
+    loadRelancesForContact(props.contact.hektor_contact_id)
+      .then((rows) => { if (!cancelled) setContactRelances(rows) })
+      .catch(() => { if (!cancelled) setContactRelances([]) })
+      .finally(() => { if (!cancelled) setContactRelancesLoading(false) })
+    return () => { cancelled = true }
+  }, [props.contact.hektor_contact_id])
+
+  const reloadRelances = useCallback(async () => {
+    setContactRelancesLoading(true)
+    try {
+      const rows = await loadRelancesForContact(props.contact.hektor_contact_id)
+      setContactRelances(rows)
+    } catch {
+      /* on garde l'état précédent en cas d'échec réseau */
+    } finally {
+      setContactRelancesLoading(false)
+    }
+  }, [props.contact.hektor_contact_id])
+
+  async function handleMarkRelance(id: number, status: 'fait' | 'reporte') {
+    try {
+      await setRelanceStatus(id, status)
+      await reloadRelances()
+    } catch (error) {
+      if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Mise à jour de la relance impossible.')
+    }
+  }
+
+  async function handleCreateRelance() {
+    if (!planLabel.trim()) return
+    setPlanPending(true)
+    try {
+      await createRelanceForContact({
+        hektorContactId: props.contact.hektor_contact_id,
+        contactSearchKey: planSearchKey || undefined,
+        label: planLabel.trim(),
+        dueDate: planDate || null,
+        negociateurEmail: props.sessionEmail ?? null,
+      })
+      await reloadRelances()
+      setPlanOpen(false)
+      setPlanLabel('')
+      setPlanDate('')
+    } catch (error) {
+      if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Création de la relance impossible.')
+    } finally {
+      setPlanPending(false)
+    }
+  }
+
+  function handleOpenPlanForm() {
+    if (!planOpen) {
+      setPlanSearchKey('') // par défaut : relance du contact (sans recherche)
+      setPlanLabel('')
+      setPlanDate('')
+    }
+    setPlanOpen((open) => !open)
+  }
+
+  // ── Métadonnées d'un événement d'activité (label + icône par kind ; couleur par groupe aud) ──
+  const activityKindLabel = (kind: string): string => {
+    switch (kind) {
+      case 'rdv': return 'Rendez-vous'
+      case 'email': return 'Email'
+      case 'like': return 'Rapprochement'
+      case 'match': return 'Rapprochement'
+      case 'offer': return 'Offre'
+      case 'visitreq': return 'Demande de visite'
+      case 'relance': return 'Relance'
+      default: return kind || 'Événement'
+    }
+  }
+  const activityKindIcon = (kind: string) => {
+    switch (kind) {
+      case 'rdv':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></svg>
+      case 'email':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+      case 'like':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z" /></svg>
+      case 'match':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      case 'offer':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3v18M7 8h7a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h8" /></svg>
+      case 'visitreq':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 21V9l7-4 7 4v12" /><path d="M9 21v-5h4v5" /><path d="M20 21V11l-3-1.7" /></svg>
+      case 'relance':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+      default:
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>
+    }
+  }
+  const filteredActivity = contactActivity.filter((item) => activityFilter === 'all' || item.aud === activityFilter)
+
+  // ── À faire : format du badge date d'une relance (— / Retard / jour+mois) ──
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const relanceDateBadge = (dueDate: string | null): { warn: boolean; big: string; small: string } => {
+    if (!dueDate) return { warn: false, big: '—', small: '' }
+    const iso = dueDate.slice(0, 10)
+    if (iso < todayIso) return { warn: true, big: '!', small: 'Retard' }
+    const d = new Date(dueDate)
+    if (Number.isNaN(d.getTime())) return { warn: false, big: '—', small: '' }
+    return {
+      warn: false,
+      big: new Intl.DateTimeFormat('fr-FR', { day: '2-digit' }).format(d),
+      small: new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(d).replace('.', ''),
+    }
+  }
+
+  // ── GAP 1 — liste des RDV Google avec actions par événement (portage du rendu ...Base, classes scopées) ──
+  const renderGoogleContactEvents = () => {
+    if (googleContactEventsLoading && activeGoogleContactEvents.length === 0) {
+      return <div className="fa-cx-ech-empty">Chargement des rendez-vous Google…</div>
+    }
+    if (activeGoogleContactEvents.length === 0) {
+      return <div className="fa-cx-ech-empty">Aucun RDV Google lié à ce contact pour le moment.</div>
+    }
+    return (
+      <div className="fa-cx-rdv-list">
+        {sortedGoogleEvents.map((event) => {
+          const eventInvitees = Array.isArray(event.attendees_json) ? event.attendees_json : []
+          const inviteeContacts = googleAgendaEventInviteeContacts(event)
+          const contactInvitee = inviteeContacts.find((item) => item.hektorContactId === props.contact.hektor_contact_id)
+          const eventAppDossierId = Number(event.app_dossier_id ?? event.metadata_json?.app_dossier_id)
+          const visitVoucherIssue = visitVoucherMissingReason(event)
+          const typeLabel = googleAgendaEventTypeOptions.find((option) => option.value === event.event_type)?.label ?? 'RDV'
+          return (
+            <article key={`fa-cx-rdv-${event.id}`} className="fa-cx-rdv">
+              <div className="fa-cx-rdv-main">
+                <div className="fa-cx-rdv-head">
+                  <span className="fa-cx-rdv-type">{typeLabel}</span>
+                  <strong>{event.summary}</strong>
+                </div>
+                <div className="fa-cx-rdv-facts">
+                  <span>{formatDateTime(event.starts_at)} - {formatDateTime(event.ends_at)}</span>
+                  <span>{event.google_calendar_email}</span>
+                  {event.location ? <span>{event.location}</span> : null}
+                  {contactInvitee?.label ? <span>Invité : {contactInvitee.label}</span> : null}
+                  {eventInvitees.length > 0 ? <span>{eventInvitees.length} invité(s)</span> : null}
+                  {visitVoucherIssue ? <span>{visitVoucherIssue}</span> : null}
+                </div>
+              </div>
+              <div className="fa-cx-rdv-acts">
+                {Number.isFinite(eventAppDossierId) ? (
+                  <button className="fa-cx-rdv-btn" type="button" onClick={() => { props.onClose(); props.onOpenDossier(eventAppDossierId) }}>Ouvrir dossier</button>
+                ) : null}
+                {event.google_html_link ? (
+                  <a className="fa-cx-rdv-btn" href={event.google_html_link} target="_blank" rel="noreferrer">Google Agenda</a>
+                ) : null}
+                {canPrintVisitVoucher(event) ? (
+                  <button className="fa-cx-rdv-btn brand" type="button" onClick={() => void handleOpenVisitVoucherPrint(event)} disabled={googleContactAgendaDeletingId === event.id || googleContactAgendaPrintingId === event.id}>
+                    {googleContactAgendaPrintingId === event.id ? 'Préparation…' : 'Bon de visite'}
+                  </button>
+                ) : null}
+                <button className="fa-cx-rdv-btn" type="button" onClick={() => handleOpenEditGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>Modifier</button>
+                <button className="fa-cx-rdv-btn" type="button" onClick={() => void handleDeleteGoogleContactAgenda(event)} disabled={googleContactAgendaDeletingId === event.id}>{googleContactAgendaDeletingId === event.id ? 'Suppression…' : 'Supprimer'}</button>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // ── GAP 2 — fils Gmail via ContactEmailThreadCard (copie verbatim de ...Base, conteneur scopé) ──
+  const renderContactEmailMessages = () => {
+    if (contactEmailMessagesLoading && contactEmailMessages.length === 0) {
+      return <div className="fa-cx-ech-empty">Chargement des emails Gmail…</div>
+    }
+    if (!contactEmail) {
+      return <div className="fa-cx-ech-empty">Email contact manquant.</div>
+    }
+    if (contactEmailMessagesLoaded && contactEmailMessages.length === 0) {
+      return <div className="fa-cx-ech-empty">Aucun email Gmail trouvé pour ce contact.</div>
+    }
+    return (
+      <div className="fa-cx-mail-list contact-email-thread-list">
+        {contactEmailMessages.map((message) => (
+          <ContactEmailThreadCard
+            key={`fa-cx-email-${message.id}`}
+            message={message}
+            subjectEmail={contactGmailSubjectEmail}
+            contactEmail={contactEmail}
+            hektorContactId={props.contact.hektor_contact_id}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`fa-contact-v2 ${typeClass}`} id="fa-cx-root" data-screen-label="Fiche contact V2">
+      <div className="fa-cx-overlay" onClick={props.onClose}>
+        <div className="fa-cx-panel" onClick={(event) => event.stopPropagation()}>
+          <div className="fa-cx-body">
+            <aside className="fa-cx-rail" data-screen-label="Volet identité">
+              <button className="fa-cx-back" type="button" onClick={props.onClose}>
+                <span className="fa-cx-back-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
+                </span>
+                <span className="fa-cx-back-tx"><span className="fa-cx-back-ey">Retour</span><span className="fa-cx-back-t">Aux contacts</span></span>
+              </button>
+
+              <div className="fa-cx-hero">
+                <div className="fa-cx-av" aria-hidden="true">
+                  <span className="fa-cx-ty-ic fa-cx-ty-acq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="10.5" cy="10.5" r="7" /><path d="M20 20l-3.8-3.8" /><path d="M7.7 11.6 10.5 9.2l2.8 2.4" /><path d="M8.7 11.2v3.1h3.6v-3.1" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-acheteur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="4.2" /><path d="M10.5 12.5 20 3" /><path d="M17 6l2.4 2.4M14 9l1.9 1.9" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-vendeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l7-6 7 6" /><path d="M5 10v9h9v-9" /><path d="M8.5 19v-4.5h3V19" /><rect x="15.5" y="4" width="6" height="4.2" rx="1" /><path d="M18.5 8.2V12" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-mandant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 11h6M9 14h4" /><path d="M9 17.5c1-1.4 2.3-1.4 2.8 0s1.5 1.4 2.5 0" /></svg></span>
+                </div>
+                <div className="fa-cx-hero-tx">
+                  <div className="fa-cx-name">{contactFullName}</div>
+                  {roleLabels.length > 1 ? (
+                    <div className="fa-cx-type-pills">
+                      {roleLabels.slice(0, 3).map((label, index) => (
+                        <span key={`fa-cx-type-pill-${index}`} className="fa-cx-type-pill multi" style={{ ['--rc']: roleColor(selectedRoles[index]) } as CSSProperties}>{label}</span>
+                      ))}
+                      {roleLabels.length > 3 ? <span className="fa-cx-type-pill more">+{roleLabels.length - 3}</span> : null}
+                    </div>
+                  ) : (
+                    <span className="fa-cx-type-pill">{dominantTypeLabel}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="fa-cx-actions">
+                <button className="fa-cx-act primary" type="button" data-tip="Créer un RDV" aria-label="Créer un RDV" onClick={handleOpenCreateGoogleContactAgenda}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M16 2.5v4M8 2.5v4M3 9.5h18" /><path d="M12 13.5v4M10 15.5h4" /></svg>
+                </button>
+                {props.canManageContacts ? (
+                  <button className="fa-cx-act ghost" type="button" data-tip="Modifier la fiche" aria-label="Modifier la fiche" onClick={() => setEditing(true)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                  </button>
+                ) : null}
+                <div className={`fa-cx-act-wrap ${contactActionsOpen ? 'open' : ''}`}>
+                  <button className="fa-cx-act ghost" type="button" data-tip="Plus d'actions" aria-haspopup="true" aria-expanded={contactActionsOpen} aria-label="Plus d'actions" onClick={() => setContactActionsOpen((open) => !open)}>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+                  </button>
+                  {contactActionsOpen ? (
+                    <div className="fa-cx-act-menu">
+                      <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(props.contact.hektor_contact_id) }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor
+                        <svg className="fa-cx-menu-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" /></svg>
+                      </button>
+                      {props.canDeleteContacts ? (
+                        <button className="fa-cx-menu-item danger" type="button" onClick={() => { setContactActionsOpen(false); setDeleteOpen(true) }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Supprimer
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="fa-cx-coords">
+                {contactPhone ? (
+                  <a className="fa-cx-coord" href={`tel:${contactPhone}`} title="Appeler (mobile)">
+                    <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Mobile</div><div className="fa-cx-coord-v">{contactPhone}</div></div>
+                  </a>
+                ) : null}
+                {contactPhoneSecondary ? (
+                  <a className="fa-cx-coord" href={`tel:${contactPhoneSecondary}`} title="Appeler (fixe)">
+                    <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Fixe</div><div className="fa-cx-coord-v">{contactPhoneSecondary}</div></div>
+                  </a>
+                ) : null}
+                {contactEmail ? (
+                  <button className="fa-cx-coord" type="button" title="Écrire un email" onClick={() => setContactEmailComposerOpen(true)}>
+                    <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Email</div><div className="fa-cx-coord-v">{contactEmail}</div></div>
+                  </button>
+                ) : null}
+                <div className="fa-cx-coord static">
+                  <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
+                  <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Adresse</div><div className="fa-cx-coord-v">{contactAddress || contactLocation}</div></div>
+                </div>
+              </div>
+
+              <div className="fa-cx-foot">
+                <div className="fa-cx-foot-head">
+                  <span className="fa-cx-foot-hic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>Négociateur
+                </div>
+                <div className="fa-cx-neg">
+                  <span className="fa-cx-neg-av">{negotiatorInitials}</span>
+                  <div className="fa-cx-neg-t">
+                    <div className="fa-cx-neg-nm">{props.contact.commercial_nom || 'Non affecté'}</div>
+                    <div className="fa-cx-neg-sb">{props.contact.agence_nom || 'Groupe GTI'}</div>
+                  </div>
+                </div>
+                <div className="fa-cx-status">
+                  <span className={`fa-cx-st-chip ${isArchived ? 'archived' : ''}`}><span className="d" />{isArchived ? 'Archivé' : 'Actif'}</span>
+                  {isEligibleApp ? <span className="fa-cx-st-chip app"><span className="d" />Éligible app</span> : null}
+                  {hasSeverity ? <span className="fa-cx-st-chip sev"><span className="d" />{severityLabel}</span> : null}
+                </div>
+              </div>
+            </aside>
+
+            <div className="fa-cx-work">
+              <div className="fa-cx-dash-top">
+                <div className="fa-cx-dash-main">
+              {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}
+              <div className="fa-cx-sec" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
+                <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></span>
+                Recherche &amp; rapprochement
+                <span className="fa-cx-sec-ln" />
+                {props.canManageContacts ? (
+                  <button className="fa-cx-sec-act" type="button" onClick={() => { setEditingSearch(null); setSearchModalOpen(true) }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}><path d="M12 5v14M5 12h14" /></svg>Ajouter une recherche
+                  </button>
+                ) : null}
+              </div>
+
+              <section className="fa-cx-mod full" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
+                {orderedSearches.length > 0 ? (
+                  orderedSearches.map((search) => {
+                    const cities = contactJsonList(search.villes_json)
+                    const types = contactSearchTypes(search.types_json)
+                    const criteria = contactSearchCriteriaLabels(search)
+                    const isActive = contactBool(search.is_active)
+                    const critParts = [...criteria]
+                    if (cities.length) critParts.push(cities.length > 1 ? `${cities.length} communes` : cities[0])
+                    return (
+                      <div key={`fa-cx-srch-${search.contact_search_key}`} className="fa-cx-srch">
+                        <span className="fa-cx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
+                        <div className="fa-cx-srch-main">
+                          <div className="fa-cx-srch-head">
+                            <span className="fa-cx-srch-ty">{types.join(' · ') || search.offre || 'Type non renseigné'}</span>
+                            <span className={`fa-cx-srch-tag ${isActive ? '' : 'archived'}`}>{isActive ? 'Active' : 'Archivée'}</span>
+                          </div>
+                          <div className="fa-cx-srch-crit">{critParts.join(' · ') || 'Critères non renseignés'}</div>
+                        </div>
+                        {props.onOpenRechercheAcquereur ? (
+                          // TODO Lot 6: brancher le compteur "N biens" (loadRapprochements/app_count_rapprochements_for_contact)
+                          <button className="fa-cx-srch-match" type="button" title="Rapprocher les biens" onClick={() => props.onOpenRechercheAcquereur?.(search)}>
+                            Rapprocher les biens<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                          </button>
+                        ) : null}
+                        {props.canManageContacts ? (
+                          <div className="fa-cx-srch-acts">
+                            <button className="fa-cx-ic-act" type="button" title="Modifier" onClick={() => setEditingSearch(search)}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                            </button>
+                            <button className="fa-cx-ic-act del" type="button" title="Supprimer" disabled={searchDeletePending === search.contact_search_key} onClick={() => handleDeleteContactSearch(search)}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M10 11v6M14 11v6" /><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="fa-cx-srch-empty">
+                    <p>Aucune recherche active pour ce contact.</p>
+                    {props.canManageContacts ? (
+                      <button className="fa-cx-sec-act" type="button" onClick={() => { setEditingSearch(null); setSearchModalOpen(true) }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}><path d="M12 5v14M5 12h14" /></svg>Ajouter une recherche
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+
+              {/* ── Lot 3 — Bande « Biens & mandats liés » (portage maquette v30) ── */}
+              <div className="fa-cx-sec" style={{ ['--sc']: 'var(--annonce-c)' } as CSSProperties}>
+                <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
+                Biens &amp; mandats liés
+                <span className="fa-cx-sec-ln" />
+                {linkedDistinctCount > 0 ? (
+                  <span className="fa-cx-sec-meta">{linkedDistinctCount} bien{linkedDistinctCount > 1 ? 's' : ''}</span>
+                ) : null}
+              </div>
+
+              <section className="fa-cx-mod full" style={{ ['--sc']: 'var(--annonce-c)' } as CSSProperties}>
+                {linkedRelations.length > 0 ? (
+                  linkedRelations.map((relation) => {
+                    const relationAppDossierId = Number(relation.app_dossier_id)
+                    const canOpen = relation.app_dossier_id != null && Number.isFinite(relationAppDossierId)
+                    const relationRef = `${relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : (relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`)}${relation.titre_bien ? ` · ${relation.titre_bien}` : ''}`
+                    const relationSub = (relation.transaction_state || '').trim() || 'annonce liée'
+                    const relationPhoto = (relation.photo_url_listing || '').trim()
+                    const relationHasPhoto = !!relationPhoto && !/no[_-]pic/i.test(relationPhoto)
+                    const relationAmount = formatPrice(relation.transaction_amount)
+                    const rowClass = relationRowClass(relation.role_contact)
+                    const inner = (
+                      <>
+                        <span className="fa-cx-lk-thumb">
+                          {relationHasPhoto ? <img src={relationPhoto} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : <span className="rf">Photo</span>}
+                        </span>
+                        <span className="fa-cx-lk-main">
+                          <span className="fa-cx-lk-ref">{relationRef}</span>
+                          <span className="fa-cx-lk-t">{relationSub}</span>
+                        </span>
+                        <span className="fa-cx-lk-meta">
+                          <span className="fa-cx-lk-role">{contactDirectoryRoleLabel(relation.role_contact)}</span>
+                          {relationAmount !== '-' ? <span className="fa-cx-lk-amt">{relationAmount}</span> : null}
+                          <span className="fa-cx-lk-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg></span>
+                        </span>
+                      </>
+                    )
+                    return canOpen ? (
+                      <button key={`fa-cx-lk-${relation.hektor_annonce_id}-${relation.role_contact}`} className={`fa-cx-lk ${rowClass}`} type="button" title="Voir l'annonce" onClick={() => { props.onClose(); props.onOpenDossier(relationAppDossierId) }}>
+                        {inner}
+                      </button>
+                    ) : (
+                      <div key={`fa-cx-lk-${relation.hektor_annonce_id}-${relation.role_contact}`} className={`fa-cx-lk ${rowClass} static`}>
+                        {inner}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="fa-cx-lk-empty">Aucune annonce liée à ce contact.</div>
+                )}
+              </section>
+                </div>
+
+                {/* ── Lot 5 — Colonne latérale « À faire » (relances du contact) ── */}
+                <div className="fa-cx-dash-side">
+                  <div className="fa-cx-sec" style={{ ['--sc']: '#c2512a' } as CSSProperties}>
+                    <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg></span>
+                    À faire
+                    <span className="fa-cx-sec-ln" />
+                    <span className="fa-cx-sec-meta" style={{ ['--sc']: '#c2512a' } as CSSProperties}>{contactRelances.length}</span>
+                  </div>
+
+                  <section className="fa-cx-mod full">
+                    {contactRelancesLoading ? (
+                      <div className="fa-cx-ech-empty">Chargement des relances…</div>
+                    ) : contactRelances.length > 0 ? (
+                      <div className="fa-cx-ech-list">
+                        {contactRelances.map((relance) => {
+                          const badge = relanceDateBadge(relance.due_date)
+                          return (
+                            <div key={`fa-cx-ech-${relance.id}`} className={`fa-cx-ech ${badge.warn ? 'late' : ''}`}>
+                              <span className={`fa-cx-ech-date ${badge.warn ? 'warn' : ''}`}><b>{badge.big}</b>{badge.small ? <i>{badge.small}</i> : null}</span>
+                              <div className="fa-cx-ech-bd">
+                                <div className="fa-cx-ech-t">{relance.label || 'Relance'}</div>
+                                {relance.sub ? <div className="fa-cx-ech-s">{relance.sub}</div> : null}
+                              </div>
+                              <div className="fa-cx-ech-acts">
+                                <button className="fa-cx-ech-go done" type="button" title="Marquer fait" aria-label="Marquer fait" onClick={() => handleMarkRelance(relance.id, 'fait')}>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="m5 12 5 5 9-11" /></svg>
+                                </button>
+                                <button className="fa-cx-ech-go snooze" type="button" title="Reporter +3j" aria-label="Reporter +3j" onClick={() => handleMarkRelance(relance.id, 'reporte')}>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 1.5M9 2h6" /></svg>
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="fa-cx-ech-empty">Aucune relance en attente.</div>
+                    )}
+
+                    <button className="fa-cx-plan-btn" type="button" onClick={handleOpenPlanForm}>
+                      <span className="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8}><path d="M12 5v14M5 12h14" /></svg></span>
+                      Planifier une relance
+                    </button>
+                    {planOpen ? (
+                      <div className="fa-cx-plan-form">
+                        <input type="text" value={planLabel} onChange={(event) => setPlanLabel(event.target.value)} placeholder="Ex. Rappeler ce contact" />
+                        <input type="date" value={planDate} onChange={(event) => setPlanDate(event.target.value)} />
+                        {orderedSearches.length > 0 ? (
+                          <select value={planSearchKey} onChange={(event) => setPlanSearchKey(event.target.value)}>
+                            <option value="">Relance du contact (sans recherche)</option>
+                            {orderedSearches.map((search) => {
+                              const types = contactSearchTypes(search.types_json)
+                              const label = types.join(' · ') || search.offre || search.contact_search_key
+                              return <option key={`fa-cx-plan-opt-${search.contact_search_key}`} value={search.contact_search_key}>Rattacher à : {label}</option>
+                            })}
+                          </select>
+                        ) : null}
+                        <div className="fa-cx-plan-acts">
+                          <button className="fa-cx-plan-cancel" type="button" onClick={() => setPlanOpen(false)} disabled={planPending}>Annuler</button>
+                          <button className="fa-cx-plan-save" type="button" onClick={handleCreateRelance} disabled={planPending || !planLabel.trim()}>
+                            {planPending ? 'Enregistrement…' : 'Enregistrer'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </section>
+                </div>
+              </div>
+
+              {/* ── Lot 4 — Bande « Activité & relation » (pleine largeur, portage maquette v30) ── */}
+              <div className="fa-cx-sec" style={{ ['--sc']: '#2f6fa8' } as CSSProperties}>
+                <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 12h4l2 5 4-12 2 7h6" /></svg></span>
+                Activité &amp; relation
+                <span className="fa-cx-sec-ln" />
+                {/* ── Segmented control GAP 1+2 : Fil | Rendez-vous | Échanges ── */}
+                <div className="fa-cx-seg" role="tablist" aria-label="Vue de l'activité">
+                  {([['fil', 'Fil'], ['rdv', 'Rendez-vous'], ['echanges', 'Échanges']] as ['fil' | 'rdv' | 'echanges', string][]).map(([value, label]) => (
+                    <button key={`fa-cx-seg-${value}`} type="button" role="tab" aria-selected={activityView === value} className={activityView === value ? 'on' : ''} onClick={() => setActivityView(value)}>{label}</button>
+                  ))}
+                </div>
+                <button className="fa-cx-sec-act ghost" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>RDV
+                </button>
+                {contactEmail ? (
+                  <button className="fa-cx-sec-act ghost" type="button" onClick={() => setContactEmailComposerOpen(true)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>Email
+                  </button>
+                ) : null}
+              </div>
+
+              {activityView === 'fil' ? (
+                <section className="fa-cx-mod full">
+                  <div className="fa-cx-aflt">
+                    {([['all', 'Tout'], ['rdv', 'RDV'], ['email', 'Emails'], ['rappro', 'Rapprochements'], ['tr', 'Transactions'], ['relance', 'Relances']] as [string, string][]).map(([value, label]) => (
+                      <button key={`fa-cx-aflt-${value}`} type="button" className={activityFilter === value ? 'on' : ''} onClick={() => setActivityFilter(value)}>{label}</button>
+                    ))}
+                  </div>
+                  {contactActivityLoading ? (
+                    <div className="fa-cx-feed-empty">Chargement de l'activité…</div>
+                  ) : filteredActivity.length > 0 ? (
+                    <div className="fa-cx-feed">
+                      {filteredActivity.map((item, index) => (
+                        <div key={`fa-cx-ev-${index}-${item.at}`} className={`fa-cx-ev g-${item.aud}`}>
+                          <span className="fa-cx-ev-ic">{activityKindIcon(item.kind)}</span>
+                          <div className="fa-cx-ev-bd">
+                            <div className="fa-cx-ev-top">
+                              <span className={`fa-cx-ev-type g-${item.aud}`}>{activityKindLabel(item.kind)}</span>
+                              <span className="fa-cx-ev-nm">{item.lead}</span>
+                              <span className="fa-cx-ev-when">{formatDateTime(item.at)}</span>
+                            </div>
+                            {item.rest ? <div className="fa-cx-ev-s">{item.rest}</div> : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="fa-cx-feed-empty">Aucune activité enregistrée pour ce contact.</div>
+                  )}
+                </section>
+              ) : null}
+
+              {activityView === 'rdv' ? (
+                <section className="fa-cx-mod full">
+                  <div className="fa-cx-view-head">
+                    <span className="fa-cx-view-meta">{upcomingGoogleEvents.length} RDV planifié{upcomingGoogleEvents.length > 1 ? 's' : ''}</span>
+                    <span className="fa-cx-view-sub">{contactGmailSubjectEmail || props.contact.negociateur_email || '—'}{nextGoogleEventLabel ? ` · prochain ${nextGoogleEventLabel}` : ''}</span>
+                    <button className="fa-cx-sec-act ghost" type="button" onClick={handleOpenCreateGoogleContactAgenda}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>Créer un RDV
+                    </button>
+                  </div>
+                  {googleContactEventsError ? <p className="fa-cx-view-err">{googleContactEventsError}</p> : null}
+                  {renderGoogleContactEvents()}
+                </section>
+              ) : null}
+
+              {activityView === 'echanges' ? (
+                <section className="fa-cx-mod full">
+                  <div className="fa-cx-view-head">
+                    <span className="fa-cx-view-meta">{contactEmail || 'Aucune adresse email'}</span>
+                    <span className="fa-cx-view-sub">{isGoogleWorkspaceEmail(contactGmailSubjectEmail) ? contactGmailSubjectEmail : 'Compte Gmail non reconnu'}</span>
+                    <button className="fa-cx-rdv-btn" type="button" onClick={() => void reloadContactEmailMessages()} disabled={contactEmailMessagesLoading}>{contactEmailMessagesLoading ? 'Actualisation…' : 'Actualiser'}</button>
+                    {contactEmail ? (
+                      <button className="fa-cx-sec-act ghost" type="button" onClick={() => setContactEmailComposerOpen(true)}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>Écrire
+                      </button>
+                    ) : null}
+                  </div>
+                  {contactEmailMessagesError ? <p className="fa-cx-view-err">{contactEmailMessagesError}</p> : null}
+                  {renderContactEmailMessages()}
+                </section>
+              ) : null}
+
+              {/* ── Lot 6 — Bande « Qualité de la fiche » (pleine largeur, portage maquette v30) ── */}
+              <div className="fa-cx-sec" style={{ ['--sc']: '#a8814a' } as CSSProperties}>
+                <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
+                Qualité de la fiche
+                <span className="fa-cx-sec-ln" />
+              </div>
+
+              <section className="fa-cx-mod full">
+                <div className="fa-cx-dq">
+                  <span className="fa-cx-dq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx="9" cy="8" r="3.4" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="M16 5.2a3.4 3.4 0 0 1 0 5.6M18 14.4a6 6 0 0 1 3 5.6" /></svg></span>
+                  <div className="fa-cx-dq-bd">
+                    <div className="fa-cx-dq-t">{duplicateCount > 0 ? `${duplicateCount} groupe(s) doublon${candidateId ? ` · candidat ${candidateId}` : ''}` : 'Aucun doublon détecté'}</div>
+                    <div className="fa-cx-dq-s">{duplicateCount > 0 ? 'À contrôler avant fusion pour fiabiliser la base.' : 'Fiche propre.'}</div>
+                  </div>
+                  {completeness != null ? (
+                    <div className="fa-cx-comp">
+                      <span className="fa-cx-comp-k">Complétude</span>
+                      <div className="fa-cx-comp-bar"><span style={{ width: `${completeness}%` }} /></div>
+                      <span className="fa-cx-comp-v">{completeness} %</span>
+                    </div>
+                  ) : null}
+                  {duplicateCount > 0 ? (
+                    <button className="fa-cx-dq-merge" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>Comparer &amp; fusionner</button>
+                  ) : null}
+                </div>
+                {/* ── GAP 3 — Données Hektor (portage de l'onglet Synchronisation de ...Base) ── */}
+                <div className="fa-cx-dbar">
+                  <div className="fa-cx-dbar-f"><span className="k">Détail Hektor</span><span className={`v ${hasDetail ? 'ok' : ''}`}>{hasDetail ? 'Disponible' : 'À charger'}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">Détail Hektor lu le</span><span className="v">{syncDate || '—'}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">ID contact</span><span className="v">{props.contact.hektor_contact_id}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">Recherches connues</span><span className="v">{props.contact.total_search_count ?? props.searches.length}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">Recherches actives</span><span className="v">{selectedActiveSearches.length}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">Recherches archivées</span><span className="v">{selectedArchivedSearches.length}</span></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {editing && props.canManageContacts ? (
+        <ContactEditModalV2
+          contact={props.contact}
+          hektorUserEmail={props.hektorUserEmail}
+          hektorUserId={props.hektorUserId}
+          hektorNegotiators={props.hektorNegotiators}
+          profileRole={props.profileRole}
+          sessionEmail={props.sessionEmail}
+          onClose={() => setEditing(false)}
+          onJobCreated={props.onJobCreated}
+        />
+      ) : null}
+
+      {googleContactAgendaOpen ? (
+        <GoogleAgendaContactModal
+          contact={props.contact}
+          relations={props.relations}
+          hektorNegotiators={props.hektorNegotiators}
+          sessionEmail={props.sessionEmail}
+          editingEvent={googleContactAgendaEditingEvent}
+          onClose={() => {
+            setGoogleContactAgendaOpen(false)
+            setGoogleContactAgendaEditingEvent(null)
+          }}
+          onCreated={handleGoogleContactAgendaCreated}
+          onUpdated={handleGoogleContactAgendaUpdated}
+        />
+      ) : null}
+
+      {contactEmailComposerOpen ? (
+        <ContactEmailComposerModal
+          contact={props.contact}
+          relations={props.relations}
+          searches={props.searches}
+          hektorNegotiators={props.hektorNegotiators}
+          sessionEmail={props.sessionEmail}
+          onClose={() => setContactEmailComposerOpen(false)}
+        />
+      ) : null}
+
+      {deleteOpen && props.canDeleteContacts ? (
+        <ContactWorkflowModal
+          title="Supprimer le contact"
+          eyebrow="Action sensible"
+          summary="La suppression passe par Hektor, puis nettoie la copie locale et le listing Supabase."
+          tone="danger"
+          onClose={() => setDeleteOpen(false)}
+        >
+          <form className="contact-delete-panel contact-delete-panel-modern delete-annonce-form" onSubmit={handleDeleteContact}>
+            <section className="delete-annonce-warning">
+              <strong>{props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`}</strong>
+              <span>Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.</span>
+            </section>
+            <label className="filter-field">
+              <span>Raison interne</span>
+              <textarea className="inline-textarea" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} placeholder="Doublon, test, erreur de creation..." />
+            </label>
+            <label className="filter-field">
+              <span>Confirmation</span>
+              <input
+                value={deleteConfirmText}
+                onChange={(event) => setDeleteConfirmText(event.target.value)}
+                placeholder={`Tape : ${expectedDeleteConfirm}`}
+                autoComplete="off"
+                required
+              />
+            </label>
+            {deleteError ? <p className="form-error">{deleteError}</p> : null}
+            <div className="modal-actions">
+              <button className="ghost-button button-subtle" type="button" onClick={() => setDeleteOpen(false)} disabled={deletePending}>Annuler</button>
+              <button className="ghost-button button-danger" type="submit" disabled={deletePending || deleteConfirmText.trim() !== expectedDeleteConfirm}>
+                {deletePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+              </button>
+            </div>
+          </form>
+        </ContactWorkflowModal>
+      ) : null}
+
+      {(searchModalOpen || editingSearch) && props.canManageContacts ? (
+        <ContactSearchModal
+          contactId={props.contact.hektor_contact_id}
+          contactName={[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || null}
+          negotiatorLabel={props.contact.commercial_nom || props.contact.negociateur_email || null}
+          defaultCity={props.contact.ville ?? null}
+          defaultPostalCode={props.contact.code_postal ?? null}
+          defaultOfferCode={hektorDefaultContactSearchOffer(contactSearchKind)}
+          offerOptions={hektorContactSearchOfferOptionsByKind[contactSearchKind] ?? hektorContactSearchOfferOptionsByKind.acquereur}
+          contactKind={contactSearchKind}
+          contactQualification={hektorContactQualificationForKind(contactSearchKind)}
+          mode={editingSearch ? 'edit' : 'create'}
+          initialSearch={editingSearch}
+          onClose={() => { setSearchModalOpen(false); setEditingSearch(null) }}
+          onCreated={(job) => props.onJobCreated?.(job)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+// Switch drop-in : garde le nom ContactDetailPopup pour que les 3 sites d'appel
+// (App.tsx contexte annonce, ContactsScreen desktop, MobileContactCards) soient inchangés.
+function ContactDetailPopup(props: Parameters<typeof ContactDetailPopupBase>[0]) {
+  return APP_CONTACT_V2_ENABLED
+    ? <ContactDetailPopupV2 {...props} />
+    : <ContactDetailPopupBase {...props} />
 }
 
 function ContactsScreen(props: {

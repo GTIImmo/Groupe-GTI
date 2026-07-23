@@ -1,0 +1,494 @@
+/* ============================================================================
+   Fiche Contact v2 — feuille scopée sous .fa-contact-v2 (importée EN DERNIER dans main.tsx).
+   Règle absolue : AUCUN sélecteur ne doit sortir du scope .fa-contact-v2.
+   Flag VITE_APP_CONTACT_V2_ENABLED OFF => composant jamais monté => feuille inerte.
+   Lot 0 = fondations (tokens de thème par type, overlay, rail, hero, bouton retour animé).
+   ========================================================================== */
+
+.fa-contact-v2 {
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  /* Thème par TYPE de contact (couleur d'ambiance) — défaut = acquéreur (teal). */
+  --ty: #2f7c86; --ty-deep: #1f5560; --ty-mid: #3f97a1; --ty-soft: #e6f1f1; --ty-line: #d7e7e7;
+  --ty-g1: #357f89; --ty-g2: #255f69; --ty-g3: #1b4b54;
+  --annonce-c: #c2701a;
+  --paper: #fbf7f0; --ink: #211a13; --ink-soft: #5c5346; --muted: #8a7f6e; --faint: #a89c88;
+  --line: #eadfce; --line-soft: #f0e8da;
+  color: var(--ink);
+}
+.fa-contact-v2.ty-acheteur { --ty: #2f8a5b; --ty-deep: #155e39; --ty-mid: #41a877; --ty-soft: #e7f3ec; --ty-line: #cfe8da; --ty-g1: #41a877; --ty-g2: #1f7a4a; --ty-g3: #155e39; }
+.fa-contact-v2.ty-vendeur { --ty: #c2701a; --ty-deep: #7c400a; --ty-mid: #d98a3c; --ty-soft: #f7ece0; --ty-line: #eddcc8; --ty-g1: #cb883f; --ty-g2: #9c530d; --ty-g3: #7c400a; }
+.fa-contact-v2.ty-mandant { --ty: #c2125f; --ty-deep: #8a0e45; --ty-mid: #d83a7e; --ty-soft: #fbe6f0; --ty-line: #f3cadd; --ty-g1: #d83a7e; --ty-g2: #c2125f; --ty-g3: #8a0e45; --annonce-c: #c2125f; }
+
+/* Overlay plein écran + panneau centré (reproduit le comportement de l'actuel #fcx-root). */
+.fa-contact-v2 .fa-cx-overlay {
+  position: fixed; inset: 0; z-index: 1000; display: flex; overflow: auto;
+  padding: 24px; background: rgba(30, 22, 16, .42); backdrop-filter: blur(3px);
+}
+.fa-contact-v2 .fa-cx-panel {
+  margin: auto; width: 100%; max-width: 1400px; position: relative;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 24px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(32, 24, 18, .05), 0 40px 90px -46px rgba(32, 24, 18, .5);
+}
+.fa-contact-v2 .fa-cx-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); }
+
+/* ── Rail gauche (fond blanc froid + soupçon de teinte du type) ── */
+.fa-contact-v2 .fa-cx-rail {
+  position: relative; z-index: 2; display: flex; flex-direction: column;
+  border-right: 1px solid var(--line-soft); padding: 16px 16px 18px;
+  background:
+    radial-gradient(120% 30% at 50% 0%, color-mix(in srgb, var(--ty) 9%, transparent), transparent 60%),
+    linear-gradient(180deg, #fcfdfd, #f7fafa);
+}
+
+/* ── Bouton retour (réplique de la page détail annonce : flèche + halo magenta animés) ── */
+.fa-contact-v2 .fa-cx-back {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 15px; padding: 11px 13px;
+  border: 1px solid #e9dcc5; border-radius: 14px; background: linear-gradient(120deg, #fff, #fdf1f6);
+  box-shadow: 0 7px 16px -13px rgba(194, 18, 95, .55); cursor: pointer; text-align: left;
+  transition: background .16s, border-color .16s, box-shadow .16s;
+}
+.fa-contact-v2 .fa-cx-back:hover { border-color: color-mix(in srgb, #c2125f 42%, #e9dcc5); box-shadow: 0 11px 24px -12px rgba(194, 18, 95, .6); }
+.fa-contact-v2 .fa-cx-back-mark {
+  position: relative; width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; color: #fff; background: linear-gradient(150deg, #e8437f, #a01050);
+  box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75);
+  animation: fa-cx-retour 3s ease-in-out infinite, fa-cx-retourhalo 3s ease-in-out infinite;
+}
+.fa-contact-v2 .fa-cx-back:hover .fa-cx-back-mark { animation-play-state: paused; }
+.fa-contact-v2 .fa-cx-back-mark svg { width: 20px; height: 20px; }
+.fa-contact-v2 .fa-cx-back-tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; }
+.fa-contact-v2 .fa-cx-back-ey { font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: #c2125f; }
+.fa-contact-v2 .fa-cx-back-t { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: #1c1815; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes fa-cx-retour { 0%, 52%, 100% { transform: translateX(0); } 62% { transform: translateX(-4px); } 70% { transform: translateX(0); } 78% { transform: translateX(-3px); } 86% { transform: translateX(0); } }
+@keyframes fa-cx-retourhalo { 0%, 48% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 0 rgba(232, 67, 127, .55); } 74% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 11px rgba(232, 67, 127, 0); } 100% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 0 rgba(232, 67, 127, 0); } }
+
+/* ── Hero identité compact (avatar coloré par type + nom + pastille) ── */
+.fa-contact-v2 .fa-cx-hero { display: flex; align-items: center; gap: 13px; padding: 6px 2px 10px; }
+.fa-contact-v2 .fa-cx-av {
+  width: 50px; height: 50px; flex: none; border-radius: 15px; display: flex; align-items: center; justify-content: center;
+  color: #fff; background: linear-gradient(155deg, var(--ty-mid), var(--ty-deep));
+  box-shadow: 0 12px 22px -10px color-mix(in srgb, var(--ty) 72%, transparent), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+.fa-contact-v2 .fa-cx-av svg { width: 26px; height: 26px; }
+.fa-contact-v2 .fa-cx-hero-tx { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.fa-contact-v2 .fa-cx-name { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.16; letter-spacing: -.015em; }
+.fa-contact-v2 .fa-cx-type-pill { font-size: 11.5px; font-weight: 800; letter-spacing: .02em; color: var(--ty-deep); background: var(--ty-soft); border: 1px solid var(--ty-line); border-radius: 999px; padding: 3px 11px; }
+
+/* ── Zone de travail (droite) + placeholder d'échafaudage ── */
+.fa-contact-v2 .fa-cx-work {
+  position: relative; z-index: 1; padding: 20px 22px 24px; min-width: 0;
+  background:
+    radial-gradient(95% 36% at 3% -4%, color-mix(in srgb, var(--ty) 12%, transparent), transparent 56%),
+    linear-gradient(158deg, #f4f0ea 0%, #f7f3ed 50%, #f1ece4 100%);
+}
+.fa-contact-v2 .fa-cx-scaffold {
+  border: 1px dashed var(--line); border-radius: 16px; padding: 22px; background: rgba(255, 255, 255, .55);
+  color: var(--muted); font-size: 13px; line-height: 1.5;
+}
+
+/* ============================================================================
+   Lot 1 — Colonne gauche (rail) : pictos par type, cluster d'actions, coordonnées,
+   pied négociateur + chips. Tout est scopé sous .fa-contact-v2 (aucune fuite).
+   Portage de la maquette detail-contact-v30-dashboard.html (rail #fcc-root).
+   ========================================================================== */
+
+/* Jetons magenta + vert locaux (repris de la maquette, scopés). */
+.fa-contact-v2 {
+  --brand: #c2125f; --brand-ink: #a3104f; --brand-soft: #fbe6f0; --brand-line: #f3d7e3;
+  --green: #2f8a5b; --green-ink: #1c7a4a;
+}
+
+/* ── Pictos identité par type dans l'avatar (blancs, un seul visible) ── */
+.fa-contact-v2 .fa-cx-av .fa-cx-ty-ic { display: none; align-items: center; justify-content: center; color: #fff; }
+.fa-contact-v2 .fa-cx-av .fa-cx-ty-ic svg { width: 26px; height: 26px; }
+.fa-contact-v2.ty-acq .fa-cx-av .fa-cx-ty-acq,
+.fa-contact-v2.ty-acheteur .fa-cx-av .fa-cx-ty-acheteur,
+.fa-contact-v2.ty-vendeur .fa-cx-av .fa-cx-ty-vendeur,
+.fa-contact-v2.ty-mandant .fa-cx-av .fa-cx-ty-mandant { display: flex; }
+
+/* ── Cluster d'actions (RDV magenta + Modifier + Plus) avec tooltip au survol ── */
+.fa-contact-v2 .fa-cx-actions { position: relative; margin-top: 15px; padding-top: 15px; display: flex; gap: 8px; }
+.fa-contact-v2 .fa-cx-actions::before { content: ""; position: absolute; top: 0; left: 2px; right: 2px; height: 1px; background: linear-gradient(90deg, transparent, #dbe8e8 22%, #dbe8e8 78%, transparent); }
+.fa-contact-v2 .fa-cx-act-wrap { position: relative; flex: 1; display: flex; }
+.fa-contact-v2 .fa-cx-act { flex: 1; height: 34px; position: relative; display: flex; align-items: center; justify-content: center; border-radius: 11px; cursor: pointer; transition: filter .16s, transform .16s, background .16s, border-color .16s, color .16s; }
+.fa-contact-v2 .fa-cx-act svg { width: 16px; height: 16px; }
+.fa-contact-v2 .fa-cx-act.primary { background: linear-gradient(150deg, #e3407f, #bb1059); border: 1px solid #bb1059; color: #fff; box-shadow: 0 12px 22px -13px rgba(187, 16, 89, .62); }
+.fa-contact-v2 .fa-cx-act.primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-act.ghost { background: #eef5f5; border: 1px solid #dde9e9; color: #5c6b6b; }
+.fa-contact-v2 .fa-cx-act.ghost:hover { background: #fff; border-color: var(--ty); color: var(--ty-deep); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-act::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%) translateY(4px); background: #2a2018; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .01em; padding: 5px 9px; border-radius: 7px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; z-index: 6; box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .4); }
+.fa-contact-v2 .fa-cx-act::before { content: ""; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #2a2018; opacity: 0; transition: opacity .15s; z-index: 6; }
+.fa-contact-v2 .fa-cx-act:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.fa-contact-v2 .fa-cx-act:hover::before { opacity: 1; }
+
+/* ── Menu « Plus d'actions » ── */
+.fa-contact-v2 .fa-cx-act-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 12; min-width: 190px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 44px -20px rgba(32, 24, 18, .5); display: flex; flex-direction: column; gap: 2px; }
+.fa-contact-v2 .fa-cx-menu-item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; transition: background .13s, color .13s; }
+.fa-contact-v2 .fa-cx-menu-item svg { width: 16px; height: 16px; flex: none; }
+.fa-contact-v2 .fa-cx-menu-item .fa-cx-menu-ext { margin-left: auto; width: 14px; height: 14px; color: var(--faint); }
+.fa-contact-v2 .fa-cx-menu-item:hover { background: var(--ty-soft); color: var(--ty-deep); }
+.fa-contact-v2 .fa-cx-menu-item.danger { color: #b3243a; }
+.fa-contact-v2 .fa-cx-menu-item.danger:hover { background: #fbe9ec; color: #8f1a2d; }
+
+/* ── Coordonnées (teintées par --ty, remplissage au survol) ── */
+.fa-contact-v2 .fa-cx-coords { margin-top: 16px; display: flex; flex-direction: column; }
+.fa-contact-v2 .fa-cx-coord { display: flex; align-items: center; gap: 11px; padding: 8px 8px; margin: 0 -8px; width: calc(100% + 16px); border-radius: 11px; text-align: left; font: inherit; color: inherit; text-decoration: none; background: none; border: 0; cursor: pointer; transition: background .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-coord + .fa-cx-coord { margin-top: 2px; }
+.fa-contact-v2 .fa-cx-coord:not(.static):hover { background: color-mix(in srgb, var(--ty) 8%, #fff); box-shadow: 0 8px 20px -14px rgba(32, 24, 18, .5); }
+.fa-contact-v2 .fa-cx-coord.static { cursor: default; }
+.fa-contact-v2 .fa-cx-coord-ic { width: 35px; height: 35px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--ty-soft); border: 1px solid var(--ty-line); color: var(--ty); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85); transition: background .14s, border-color .14s, color .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-coord-ic svg { width: 16px; height: 16px; }
+.fa-contact-v2 .fa-cx-coord:not(.static):hover .fa-cx-coord-ic { background: linear-gradient(150deg, var(--ty-mid), var(--ty)); border-color: transparent; color: #fff; box-shadow: 0 8px 16px -8px color-mix(in srgb, var(--ty) 60%, transparent); }
+.fa-contact-v2 .fa-cx-coord-bd { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-coord-k { font-size: 9.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1px; }
+.fa-contact-v2 .fa-cx-coord-v { font-size: 13.5px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; color: #2a2018; word-break: break-word; overflow-wrap: anywhere; }
+
+/* ── Pied de rail : négociateur + chips de statut ── */
+.fa-contact-v2 .fa-cx-foot { margin: 18px -16px 0; padding: 15px 16px 4px; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 10px; }
+.fa-contact-v2 .fa-cx-foot-head { display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); padding: 0 2px; }
+.fa-contact-v2 .fa-cx-foot-hic { display: inline-flex; }
+.fa-contact-v2 .fa-cx-foot-hic svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-neg { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 13px; background: #fff; text-align: left; box-shadow: 0 1px 2px rgba(32, 24, 18, .04); }
+.fa-contact-v2 .fa-cx-neg-av { width: 38px; height: 38px; border-radius: 11px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 800; background: linear-gradient(145deg, #d23076, #a30f4e); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fa-contact-v2 .fa-cx-neg-t { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-neg-nm { font-size: 13px; font-weight: 700; line-height: 1.15; }
+.fa-contact-v2 .fa-cx-neg-sb { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+.fa-contact-v2 .fa-cx-status { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin-top: 2px; padding-top: 11px; border-top: 1px solid var(--line-soft); }
+.fa-contact-v2 .fa-cx-st-chip { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+.fa-contact-v2 .fa-cx-st-chip .d { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.fa-contact-v2 .fa-cx-st-chip.archived .d { background: var(--annonce-c); }
+.fa-contact-v2 .fa-cx-st-chip.app { color: var(--brand-ink); background: var(--brand-soft); border-color: var(--brand-line); }
+.fa-contact-v2 .fa-cx-st-chip.app .d { background: var(--brand); }
+
+/* Responsive : rail au-dessus sur petit écran. */
+@media (max-width: 820px) {
+  .fa-contact-v2 .fa-cx-body { grid-template-columns: 1fr; }
+  .fa-contact-v2 .fa-cx-rail { border-right: none; border-bottom: 1px solid var(--line-soft); }
+  .fa-contact-v2 .fa-cx-overlay { padding: 0; }
+  .fa-contact-v2 .fa-cx-panel { border-radius: 0; min-height: 100%; }
+}
+
+/* ============================================================================
+   Lot 2 — Colonne droite : bande « Recherche & rapprochement ». Portage de la
+   maquette detail-contact-v30-dashboard.html (.dash-sec / .mod.full / .srch3).
+   Couleur de rubrique = teal #2f7c86 (via --sc), indépendante du thème ty-*.
+   Tout est scopé sous .fa-contact-v2 (aucune fuite globale).
+   ========================================================================== */
+
+/* En-tête de section (teal --sc + action magenta) */
+.fa-contact-v2 .fa-cx-sec { display: flex; align-items: center; gap: 11px; margin: 2px 2px 13px; font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-sec-ic { width: 24px; height: 24px; flex: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, color-mix(in srgb, var(--sc, var(--brand)) 78%, #fff), var(--sc, var(--brand))); box-shadow: 0 5px 12px -5px var(--sc, var(--brand)), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-contact-v2 .fa-cx-sec-ic svg { width: 14px; height: 14px; }
+.fa-contact-v2 .fa-cx-sec-ln { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+.fa-contact-v2 .fa-cx-sec-act { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .01em; text-transform: none; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border: none; border-radius: 9px; padding: 7px 13px; cursor: pointer; box-shadow: 0 8px 16px -7px rgba(187, 16, 89, .6), inset 0 1px 0 rgba(255, 255, 255, .28); transition: .15s; }
+.fa-contact-v2 .fa-cx-sec-act svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-sec-act:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+/* Carte pleine largeur */
+.fa-contact-v2 .fa-cx-mod { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 17px 19px; box-shadow: 0 1px 2px rgba(32, 24, 18, .04), 0 16px 32px -24px rgba(32, 24, 18, .28); overflow: hidden; }
+.fa-contact-v2 .fa-cx-mod.full { width: 100%; }
+
+/* Ligne recherche */
+.fa-contact-v2 .fa-cx-srch { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(160deg, #fff, #f5fbfb); box-shadow: 0 1px 2px rgba(32, 24, 18, .04); transition: border-color .15s, box-shadow .16s, transform .12s; }
+.fa-contact-v2 .fa-cx-srch + .fa-cx-srch { margin-top: 9px; }
+.fa-contact-v2 .fa-cx-srch:hover { border-color: #cfe3e6; box-shadow: 0 14px 28px -18px rgba(47, 124, 134, .42); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-srch-ic { width: 37px; height: 37px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #2f7c86; background: #e1eef0; border: 1px solid #cfe3e6; }
+.fa-contact-v2 .fa-cx-srch-ic svg { width: 17px; height: 17px; }
+.fa-contact-v2 .fa-cx-srch-main { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-srch-head { display: flex; align-items: center; gap: 8px; }
+.fa-contact-v2 .fa-cx-srch-ty { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-srch-tag { font-size: 10px; font-weight: 800; color: #1f6e44; background: #e9f6ee; border: 1px solid #cfe7d8; border-radius: 99px; padding: 3px 9px; flex: none; }
+.fa-contact-v2 .fa-cx-srch-tag.archived { color: var(--muted); background: #f1eae1; border-color: var(--line); }
+.fa-contact-v2 .fa-cx-srch-crit { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+
+/* Pilule teal « Rapprocher les biens → » */
+.fa-contact-v2 .fa-cx-srch-match { position: relative; overflow: hidden; flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #4aa7b1, #2c7c87 52%, #1f636d); border: 0; border-radius: 11px; padding: 8px 12px; cursor: pointer; box-shadow: 0 8px 18px -9px rgba(47, 124, 134, .7), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .16s, box-shadow .2s, filter .15s; }
+.fa-contact-v2 .fa-cx-srch-match svg { width: 14px; height: 14px; transition: transform .18s; }
+.fa-contact-v2 .fa-cx-srch-match:hover { transform: translateY(-2px); filter: brightness(1.05); box-shadow: 0 16px 28px -10px rgba(47, 124, 134, .8), inset 0 1px 0 rgba(255, 255, 255, .32); }
+.fa-contact-v2 .fa-cx-srch-match:hover svg { transform: translateX(3px); }
+
+/* Icônes d'action (crayon / corbeille) */
+.fa-contact-v2 .fa-cx-srch-acts { display: flex; gap: 6px; flex: none; }
+.fa-contact-v2 .fa-cx-ic-act { width: 33px; height: 33px; flex: none; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s; }
+.fa-contact-v2 .fa-cx-ic-act svg { width: 15px; height: 15px; transition: transform .15s; }
+.fa-contact-v2 .fa-cx-ic-act:hover { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-soft); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-ic-act:disabled { opacity: .5; cursor: default; transform: none; }
+.fa-contact-v2 .fa-cx-ic-act.del:hover { border-color: #c0392b; color: #c0392b; background: #fdeceb; }
+.fa-contact-v2 .fa-cx-ic-act.del:hover svg { transform: rotate(-8deg); }
+
+/* État vide + note d'échafaudage réduite */
+.fa-contact-v2 .fa-cx-srch-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 8px 2px; color: var(--muted); font-size: 13px; }
+.fa-contact-v2 .fa-cx-srch-empty p { margin: 0; }
+.fa-contact-v2 .fa-cx-scaffold.sm { margin-top: 16px; padding: 13px 16px; font-size: 11.5px; }
+
+/* ── Lot 3 — Bande « Biens & mandats liés » (portage maquette v30) ── */
+.fa-contact-v2 .fa-cx-sec-meta { font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .01em; text-transform: none; color: var(--sc, var(--brand)); background: color-mix(in srgb, var(--sc, var(--brand)) 13%, #fff); border: 1px solid color-mix(in srgb, var(--sc, var(--brand)) 22%, transparent); border-radius: 8px; padding: 4px 10px; }
+
+/* ligne annonce liée compacte (hauteur ≈ petite vignette) — couleur = relation (--rc) */
+.fa-contact-v2 .fa-cx-mod.full > .fa-cx-lk + .fa-cx-lk { margin-top: 9px; }
+.fa-contact-v2 .fa-cx-lk { --rc: var(--annonce-c); display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 11px; padding: 7px 11px 7px 8px; background: #fff; width: 100%; text-align: left; font: inherit; cursor: pointer; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .16s, transform .12s; }
+.fa-contact-v2 .fa-cx-lk.static { cursor: default; }
+.fa-contact-v2 button.fa-cx-lk:hover { border-color: color-mix(in srgb, var(--rc) 45%, var(--line)); box-shadow: 0 12px 22px -16px rgba(32, 24, 18, .42); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-lk-thumb { position: relative; width: 44px; height: 44px; border-radius: 9px; flex: none; overflow: hidden; border: 1px solid var(--line); background: repeating-linear-gradient(135deg, #efe7dd, #efe7dd 8px, #e7ded2 8px, #e7ded2 16px); }
+.fa-contact-v2 .fa-cx-lk-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fa-contact-v2 .fa-cx-lk-thumb .rf { position: absolute; left: 3px; bottom: 3px; font-size: 7px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .6); padding: 1px 4px; border-radius: 4px; }
+.fa-contact-v2 .fa-cx-lk-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.fa-contact-v2 .fa-cx-lk-ref { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-lk-t { font-size: 11.5px; color: var(--muted); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-lk-meta { display: flex; align-items: center; gap: 11px; flex: none; }
+.fa-contact-v2 .fa-cx-lk-role { font-size: 9.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--rc); background: color-mix(in srgb, var(--rc) 12%, #fff); border: 1px solid color-mix(in srgb, var(--rc) 26%, transparent); border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-lk-amt { font-size: 13px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fa-contact-v2 .fa-cx-lk-go { flex: none; display: flex; align-items: center; color: var(--rc); transition: transform .15s; }
+.fa-contact-v2 .fa-cx-lk-go svg { width: 18px; height: 18px; }
+.fa-contact-v2 button.fa-cx-lk:hover .fa-cx-lk-go { transform: translateX(3px); }
+.fa-contact-v2 .fa-cx-lk.r-acq { --rc: #2f7c86; }
+.fa-contact-v2 .fa-cx-lk.r-vendeur { --rc: #c2701a; }
+.fa-contact-v2 .fa-cx-lk.r-mandant { --rc: #c2125f; }
+.fa-contact-v2 .fa-cx-lk.r-acheteur { --rc: #2f8a5b; }
+.fa-contact-v2 .fa-cx-lk-empty { padding: 8px 2px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-srch { flex-wrap: wrap; }
+  .fa-contact-v2 .fa-cx-srch-main { flex-basis: 100%; }
+  .fa-contact-v2 .fa-cx-lk { flex-wrap: wrap; }
+  .fa-contact-v2 .fa-cx-lk-main { flex-basis: 60%; }
+}
+
+/* ============================================================================
+   Lots 4 & 5 — Tableau de bord droite : grille dash-top (Recherche + Biens à
+   gauche, « À faire » à droite), bande « Activité & relation » pleine largeur.
+   Portage de detail-contact-v30-dashboard.html (.dash-top / .aflt / .feed /
+   .ev / .ech-list / .ech). Tout scopé sous .fa-contact-v2 (aucune fuite).
+   ========================================================================== */
+
+/* Jetons de teinte locaux (repris de la maquette #fcc-root, scopés). */
+.fa-contact-v2 {
+  --blue: #2f6fa8; --blue-bg: #e6eff8;
+  --teal: #2f7c86; --teal-bg: #e1eef0;
+  --amber: #a8814a; --amber-bg: #f6efe1;
+  --alert: #c2512a; --alert-bg: #fae7dd; --alert-line: #f0d5c5;
+}
+
+/* Grille haute : colonne principale 2fr + colonne latérale 1fr */
+.fa-contact-v2 .fa-cx-dash-top { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-bottom: 24px; }
+.fa-contact-v2 .fa-cx-dash-main, .fa-contact-v2 .fa-cx-dash-side { min-width: 0; }
+@media (max-width: 1080px) { .fa-contact-v2 .fa-cx-dash-top { grid-template-columns: 1fr; } }
+
+/* Variante « ghost » des boutons d'action de section (RDV / Email de l'Activité) */
+.fa-contact-v2 .fa-cx-sec-act.ghost { color: var(--blue); background: var(--blue-bg); border: 1px solid color-mix(in srgb, var(--blue) 22%, transparent); box-shadow: none; }
+.fa-contact-v2 .fa-cx-sec-act.ghost:hover { filter: none; background: color-mix(in srgb, var(--blue) 18%, #fff); }
+
+/* ── Activité : chips de filtre ── */
+.fa-contact-v2 .fa-cx-aflt { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.fa-contact-v2 .fa-cx-aflt button { font: inherit; font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); background: #faf6f0; color: var(--muted); border-radius: 99px; padding: 5px 12px; cursor: pointer; transition: border-color .14s, color .14s, background .14s; }
+.fa-contact-v2 .fa-cx-aflt button:hover { border-color: var(--blue); color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-aflt button.on { background: var(--blue-bg); border-color: transparent; color: #1f5b96; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
+
+/* ── Activité : fil vertical (timeline) ── */
+.fa-contact-v2 .fa-cx-feed { position: relative; padding-left: 6px; }
+.fa-contact-v2 .fa-cx-feed::before { content: ""; position: absolute; left: 23px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--line), var(--line) 82%, transparent); }
+.fa-contact-v2 .fa-cx-ev { position: relative; display: flex; gap: 12px; padding: 8px 2px; }
+.fa-contact-v2 .fa-cx-ev-ic { position: relative; z-index: 1; width: 34px; height: 34px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--tone, var(--muted)); background: var(--tone-bg, #f1eae1); box-shadow: 0 0 0 4px #fff; }
+.fa-contact-v2 .fa-cx-ev-ic svg { width: 16px; height: 16px; }
+.fa-contact-v2 .fa-cx-ev.g-rdv { --tone: var(--blue); --tone-bg: var(--blue-bg); }
+.fa-contact-v2 .fa-cx-ev.g-email { --tone: var(--teal); --tone-bg: var(--teal-bg); }
+.fa-contact-v2 .fa-cx-ev.g-rappro { --tone: #2f8a5b; --tone-bg: #e6f2ea; }
+.fa-contact-v2 .fa-cx-ev.g-tr { --tone: #c2125f; --tone-bg: #f9e7ef; }
+.fa-contact-v2 .fa-cx-ev.g-relance { --tone: var(--amber); --tone-bg: var(--amber-bg); }
+.fa-contact-v2 .fa-cx-ev-bd { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-ev-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-ev-type { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--tone, var(--muted)); background: var(--tone-bg, #f1eae1); border-radius: 99px; padding: 2px 8px; flex: none; }
+.fa-contact-v2 .fa-cx-ev-nm { font-size: 13.5px; font-weight: 700; }
+.fa-contact-v2 .fa-cx-ev-when { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--faint); white-space: nowrap; }
+.fa-contact-v2 .fa-cx-ev-s { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+.fa-contact-v2 .fa-cx-feed-empty { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; padding: 20px 14px; border: 1px dashed var(--line); border-radius: 12px; background: #fdfbf8; }
+
+/* ── À faire : liste des relances ── */
+.fa-contact-v2 .fa-cx-ech-list { display: flex; flex-direction: column; gap: 9px; }
+.fa-contact-v2 .fa-cx-ech { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 13px; background: #fff; box-shadow: 0 1px 2px rgba(32, 24, 18, .04); --u: var(--amber); --u-bg: var(--amber-bg); --u-line: #e9dcc5; }
+.fa-contact-v2 .fa-cx-ech.late { background: linear-gradient(100deg, #fdf3ee, #fff 58%); --u: var(--alert); --u-bg: var(--alert-bg); --u-line: var(--alert-line); }
+.fa-contact-v2 .fa-cx-ech-date { width: 46px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 11px; padding: 6px 4px; background: var(--u-bg); border: 1px solid var(--u-line); }
+.fa-contact-v2 .fa-cx-ech-date b { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; line-height: 1; color: var(--u); }
+.fa-contact-v2 .fa-cx-ech-date.warn b { font-size: 20px; }
+.fa-contact-v2 .fa-cx-ech-date i { font-size: 8px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--u); font-style: normal; margin-top: 2px; }
+.fa-contact-v2 .fa-cx-ech-bd { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-ech-t { font-size: 13px; font-weight: 700; line-height: 1.2; }
+.fa-contact-v2 .fa-cx-ech-s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.fa-contact-v2 .fa-cx-ech-acts { display: flex; gap: 6px; flex: none; }
+.fa-contact-v2 .fa-cx-ech-go { width: 32px; height: 32px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--u-line); background: var(--u-bg); color: var(--u); cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+.fa-contact-v2 .fa-cx-ech-go svg { width: 15px; height: 15px; }
+.fa-contact-v2 .fa-cx-ech-go.done { border-color: #cfe7d8; background: #e9f6ee; color: #1f6e44; }
+.fa-contact-v2 .fa-cx-ech-go.done:hover { background: #1f6e44; color: #fff; border-color: transparent; }
+.fa-contact-v2 .fa-cx-ech-go.snooze:hover { background: var(--u); color: #fff; border-color: transparent; }
+.fa-contact-v2 .fa-cx-ech-empty { padding: 14px 4px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* ── À faire : bouton « Planifier une relance » + formulaire inline ── */
+.fa-contact-v2 .fa-cx-plan-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 12px; padding: 12px; border: 1.5px dashed var(--brand-line); border-radius: 13px; background: rgba(255, 255, 255, .5); color: var(--brand-ink); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; transition: border-color .16s, background .16s; }
+.fa-contact-v2 .fa-cx-plan-btn:hover { border-color: var(--brand); background: var(--brand-soft); }
+.fa-contact-v2 .fa-cx-plan-btn .plus { width: 22px; height: 22px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); box-shadow: 0 4px 10px -5px rgba(194, 18, 95, .7); }
+.fa-contact-v2 .fa-cx-plan-btn .plus svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-plan-form { display: flex; flex-direction: column; gap: 9px; margin-top: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 13px; background: #fdfbf8; }
+.fa-contact-v2 .fa-cx-plan-form input, .fa-contact-v2 .fa-cx-plan-form select { width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; transition: border-color .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-plan-form input:focus, .fa-contact-v2 .fa-cx-plan-form select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.fa-contact-v2 .fa-cx-plan-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.fa-contact-v2 .fa-cx-plan-cancel { font: inherit; font-size: 12px; font-weight: 700; background: #fff; border: 1px solid var(--line); color: var(--ink-soft); border-radius: 9px; padding: 9px 13px; cursor: pointer; transition: border-color .14s, color .14s; }
+.fa-contact-v2 .fa-cx-plan-cancel:hover:not(:disabled) { border-color: var(--brand); color: var(--brand-ink); }
+.fa-contact-v2 .fa-cx-plan-save { font: inherit; font-size: 12px; font-weight: 700; background: linear-gradient(150deg, #e3407f, #bb1059); border: 0; color: #fff; border-radius: 9px; padding: 9px 15px; cursor: pointer; transition: filter .14s; }
+.fa-contact-v2 .fa-cx-plan-save:hover:not(:disabled) { filter: brightness(1.06); }
+.fa-contact-v2 .fa-cx-plan-cancel:disabled, .fa-contact-v2 .fa-cx-plan-save:disabled { opacity: .55; cursor: default; }
+.fa-contact-v2 .fa-cx-plan-hint { margin-top: 12px; padding: 13px 15px; border: 1px dashed var(--line); border-radius: 13px; background: #fdfbf8; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+/* ============================================================================
+   Lot 6 — Polish final : pastilles de rôle hybrides (hero), bande « Qualité de
+   la fiche » (doublons + complétude + fusion), responsive resserré et mode
+   sombre. Portage de detail-contact-v30-dashboard.html (.type-pill / .dq /
+   .comp-bar). Tout scopé sous .fa-contact-v2 (aucune fuite globale).
+   ========================================================================== */
+
+/* ── Hero : pastilles multiples pour contacts hybrides (couleur = rôle via --rc) ── */
+.fa-contact-v2 .fa-cx-type-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.fa-contact-v2 .fa-cx-type-pill.multi { color: var(--rc); background: color-mix(in srgb, var(--rc) 12%, #fff); border-color: color-mix(in srgb, var(--rc) 28%, transparent); }
+.fa-contact-v2 .fa-cx-type-pill.more { color: var(--muted); background: #f1eae1; border-color: var(--line); }
+
+/* ── Bande « Qualité de la fiche » (or --sc #a8814a) ── */
+.fa-contact-v2 .fa-cx-dq { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-dq-ic { width: 46px; height: 46px; border-radius: 13px; background: #f6efe1; color: #a8814a; display: flex; align-items: center; justify-content: center; flex: none; border: 1px solid #e9dcc5; }
+.fa-contact-v2 .fa-cx-dq-ic svg { width: 23px; height: 23px; }
+.fa-contact-v2 .fa-cx-dq-bd { flex: 1; min-width: 170px; }
+.fa-contact-v2 .fa-cx-dq-t { font-size: 15px; font-weight: 700; }
+.fa-contact-v2 .fa-cx-dq-s { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.fa-contact-v2 .fa-cx-comp { display: flex; align-items: center; gap: 11px; margin-left: auto; }
+.fa-contact-v2 .fa-cx-comp-k { font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.fa-contact-v2 .fa-cx-comp-bar { width: 120px; height: 8px; border-radius: 99px; background: #efe7db; overflow: hidden; }
+.fa-contact-v2 .fa-cx-comp-bar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #e0a93f, #2f8a5b); }
+.fa-contact-v2 .fa-cx-comp-v { font-size: 13px; font-weight: 800; color: #1f6e44; }
+.fa-contact-v2 .fa-cx-dq-merge { margin-left: 8px; font: inherit; font-size: 12px; font-weight: 700; background: #fff; border: 1px solid var(--line); color: var(--ink-soft); border-radius: 9px; padding: 9px 13px; cursor: pointer; transition: border-color .14s, color .14s, background .14s; }
+.fa-contact-v2 .fa-cx-dq-merge:hover { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-soft); }
+
+/* ── Responsive resserré (≤640px : jauge et bouton passent à la ligne, padding réduit) ── */
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-comp { margin-left: 0; }
+  .fa-contact-v2 .fa-cx-dq-merge { margin-left: 0; }
+  .fa-contact-v2 .fa-cx-work { padding: 16px 14px 20px; }
+  .fa-contact-v2 .fa-cx-rail { padding: 14px 14px 16px; }
+}
+
+/* ============================================================================
+   Mode sombre — même déclencheur que la fiche contact actuelle (.fcx-overlay
+   dans mobile.css) : @media (prefers-color-scheme: dark) and (max-width: 1180px).
+   Assombrit panneau / rail / cartes / coordonnées, garde les accents --ty et
+   les dégradés magenta lisibles. Tout scopé sous .fa-contact-v2.
+   ========================================================================== */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  .fa-contact-v2 .fa-cx-panel { background: var(--md-bg-1); border-color: var(--md-border); color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-rail { background: var(--md-surface); border-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-work { background: var(--md-bg-1); }
+  .fa-contact-v2 .fa-cx-back { background: var(--md-surface-2); border-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-back-t { color: var(--md-text); }
+
+  /* Cartes, lignes et menus : surface sombre secondaire */
+  .fa-contact-v2 .fa-cx-mod,
+  .fa-contact-v2 .fa-cx-srch,
+  .fa-contact-v2 .fa-cx-lk,
+  .fa-contact-v2 .fa-cx-ech,
+  .fa-contact-v2 .fa-cx-neg,
+  .fa-contact-v2 .fa-cx-plan-form,
+  .fa-contact-v2 .fa-cx-act-menu,
+  .fa-contact-v2 .fa-cx-coord-ic { background: var(--md-surface-2); border-color: var(--md-border); color: var(--md-text); }
+
+  /* Titres et valeurs : texte clair */
+  .fa-contact-v2 .fa-cx-name,
+  .fa-contact-v2 .fa-cx-coord-v,
+  .fa-contact-v2 .fa-cx-dq-t,
+  .fa-contact-v2 .fa-cx-ech-t,
+  .fa-contact-v2 .fa-cx-ev-nm,
+  .fa-contact-v2 .fa-cx-srch-ty,
+  .fa-contact-v2 .fa-cx-lk-ref,
+  .fa-contact-v2 .fa-cx-neg-nm,
+  .fa-contact-v2 .fa-cx-menu-item { color: var(--md-text); }
+
+  /* Libellés secondaires : gris clair */
+  .fa-contact-v2 .fa-cx-coord-k,
+  .fa-contact-v2 .fa-cx-dq-s,
+  .fa-contact-v2 .fa-cx-ech-s,
+  .fa-contact-v2 .fa-cx-ev-s,
+  .fa-contact-v2 .fa-cx-ev-when,
+  .fa-contact-v2 .fa-cx-srch-crit,
+  .fa-contact-v2 .fa-cx-neg-sb,
+  .fa-contact-v2 .fa-cx-lk-t,
+  .fa-contact-v2 .fa-cx-sec { color: var(--md-text-muted); }
+
+  /* Chips de filtre, statut, formulaires, jauge : fonds sombres */
+  .fa-contact-v2 .fa-cx-aflt button { background: var(--md-surface-2); border-color: var(--md-border); color: var(--md-text-muted); }
+  .fa-contact-v2 .fa-cx-st-chip { background: rgba(255, 255, 255, .07); border-color: var(--md-border); color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-plan-form input,
+  .fa-contact-v2 .fa-cx-plan-form select { background: var(--md-inset); border-color: var(--md-border); color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-comp-bar { background: rgba(255, 255, 255, .10); }
+  .fa-contact-v2 .fa-cx-dq-merge { background: var(--md-surface-2); border-color: var(--md-border); color: var(--md-text); }
+}
+
+/* ============================================================================
+   Parité fonctionnelle vs ...Base — segmented control « Fil | Rendez-vous | Échanges »,
+   liste RDV Google avec actions par événement (GAP 1), fils Gmail (GAP 2),
+   données Hektor dans la bande Qualité (GAP 3) et chip sévérité doublon (GAP 4).
+   Tout scopé sous .fa-contact-v2 ; aucune règle globale.
+   ========================================================================== */
+
+/* ── Segmented control dans l'en-tête de la bande « Activité & relation » ── */
+.fa-contact-v2 .fa-cx-seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; background: #faf6f0; border: 1px solid var(--line); border-radius: 99px; margin-right: 8px; }
+.fa-contact-v2 .fa-cx-seg button { font: inherit; font-size: 11.5px; font-weight: 700; color: var(--muted); background: transparent; border: none; border-radius: 99px; padding: 5px 13px; cursor: pointer; transition: color .14s, background .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-seg button:hover { color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-seg button.on { color: #1f5b96; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+
+/* ── En-tête interne des vues RDV / Échanges (méta + sous-titre + action) ── */
+.fa-contact-v2 .fa-cx-view-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+.fa-contact-v2 .fa-cx-view-meta { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.fa-contact-v2 .fa-cx-view-sub { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.fa-contact-v2 .fa-cx-view-head .fa-cx-sec-act { margin-left: auto; }
+.fa-contact-v2 .fa-cx-view-err { font-size: 12px; font-weight: 600; color: var(--annonce-c); background: color-mix(in srgb, var(--annonce-c) 8%, #fff); border: 1px solid color-mix(in srgb, var(--annonce-c) 22%, transparent); border-radius: 10px; padding: 8px 11px; margin: 0 0 12px; }
+
+/* ── Liste RDV Google (GAP 1) — cartes + actions par événement ── */
+.fa-contact-v2 .fa-cx-rdv-list { display: flex; flex-direction: column; gap: 9px; }
+.fa-contact-v2 .fa-cx-rdv { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; background: #fdfbf8; border: 1px solid var(--line); border-radius: 14px; }
+.fa-contact-v2 .fa-cx-rdv-main { flex: 1 1 260px; min-width: 0; }
+.fa-contact-v2 .fa-cx-rdv-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-rdv-head strong { font-size: 13px; font-weight: 800; color: var(--ink); }
+.fa-contact-v2 .fa-cx-rdv-type { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--blue); background: var(--blue-bg); border-radius: 99px; padding: 3px 9px; }
+.fa-contact-v2 .fa-cx-rdv-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.fa-contact-v2 .fa-cx-rdv-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fa-contact-v2 .fa-cx-rdv-btn { font: inherit; font-size: 11px; font-weight: 700; color: var(--ink-soft); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; cursor: pointer; text-decoration: none; transition: border-color .14s, background .14s, color .14s; }
+.fa-contact-v2 .fa-cx-rdv-btn:hover { border-color: var(--blue); color: #1f5b96; }
+.fa-contact-v2 .fa-cx-rdv-btn.brand { color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border-color: transparent; box-shadow: 0 6px 12px -7px rgba(187, 16, 89, .6); }
+.fa-contact-v2 .fa-cx-rdv-btn.brand:hover { filter: brightness(1.06); }
+.fa-contact-v2 .fa-cx-rdv-btn:disabled { opacity: .55; cursor: default; }
+
+/* ── Fils Gmail (GAP 2) — conteneur scopé, ContactEmailThreadCard apporte son propre markup ── */
+.fa-contact-v2 .fa-cx-mail-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Chip sévérité doublon (GAP 4) ── */
+.fa-contact-v2 .fa-cx-st-chip.sev { color: var(--annonce-c); background: color-mix(in srgb, var(--annonce-c) 10%, #fff); border-color: color-mix(in srgb, var(--annonce-c) 24%, transparent); }
+.fa-contact-v2 .fa-cx-st-chip.sev .d { background: var(--annonce-c); }
+
+/* ── Données Hektor (GAP 3) — grille compacte sous la bande Qualité ── */
+.fa-contact-v2 .fa-cx-dbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.fa-contact-v2 .fa-cx-dbar-f { display: flex; flex-direction: column; gap: 2px; }
+.fa-contact-v2 .fa-cx-dbar-f .k { font-size: 10.5px; font-weight: 700; letter-spacing: .01em; color: var(--muted); }
+.fa-contact-v2 .fa-cx-dbar-f .v { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.fa-contact-v2 .fa-cx-dbar-f .v.ok { color: var(--green-ink); }
+
+/* ── Mode sombre pour les nouveaux éléments (même déclencheur que le bloc principal) ── */
+@media (prefers-color-scheme: dark) and (max-width: 1180px) {
+  .fa-contact-v2 .fa-cx-seg { background: var(--md-surface-2); border-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-seg button { color: var(--md-text-muted); }
+  .fa-contact-v2 .fa-cx-seg button.on { background: var(--md-inset); color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-view-meta { color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-view-sub { color: var(--md-text-muted); }
+  .fa-contact-v2 .fa-cx-rdv { background: var(--md-surface-2); border-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-rdv-head strong { color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-rdv-facts { color: var(--md-text-muted); }
+  .fa-contact-v2 .fa-cx-rdv-btn { background: var(--md-inset); border-color: var(--md-border); color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-dbar { border-top-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-dbar-f .v { color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-dbar-f .k { color: var(--md-text-muted); }
+}

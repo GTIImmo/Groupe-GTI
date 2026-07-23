@@ -2747,6 +2747,44 @@ export async function loadRelancesForDossier(appDossierId: number): Promise<Rela
   return (data ?? []) as RelanceRow[]
 }
 
+// ---- Fiche Contact v2 : fil d'activité + relances contact (RPC dédiées, additives) ----
+export type ContactActivityItem = { kind: string; aud: string; at: string; lead: string; rest: string; actor: string | null }
+
+/** Fil d'activité unifié d'un contact (fiche V2) — RPC app_contact_activite. */
+export async function loadContactActivite(hektorContactId: string, limit = 40): Promise<ContactActivityItem[]> {
+  if (!hasSupabaseEnv || !supabase || !hektorContactId.trim()) return []
+  const { data, error } = await supabase.rpc('app_contact_activite', { p_hektor_contact_id: hektorContactId.trim(), p_limit: limit })
+  if (error) throw new Error(error.message ?? 'Unable to load contact activity')
+  return (data ?? []) as ContactActivityItem[]
+}
+
+/** Relances « À faire » d'un contact (fiche V2) — RPC app_list_relances_for_contact. */
+export async function loadRelancesForContact(hektorContactId: string): Promise<RelanceRow[]> {
+  if (!hasSupabaseEnv || !supabase || !hektorContactId.trim()) return []
+  const { data, error } = await supabase.rpc('app_list_relances_for_contact', { p_hektor_contact_id: hektorContactId.trim() })
+  if (error) throw new Error(error.message ?? 'Unable to load contact relances')
+  return (data ?? []) as RelanceRow[]
+}
+
+/** Crée une relance manuelle pour un contact (« Planifier une relance ») — RPC app_create_relance_for_contact. */
+export async function createRelanceForContact(args: {
+  hektorContactId: string; label: string; contactSearchKey?: string | null
+  dueDate?: string | null; negociateurEmail?: string | null; sub?: string | null; appDossierId?: number | null
+}): Promise<RelanceRow | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const { data, error } = await supabase.rpc('app_create_relance_for_contact', {
+    p_hektor_contact_id: args.hektorContactId,
+    p_contact_search_key: args.contactSearchKey ?? null,
+    p_label: args.label,
+    p_due_date: args.dueDate ?? null,
+    p_negociateur_email: args.negociateurEmail ?? null,
+    p_sub: args.sub ?? null,
+    p_app_dossier_id: args.appDossierId ?? null,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to create relance')
+  return ((data ?? []) as RelanceRow[])[0] ?? null
+}
+
 export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null, gmailMessageId?: string | null, gmailThreadId?: string | null): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_record_proposition', {
