@@ -3319,7 +3319,16 @@ async function upsertConsoleDocuments(dossier, entries) {
         technical_name: entry.technical_name,
         transfer_name: entry.transfer_name,
         hektor_uploaded_document_id: entry.hektor_uploaded_document_id,
-        signature: entry.signature || null,
+        // Preserve la date d'envoi/signature deja constatee (sent_at / signed_at).
+        // Hektor n'expose pas ces dates -> entry.signature ne les porte pas ; les ecraser
+        // effacait sent_at et re-datait "Mandat envoye en signature" a chaque sync
+        // (le fil d'activite retombait alors sur updated_at = maintenant). Cf. reconcileSignatureStates.
+        signature: (function () {
+          const cur = (current.metadata_json && current.metadata_json.signature) || null;
+          const inc = entry.signature || null;
+          if (cur && inc) return { ...inc, sent_at: (cur.sent_at ?? inc.sent_at ?? null), signed_at: (cur.signed_at ?? inc.signed_at ?? null) };
+          return inc || cur || null;
+        })(),
       },
       updated_at: now,
     };
