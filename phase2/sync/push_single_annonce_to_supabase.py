@@ -367,6 +367,23 @@ def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: st
             query={"app_dossier_id": f"eq.{gid}"},
             payload={"app_dossier_id": int(keep_app_dossier_id)},
         )
+        # Retours acquereur (coeur/pouce/motif) et statut de proposition : on RE-POINTE
+        # l'ancien app_dossier_id vers le bon (jamais supprimer). Sans ca, apres une
+        # re-indexation (nouvel id local), le retour du client et l'etat "propose/refuse"
+        # restaient colles au fantome -> l'annonce disparaissant du rapprochement, le
+        # retour devenait orphelin et invisible. Ces 2 tables n'etaient pas couvertes.
+        for feedback_table in ("app_email_envoi_bien", "app_bien_acquereur_statut"):
+            try:
+                client._request(
+                    method="PATCH",
+                    path=feedback_table,
+                    query={"app_dossier_id": f"eq.{gid}"},
+                    payload={"app_dossier_id": int(keep_app_dossier_id)},
+                )
+            except Exception:
+                # Best-effort : un conflit d'unicite (une ligne existe deja sous le bon
+                # id) ne doit jamais casser la reconciliation.
+                pass
     for table in (
         "app_mandat_broadcast_current",
         "app_work_item_current",
