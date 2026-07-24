@@ -28576,6 +28576,21 @@ function contactBuyerStageLabel(roles: string[]): string | null {
   if (roles.some(isBuyerRole)) return 'Transaction'
   return null
 }
+// Symbole SVG du type dominant (IDENTIQUE a l'avatar du detail contact V2 fa-cx-ty-*).
+// Utilise dans l'avatar du listing (.ci-av) a la place des initiales.
+function contactDirectoryTypeSymbol(cat: ContactDirectoryType) {
+  if (cat === 'mandant') {
+    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 11h6M9 14h4" /><path d="M9 17.5c1-1.4 2.3-1.4 2.8 0s1.5 1.4 2.5 0" /></svg>
+  }
+  if (cat === 'proprietaire') {
+    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l7-6 7 6" /><path d="M5 10v9h9v-9" /><path d="M8.5 19v-4.5h3V19" /><rect x="15.5" y="4" width="6" height="4.2" rx="1" /><path d="M18.5 8.2V12" /></svg>
+  }
+  if (cat === 'acheteur') {
+    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="4.2" /><path d="M10.5 12.5 20 3" /><path d="M17 6l2.4 2.4M14 9l1.9 1.9" /></svg>
+  }
+  // acquereur (recherche) + autre : loupe
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="10.5" cy="10.5" r="7" /><path d="M20 20l-3.8-3.8" /><path d="M7.7 11.6 10.5 9.2l2.8 2.4" /><path d="M8.7 11.2v3.1h3.6v-3.1" /></svg>
+}
 // Badge "Qualite" = fiabilite de la fiche (completeness_score). En prod c'est un
 // score ENTIER 0..8 (nb de champs cles renseignes), verifie sur app_contacts_current.
 // Seuils : Fort >=6, Moyen 4-5, Critique 1-3, N/D = 0/absent.
@@ -34768,7 +34783,6 @@ function ContactsScreen(props: {
                   const shownCategories: ContactDirectoryType[] = categories.length ? categories : ['autre']
                   const primaryType = shownCategories[0]
                   const isSelected = detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
-                  const initials = userInitials(contact.display_name, contact.email)
                   const phone = (contact.phone_primary ?? '').trim()
                   const email = (contact.email ?? '').trim()
                   const ville = [contact.code_postal, contact.ville].filter(Boolean).join(' ')
@@ -34782,7 +34796,7 @@ function ContactsScreen(props: {
                   return (
                     <div key={contact.hektor_contact_id} className={`contact-row${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact.hektor_contact_id) } }}>
                       <div className="ci">
-                        <div className={`ci-av ${primaryType}`}>{initials}<span className={`ci-av-badge ${avBadgeOk ? 'ok' : 'off'}`}>{avBadgeOk ? AV_ICONS.check : AV_ICONS.cross}</span></div>
+                        <div className={`ci-av has-sym ${primaryType}`} title={contactDirectoryTypeLabel[primaryType]}><span className="ci-av-sym" aria-hidden="true">{contactDirectoryTypeSymbol(primaryType)}</span><span className={`ci-av-badge ${avBadgeOk ? 'ok' : 'off'}`}>{avBadgeOk ? AV_ICONS.check : AV_ICONS.cross}</span></div>
                         <div className="ci-body">
                           <div className="ci-name">{contact.display_name}</div>
                           <div className="ci-roles">{shownCategories.map((cat, index) => <span key={`role-${cat}-${index}`} className={`ci-role ${cat}`}>{contactDirectoryTypeLabel[cat]}</span>)}</div>
