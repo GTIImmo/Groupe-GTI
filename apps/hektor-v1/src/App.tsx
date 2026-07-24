@@ -11727,6 +11727,15 @@ export default function App() {
     return () => { cancelled = true }
   }, [annonceContactId, session])
 
+  // Reset IMMÉDIAT au changement de contact : sans ça, les recherches/relations du contact
+  // précédent restaient affichées pendant le chargement du nouveau (et persistaient si le
+  // chargement échouait) -> « recherche fantôme » sur une fiche qui n'en a pas. Dépend
+  // uniquement de selectedContactId (pas de dataReloadKey) pour ne pas clignoter aux refresh.
+  useEffect(() => {
+    setSelectedContactRelations([])
+    setSelectedContactSearches([])
+  }, [selectedContactId])
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     if (screen !== 'contacts' || !selectedContactId) {
@@ -34768,6 +34777,7 @@ function ContactsScreen(props: {
       </div>
       {detailOpen && props.selectedContact ? (
         <ContactDetailPopup
+          key={props.selectedContact.hektor_contact_id}
           contact={props.selectedContact}
           relations={props.selectedRelations}
           searches={props.selectedSearches}
@@ -34912,6 +34922,7 @@ function MobileContactCards(props: {
       </div>
       {detailOpen && props.selectedContact ? (
         <ContactDetailPopup
+          key={props.selectedContact.hektor_contact_id}
           contact={props.selectedContact}
           relations={props.selectedRelations}
           searches={props.selectedSearches}
