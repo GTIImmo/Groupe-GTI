@@ -10659,6 +10659,8 @@ export default function App() {
   const [contactDirectLookupId, setContactDirectLookupId] = useState<string | null>(null)
   const [selectedContactRelations, setSelectedContactRelations] = useState<AppContactRelation[]>([])
   const [selectedContactSearches, setSelectedContactSearches] = useState<AppContactSearch[]>([])
+  // Chargement des relations + recherches du contact sélectionné (pour l'anim de chargement de la fiche).
+  const [selectedContactDataLoading, setSelectedContactDataLoading] = useState(false)
   // Fiche contact ouverte EN POP-UP par-dessus une fiche annonce (retour = fermeture → revient au bien).
   const [annonceContactId, setAnnonceContactId] = useState<string | null>(null)
   const [annonceContact, setAnnonceContact] = useState<AppContact | null>(null)
@@ -11742,9 +11744,11 @@ export default function App() {
     if (screen !== 'contacts' || !selectedContactId) {
       setSelectedContactRelations([])
       setSelectedContactSearches([])
+      setSelectedContactDataLoading(false)
       return
     }
     let cancelled = false
+    setSelectedContactDataLoading(true)
     Promise.all([
       loadContactRelations(selectedContactId),
       loadContactSearches(selectedContactId),
@@ -11757,6 +11761,7 @@ export default function App() {
       .catch((error) => {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement de la fiche contact')
       })
+      .finally(() => { if (!cancelled) setSelectedContactDataLoading(false) })
     return () => {
       cancelled = true
     }
@@ -17379,6 +17384,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedContact={selectedContact}
             selectedRelations={selectedContactRelations}
             selectedSearches={selectedContactSearches}
+            selectedSearchesLoading={selectedContactDataLoading}
             loading={contactsLoading}
             createOpen={contactCreateOpen}
             onCloseCreate={() => setContactCreateOpen(false)}
@@ -18301,6 +18307,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedContact={selectedContact}
             selectedRelations={selectedContactRelations}
             selectedSearches={selectedContactSearches}
+            selectedSearchesLoading={selectedContactDataLoading}
             openContactId={contactDirectLookupId}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
@@ -32493,6 +32500,7 @@ function ContactDetailPopupBase(props: {
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
   initialEditing?: boolean
   backContext?: 'annonce' | 'annuaire'
+  dataLoading?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -34135,7 +34143,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               <section className="fa-cx-mod full" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
-                {orderedSearches.length > 0 ? (
+                {props.dataLoading && orderedSearches.length === 0 ? (
+                  <div className="fa-cx-srch-loading" aria-busy="true" aria-label="Chargement des recherches…">
+                    <span className="fa-cx-skel fa-cx-skel-ic" />
+                    <div className="fa-cx-skel-lines"><span className="fa-cx-skel fa-cx-skel-line w55" /><span className="fa-cx-skel fa-cx-skel-line w85" /></div>
+                    <span className="fa-cx-skel fa-cx-skel-btn" />
+                  </div>
+                ) : orderedSearches.length > 0 ? (
                   orderedSearches.map((search) => {
                     const cities = contactJsonList(search.villes_json)
                     const types = contactSearchTypes(search.types_json)
@@ -34210,7 +34224,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               <section className="fa-cx-mod full" style={{ ['--sc']: 'var(--annonce-c)' } as CSSProperties}>
-                {linkedRelations.length > 0 ? (
+                {props.dataLoading && linkedRelations.length === 0 ? (
+                  <div className="fa-cx-srch-loading" aria-busy="true" aria-label="Chargement des biens liés…">
+                    <span className="fa-cx-skel fa-cx-skel-thumb" />
+                    <div className="fa-cx-skel-lines"><span className="fa-cx-skel fa-cx-skel-line w70" /><span className="fa-cx-skel fa-cx-skel-line w40" /></div>
+                  </div>
+                ) : linkedRelations.length > 0 ? (
                   linkedRelations.map((relation) => {
                     const relationAppDossierId = Number(relation.app_dossier_id)
                     const canOpen = relation.app_dossier_id != null && Number.isFinite(relationAppDossierId)
@@ -34592,6 +34611,7 @@ function ContactsScreen(props: {
   selectedContact: AppContact | null
   selectedRelations: AppContactRelation[]
   selectedSearches: AppContactSearch[]
+  selectedSearchesLoading?: boolean
   openContactId?: string | null
   loading: boolean
   hasActiveFilters: boolean
@@ -34816,6 +34836,7 @@ function ContactsScreen(props: {
           contact={props.selectedContact}
           relations={props.selectedRelations}
           searches={props.selectedSearches}
+          dataLoading={props.selectedSearchesLoading}
           initialEditing={detailInitialEditing}
           canManageContacts={props.canManageContacts}
           canDeleteContacts={props.canDeleteContacts}
@@ -34843,6 +34864,7 @@ function MobileContactCards(props: {
   selectedContact: AppContact | null
   selectedRelations: AppContactRelation[]
   selectedSearches: AppContactSearch[]
+  selectedSearchesLoading?: boolean
   loading: boolean
   createOpen: boolean
   onCloseCreate: () => void
@@ -34961,6 +34983,7 @@ function MobileContactCards(props: {
           contact={props.selectedContact}
           relations={props.selectedRelations}
           searches={props.selectedSearches}
+          dataLoading={props.selectedSearchesLoading}
           canManageContacts={props.canManageContacts}
           canDeleteContacts={props.canDeleteContacts}
           hektorUserEmail={props.hektorUserEmail}

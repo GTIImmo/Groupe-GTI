@@ -244,6 +244,21 @@
 /* État vide + note d'échafaudage réduite */
 .fa-contact-v2 .fa-cx-srch-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 8px 2px; color: var(--muted); font-size: 13px; }
 .fa-contact-v2 .fa-cx-srch-empty p { margin: 0; }
+/* Skeleton de chargement (recherches / biens liés) : évite le flash « Aucune recherche » pendant l'async */
+.fa-contact-v2 .fa-cx-srch-loading { display: flex; align-items: center; gap: 14px; padding: 8px 2px; }
+.fa-contact-v2 .fa-cx-skel { position: relative; overflow: hidden; background: color-mix(in srgb, var(--sc, var(--line)) 12%, #f0e8da); border-radius: 8px; }
+.fa-contact-v2 .fa-cx-skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75), transparent); animation: fa-cx-shimmer 1.15s ease-in-out infinite; }
+@keyframes fa-cx-shimmer { 100% { transform: translateX(100%); } }
+.fa-contact-v2 .fa-cx-skel-ic { width: 44px; height: 44px; border-radius: 12px; flex: none; }
+.fa-contact-v2 .fa-cx-skel-thumb { width: 58px; height: 44px; border-radius: 10px; flex: none; }
+.fa-contact-v2 .fa-cx-skel-lines { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.fa-contact-v2 .fa-cx-skel-line { height: 11px; border-radius: 6px; }
+.fa-contact-v2 .fa-cx-skel-line.w40 { width: 40%; }
+.fa-contact-v2 .fa-cx-skel-line.w55 { width: 55%; }
+.fa-contact-v2 .fa-cx-skel-line.w70 { width: 70%; }
+.fa-contact-v2 .fa-cx-skel-line.w85 { width: 85%; }
+.fa-contact-v2 .fa-cx-skel-btn { width: 92px; height: 38px; border-radius: 11px; flex: none; }
+@media (prefers-reduced-motion: reduce) { .fa-contact-v2 .fa-cx-skel::after { animation: none; } }
 .fa-contact-v2 .fa-cx-scaffold.sm { margin-top: 16px; padding: 13px 16px; font-size: 11.5px; }
 
 /* ── Lot 3 — Bande « Biens & mandats liés » (portage maquette v30) ── */
