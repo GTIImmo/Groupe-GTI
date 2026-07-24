@@ -20930,6 +20930,7 @@ const CK_ICON: Record<string, string> = {
   reporting: '<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   heart: '<path d="M12 21s-7-4.5-9.3-9A5 5 0 0 1 12 5.5 5 5 0 0 1 21.3 12c-2.3 4.5-9.3 9-9.3 9z"/>',
+  thumbdown: '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>',
 }
 // Fil d'activité : chaque ligne mène à une rubrique (maquette v26 → openRub).
 // Le flux peut fournir sa cible (`rub`) ; sinon on la dérive de l'icône, pour que
@@ -20955,6 +20956,8 @@ const CK_ACTI_KMAP: Record<string, { ic: string; nc: string; nb: string; rub: st
   rdv:      { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
   visitreq: { ic: 'rendezvous',   nc: '#6d4bb5', nb: '#ece4f8', rub: 'rendezvous' },
   like:     { ic: 'heart',        nc: '#c2125f', nb: '#f9e7ef', rub: 'rapprochement' },
+  // Refus acquéreur (✕ « Pas pour moi » + motif) — ton neutre/écarté, jamais un cœur.
+  pass:     { ic: 'thumbdown',    nc: '#8a807a', nb: '#f1eae1', rub: 'rapprochement' },
   relance:  { ic: 'mail',         nc: '#9a5b05', nb: '#fdf4e2', rub: 'rapprochement' },
   offer:    { ic: 'affaires',     nc: '#1f6e44', nb: '#e4f1e8', rub: 'affaires' },
   email:    { ic: 'mail',         nc: '#3a5a8a', nb: '#e7edf7', rub: 'contact' },
@@ -33802,7 +33805,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     switch (kind) {
       case 'rdv': return 'Rendez-vous'
       case 'email': return 'Email'
-      case 'like': return 'Rapprochement'
+      case 'like': return 'Coup de cœur'
+      case 'pass': return 'Pas intéressé'
       case 'match': return 'Rapprochement'
       case 'offer': return 'Offre'
       case 'visitreq': return 'Demande de visite'
@@ -33822,6 +33826,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
       case 'like':
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z" /></svg>
+      case 'pass':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" /></svg>
       case 'match':
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
       case 'offer':
