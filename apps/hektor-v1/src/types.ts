@@ -459,6 +459,7 @@ export type AppContactRelation = {
   transaction_date?: string | null
   transaction_amount?: string | null
   is_active_annonce?: boolean | number | string | null
+  statut_annonce?: string | null
   last_seen_at?: string | null
   refreshed_at?: string | null
 }

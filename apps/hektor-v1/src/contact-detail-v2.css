@@ -492,3 +492,15 @@
   .fa-contact-v2 .fa-cx-dbar-f .v { color: var(--md-text); }
   .fa-contact-v2 .fa-cx-dbar-f .k { color: var(--md-text-muted); }
 }
+
+/* ── Compteur « N biens » du bouton rapprochement (chiffre en pastille, façon maquette v30) ── */
+.fa-contact-v2 .fa-cx-srch-match b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 13.5px; background: rgba(255, 255, 255, .22); border-radius: 6px; padding: 1px 7px; }
+
+/* ── Statut de l'annonce liée (pastille colorée) dans la ligne « Biens & mandats liés » ── */
+.fa-contact-v2 .fa-cx-lk-refrow { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.fa-contact-v2 .fa-cx-lk-refrow .fa-cx-lk-ref { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-lk-stat { flex: none; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; border: 1px solid transparent; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-lk-stat.ok { color: #1f6e44; background: #e6f4ec; border-color: #cfe7d8; }
+.fa-contact-v2 .fa-cx-lk-stat.warn { color: #9a5b05; background: #fdf4e2; border-color: #f0dcb4; }
+.fa-contact-v2 .fa-cx-lk-stat.done { color: #1f5b96; background: #e9f1fb; border-color: #cfe0f2; }
+.fa-contact-v2 .fa-cx-lk-stat.muted { color: #6f6152; background: #f3ede2; border-color: #e6dccb; }

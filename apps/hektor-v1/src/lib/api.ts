@@ -2515,21 +2515,25 @@ export async function loadContactRelations(contactId: string): Promise<AppContac
     const annonceIds = Array.from(new Set(relations.map((r) => String(r.hektor_annonce_id ?? '').trim()).filter(Boolean)))
     if (annonceIds.length) {
       const [dossiersRes, historicalRes, archiveRes] = await Promise.all([
-        supabase.from('app_dossiers_current').select('hektor_annonce_id, photo_url_listing').in('hektor_annonce_id', annonceIds),
-        supabase.from('app_historical_annonce_index_current').select('hektor_annonce_id, photo_url_listing').in('hektor_annonce_id', annonceIds),
-        supabase.from('app_archive_annonce_index_current').select('hektor_annonce_id, photo_url_listing').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_dossiers_current').select('hektor_annonce_id, photo_url_listing, statut_annonce').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_historical_annonce_index_current').select('hektor_annonce_id, photo_url_listing, statut_annonce').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_archive_annonce_index_current').select('hektor_annonce_id, photo_url_listing, statut_annonce').in('hektor_annonce_id', annonceIds),
       ])
       const photoByAnnonce = new Map<string, string>()
+      const statutByAnnonce = new Map<string, string>()
       const isReal = (url: string) => !!url && !/no_pic/i.test(url)
-      const ingest = (rows: Array<{ hektor_annonce_id: string | number | null; photo_url_listing: string | null }> | null) => {
+      const ingest = (rows: Array<{ hektor_annonce_id: string | number | null; photo_url_listing: string | null; statut_annonce?: string | null }> | null) => {
         for (const row of rows ?? []) {
           const key = String(row.hektor_annonce_id ?? '').trim()
+          if (!key) continue
           const url = (row.photo_url_listing ?? '').trim()
-          if (!key || !url) continue
           // On prefere toujours une vraie photo a un placeholder no_pic deja stocke.
-          if (!photoByAnnonce.has(key) || (isReal(url) && !isReal(photoByAnnonce.get(key) ?? ''))) {
+          if (url && (!photoByAnnonce.has(key) || (isReal(url) && !isReal(photoByAnnonce.get(key) ?? '')))) {
             photoByAnnonce.set(key, url)
           }
+          // Statut de l'annonce : priorite au 1er index qui le porte (dossiers actifs > historique > archive).
+          const statut = (row.statut_annonce ?? '').trim()
+          if (statut && !statutByAnnonce.has(key)) statutByAnnonce.set(key, statut)
         }
       }
       ingest(dossiersRes.data as never)
@@ -2538,6 +2542,7 @@ export async function loadContactRelations(contactId: string): Promise<AppContac
       for (const relation of relations) {
         const key = String(relation.hektor_annonce_id ?? '').trim()
         if (key && photoByAnnonce.has(key)) relation.photo_url_listing = photoByAnnonce.get(key) ?? null
+        if (key && statutByAnnonce.has(key)) relation.statut_annonce = statutByAnnonce.get(key) ?? null
       }
     }
   } catch {
@@ -2783,6 +2788,18 @@ export async function createRelanceForContact(args: {
   })
   if (error) throw new Error(error.message ?? 'Unable to create relance')
   return ((data ?? []) as RelanceRow[])[0] ?? null
+}
+
+/** Compteur « N biens correspondants » par recherche d'un contact (bouton rapprochement, fiche V2). */
+export async function loadRapprochementCountsForContact(hektorContactId: string): Promise<Record<string, number>> {
+  if (!hasSupabaseEnv || !supabase || !hektorContactId.trim()) return {}
+  const { data, error } = await supabase.rpc('app_count_rapprochements_for_contact', { p_hektor_contact_id: hektorContactId.trim() })
+  if (error) throw new Error(error.message ?? 'Unable to count rapprochements')
+  const out: Record<string, number> = {}
+  for (const row of (data ?? []) as Array<{ contact_search_key: string; n: number }>) {
+    if (row.contact_search_key) out[row.contact_search_key] = Number(row.n) || 0
+  }
+  return out
 }
 
 export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null, gmailMessageId?: string | null, gmailThreadId?: string | null): Promise<void> {

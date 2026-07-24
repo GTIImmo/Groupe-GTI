@@ -127,6 +127,7 @@ import {
   loadContactActivite,
   type ContactActivityItem,
   loadRelancesForContact,
+  loadRapprochementCountsForContact,
   createRelanceForContact,
   setRelanceStatus,
   type RelanceRow,
@@ -33407,6 +33408,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const [contactActivity, setContactActivity] = useState<ContactActivityItem[]>([])
   const [contactActivityLoading, setContactActivityLoading] = useState(false)
   const [activityFilter, setActivityFilter] = useState('all')
+  const [rapproCounts, setRapproCounts] = useState<Record<string, number>>({}) // « N biens » par recherche
   const [contactRelances, setContactRelances] = useState<RelanceRow[]>([])
   const [contactRelancesLoading, setContactRelancesLoading] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
@@ -33717,6 +33719,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
       .then((rows) => { if (!cancelled) setContactRelances(rows) })
       .catch(() => { if (!cancelled) setContactRelances([]) })
       .finally(() => { if (!cancelled) setContactRelancesLoading(false) })
+    setRapproCounts({})
+    loadRapprochementCountsForContact(props.contact.hektor_contact_id)
+      .then((counts) => { if (!cancelled) setRapproCounts(counts) })
+      .catch(() => { if (!cancelled) setRapproCounts({}) })
     return () => { cancelled = true }
   }, [props.contact.hektor_contact_id])
 
@@ -34035,6 +34041,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     const isActive = contactBool(search.is_active)
                     const critParts = [...criteria]
                     if (cities.length) critParts.push(cities.length > 1 ? `${cities.length} communes` : cities[0])
+                    const nBiens = rapproCounts[search.contact_search_key] ?? 0
                     return (
                       <div key={`fa-cx-srch-${search.contact_search_key}`} className="fa-cx-srch">
                         <span className="fa-cx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
@@ -34046,9 +34053,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                           <div className="fa-cx-srch-crit">{critParts.join(' · ') || 'Critères non renseignés'}</div>
                         </div>
                         {props.onOpenRechercheAcquereur ? (
-                          // TODO Lot 6: brancher le compteur "N biens" (loadRapprochements/app_count_rapprochements_for_contact)
-                          <button className="fa-cx-srch-match" type="button" title="Rapprocher les biens" onClick={() => props.onOpenRechercheAcquereur?.(search)}>
-                            Rapprocher les biens<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                          <button className="fa-cx-srch-match" type="button" title={`Rapprocher les biens correspondants (${nBiens})`} onClick={() => props.onOpenRechercheAcquereur?.(search)}>
+                            <b>{nBiens}</b> bien{nBiens !== 1 ? 's' : ''}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                           </button>
                         ) : null}
                         {props.canManageContacts ? (
@@ -34093,6 +34099,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     const canOpen = relation.app_dossier_id != null && Number.isFinite(relationAppDossierId)
                     const relationRef = `${relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : (relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`)}${relation.titre_bien ? ` · ${relation.titre_bien}` : ''}`
                     const relationSub = (relation.transaction_state || '').trim() || 'annonce liée'
+                    const relationStatut = (relation.statut_annonce || '').trim()
+                    const st = relationStatut.toLowerCase()
+                    const statutTone = st.includes('vendu') ? 'done' : (st.includes('compromis') || st.includes('offre')) ? 'warn' : st.includes('actif') ? 'ok' : 'muted'
                     const relationPhoto = (relation.photo_url_listing || '').trim()
                     const relationHasPhoto = !!relationPhoto && !/no[_-]pic/i.test(relationPhoto)
                     const relationAmount = formatPrice(relation.transaction_amount)
@@ -34103,7 +34112,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                           {relationHasPhoto ? <img src={relationPhoto} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : <span className="rf">Photo</span>}
                         </span>
                         <span className="fa-cx-lk-main">
-                          <span className="fa-cx-lk-ref">{relationRef}</span>
+                          <span className="fa-cx-lk-refrow">
+                            <span className="fa-cx-lk-ref">{relationRef}</span>
+                            {relationStatut ? <span className={`fa-cx-lk-stat ${statutTone}`}>{relationStatut}</span> : null}
+                          </span>
                           <span className="fa-cx-lk-t">{relationSub}</span>
                         </span>
                         <span className="fa-cx-lk-meta">
