@@ -331,9 +331,11 @@
 .fa-contact-v2 button.fa-cx-ev { font: inherit; color: inherit; }
 .fa-contact-v2 .fa-cx-ev.is-link { width: 100%; background: none; border: none; text-align: left; cursor: pointer; border-radius: 12px; margin: 0 -6px; padding-right: 8px; transition: background .14s; }
 .fa-contact-v2 .fa-cx-ev.is-link:hover { background: color-mix(in srgb, var(--tone, var(--blue)) 9%, #fff); }
-.fa-contact-v2 .fa-cx-ev-go { align-self: center; flex: none; color: var(--faint); transition: transform .15s, color .14s; }
-.fa-contact-v2 .fa-cx-ev-go svg { width: 15px; height: 15px; display: block; }
-.fa-contact-v2 .fa-cx-ev.is-link:hover .fa-cx-ev-go { color: var(--tone, var(--blue)); transform: translateX(3px); }
+/* Bouton de lien LIBELLÉ (pilule teintée au ton de l'événement), comme le fil de la page annonce */
+.fa-contact-v2 .fa-cx-ev-go { align-self: center; flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--tone, var(--blue)); background: var(--tone-bg, #eef3fb); border: 1px solid color-mix(in srgb, var(--tone, var(--blue)) 26%, transparent); border-radius: 9px; padding: 5px 10px; white-space: nowrap; transition: transform .15s, background .14s, color .14s, box-shadow .15s; }
+.fa-contact-v2 .fa-cx-ev-go svg { width: 13px; height: 13px; flex: none; }
+.fa-contact-v2 .fa-cx-ev.is-link:hover .fa-cx-ev-go { background: var(--tone, var(--blue)); color: #fff; box-shadow: 0 4px 10px -4px var(--tone, var(--blue)); transform: translateX(2px); }
+@media (max-width: 640px) { .fa-contact-v2 .fa-cx-ev-go-t { display: none; } }
 .fa-contact-v2 .fa-cx-feed-empty { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; padding: 20px 14px; border: 1px dashed var(--line); border-radius: 12px; background: #fdfbf8; }
 
 /* ── À faire : liste des relances ── */

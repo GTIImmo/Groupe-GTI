@@ -2802,6 +2802,19 @@ export async function loadRapprochementCountsForContact(hektorContactId: string)
   return out
 }
 
+/** Compteur « biens correspondants » TOTAL par contact (listing annuaire, batch). */
+export async function loadRapprochementCountsForContacts(hektorContactIds: string[]): Promise<Record<string, number>> {
+  const ids = Array.from(new Set(hektorContactIds.map((id) => String(id ?? '').trim()).filter(Boolean)))
+  if (!hasSupabaseEnv || !supabase || ids.length === 0) return {}
+  const { data, error } = await supabase.rpc('app_count_rapprochements_for_contacts', { p_hektor_contact_ids: ids })
+  if (error) throw new Error(error.message ?? 'Unable to count rapprochements')
+  const out: Record<string, number> = {}
+  for (const row of (data ?? []) as Array<{ hektor_contact_id: string; n: number }>) {
+    if (row.hektor_contact_id) out[String(row.hektor_contact_id)] = Number(row.n) || 0
+  }
+  return out
+}
+
 export async function recordProposition(contactSearchKey: string, appDossierId: number, channel: string, note?: string | null, nego?: string | null, gmailMessageId?: string | null, gmailThreadId?: string | null): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_record_proposition', {

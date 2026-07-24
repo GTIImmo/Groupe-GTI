@@ -128,6 +128,7 @@ import {
   type ContactActivityItem,
   loadRelancesForContact,
   loadRapprochementCountsForContact,
+  loadRapprochementCountsForContacts,
   createRelanceForContact,
   setRelanceStatus,
   type RelanceRow,
@@ -33883,20 +33884,27 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     }
   }
   const filteredActivity = contactActivity.filter((item) => activityFilter === 'all' || item.aud === activityFilter)
-  // Lien d'une ligne du fil (comme la page annonce) : bien -> ouvre le détail dossier
-  // (retour = revient à cette fiche contact) ; recherche -> ouvre le rapprochement ;
-  // email -> onglet Échanges ; rdv/visite -> onglet Rendez-vous. null = non cliquable.
-  const activityLinkFor = (item: ContactActivityItem): (() => void) | null => {
+  // Lien d'une ligne du fil (bouton libellé, comme la page annonce). Destination par nature :
+  //  - RDV / demande de visite -> onglet « Rendez-vous » (gérer le RDV)
+  //  - email                    -> onglet « Échanges » (lire le fil Gmail)
+  //  - match / relance          -> « Rapprochement » (ouvre le rapprochement de la recherche)
+  //  - retour bien / offre / activité annonce (mandat/prix…) -> « Le bien » (détail dossier ;
+  //    retour = revient à cette fiche contact)
+  // null = non cliquable.
+  const activityLink = (item: ContactActivityItem): { label: string; onClick: () => void } | null => {
+    const search = item.ref_search_key ? props.searches.find((s) => s.contact_search_key === item.ref_search_key) : null
+    if (item.kind === 'rdv' || item.kind === 'visitreq') return { label: 'Rendez-vous', onClick: () => setActivityView('rdv') }
+    if (item.kind === 'email') return { label: 'Échanges', onClick: () => setActivityView('echanges') }
+    if ((item.kind === 'match' || item.kind === 'relance') && search && props.onOpenRechercheAcquereur) {
+      return { label: 'Rapprochement', onClick: () => props.onOpenRechercheAcquereur?.(search) }
+    }
     if (item.ref_dossier_id && props.onOpenDossier) {
       const id = item.ref_dossier_id
-      return () => props.onOpenDossier?.(id)
+      return { label: 'Le bien', onClick: () => props.onOpenDossier?.(id) }
     }
-    if (item.ref_search_key && props.onOpenRechercheAcquereur) {
-      const search = props.searches.find((s) => s.contact_search_key === item.ref_search_key)
-      if (search) return () => props.onOpenRechercheAcquereur?.(search)
+    if (search && props.onOpenRechercheAcquereur) {
+      return { label: 'Rapprochement', onClick: () => props.onOpenRechercheAcquereur?.(search) }
     }
-    if (item.kind === 'email') return () => setActivityView('echanges')
-    if (item.kind === 'rdv' || item.kind === 'visitreq') return () => setActivityView('rdv')
     return null
   }
 
@@ -34345,7 +34353,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   ) : filteredActivity.length > 0 ? (
                     <div className="fa-cx-feed">
                       {filteredActivity.map((item, index) => {
-                        const onGo = activityLinkFor(item)
+                        const link = activityLink(item)
                         const inner = (
                           <>
                             <span className="fa-cx-ev-ic">{activityKindIcon(item.kind)}</span>
@@ -34357,13 +34365,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                               </div>
                               {item.rest ? <div className="fa-cx-ev-s">{item.rest}</div> : null}
                             </div>
-                            {onGo ? (
-                              <span className="fa-cx-ev-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M9 6l6 6-6 6" /></svg></span>
+                            {link ? (
+                              <span className="fa-cx-ev-go"><span className="fa-cx-ev-go-t">{link.label}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
                             ) : null}
                           </>
                         )
-                        return onGo ? (
-                          <button key={`fa-cx-ev-${index}-${item.at}`} type="button" className={`fa-cx-ev is-link g-${item.aud}`} onClick={onGo}>{inner}</button>
+                        return link ? (
+                          <button key={`fa-cx-ev-${index}-${item.at}`} type="button" className={`fa-cx-ev is-link g-${item.aud}`} onClick={link.onClick}>{inner}</button>
                         ) : (
                           <div key={`fa-cx-ev-${index}-${item.at}`} className={`fa-cx-ev g-${item.aud}`}>{inner}</div>
                         )
@@ -34626,6 +34634,24 @@ function ContactsScreen(props: {
   // "Sous mandat" est un filtre visuel doux (comme dans la maquette, ou il ne filtre pas) :
   // on garde l'etat local d'affichage sans toucher au chargement serveur.
   const [sousMandatOn, setSousMandatOn] = useState(false)
+  // Compteur « biens correspondants » par contact (même métrique que le détail), chargé en
+  // BATCH pour la page affichée -> le badge du listing montre le nombre de biens qui matchent
+  // (36), plus le simple nombre de recherches actives.
+  const [rapproByContact, setRapproByContact] = useState<Record<string, number>>({})
+  useEffect(() => {
+    const ids = props.contacts
+      .filter((c) => {
+        const cats = contactDirectoryCategories(contactJsonList(c.relation_roles_json))
+        return cats.includes('acquereur') && Number(c.active_search_count ?? 0) > 0
+      })
+      .map((c) => c.hektor_contact_id)
+    if (ids.length === 0) { setRapproByContact({}); return }
+    let cancelled = false
+    loadRapprochementCountsForContacts(ids)
+      .then((m) => { if (!cancelled) setRapproByContact(m) })
+      .catch(() => { if (!cancelled) setRapproByContact({}) })
+    return () => { cancelled = true }
+  }, [props.contacts])
   const activeRole = props.activeRole ?? ''
   const selectRole = (role: string) => props.onSelectRole?.(activeRole === role ? '' : role)
   const AV_ICONS = {
@@ -34759,7 +34785,12 @@ function ContactsScreen(props: {
                       <div className="rc-actions">
                         {phone ? <a className="ra" href={`tel:${phone}`} title="Appeler" onClick={(event) => event.stopPropagation()}>{AV_ICONS.tel}</a> : <span className="ra-spacer" />}
                         <button className="ra" type="button" title="Modifier le contact" onClick={(event) => { event.stopPropagation(); props.canManageContacts ? openContactEdit(contact.hektor_contact_id) : openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.edit}</button>
-                        {canRappro ? <button className="ra rappro" type="button" title={`${activeSearch} recherche(s) active(s)`} onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.rappro}{activeSearch > 0 ? <span className="ra-badge">{activeSearch}</span> : null}</button> : <span className="ra-spacer" />}
+                        {canRappro ? (() => {
+                          const rapproN = rapproByContact[contact.hektor_contact_id]
+                          const badgeVal = rapproN ?? activeSearch // fallback au nb de recherches tant que le batch n'est pas chargé
+                          const tip = rapproN != null ? `${rapproN} bien${rapproN > 1 ? 's' : ''} correspondant${rapproN > 1 ? 's' : ''}` : `${activeSearch} recherche(s) active(s)`
+                          return <button className="ra rappro" type="button" title={tip} onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.rappro}{badgeVal > 0 ? <span className="ra-badge">{badgeVal}</span> : null}</button>
+                        })() : <span className="ra-spacer" />}
                         <button className="ra cta" type="button" title="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); openContactDetail(contact.hektor_contact_id) }}>{AV_ICONS.arr}</button>
                       </div>
                     </div>
