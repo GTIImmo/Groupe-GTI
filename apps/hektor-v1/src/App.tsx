@@ -10665,6 +10665,9 @@ export default function App() {
   const [annonceContactSearches, setAnnonceContactSearches] = useState<AppContactSearch[]>([])
   const [contactStats, setContactStats] = useState<ContactStats>({ total: 0, active: 0, archived: 0, duplicates: 0, highRiskDuplicates: 0, linked: 0, searchContacts: 0, activeSearchContacts: 0, eligible: 0 })
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null)
+  // Contact d'origine quand un dossier est ouvert DEPUIS la fiche contact : le bouton
+  // retour du détail dossier rouvre alors ce contact au lieu du retour par défaut.
+  const [dossierReturnContactId, setDossierReturnContactId] = useState<string | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
   const selectedDossierRef = useRef<DetailedDossier | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -12116,13 +12119,9 @@ export default function App() {
     })
   }
 
-  function openContactDirectory(contactId: string | null | undefined) {
-    const normalizedId = String(contactId ?? '').trim()
-    if (!normalizedId) return
-    // Si une fiche annonce (détail bien) est ouverte, on affiche la fiche contact
-    // EN POP-UP par-dessus l'annonce : sa fermeture revient au bien (retour contextuel).
-    // Sinon (depuis le listing / ailleurs), comportement historique → écran Contacts.
-    if (detailOpen) { setAnnonceContactId(normalizedId); return }
+  // Affiche la fiche contact sur l'écran Contacts (lookup direct + réouverture du pop-up),
+  // SANS la garde détail-ouvert. Réutilisé par le retour depuis le détail dossier.
+  function showContactInDirectory(normalizedId: string) {
     setScreen('contacts')
     setDetailOpen(false)
     setSelectedContactId(normalizedId)
@@ -12134,6 +12133,16 @@ export default function App() {
       archive: allFilterValue,
       query: normalizedId,
     })
+  }
+
+  function openContactDirectory(contactId: string | null | undefined) {
+    const normalizedId = String(contactId ?? '').trim()
+    if (!normalizedId) return
+    // Si une fiche annonce (détail bien) est ouverte, on affiche la fiche contact
+    // EN POP-UP par-dessus l'annonce : sa fermeture revient au bien (retour contextuel).
+    // Sinon (depuis le listing / ailleurs), comportement historique → écran Contacts.
+    if (detailOpen) { setAnnonceContactId(normalizedId); return }
+    showContactInDirectory(normalizedId)
   }
 
   async function handlePrepareArchivedAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
@@ -12382,8 +12391,16 @@ export default function App() {
   }
 
   function closeDossierDetailPage() {
-    setDetailOpen(false)
     setDetailImageModalUrl(null)
+    // Retour contextuel : si ce dossier a été ouvert depuis une fiche contact, le retour
+    // rouvre ce contact (écran Contacts) au lieu de simplement fermer le détail.
+    if (dossierReturnContactId) {
+      const cid = dossierReturnContactId
+      setDossierReturnContactId(null)
+      showContactInDirectory(cid) // fait déjà setDetailOpen(false) + rouvre le pop-up contact
+      return
+    }
+    setDetailOpen(false)
   }
 
   // --- Actions rapides Estimations : résout le contact propriétaire d'une annonce ---
@@ -17359,6 +17376,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onPrevContact={() => setContactPage((page) => Math.max(1, page - 1))}
             onNextContact={() => setContactPage((page) => Math.min(contactTotalPages, page + 1))}
             onOpenDossier={(id) => {
+              setDossierReturnContactId(selectedContactId) // retour du détail → rouvre ce contact
               setScreen('mandats')
               setSelectedMandatId(id)
               setSelectedDossierId(id)
@@ -18283,6 +18301,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onGoToContactPage={(page) => setContactPage(Math.min(contactTotalPages, Math.max(1, page)))}
             onSelectContact={setSelectedContactId}
             onOpenDossier={(id) => {
+              setDossierReturnContactId(selectedContactId) // retour du détail → rouvre ce contact
               setScreen('mandats')
               setSelectedMandatId(id)
               setSelectedDossierId(id)
@@ -33848,6 +33867,22 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     }
   }
   const filteredActivity = contactActivity.filter((item) => activityFilter === 'all' || item.aud === activityFilter)
+  // Lien d'une ligne du fil (comme la page annonce) : bien -> ouvre le détail dossier
+  // (retour = revient à cette fiche contact) ; recherche -> ouvre le rapprochement ;
+  // email -> onglet Échanges ; rdv/visite -> onglet Rendez-vous. null = non cliquable.
+  const activityLinkFor = (item: ContactActivityItem): (() => void) | null => {
+    if (item.ref_dossier_id && props.onOpenDossier) {
+      const id = item.ref_dossier_id
+      return () => props.onOpenDossier?.(id)
+    }
+    if (item.ref_search_key && props.onOpenRechercheAcquereur) {
+      const search = props.searches.find((s) => s.contact_search_key === item.ref_search_key)
+      if (search) return () => props.onOpenRechercheAcquereur?.(search)
+    }
+    if (item.kind === 'email') return () => setActivityView('echanges')
+    if (item.kind === 'rdv' || item.kind === 'visitreq') return () => setActivityView('rdv')
+    return null
+  }
 
   // ── À faire : format du badge date d'une relance (— / Retard / jour+mois) ──
   const todayIso = new Date().toISOString().slice(0, 10)
@@ -34293,19 +34328,30 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     <div className="fa-cx-feed-empty">Chargement de l'activité…</div>
                   ) : filteredActivity.length > 0 ? (
                     <div className="fa-cx-feed">
-                      {filteredActivity.map((item, index) => (
-                        <div key={`fa-cx-ev-${index}-${item.at}`} className={`fa-cx-ev g-${item.aud}`}>
-                          <span className="fa-cx-ev-ic">{activityKindIcon(item.kind)}</span>
-                          <div className="fa-cx-ev-bd">
-                            <div className="fa-cx-ev-top">
-                              <span className={`fa-cx-ev-type g-${item.aud}`}>{activityKindLabel(item.kind)}</span>
-                              <span className="fa-cx-ev-nm">{item.lead}</span>
-                              <span className="fa-cx-ev-when">{formatDateTime(item.at)}</span>
+                      {filteredActivity.map((item, index) => {
+                        const onGo = activityLinkFor(item)
+                        const inner = (
+                          <>
+                            <span className="fa-cx-ev-ic">{activityKindIcon(item.kind)}</span>
+                            <div className="fa-cx-ev-bd">
+                              <div className="fa-cx-ev-top">
+                                <span className={`fa-cx-ev-type g-${item.aud}`}>{activityKindLabel(item.kind)}</span>
+                                <span className="fa-cx-ev-nm">{item.lead}</span>
+                                <span className="fa-cx-ev-when">{formatDateTime(item.at)}</span>
+                              </div>
+                              {item.rest ? <div className="fa-cx-ev-s">{item.rest}</div> : null}
                             </div>
-                            {item.rest ? <div className="fa-cx-ev-s">{item.rest}</div> : null}
-                          </div>
-                        </div>
-                      ))}
+                            {onGo ? (
+                              <span className="fa-cx-ev-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M9 6l6 6-6 6" /></svg></span>
+                            ) : null}
+                          </>
+                        )
+                        return onGo ? (
+                          <button key={`fa-cx-ev-${index}-${item.at}`} type="button" className={`fa-cx-ev is-link g-${item.aud}`} onClick={onGo}>{inner}</button>
+                        ) : (
+                          <div key={`fa-cx-ev-${index}-${item.at}`} className={`fa-cx-ev g-${item.aud}`}>{inner}</div>
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="fa-cx-feed-empty">Aucune activité enregistrée pour ce contact.</div>

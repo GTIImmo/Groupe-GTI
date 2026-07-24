@@ -327,6 +327,13 @@
 .fa-contact-v2 .fa-cx-ev-nm { font-size: 13.5px; font-weight: 700; }
 .fa-contact-v2 .fa-cx-ev-when { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--faint); white-space: nowrap; }
 .fa-contact-v2 .fa-cx-ev-s { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+/* Ligne du fil cliquable (comme la page annonce) : bouton reset + hover teinté + chevron */
+.fa-contact-v2 button.fa-cx-ev { font: inherit; color: inherit; }
+.fa-contact-v2 .fa-cx-ev.is-link { width: 100%; background: none; border: none; text-align: left; cursor: pointer; border-radius: 12px; margin: 0 -6px; padding-right: 8px; transition: background .14s; }
+.fa-contact-v2 .fa-cx-ev.is-link:hover { background: color-mix(in srgb, var(--tone, var(--blue)) 9%, #fff); }
+.fa-contact-v2 .fa-cx-ev-go { align-self: center; flex: none; color: var(--faint); transition: transform .15s, color .14s; }
+.fa-contact-v2 .fa-cx-ev-go svg { width: 15px; height: 15px; display: block; }
+.fa-contact-v2 .fa-cx-ev.is-link:hover .fa-cx-ev-go { color: var(--tone, var(--blue)); transform: translateX(3px); }
 .fa-contact-v2 .fa-cx-feed-empty { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; padding: 20px 14px; border: 1px dashed var(--line); border-radius: 12px; background: #fdfbf8; }
 
 /* ── À faire : liste des relances ── */
@@ -461,10 +468,10 @@
    ========================================================================== */
 
 /* ── Segmented control dans l'en-tête de la bande « Activité & relation » ── */
-.fa-contact-v2 .fa-cx-seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; background: #faf6f0; border: 1px solid var(--line); border-radius: 99px; margin-right: 8px; }
-.fa-contact-v2 .fa-cx-seg button { font: inherit; font-size: 11.5px; font-weight: 700; color: var(--muted); background: transparent; border: none; border-radius: 99px; padding: 5px 13px; cursor: pointer; transition: color .14s, background .14s, box-shadow .14s; }
-.fa-contact-v2 .fa-cx-seg button:hover { color: var(--ink-soft); }
-.fa-contact-v2 .fa-cx-seg button.on { color: #1f5b96; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.fa-contact-v2 .fa-cx-seg { display: inline-flex; align-items: center; gap: 3px; padding: 3px; background: #fff; border: 1.5px solid color-mix(in srgb, var(--sc, var(--blue)) 45%, var(--line)); border-radius: 99px; margin-right: 8px; box-shadow: 0 2px 7px -4px rgba(32, 24, 18, .3); }
+.fa-contact-v2 .fa-cx-seg button { font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .01em; color: var(--ink-soft); background: transparent; border: none; border-radius: 99px; padding: 6px 15px; cursor: pointer; transition: color .14s, background .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-seg button:hover { color: var(--sc, var(--blue)); background: color-mix(in srgb, var(--sc, var(--blue)) 11%, #fff); }
+.fa-contact-v2 .fa-cx-seg button.on { color: #fff; background: var(--sc, var(--blue)); box-shadow: 0 4px 10px -4px var(--sc, var(--blue)), inset 0 1px 0 rgba(255, 255, 255, .25); }
 
 /* ── En-tête interne des vues RDV / Échanges (méta + sous-titre + action) ── */
 .fa-contact-v2 .fa-cx-view-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }

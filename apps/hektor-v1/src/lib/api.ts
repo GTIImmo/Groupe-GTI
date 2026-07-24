@@ -2753,7 +2753,7 @@ export async function loadRelancesForDossier(appDossierId: number): Promise<Rela
 }
 
 // ---- Fiche Contact v2 : fil d'activité + relances contact (RPC dédiées, additives) ----
-export type ContactActivityItem = { kind: string; aud: string; at: string; lead: string; rest: string; actor: string | null }
+export type ContactActivityItem = { kind: string; aud: string; at: string; lead: string; rest: string; actor: string | null; ref_dossier_id?: number | null; ref_search_key?: string | null }
 
 /** Fil d'activité unifié d'un contact (fiche V2) — RPC app_contact_activite. */
 export async function loadContactActivite(hektorContactId: string, limit = 40): Promise<ContactActivityItem[]> {
