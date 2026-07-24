@@ -34376,6 +34376,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         </div>
       </div>
 
+      {/* Les modales (édition, RDV, email, suppression, recherche) sont des composants
+          partagés dont les styles sont scopés #fcx-root. Le root V2 est #fa-cx-root, donc
+          on les enveloppe dans #fcx-root pour qu'elles retrouvent leurs styles + z-index
+          d'origine (edit-overlay z-1400 etc.), au-dessus de l'overlay de la fiche. */}
+      <div id="fcx-root" className="fa-cx-modal-scope">
       {editing && props.canManageContacts ? (
         <ContactEditModalV2
           contact={props.contact}
@@ -34471,6 +34476,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
           onCreated={(job) => props.onJobCreated?.(job)}
         />
       ) : null}
+      </div>
     </div>
   )
 }
