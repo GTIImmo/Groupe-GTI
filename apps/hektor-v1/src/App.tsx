@@ -28538,29 +28538,36 @@ function contactToneFromRoles(roles: string[], contact?: Pick<AppContact, 'activ
   return 'default'
 }
 
-// ----- Annuaire des contacts (refonte maquette) : derivations visuelles -----
-// Categories metier NON exclusives : un contact peut cumuler un cote vente ET un
-// cote achat (max une par cote => 0, 1 ou 2 categories).
-//  - Cote vente  : Mandant (mandat actif) > Vendeur (role `proprietaire`, lie a une transaction)
-//  - Cote achat  : Acquereur (recherche active) > Acheteur (`acquereur_vente`, achat conclu)
-// NB : `proprietaire` est un VENDEUR (transaction), libelle "Vendeur" pour ne pas
-// le confondre avec Mandant ; le role technique et les filtres serveur restent inchanges.
-type ContactDirectoryType = 'vendeur' | 'mandant' | 'acquereur' | 'acheteur' | 'autre'
+// ----- Annuaire des contacts : dérivation UNIQUE du type (partagée listing + détail V2) -----
+// 4 catégories métier, NON exclusives (un contact peut cumuler) :
+//  - Mandant      : lié à une annonce AVEC un n° de mandat (role `mandant`, calculé au build)
+//  - Acheteur     : lié à une annonce par une TRANSACTION (offre/compromis/vente)
+//  - Propriétaire : lié à une annonce SANS mandat (role `proprietaire`)
+//  - Acquéreur    : a une RECHERCHE active (prospect), indépendamment des relations aux biens
+// Priorité du TYPE DOMINANT (avatar/thème) : Mandant > Acheteur > Propriétaire > Acquéreur.
+type ContactDirectoryType = 'mandant' | 'proprietaire' | 'acheteur' | 'acquereur' | 'autre'
 const contactDirectoryTypeLabel: Record<ContactDirectoryType, string> = {
-  vendeur: 'Vendeur',
   mandant: 'Mandant',
-  acquereur: 'Acquéreur',
+  proprietaire: 'Propriétaire',
   acheteur: 'Acheteur',
+  acquereur: 'Acquéreur',
   autre: 'Contact',
 }
-function contactDirectoryCategories(roles: string[]): ContactDirectoryType[] {
+function contactDirectoryCategories(roles: string[], activeSearchCount = 0): ContactDirectoryType[] {
   const out: ContactDirectoryType[] = []
-  const sell: ContactDirectoryType | null = roles.includes('mandant') ? 'mandant' : roles.includes('proprietaire') ? 'vendeur' : null
-  const hasActiveBuyer = roles.some((role) => isBuyerRole(role) && role !== 'acquereur_vente')
-  const buy: ContactDirectoryType | null = hasActiveBuyer ? 'acquereur' : roles.includes('acquereur_vente') ? 'acheteur' : null
-  if (sell) out.push(sell)
-  if (buy) out.push(buy)
-  return out
+  if (roles.includes('mandant')) out.push('mandant')          // avec n° de mandat
+  if (roles.some(isBuyerRole)) out.push('acheteur')           // transaction offre/compromis/vente
+  if (roles.includes('proprietaire')) out.push('proprietaire') // propriétaire sans mandat
+  if (activeSearchCount > 0) out.push('acquereur')            // recherche active (prospect)
+  return out // déjà en ordre de priorité -> out[0] = type dominant
+}
+// Étape de transaction d'un « Acheteur » (précision offre/compromis/vente).
+function contactBuyerStageLabel(roles: string[]): string | null {
+  if (roles.includes('acquereur_vente')) return 'Vente'
+  if (roles.includes('acquereur_compromis')) return 'Compromis'
+  if (roles.includes('acquereur_offre')) return 'Offre'
+  if (roles.some(isBuyerRole)) return 'Transaction'
+  return null
 }
 // Badge "Qualite" = fiabilite de la fiche (completeness_score). En prod c'est un
 // score ENTIER 0..8 (nb de champs cles renseignes), verifie sur app_contacts_current.
@@ -33500,19 +33507,19 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     hektorNegotiators: props.hektorNegotiators,
   })
 
-  // ── Ambiance par rôle (précédence mandant > vendeur/propriétaire > acquéreur* > acheteur) ──
-  const normalizedRoles = selectedRoles.map((role) => role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())
-  const typeClass = normalizedRoles.includes('mandant')
+  // ── Type & ambiance : MÊME dérivation que le listing (contactDirectoryCategories) pour que le
+  //    type soit IDENTIQUE listing ↔ détail. Priorité Mandant > Acheteur > Propriétaire > Acquéreur.
+  const dirCategories = contactDirectoryCategories(selectedRoles, Number(props.contact.active_search_count ?? 0))
+  const primaryCategory: ContactDirectoryType = dirCategories[0] ?? 'autre'
+  const typeClass = primaryCategory === 'mandant'
     ? 'ty-mandant'
-    : normalizedRoles.some((role) => role === 'vendeur' || role === 'proprietaire')
-      ? 'ty-vendeur'
-      : normalizedRoles.some((role) => role.startsWith('acquereur'))
-        ? 'ty-acq'
-        : normalizedRoles.includes('acheteur')
-          ? 'ty-acheteur'
-          : 'ty-acq'
-  const typeClassLabel = typeClass === 'ty-mandant' ? 'Mandant' : typeClass === 'ty-vendeur' ? 'Vendeur' : typeClass === 'ty-acheteur' ? 'Acheteur' : 'Acquéreur'
-  const dominantTypeLabel = roleLabels[0] || typeClassLabel
+    : primaryCategory === 'acheteur'
+      ? 'ty-acheteur'
+      : primaryCategory === 'proprietaire'
+        ? 'ty-vendeur' // réutilise la classe orange
+        : 'ty-acq' // acquereur (recherche) ou autre -> teal
+  const dominantTypeLabel = contactDirectoryTypeLabel[primaryCategory]
+  const categoryColor = (cat: ContactDirectoryType) => cat === 'mandant' ? '#c2125f' : cat === 'proprietaire' ? '#c2701a' : cat === 'acheteur' ? '#2f8a5b' : '#2f7c86'
   // Couleur d'une pastille de rôle (contacts hybrides) — même normalisation NFD que relationRowClass.
   const roleColor = (role: string) => {
     const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -34026,12 +34033,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
                 <div className="fa-cx-hero-tx">
                   <div className="fa-cx-name">{contactFullName}</div>
-                  {roleLabels.length > 1 ? (
+                  {dirCategories.length > 1 ? (
                     <div className="fa-cx-type-pills">
-                      {roleLabels.slice(0, 3).map((label, index) => (
-                        <span key={`fa-cx-type-pill-${index}`} className="fa-cx-type-pill multi" style={{ ['--rc']: roleColor(selectedRoles[index]) } as CSSProperties}>{label}</span>
+                      {dirCategories.slice(0, 3).map((cat, index) => (
+                        <span key={`fa-cx-type-pill-${index}`} className="fa-cx-type-pill multi" style={{ ['--rc']: categoryColor(cat) } as CSSProperties}>{contactDirectoryTypeLabel[cat]}</span>
                       ))}
-                      {roleLabels.length > 3 ? <span className="fa-cx-type-pill more">+{roleLabels.length - 3}</span> : null}
+                      {dirCategories.length > 3 ? <span className="fa-cx-type-pill more">+{dirCategories.length - 3}</span> : null}
                     </div>
                   ) : (
                     <span className="fa-cx-type-pill">{dominantTypeLabel}</span>
@@ -34640,10 +34647,7 @@ function ContactsScreen(props: {
   const [rapproByContact, setRapproByContact] = useState<Record<string, number>>({})
   useEffect(() => {
     const ids = props.contacts
-      .filter((c) => {
-        const cats = contactDirectoryCategories(contactJsonList(c.relation_roles_json))
-        return cats.includes('acquereur') && Number(c.active_search_count ?? 0) > 0
-      })
+      .filter((c) => Number(c.active_search_count ?? 0) > 0) // « Acquéreur » = recherche active
       .map((c) => c.hektor_contact_id)
     if (ids.length === 0) { setRapproByContact({}); return }
     let cancelled = false
@@ -34667,14 +34671,14 @@ function ContactsScreen(props: {
     rappro: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.7 12 3l9 6.7V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.7Z" /><path d="M12 17.4c-1.7-1.2-3-2.3-3-3.85a1.55 1.55 0 0 1 3-.55 1.55 1.55 0 0 1 3 .55c0 1.55-1.3 2.65-3 3.85Z" fill="currentColor" stroke="none" /></svg>,
     arr: <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   }
-  const renderStatut = (cat: ContactDirectoryType, linked: number, activeSearch: number) => {
+  const renderStatut = (cat: ContactDirectoryType, linked: number, activeSearch: number, roles: string[]) => {
     if (cat === 'mandant') return (<><span className="st-pill mandat">{AV_ICONS.mandat}Sous mandat</span><span className="st-detail">{linked} bien{linked > 1 ? 's' : ''} en portefeuille</span></>)
-    if (cat === 'vendeur') return (<><span className="st-pill vendu">{AV_ICONS.check}A vendu</span><span className="st-detail">Vente réalisée</span></>)
+    if (cat === 'proprietaire') return (<><span className="st-pill proprio">{AV_ICONS.mandat}Propriétaire</span><span className="st-detail">{linked} bien{linked > 1 ? 's' : ''} · sans mandat</span></>)
+    if (cat === 'acheteur') { const stage = contactBuyerStageLabel(roles); return (<><span className="st-pill achete">{AV_ICONS.check}Acheteur</span><span className="st-detail">{stage ? `Transaction · ${stage}` : 'Transaction en cours'}</span></>) }
     if (cat === 'acquereur') {
       if (activeSearch > 0) return (<><span className="st-pill search">{AV_ICONS.search}Recherche active</span><span className="st-detail">{activeSearch} critère{activeSearch > 1 ? 's' : ''} enregistré{activeSearch > 1 ? 's' : ''}</span></>)
       return (<><span className="st-pill nosearch">{AV_ICONS.cross}Sans recherche</span><span className="st-detail">À qualifier</span></>)
     }
-    if (cat === 'acheteur') return (<><span className="st-pill achete">{AV_ICONS.check}A acheté</span><span className="st-detail">Acquisition réalisée</span></>)
     return (<><span className="st-pill nosearch">{AV_ICONS.cross}À qualifier</span><span className="st-detail">Profil à qualifier</span></>)
   }
   return (
@@ -34702,11 +34706,11 @@ function ContactsScreen(props: {
         ) : null}
 
         <div className="segments">
-          <button type="button" className={`seg ${activeRole === '' ? 'active' : ''}`} onClick={() => selectRole('')}><span>Tous</span><span className="cnt">{formatNumber.format(props.contactsTotal)}</span></button>
-          <button type="button" className={`seg ${activeRole === 'proprietaire' ? 'active' : ''}`} onClick={() => selectRole('proprietaire')}><span className="dot" style={{ background: '#1a7a4a' }} /><span>Vendeurs</span></button>
-          <button type="button" className={`seg ${activeRole === 'mandant' ? 'active' : ''}`} onClick={() => selectRole('mandant')}><span className="dot" style={{ background: '#c5005f' }} /><span>Mandants</span></button>
-          <button type="button" className={`seg ${activeRole === 'acquereur' ? 'active' : ''}`} onClick={() => selectRole('acquereur')}><span className="dot" style={{ background: '#3a5fae' }} /><span>Acquéreurs</span></button>
-          <button type="button" className={`seg ${activeRole === 'acquereur_vente' ? 'active' : ''}`} onClick={() => selectRole('acquereur_vente')}><span className="dot" style={{ background: '#7c3aed' }} /><span>Acheteurs</span></button>
+          <button type="button" className={`seg ${activeRole === '' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('') }}><span>Tous</span><span className="cnt">{formatNumber.format(props.contactsTotal)}</span></button>
+          <button type="button" className={`seg ${activeRole === 'proprietaire' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('proprietaire') }}><span className="dot" style={{ background: '#c2701a' }} /><span>Propriétaires</span></button>
+          <button type="button" className={`seg ${activeRole === 'mandant' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('mandant') }}><span className="dot" style={{ background: '#c2125f' }} /><span>Mandants</span></button>
+          <button type="button" className={`seg ${activeRole === 'acquereur' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('acquereur') }}><span className="dot" style={{ background: '#2f8a5b' }} /><span>Acheteurs</span></button>
+          <button type="button" className={`seg ${props.searchActive ? 'active' : ''}`} onClick={() => { props.onSelectRole?.(''); props.onToggleSearchActive?.() }}><span className="dot" style={{ background: '#2f7c86' }} /><span>Acquéreurs</span></button>
           <div className="seg-sep" />
           <button type="button" className={`seg-sub mandat ${sousMandatOn ? 'on' : ''}`} onClick={() => setSousMandatOn((value) => !value)}>{AV_ICONS.mandat}Sous mandat</button>
           <button type="button" className={`seg-sub search ${props.searchActive ? 'on' : ''}`} onClick={() => props.onToggleSearchActive?.()}>{AV_ICONS.search}Recherche active</button>
@@ -34740,7 +34744,7 @@ function ContactsScreen(props: {
                 </div>
                 {props.contacts.map((contact) => {
                   const roles = contactJsonList(contact.relation_roles_json)
-                  const categories = contactDirectoryCategories(roles)
+                  const categories = contactDirectoryCategories(roles, Number(contact.active_search_count ?? 0))
                   const shownCategories: ContactDirectoryType[] = categories.length ? categories : ['autre']
                   const primaryType = shownCategories[0]
                   const isSelected = detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id
@@ -34752,8 +34756,8 @@ function ContactsScreen(props: {
                   const linked = Number(contact.linked_annonce_count ?? 0)
                   const quality = contactQualityTier(contact)
                   const dupRisk = contactHasDuplicateRisk(contact)
-                  const avBadgeOk = categories.some((cat) => cat === 'mandant' || cat === 'vendeur' || cat === 'acheteur') || (categories.includes('acquereur') && activeSearch > 0)
-                  const canRappro = categories.includes('acquereur') && activeSearch > 0
+                  const avBadgeOk = categories.length > 0
+                  const canRappro = categories.includes('acquereur') // Acquéreur = recherche active
                   const negoInitials = contact.commercial_nom ? userInitials(contact.commercial_nom) : 'GTI'
                   return (
                     <div key={contact.hektor_contact_id} className={`contact-row${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact.hektor_contact_id) } }}>
@@ -34765,7 +34769,7 @@ function ContactsScreen(props: {
                           <div className="ci-id">ID {contact.hektor_contact_id}</div>
                         </div>
                       </div>
-                      <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch)}</div>)}</div>
+                      <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch, roles)}</div>)}</div>
                       <div className="coord-col">
                         <div className="coord-tel">{AV_ICONS.tel}{phone || '—'}</div>
                         <div className="coord-mail">{AV_ICONS.mail}{email || '—'}</div>

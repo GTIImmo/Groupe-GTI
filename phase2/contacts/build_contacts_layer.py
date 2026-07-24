@@ -740,6 +740,12 @@ def load_relations(
     roles_by_contact: dict[str, set[str]] = defaultdict(set)
     for row in relation_by_key.values():
         contact_id = row["hektor_contact_id"]
+        # Règle mandant/propriétaire : côté vente, on distingue par la PRÉSENCE d'un numéro de
+        # mandat (mandant = bien sous mandat) plutôt que par la source du lien (annonce vs fiche).
+        # Réassigne aussi role_contact pour que la table relations ET relation_roles_json soient
+        # cohérents. Les rôles acquéreur/notaire/etc. ne sont pas touchés.
+        if row.get("role_contact") in ("proprietaire", "mandant"):
+            row["role_contact"] = "mandant" if clean_text(row.get("numero_mandat")) else "proprietaire"
         roles_by_contact[contact_id].add(row["role_contact"])
         relation_rows[contact_id].append(row)
     return relation_rows, roles_by_contact
