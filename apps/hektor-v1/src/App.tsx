@@ -34753,10 +34753,7 @@ function ContactsScreen(props: {
                   const quality = contactQualityTier(contact)
                   const dupRisk = contactHasDuplicateRisk(contact)
                   const avBadgeOk = categories.some((cat) => cat === 'mandant' || cat === 'vendeur' || cat === 'acheteur') || (categories.includes('acquereur') && activeSearch > 0)
-                  // Un contact peut avoir une recherche active SANS être catégorisé « acquéreur »
-                  // (ex. un mandant qui cherche aussi à acheter). On surface sa recherche dès qu'il
-                  // en a une, quel que soit son rôle -> cohérent avec la fiche.
-                  const canRappro = activeSearch > 0
+                  const canRappro = categories.includes('acquereur') && activeSearch > 0
                   const negoInitials = contact.commercial_nom ? userInitials(contact.commercial_nom) : 'GTI'
                   return (
                     <div key={contact.hektor_contact_id} className={`contact-row${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact.hektor_contact_id) } }}>
@@ -34768,7 +34765,7 @@ function ContactsScreen(props: {
                           <div className="ci-id">ID {contact.hektor_contact_id}</div>
                         </div>
                       </div>
-                      <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch)}</div>)}{!categories.includes('acquereur') && activeSearch > 0 ? <div className="st-block"><span className="st-pill search">{AV_ICONS.search}Recherche active</span><span className="st-detail">{activeSearch} critère{activeSearch > 1 ? 's' : ''} · cherche aussi à acheter</span></div> : null}</div>
+                      <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch)}</div>)}</div>
                       <div className="coord-col">
                         <div className="coord-tel">{AV_ICONS.tel}{phone || '—'}</div>
                         <div className="coord-mail">{AV_ICONS.mail}{email || '—'}</div>
