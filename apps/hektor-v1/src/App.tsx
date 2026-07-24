@@ -33398,6 +33398,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const [contactActionsOpen, setContactActionsOpen] = useState(false)
   // ── Segmented control de la bande « Activité & relation » : Fil | Rendez-vous | Échanges ──
   const [activityView, setActivityView] = useState<'fil' | 'rdv' | 'echanges'>('fil')
+  // ── Bloc « Qualité de la fiche » : déroulant, plié par défaut ──
+  const [qualityOpen, setQualityOpen] = useState(false)
   // ── États recherches (dupliqués depuis ...Base, Lot 2) ──
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
@@ -34293,13 +34295,21 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </section>
               ) : null}
 
-              {/* ── Lot 6 — Bande « Qualité de la fiche » (pleine largeur, portage maquette v30) ── */}
-              <div className="fa-cx-sec" style={{ ['--sc']: '#a8814a' } as CSSProperties}>
+              {/* ── Lot 6 — Bande « Qualité de la fiche » (pleine largeur, portage maquette v30) — déroulant plié par défaut ── */}
+              <button
+                type="button"
+                className={`fa-cx-sec fa-cx-sec-toggle${qualityOpen ? ' is-open' : ''}`}
+                style={{ ['--sc']: '#a8814a' } as CSSProperties}
+                onClick={() => setQualityOpen((v) => !v)}
+                aria-expanded={qualityOpen}
+              >
                 <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
                 Qualité de la fiche
                 <span className="fa-cx-sec-ln" />
-              </div>
+                <span className="fa-cx-sec-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg></span>
+              </button>
 
+              {qualityOpen ? (
               <section className="fa-cx-mod full">
                 <div className="fa-cx-dq">
                   <span className="fa-cx-dq-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx="9" cy="8" r="3.4" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="M16 5.2a3.4 3.4 0 0 1 0 5.6M18 14.4a6 6 0 0 1 3 5.6" /></svg></span>
@@ -34328,6 +34338,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   <div className="fa-cx-dbar-f"><span className="k">Recherches archivées</span><span className="v">{selectedArchivedSearches.length}</span></div>
                 </div>
               </section>
+              ) : null}
             </div>
           </div>
         </div>

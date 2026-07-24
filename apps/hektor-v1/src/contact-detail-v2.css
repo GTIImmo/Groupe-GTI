@@ -184,6 +184,13 @@
 .fa-contact-v2 .fa-cx-sec-act { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .01em; text-transform: none; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border: none; border-radius: 9px; padding: 7px 13px; cursor: pointer; box-shadow: 0 8px 16px -7px rgba(187, 16, 89, .6), inset 0 1px 0 rgba(255, 255, 255, .28); transition: .15s; }
 .fa-contact-v2 .fa-cx-sec-act svg { width: 13px; height: 13px; }
 .fa-contact-v2 .fa-cx-sec-act:hover { filter: brightness(1.06); transform: translateY(-1px); }
+/* ── Bandeau de section cliquable (déroulant « Qualité de la fiche », plié par défaut) ── */
+.fa-contact-v2 button.fa-cx-sec-toggle { width: 100%; background: none; border: none; padding: 4px 2px; cursor: pointer; text-align: left; -webkit-appearance: none; appearance: none; }
+.fa-contact-v2 .fa-cx-sec-toggle:hover .fa-cx-sec-chev { color: var(--sc, var(--brand)); }
+.fa-contact-v2 .fa-cx-sec-toggle:hover .fa-cx-sec-ic { transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-sec-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; color: var(--ink-soft); background: color-mix(in srgb, var(--sc, var(--brand)) 9%, #fff); border: 1px solid color-mix(in srgb, var(--sc, var(--brand)) 16%, transparent); transition: transform .2s ease, color .15s; }
+.fa-contact-v2 .fa-cx-sec-chev svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-sec-toggle.is-open .fa-cx-sec-chev { transform: rotate(180deg); color: var(--sc, var(--brand)); }
 
 /* Carte pleine largeur */
 .fa-contact-v2 .fa-cx-mod { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 17px 19px; box-shadow: 0 1px 2px rgba(32, 24, 18, .04), 0 16px 32px -24px rgba(32, 24, 18, .28); overflow: hidden; }
