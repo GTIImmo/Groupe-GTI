@@ -16781,6 +16781,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
         {annonceContact ? (
           <ContactDetailPopup
+            backContext="annonce"
             contact={annonceContact}
             relations={annonceContactRelations}
             searches={annonceContactSearches}
@@ -32444,6 +32445,7 @@ function ContactDetailPopupBase(props: {
   onOpenDossier: (id: number) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
   initialEditing?: boolean
+  backContext?: 'annonce' | 'annuaire'
 }) {
   const [editing, setEditing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -33911,7 +33913,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 <span className="fa-cx-back-mark" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
                 </span>
-                <span className="fa-cx-back-tx"><span className="fa-cx-back-ey">Retour</span><span className="fa-cx-back-t">Aux contacts</span></span>
+                <span className="fa-cx-back-tx"><span className="fa-cx-back-ey">Retour</span><span className="fa-cx-back-t">{props.backContext === 'annonce' ? 'Fiche annonce' : 'Annuaire'}</span></span>
               </button>
 
               <div className="fa-cx-hero">
