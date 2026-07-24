@@ -372,7 +372,12 @@ def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: st
         # re-indexation (nouvel id local), le retour du client et l'etat "propose/refuse"
         # restaient colles au fantome -> l'annonce disparaissant du rapprochement, le
         # retour devenait orphelin et invisible. Ces 2 tables n'etaient pas couvertes.
-        for feedback_table in ("app_email_envoi_bien", "app_bien_acquereur_statut"):
+        for feedback_table in (
+            "app_email_envoi_bien",
+            "app_bien_acquereur_statut",
+            "app_proposition",
+            "app_relance_rapprochement",
+        ):
             try:
                 client._request(
                     method="PATCH",
