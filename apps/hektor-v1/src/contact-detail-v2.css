@@ -208,6 +208,15 @@
 .fa-contact-v2 .fa-cx-srch-tag { font-size: 10px; font-weight: 800; color: #1f6e44; background: #e9f6ee; border: 1px solid #cfe7d8; border-radius: 99px; padding: 3px 9px; flex: none; }
 .fa-contact-v2 .fa-cx-srch-tag.archived { color: var(--muted); background: #f1eae1; border-color: var(--line); }
 .fa-contact-v2 .fa-cx-srch-crit { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+/* Dépliage de la liste complète des communes (repliée par défaut sur le décompte) */
+.fa-contact-v2 .fa-cx-srch-cities-wrap { margin-top: 5px; }
+.fa-contact-v2 .fa-cx-srch-cities-tg { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; font-weight: 700; color: var(--sc, var(--brand)); background: color-mix(in srgb, var(--sc, var(--brand)) 9%, #fff); border: 1px solid color-mix(in srgb, var(--sc, var(--brand)) 20%, transparent); border-radius: 8px; padding: 3px 9px; cursor: pointer; transition: background .15s, transform .12s; }
+.fa-contact-v2 .fa-cx-srch-cities-tg svg { width: 12px; height: 12px; }
+.fa-contact-v2 .fa-cx-srch-cities-tg:hover { background: color-mix(in srgb, var(--sc, var(--brand)) 16%, #fff); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-srch-cities-chev { transition: transform .2s ease; }
+.fa-contact-v2 .fa-cx-srch-cities-tg[aria-expanded="true"] .fa-cx-srch-cities-chev { transform: rotate(180deg); }
+.fa-contact-v2 .fa-cx-srch-cities { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.fa-contact-v2 .fa-cx-srch-city { font-size: 11px; font-weight: 600; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 7px; padding: 2px 8px; }
 
 /* Pilule teal « Rapprocher les biens → » */
 .fa-contact-v2 .fa-cx-srch-match { position: relative; overflow: hidden; flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #4aa7b1, #2c7c87 52%, #1f636d); border: 0; border-radius: 11px; padding: 8px 12px; cursor: pointer; box-shadow: 0 8px 18px -9px rgba(47, 124, 134, .7), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .16s, box-shadow .2s, filter .15s; }

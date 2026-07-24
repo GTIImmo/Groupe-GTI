@@ -33404,6 +33404,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
   const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
+  // Dépliage de la liste complète des communes d'une recherche (repliée par défaut sur le décompte).
+  const [expandedSearchKeys, setExpandedSearchKeys] = useState<Set<string>>(() => new Set())
+  const toggleSearchExpanded = (key: string) => setExpandedSearchKeys((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key); else next.add(key)
+    return next
+  })
   const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
   const contactSearchKind = contactSearchIdentity.contactKind ?? 'acquereur'
   // ── États Lots 4 & 5 : fil d'activité + relances « À faire » + formulaire « Planifier » ──
@@ -33740,10 +33747,20 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     }
   }, [props.contact.hektor_contact_id])
 
+  // Recharge le fil d'activité (les relances y apparaissent aussi comme événements) sans vider l'affichage courant.
+  const reloadActivity = useCallback(async () => {
+    try {
+      const rows = await loadContactActivite(props.contact.hektor_contact_id)
+      setContactActivity(rows)
+    } catch {
+      /* on garde le fil précédent en cas d'échec réseau */
+    }
+  }, [props.contact.hektor_contact_id])
+
   async function handleMarkRelance(id: number, status: 'fait' | 'reporte') {
     try {
       await setRelanceStatus(id, status)
-      await reloadRelances()
+      await Promise.all([reloadRelances(), reloadActivity()])
     } catch (error) {
       if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Mise à jour de la relance impossible.')
     }
@@ -33760,7 +33777,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         dueDate: planDate || null,
         negociateurEmail: props.sessionEmail ?? null,
       })
-      await reloadRelances()
+      await Promise.all([reloadRelances(), reloadActivity()])
       setPlanOpen(false)
       setPlanLabel('')
       setPlanDate('')
@@ -34044,6 +34061,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     const critParts = [...criteria]
                     if (cities.length) critParts.push(cities.length > 1 ? `${cities.length} communes` : cities[0])
                     const nBiens = rapproCounts[search.contact_search_key] ?? 0
+                    const isExpanded = expandedSearchKeys.has(search.contact_search_key)
                     return (
                       <div key={`fa-cx-srch-${search.contact_search_key}`} className="fa-cx-srch">
                         <span className="fa-cx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
@@ -34053,6 +34071,20 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                             <span className={`fa-cx-srch-tag ${isActive ? '' : 'archived'}`}>{isActive ? 'Active' : 'Archivée'}</span>
                           </div>
                           <div className="fa-cx-srch-crit">{critParts.join(' · ') || 'Critères non renseignés'}</div>
+                          {cities.length > 1 ? (
+                            <div className="fa-cx-srch-cities-wrap">
+                              <button type="button" className="fa-cx-srch-cities-tg" onClick={() => toggleSearchExpanded(search.contact_search_key)} aria-expanded={isExpanded}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                                {isExpanded ? 'Réduire les communes' : `Voir les ${cities.length} communes`}
+                                <svg className="fa-cx-srch-cities-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg>
+                              </button>
+                              {isExpanded ? (
+                                <div className="fa-cx-srch-cities">
+                                  {cities.map((city) => <span key={`fa-cx-city-${search.contact_search_key}-${city}`} className="fa-cx-srch-city">{city}</span>)}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
                         {props.onOpenRechercheAcquereur ? (
                           <button className="fa-cx-srch-match" type="button" title={`Rapprocher les biens correspondants (${nBiens})`} onClick={() => props.onOpenRechercheAcquereur?.(search)}>
