@@ -21837,19 +21837,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const lebienFoot: CkFoot = (dpeVal > 0 || gesVal > 0)
     ? ['neutral', `DPE ${dpeVal > 0 ? ckDpeLetter(dpeVal, 'conso') : '—'} · GES ${gesVal > 0 ? ckDpeLetter(gesVal, 'ges') : '—'}`]
     : ['alert', 'Diagnostics manquants']
-  // « Médias & pièces » juste après « Le Bien » : c'est là qu'on va après avoir vu la fiche.
-  const mediaFoot: CkFoot = ckDocToPrep > 0
-    ? ['alert', `${ckDocToPrep} à préparer`]
-    : ['neutral', `${props.images.length} photo${props.images.length > 1 ? 's' : ''} · ${ckDocCount} doc${ckDocCount > 1 ? 's' : ''}`]
   const featList: Array<[string, CkFoot]> = ([
     ['lebien', lebienFoot],
-    ['medias', mediaFoot],
     ...PH.feat,
     ['rendezvous', rdvFoot],
     ['contact', contactFoot],
   ] as Array<[string, CkFoot]>).filter(([k]) => k !== 'documents')
   // « Documents » est fusionné dans « Média et Documents » (onglet Documents) : retiré du rail.
-  const autreList = PH.autre.filter((k) => k !== 'documents')
+  // « Média et Documents » va TOUJOURS dans « Autres rubriques », quel que soit l'état de
+  // l'annonce (choix de Frédéric) — plus jamais « en avant ». Dédupliqué + documents exclu.
+  const autreList = ['medias', ...PH.autre].filter((k, i, arr) => k !== 'documents' && arr.indexOf(k) === i)
   const horsPerimetre = Math.max(0, 11 - (featList.length + autreList.length))
   const CK_RUB_MAP: Record<string, (typeof CK_RUBRIQUES)[number]> = Object.fromEntries(CK_RUBRIQUES.map((r) => [r.key, r]))
   // Navigation rubrique partagée : le rail, le bloc « Prochaine action » ET le fil
