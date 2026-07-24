@@ -913,6 +913,24 @@
 .fa-ck-docbadge { font-size: 11px; font-weight: 800; color: #8a6a2f; background: var(--fa-gold-soft, #f7f0e3); border: 1px solid #ecdfc7; border-radius: 99px; padding: 5px 12px; }
 .fa-ck-docbadge.ok { color: #1f6e44; background: #e9f4ee; border-color: #cfe7d8; }
 
+/* --- Bloc Documents UNIFIE (skin v21) : liste maquette + actions reelles + tiroir d'ajout --- */
+.fa-ck-docs-unified { display: flex; flex-direction: column; }
+.fa-ck-docs-head { align-items: center; }
+.fa-ck-docs-head-tx { flex: 1; min-width: 0; }
+.fa-ck-docadd { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 800; color: #fff; background: #4756a6; border: 1px solid #3c4a95; border-radius: 10px; padding: 8px 14px; cursor: pointer; transition: background .15s ease, transform .05s ease; }
+.fa-ck-docadd:hover { background: #3c4a95; }
+.fa-ck-docadd:active { transform: translateY(1px); }
+.fa-ck-docadd.on { color: #4756a6; background: #e9ebf8; border-color: #d3d8f0; }
+.fa-ck-docadd svg { width: 15px; height: 15px; }
+.fa-ck-docup { background: #faf9f5; border: 1px solid var(--fa-line); border-radius: 14px; padding: 2px 14px 12px; margin: 2px 2px 14px; }
+.fa-ck-docs-unified .fa-ck-docitem { align-items: flex-start; }
+.fa-ck-docs-unified .fa-ck-dfic { margin-top: 1px; }
+.fa-ck-docs-unified .fa-ck-dright { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-width: 60%; }
+.fa-ck-docs-unified .console-document-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0; }
+.fa-ck-docs-unified .console-document-actions .ghost-button { font-size: 11.5px; padding: 5px 10px; border-radius: 9px; }
+.fa-ck-docs-unified .empty-state { margin: 6px 2px; }
+.fa-ck-docs-unified .console-documents-message, .fa-ck-docs-unified .console-documents-error { margin: 4px 2px; }
+
 /* Rubrique Mandat (v22) : champs mandat + validation + signature */
 .fa-ck-mandat { display: flex; flex-direction: column; gap: 4px; }
 .fa-ck-badge-ok { font-size: 11px; font-weight: 800; color: #1f6e44; background: #e9f4ee; border: 1px solid #cfe7d8; border-radius: 99px; padding: 4px 11px; margin-left: auto; }

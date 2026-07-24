@@ -9551,8 +9551,11 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
   )
 }
 
-function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
+function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
+  // Skin « v21 » (cockpit) : filtre + tiroir d'ajout. Non utilises en skin classique.
+  const [docFilter, setDocFilter] = useState<'tous' | 'prep' | 'signed' | 'cloud'>('tous')
+  const [uploadOpen, setUploadOpen] = useState(false)
   const [signDoc, setSignDoc] = useState<ConsoleDocument | null>(null)
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -9793,6 +9796,226 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
     }
   }
 
+  // Formulaire d'ajout — PARTAGE entre les deux skins (une seule verite).
+  const uploadForm = (
+    <form className="console-upload-form" onSubmit={handleUploadDocument}>
+      <div className="console-upload-card-head">
+        <span className="console-upload-card-icon" aria-hidden="true"><DetailIcon type="actions" /></span>
+        <div>
+          <strong>Ajouter un document</strong>
+          <small>Le fichier sera envoyé dans Hektor puis indexé dans l'app.</small>
+        </div>
+      </div>
+
+      <label className="console-upload-file">
+        <span className="console-upload-label">Fichier</span>
+        <div className={`console-upload-dropzone ${uploadFile ? 'has-file' : ''}`}>
+          <span className="console-upload-dropzone-icon" aria-hidden="true"><DetailIcon type={uploadFile ? consoleDocumentIconType({ mime_type: uploadFile.type, document_name: uploadFile.name, document_type: uploadType }) : 'content'} /></span>
+          <span className="console-upload-dropzone-copy">
+            <strong>{uploadFile ? uploadFile.name : 'Choisir un fichier'}</strong>
+            <small>{uploadFile ? formatFileSize(uploadFile.size) : 'PDF, image, document ou photo mobile'}</small>
+          </span>
+          <span className="console-upload-pickers">
+            <label className="ghost-button console-upload-picker">
+              <span aria-hidden="true"><DetailIcon type="content" /></span>
+              Parcourir
+              <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
+            </label>
+            <label className="ghost-button console-upload-picker console-upload-camera">
+              <span aria-hidden="true"><DetailIcon type="photo" /></span>
+              Camera
+              <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
+            </label>
+          </span>
+        </div>
+      </label>
+
+      <label className="filter-field">
+        <span>Libelle</span>
+        <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
+      </label>
+
+      <fieldset className="console-visibility-field">
+        <span>Visibilite</span>
+        <div className="console-segmented-control">
+          <button className={uploadVisibility === 'private' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('private')}>
+            <span aria-hidden="true"><DetailIcon type="visibility" /></span>
+            Prive
+          </button>
+          <button className={uploadVisibility === 'shared' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('shared')}>
+            <span aria-hidden="true"><DetailIcon type="contact" /></span>
+            Public
+          </button>
+        </div>
+      </fieldset>
+
+      <label className="filter-field">
+        <span>Type</span>
+        <select value={uploadType} onChange={(event) => setUploadType(event.target.value)}>
+          <option value="">Autre</option>
+          <option value="DPE">DPE</option>
+          <option value="Mandat">Mandat</option>
+          <option value="Diagnostic">Diagnostic</option>
+          <option value="Plan">Plan</option>
+          <option value="Facture">Facture</option>
+          <option value="Photo">Photo</option>
+          <option value="Taxe fonciere">Taxe fonciere</option>
+          <option value="Bon de visite">Bon de visite</option>
+          <option value="Piece identite">Piece identite</option>
+        </select>
+      </label>
+
+      <button className="ghost-button button-primary console-upload-submit" type="submit" disabled={uploadPending || !uploadFile}>
+        <span aria-hidden="true"><DetailIcon type="hektor" /></span>
+        {uploadPending ? 'Demande...' : 'Envoyer'}
+      </button>
+    </form>
+  )
+
+  // Actions par ligne — PARTAGEES entre les deux skins (zero perte de fonction).
+  const docRowActions = (document: ConsoleDocument) => {
+    const preparing = pendingDocumentIds.has(document.id)
+    const deleting = deletingDocumentIds.has(document.id)
+    const canOpen = document.storage_status === 'cloud_available'
+    const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
+    const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
+    const signedDocument = (document.metadata_json as { signed_document?: { storage_path?: string } } | null)?.signed_document ?? null
+    const hasSignedFile = Boolean(signedDocument?.storage_path)
+    return (
+      <div className="console-document-actions">
+        {hasSignedFile ? (
+          <button className="ghost-button console-document-open console-document-signed" type="button" onClick={() => void handleOpenSignedDocument(document)} disabled={busyDocumentId === document.id} title="Ouvrir le document signé">
+            <span aria-hidden="true"><DetailIcon type="content" /></span>
+            Ouvrir le signé
+          </button>
+        ) : canOpen ? (
+          <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>
+            <span aria-hidden="true"><DetailIcon type="content" /></span>
+            Ouvrir
+          </button>
+        ) : (
+          <button className="ghost-button console-document-prepare" type="button" onClick={() => void handlePrepareDocument(document)} disabled={!canPrepare || busyDocumentId === document.id}>
+            <span aria-hidden="true"><DetailIcon type="hektor" /></span>
+            {preparing ? 'En attente' : 'Preparer'}
+          </button>
+        )}
+        {signature?.status === 'pending' && signature.procedure_id ? (
+          <button className="ghost-button console-document-relance" type="button" onClick={() => void handleRelanceSignature(document, signature.procedure_id!)} disabled={busyDocumentId === document.id} title="Envoyer un rappel de signature">
+            <span aria-hidden="true"><DetailIcon type="hektor" /></span>
+            Relancer
+          </button>
+        ) : null}
+        {signature?.status === 'pending' && signature.procedure_id ? (
+          <button className="ghost-button console-document-cancel" type="button" onClick={() => void handleCancelSignature(document, signature.procedure_id!, signature.hektor_doc_id)} disabled={busyDocumentId === document.id} title="Annuler la signature en cours">
+            <span aria-hidden="true"><DetailIcon type="actions" /></span>
+            Annuler
+          </button>
+        ) : null}
+        {signature?.status !== 'signed' ? (
+          <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
+            <span aria-hidden="true"><DetailIcon type="signature" /></span>
+            Signature
+          </button>
+        ) : null}
+        <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
+          <span aria-hidden="true"><DetailIcon type="actions" /></span>
+          {deleting ? 'Suppression' : 'Supprimer'}
+        </button>
+      </div>
+    )
+  }
+
+  // ---- Skin « v21 » (cockpit) : bloc UNIFIE — liste maquette v21 + actions reelles + tiroir d'ajout.
+  if (skin === 'v21') {
+    const docTypeOf = (name: string): [string, string] => {
+      const n = name.toLowerCase()
+      if (/avenant/.test(n)) return ['avenant', 'Avenant']
+      if (/mandat/.test(n)) return ['mandat', 'Mandat']
+      if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
+      if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
+      if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
+      return ['autre', 'Document']
+    }
+    const enriched = documents.map((d) => {
+      const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
+      const st = sig?.status
+      const [type, typeLabel] = docTypeOf(`${d.document_name ?? ''} ${d.document_type ?? ''}`)
+      const signed = st === 'signed'
+      const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
+        : st === 'pending' ? 'En attente de signature'
+        : st === 'to_send' ? 'À envoyer en signature'
+        : st === 'cancelled' ? 'Signature annulée'
+        : ''
+      const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : d.storage_status === 'cloud_available' ? 'Cloud' : 'Indexé'
+      const cloud = d.storage_status === 'cloud_available'
+      return { doc: d, type, typeLabel, signed, sigLabel, badge, cloud }
+    })
+    const cntAll = enriched.length
+    const cntPrep = enriched.filter((e) => !e.signed).length
+    const cntSigned = enriched.filter((e) => e.signed).length
+    const cntCloud = enriched.filter((e) => e.cloud).length
+    const shown = docFilter === 'prep' ? enriched.filter((e) => !e.signed)
+      : docFilter === 'signed' ? enriched.filter((e) => e.signed)
+      : docFilter === 'cloud' ? enriched.filter((e) => e.cloud)
+      : enriched
+    return (
+      <div className="fa-ck-docs-unified">
+        <div className="fa-ck-pub-sec fa-ck-docs-head">
+          <span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
+          <div className="fa-ck-docs-head-tx">
+            <div className="fa-ck-pub-t">Documents</div>
+            <div className="fa-ck-pub-s">Consulter, préparer et signer — synchronisé avec Hektor</div>
+          </div>
+          <button type="button" className={`fa-ck-docadd${uploadOpen ? ' on' : ''}`} onClick={() => setUploadOpen((v) => !v)}>
+            <span aria-hidden="true"><DetailIcon type={uploadOpen ? 'actions' : 'content'} /></span>
+            {uploadOpen ? 'Fermer' : 'Ajouter un document'}
+          </button>
+        </div>
+
+        {message ? <p className="console-documents-message">{message}</p> : null}
+        {error ? <p className="console-documents-error">{error}</p> : null}
+        {uploadOpen ? <div className="fa-ck-docup">{uploadForm}</div> : null}
+
+        {cntAll > 0 ? (
+          <div className="fa-ck-histofilt fa-ck-docfilt">
+            {([['tous', 'Tous', cntAll], ['prep', 'À préparer', cntPrep], ['signed', 'Signés', cntSigned], ['cloud', 'Cloud', cntCloud]] as Array<['tous' | 'prep' | 'signed' | 'cloud', string, number]>).map(([k, lbl, n]) => (
+              <button key={k} type="button" className={docFilter === k ? 'is-on' : ''} onClick={() => setDocFilter(k)}>{lbl}<span>{n}</span></button>
+            ))}
+          </div>
+        ) : null}
+
+        {loading && !cntAll ? <p className="empty-state">Chargement des documents…</p> : null}
+        {!loading && !cntAll ? <p className="empty-state">Aucun document indexé pour ce bien.</p> : null}
+
+        <div className="fa-ck-doclist">
+          {shown.map((e) => (
+            <div key={e.doc.id} className="fa-ck-docitem">
+              <span className="fa-ck-dfic" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
+              <div className="fa-ck-dinfo">
+                <div className="fa-ck-dnm-row"><span className="fa-ck-dnm">{e.doc.document_name}</span><span className={`fa-ck-dtype ${e.type}`}>{e.typeLabel}</span></div>
+                <div className="fa-ck-dmeta">{[consoleDocumentVisibilityLabel(e.doc.visibility), formatFileSize(e.doc.file_size)].filter((v) => v && v !== '-').join(' · ') || 'Document'}</div>
+                {e.sigLabel ? <div className={`fa-ck-docsig${e.signed ? ' signed' : ''}`}>{e.sigLabel}</div> : null}
+              </div>
+              <div className="fa-ck-dright">
+                <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>
+                {docRowActions(e.doc)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {signDoc ? (
+          <SignaturePromptModal
+            intro={`Document : ${signDoc.document_name}`}
+            items={["Hektor va s'ouvrir sur l'onglet Documents : clique le picto signature sur le document, ajoute les signataires puis Envoyer."]}
+            onConfirm={openHektorSignature}
+            onClose={() => setSignDoc(null)}
+          />
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <details className={`console-documents-panel cdocs-v2 ${compact ? 'is-compact' : ''}`}>
       <summary className="console-documents-head">
@@ -9814,78 +10037,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
         {message ? <p className="console-documents-message">{message}</p> : null}
         {error ? <p className="console-documents-error">{error}</p> : null}
 
-        <form className="console-upload-form" onSubmit={handleUploadDocument}>
-          <div className="console-upload-card-head">
-            <span className="console-upload-card-icon" aria-hidden="true"><DetailIcon type="actions" /></span>
-            <div>
-              <strong>Ajouter un document</strong>
-              <small>Le fichier sera envoyé dans Hektor puis indexé dans l'app.</small>
-            </div>
-          </div>
-
-          <label className="console-upload-file">
-            <span className="console-upload-label">Fichier</span>
-            <div className={`console-upload-dropzone ${uploadFile ? 'has-file' : ''}`}>
-              <span className="console-upload-dropzone-icon" aria-hidden="true"><DetailIcon type={uploadFile ? consoleDocumentIconType({ mime_type: uploadFile.type, document_name: uploadFile.name, document_type: uploadType }) : 'content'} /></span>
-              <span className="console-upload-dropzone-copy">
-                <strong>{uploadFile ? uploadFile.name : 'Choisir un fichier'}</strong>
-                <small>{uploadFile ? formatFileSize(uploadFile.size) : 'PDF, image, document ou photo mobile'}</small>
-              </span>
-              <span className="console-upload-pickers">
-                <label className="ghost-button console-upload-picker">
-                  <span aria-hidden="true"><DetailIcon type="content" /></span>
-                  Parcourir
-                  <input key={`file-${uploadInputVersion}`} type="file" onChange={handleUploadFileChange} />
-                </label>
-                <label className="ghost-button console-upload-picker console-upload-camera">
-                  <span aria-hidden="true"><DetailIcon type="photo" /></span>
-                  Camera
-                  <input key={`camera-${uploadInputVersion}`} type="file" accept="image/*" capture="environment" onChange={handleUploadFileChange} />
-                </label>
-              </span>
-            </div>
-          </label>
-
-          <label className="filter-field">
-            <span>Libelle</span>
-            <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
-          </label>
-
-          <fieldset className="console-visibility-field">
-            <span>Visibilite</span>
-            <div className="console-segmented-control">
-              <button className={uploadVisibility === 'private' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('private')}>
-                <span aria-hidden="true"><DetailIcon type="visibility" /></span>
-                Prive
-              </button>
-              <button className={uploadVisibility === 'shared' ? 'is-active' : ''} type="button" onClick={() => setUploadVisibility('shared')}>
-                <span aria-hidden="true"><DetailIcon type="contact" /></span>
-                Public
-              </button>
-            </div>
-          </fieldset>
-
-          <label className="filter-field">
-            <span>Type</span>
-            <select value={uploadType} onChange={(event) => setUploadType(event.target.value)}>
-              <option value="">Autre</option>
-              <option value="DPE">DPE</option>
-              <option value="Mandat">Mandat</option>
-              <option value="Diagnostic">Diagnostic</option>
-              <option value="Plan">Plan</option>
-              <option value="Facture">Facture</option>
-              <option value="Photo">Photo</option>
-              <option value="Taxe fonciere">Taxe fonciere</option>
-              <option value="Bon de visite">Bon de visite</option>
-              <option value="Piece identite">Piece identite</option>
-            </select>
-          </label>
-
-          <button className="ghost-button button-primary console-upload-submit" type="submit" disabled={uploadPending || !uploadFile}>
-            <span aria-hidden="true"><DetailIcon type="hektor" /></span>
-            {uploadPending ? 'Demande...' : 'Envoyer'}
-          </button>
-        </form>
+        {uploadForm}
 
         {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}
         {!loading && documents.length === 0 ? <p className="empty-state">Aucun document Console indexe pour ce dossier.</p> : null}
@@ -9894,11 +10046,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
             {documents.map((document) => {
               const preparing = pendingDocumentIds.has(document.id)
               const deleting = deletingDocumentIds.has(document.id)
-              const canOpen = document.storage_status === 'cloud_available'
-              const canPrepare = !canOpen && !preparing && document.storage_status !== 'missing' && document.storage_status !== 'error'
               const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
-              const signedDocument = (document.metadata_json as { signed_document?: { storage_path?: string } } | null)?.signed_document ?? null
-              const hasSignedFile = Boolean(signedDocument?.storage_path)
               return (
                 <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
                   <span className="console-document-icon" data-ftype={consoleFileType(document)} aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
@@ -9908,46 +10056,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, onJobCreated, onMissi
                     <SignatureBadge signature={signature} />
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
-                  <div className="console-document-actions">
-                    {hasSignedFile ? (
-                      <button className="ghost-button console-document-open console-document-signed" type="button" onClick={() => void handleOpenSignedDocument(document)} disabled={busyDocumentId === document.id} title="Ouvrir le document signé">
-                        <span aria-hidden="true"><DetailIcon type="content" /></span>
-                        Ouvrir le signé
-                      </button>
-                    ) : canOpen ? (
-                      <button className="ghost-button console-document-open" type="button" onClick={() => void handleOpenDocument(document)} disabled={busyDocumentId === document.id}>
-                        <span aria-hidden="true"><DetailIcon type="content" /></span>
-                        Ouvrir
-                      </button>
-                    ) : (
-                      <button className="ghost-button console-document-prepare" type="button" onClick={() => void handlePrepareDocument(document)} disabled={!canPrepare || busyDocumentId === document.id}>
-                        <span aria-hidden="true"><DetailIcon type="hektor" /></span>
-                        {preparing ? 'En attente' : 'Preparer'}
-                      </button>
-                    )}
-                    {signature?.status === 'pending' && signature.procedure_id ? (
-                      <button className="ghost-button console-document-relance" type="button" onClick={() => void handleRelanceSignature(document, signature.procedure_id!)} disabled={busyDocumentId === document.id} title="Envoyer un rappel de signature">
-                        <span aria-hidden="true"><DetailIcon type="hektor" /></span>
-                        Relancer
-                      </button>
-                    ) : null}
-                    {signature?.status === 'pending' && signature.procedure_id ? (
-                      <button className="ghost-button console-document-cancel" type="button" onClick={() => void handleCancelSignature(document, signature.procedure_id!, signature.hektor_doc_id)} disabled={busyDocumentId === document.id} title="Annuler la signature en cours">
-                        <span aria-hidden="true"><DetailIcon type="actions" /></span>
-                        Annuler
-                      </button>
-                    ) : null}
-                    {signature?.status !== 'signed' ? (
-                      <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
-                        <span aria-hidden="true"><DetailIcon type="signature" /></span>
-                        Signature
-                      </button>
-                    ) : null}
-                    <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
-                      <span aria-hidden="true"><DetailIcon type="actions" /></span>
-                      {deleting ? 'Suppression' : 'Supprimer'}
-                    </button>
-                  </div>
+                  {docRowActions(document)}
                 </article>
               )
             })}
@@ -21383,7 +21492,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
   const [histoFilter, setHistoFilter] = useState<string>('tout')
-  const [docFilter, setDocFilter] = useState<string>('tous')
   // Édition EN PLACE (façon v21) : diff local `edited` → un seul editAnnonceOptimistic (calque + worker).
   const [edited, setEdited] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -21775,74 +21883,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   }
   // Contenu riche « Documents » — extrait pour être partagé entre la rubrique
   // unifiée « Média et Documents » (onglet Documents) et tout lien direct.
+  // Bloc UNIFIE (fusion des deux anciens blocs « affichage v21 » + « outil Console ») :
+  // une seule liste, jolie (maquette v21) ET actionnable, une seule source (loadConsoleDocuments).
   const renderDocumentsPane = () => (
     <div className="fa-ck-rub fa-ck-documents">
-      {(() => {
-        type CkDoc = { name: string; sig: string; badge: string; signed?: boolean; cloud?: boolean; type: string; typeLabel: string }
-        const docsMock = parseJson<CkDoc[]>(detailStr('documents_json') || '[]', [])
-        const docTypeOf = (name: string): [string, string] => {
-          const n = name.toLowerCase()
-          if (/avenant/.test(n)) return ['avenant', 'Avenant']
-          if (/mandat/.test(n)) return ['mandat', 'Mandat']
-          if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
-          if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
-          if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
-          return ['autre', 'Document']
-        }
-        const docsReal: CkDoc[] = ckDocs.map((d) => {
-          const name = String(d.document_name ?? 'Document')
-          const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature
-          const st = sig?.status
-          const [type, typeLabel] = docTypeOf(name)
-          const signed = st === 'signed'
-          const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
-            : st === 'pending' ? 'En attente de signature'
-            : st === 'to_send' ? 'À envoyer en signature'
-            : st === 'cancelled' ? 'Signature annulée'
-            : ''
-          const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : 'Indexé'
-          const cloud = Boolean(d.storage_bucket) && String(d.storage_status ?? '').toLowerCase() !== 'missing'
-          return { name, sig: sigLabel, badge, signed, cloud, type, typeLabel }
-        })
-        const all = docsMock.length ? docsMock : docsReal
-        if (!all.length) return null
-        const cntAll = all.length
-        const cntPrep = all.filter((d) => !d.signed).length
-        const cntSigned = all.filter((d) => d.signed).length
-        const cntCloud = all.filter((d) => d.cloud).length
-        const docs = docFilter === 'prep' ? all.filter((d) => !d.signed)
-          : docFilter === 'signed' ? all.filter((d) => d.signed)
-          : docFilter === 'cloud' ? all.filter((d) => d.cloud)
-          : all
-        return (
-          <>
-            <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span><div><div className="fa-ck-pub-t">Documents Hektor Console</div><div className="fa-ck-pub-s">Ajouter, consulter et préparer</div></div></div>
-            <div className="fa-ck-histofilt fa-ck-docfilt">
-              {([['tous', 'Tous', cntAll], ['prep', 'À préparer', cntPrep], ['signed', 'Signés', cntSigned], ['cloud', 'Cloud', cntCloud]] as Array<[string, string, number]>).map(([k, lbl, n]) => (
-                <button key={k} type="button" className={docFilter === k ? 'is-on' : ''} onClick={() => setDocFilter(k)}>{lbl}<span>{n}</span></button>
-              ))}
-            </div>
-            <div className="fa-ck-doclist">
-              {docs.map((d, i) => (
-                <div key={i} className="fa-ck-docitem">
-                  <span className="fa-ck-dfic" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
-                  <div className="fa-ck-dinfo">
-                    <div className="fa-ck-dnm-row"><span className="fa-ck-dnm">{d.name}</span><span className={`fa-ck-dtype ${d.type}`}>{d.typeLabel}</span></div>
-                    <div className="fa-ck-dmeta">document · Privé</div>
-                    <div className={`fa-ck-docsig${d.signed ? ' signed' : ''}`}>{d.sig}</div>
-                  </div>
-                  <div className="fa-ck-dright"><span className={`fa-ck-docbadge${d.signed ? ' ok' : ''}`}>{d.badge}</span></div>
-                </div>
-              ))}
-            </div>
-          </>
-        )
-      })()}
-      <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Outil documents (Console Hektor)</div>
       <section className="detail-section">
         {isLightweightDetail
           ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
-          : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+          : <ConsoleDocumentsPanel dossier={dossier} skin="v21" onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
       </section>
     </div>
   )
