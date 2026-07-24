@@ -18401,6 +18401,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 detailLoading={detailLoading}
                 eyebrow={detailEyebrowForScreen(screen)}
                 backLabel="Fermer"
+                backSynthLabel={dossierReturnContactId ? 'Fiche contact' : undefined}
                 onBack={closeDossierDetailPage}
                 detailVariant={detailVariantForScreen(screen)}
                 allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
@@ -21955,7 +21956,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             className={`fa-ck-rail-brand${activeTab !== 'synthese' ? ' is-inrub' : ''}`}
             onClick={() => { if (activeTab !== 'synthese') setActiveTab('synthese'); else props.onBack() }}
             title={activeTab !== 'synthese' ? 'Retour au cockpit du dossier' : 'Retour aux annonces'}
-            data-tip={activeTab !== 'synthese' ? 'Retour au cockpit' : 'Retour aux annonces'}
+            data-tip={activeTab !== 'synthese' ? 'Retour au cockpit' : (props.backSynthLabel ? `Retour · ${props.backSynthLabel}` : 'Retour aux annonces')}
           >
             <span className="fa-ck-rb-mark" aria-hidden="true">
               <span className="fa-ck-rb-ic fa-ck-rb-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg></span>
@@ -21963,7 +21964,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </span>
             <span className="fa-ck-rb-tx">
               <span className="fa-ck-rb-ey">{activeTab !== 'synthese' ? 'Retour au' : 'Retour'}</span>
-              <span className="fa-ck-rb-t">{activeTab !== 'synthese' ? 'Cockpit' : 'Aux annonces'}</span>
+              <span className="fa-ck-rb-t">{activeTab !== 'synthese' ? 'Cockpit' : (props.backSynthLabel || 'Aux annonces')}</span>
             </span>
           </button>
           <div className="fa-ck-hero">
@@ -23271,6 +23272,9 @@ function DossierDetailLayoutBase(props: {
   detailLoading: boolean
   eyebrow: string
   backLabel: string
+  // Libellé du bouton retour (onglet synthèse cockpit) quand le détail a été ouvert depuis
+  // une fiche contact -> « Fiche contact ». Optionnel : défaut « Aux annonces ».
+  backSynthLabel?: string | null
   onBack: () => void
   allowMarkValidation?: boolean
   markValidationPending?: boolean
@@ -27692,6 +27696,9 @@ function MobileDossierDetail(props: {
   detailLoading: boolean
   eyebrow: string
   backLabel: string
+  // Libellé du bouton retour (onglet synthèse cockpit) quand le détail a été ouvert depuis
+  // une fiche contact -> « Fiche contact ». Optionnel : défaut « Aux annonces ».
+  backSynthLabel?: string | null
   onBack: () => void
   allowMarkValidation?: boolean
   markValidationPending?: boolean
