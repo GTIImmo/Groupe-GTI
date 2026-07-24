@@ -33807,6 +33807,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
       case 'offer': return 'Offre'
       case 'visitreq': return 'Demande de visite'
       case 'relance': return 'Relance'
+      case 'sign': return 'Mandat'
+      case 'mandat': return 'Mandat'
+      case 'price': return 'Prix'
+      case 'requalif': return 'Diffusion'
       default: return kind || 'Événement'
     }
   }
@@ -33826,6 +33830,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 21V9l7-4 7 4v12" /><path d="M9 21v-5h4v5" /><path d="M20 21V11l-3-1.7" /></svg>
       case 'relance':
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+      case 'sign':
+      case 'mandat':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /><path d="m9 15 2 2 4-4" /></svg>
+      case 'price':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3v18M8 7h6a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h7" /></svg>
+      case 'requalif':
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6l-5 4H4a1 1 0 0 0-1 1Z" /><path d="M16 9a3 3 0 0 1 0 6" /></svg>
       default:
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>
     }
@@ -34268,7 +34279,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               {activityView === 'fil' ? (
                 <section className="fa-cx-mod full">
                   <div className="fa-cx-aflt">
-                    {([['all', 'Tout'], ['rdv', 'RDV'], ['email', 'Emails'], ['rappro', 'Rapprochements'], ['tr', 'Transactions'], ['relance', 'Relances']] as [string, string][]).map(([value, label]) => (
+                    {([['all', 'Tout'], ['annonce', 'Annonce'], ['rdv', 'RDV'], ['email', 'Emails'], ['rappro', 'Rapprochements'], ['tr', 'Transactions'], ['relance', 'Relances']] as [string, string][]).map(([value, label]) => (
                       <button key={`fa-cx-aflt-${value}`} type="button" className={activityFilter === value ? 'on' : ''} onClick={() => setActivityFilter(value)}>{label}</button>
                     ))}
                   </div>

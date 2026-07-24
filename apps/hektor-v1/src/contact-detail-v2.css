@@ -320,6 +320,7 @@
 .fa-contact-v2 .fa-cx-ev.g-rappro { --tone: #2f8a5b; --tone-bg: #e6f2ea; }
 .fa-contact-v2 .fa-cx-ev.g-tr { --tone: #c2125f; --tone-bg: #f9e7ef; }
 .fa-contact-v2 .fa-cx-ev.g-relance { --tone: var(--amber); --tone-bg: var(--amber-bg); }
+.fa-contact-v2 .fa-cx-ev.g-annonce { --tone: #a8814a; --tone-bg: #f7f0e3; } /* activité de l'annonce (mandant/vendeur) : doré */
 .fa-contact-v2 .fa-cx-ev-bd { flex: 1; min-width: 0; }
 .fa-contact-v2 .fa-cx-ev-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .fa-contact-v2 .fa-cx-ev-type { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--tone, var(--muted)); background: var(--tone-bg, #f1eae1); border-radius: 99px; padding: 2px 8px; flex: none; }
