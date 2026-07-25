@@ -3359,6 +3359,13 @@ function HektorMandatNumberForm(props: {
       props.onMissingNegotiator?.(props.dossier)
       return
     }
+    // Garde-fou : générer le numéro réserve le prochain n° et CRÉE une ligne au
+    // registre des mandats (action officielle). On confirme avant, car c'est non
+    // annulable côté registre.
+    const confirmed = window.confirm(
+      'Générer le numéro de mandat ?\n\nCela réserve le prochain numéro dans Hektor et crée une ligne dans le registre des mandats (action officielle). À ne faire qu\'une fois le mandant confirmé.',
+    )
+    if (!confirmed) return
     setPending(true)
     try {
       const job = await createHektorMandatAutoNumberJob({
