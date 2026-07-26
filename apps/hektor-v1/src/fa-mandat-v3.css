@@ -1,0 +1,21 @@
+/* ============================================================================
+   Rubrique Mandat v3 — feuille SCOPÉE .fa-ck-mandat-v3
+   Portée uniquement quand le flag VITE_APP_MANDAT_V3_ENABLED est ON.
+   Additif : n'altère jamais l'ancienne rubrique (.fa-ck-mandat). Tokens cockpit
+   (--fa-*), light-only (le cockpit n'a pas de dark mode). Voir PLAN_DEV_MANDAT_V3.md.
+   Lot 1 : scaffold. Le style complet (cycle, états, illustrations, animations)
+   est porté aux lots suivants.
+   ============================================================================ */
+
+.fa-ck-mandat-v3 { display: flex; flex-direction: column; gap: 13px; }
+
+/* Placeholder du Lot 1 — retiré au Lot 2 dès que le squelette piloté par ckStage arrive. */
+.fa-ck-mandat-v3 .mv3-scaffold {
+  border: 1px dashed var(--fa-line, #e9e1d3);
+  background: var(--fa-brand-soft, #f6efe6);
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-size: 13px;
+  color: var(--fa-muted, #6b6058);
+}
+.fa-ck-mandat-v3 .mv3-scaffold b { color: var(--fa-ink, #241f22); }

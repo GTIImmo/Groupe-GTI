@@ -21065,6 +21065,14 @@ const APP_COCKPIT_V2_ENABLED =
 const APP_CONTACT_V2_ENABLED =
   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_CONTACT_V2_ENABLED ?? '').trim().toLowerCase())
 
+// Rubrique Mandat v3 (refonte maquette V3, portage du décor détail annonce) — même garde-fou
+// réversible : flag OFF par défaut, lu au BUILD par Vite (bascule Vercel = rebuild). Flag OFF =>
+// renderMandatRubriqueV3 jamais rendu, feuille .fa-ck-mandat-v3 inerte : rubrique Mandat actuelle
+// inchangée. Migration additive lot par lot ; réutilise les composants existants (générer/éditer/
+// signature/démarches/pilotage/historiques), aucune logique dupliquée. Voir PLAN_DEV_MANDAT_V3.md.
+const APP_MANDAT_V3_ENABLED =
+  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_MANDAT_V3_ENABLED ?? '').trim().toLowerCase())
+
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
 // Icônes SVG EXACTES de la maquette v26 (table IC), rendues telles quelles.
@@ -21898,6 +21906,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       </section>
     </div>
   )
+  // Rubrique Mandat V3 (refonte maquette) — rendue à la place de l'ancienne rubrique
+  // UNIQUEMENT quand APP_MANDAT_V3_ENABLED est ON. Lot 1 : scaffold (invisible en prod,
+  // flag OFF). Les lots suivants portent le rendu piloté par ckStage en réutilisant les
+  // composants existants (HektorMandatNumberForm, MandatDocumentEditor, MandatSignatureTracker,
+  // ckDemarches, DetailAdminPilotPanel, props.mandats, PriceChangeHistoryCard). Voir PLAN_DEV_MANDAT_V3.md.
+  const renderMandatRubriqueV3 = () => (
+    <div className="fa-ck-rub fa-ck-mandat-v3" data-screen-label="Rubrique Mandat V3">
+      <div className="mv3-scaffold">
+        <b>Rubrique Mandat V3</b> — scaffold (Lot 1). État courant : <b>{ckStage}</b>. Le contenu piloté par l'état arrive aux lots suivants (composants existants réutilisés, rien cassé).
+      </div>
+    </div>
+  )
   // Libellé, description et liens de prochaine action viennent tous du sous-état
   // résolu (CK_STAGES) — plus de cascade en dur dupliquée trois fois.
   const situationLabel = ckStageDef.label
@@ -22624,7 +22644,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ) : null}
               <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
             </div>
-          ) : activeTab === 'mandat' ? (
+          ) : activeTab === 'mandat' ? (APP_MANDAT_V3_ENABLED ? renderMandatRubriqueV3() : (
             /* `md-root` : réutilise le design du détail mandat du registre (chiffres clés +
                cycle de vie), re-scopé de l'ID vers cette classe pour être partageable. */
             <div className="fa-ck-rub fa-ck-mandat md-root">
@@ -22861,7 +22881,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {!isLightweightDetail ? <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} /> : null}
               {!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
             </div>
-          ) : activeTab === 'rendezvous' ? (
+          )) : activeTab === 'rendezvous' ? (
             <div className="fa-ck-rub fa-ck-rdv">
               {appts.length > 0 ? (
                 <>
