@@ -22158,7 +22158,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     ? <span className="mv3-st lock">🔒 Verrouillé</span>
                     : <>
                         {demBaisse.onClick ? <button type="button" className="mv3-btn" style={{ ['--cta']: '#2fa564', ['--cta-d']: '#1f7a4a' } as CSSProperties} onClick={demBaisse.onClick}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>Demander la validation de l'avenant</button> : null}
-                        {mv3StateChip(demBaisse.stateLabel)}
+                        {/^(ajouter|demander)$/i.test(String(demBaisse.stateLabel ?? '').trim()) ? null : mv3StateChip(demBaisse.stateLabel)}
                       </>}
                 </div>
               ) : null}
