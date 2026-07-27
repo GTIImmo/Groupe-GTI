@@ -127,6 +127,43 @@
 .fa-ck-mandat-v3 .mv3-bub .txt { font-size: 12px; } .fa-ck-mandat-v3 .mv3-bub .dt { font-size: 10px; color: var(--mv3-soft); }
 .fa-ck-mandat-v3 .mv3-dmd-foot { display: flex; justify-content: flex-end; padding: 0 14px 12px; }
 
+/* ---- Caractéristiques (Validé/Échu) : chiffres + champs en repli ---- */
+.fa-ck-mandat-v3 .mv3-figs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.fa-ck-mandat-v3 .mv3-fig { background: var(--mv3-paper); border: 1px solid var(--mv3-line); border-radius: 12px; padding: 11px 12px; text-align: center; }
+.fa-ck-mandat-v3 .mv3-fig .v { font-family: var(--mv3-disp); font-size: 19px; font-weight: 600; } .fa-ck-mandat-v3 .mv3-fig .v.mag { color: var(--mv3-mag); } .fa-ck-mandat-v3 .mv3-fig .v.amber { color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mv3-fig .u { font-size: 12px; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-fig .k { font-size: 10.5px; font-weight: 700; color: var(--mv3-soft); margin-top: 2px; }
+.fa-ck-mandat-v3 .mv3-fold { margin-top: 12px; border-top: 1px solid var(--mv3-line); padding-top: 10px; }
+.fa-ck-mandat-v3 .mv3-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 700; }
+.fa-ck-mandat-v3 .mv3-fold > summary::-webkit-details-marker { display: none; }
+.fa-ck-mandat-v3 .mv3-fold .ff-c { font-size: 11px; font-weight: 800; color: var(--mv3-soft); background: var(--mv3-paper); padding: 2px 8px; border-radius: 99px; }
+.fa-ck-mandat-v3 .mv3-fold .ff-ch { margin-left: auto; width: 16px; height: 16px; color: var(--mv3-soft); transition: transform .2s; }
+.fa-ck-mandat-v3 .mv3-fold[open] .ff-ch { transform: rotate(180deg); }
+.fa-ck-mandat-v3 .mv3-fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--mv3-line); border: 1px solid var(--mv3-line); border-radius: 12px; overflow: hidden; margin-top: 9px; }
+.fa-ck-mandat-v3 .mv3-fcell { background: var(--mv3-card); padding: 10px 13px; }
+.fa-ck-mandat-v3 .mv3-fcell .fk { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-fcell .fv { font-size: 13.5px; font-weight: 600; margin-top: 2px; } .fa-ck-mandat-v3 .mv3-fcell.hl .fv { color: var(--mv3-mag); }
+
+/* ---- Mandants (résumé + lien) ---- */
+.fa-ck-mandat-v3 .mv3-people { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; }
+.fa-ck-mandat-v3 .mv3-avs { display: flex; } .fa-ck-mandat-v3 .mv3-avs span { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--mv3-card); margin-left: -8px; display: grid; place-items: center; font-weight: 800; font-size: 11px; color: #fff; background: linear-gradient(135deg, var(--mv3-blue), #2a3670); } .fa-ck-mandat-v3 .mv3-avs span:first-child { margin-left: 0; }
+.fa-ck-mandat-v3 .mv3-people .ptx { flex: 1; min-width: 120px; } .fa-ck-mandat-v3 .mv3-people .ptx b { font-size: 13px; } .fa-ck-mandat-v3 .mv3-people .ptx span { font-size: 11.5px; color: var(--mv3-soft); display: block; }
+.fa-ck-mandat-v3 .mv3-link { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--mv3-mag); background: var(--mv3-mag-soft); border: 1px solid color-mix(in srgb, var(--mv3-mag) 24%, transparent); padding: 7px 12px; border-radius: 9px; }
+
+/* ---- Historique des mandats & avenants ---- */
+.fa-ck-mandat-v3 .mv3-mh { display: flex; flex-direction: column; gap: 9px; }
+.fa-ck-mandat-v3 .mv3-mhi { border: 1px solid var(--mv3-line); border-radius: 12px; background: var(--mv3-paper); padding: 11px 13px; }
+.fa-ck-mandat-v3 .mv3-mhi.cur { border-left: 4px solid var(--mv3-mag); background: linear-gradient(90deg, var(--mv3-mag-soft), var(--mv3-paper) 55%); }
+.fa-ck-mandat-v3 .mv3-mh-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.fa-ck-mandat-v3 .mv3-mh-badge { font-family: var(--mv3-disp); font-weight: 700; font-size: 13px; color: var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-mh-type { font-size: 10px; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); padding: 2px 7px; border-radius: 6px; }
+.fa-ck-mandat-v3 .mv3-mhi.old .mv3-mh-type { background: linear-gradient(135deg, #8a807a, #615851); }
+.fa-ck-mandat-v3 .mv3-mh-dates { font-size: 11.5px; color: var(--mv3-soft); font-variant-numeric: tabular-nums; }
+.fa-ck-mandat-v3 .mv3-mh-state { margin-left: auto; font-size: 10.5px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--mv3-green-soft); color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mv3-mh-state.clot { background: var(--mv3-paper); color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-mh-av { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--mv3-ink); }
+.fa-ck-mandat-v3 .mv3-mh-av .avd { width: 16px; height: 16px; border-radius: 5px; background: linear-gradient(135deg, #d68f22, var(--mv3-gold)); display: grid; place-items: center; flex: none; } .fa-ck-mandat-v3 .mv3-mh-av .avd svg { width: 10px; height: 10px; color: #fff; }
+
 /* ---- Conteneur pour les composants réels embarqués (générer / éditer / signature) ---- */
 .fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
 

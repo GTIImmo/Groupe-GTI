@@ -21988,6 +21988,91 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       return 'En traitement'
     })()
     const mv3Msgs = props.requestMessagesDiffusion ?? []
+    // Caractéristiques (Validé/Échu) : chiffres clés + tous les champs repliés — MÊMES
+    // expressions que l'ancienne rubrique (numero_mandat, mandat_type, dates, prix, diffusable…).
+    const mv3Lignes: Array<[string, string]> = [
+      ['Numéro', numero || '-'],
+      ['Type', mv3Type || '-'],
+      ['Début', formatDate(mandatDateDebut) || '-'],
+      ['Échéance', formatDate(mandatDateFin) || '-'],
+      ['Montant', formatPrice(Number(dossier.prix ?? 0) || null) || '-'],
+      ['Validation', String(dossierRec['validation_diffusion_state'] ?? '-') || '-'],
+      ['Diffusable', isDiffusableValue(dossier.diffusable) ? 'Oui' : 'Non'],
+      ['Commercial', String(dossier.commercial_nom ?? '-') || '-'],
+      ['Agence', String(dossier.agence_nom ?? '-') || '-'],
+    ]
+    const mv3Figs = (
+      <div className="mv3-figs">
+        <div className="mv3-fig"><div className="v mag">{formatPrice(Number(dossier.prix ?? 0) || null) || '—'}</div><div className="k">Montant</div></div>
+        <div className="mv3-fig"><div className="v">{mv3Type || '—'}</div><div className="k">Type de mandat</div></div>
+        <div className="mv3-fig"><div className={`v ${mandatEchu ? '' : 'amber'}`}>{mandatEchu ? 'Échu' : (ckMandatTiming.joursRestants ?? '—')}{!mandatEchu && ckMandatTiming.joursRestants != null ? <span className="u"> j</span> : null}</div><div className="k">{mandatEchu ? 'État' : 'Jours restants'}</div></div>
+      </div>
+    )
+    const mv3Fold = (
+      <details className="mv3-fold">
+        <summary><span>Tous les champs du mandat</span><span className="ff-c">{mv3Lignes.length} champs</span><svg className="ff-ch" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="m6 9 6 6 6-6" /></svg></summary>
+        <div className="mv3-fgrid">
+          {mv3Lignes.map(([k, v]) => <div className={`mv3-fcell${k === 'Montant' ? ' hl' : ''}`} key={`mv3f-${k}`}><div className="fk">{k}</div><div className="fv">{v}</div></div>)}
+        </div>
+      </details>
+    )
+    // Mandants : résumé (avatars + noms) + lien vers la rubrique Contact (source unique) —
+    // on NE duplique PAS l'éditeur de contacts (cf audit doublons).
+    const mv3People = props.contacts.length ? (
+      <div className="mv3-people">
+        <div className="mv3-avs">
+          {props.contacts.slice(0, 4).map((c, i) => {
+            const nom = c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'
+            const ini = nom.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'C'
+            return <span key={c.id ?? `mv3av-${i}`}>{ini}</span>
+          })}
+        </div>
+        <div className="ptx"><b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b><span>{props.contacts.map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).slice(0, 3).join(' · ')}</span></div>
+        <button type="button" className="mv3-link" onClick={() => goRub('contact')}>Gérer dans Contact</button>
+      </div>
+    ) : (
+      <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Aucun mandant lié — ajoutez-les dans la rubrique <b>Contact</b>.</span></div>
+    )
+    // Historique du prix : composant réel (mêmes événements que partout ailleurs dans l'app).
+    const mv3PriceHist = <div className="mv3-embed"><PriceChangeHistoryCard source={props.detail} title="" emptyLabel="Aucun changement de prix pour ce bien pour l'instant." /></div>
+    // Historique des mandats & avenants (permanent) : MÊME source que mandatDetails
+    // (detail.mandats_json), groupée par numéro, avenants embarqués. Aucune nouvelle donnée.
+    const mv3RawMandats = parseJson<Array<Record<string, unknown>>>(props.detail?.mandats_json ?? '', [])
+    const mv3History = (() => {
+      const grouped = new Map<string, Array<Record<string, unknown>>>()
+      mv3RawMandats.forEach((it, i) => { const n = safeText(it.numero) || `Mandat ${i + 1}`; grouped.set(n, [...(grouped.get(n) ?? []), it]) })
+      return Array.from(grouped.entries()).map(([num, versions]) => {
+        const cur = versions[0] ?? {}
+        const avenants = versions.flatMap((v) => Array.isArray(v.avenants) ? v.avenants : []).filter((a): a is Record<string, unknown> => Boolean(a && typeof a === 'object'))
+        return { num, type: safeText(cur.type), debut: safeText(cur.debut), fin: safeText(cur.fin), cloture: safeText(cur.cloture), avenants }
+      })
+    })()
+    const mv3HistBlock = mv3History.length ? (
+      <>
+        <div className="mv3-sh"><span className="mv3-ic mag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /></svg></span><div><div className="tt">Historique des mandats &amp; avenants</div><div className="ss">Tous les mandats de ce bien, du plus récent au plus ancien</div></div></div>
+        <section className="mv3-card mv3-pad">
+          <div className="mv3-mh">
+            {mv3History.map((h, i) => {
+              const isCur = Boolean(numero) && h.num === numero
+              const dates = [h.debut, h.fin].filter(Boolean).join(' → ')
+              return (
+                <div className={`mv3-mhi ${isCur && mv3Mode === 'valide' ? 'cur' : 'old'}`} key={`mv3mh-${h.num}-${i}`}>
+                  <div className="mv3-mh-head">
+                    <span className="mv3-mh-badge">N° {h.num}</span>
+                    {h.type ? <span className="mv3-mh-type">{h.type}</span> : null}
+                    {dates ? <span className="mv3-mh-dates">{dates}</span> : null}
+                    <span className={`mv3-mh-state ${h.cloture || !isCur ? 'clot' : ''}`}>{h.cloture ? 'Clôturé' : isCur ? (mv3Mode === 'echu' ? 'Échu' : mv3Mode === 'valide' ? 'Actif' : 'En cours') : 'Archivé'}</span>
+                  </div>
+                  {h.avenants.map((a, j) => (
+                    <div className="mv3-mh-av" key={`mv3av-${j}`}><span className="avd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="m5 12 5 5 9-9" /></svg></span>Avenant {[safeText(a.numero), safeText(a.date), safeText(a.detail)].filter(Boolean).join(' · ') || '—'}</div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      </>
+    ) : null
     return (
       <div className="fa-ck-rub fa-ck-mandat-v3" data-screen-label="Rubrique Mandat V3">
         <section className="mv3-card mv3-life">
@@ -22090,9 +22175,56 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="mv3-dmd-foot"><button type="button" className="fa-ck-rep-btn" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, 'nego', 'demande_diffusion')}>Répondre / renvoyer</button></div>
             </div>
           </>
+        ) : mv3Mode === 'valide' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#2fa564,#1f7a4a)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z" /><path d="m9 11 2 2 4-4" /></svg></span><div><div className="tt">Mandat validé &amp; diffusé</div><div className="ss">Le mandat est actif et l'annonce diffusée. Suivez son cycle de vie et pilotez les avenants.</div></div><span className="tag" style={{ background: 'var(--mv3-green-soft)', color: 'var(--mv3-green)' }}>Validé</span></div>
+            <section className="mv3-card mv3-pad">{mv3Figs}{mv3Fold}</section>
+            <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /></svg></span><div><div className="tt">Mandants</div><div className="ss">Gérés dans la rubrique Contact — résumé ici</div></div></div>
+            <section className="mv3-card mv3-pad">{mv3People}</section>
+            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 13h6M9 17h6" /></svg></span><div><div className="tt">Avenant &amp; demandes</div><div className="ss">Baisse de prix ou clôture — soumises à la direction, puis avenant</div></div></div>
+            <section className="mv3-card mv3-pad">
+              {ckDemarches.filter((d) => d.dem === 'price' || d.dem === 'cancel').length ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 13 }}>
+                  {ckDemarches.filter((d) => d.dem === 'price' || d.dem === 'cancel').map((d) => (
+                    <div key={d.key} className={`fa-ck-dm-card${d.locked ? ' lock' : ''}`}>
+                      <div className="fa-ck-dm-tx"><div className="dm-nm">{d.title}</div><div className="dm-sub">{d.sub}</div></div>
+                      {d.locked
+                        ? <span className="fa-ck-dm-state lock">🔒 Après validation</span>
+                        : <><span className="fa-ck-dm-state">● {d.stateLabel}</span>{d.onClick ? <button type="button" className="fa-ck-dm-act" onClick={d.onClick}>{d.actLabel}</button> : null}</>}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="mv3-embed">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
+                  : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+              </div>
+            </section>
+            <div className="mv3-sh"><span className="mv3-ic mag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /></svg></span><div><div className="tt">Historique du prix</div><div className="ss">Chaque changement de prix public est tracé</div></div></div>
+            <section className="mv3-card mv3-pad">{mv3PriceHist}</section>
+          </>
         ) : (
-          <div className="mv3-scaffold">État <b>{mv3Mode}</b> (ckStage : {ckStage}) — contenu porté au lot 5.</div>
+          <>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#8a807a,#615851)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></span><div><div className="tt">{mandatEchu ? 'Mandat échu' : pVendu ? 'Bien vendu' : 'Mandat clôturé'}</div><div className="ss">Conservé pour l'historique — générez un nouveau numéro pour reprendre la commercialisation</div></div><span className="tag" style={{ background: 'var(--mv3-paper)', color: 'var(--mv3-soft)' }}>{mandatEchu ? 'Échu' : pVendu ? 'Vendu' : 'Clôturé'}</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-warn"><span className="em">⚠️</span><span><b>La commercialisation doit reposer sur un mandat en cours de validité.</b> Le mandat n° {numero || '—'} n'est plus actif ; ses informations restent consultables ci-dessous.</span></div>
+              {mv3Figs}{mv3Fold}
+            </section>
+            <div className="mv3-sh"><span className="mv3-ic mag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /></svg></span><div><div className="tt">Historique du prix</div><div className="ss">Chaque changement de prix public reste tracé</div></div></div>
+            <section className="mv3-card mv3-pad">{mv3PriceHist}</section>
+            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M11 13h2M12 12v3" /></svg></span><div><div className="tt">Reprendre la commercialisation</div><div className="ss">Générez un nouveau numéro de mandat pour ce bien</div></div><span className="tag amber">Nouveau</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-warn"><span className="em">⚠️</span><span><b>Action officielle.</b> Générer le numéro <b>crée une nouvelle ligne définitive au registre des mandats</b>.</span></div>
+              <div className="mv3-embed">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="Le numero de mandat n'est pas modifiable depuis une fiche d'index leger." />
+                  : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+              </div>
+            </section>
+          </>
         )}
+        {mv3HistBlock}
       </div>
     )
   }
