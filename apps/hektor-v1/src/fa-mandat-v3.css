@@ -213,7 +213,11 @@
 .fa-ck-mandat-v3 .fa-ck-rep-btn:active, .fa-ck-mandat-v3 .fa-ck-dm-act:active, .fa-ck-mandat-v3 .mv3-link:active { transform: translateY(0); }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Révélation en cascade des blocs à l'ouverture de la rubrique. */
+  /* Révélation en cascade des blocs à l'ouverture de la rubrique.
+     IMPORTANT : opacity SEULE — surtout PAS de transform ici. Ces éléments sont
+     les conteneurs des composants embarqués (MandatDocumentEditor, HektorMandatNumberForm,
+     MandatSignatureTracker) dont la modale est `position: fixed`. Un `transform` sur un
+     ancêtre créerait un bloc conteneur qui piège/masque la modale (régression Lot 6). */
   .fa-ck-mandat-v3 > * { animation: mv3in .5s cubic-bezier(.22, .68, .28, 1) both; }
   .fa-ck-mandat-v3 > *:nth-child(1) { animation-delay: .02s; }
   .fa-ck-mandat-v3 > *:nth-child(2) { animation-delay: .06s; }
@@ -225,7 +229,7 @@
   .fa-ck-mandat-v3 > *:nth-child(8) { animation-delay: .30s; }
   .fa-ck-mandat-v3 > *:nth-child(9) { animation-delay: .34s; }
   .fa-ck-mandat-v3 > *:nth-child(n+10) { animation-delay: .38s; }
-  @keyframes mv3in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes mv3in { from { opacity: 0; } to { opacity: 1; } }
 
   /* Reflet qui balaie la barre de progression du cycle. */
   .fa-ck-mandat-v3 .mv3-life-fill { position: relative; overflow: hidden; }
