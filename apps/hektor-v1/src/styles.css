@@ -2525,6 +2525,60 @@ body {
   font-size: 12px;
   line-height: 1.45;
 }
+
+/* ============================================================================
+   Refonte V3 des modales de demande (validation / baisse / annulation) +
+   illustrations sur mesure. Scopé `.request-modal-v3` → n'affecte pas les autres
+   modales `.modal-panel`. Accent piloté par --req-acc (style inline : type+état). */
+.request-modal-panel.request-modal-v3 {
+  --req-acc: #b3134f;
+  --req-soft: color-mix(in srgb, var(--req-acc) 13%, #fff);
+  --req-disp: 'Fraunces', 'Spectral', serif;
+  background: radial-gradient(140% 80% at 50% -8%, #fbf7f0, #f7f3ec 60%);
+  border: 1px solid #e9e1d3; border-radius: 22px; padding: 0 0 18px; gap: 14px;
+}
+.request-modal-v3 .request-modal-head {
+  margin: 0; border: 0; border-radius: 22px 22px 0 0; box-shadow: none;
+  padding: 15px 22px; border-bottom: 2px solid var(--req-acc);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--req-acc) 92%, #000), var(--req-acc));
+}
+.request-modal-v3 .request-type-chip {
+  align-self: center; font: 800 10px 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  color: #fff; background: rgba(255, 255, 255, .2); padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+}
+.request-modal-v3 .request-modal-title .eyebrow { color: rgba(255, 255, 255, .74); }
+.request-modal-v3 .request-modal-title h3 { font-family: var(--req-disp); font-weight: 600; color: #fff; font-size: 20px; letter-spacing: -.01em; }
+.request-modal-v3 .request-modal-head .ghost-button { color: #fff; border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .12); border-radius: 10px; font-weight: 800; }
+.request-modal-v3 .modal-subline { padding: 0 22px; color: #6b6058; }
+.request-modal-v3 .request-summary-card,
+.request-modal-v3 .request-form-grid,
+.request-modal-v3 .request-history-card,
+.request-modal-v3 .request-message-field,
+.request-modal-v3 .modal-actions { margin-left: 22px; margin-right: 22px; }
+
+.request-modal-v3 .request-summary-card { border: 1px solid #e9e1d3; border-radius: 18px; background: #fffdf9; box-shadow: 0 5px 16px -10px rgba(60, 40, 30, .55); overflow: hidden; }
+.request-modal-v3 .request-summary-hero { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 8px; align-items: center; padding: 14px 16px 14px 8px; }
+.request-modal-v3 .request-summary-illus { display: grid; place-items: center; }
+.request-modal-v3 .request-summary-illus svg { width: 100%; height: auto; max-width: 168px; filter: drop-shadow(0 12px 18px rgba(60, 40, 30, .14)); }
+.request-modal-v3 .request-summary-illus .rfl { transform-box: fill-box; transform-origin: center; animation: reqfl 3.4s ease-in-out infinite; }
+@keyframes reqfl { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.request-modal-v3 .request-summary-copy { min-width: 0; }
+.request-modal-v3 .request-summary-kicker { color: var(--req-acc); font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: 10.5px; }
+.request-modal-v3 .request-summary-heading { font-family: var(--req-disp); font-weight: 600; font-size: 18px; color: #241f22; margin: 5px 0 6px; }
+.request-modal-v3 .request-summary-note { color: #6b6058; font-size: 12.5px; line-height: 1.5; margin: 0 0 10px; }
+.request-modal-v3 .request-summary-state { margin-top: 0; }
+.request-modal-v3 .request-summary-metrics { border-top: 1px solid #e9e1d3; background: #e9e1d3; gap: 1px; }
+.request-modal-v3 .request-summary-metric { background: #fffdf9; padding-left: 16px; }
+.request-modal-v3 .request-summary-metric::before { display: none; }
+.request-modal-v3 .request-summary-metric strong { font-family: var(--req-disp); font-weight: 600; color: #241f22; }
+
+.request-modal-v3 .filter-field input:focus,
+.request-modal-v3 .filter-field select:focus,
+.request-modal-v3 .inline-textarea:focus { border-color: var(--req-acc); box-shadow: 0 0 0 3px var(--req-soft); }
+.request-modal-v3 .request-history-card { border: 1px solid #e9e1d3; background: #fffdf9; border-radius: 16px; }
+.request-modal-v3 .timeline-card { border: 1px solid #e9e1d3; border-left: 3px solid var(--req-acc); background: #f7f3ec; }
+.request-modal-v3 .modal-actions .ghost-button.button-primary { background: linear-gradient(135deg, var(--req-acc), color-mix(in srgb, var(--req-acc) 72%, #000)); border: 0; color: #fff; box-shadow: 0 8px 20px -10px var(--req-acc); }
+
 .request-modal-panel .detail-card {
   position: relative;
   overflow: hidden;

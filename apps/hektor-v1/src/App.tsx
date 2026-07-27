@@ -5699,6 +5699,31 @@ const requestTypeOptions = [
   { value: 'demande_annulation_mandat', label: 'Annulation mandat' },
 ]
 
+// Illustrations sur mesure des modales de demande (langage visuel des illustrations
+// rubrique V3). Règle : à l'état « à envoyer » l'illustration = le TYPE (ce qu'on
+// demande) ; une fois la demande partie, l'illustration = l'ÉTAT (où on en est).
+const REQUEST_ILLUS: Record<string, string> = {
+  validation: `<svg viewBox="0 0 210 150"><defs><linearGradient id="rvg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3fbf7a"/><stop offset="1" stop-color="#1f7a4a"/></linearGradient></defs><ellipse cx="102" cy="134" rx="70" ry="8" fill="#00000010"/><rect x="50" y="24" width="84" height="96" rx="13" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><path d="M50 37a13 13 0 0 1 13-13h58a13 13 0 0 1 13 13v6H50z" fill="url(#rvg)"/><rect x="64" y="55" width="56" height="6" rx="3" fill="#eaf3ee"/><rect x="64" y="69" width="44" height="6" rx="3" fill="#eaf3ee"/><rect x="64" y="83" width="50" height="6" rx="3" fill="#eaf3ee"/><g fill="none" stroke="url(#rvg)" stroke-width="3.4" stroke-linecap="round" opacity=".5"><path d="M150 58a26 26 0 0 1 0 42"/><path d="M164 47a46 46 0 0 1 0 64"/></g><circle cx="132" cy="104" r="21" fill="url(#rvg)" stroke="#fffdf9" stroke-width="3.5"/><path d="M123 104l6 6 12-13" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path class="rfl" d="M36 40 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z" fill="#a5793d"/><circle cx="182" cy="30" r="4" fill="#2f9e9e"/></svg>`,
+  price: `<svg viewBox="0 0 210 150"><defs><linearGradient id="rpg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cf9c50"/><stop offset="1" stop-color="#a5793d"/></linearGradient></defs><ellipse cx="100" cy="134" rx="70" ry="8" fill="#00000010"/><g transform="rotate(-9 92 78)"><rect x="44" y="40" width="88" height="78" rx="15" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><circle cx="66" cy="62" r="7.5" fill="none" stroke="url(#rpg)" stroke-width="3.4"/><text x="92" y="98" font-family="Fraunces,serif" font-size="42" font-weight="700" fill="url(#rpg)" text-anchor="middle">€</text></g><g stroke="#b06a05" stroke-width="4.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M168 40v54"/><path d="M155 80l13 17 13-17"/></g><path class="rfl" d="M34 48 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z" fill="#3fbf7a"/><circle cx="190" cy="120" r="4" fill="#2f9e9e"/></svg>`,
+  cancellation: `<svg viewBox="0 0 210 150"><defs><linearGradient id="rcg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e05a4b"/><stop offset="1" stop-color="#c0392b"/></linearGradient></defs><ellipse cx="100" cy="134" rx="70" ry="8" fill="#00000010"/><rect x="46" y="24" width="84" height="96" rx="13" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><path d="M46 37a13 13 0 0 1 13-13h58a13 13 0 0 1 13 13v6H46z" fill="#9a8f86"/><rect x="60" y="55" width="56" height="6" rx="3" fill="#efe7de"/><rect x="60" y="69" width="44" height="6" rx="3" fill="#efe7de"/><rect x="60" y="83" width="50" height="6" rx="3" fill="#efe7de"/><g fill="none" stroke="#c0392b" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" opacity=".45"><path d="M34 96a22 22 0 0 1 22-22"/><path d="M34 82v14h14"/></g><circle cx="140" cy="102" r="22" fill="url(#rcg)" stroke="#fffdf9" stroke-width="3.5"/><path d="M131 93l18 18" stroke="#fff" stroke-width="3.8" stroke-linecap="round"/><path class="rfl" d="M182 36 l2.4 6 6 2.4 -6 2.4 -2.4 6 -2.4 -6 -6 -2.4 6 -2.4z" fill="#a5793d"/><circle cx="40" cy="120" r="4" fill="#2f9e9e"/></svg>`,
+  envoye: `<svg viewBox="0 0 210 150"><defs><linearGradient id="rs1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5566c0"/><stop offset="1" stop-color="#3a4a95"/></linearGradient></defs><ellipse cx="104" cy="136" rx="66" ry="7" fill="#00000010"/><path d="M34 108 q34 -20 58 -34" fill="none" stroke="#3a4a95" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9" opacity=".5"/><g class="rfl"><path d="M52 96 L162 40 L120 104 L104 82 Z" fill="url(#rs1)"/><path d="M162 40 L104 82 L120 104 Z" fill="#2f3d84"/><path d="M162 40 L52 96 L104 82 Z" fill="#6474cf"/></g><path d="M182 44 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z" fill="#a5793d"/><circle cx="40" cy="60" r="4" fill="#2f9e9e"/></svg>`,
+  corriger: `<svg viewBox="0 0 210 150"><defs><linearGradient id="rc1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d68f22"/><stop offset="1" stop-color="#b06a05"/></linearGradient></defs><ellipse cx="98" cy="134" rx="70" ry="8" fill="#00000010"/><rect x="46" y="22" width="84" height="98" rx="13" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><path d="M46 35a13 13 0 0 1 13-13h58a13 13 0 0 1 13 13v6H46z" fill="url(#rc1)"/><rect x="60" y="54" width="56" height="6" rx="3" fill="#f6ead4"/><rect x="60" y="68" width="40" height="6" rx="3" fill="#f6ead4"/><rect x="60" y="82" width="48" height="6" rx="3" fill="#f6ead4"/><path d="M150 66 l24 42 a6 6 0 0 1 -5 9 h-38 a6 6 0 0 1 -5 -9 z" fill="url(#rc1)" stroke="#fffdf9" stroke-width="3.5"/><rect x="147" y="86" width="6" height="16" rx="3" fill="#fff"/><circle cx="150" cy="109" r="3.2" fill="#fff"/><path class="rfl" d="M36 44 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z" fill="#3fbf7a"/><circle cx="188" cy="40" r="4" fill="#2f9e9e"/></svg>`,
+  acceptee: `<svg viewBox="0 0 210 150"><defs><linearGradient id="ra1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3fbf7a"/><stop offset="1" stop-color="#1f7a4a"/></linearGradient></defs><ellipse cx="105" cy="136" rx="60" ry="7" fill="#00000010"/><path d="M92 96 l-16 30 16 -6 8 14 14 -30z" fill="#2f8a5b"/><path d="M118 96 l16 30 -16 -6 -8 14 -14 -30z" fill="#256e49"/><circle cx="105" cy="74" r="34" fill="url(#ra1)" stroke="#fffdf9" stroke-width="4"/><path d="M92 74 l9 9 18 -19" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path class="rfl" d="M52 42 l2.8 7 7 2.8 -7 2.8 -2.8 7 -2.8 -7 -7 -2.8 7 -2.8z" fill="#a5793d"/><path d="M162 54 l2.2 5.4 5.4 2.2 -5.4 2.2 -2.2 5.4 -2.2 -5.4 -5.4 -2.2 5.4 -2.2z" fill="#3fbf7a"/><circle cx="158" cy="104" r="4" fill="#2f9e9e"/></svg>`,
+}
+const REQUEST_ACCENT: Record<string, string> = { validation: '#1f7a4a', price: '#b06a05', cancellation: '#c0392b', envoye: '#3a4a95', corriger: '#b06a05', acceptee: '#1f7a4a' }
+// Vue illustrée : mappe (type effectif + statut de la demande) → clé illustration + accent.
+// « au plus proche » : in_progress → envoyé (bleu) ; refused/waiting_commercial → à corriger (ambre).
+function requestModalIllusView(effectiveType: string, status: string | null | undefined) {
+  const typeKey = effectiveType === 'demande_baisse_prix' ? 'price' : effectiveType === 'demande_annulation_mandat' ? 'cancellation' : 'validation'
+  const stateKey = !status ? 'envoyer'
+    : status === 'accepted' ? 'acceptee'
+    : (status === 'waiting_commercial' || status === 'refused') ? 'corriger'
+    : 'envoye'
+  const illusKey = stateKey === 'envoyer' ? typeKey : stateKey
+  const acc = REQUEST_ACCENT[illusKey] ?? '#b3134f'
+  return { typeKey, stateKey, illusKey, acc }
+}
+
 function refusalReasonLabel(value: string | null | undefined) {
   const normalized = (value ?? '').trim()
   if (!normalized) return ''
@@ -16454,14 +16479,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
             <section
-              className={`modal-panel request-modal-panel ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'request-modal-panel-cancellation' : 'request-modal-panel-validation'}`}
+              className={`modal-panel request-modal-panel request-modal-v3 ${requestModalEffectiveType === 'demande_baisse_prix' ? 'request-modal-panel-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'request-modal-panel-cancellation' : 'request-modal-panel-validation'}`}
+              style={{ ['--req-acc']: requestModalIllusView(requestModalEffectiveType, requestModalRequest?.request_status).acc } as CSSProperties}
               onClick={(event) => event.stopPropagation()}
             >
               <div className="panel-head request-modal-head">
-                <span
-                  className={`modal-hero-icon ${requestModalEffectiveType === 'demande_baisse_prix' ? 'modal-hero-icon-price' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'modal-hero-icon-cancellation' : 'modal-hero-icon-validation'}`}
-                  aria-hidden="true"
-                />
+                <span className="request-type-chip" aria-hidden="true">{requestModalEffectiveType === 'demande_baisse_prix' ? 'Baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation' : 'Validation'}</span>
                 <div className="request-modal-title">
                   <p className="eyebrow">Gestion des demandes</p>
                   <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Demande d annulation de mandat' : 'Demande de validation'}</h3>
@@ -16472,68 +16495,83 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button button-subtle request-modal-close" type="button" onClick={closeRequestModal}>Fermer</button>
               </div>
               <p className="modal-subline">{requestModalMandat.numero_dossier ?? '-'} - {requestModalMandat.numero_mandat ?? '-'} - {commercialDisplay(requestModalMandat)}</p>
-              {requestModalEffectiveType !== 'demande_baisse_prix' ? (
-                <section className="request-summary-card">
-                  <div className="request-summary-hero">
-                    <div className="request-summary-copy">
-                      <p className="request-summary-kicker">{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation mandat' : 'Validation diffusion'}</p>
-                      <h4 className="request-summary-heading">
-                        {requestModalEffectiveType === 'demande_annulation_mandat'
-                          ? requestModalRole === 'pauline'
-                            ? 'Decision sur l annulation'
-                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                              ? 'Correction prete a renvoyer'
-                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                                ? 'Demande deja transmise'
-                                : 'Annulation en preparation'
-                          : requestModalRole === 'pauline'
-                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
-                            ? 'Relecture avant retour'
-                            : 'Decision de Pauline'
-                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                            ? 'Correction prete a renvoyer'
-                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                              ? 'Demande deja transmise'
-                              : 'Validation en preparation'}
-                      </h4>
-                      <p className="request-summary-note">
-                        {requestModalEffectiveType === 'demande_annulation_mandat'
-                          ? requestModalRole === 'pauline'
-                            ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
-                            : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                              ? 'La demande a ete completee. Tu peux la renvoyer a Pauline.'
-                              : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                                ? 'La demande est partie. Il reste a suivre le retour de Pauline.'
-                                : 'Explique le motif d annulation pour que Pauline controle le mandat dans Hektor.'
-                          : requestModalRole === 'pauline'
-                          ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
-                            ? 'Relis le dernier retour puis decide si le dossier peut repartir ou non.'
-                            : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
+              <section className="request-summary-card">
+                <div className="request-summary-hero">
+                  <div className="request-summary-illus" aria-hidden="true" dangerouslySetInnerHTML={{ __html: REQUEST_ILLUS[requestModalIllusView(requestModalEffectiveType, requestModalRequest?.request_status).illusKey] ?? '' }} />
+                  <div className="request-summary-copy">
+                    <p className="request-summary-kicker">{requestModalEffectiveType === 'demande_baisse_prix' ? 'Baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation mandat' : 'Validation diffusion'}</p>
+                    <h4 className="request-summary-heading">
+                      {requestModalEffectiveType === 'demande_baisse_prix'
+                        ? requestModalRole === 'pauline'
+                          ? 'Decision sur la baisse'
                           : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
-                            ? 'Le dossier a ete ajuste. Tu peux renvoyer une version propre a Pauline.'
+                            ? 'A corriger puis renvoyer'
                             : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
-                              ? 'La demande est partie. Il reste a suivre le retour de validation.'
-                              : 'Une fois approuvee, la diffusion et les passerelles par defaut seront activees automatiquement.'}
-                      </p>
-                    </div>
+                              ? 'Demande transmise'
+                              : 'Prete a envoyer'
+                        : requestModalEffectiveType === 'demande_annulation_mandat'
+                        ? requestModalRole === 'pauline'
+                          ? 'Decision sur l annulation'
+                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                            ? 'A corriger puis renvoyer'
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              ? 'Demande transmise'
+                              : 'Prete a envoyer'
+                        : requestModalRole === 'pauline'
+                        ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
+                          ? 'Relecture avant retour'
+                          : 'Decision de Pauline'
+                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                          ? 'A corriger puis renvoyer'
+                          : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                            ? 'Demande transmise'
+                            : 'Prete a envoyer'}
+                    </h4>
+                    <p className="request-summary-note">
+                      {requestModalEffectiveType === 'demande_baisse_prix'
+                        ? requestModalRole === 'pauline'
+                          ? 'Controlez l avenant signe dans Hektor puis validez ou refusez la baisse.'
+                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                            ? 'La direction a demande un ajustement. Corrigez puis renvoyez.'
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              ? 'La demande est partie. Suivez le retour de la direction ci-dessous.'
+                              : 'Verifiez le nouveau prix puis transmettez la demande a la direction.'
+                        : requestModalEffectiveType === 'demande_annulation_mandat'
+                        ? requestModalRole === 'pauline'
+                          ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
+                          : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                            ? 'La direction a demande un ajustement. Corrigez puis renvoyez.'
+                            : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                              ? 'La demande est partie. Suivez le retour de la direction ci-dessous.'
+                              : 'Expliquez le motif d annulation puis transmettez la demande a la direction.'
+                        : requestModalRole === 'pauline'
+                        ? requestModalPaulineState?.label?.toLowerCase().includes('refusee')
+                          ? 'Relis le dernier retour puis decide si le dossier peut repartir ou non.'
+                          : 'Tout le contexte utile est centralise ici pour valider rapidement le bien.'
+                        : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
+                          ? 'La direction a demande un ajustement. Corrigez puis renvoyez.'
+                          : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
+                            ? 'La demande est partie. Suivez le retour de la direction ci-dessous.'
+                            : 'Verifiez le dossier puis transmettez la demande a la direction.'}
+                    </p>
                     <div className="request-summary-state">
                       <StatusPill value={requestModalRole === 'pauline' ? (requestModalPaulineState?.label ?? 'A traiter') : requestModalNegoLabel} />
                     </div>
                   </div>
-                  <div className="request-summary-metrics">
-                    <article className="request-summary-metric">
-                      <span className="request-summary-metric-label">Dossier</span>
-                      <strong>{requestModalMandat.numero_dossier ?? '-'}</strong>
-                      <small>Mandat {requestModalMandat.numero_mandat ?? '-'}</small>
-                    </article>
-                    <article className="request-summary-metric">
-                      <span className="request-summary-metric-label">Apres accord</span>
-                      <strong>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Email commercial envoye' : 'Diffusion activee'}</strong>
-                      <small>{requestModalEffectiveType === 'demande_annulation_mandat' ? 'Aucun automatisme Hektor' : 'Passerelles par defaut appliquees'}</small>
-                    </article>
-                  </div>
-                </section>
-              ) : null}
+                </div>
+                <div className="request-summary-metrics">
+                  <article className="request-summary-metric">
+                    <span className="request-summary-metric-label">Dossier</span>
+                    <strong>{requestModalMandat.numero_dossier ?? '-'}</strong>
+                    <small>Mandat {requestModalMandat.numero_mandat ?? '-'}</small>
+                  </article>
+                  <article className="request-summary-metric">
+                    <span className="request-summary-metric-label">{requestModalEffectiveType === 'demande_baisse_prix' ? 'Nouveau prix' : 'Apres accord'}</span>
+                    <strong>{requestModalEffectiveType === 'demande_baisse_prix' ? `${requestModalPriceValue || '—'}${requestModalPriceValue ? ' €' : ''}` : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Email commercial envoye' : 'Diffusion activee'}</strong>
+                    <small>{requestModalEffectiveType === 'demande_baisse_prix' ? 'Applique apres validation' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Aucun automatisme Hektor' : 'Passerelles par defaut appliquees'}</small>
+                  </article>
+                </div>
+              </section>
               {requestModalRole !== 'pauline' ? (
                 <div className="admin-form-grid request-form-grid">
                   <label className="filter-field">
