@@ -186,6 +186,50 @@
 .fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
 
 /* ============================================================================
+   Lot 8 — Fidélité maquette : illustrations SVG + layout 2 colonnes + CTA dégradés.
+   Décor AUTOUR des vrais composants (qui restent inchangés). Les transforms ici
+   sont uniquement sur des FEUILLES (SVG <g>/<path>, pseudo-éléments, boutons) —
+   jamais sur un ancêtre de modale (cf. régression Lot 6).
+   ============================================================================ */
+/* Bloc 2 colonnes : illustration à gauche, contenu à droite. */
+.fa-ck-mandat-v3 .mv3-gen2 { display: flex; gap: 20px; align-items: center; }
+.fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 0 34%; display: flex; justify-content: center; }
+.fa-ck-mandat-v3 .mv3-gen2-illus svg { width: 100%; max-width: 210px; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
+.fa-ck-mandat-v3 .mv3-gen2-body { flex: 1; min-width: 0; }
+@media (max-width: 680px) { .fa-ck-mandat-v3 .mv3-gen2 { flex-direction: column; } .fa-ck-mandat-v3 .mv3-gen2-illus { flex: none; } }
+/* Illustration centrée (états lecture seule type Échu). */
+.fa-ck-mandat-v3 .mv3-illus { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0 0 14px; }
+.fa-ck-mandat-v3 .mv3-illus svg { width: 210px; max-width: 62%; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
+.fa-ck-mandat-v3 .mv3-illus-cap, .fa-ck-mandat-v3 .mv3-gen2-cap { font-size: 12.5px; color: var(--mv3-soft); line-height: 1.5; }
+.fa-ck-mandat-v3 .mv3-illus-cap { text-align: center; max-width: 82%; }
+.fa-ck-mandat-v3 .mv3-gen2-cap { margin: 0 0 11px; }
+.fa-ck-mandat-v3 .mv3-illus-cap b, .fa-ck-mandat-v3 .mv3-gen2-cap b { color: var(--mv3-ink); }
+
+/* Gros boutons d'action dégradés (repris de .btn-mag de la maquette). */
+.fa-ck-mandat-v3 .mv3-btn { cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 800; color: #fff; padding: 12px 19px; border-radius: 12px; border: 0; display: inline-flex; align-items: center; gap: 8px; position: relative; overflow: hidden;
+  --cta: var(--mv3-mag); --cta-d: var(--mv3-mag-deep);
+  background: linear-gradient(135deg, var(--cta), var(--cta-d));
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--cta) 85%, #000), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.fa-ck-mandat-v3 .mv3-btn svg { width: 15px; height: 15px; position: relative; z-index: 1; }
+.fa-ck-mandat-v3 .mv3-btn-gold { --cta: #c8994e; --cta-d: #916626; }
+.fa-ck-mandat-v3 .mv3-btn-blue { --cta: #5566c0; --cta-d: #2f3d84; }
+.fa-ck-mandat-v3 .mv3-btn-amber { --cta: #d68f22; --cta-d: #9a5f05; }
+
+/* Flottement des illustrations + reflet/pictos des CTA (feuilles uniquement). */
+@media (prefers-reduced-motion: no-preference) {
+  .fa-ck-mandat-v3 .mv3-gen2-illus .fl, .fa-ck-mandat-v3 .mv3-illus .fl { animation: mv3float 4.4s ease-in-out infinite; }
+  .fa-ck-mandat-v3 .mv3-gen2-illus .fl2, .fa-ck-mandat-v3 .mv3-illus .fl2 { animation: mv3float 5.2s ease-in-out infinite .5s; }
+  @keyframes mv3float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  .fa-ck-mandat-v3 .mv3-btn::after { content: ''; position: absolute; top: 0; left: 0; width: 50%; height: 100%; z-index: 0; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .42), transparent); transform: translateX(-180%) skewX(-16deg); animation: mv3shine 3.6s ease-in-out infinite; }
+  @keyframes mv3shine { 0% { transform: translateX(-180%) skewX(-16deg); } 42%, 100% { transform: translateX(360%) skewX(-16deg); } }
+  .fa-ck-mandat-v3 .mv3-btn:hover { transform: translateY(-2px); box-shadow: 0 13px 30px -10px var(--cta), inset 0 1px 0 rgba(255, 255, 255, .32); }
+  .fa-ck-mandat-v3 .mv3-btn:active { transform: translateY(0) scale(.99); }
+  .fa-ck-mandat-v3 .mv3-btn svg { animation: mv3cue 2.6s ease-in-out infinite; }
+  @keyframes mv3cue { 0%, 76%, 100% { transform: translateX(0) scale(1); } 85% { transform: translateX(2px) scale(1.14); } 93% { transform: translateX(0) scale(1); } }
+}
+
+/* ============================================================================
    Lot 6 — Illustrations, animations & finitions
    Effets décoratifs (halos, survols) toujours actifs car peu coûteux ;
    toute animation en boucle / d'entrée est confinée à prefers-reduced-motion:

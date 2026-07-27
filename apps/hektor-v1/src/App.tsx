@@ -21101,6 +21101,20 @@ const APP_CONTACT_V2_ENABLED =
 const APP_MANDAT_V3_ENABLED =
   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_MANDAT_V3_ENABLED ?? '').trim().toLowerCase())
 
+// Illustrations SVG de la rubrique Mandat V3 (Lot 8) — reprises VERBATIM de la maquette de
+// référence. Chaînes statiques (aucune entrée utilisateur) injectées via dangerouslySetInnerHTML,
+// ce qui évite la conversion kebab→camelCase des attributs SVG. Les classes .fl/.fl2 portent le
+// flottement (CSS scopé .fa-ck-mandat-v3). Un seul état s'affiche à la fois → ids de gradient OK.
+const MV3_ILLUS: Record<string, string> = {
+  none: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3ga1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b3134f"/><stop offset="1" stop-color="#8b0f3d"/></linearGradient><linearGradient id="mv3ga2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cf9c50"/><stop offset="1" stop-color="#a5793d"/></linearGradient></defs><ellipse cx="115" cy="90" rx="78" ry="7" fill="#00000010"/><rect x="52" y="20" width="92" height="66" rx="9" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><path d="M52 29a9 9 0 0 1 9-9h74a9 9 0 0 1 9 9v6H52z" fill="url(#mv3ga2)"/><circle cx="61" cy="27.5" r="2.4" fill="#fff"/><circle cx="69" cy="27.5" r="2.4" fill="#fff"/><rect x="64" y="46" width="58" height="5" rx="2.5" fill="#efe7d8"/><rect x="64" y="57" width="46" height="5" rx="2.5" fill="#efe7d8"/><rect x="64" y="68" width="34" height="5" rx="2.5" fill="#efe7d8"/><g class="fl"><circle cx="150" cy="60" r="24" fill="url(#mv3ga1)"/><text x="150" y="67" text-anchor="middle" font-family="Georgia,serif" font-size="19" font-weight="700" fill="#fff">N°</text></g><path class="fl2" d="M185 22 l3.4 8.6 8.6 3.4 -8.6 3.4 -3.4 8.6 -3.4 -8.6 -8.6 -3.4 8.6 -3.4z" fill="#2f9e9e"/><circle class="fl2" cx="40" cy="34" r="4.5" fill="#3fbf7a"/><circle cx="196" cy="70" r="3.5" fill="#d1662e"/></svg>`,
+  editer: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3gb1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cf9c50"/><stop offset="1" stop-color="#a5793d"/></linearGradient><linearGradient id="mv3gb2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5566c0"/><stop offset="1" stop-color="#2f3d84"/></linearGradient></defs><ellipse cx="115" cy="90" rx="76" ry="7" fill="#00000010"/><rect x="60" y="16" width="84" height="70" rx="9" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><path d="M60 25a9 9 0 0 1 9-9h66a9 9 0 0 1 9 9v6H60z" fill="url(#mv3gb1)"/><rect x="72" y="42" width="60" height="5" rx="2.5" fill="#efe7d8"/><rect x="72" y="53" width="50" height="5" rx="2.5" fill="#efe7d8"/><rect x="72" y="64" width="38" height="5" rx="2.5" fill="#e7edf7"/><g class="fl" transform="rotate(38 168 58)"><rect x="162" y="20" width="12" height="52" rx="4" fill="url(#mv3gb2)"/><rect x="162" y="20" width="12" height="9" rx="4" fill="#8b0f3d"/><path d="M162 72 h12 l-6 12z" fill="#2b2540"/></g><path class="fl2" d="M44 24 l3 7.4 7.4 3 -7.4 3 -3 7.4 -3 -7.4 -7.4 -3 7.4 -3z" fill="#3fbf7a"/><circle cx="196" cy="30" r="4" fill="#2f9e9e"/></svg>`,
+  edite: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3gi1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cf9c50"/><stop offset="1" stop-color="#a5793d"/></linearGradient></defs><ellipse cx="115" cy="90" rx="70" ry="7" fill="#00000010"/><rect x="62" y="16" width="82" height="70" rx="9" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><path d="M62 25a9 9 0 0 1 9-9h64a9 9 0 0 1 9 9v6H62z" fill="url(#mv3gi1)"/><rect x="74" y="42" width="58" height="5" rx="2.5" fill="#efe7d8"/><rect x="74" y="53" width="48" height="5" rx="2.5" fill="#efe7d8"/><rect x="74" y="64" width="38" height="5" rx="2.5" fill="#efe7d8"/><g class="fl"><circle cx="150" cy="66" r="17" fill="#1f7a4a"/><path d="M143 66 l5 5 9 -10" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g><path class="fl2" d="M44 26 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z" fill="#5566c0"/><circle class="fl2" cx="190" cy="30" r="3.6" fill="#2f9e9e"/></svg>`,
+  envoye: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3gc1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5566c0"/><stop offset="1" stop-color="#2f3d84"/></linearGradient></defs><ellipse cx="115" cy="90" rx="76" ry="7" fill="#00000010"/><rect x="40" y="20" width="74" height="62" rx="8" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><rect x="52" y="34" width="50" height="4.5" rx="2.2" fill="#efe7d8"/><rect x="52" y="44" width="42" height="4.5" rx="2.2" fill="#efe7d8"/><line x1="52" y1="66" x2="102" y2="66" stroke="#d68f22" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"/><path class="fl" d="M196 30 L120 58 L150 66 L156 84 L168 66 L196 30Z" fill="url(#mv3gc1)"/><path class="fl" d="M150 66 L168 66 L156 84Z" fill="#3a4a95"/><circle class="fl2" cx="128" cy="40" r="2.6" fill="#9aa6e6"/><circle class="fl2" cx="140" cy="34" r="2" fill="#9aa6e6"/><circle cx="118" cy="46" r="1.8" fill="#9aa6e6"/><path class="fl2" d="M204 60 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z" fill="#2f9e9e"/></svg>`,
+  valider: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3ge1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fa564"/><stop offset="1" stop-color="#1f7a4a"/></linearGradient></defs><ellipse cx="115" cy="90" rx="74" ry="7" fill="#00000010"/><rect x="58" y="14" width="84" height="72" rx="9" fill="#fffdf9" stroke="#e9e1d3" stroke-width="2"/><rect x="70" y="28" width="60" height="5" rx="2.5" fill="#efe7d8"/><rect x="70" y="39" width="48" height="5" rx="2.5" fill="#efe7d8"/><path d="M70 68 q7 -9 14 -1 t14 -1 t12 0" fill="none" stroke="#3a4a95" stroke-width="2.4" stroke-linecap="round"/><g class="fl"><circle cx="158" cy="66" r="22" fill="url(#mv3ge1)"/><path d="M148 66 l6 6 12 -13" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></g><path class="fl2" d="M44 26 l3 7.4 7.4 3 -7.4 3 -3 7.4 -3 -7.4 -7.4 -3 7.4 -3z" fill="#d68f22"/><circle class="fl2" cx="182" cy="24" r="4" fill="#2f9e9e"/></svg>`,
+  valide: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3gf1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fa564"/><stop offset="1" stop-color="#1f7a4a"/></linearGradient></defs><ellipse cx="115" cy="90" rx="70" ry="7" fill="#00000010"/><path class="fl2" d="M150 30 a34 34 0 0 1 0 40" fill="none" stroke="#2f9e9e" stroke-width="3" stroke-linecap="round" opacity=".8"/><path class="fl2" d="M160 22 a46 46 0 0 1 0 56" fill="none" stroke="#3fbf7a" stroke-width="3" stroke-linecap="round" opacity=".55"/><path class="fl2" d="M80 30 a34 34 0 0 0 0 40" fill="none" stroke="#5566c0" stroke-width="3" stroke-linecap="round" opacity=".7"/><g class="fl"><path d="M115 20 l26 10 v16 c0 16 -11 28 -26 34 c-15 -6 -26 -18 -26 -34 v-16z" fill="url(#mv3gf1)"/><path d="M104 50 l7 7 15 -16" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g><path class="fl2" d="M40 34 l3 7.4 7.4 3 -7.4 3 -3 7.4 -3 -7.4 -7.4 -3 7.4 -3z" fill="#d68f22"/><circle cx="190" cy="70" r="4" fill="#b3134f"/></svg>`,
+  echu: `<svg viewBox="0 0 230 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mv3gh1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c0392b"/><stop offset="1" stop-color="#912a20"/></linearGradient></defs><ellipse cx="115" cy="90" rx="72" ry="7" fill="#00000010"/><g opacity=".65"><rect x="56" y="16" width="80" height="70" rx="9" fill="#f3efe8" stroke="#e0d8c9" stroke-width="2"/><rect x="68" y="30" width="56" height="5" rx="2.5" fill="#e2dacb"/><rect x="68" y="41" width="44" height="5" rx="2.5" fill="#e2dacb"/><rect x="68" y="52" width="50" height="5" rx="2.5" fill="#e2dacb"/></g><g class="fl"><circle cx="156" cy="62" r="23" fill="url(#mv3gh1)"/><path d="M156 50 v12 l8 6" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></g><circle class="fl2" cx="44" cy="30" r="3.4" fill="#b0a89a"/><circle class="fl2" cx="52" cy="72" r="2.6" fill="#b0a89a"/><circle cx="186" cy="30" r="3" fill="#c0392b"/></svg>`,
+}
+
 // Cockpit v2 — RUBRIQUES DE LA MAQUETTE v26 (libellés/ordre), chacune mappée sur les vrais composants.
 // (Rapprochement = action → ouvre l'overlay existant, pas une rubrique de contenu.)
 // Icônes SVG EXACTES de la maquette v26 (table IC), rendues telles quelles.
@@ -22024,6 +22038,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       const l = String(label ?? '').trim()
       return l ? <span className={`mv3-st ${actionStateVariant(l)}`}>{l}</span> : null
     }
+    // Illustration SVG (Lot 8) : injectée verbatim depuis MV3_ILLUS (décor, aucune donnée).
+    const mv3IllusEl = (kind: string) => <div className="mv3-gen2-illus" dangerouslySetInnerHTML={{ __html: MV3_ILLUS[kind] ?? '' }} />
+    const mv3IllusCenter = (kind: string, cap: React.ReactNode) => (
+      <div className="mv3-illus"><div style={{ display: 'flex', justifyContent: 'center', width: '100%' }} dangerouslySetInnerHTML={{ __html: MV3_ILLUS[kind] ?? '' }} /><p className="mv3-illus-cap">{cap}</p></div>
+    )
     // Caractéristiques (Validé/Échu) : chiffres clés + tous les champs repliés — MÊMES
     // expressions que l'ancienne rubrique (numero_mandat, mandat_type, dates, prix, diffusable…).
     const mv3Lignes: Array<[string, string]> = [
@@ -22128,12 +22147,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         {mv3Mode === 'none' ? (
           <>
             <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M11 13h2M12 12v3" /></svg></span><div><div className="tt">Générer le numéro de mandat</div><div className="ss">Vous n'avez pas encore de mandat sur ce bien — commencez ici</div></div><span className="tag amber">À générer</span></div>
-            <section className="mv3-card mv3-pad">
-              <div className="mv3-warn"><span className="em">⚠️</span><span><b>Action officielle.</b> À ne faire qu'une fois votre mandant confirmé — générer le numéro <b>crée une ligne définitive au registre des mandats</b>.</span></div>
-              <div className="mv3-embed">
-                {isLightweightDetail
-                  ? <ReadOnlyDetailNotice label="Le numero de mandat n'est pas modifiable depuis une fiche d'index leger." />
-                  : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+            <section className="mv3-card mv3-pad mv3-gen2">
+              {mv3IllusEl('none')}
+              <div className="mv3-gen2-body">
+                <p className="mv3-gen2-cap"><b>Étape 1.</b> Réservez le <b>numéro officiel</b> de votre mandat — c'est votre point de départ.</p>
+                <div className="mv3-warn"><span className="em">⚠️</span><span><b>Action officielle.</b> À ne faire qu'une fois votre mandant confirmé — générer le numéro <b>crée une ligne définitive au registre des mandats</b>.</span></div>
+                <div className="mv3-embed">
+                  {isLightweightDetail
+                    ? <ReadOnlyDetailNotice label="Le numero de mandat n'est pas modifiable depuis une fiche d'index leger." />
+                    : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+                </div>
               </div>
             </section>
           </>
@@ -22141,6 +22164,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <>
             <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /></svg></span><div><div className="tt">Éditer le mandat</div><div className="ss">Complétez vos fiches, puis rédigez votre mandat</div></div><span className="tag mag">N° {numero}</span></div>
             <section className="mv3-card mv3-pad">
+              <div className="mv3-gen2" style={{ marginBottom: 15 }}>
+                {mv3IllusEl('editer')}
+                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Étape 2.</b> Complétez les fiches ci-dessous, puis rédigez votre mandat — il s'enregistre dans vos <b>Documents</b>.</p></div>
+              </div>
               {mv3Check}
             </section>
             <section className="mv3-card mv3-pad">
@@ -22155,6 +22182,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <>
             <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="m9 15 2 2 4-4" /></svg></span><div><div className="tt">Le mandat — édité</div><div className="ss">Rédigé — faites‑le signer (électronique ou manuscrit)</div></div><span className="tag gold">À envoyer</span></div>
             <section className="mv3-card mv3-pad">
+              <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+                {mv3IllusEl('edite')}
+                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Édité.</b> Votre mandat est rédigé. Faites-le signer par vos mandants — signature électronique ci-dessous, ou manuscrite.</p></div>
+              </div>
               <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Deux façons de faire signer : la <b>signature électronique</b> (ci‑dessous) ou, exceptionnellement, la <b>signature manuscrite</b> — dans ce cas, joignez le mandat signé dans les Documents : il part dans Hektor et le mandat passe directement à « Signé ».</span></div>
               <details className="mv3-manual">
                 <summary className="mv3-alt" style={{ marginTop: 11 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span><b>Signer à la main</b><em>imprimez, faites signer, puis joignez le signé</em></span></summary>
@@ -22177,6 +22208,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <>
             <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></svg></span><div><div className="tt">Le mandat — envoyé en signature</div><div className="ss">Envoyé sur ImmoSign — vos mandants doivent signer</div></div><span className="tag" style={{ background: 'var(--mv3-blue-soft)', color: 'var(--mv3-blue)' }}>En signature</span></div>
             <section className="mv3-card mv3-pad">
+              <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+                {mv3IllusEl('envoye')}
+                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Étape 3.</b> Envoyé à vos mandants pour <b>signature électronique</b>. Suivez et relancez si besoin.</p></div>
+              </div>
               <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
               <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg><span>Vos mandants n'ont pas encore signé. Vous pourrez <b>demander la validation</b> dès que le mandat sera <b>signé</b>.</span></div>
             </section>
@@ -22185,6 +22220,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <>
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#2fa564,#1f7a4a)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z" /><path d="m9 11 2 2 4-4" /></svg></span><div><div className="tt">Mandat signé — préparez votre annonce</div><div className="ss">Vos mandants ont signé. Finalisez votre annonce, puis demandez la validation.</div></div><span className="tag" style={{ background: 'var(--mv3-green-soft)', color: 'var(--mv3-green)' }}>Signé</span></div>
             <section className="mv3-card mv3-pad">
+              <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+                {mv3IllusEl('valider')}
+                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Signé sur ImmoSign.</b> Complétez votre annonce (documents, photos, texte des portails) avant de demander la validation.</p></div>
+              </div>
               <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
             </section>
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span><div><div className="tt">Préparez votre annonce avant la validation</div><div className="ss">Finalisez tout, puis demandez la validation à la direction</div></div></div>
@@ -22220,7 +22259,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         ) : mv3Mode === 'valide' ? (
           <>
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#2fa564,#1f7a4a)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z" /><path d="m9 11 2 2 4-4" /></svg></span><div><div className="tt">Mandat validé &amp; diffusé</div><div className="ss">Le mandat est actif et l'annonce diffusée. Suivez son cycle de vie et pilotez les avenants.</div></div><span className="tag" style={{ background: 'var(--mv3-green-soft)', color: 'var(--mv3-green)' }}>Validé</span></div>
-            <section className="mv3-card mv3-pad">{mv3Figs}{mv3Fold}</section>
+            <section className="mv3-card mv3-pad mv3-gen2">
+              {mv3IllusEl('valide')}
+              <div className="mv3-gen2-body">
+                <p className="mv3-gen2-cap"><b>Actif.</b> Votre mandat est validé par la direction — votre <b>diffusion est débloquée</b>.</p>
+                {mv3Figs}{mv3Fold}
+              </div>
+            </section>
             <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /></svg></span><div><div className="tt">Mandants</div><div className="ss">Gérés dans la rubrique Contact — résumé ici</div></div></div>
             <section className="mv3-card mv3-pad">{mv3People}</section>
             <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 13h6M9 17h6" /></svg></span><div><div className="tt">Avenant &amp; demandes</div><div className="ss">Baisse de prix ou clôture — soumises à la direction, puis avenant</div></div></div>
@@ -22250,6 +22295,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <>
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#8a807a,#615851)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></span><div><div className="tt">{mandatEchu ? 'Mandat échu' : pVendu ? 'Bien vendu' : 'Mandat clôturé'}</div><div className="ss">Conservé pour l'historique — générez un nouveau numéro pour reprendre la commercialisation</div></div><span className="tag" style={{ background: 'var(--mv3-paper)', color: 'var(--mv3-soft)' }}>{mandatEchu ? 'Échu' : pVendu ? 'Vendu' : 'Clôturé'}</span></div>
             <section className="mv3-card mv3-pad">
+              {mv3IllusCenter('echu', <><b>Fin de cycle.</b> Votre mandat est arrivé à échéance. Tout reste en <b>historique</b> — vous pouvez générer un nouveau numéro.</>)}
               <div className="mv3-warn"><span className="em">⚠️</span><span><b>La commercialisation doit reposer sur un mandat en cours de validité.</b> Le mandat n° {numero || '—'} n'est plus actif ; ses informations restent consultables ci-dessous.</span></div>
               {mv3Figs}{mv3Fold}
             </section>
