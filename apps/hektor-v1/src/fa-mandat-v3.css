@@ -293,6 +293,108 @@
 .fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head button:hover { transform: translateY(-2px); box-shadow: 0 13px 30px -10px var(--cta), inset 0 1px 0 rgba(255, 255, 255, .32); }
 
 /* ============================================================================
+   Modale d'édition MANDAT / AVENANT — refonte design & ergonomie.
+   SCOPÉE `.fa-ck-mandat-v3 .mandat-document-editor.is-open` : la modale reste un
+   descendant DOM de la rubrique V3 même en position:fixed → ces règles ne touchent
+   QUE l'éditeur mandat/avenant. L'éditeur d'estimation (.avd-editor, rendu hors
+   .fa-ck-mandat-v3) et le composant fermé ne sont pas affectés. Purement additif :
+   aucun champ, onglet ni action retiré — refonte 100% visuelle. */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open { background: radial-gradient(140% 90% at 50% -10%, #fbf7f0 0%, var(--mv3-paper) 55%); }
+
+/* En-tête sticky : bandeau magenta chaud + liseré or */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-head {
+  padding: 15px clamp(18px, 3vw, 36px); gap: 14px;
+  background: linear-gradient(120deg, var(--mv3-mag-deep) 0%, var(--mv3-mag) 100%);
+  border-bottom: 2px solid var(--mv3-gold); box-shadow: 0 10px 30px -12px rgba(139, 15, 61, .5);
+}
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-icon { width: 42px; height: 42px; border-radius: 12px; background: rgba(255, 255, 255, .16); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-head strong { font-family: var(--mv3-disp); font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-head small { color: rgba(255, 255, 255, .82); font-size: 12.5px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-head .ghost-button { color: #fff; border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .12); border-radius: 10px; font-weight: 800; padding: 9px 16px; transition: background .15s; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-head .ghost-button:hover { background: rgba(255, 255, 255, .24); }
+
+/* Corps transparent (laisse voir le fond papier) */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-body { background: transparent; gap: clamp(18px, 2.4vw, 32px); padding: clamp(18px, 2.4vw, 30px); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form { gap: 14px; }
+
+/* Sélecteur type & onglets : segmented chaud, actif magenta */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-doc-type-switch,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs { background: var(--mv3-card); border: 1px solid var(--mv3-line); border-radius: 12px; padding: 5px; box-shadow: 0 3px 12px -8px rgba(60, 40, 30, .5); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-doc-type-switch button { border-radius: 9px; color: var(--mv3-soft); font-weight: 800; font-size: 12.5px; min-height: 38px; transition: background .15s, color .15s; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button.is-active,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-doc-type-switch button.is-active { background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); color: #fff; box-shadow: 0 6px 16px -8px var(--mv3-mag); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button:not(.is-active):hover,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-doc-type-switch button:not(.is-active):hover { color: var(--mv3-mag); background: var(--mv3-mag-soft); }
+
+/* Champs : bord chaud, focus magenta */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-panel { gap: 14px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form span,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-options span { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mv3-soft); font-weight: 800; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form input,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form select,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form textarea,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-options select { border: 1px solid var(--mv3-line); border-radius: 10px; padding: 10px 12px; background: #fff; color: var(--mv3-ink); transition: border-color .15s, box-shadow .15s; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form input:focus,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form select:focus,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form textarea:focus,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-options select:focus { outline: 0; border-color: var(--mv3-mag); box-shadow: 0 0 0 3px var(--mv3-mag-soft); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-options { border: 1px solid var(--mv3-line); background: var(--mv3-card); border-radius: 12px; }
+
+/* Cartes mandants / destinataires */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-mandant-card,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-recipient-card { border: 1px solid var(--mv3-line); border-radius: 14px; background: var(--mv3-card); box-shadow: 0 3px 12px -8px rgba(60, 40, 30, .5); padding: 14px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-mandant-head strong { font-family: var(--mv3-disp); font-size: 15px; font-weight: 600; color: var(--mv3-ink); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-recipient-card.is-selected { border-color: var(--mv3-mag); box-shadow: 0 10px 26px -12px var(--mv3-mag); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-toggle span { color: var(--mv3-ink); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-summary { border: 1px solid var(--mv3-gold-soft); background: var(--mv3-gold-soft); border-radius: 12px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-summary strong { font-family: var(--mv3-disp); font-size: 15px; font-weight: 600; color: var(--mv3-ink); }
+
+/* Boutons utilitaires (Ajouter / Retirer / Reprendre) */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-panel > .ghost-button,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-mandant-head .ghost-button,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-recipient-head .ghost-button,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-summary .ghost-button { border: 1px solid var(--mv3-line); border-radius: 10px; background: #fff; color: var(--mv3-ink); font-weight: 700; transition: border-color .15s, color .15s; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-panel > .ghost-button:hover,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-signature-summary .ghost-button:hover { border-color: var(--mv3-mag); color: var(--mv3-mag); }
+
+/* Avenant : lien, infos reprises, bloc « à compléter » mis en avant */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-link { border: 1px solid var(--mv3-mag-soft); background: var(--mv3-mag-soft); border-radius: 12px; color: var(--mv3-mag-deep); font-weight: 600; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-block-title { color: var(--mv3-soft); font-weight: 800; letter-spacing: .06em; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-ro-field { border: 1px solid var(--mv3-line); border-radius: 10px; background: var(--mv3-paper); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-ro-value { color: var(--mv3-ink); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-ro-value em.ok { color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-ro-value em.ko { color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .avenant-form .avenant-block:last-child { padding: 14px; border: 1px solid var(--mv3-gold-soft); border-radius: 14px; background: linear-gradient(180deg, #fdf8ee, var(--mv3-gold-soft)); }
+
+/* Warnings / messages / contrôle */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-warning { border: 1px solid var(--mv3-mag-soft); background: var(--mv3-mag-soft); color: var(--mv3-mag-deep); border-radius: 12px; font-weight: 600; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-message { border: 1px solid var(--mv3-green-soft); background: var(--mv3-green-soft); color: var(--mv3-green); border-radius: 12px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-checklist { border: 1px solid var(--mv3-line); background: var(--mv3-card); color: var(--mv3-ink); border-radius: 14px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-checklist strong { font-family: var(--mv3-disp); font-size: 15px; font-weight: 600; }
+
+/* Barre d'actions : « Générer PDF » = CTA principal magenta, « Aperçu » = or */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions { gap: 10px; margin-top: 4px; padding: 12px; border: 1px solid var(--mv3-line); border-radius: 14px; background: var(--mv3-card); box-shadow: 0 3px 12px -8px rgba(60, 40, 30, .5); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions .ghost-button { border: 1px solid var(--mv3-line); border-radius: 10px; background: #fff; color: var(--mv3-ink); font-weight: 700; min-height: 42px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions .button-primary { border-color: var(--mv3-gold); color: var(--mv3-gold); background: var(--mv3-gold-soft); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions .button-primary.is-disabled { opacity: .5; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions button:last-child { margin-left: auto; border: 0; color: #fff; font-weight: 800; background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); box-shadow: 0 8px 20px -10px var(--mv3-mag); transition: transform .15s, box-shadow .2s; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions button:last-child:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 13px 30px -10px var(--mv3-mag); }
+
+/* Aperçu (aside) : carte épurée, en-tête sombre chaud + liseré or */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-preview { border: 1px solid var(--mv3-line); border-radius: 16px; background: var(--mv3-card); box-shadow: 0 12px 30px -18px rgba(60, 40, 30, .5); padding: 0; overflow: hidden; top: 92px; max-height: calc(100vh - 112px); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-preview-head { padding: 14px 18px; border-left: 0; border-bottom: 2px solid var(--mv3-gold); background: linear-gradient(120deg, #241f22, #3a2f30); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-preview-head strong { font-family: var(--mv3-disp); font-size: 22px; font-weight: 600; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-full-preview { border: 0; border-radius: 0; height: calc(100vh - 230px); min-height: 560px; }
+
+/* Responsive : sur fenêtre étroite, on empile formulaire puis aperçu */
+@media (max-width: 1040px) {
+  .fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-body { grid-template-columns: minmax(0, 1fr); }
+  .fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-preview { position: static; max-height: none; }
+  .fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-full-preview { height: 68vh; }
+}
+
+/* ============================================================================
    Lot 6 — Illustrations, animations & finitions
    Effets décoratifs (halos, survols) toujours actifs car peu coûteux ;
    toute animation en boucle / d'entrée est confinée à prefers-reduced-motion:
