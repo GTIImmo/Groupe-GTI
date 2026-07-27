@@ -21963,13 +21963,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // composants existants (HektorMandatNumberForm, MandatDocumentEditor, MandatSignatureTracker,
   // ckDemarches, DetailAdminPilotPanel, props.mandats, PriceChangeHistoryCard). Voir PLAN_DEV_MANDAT_V3.md.
   const renderMandatRubriqueV3 = () => {
-    // Résolution de l'état V3 (8 crans) à partir du moteur ckStage + statut signature réel.
+    // Résolution de l'état V3 à partir du moteur ckStage + statut signature réel.
     const validationEnCours = (props.requestHistoryDiffusion ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
+    // Demande de baisse de prix (= validation de l'avenant) en cours côté direction.
+    const baisseEnCours = (props.requestHistoryPriceDrop ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
     const mv3Mode = !pMandatNum ? 'none'
       : (mandatEchu || pVendu || estArchive) ? 'echu'
       : !pMandatOk ? (mandatSig === 'to_send' ? 'edite' : mandatSig === 'pending' ? 'envoye' : mandatSig === 'signed' ? (validationEnCours ? 'attente' : 'valider') : 'editer')
-      : avenantEnCours ? (avenantSig === 'to_send' ? 'edite' : avenantSig === 'pending' ? 'envoye' : 'attente')
+      // Avenant en cours : le mandat reste VALIDÉ (cycle du haut), l'avenant déroule SON propre cycle.
+      : avenantEnCours ? (avenantSig === 'to_send' ? 'av_edite' : avenantSig === 'pending' ? 'av_envoye' : (baisseEnCours ? 'av_attente' : 'av_signe'))
       : 'valide'
+    const isAv = mv3Mode.startsWith('av_')
     // Cycle du mandat à 5 crans : la DIFFUSION n'est PAS une étape du mandat (acte marketing,
     // piloté dans la rubrique Publicité) — le cycle du mandat se termine à « Validé ».
     const CYC: Record<string, { fill: string; cur: number; cap: string }> = {
@@ -21981,6 +21985,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       attente: { fill: '88%', cur: 4, cap: 'Demande envoyée — réponse en attente' },
       valide: { fill: '100%', cur: 5, cap: 'Validé · actif' },
       echu: { fill: '100%', cur: -1, cap: 'Fin de cycle — historique conservé' },
+      // Modes avenant : le cycle du HAUT reste celui du mandat (validé, complet).
+      av_edite: { fill: '100%', cur: 5, cap: 'Mandat validé · avenant en cours' },
+      av_envoye: { fill: '100%', cur: 5, cap: 'Mandat validé · avenant en cours' },
+      av_signe: { fill: '100%', cur: 5, cap: 'Mandat validé · avenant en cours' },
+      av_attente: { fill: '100%', cur: 5, cap: 'Mandat validé · avenant en cours' },
     }
     const cyc = CYC[mv3Mode] ?? CYC.valide
     const steps = ['Numéro', 'Édité', 'Envoyé', 'Signé', 'Validé']
@@ -21988,6 +21997,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       none: ['Sans mandat', 'none'], editer: ['À éditer', 'wait'], edite: ['Édité · à envoyer', 'wait'],
       envoye: ['En signature', 'wait'], valider: ['Signé · à valider', 'wait'], attente: ['En validation', 'wait'],
       valide: ['Validé', 'ok'], echu: [mandatEchu ? 'Échu' : pVendu ? 'Vendu' : 'Clôturé', 'none'],
+      av_edite: ['Validé', 'ok'], av_envoye: ['Validé', 'ok'], av_signe: ['Validé', 'ok'], av_attente: ['Validé', 'ok'],
     }
     const [statLabel, statCls] = STAT[mv3Mode] ?? STAT.valide
     const mv3Type = String(dossierRec['mandat_type'] ?? dossierRec['mandat_type_source'] ?? '').trim()
@@ -22053,6 +22063,85 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const mv3IllusEl = (kind: string) => <div className="mv3-gen2-illus" dangerouslySetInnerHTML={{ __html: MV3_ILLUS[kind] ?? '' }} />
     const mv3IllusCenter = (kind: string, cap: React.ReactNode) => (
       <div className="mv3-illus"><div style={{ display: 'flex', justifyContent: 'center', width: '100%' }} dangerouslySetInnerHTML={{ __html: MV3_ILLUS[kind] ?? '' }} /><p className="mv3-illus-cap">{cap}</p></div>
+    )
+    // ── Cycle AVENANT (Lot B) : quand un avenant est en cours, le mandat reste « Validé »
+    // (cycle du haut) et l'avenant déroule SON propre cycle ci-dessous. Réutilise les vrais
+    // composants (éditeur avenant, MandatSignatureTracker, démarche baisse = validation avenant). ──
+    const avPriceMsgs = props.requestMessagesPriceDrop ?? []
+    const AV_CYC: Record<string, { fill: string; cur: number; cap: string; tag: string; tagBg: string; tagFg: string }> = {
+      av_edite: { fill: '35%', cur: 1, cap: 'Édité — à envoyer à la signature', tag: 'Édité · à envoyer', tagBg: 'var(--mv3-gold-soft)', tagFg: 'var(--mv3-gold)' },
+      av_envoye: { fill: '55%', cur: 2, cap: 'Envoyé — en attente de signature', tag: 'En signature', tagBg: 'var(--mv3-blue-soft)', tagFg: 'var(--mv3-blue)' },
+      av_signe: { fill: '72%', cur: 3, cap: 'Signé — à faire valider', tag: 'Signé · à valider', tagBg: 'var(--mv3-green-soft)', tagFg: 'var(--mv3-green)' },
+      av_attente: { fill: '88%', cur: 3, cap: 'Validation demandée — réponse en attente', tag: 'En validation', tagBg: 'var(--mv3-amber-soft)', tagFg: 'var(--mv3-amber)' },
+    }
+    const avSteps = ['Édité', 'Envoyé', 'Signé', 'Validé']
+    const avc = AV_CYC[mv3Mode] ?? AV_CYC.av_edite
+    const demBaisse = ckDemarches.find((d) => d.dem === 'price')
+    const baisseStatut = (() => {
+      const s = String(((props.requestHistoryPriceDrop ?? [])[0] as { status?: string } | undefined)?.status ?? '').toLowerCase()
+      if (/refus/.test(s)) return 'Refusée'
+      if (/wait|corr/.test(s)) return 'À corriger'
+      if (/accept/.test(s)) return 'Acceptée'
+      return 'En traitement'
+    })()
+    const avenantBlock = (
+      <>
+        <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></span><div><div className="tt">Avenant de baisse</div><div className="ss">Le mandat reste validé (ci-dessus) — l'avenant suit son propre cycle</div></div><span className="tag" style={{ background: avc.tagBg, color: avc.tagFg }}>{avc.tag}</span></div>
+        <section className="mv3-card mv3-life">
+          <div className="mv3-life-top"><span>Vie de l'avenant</span><span>{avc.cap}</span></div>
+          <div className="mv3-life-track"><div className="mv3-life-fill" style={{ width: avc.fill, background: 'linear-gradient(90deg,#d68f22,#a5793d 45%,#1f7a4a)' }} /></div>
+          <div className="mv3-life-steps">
+            {avSteps.map((s, i) => <div key={`av-${s}`} className={`mv3-ls ${i < avc.cur ? 'done' : i === avc.cur ? 'cur' : ''}`}><span className="d" />{s}</div>)}
+          </div>
+        </section>
+        {mv3Mode === 'av_edite' ? (
+          <section className="mv3-card mv3-pad">
+            <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Avenant rédigé. Faites-le signer : <b>signature électronique</b> (ci-dessous) ou <b>manuscrite</b> — dans ce cas, joignez l'avenant signé dans les Documents (il part dans Hektor et passe direct à « Signé »).</span></div>
+            <div className="mv3-embed">
+              {isLightweightDetail
+                ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
+                : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+            </div>
+          </section>
+        ) : mv3Mode === 'av_envoye' ? (
+          <section className="mv3-card mv3-pad">
+            <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
+            <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg><span>Vos mandants n'ont pas encore signé l'avenant. Vous pourrez <b>demander la validation</b> dès qu'il sera <b>signé</b>.</span></div>
+          </section>
+        ) : mv3Mode === 'av_signe' ? (
+          <>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
+            </section>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg><span>Avenant signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</span></div>
+              {demBaisse ? (
+                <div className="fa-ck-dm-card" style={{ marginTop: 12 }}>
+                  <div className="fa-ck-dm-tx"><div className="dm-nm">Validation de l'avenant</div><div className="dm-sub">Le nouveau prix s'applique après accord de la direction</div></div>
+                  {demBaisse.locked
+                    ? <span className="mv3-st lock">🔒 Verrouillé</span>
+                    : <>{mv3StateChip(demBaisse.stateLabel)}{demBaisse.onClick ? <button type="button" className="fa-ck-dm-act mv3-cta" onClick={demBaisse.onClick}>{demBaisse.actLabel}</button> : null}</>}
+                </div>
+              ) : null}
+            </section>
+          </>
+        ) : (
+          <div className={`mv3-dmd ${/refus/i.test(baisseStatut) ? 'rejected' : /corr/i.test(baisseStatut) ? 'correction' : /accept/i.test(baisseStatut) ? 'accepted' : 'amber'}`}>
+            <div className="mv3-dmd-h"><span className="nm">Validation de l'avenant<span>Le nouveau prix s'applique après accord de la direction</span></span>{mv3StateChip(baisseStatut)}</div>
+            {avPriceMsgs.length ? (
+              <div className="mv3-thread">
+                <div className="mv3-thread-h">Vos échanges avec la direction</div>
+                {avPriceMsgs.slice(-6).map((m, i) => {
+                  const dir = /pauline|direction|admin|pilot/i.test(String(m.author ?? ''))
+                  const ini = String(m.author ?? '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '·'
+                  return <div className={`mv3-msg ${dir ? '' : 'me'}`} key={m.id ?? i}><span className={`av ${dir ? 'dir' : 'nego'}`}>{ini}</span><div className="mv3-bub"><div className="who">{m.author}</div><div className="txt">{m.message}</div><div className="dt">{m.date}</div></div></div>
+                })}
+              </div>
+            ) : <div className="mv3-thread"><div className="mv3-thread-h">Demande envoyée — en attente de la réponse de la direction.</div></div>}
+            <div className="mv3-dmd-foot"><button type="button" className="fa-ck-rep-btn" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, 'nego', 'demande_baisse_prix')}>Répondre / renvoyer</button></div>
+          </div>
+        )}
+      </>
     )
     // Caractéristiques (Validé/Échu) : chiffres clés + tous les champs repliés — MÊMES
     // expressions que l'ancienne rubrique (numero_mandat, mandat_type, dates, prix, diffusable…).
@@ -22165,7 +22254,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             ))}
           </div>
         </section>
-        {mv3Mode === 'none' ? (
+        {isAv ? avenantBlock : mv3Mode === 'none' ? (
           <>
             <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M11 13h2M12 12v3" /></svg></span><div><div className="tt">Générer le numéro de mandat</div><div className="ss">Vous n'avez pas encore de mandat sur ce bien — commencez ici</div></div><span className="tag amber">À générer</span></div>
             <section className="mv3-card mv3-pad mv3-gen2">
@@ -22292,6 +22381,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             {/* Avenant & baisse de prix (maquette) : CTA avenant épuré + demande de baisse en action secondaire (fonction conservée) */}
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></span><div><div className="tt">Avenant &amp; baisse de prix</div><div className="ss">Édite l'avenant (prix saisi une fois) puis suis-le · validé par la direction</div></div>{!avenantEnCours ? <span className="tag" style={{ background: 'var(--mv3-paper)', color: 'var(--mv3-soft)' }}>Aucun avenant en cours</span> : null}</div>
             <section className="mv3-card mv3-pad">
+              <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+                {mv3IllusEl('editer')}
+                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Éditer un avenant.</b> Possible car le mandat est <b>validé</b> — l'avenant reprend le mandat, vous ne saisissez que le <b>nouveau prix</b>.</p></div>
+              </div>
               <div className="mv3-embed">
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
