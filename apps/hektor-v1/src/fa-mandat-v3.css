@@ -299,6 +299,10 @@
    QUE l'éditeur mandat/avenant. L'éditeur d'estimation (.avd-editor, rendu hors
    .fa-ck-mandat-v3) et le composant fermé ne sont pas affectés. Purement additif :
    aucun champ, onglet ni action retiré — refonte 100% visuelle. */
+/* Portail body : wrapper .fa-ck-mandat-v3 (garde styles+tokens) sans layout ni animation
+   qui recréerait un bloc contenant → la modale position:fixed reste bien plein écran. */
+.fa-ck-mandat-v3.mv3-doc-portal { display: block; }
+.fa-ck-mandat-v3 > .mandat-document-editor.is-open { animation: none; }
 .fa-ck-mandat-v3 .mandat-document-editor.is-open { background: radial-gradient(140% 90% at 50% -10%, #fbf7f0 0%, var(--mv3-paper) 55%); }
 
 /* En-tête sticky : bandeau magenta chaud + liseré or */

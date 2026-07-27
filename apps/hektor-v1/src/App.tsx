@@ -4698,21 +4698,31 @@ function MandatDocumentEditor(props: {
     setSignPromptOpen(false)
   }
 
-  return (
-    <div className={`mandat-document-editor ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
-      <div className="mandat-document-editor-head">
-        <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
-        <div>
-          <strong>{documentTitle}</strong>
-          <small>{missingFields.length ? `${missingFields.length} élément${missingFields.length > 1 ? 's' : ''} à compléter avant signature` : 'Document prêt à vérifier avant signature'}</small>
-        </div>
-        <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((value) => !value)}>
-          {open ? 'Retour fiche' : documentActionLabel}
-        </button>
+  // En-tête réutilisé : déclencheur inline (fermé) et barre de la modale (ouvert).
+  const editorHead = (closing: boolean) => (
+    <div className="mandat-document-editor-head">
+      <span className="mandat-document-editor-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
+      <div>
+        <strong>{documentTitle}</strong>
+        <small>{missingFields.length ? `${missingFields.length} élément${missingFields.length > 1 ? 's' : ''} à compléter avant signature` : 'Document prêt à vérifier avant signature'}</small>
       </div>
-      {open ? (
-        <div className="mandat-document-editor-body">
-          <div className="mandat-document-form">
+      <button className="ghost-button button-subtle" type="button" onClick={() => setOpen(!closing)}>
+        {closing ? 'Retour fiche' : documentActionLabel}
+      </button>
+    </div>
+  )
+  // La modale ouverte est PORTÉE dans document.body (enveloppée dans .fa-ck-mandat-v3
+  // pour conserver styles + tokens) afin d'échapper à tout ancêtre `transform` (ex.
+  // .modal-panel-detail) qui casserait le position:fixed plein écran.
+  return (
+    <div className={`mandat-document-editor ${props.compact ? 'is-compact' : ''}`}>
+      {editorHead(false)}
+      {open && typeof document !== 'undefined' ? createPortal(
+        <div className="fa-ck-mandat-v3 mv3-doc-portal">
+          <div className="mandat-document-editor is-open">
+            {editorHead(true)}
+            <div className="mandat-document-editor-body">
+              <div className="mandat-document-form">
             {hasActiveMandate ? (
               <div className="mandat-doc-type-switch" role="tablist" aria-label="Type de document">
                 <button type="button" className={!isAvenant ? 'is-active' : ''} onClick={() => setDocMode('mandat')}>Mandat de vente</button>
@@ -4901,7 +4911,10 @@ function MandatDocumentEditor(props: {
             {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du document" /> : null}
           </aside>
         </div>
-      ) : null}
+            </div>
+          </div>,
+          document.body,
+        ) : null}
     </div>
   )
 }
