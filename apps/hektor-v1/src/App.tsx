@@ -3310,6 +3310,11 @@ function HektorMandatNumberForm(props: {
   compact?: boolean
   onJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
+  // Mode « Ajouter un nouveau mandat » : autorise la génération d'un NOUVEAU numéro même
+  // si l'annonce en a déjà un (l'ancien reste au registre + dans l'historique). Le worker
+  // envoie déjà `protexa-valideStep1&numMandat=0` (numéro auto) sans condition d'existence ;
+  // seul ce garde-fou front bloquait. Hektor gère nativement plusieurs mandats par annonce.
+  allowNewMandate?: boolean
 }) {
   const numericContacts = props.contacts.filter((contact) => contact.sourceId && /^\d+$/.test(contact.sourceId))
   const [open, setOpen] = useState(false)
@@ -3335,7 +3340,7 @@ function HektorMandatNumberForm(props: {
   }, [props.dossier.app_dossier_id, props.dossier.numero_mandat, props.contacts.map((contact) => contact.sourceId ?? contact.id).join('|')])
 
   const hasMandat = Boolean(String(props.dossier.numero_mandat ?? '').trim())
-  const canCreate = !hasMandat && props.contacts.length > 0
+  const canCreate = (props.allowNewMandate ? true : !hasMandat) && props.contacts.length > 0
 
   const toggleContact = (contactId: string) => {
     setSelectedIds((current) => current.includes(contactId) ? current.filter((id) => id !== contactId) : [...current, contactId])
@@ -3344,7 +3349,7 @@ function HektorMandatNumberForm(props: {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
-    if (hasMandat) {
+    if (hasMandat && !props.allowNewMandate) {
       setError('Un numero de mandat existe deja sur cette annonce.')
       return
     }
@@ -3364,7 +3369,9 @@ function HektorMandatNumberForm(props: {
     // registre des mandats (action officielle). On confirme avant, car c'est non
     // annulable côté registre.
     const confirmed = window.confirm(
-      'Générer le numéro de mandat ?\n\nCela réserve le prochain numéro dans Hektor et crée une ligne dans le registre des mandats (action officielle). À ne faire qu\'une fois le mandant confirmé.',
+      props.allowNewMandate
+        ? 'Ajouter un NOUVEAU mandat sur cette annonce ?\n\nCela réserve un nouveau numéro dans Hektor et crée une nouvelle ligne au registre des mandats (action officielle). L\'ancien mandat n\'est PAS supprimé (il reste dans l\'historique). À ne faire qu\'une fois le mandant confirmé.'
+        : 'Générer le numéro de mandat ?\n\nCela réserve le prochain numéro dans Hektor et crée une ligne dans le registre des mandats (action officielle). À ne faire qu\'une fois le mandant confirmé.',
     )
     if (!confirmed) return
     setPending(true)
@@ -3393,10 +3400,10 @@ function HektorMandatNumberForm(props: {
   return (
     <div className={`hektor-mandat-number-shell ${props.compact ? 'is-compact' : ''} ${open ? 'is-open' : ''}`}>
       {!open ? (
-        <button className={`hektor-mandat-number-card ${hasMandat ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
-          <span aria-hidden="true">{hasMandat ? 'N' : '#'}</span>
-          <strong>{hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le N° mandat'}</strong>
-          <small>{hasMandat ? "Numéro déjà présent dans l'app." : props.contacts.length ? 'Hektor attribue automatiquement le prochain numéro.' : 'Ajoutez un mandant avant cette étape.'}</small>
+        <button className={`hektor-mandat-number-card ${hasMandat && !props.allowNewMandate ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
+          <span aria-hidden="true">{props.allowNewMandate ? '+' : hasMandat ? 'N' : '#'}</span>
+          <strong>{props.allowNewMandate ? 'Ajouter un nouveau mandat' : hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le N° mandat'}</strong>
+          <small>{props.allowNewMandate ? (props.contacts.length ? "Nouveau numéro auto ; l'ancien reste dans l'historique." : 'Ajoutez un mandant avant cette étape.') : hasMandat ? "Numéro déjà présent dans l'app." : props.contacts.length ? 'Hektor attribue automatiquement le prochain numéro.' : 'Ajoutez un mandant avant cette étape.'}</small>
         </button>
       ) : null}
       {open ? (
@@ -22437,12 +22444,23 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="mv3-embed">
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Le numero de mandat n'est pas modifiable depuis une fiche d'index leger." />
-                  : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+                  : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} allowNewMandate />}
               </div>
             </section>
           </>
         )}
         {mv3HistBlock}
+        {/* « Ajouter un nouveau mandat » : visible pour TOUS les accès dès qu'un numéro existe
+            (mandat actif OU échu). L'échu a déjà son propre bloc « Reprendre la commercialisation ». */}
+        {pMandatNum && mv3Mode !== 'echu' && !isLightweightDetail ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M11 13h2M12 12v3" /></svg></span><div><div className="tt">Ajouter un nouveau mandat</div><div className="ss">Enregistrer un nouveau numéro sur cette annonce — l'ancien reste dans l'historique</div></div><span className="tag amber">Nouveau</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-warn"><span className="em">⚠️</span><span><b>Action officielle.</b> Génère un nouveau numéro au registre — l'ancien mandat n'est <b>pas supprimé</b> (il reste consultable dans l'historique ci-dessus).</span></div>
+              <div className="mv3-embed"><HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} allowNewMandate /></div>
+            </section>
+          </>
+        ) : null}
         {mv3HistSel ? (() => {
           const h = mv3HistSel
           const fields: Array<[string, string]> = ([
