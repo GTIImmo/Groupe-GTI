@@ -22341,14 +22341,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 <div className="mv3-gen2-body">
                   <p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Étape 2.</b> Complétez les fiches ci-dessous, puis rédigez votre mandat — il s'enregistre dans vos <b>Documents</b>.</p>
                   <div style={{ marginTop: 10 }}>{mv3CheckTop}</div>
+                  <div className="mv3-embed" style={{ marginTop: 12 }}>
+                    {isLightweightDetail
+                      ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
+                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                  </div>
                 </div>
               </div>
               {mv3CheckSections}
-              <div className="mv3-embed" style={{ marginTop: 14 }}>
-                {isLightweightDetail
-                  ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
-                  : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
-              </div>
             </section>
           </>
         ) : mv3Mode === 'edite' ? (

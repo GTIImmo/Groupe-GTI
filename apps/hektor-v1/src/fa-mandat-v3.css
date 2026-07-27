@@ -286,10 +286,10 @@
 /* Déclencheur d'outil réduit à un BOUTON seul : la tuile icône + le titre + le sous-titre
    du bandeau sont redondants avec l'en-tête du bloc (.mv3-sh). On ne garde que le bouton,
    qui ouvre la même pop-up plein écran (.is-open, inchangée) — comme en V1 / la maquette. */
-.fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head { display: flex; align-items: center; gap: 14px; padding: 0; background: transparent; color: var(--mv3-ink); }
+.fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head { display: flex; align-items: center; justify-content: flex-start; gap: 14px; padding: 0; background: transparent; color: var(--mv3-ink); }
 .fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-icon,
 .fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head > div { display: none; }
-.fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head button { font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; white-space: normal; flex: 1 1 auto; justify-content: center; color: #fff; border: 0; border-radius: 12px; padding: 13px 20px; display: inline-flex; align-items: center; gap: 8px; --cta: #c8994e; --cta-d: #916626; background: linear-gradient(135deg, var(--cta), var(--cta-d)); box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--cta) 85%, #000), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .15s ease, box-shadow .2s ease; }
+.fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head button { font-family: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; white-space: nowrap; flex: 0 0 auto; align-self: flex-start; color: #fff; border: 0; border-radius: 11px; padding: 11px 18px; display: inline-flex; align-items: center; gap: 8px; --cta: #c8994e; --cta-d: #916626; background: linear-gradient(135deg, var(--cta), var(--cta-d)); box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--cta) 85%, #000), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .15s ease, box-shadow .2s ease; }
 .fa-ck-mandat-v3 .mv3-embed .mandat-document-editor:not(.is-open) .mandat-document-editor-head button:hover { transform: translateY(-2px); box-shadow: 0 13px 30px -10px var(--cta), inset 0 1px 0 rgba(255, 255, 255, .32); }
 
 /* ============================================================================
