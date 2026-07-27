@@ -22103,7 +22103,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         </section>
         {mv3Mode === 'av_edite' ? (
           <section className="mv3-card mv3-pad">
-            <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Avenant rédigé. Faites-le signer : <b>signature électronique</b> (ci-dessous) ou <b>manuscrite</b> — dans ce cas, joignez l'avenant signé dans les Documents (il part dans Hektor et passe direct à « Signé »).</span></div>
+            <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+              {mv3IllusEl('editer')}
+              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant rédigé.</b> Faites-le signer : <b>signature électronique</b> (ci-dessous) ou <b>manuscrite</b> — joignez alors l'avenant signé dans les Documents (il part dans Hektor et passe direct à « Signé »).</p></div>
+            </div>
             <div className="mv3-embed">
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
@@ -22112,26 +22115,27 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           </section>
         ) : mv3Mode === 'av_envoye' ? (
           <section className="mv3-card mv3-pad">
+            <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+              {mv3IllusEl('envoye')}
+              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant envoyé.</b> Parti en signature électronique. Vos mandants n'ont pas encore signé — suivez et relancez si besoin.</p></div>
+            </div>
             <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
-            <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg><span>Vos mandants n'ont pas encore signé l'avenant. Vous pourrez <b>demander la validation</b> dès qu'il sera <b>signé</b>.</span></div>
           </section>
         ) : mv3Mode === 'av_signe' ? (
-          <>
-            <section className="mv3-card mv3-pad">
-              <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
-            </section>
-            <section className="mv3-card mv3-pad">
-              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg><span>Avenant signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</span></div>
-              {demBaisse ? (
-                <div className="fa-ck-dm-card" style={{ marginTop: 12 }}>
-                  <div className="fa-ck-dm-tx"><div className="dm-nm">Validation de l'avenant</div><div className="dm-sub">Le nouveau prix s'applique après accord de la direction</div></div>
-                  {demBaisse.locked
-                    ? <span className="mv3-st lock">🔒 Verrouillé</span>
-                    : <>{mv3StateChip(demBaisse.stateLabel)}{demBaisse.onClick ? <button type="button" className="fa-ck-dm-act mv3-cta" onClick={demBaisse.onClick}>{demBaisse.actLabel}</button> : null}</>}
-                </div>
-              ) : null}
-            </section>
-          </>
+          <section className="mv3-card mv3-pad">
+            <div className="mv3-gen2" style={{ marginBottom: 13 }}>
+              {mv3IllusEl('valider')}
+              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant signé.</b> Vos mandants ont signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</p></div>
+            </div>
+            {demBaisse ? (
+              <div className="fa-ck-dm-card">
+                <div className="fa-ck-dm-tx"><div className="dm-nm">Validation de l'avenant</div><div className="dm-sub">Le nouveau prix s'applique après accord de la direction</div></div>
+                {demBaisse.locked
+                  ? <span className="mv3-st lock">🔒 Verrouillé</span>
+                  : <>{mv3StateChip(demBaisse.stateLabel)}{demBaisse.onClick ? <button type="button" className="fa-ck-dm-act mv3-cta" onClick={demBaisse.onClick}>{demBaisse.actLabel}</button> : null}</>}
+              </div>
+            ) : null}
+          </section>
         ) : (
           <div className={`mv3-dmd ${/refus/i.test(baisseStatut) ? 'rejected' : /corr/i.test(baisseStatut) ? 'correction' : /accept/i.test(baisseStatut) ? 'accepted' : 'amber'}`}>
             <div className="mv3-dmd-h"><span className="nm">Validation de l'avenant<span>Le nouveau prix s'applique après accord de la direction</span></span>{mv3StateChip(baisseStatut)}</div>

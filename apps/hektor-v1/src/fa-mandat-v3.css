@@ -217,11 +217,13 @@
    jamais sur un ancêtre de modale (cf. régression Lot 6).
    ============================================================================ */
 /* Bloc 2 colonnes : illustration à gauche, contenu à droite. */
-.fa-ck-mandat-v3 .mv3-gen2 { display: flex; gap: 20px; align-items: center; }
-.fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 0 34%; display: flex; justify-content: center; }
-.fa-ck-mandat-v3 .mv3-gen2-illus svg { width: 100%; max-width: 210px; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
-.fa-ck-mandat-v3 .mv3-gen2-body { flex: 1; min-width: 0; }
-@media (max-width: 680px) { .fa-ck-mandat-v3 .mv3-gen2 { flex-direction: column; } .fa-ck-mandat-v3 .mv3-gen2-illus { flex: none; } }
+/* 2 colonnes RESPONSIVE AU CONTENEUR (flex-wrap + largeurs mini) et non à la fenêtre :
+   le 2-colonnes tient tant que la colonne de travail fait ~430px, sinon ça passe en 1 colonne
+   (l'illustration reste toujours affichée, empilée). Corrige le « pas sur 2 colonnes » en vue étroite/zoom. */
+.fa-ck-mandat-v3 .mv3-gen2 { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; }
+.fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 1 175px; min-width: 130px; display: flex; justify-content: center; }
+.fa-ck-mandat-v3 .mv3-gen2-illus svg { width: 100%; max-width: 200px; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
+.fa-ck-mandat-v3 .mv3-gen2-body { flex: 1 1 240px; min-width: 0; }
 /* Illustration centrée (états lecture seule type Échu). */
 .fa-ck-mandat-v3 .mv3-illus { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0 0 14px; }
 .fa-ck-mandat-v3 .mv3-illus svg { width: 210px; max-width: 62%; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
