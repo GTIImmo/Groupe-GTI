@@ -167,6 +167,60 @@
 /* ---- Conteneur pour les composants réels embarqués (générer / éditer / signature) ---- */
 .fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
 
-/* Placeholder (états non encore portés — lots 4-5). */
-.fa-ck-mandat-v3 .mv3-scaffold { border: 1px dashed var(--mv3-line); background: var(--mv3-mag-soft); border-radius: 14px; padding: 15px 17px; font-size: 13px; color: var(--mv3-soft); }
-.fa-ck-mandat-v3 .mv3-scaffold b { color: var(--mv3-ink); }
+/* ============================================================================
+   Lot 6 — Illustrations, animations & finitions
+   Effets décoratifs (halos, survols) toujours actifs car peu coûteux ;
+   toute animation en boucle / d'entrée est confinée à prefers-reduced-motion:
+   no-preference pour respecter les préférences d'accessibilité.
+   ============================================================================ */
+
+/* Halos décoratifs derrière le cycle de vie — illustration légère, non intrusive. */
+.fa-ck-mandat-v3 .mv3-life { position: relative; overflow: hidden; }
+.fa-ck-mandat-v3 .mv3-life::before { content: ''; position: absolute; top: -64px; right: -52px; width: 210px; height: 210px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--mv3-mag) 13%, transparent), transparent 70%); }
+.fa-ck-mandat-v3 .mv3-life::after { content: ''; position: absolute; bottom: -74px; left: -44px; width: 170px; height: 170px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--mv3-gold) 15%, transparent), transparent 72%); }
+.fa-ck-mandat-v3 .mv3-life > * { position: relative; }
+
+/* Survols : cartes, tuiles chiffres, lignes d'historique. */
+.fa-ck-mandat-v3 .mv3-card { transition: box-shadow .25s ease, transform .25s ease; }
+.fa-ck-mandat-v3 .mv3-fig { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.fa-ck-mandat-v3 .mv3-fig:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--mv3-mag) 35%, var(--mv3-line)); box-shadow: 0 9px 18px -12px var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-mhi { transition: transform .2s ease, box-shadow .2s ease; }
+.fa-ck-mandat-v3 .mv3-mhi:hover { transform: translateX(2px); box-shadow: 0 6px 16px -12px rgba(60, 40, 30, .55); }
+
+/* Boutons d'action : léger relèvement au survol + retour à la pression. */
+.fa-ck-mandat-v3 .fa-ck-rep-btn, .fa-ck-mandat-v3 .fa-ck-dm-act, .fa-ck-mandat-v3 .mv3-link { transition: transform .15s ease, box-shadow .2s ease, background .2s ease; }
+.fa-ck-mandat-v3 .fa-ck-rep-btn:hover, .fa-ck-mandat-v3 .fa-ck-dm-act:hover, .fa-ck-mandat-v3 .mv3-link:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(60, 40, 30, .5); }
+.fa-ck-mandat-v3 .fa-ck-rep-btn:active, .fa-ck-mandat-v3 .fa-ck-dm-act:active, .fa-ck-mandat-v3 .mv3-link:active { transform: translateY(0); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Révélation en cascade des blocs à l'ouverture de la rubrique. */
+  .fa-ck-mandat-v3 > * { animation: mv3in .5s cubic-bezier(.22, .68, .28, 1) both; }
+  .fa-ck-mandat-v3 > *:nth-child(1) { animation-delay: .02s; }
+  .fa-ck-mandat-v3 > *:nth-child(2) { animation-delay: .06s; }
+  .fa-ck-mandat-v3 > *:nth-child(3) { animation-delay: .10s; }
+  .fa-ck-mandat-v3 > *:nth-child(4) { animation-delay: .14s; }
+  .fa-ck-mandat-v3 > *:nth-child(5) { animation-delay: .18s; }
+  .fa-ck-mandat-v3 > *:nth-child(6) { animation-delay: .22s; }
+  .fa-ck-mandat-v3 > *:nth-child(7) { animation-delay: .26s; }
+  .fa-ck-mandat-v3 > *:nth-child(8) { animation-delay: .30s; }
+  .fa-ck-mandat-v3 > *:nth-child(9) { animation-delay: .34s; }
+  .fa-ck-mandat-v3 > *:nth-child(n+10) { animation-delay: .38s; }
+  @keyframes mv3in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* Reflet qui balaie la barre de progression du cycle. */
+  .fa-ck-mandat-v3 .mv3-life-fill { position: relative; overflow: hidden; }
+  .fa-ck-mandat-v3 .mv3-life-fill::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .55) 50%, transparent 80%); transform: translateX(-100%); animation: mv3sheen 3.4s ease-in-out 1s infinite; }
+  @keyframes mv3sheen { 0% { transform: translateX(-100%); } 55%, 100% { transform: translateX(240%); } }
+
+  /* Pictos des en-têtes « action » (or) : flottement discret qui attire l'œil. */
+  .fa-ck-mandat-v3 .mv3-sh .mv3-ic.gold { animation: mv3bob 2.8s ease-in-out infinite; }
+  @keyframes mv3bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+  /* Balise « beacon » sur le CTA principal (mv3-cta) pour inciter au clic. */
+  .fa-ck-mandat-v3 .mv3-cta { position: relative; }
+  .fa-ck-mandat-v3 .mv3-cta::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: mv3beacon 2.4s ease-out infinite; }
+  @keyframes mv3beacon { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mv3-mag) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 11px transparent; } }
+}

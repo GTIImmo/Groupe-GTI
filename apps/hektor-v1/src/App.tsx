@@ -22154,7 +22154,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span><div><div className="tt">Préparez votre annonce avant la validation</div><div className="ss">Finalisez tout, puis demandez la validation à la direction</div></div></div>
             <section className="mv3-card mv3-pad">
               {mv3PreValid}
-              {demValidation?.onClick ? <div style={{ marginTop: 14 }}><button type="button" className="fa-ck-rep-btn primary" onClick={demValidation.onClick}>Demander la validation à la direction</button></div> : null}
+              {demValidation?.onClick ? <div style={{ marginTop: 14 }}><button type="button" className="fa-ck-rep-btn primary mv3-cta" onClick={demValidation.onClick}>Demander la validation à la direction</button></div> : null}
             </section>
           </>
         ) : mv3Mode === 'attente' ? (
