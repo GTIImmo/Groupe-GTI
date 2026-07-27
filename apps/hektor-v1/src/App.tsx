@@ -22030,9 +22030,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const bienKo = bienChecks.filter(([, ok]) => !ok).map(([k]) => k)
     const nbTotal = nbMandants + bienChecks.length
     const nbOk = (nbMandants - mandantsKo.length) + (bienChecks.length - bienKo.length)
-    const mv3Check = (
+    // Résumé « Presque prêt » — placé dans la colonne DROITE du bloc 2 colonnes (comme la maquette),
+    // pour équilibrer l'illustration ; les lignes détaillées (mv3CheckSections) restent pleine largeur.
+    const mv3CheckTop = (
+      <div className="mv3-cktop"><span className="l">Presque prêt</span><span className="n">{nbOk}/{nbTotal} prêts · <b>{nbTotal - nbOk}</b> à finaliser</span></div>
+    )
+    const mv3CheckSections = (
       <>
-        <div className="mv3-cktop"><span className="l">Presque prêt</span><span className="n">{nbOk}/{nbTotal} prêts · <b>{nbTotal - nbOk}</b> à finaliser</span></div>
         <div className="mv3-cksec">
           <div className="mv3-ckhead"><span className="lbl">Mandants ({nbMandants})</span><span className={`mv3-cnt ${mandantsKo.length ? 'ko' : 'ok'}`}>{nbMandants - mandantsKo.length}/{nbMandants}</span></div>
           {mandantsKo.length ? <div className="mv3-miss">{mandantsKo.map((c, i) => <span className="m" key={`mko-${i}`}>⚠ {(c.name || 'Mandant').split(' ')[0]} · coordonnées</span>)}</div> : <div className="mv3-alldone">✓ Coordonnées complètes</div>}
@@ -22334,9 +22338,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <section className="mv3-card mv3-pad">
               <div className="mv3-gen2" style={{ marginBottom: 15 }}>
                 {mv3IllusEl('editer')}
-                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Étape 2.</b> Complétez les fiches ci-dessous, puis rédigez votre mandat — il s'enregistre dans vos <b>Documents</b>.</p></div>
+                <div className="mv3-gen2-body">
+                  <p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Étape 2.</b> Complétez les fiches ci-dessous, puis rédigez votre mandat — il s'enregistre dans vos <b>Documents</b>.</p>
+                  <div style={{ marginTop: 10 }}>{mv3CheckTop}</div>
+                </div>
               </div>
-              {mv3Check}
+              {mv3CheckSections}
             </section>
             <section className="mv3-card mv3-pad">
               <div className="mv3-embed">
