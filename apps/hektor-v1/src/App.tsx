@@ -4657,6 +4657,8 @@ function MandatDocumentEditor(props: {
         numeroMandat: draft.numeroMandat || null,
         // Avenant : nom de document dedie + lie au n° de mandat -> apparait ainsi dans Hektor + ImmoSign.
         documentLabel: docMode === 'avenant' ? `Avenant au mandat - ${draft.numeroMandat || ''}`.trim().replace(/-\s*$/, '').trim() : null,
+        // Avenant : le NOUVEAU prix proposé (« Nouveau prix FAI » = draft.prixVente) — passif, pour affichage.
+        avenantNewPrice: docMode === 'avenant' ? (draft.prixVente || null) : null,
       })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Generation PDF impossible.')
@@ -21717,6 +21719,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   }
   const mandatSig = ckSigStatus(/mandat/i, /avenant/i)
   const avenantSig = ckSigStatus(/avenant/i)
+  // Nouveau prix PROPOSÉ par l'avenant, annoté par le worker sur le document
+  // (metadata_json.avenant_new_price) — AFFICHAGE SEUL. Le prix réel de l'annonce
+  // (dossier.prix) n'est pas modifié tant que la baisse n'est pas validée.
+  const avenantDoc = ckDocs.find((d) => /avenant/i.test(`${d.document_name ?? ''} ${d.document_type ?? ''}`))
+  const avenantNewPriceRaw = (avenantDoc?.metadata_json as { avenant_new_price?: string | number | null } | null)?.avenant_new_price
+  const avenantNewPrice = avenantNewPriceRaw != null && String(avenantNewPriceRaw).trim() !== ''
+    ? (formatPrice(Number(String(avenantNewPriceRaw).replace(/[^\d.-]/g, '')) || null) || null)
+    : null
   // L'avenant est « validé » quand la démarche baisse de prix est acceptée : le
   // cycle se termine et l'annonce revient en Diffusé · Actif (arbitrage §6.1).
   const baisseAcceptee = (props.requestHistoryPriceDrop ?? []).some((r) => /accept/i.test(String((r as { status?: string }).status ?? '')))
@@ -22152,7 +22162,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             {mv3IllusEl('valider')}
             <div className="mv3-gen2-body">
               <p className="mv3-gen2-cap"><b>Avenant signé.</b> Vos mandants ont signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</p>
-              <div className="mv3-avprice"><span className="l">Prix actuel</span><span className="v">{formatPrice(Number(dossier.prix ?? 0) || null) || '—'}</span><span className="n">le nouveau prix (défini dans l'avenant) s'applique après validation</span></div>
+              {avenantNewPrice ? (
+                <div className="mv3-avprice mv3-avprice-2">
+                  <div className="mv3-avprice-col"><span className="l">Prix actuel</span><span className="v old">{formatPrice(Number(dossier.prix ?? 0) || null) || '—'}</span></div>
+                  <span className="mv3-avprice-arrow" aria-hidden="true">→</span>
+                  <div className="mv3-avprice-col"><span className="l">Nouveau prix (avenant)</span><span className="v">{avenantNewPrice}</span></div>
+                  <span className="n">le nouveau prix s'applique à l'annonce seulement après validation de la baisse</span>
+                </div>
+              ) : (
+                <div className="mv3-avprice"><span className="l">Prix actuel</span><span className="v">{formatPrice(Number(dossier.prix ?? 0) || null) || '—'}</span><span className="n">le nouveau prix (défini dans l'avenant) s'applique après validation</span></div>
+              )}
               <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 {demBaisse && demBaisse.locked ? <span className="mv3-st lock">🔒 Verrouillé</span>
                   : demBaisse && demBaisse.onClick ? <button type="button" className="mv3-btn" style={{ ['--cta']: '#2fa564', ['--cta-d']: '#1f7a4a' } as CSSProperties} onClick={demBaisse.onClick}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>Demander la validation de l'avenant</button> : null}
