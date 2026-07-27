@@ -3609,7 +3609,11 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
     if (!sig) return false;
     if (sig.status === "pending") return true;
     if (gateMode === "all" && sig.status === "to_send") return true;
-    if (gateMode === "all" && sig.status === "signed" && !(r.metadata_json && r.metadata_json.signed_document)) return true;
+    // Voie manuscrite (Lot 7) : un mandat signe A LA MAIN (source 'manuscrite') n'a pas de
+    // procedure ImmoSign a rapatrier -> ne PAS declencher de lecture Hektor pour recuperer un
+    // signed_document qui n'existera jamais. On ne garde le gate 'signed' que pour les signatures
+    // electroniques (dont le PDF signe est a telecharger).
+    if (gateMode === "all" && sig.status === "signed" && sig.source !== "manuscrite" && !(r.metadata_json && r.metadata_json.signed_document)) return true;
     return false;
   });
   if (!hasWork) return 0;

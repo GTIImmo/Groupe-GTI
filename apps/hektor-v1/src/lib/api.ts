@@ -6276,6 +6276,20 @@ export async function loadConsoleDocuments(appDossierId: number): Promise<Consol
   return (data ?? []) as ConsoleDocument[]
 }
 
+// Voie manuscrite (rubrique Mandat V3, Lot 7) : marque un document (mandat/avenant)
+// comme signé À LA MAIN. RPC SECURITY DEFINER dédiée (le front n'a pas de policy UPDATE
+// sur app_console_document). Pose metadata_json.signature.status='signed', source='manuscrite'
+// → le cockpit passe le mandat à « Signé ». L'upload du PDF a déjà déclenché l'envoi vers Hektor.
+export async function markConsoleDocumentSignedManual(documentId: string, signedDate?: string | null): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { error } = await supabase.rpc('app_console_mark_document_signed_manual', {
+    document_id: documentId,
+    signed_date: signedDate ?? null,
+  })
+  if (error) throw new Error(error.message)
+}
+
 export async function loadConsolePhotos(appDossierId: number): Promise<ConsolePhoto[]> {
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase

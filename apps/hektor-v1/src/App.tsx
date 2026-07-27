@@ -120,6 +120,7 @@ import {
   createSignedProcedureDocumentUrl,
   createRelanceSignatureJob,
   createCancelSignatureJob,
+  markConsoleDocumentSignedManual,
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
   loadContactRelations,
@@ -8641,7 +8642,7 @@ function sigIcon(kind: 'check' | 'clock' | 'pen' | 'x') {
   return <svg {...common}><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
 }
 
-type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null }
+type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null; source?: string | null; marked_manual_at?: string | null }
 
 // Pastille d'etat de signature, partagee par le bloc Documents et le suivi mandat.
 function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
@@ -9558,7 +9559,7 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
   )
 }
 
-function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler }) {
+function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   // Skin « v21 » (cockpit) : filtre + tiroir d'ajout. Non utilises en skin classique.
   const [docFilter, setDocFilter] = useState<'tous' | 'prep' | 'signed' | 'cloud'>('tous')
@@ -9803,6 +9804,27 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     }
   }
 
+  // Voie manuscrite (Lot 7) : le mandat a été signé SUR PAPIER par les mandants, puis le PDF
+  // signé a été joint ici (ce qui a déjà déclenché l'upload vers Hektor). Ce marquage pose
+  // signature.status='signed' (source manuscrite) → le cockpit passe le mandat à « Signé »,
+  // sans procédure ImmoSign. Écriture via RPC dédiée (pas de policy UPDATE côté front).
+  async function handleMarkSignedManual(document: ConsoleDocument) {
+    if (!window.confirm(`Confirmer que ce document a été signé À LA MAIN par tous les mandants ?\n\n${document.document_name}\n\nLe mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé joint aux documents.`)) return
+    setBusyDocumentId(document.id)
+    setMessage(null)
+    setError(null)
+    try {
+      await markConsoleDocumentSignedManual(document.id)
+      await refreshDocuments()
+      onDocumentsChanged?.()
+      setMessage('Document marqué comme signé (signature manuscrite).')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de marquer le document comme signé')
+    } finally {
+      setBusyDocumentId(null)
+    }
+  }
+
   // Formulaire d'ajout — PARTAGE entre les deux skins (une seule verite).
   const uploadForm = (
     <form className="console-upload-form" onSubmit={handleUploadDocument}>
@@ -9922,6 +9944,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
           <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
             <span aria-hidden="true"><DetailIcon type="signature" /></span>
             Signature
+          </button>
+        ) : null}
+        {APP_MANDAT_V3_ENABLED && signature?.status !== 'signed' && /mandat|avenant/i.test(`${document.document_name ?? ''} ${document.document_type ?? ''}`) ? (
+          <button className="ghost-button console-document-sign-manual" type="button" onClick={() => void handleMarkSignedManual(document)} disabled={busyDocumentId === document.id} title="Le mandat a été signé sur papier : le marquer comme signé (passe le cockpit à « Signé »)">
+            <span aria-hidden="true"><DetailIcon type="content" /></span>
+            Signé à la main
           </button>
         ) : null}
         <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
@@ -21902,7 +21930,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       <section className="detail-section">
         {isLightweightDetail
           ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
-          : <ConsoleDocumentsPanel dossier={dossier} skin="v21" onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+          : <ConsoleDocumentsPanel dossier={dossier} skin="v21" onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} onDocumentsChanged={() => { const id = dossier?.app_dossier_id; if (id) void loadConsoleDocuments(id).then(setCkDocs).catch(() => {}) }} />}
       </section>
     </div>
   )
