@@ -21963,6 +21963,31 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         </div>
       </>
     )
+    // Pré-validation (état Signé) : l'annonce doit être prête avant de demander la validation.
+    const preChecks: Array<[string, boolean]> = [
+      ['Fiche annonce complète', bienKo.length === 0],
+      ['Photos marketing', (props.images?.length ?? 0) > 0],
+      ['Documents obligatoires', ckDocs.length > 0],
+    ]
+    const preKo = preChecks.filter(([, ok]) => !ok)
+    const mv3PreValid = (
+      <>
+        <div className="mv3-cktop"><span className="l">Presque prêt · à diffuser</span><span className="n">{preChecks.length - preKo.length}/{preChecks.length} · <b>{preKo.length}</b> à finaliser</span></div>
+        {preChecks.map(([k, ok]) => (
+          <div className="mv3-cksec" key={k}><div className="mv3-ckhead"><span className="lbl">{k}</span><span className={`mv3-cnt ${ok ? 'ok' : 'ko'}`}>{ok ? 'OK' : 'À faire'}</span></div></div>
+        ))}
+      </>
+    )
+    // Demande de validation (démarche réelle) + libellé d'état de la demande.
+    const demValidation = ckDemarches.find((d) => d.dem === 'validation')
+    const validationStatut = (() => {
+      const s = String(((props.requestHistoryDiffusion ?? [])[0] as { status?: string } | undefined)?.status ?? '').toLowerCase()
+      if (/refus/.test(s)) return 'Refusée'
+      if (/wait|corr/.test(s)) return 'À corriger'
+      if (/accept/.test(s)) return 'Acceptée'
+      return 'En traitement'
+    })()
+    const mv3Msgs = props.requestMessagesDiffusion ?? []
     return (
       <div className="fa-ck-rub fa-ck-mandat-v3" data-screen-label="Rubrique Mandat V3">
         <section className="mv3-card mv3-life">
@@ -22027,8 +22052,46 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </div>
             </section>
           </>
+        ) : mv3Mode === 'envoye' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></svg></span><div><div className="tt">Le mandat — envoyé en signature</div><div className="ss">Envoyé sur ImmoSign — vos mandants doivent signer</div></div><span className="tag" style={{ background: 'var(--mv3-blue-soft)', color: 'var(--mv3-blue)' }}>En signature</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
+              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg><span>Vos mandants n'ont pas encore signé. Vous pourrez <b>demander la validation</b> dès que le mandat sera <b>signé</b>.</span></div>
+            </section>
+          </>
+        ) : mv3Mode === 'valider' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#2fa564,#1f7a4a)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z" /><path d="m9 11 2 2 4-4" /></svg></span><div><div className="tt">Mandat signé — préparez votre annonce</div><div className="ss">Vos mandants ont signé. Finalisez votre annonce, puis demandez la validation.</div></div><span className="tag" style={{ background: 'var(--mv3-green-soft)', color: 'var(--mv3-green)' }}>Signé</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
+            </section>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span><div><div className="tt">Préparez votre annonce avant la validation</div><div className="ss">Finalisez tout, puis demandez la validation à la direction</div></div></div>
+            <section className="mv3-card mv3-pad">
+              {mv3PreValid}
+              {demValidation?.onClick ? <div style={{ marginTop: 14 }}><button type="button" className="fa-ck-rep-btn primary" onClick={demValidation.onClick}>Demander la validation à la direction</button></div> : null}
+            </section>
+          </>
+        ) : mv3Mode === 'attente' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></span><div><div className="tt">En attente de la direction</div><div className="ss">Votre demande est partie — suivez la réponse de Pauline (acceptée / à corriger / refusée)</div></div><span className="tag amber">{validationStatut}</span></div>
+            <div className="mv3-dmd amber">
+              <div className="mv3-dmd-h"><span className="nm">Demande de validation<span>Débloque la diffusion après accord de la direction</span></span><span className="mv3-dmd-state amber">{validationStatut}</span></div>
+              {mv3Msgs.length ? (
+                <div className="mv3-thread">
+                  <div className="mv3-thread-h">Vos échanges avec la direction</div>
+                  {mv3Msgs.slice(-6).map((m, i) => {
+                    const dir = /pauline|direction|admin|pilot/i.test(String(m.author ?? ''))
+                    const ini = String(m.author ?? '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '·'
+                    return <div className={`mv3-msg ${dir ? '' : 'me'}`} key={m.id ?? i}><span className={`av ${dir ? 'dir' : 'nego'}`}>{ini}</span><div className="mv3-bub"><div className="who">{m.author}</div><div className="txt">{m.message}</div><div className="dt">{m.date}</div></div></div>
+                  })}
+                </div>
+              ) : <div className="mv3-thread"><div className="mv3-thread-h">Demande envoyée — en attente de la réponse de la direction.</div></div>}
+              <div className="mv3-dmd-foot"><button type="button" className="fa-ck-rep-btn" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, 'nego', 'demande_diffusion')}>Répondre / renvoyer</button></div>
+            </div>
+          </>
         ) : (
-          <div className="mv3-scaffold">État <b>{mv3Mode}</b> (ckStage : {ckStage}) — contenu porté aux lots 4‑5.</div>
+          <div className="mv3-scaffold">État <b>{mv3Mode}</b> (ckStage : {ckStage}) — contenu porté au lot 5.</div>
         )}
       </div>
     )
