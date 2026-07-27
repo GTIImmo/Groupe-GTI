@@ -7,15 +7,53 @@
    est porté aux lots suivants.
    ============================================================================ */
 
-.fa-ck-mandat-v3 { display: flex; flex-direction: column; gap: 13px; }
-
-/* Placeholder du Lot 1 — retiré au Lot 2 dès que le squelette piloté par ckStage arrive. */
-.fa-ck-mandat-v3 .mv3-scaffold {
-  border: 1px dashed var(--fa-line, #e9e1d3);
-  background: var(--fa-brand-soft, #f6efe6);
-  border-radius: 14px;
-  padding: 16px 18px;
-  font-size: 13px;
-  color: var(--fa-muted, #6b6058);
+/* Tokens locaux : on mappe la palette de la maquette sur les tokens cockpit --fa-*,
+   scopés à la rubrique pour ne rien laisser fuir. */
+.fa-ck-mandat-v3 {
+  --mv3-mag: var(--fa-brand, #b3134f); --mv3-mag-deep: #8b0f3d; --mv3-mag-soft: var(--fa-brand-soft, #fbe6ee);
+  --mv3-gold: var(--fa-gold, #a5793d); --mv3-gold-soft: var(--fa-gold-soft, #f5ecd8);
+  --mv3-green: #1f7a4a; --mv3-green-soft: #e6f3ec;
+  --mv3-amber: #b06a05; --mv3-amber-soft: #fbefd8;
+  --mv3-red: #c0392b; --mv3-red-soft: #fbe9e6;
+  --mv3-blue: #3a4a95; --mv3-blue-soft: #e9ebf8;
+  --mv3-ink: var(--fa-ink, #241f22); --mv3-soft: var(--fa-muted, #6b6058); --mv3-line: var(--fa-line, #e9e1d3);
+  --mv3-card: var(--fa-surface, #fffdf9); --mv3-paper: var(--fa-bg, #f7f3ec);
+  --mv3-disp: 'Fraunces', 'Spectral', serif;
+  display: flex; flex-direction: column; gap: 13px;
 }
-.fa-ck-mandat-v3 .mv3-scaffold b { color: var(--fa-ink, #241f22); }
+
+.fa-ck-mandat-v3 .mv3-card { background: var(--mv3-card); border: 1px solid var(--mv3-line); border-radius: 16px; box-shadow: 0 3px 12px -7px rgba(60,40,30,.5); }
+.fa-ck-mandat-v3 .mv3-pad { padding: 15px 17px; }
+.fa-ck-mandat-v3 .mv3-tnum { font-variant-numeric: tabular-nums; }
+
+/* ---- Cycle de vie (« Vie du mandat ») ---- */
+.fa-ck-mandat-v3 .mv3-life { padding: 15px 18px; }
+.fa-ck-mandat-v3 .mv3-life-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 13px; }
+.fa-ck-mandat-v3 .mv3-tbadge { font-family: var(--mv3-disp); font-weight: 600; font-size: 13px; letter-spacing: .03em; color: #fff; background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); padding: 4px 11px; border-radius: 8px; }
+.fa-ck-mandat-v3 .mv3-hnum { font-family: var(--mv3-disp); font-size: 16px; font-weight: 600; }
+.fa-ck-mandat-v3 .mv3-statut { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 99px; }
+.fa-ck-mandat-v3 .mv3-statut .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.fa-ck-mandat-v3 .mv3-statut.ok { background: var(--mv3-green-soft); color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mv3-statut.wait { background: var(--mv3-blue-soft); color: var(--mv3-blue); }
+.fa-ck-mandat-v3 .mv3-statut.none { background: var(--mv3-amber-soft); color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mv3-life-top { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--mv3-soft); margin-bottom: 7px; }
+.fa-ck-mandat-v3 .mv3-life-track { position: relative; height: 8px; border-radius: 99px; background: var(--mv3-line); }
+.fa-ck-mandat-v3 .mv3-life-fill { height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.45,.05,.15,1);
+  background: linear-gradient(90deg, var(--mv3-mag), #d1662e 34%, var(--mv3-gold) 55%, var(--mv3-green) 82%, #2f9e9e); }
+.fa-ck-mandat-v3 .mv3-life-steps { display: flex; justify-content: space-between; margin-top: 9px; }
+.fa-ck-mandat-v3 .mv3-ls { flex: 1; text-align: center; font-size: 10.5px; font-weight: 700; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-ls .d { display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--mv3-line); margin: 0 auto 4px; }
+.fa-ck-mandat-v3 .mv3-ls.done, .fa-ck-mandat-v3 .mv3-ls.cur { color: var(--mv3-ink); }
+.fa-ck-mandat-v3 .mv3-ls.cur .d { background: var(--mv3-mag); box-shadow: 0 0 0 4px var(--mv3-mag-soft); }
+.fa-ck-mandat-v3 .mv3-ls:nth-child(1).done .d { background: var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-ls:nth-child(2).done .d { background: #d1662e; }
+.fa-ck-mandat-v3 .mv3-ls:nth-child(3).done .d { background: var(--mv3-gold); }
+.fa-ck-mandat-v3 .mv3-ls:nth-child(4).done .d { background: var(--mv3-green); }
+.fa-ck-mandat-v3 .mv3-ls:nth-child(5).done .d { background: #2f9e9e; }
+.fa-ck-mandat-v3 .mv3-ls:nth-child(6).done .d { background: var(--mv3-blue); }
+@media (prefers-reduced-motion: no-preference) { .fa-ck-mandat-v3 .mv3-ls.cur .d { animation: mv3ring 1.7s ease-in-out infinite; } }
+@keyframes mv3ring { 0%,100% { box-shadow: 0 0 0 3px var(--mv3-mag-soft); } 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--mv3-mag) 14%, transparent); } }
+
+/* Placeholder (Lot 2 — remplacé par le contenu réel des états aux lots 3-5). */
+.fa-ck-mandat-v3 .mv3-scaffold { border: 1px dashed var(--mv3-line); background: var(--mv3-mag-soft); border-radius: 14px; padding: 15px 17px; font-size: 13px; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-scaffold b { color: var(--mv3-ink); }

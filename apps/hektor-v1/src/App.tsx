@@ -21911,13 +21911,54 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // flag OFF). Les lots suivants portent le rendu piloté par ckStage en réutilisant les
   // composants existants (HektorMandatNumberForm, MandatDocumentEditor, MandatSignatureTracker,
   // ckDemarches, DetailAdminPilotPanel, props.mandats, PriceChangeHistoryCard). Voir PLAN_DEV_MANDAT_V3.md.
-  const renderMandatRubriqueV3 = () => (
-    <div className="fa-ck-rub fa-ck-mandat-v3" data-screen-label="Rubrique Mandat V3">
-      <div className="mv3-scaffold">
-        <b>Rubrique Mandat V3</b> — scaffold (Lot 1). État courant : <b>{ckStage}</b>. Le contenu piloté par l'état arrive aux lots suivants (composants existants réutilisés, rien cassé).
+  const renderMandatRubriqueV3 = () => {
+    // Résolution de l'état V3 (8 crans) à partir du moteur ckStage + statut signature réel.
+    const validationEnCours = (props.requestHistoryDiffusion ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
+    const mv3Mode = !pMandatNum ? 'none'
+      : (mandatEchu || pVendu || estArchive) ? 'echu'
+      : !pMandatOk ? (mandatSig === 'to_send' ? 'edite' : mandatSig === 'pending' ? 'envoye' : mandatSig === 'signed' ? (validationEnCours ? 'attente' : 'valider') : 'editer')
+      : avenantEnCours ? (avenantSig === 'to_send' ? 'edite' : avenantSig === 'pending' ? 'envoye' : 'attente')
+      : 'valide'
+    const CYC: Record<string, { fill: string; cur: number; cap: string }> = {
+      none: { fill: '4%', cur: 0, cap: 'Générer le numéro → …' },
+      editer: { fill: '16%', cur: 1, cap: 'Numéro attribué — à éditer' },
+      edite: { fill: '32%', cur: 2, cap: 'Édité — à envoyer à la signature' },
+      envoye: { fill: '50%', cur: 3, cap: 'Envoyé — en attente de signature' },
+      valider: { fill: '66%', cur: 4, cap: 'Signé — à préparer / faire valider' },
+      attente: { fill: '74%', cur: 4, cap: 'Demande envoyée — réponse en attente' },
+      valide: { fill: '86%', cur: 5, cap: 'Validé & diffusé' },
+      echu: { fill: '100%', cur: -1, cap: 'Fin de cycle — historique conservé' },
+    }
+    const cyc = CYC[mv3Mode] ?? CYC.valide
+    const steps = ['Numéro', 'Édité', 'Envoyé', 'Signé', 'Validé', 'Diffusé']
+    const STAT: Record<string, [string, string]> = {
+      none: ['Sans mandat', 'none'], editer: ['À éditer', 'wait'], edite: ['Édité · à envoyer', 'wait'],
+      envoye: ['En signature', 'wait'], valider: ['Signé · à valider', 'wait'], attente: ['En validation', 'wait'],
+      valide: ['Validé', 'ok'], echu: [mandatEchu ? 'Échu' : pVendu ? 'Vendu' : 'Clôturé', 'none'],
+    }
+    const [statLabel, statCls] = STAT[mv3Mode] ?? STAT.valide
+    const mv3Type = String(dossierRec['mandat_type'] ?? dossierRec['mandat_type_source'] ?? '').trim()
+    const numero = String(dossier.numero_mandat ?? '').trim()
+    return (
+      <div className="fa-ck-rub fa-ck-mandat-v3" data-screen-label="Rubrique Mandat V3">
+        <section className="mv3-card mv3-life">
+          <div className="mv3-life-head">
+            <span className="mv3-tbadge">{pMandatNum ? (mv3Type || 'MANDAT') : 'À CRÉER'}</span>
+            <span className="mv3-hnum">{pMandatNum && numero ? `Mandat n° ${numero}` : 'Mandat à créer'}</span>
+            <span className={`mv3-statut ${statCls}`}><span className="dot" />{statLabel}</span>
+          </div>
+          <div className="mv3-life-top"><span>Vie du mandat</span><span>{cyc.cap}</span></div>
+          <div className="mv3-life-track"><div className="mv3-life-fill" style={{ width: cyc.fill }} /></div>
+          <div className="mv3-life-steps">
+            {steps.map((s, i) => (
+              <div key={s} className={`mv3-ls ${(cyc.cur === -1 || i < cyc.cur) ? 'done' : i === cyc.cur ? 'cur' : ''}`}><span className="d" />{s}</div>
+            ))}
+          </div>
+        </section>
+        <div className="mv3-scaffold">Squelette V3 (Lot 2) · état <b>{mv3Mode}</b> (ckStage : {ckStage}). Le contenu détaillé de chaque état arrive aux lots 3‑5 (composants existants réutilisés).</div>
       </div>
-    </div>
-  )
+    )
+  }
   // Libellé, description et liens de prochaine action viennent tous du sous-état
   // résolu (CK_STAGES) — plus de cascade en dur dupliquée trois fois.
   const situationLabel = ckStageDef.label
