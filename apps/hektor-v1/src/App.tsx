@@ -22016,6 +22016,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       return 'En traitement'
     })()
     const mv3Msgs = props.requestMessagesDiffusion ?? []
+    // Pastille d'état d'une démarche (validation / baisse / annulation) : le libellé vient
+    // du modèle métier (buildMandatActionModel → stateLabel = retour direction) et la COULEUR
+    // est dérivée par la MÊME taxonomie que le reste de l'app (actionStateVariant). Ainsi
+    // « Refusée » = rouge, « À corriger » = orange, « Acceptée » = vert, « Envoyée » = ambre, etc.
+    const mv3StateChip = (label?: string | null) => {
+      const l = String(label ?? '').trim()
+      return l ? <span className={`mv3-st ${actionStateVariant(l)}`}>{l}</span> : null
+    }
     // Caractéristiques (Validé/Échu) : chiffres clés + tous les champs repliés — MÊMES
     // expressions que l'ancienne rubrique (numero_mandat, mandat_type, dates, prix, diffusable…).
     const mv3Lignes: Array<[string, string]> = [
@@ -22182,14 +22190,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span><div><div className="tt">Préparez votre annonce avant la validation</div><div className="ss">Finalisez tout, puis demandez la validation à la direction</div></div></div>
             <section className="mv3-card mv3-pad">
               {mv3PreValid}
-              {demValidation?.onClick ? <div style={{ marginTop: 14 }}><button type="button" className="fa-ck-rep-btn primary mv3-cta" onClick={demValidation.onClick}>Demander la validation à la direction</button></div> : null}
+              {demValidation ? (
+                <div className="fa-ck-dm-card" style={{ marginTop: 14 }}>
+                  <div className="fa-ck-dm-tx"><div className="dm-nm">{demValidation.title}</div><div className="dm-sub">{demValidation.sub}</div></div>
+                  {mv3StateChip(demValidation.stateLabel)}
+                  {demValidation.onClick ? <button type="button" className="fa-ck-dm-act mv3-cta" onClick={demValidation.onClick}>{demValidation.actLabel}</button> : null}
+                </div>
+              ) : null}
             </section>
           </>
         ) : mv3Mode === 'attente' ? (
           <>
-            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></span><div><div className="tt">En attente de la direction</div><div className="ss">Votre demande est partie — suivez la réponse de Pauline (acceptée / à corriger / refusée)</div></div><span className="tag amber">{validationStatut}</span></div>
-            <div className="mv3-dmd amber">
-              <div className="mv3-dmd-h"><span className="nm">Demande de validation<span>Débloque la diffusion après accord de la direction</span></span><span className="mv3-dmd-state amber">{validationStatut}</span></div>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></span><div><div className="tt">En attente de la direction</div><div className="ss">Votre demande est partie — suivez la réponse de Pauline (acceptée / à corriger / refusée)</div></div><span style={{ marginLeft: 'auto' }}>{mv3StateChip(validationStatut)}</span></div>
+            <div className={`mv3-dmd ${/refus/i.test(validationStatut) ? 'rejected' : /corr/i.test(validationStatut) ? 'correction' : /accept/i.test(validationStatut) ? 'accepted' : 'amber'}`}>
+              <div className="mv3-dmd-h"><span className="nm">Demande de validation<span>Débloque la diffusion après accord de la direction</span></span>{mv3StateChip(validationStatut)}</div>
               {mv3Msgs.length ? (
                 <div className="mv3-thread">
                   <div className="mv3-thread-h">Vos échanges avec la direction</div>
@@ -22217,8 +22231,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     <div key={d.key} className={`fa-ck-dm-card${d.locked ? ' lock' : ''}`}>
                       <div className="fa-ck-dm-tx"><div className="dm-nm">{d.title}</div><div className="dm-sub">{d.sub}</div></div>
                       {d.locked
-                        ? <span className="fa-ck-dm-state lock">🔒 Après validation</span>
-                        : <><span className="fa-ck-dm-state">● {d.stateLabel}</span>{d.onClick ? <button type="button" className="fa-ck-dm-act" onClick={d.onClick}>{d.actLabel}</button> : null}</>}
+                        ? <span className="mv3-st lock">🔒 Après validation</span>
+                        : <>{mv3StateChip(d.stateLabel)}{d.onClick ? <button type="button" className="fa-ck-dm-act" onClick={d.onClick}>{d.actLabel}</button> : null}</>}
                     </div>
                   ))}
                 </div>
