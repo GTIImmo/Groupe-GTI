@@ -22074,6 +22074,24 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     // ── Cycle AVENANT (Lot B) : quand un avenant est en cours, le mandat reste « Validé »
     // (cycle du haut) et l'avenant déroule SON propre cycle ci-dessous. Réutilise les vrais
     // composants (éditeur avenant, MandatSignatureTracker, démarche baisse = validation avenant). ──
+    // Carte de demande (validation / baisse) au design maquette (.mv3-dmd) : liseré coloré à
+    // gauche + icône + titre/sous-titre + pastille d'état couleur + bouton d'action. Remplace
+    // l'ancien style cockpit .fa-ck-dm-card. Pastille masquée si l'état est « à demander » (redondant).
+    const mv3DmdCard = (d: { tone?: string; icon: React.ReactNode; title: string; sub: string; stateLabel?: string; actLabel?: string; onClick?: () => void; locked?: boolean }) => {
+      const st = String(d.stateLabel ?? '').trim()
+      const showChip = st && !/^(ajouter|demander)$/i.test(st)
+      return (
+        <div className={`mv3-dmd ${d.tone ?? 'amber'}`}>
+          <div className="mv3-dmd-h">
+            <span className="mv3-dmd-ic">{d.icon}</span>
+            <span className="nm">{d.title}<span>{d.sub}</span></span>
+            {d.locked ? <span className="mv3-dmd-state amber">🔒 Verrouillé</span> : showChip ? mv3StateChip(st) : null}
+          </div>
+          {!d.locked && d.onClick ? <div className="mv3-dmd-foot"><button type="button" className="mv3-dmd-act" onClick={d.onClick}>{d.actLabel || 'Ouvrir'}</button></div> : null}
+        </div>
+      )
+    }
+    const mv3DmdCheckIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>
     const avPriceMsgs = props.requestMessagesPriceDrop ?? []
     const AV_CYC: Record<string, { fill: string; cur: number; cap: string; tag: string; tagBg: string; tagFg: string }> = {
       av_edite: { fill: '35%', cur: 1, cap: 'Édité — à envoyer à la signature', tag: 'Édité · à envoyer', tagBg: 'var(--mv3-gold-soft)', tagFg: 'var(--mv3-gold)' },
@@ -22127,14 +22145,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {mv3IllusEl('valider')}
               <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant signé.</b> Vos mandants ont signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</p></div>
             </div>
-            {demBaisse ? (
-              <div className="fa-ck-dm-card">
-                <div className="fa-ck-dm-tx"><div className="dm-nm">Validation de l'avenant</div><div className="dm-sub">Le nouveau prix s'applique après accord de la direction</div></div>
-                {demBaisse.locked
-                  ? <span className="mv3-st lock">🔒 Verrouillé</span>
-                  : <>{mv3StateChip(demBaisse.stateLabel)}{demBaisse.onClick ? <button type="button" className="fa-ck-dm-act mv3-cta" onClick={demBaisse.onClick}>{demBaisse.actLabel}</button> : null}</>}
-              </div>
-            ) : null}
+            {demBaisse ? mv3DmdCard({ tone: 'amber', icon: mv3DmdCheckIcon, title: "Validation de l'avenant", sub: "Le nouveau prix s'applique après accord de la direction", stateLabel: demBaisse.stateLabel, actLabel: demBaisse.actLabel, onClick: demBaisse.onClick, locked: demBaisse.locked }) : null}
           </section>
         ) : (
           <div className={`mv3-dmd ${/refus/i.test(baisseStatut) ? 'rejected' : /corr/i.test(baisseStatut) ? 'correction' : /accept/i.test(baisseStatut) ? 'accepted' : 'amber'}`}>
@@ -22350,13 +22361,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span><div><div className="tt">Préparez votre annonce avant la validation</div><div className="ss">Finalisez tout, puis demandez la validation à la direction</div></div></div>
             <section className="mv3-card mv3-pad">
               {mv3PreValid}
-              {demValidation ? (
-                <div className="fa-ck-dm-card" style={{ marginTop: 14 }}>
-                  <div className="fa-ck-dm-tx"><div className="dm-nm">{demValidation.title}</div><div className="dm-sub">{demValidation.sub}</div></div>
-                  {mv3StateChip(demValidation.stateLabel)}
-                  {demValidation.onClick ? <button type="button" className="fa-ck-dm-act mv3-cta" onClick={demValidation.onClick}>{demValidation.actLabel}</button> : null}
-                </div>
-              ) : null}
+              {demValidation ? <div style={{ marginTop: 14 }}>{mv3DmdCard({ tone: 'amber', icon: mv3DmdCheckIcon, title: demValidation.title, sub: demValidation.sub, stateLabel: demValidation.stateLabel, actLabel: demValidation.actLabel, onClick: demValidation.onClick, locked: demValidation.locked })}</div> : null}
             </section>
           </>
         ) : mv3Mode === 'attente' ? (

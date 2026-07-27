@@ -56,11 +56,13 @@
 
 /* ---- En-têtes de section ---- */
 .fa-ck-mandat-v3 .mv3-sh { display: flex; align-items: center; gap: 10px; margin: 4px 2px 0; }
-.fa-ck-mandat-v3 .mv3-sh .mv3-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; color: #fff; }
+/* Reflet brillant en haut (inset) + ombre portée sur TOUTES les icônes (y compris celles
+   stylées en inline : vert/ambre/rouge) — détail repris de la maquette (.sh .ic). */
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; color: #fff; box-shadow: 0 5px 12px -6px rgba(60, 40, 30, .55), inset 0 1px 0 rgba(255, 255, 255, .32); }
 .fa-ck-mandat-v3 .mv3-sh .mv3-ic svg { width: 16px; height: 16px; }
-.fa-ck-mandat-v3 .mv3-sh .mv3-ic.mag { background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); box-shadow: 0 5px 12px -5px var(--mv3-mag); }
-.fa-ck-mandat-v3 .mv3-sh .mv3-ic.gold { background: linear-gradient(135deg, #c8994e, var(--mv3-gold)); box-shadow: 0 5px 12px -5px var(--mv3-gold); }
-.fa-ck-mandat-v3 .mv3-sh .mv3-ic.blue { background: linear-gradient(135deg, #5566c0, var(--mv3-blue)); box-shadow: 0 5px 12px -5px var(--mv3-blue); }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic.mag { background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); box-shadow: 0 5px 12px -5px var(--mv3-mag), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic.gold { background: linear-gradient(135deg, #c8994e, var(--mv3-gold)); box-shadow: 0 5px 12px -5px var(--mv3-gold), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic.blue { background: linear-gradient(135deg, #5566c0, var(--mv3-blue)); box-shadow: 0 5px 12px -5px var(--mv3-blue), inset 0 1px 0 rgba(255, 255, 255, .35); }
 .fa-ck-mandat-v3 .mv3-sh .tt { font-family: var(--mv3-disp); font-size: 15.5px; font-weight: 600; }
 .fa-ck-mandat-v3 .mv3-sh .ss { font-size: 11.5px; color: var(--mv3-soft); }
 .fa-ck-mandat-v3 .mv3-sh .tag { margin-left: auto; font-size: 10.5px; font-weight: 800; padding: 4px 9px; border-radius: 99px; }
@@ -118,6 +120,13 @@
 .fa-ck-mandat-v3 .mv3-dmd-h .nm span { display: block; font-size: 11.5px; font-weight: 500; color: var(--mv3-soft); }
 .fa-ck-mandat-v3 .mv3-dmd-state { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 99px; background: var(--mv3-blue-soft); color: var(--mv3-blue); white-space: nowrap; }
 .fa-ck-mandat-v3 .mv3-dmd-state.amber { background: var(--mv3-amber-soft); color: var(--mv3-amber); }
+/* Icône + bouton d'action de la carte demande (design maquette .dmd). */
+.fa-ck-mandat-v3 .mv3-dmd-ic { width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; background: var(--mv3-blue-soft); color: var(--mv3-blue); } .fa-ck-mandat-v3 .mv3-dmd-ic svg { width: 16px; height: 16px; }
+.fa-ck-mandat-v3 .mv3-dmd.amber .mv3-dmd-ic { background: var(--mv3-amber-soft); color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mv3-dmd.accepted .mv3-dmd-ic { background: var(--mv3-green-soft); color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mv3-dmd-act { cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 9px; border: 1px solid var(--mv3-blue); background: transparent; color: var(--mv3-blue); transition: background .15s ease, transform .15s ease; }
+.fa-ck-mandat-v3 .mv3-dmd.amber .mv3-dmd-act { border-color: var(--mv3-amber); color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mv3-dmd-act:hover { transform: translateY(-1px); background: var(--mv3-blue-soft); } .fa-ck-mandat-v3 .mv3-dmd.amber .mv3-dmd-act:hover { background: var(--mv3-amber-soft); }
 .fa-ck-mandat-v3 .mv3-thread { border-top: 1px dashed var(--mv3-line); margin: 0 14px; padding: 11px 0; display: flex; flex-direction: column; gap: 8px; }
 .fa-ck-mandat-v3 .mv3-thread-h { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--mv3-soft); }
 .fa-ck-mandat-v3 .mv3-msg { display: flex; gap: 8px; max-width: 92%; }
