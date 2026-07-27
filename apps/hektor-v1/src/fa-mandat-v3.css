@@ -182,6 +182,23 @@
 .fa-ck-mandat-v3 .mv3-mh-av { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--mv3-ink); }
 .fa-ck-mandat-v3 .mv3-mh-av .avd { width: 16px; height: 16px; border-radius: 5px; background: linear-gradient(135deg, #d68f22, var(--mv3-gold)); display: grid; place-items: center; flex: none; } .fa-ck-mandat-v3 .mv3-mh-av .avd svg { width: 10px; height: 10px; color: #fff; }
 
+/* Ligne d'historique cliquable (ouvre le popup des champs du mandat). */
+.fa-ck-mandat-v3 .mv3-mhi-click { cursor: pointer; text-align: left; }
+.fa-ck-mandat-v3 .mv3-mhi-chev { width: 15px; height: 15px; color: var(--mv3-soft); flex: none; margin-left: 4px; }
+.fa-ck-mandat-v3 .mv3-mhi-click:hover .mv3-mhi-chev { color: var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-mhi-click:focus-visible { outline: 2px solid var(--mv3-mag); outline-offset: 2px; }
+
+/* Popup « champs du mandat » — modale légère (rendue dans .fa-ck-mandat-v3, position fixe). */
+.fa-ck-mandat-v3 > .mv3-modal-ov { animation: none; }
+.fa-ck-mandat-v3 .mv3-modal-ov { position: fixed; inset: 0; z-index: 10060; background: rgba(20, 14, 10, .5); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.fa-ck-mandat-v3 .mv3-modal { background: var(--mv3-card); border: 1px solid var(--mv3-line); border-radius: 16px; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .55); width: 100%; max-width: 430px; max-height: 85vh; overflow: auto; }
+.fa-ck-mandat-v3 .mv3-modal-h { display: flex; align-items: center; gap: 9px; padding: 13px 15px; border-bottom: 1px solid var(--mv3-line); position: sticky; top: 0; background: var(--mv3-card); }
+.fa-ck-mandat-v3 .mv3-modal-x { margin-left: auto; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--mv3-line); background: var(--mv3-paper); color: var(--mv3-soft); cursor: pointer; display: grid; place-items: center; } .fa-ck-mandat-v3 .mv3-modal-x svg { width: 15px; height: 15px; }
+.fa-ck-mandat-v3 .mv3-modal-b { padding: 14px 15px; }
+.fa-ck-mandat-v3 .mv3-modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--mv3-line); border: 1px solid var(--mv3-line); border-radius: 12px; overflow: hidden; }
+.fa-ck-mandat-v3 .mv3-mfield { background: var(--mv3-card); padding: 10px 13px; } .fa-ck-mandat-v3 .mv3-mfield .k { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--mv3-soft); display: block; } .fa-ck-mandat-v3 .mv3-mfield .v { font-size: 13.5px; font-weight: 600; margin-top: 2px; display: block; } .fa-ck-mandat-v3 .mv3-mfield.hl .v { color: var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-modal-av { margin-top: 12px; } .fa-ck-mandat-v3 .mv3-modal-avh { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--mv3-soft); margin-bottom: 7px; }
+
 /* ---- Conteneur pour les composants réels embarqués (générer / éditer / signature) ---- */
 .fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
 

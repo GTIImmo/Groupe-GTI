@@ -21101,6 +21101,13 @@ const APP_CONTACT_V2_ENABLED =
 const APP_MANDAT_V3_ENABLED =
   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_MANDAT_V3_ENABLED ?? '').trim().toLowerCase())
 
+// Un mandat de l'historique (rubrique Mandat V3), pour le popup « champs du mandat ».
+type Mv3HistItem = {
+  num: string; type: string; debut: string; fin: string; cloture: string;
+  dateenr: string; montant: string; mandants: string; note: string; versions: number;
+  avenants: Array<Record<string, unknown>>
+}
+
 // Illustrations SVG de la rubrique Mandat V3 (Lot 8) — reprises VERBATIM de la maquette de
 // référence. Chaînes statiques (aucune entrée utilisateur) injectées via dangerouslySetInnerHTML,
 // ce qui évite la conversion kebab→camelCase des attributs SVG. Les classes .fl/.fl2 portent le
@@ -21564,6 +21571,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // « mandat édité » / « en signature » / « signé » — et donc des VERBES faux
   // au regard du principe §1 (« le verbe suit la position du document »).
   const [ckDocs, setCkDocs] = useState<ConsoleDocument[]>([])
+  // Popup « champs du mandat » (rubrique Mandat V3) : mandat d'historique sélectionné.
+  const [mv3HistSel, setMv3HistSel] = useState<Mv3HistItem | null>(null)
   // Fil d'activité RÉEL (RPC app_cockpit_activite) : agrège les événements du dossier.
   // Remplace le fallback pauvre quand il n'y a pas de mock activite_json.
   const [ckActi, setCkActi] = useState<CockpitActiviteRow[]>([])
@@ -22093,13 +22102,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     // Historique des mandats & avenants (permanent) : MÊME source que mandatDetails
     // (detail.mandats_json), groupée par numéro, avenants embarqués. Aucune nouvelle donnée.
     const mv3RawMandats = parseJson<Array<Record<string, unknown>>>(props.detail?.mandats_json ?? '', [])
-    const mv3History = (() => {
+    const mv3History: Mv3HistItem[] = (() => {
       const grouped = new Map<string, Array<Record<string, unknown>>>()
       mv3RawMandats.forEach((it, i) => { const n = safeText(it.numero) || `Mandat ${i + 1}`; grouped.set(n, [...(grouped.get(n) ?? []), it]) })
       return Array.from(grouped.entries()).map(([num, versions]) => {
-        const cur = versions[0] ?? {}
-        const avenants = versions.flatMap((v) => Array.isArray(v.avenants) ? v.avenants : []).filter((a): a is Record<string, unknown> => Boolean(a && typeof a === 'object'))
-        return { num, type: safeText(cur.type), debut: safeText(cur.debut), fin: safeText(cur.fin), cloture: safeText(cur.cloture), avenants }
+        // Version la plus renseignée = source des champs (même logique que mandatDetails).
+        const sorted = versions.slice().sort((a, b) => {
+          const score = (e: Record<string, unknown>) => ['type', 'debut', 'fin', 'cloture', 'montant', 'mandants', 'note'].reduce((c, k) => c + (safeText(e[k]) ? 1 : 0), 0)
+          return score(b) - score(a)
+        })
+        const cur = sorted[0] ?? {}
+        const avenants = sorted.flatMap((v) => Array.isArray(v.avenants) ? v.avenants : []).filter((a): a is Record<string, unknown> => Boolean(a && typeof a === 'object'))
+        return {
+          num, type: safeText(cur.type), debut: safeText(cur.debut), fin: safeText(cur.fin), cloture: safeText(cur.cloture),
+          dateenr: safeText(cur.dateenr) || safeText(cur.date_enregistrement), montant: safeText(cur.montant),
+          mandants: safeText(cur.mandants), note: safeText(cur.note), versions: versions.length, avenants,
+        }
       })
     })()
     const mv3HistBlock = mv3History.length ? (
@@ -22111,12 +22129,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               const isCur = Boolean(numero) && h.num === numero
               const dates = [h.debut, h.fin].filter(Boolean).join(' → ')
               return (
-                <div className={`mv3-mhi ${isCur && mv3Mode === 'valide' ? 'cur' : 'old'}`} key={`mv3mh-${h.num}-${i}`}>
+                <div className={`mv3-mhi mv3-mhi-click ${isCur && mv3Mode === 'valide' ? 'cur' : 'old'}`} key={`mv3mh-${h.num}-${i}`} role="button" tabIndex={0} title="Voir les champs du mandat" onClick={() => setMv3HistSel(h)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMv3HistSel(h) } }}>
                   <div className="mv3-mh-head">
                     <span className="mv3-mh-badge">N° {h.num}</span>
                     {h.type ? <span className="mv3-mh-type">{h.type}</span> : null}
                     {dates ? <span className="mv3-mh-dates">{dates}</span> : null}
                     <span className={`mv3-mh-state ${h.cloture || !isCur ? 'clot' : ''}`}>{h.cloture ? 'Clôturé' : isCur ? (mv3Mode === 'echu' ? 'Échu' : mv3Mode === 'valide' ? 'Actif' : 'En cours') : 'Archivé'}</span>
+                    <svg className="mv3-mhi-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m9 18 6-6-6-6" /></svg>
                   </div>
                   {h.avenants.map((a, j) => (
                     <div className="mv3-mh-av" key={`mv3av-${j}`}><span className="avd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="m5 12 5 5 9-9" /></svg></span>Avenant {[safeText(a.numero), safeText(a.date), safeText(a.detail)].filter(Boolean).join(' · ') || '—'}</div>
@@ -22313,6 +22332,38 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           </>
         )}
         {mv3HistBlock}
+        {mv3HistSel ? (() => {
+          const h = mv3HistSel
+          const fields: Array<[string, string]> = ([
+            ['Numéro', h.num], ['Type', h.type], ['Enregistrement', h.dateenr], ['Début', h.debut],
+            ['Échéance', h.fin], ['Clôture', h.cloture], ['Montant', h.montant], ['Mandants', h.mandants],
+            ['Versions', h.versions > 1 ? `${h.versions} versions` : '1 version'], ['Note', h.note],
+          ] as Array<[string, string]>).filter((e) => e[1])
+          return (
+            <div className="mv3-modal-ov" role="presentation" onClick={() => setMv3HistSel(null)}>
+              <div className="mv3-modal" role="dialog" aria-modal="true" aria-label={`Mandat n° ${h.num}`} onClick={(e) => e.stopPropagation()}>
+                <div className="mv3-modal-h">
+                  <span className="mv3-mh-badge">N° {h.num}</span>
+                  {h.type ? <span className="mv3-mh-type">{h.type}</span> : null}
+                  <button type="button" className="mv3-modal-x" aria-label="Fermer" onClick={() => setMv3HistSel(null)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6 6 18M6 6l12 12" /></svg></button>
+                </div>
+                <div className="mv3-modal-b">
+                  <div className="mv3-modal-grid">
+                    {fields.map(([k, v]) => <div className={`mv3-mfield${k === 'Montant' ? ' hl' : ''}`} key={k}><span className="k">{k}</span><span className="v">{v}</span></div>)}
+                  </div>
+                  {h.avenants.length ? (
+                    <div className="mv3-modal-av">
+                      <div className="mv3-modal-avh">Avenants ({h.avenants.length})</div>
+                      {h.avenants.map((a, j) => (
+                        <div className="mv3-mh-av" key={`mv3mav-${j}`}><span className="avd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="m5 12 5 5 9-9" /></svg></span>Avenant {[safeText(a.numero), safeText(a.date), safeText(a.detail)].filter(Boolean).join(' · ') || '—'}</div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )
+        })() : null}
       </div>
     )
   }
