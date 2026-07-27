@@ -22287,28 +22287,44 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </section>
             <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /></svg></span><div><div className="tt">Mandants</div><div className="ss">Gérés dans la rubrique Contact — résumé ici</div></div></div>
             <section className="mv3-card mv3-pad">{mv3People}</section>
-            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 13h6M9 17h6" /></svg></span><div><div className="tt">Avenant &amp; demandes</div><div className="ss">Baisse de prix ou clôture — soumises à la direction, puis avenant</div></div></div>
+            {/* Avenant & baisse de prix (maquette) : CTA avenant épuré + demande de baisse en action secondaire (fonction conservée) */}
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d68f22,#b06a05)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></span><div><div className="tt">Avenant &amp; baisse de prix</div><div className="ss">Édite l'avenant (prix saisi une fois) puis suis-le · validé par la direction</div></div>{!avenantEnCours ? <span className="tag" style={{ background: 'var(--mv3-paper)', color: 'var(--mv3-soft)' }}>Aucun avenant en cours</span> : null}</div>
             <section className="mv3-card mv3-pad">
-              {ckDemarches.filter((d) => d.dem === 'price' || d.dem === 'cancel').length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 13 }}>
-                  {ckDemarches.filter((d) => d.dem === 'price' || d.dem === 'cancel').map((d) => (
-                    <div key={d.key} className={`fa-ck-dm-card${d.locked ? ' lock' : ''}`}>
-                      <div className="fa-ck-dm-tx"><div className="dm-nm">{d.title}</div><div className="dm-sub">{d.sub}</div></div>
-                      {d.locked
-                        ? <span className="mv3-st lock">🔒 Après validation</span>
-                        : <>{mv3StateChip(d.stateLabel)}{d.onClick ? <button type="button" className="fa-ck-dm-act" onClick={d.onClick}>{d.actLabel}</button> : null}</>}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
               <div className="mv3-embed">
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
                   : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
               </div>
+              {(() => {
+                const dPrice = ckDemarches.find((d) => d.dem === 'price')
+                return dPrice ? (
+                  <div className="mv3-secondary">
+                    <span className="mv3-sec-tx">Vous pouvez aussi <b>demander une baisse de prix</b> à la direction (sans éditer d'avenant).</span>
+                    {dPrice.locked
+                      ? <span className="mv3-st lock">🔒 Après validation</span>
+                      : <>{mv3StateChip(dPrice.stateLabel)}{dPrice.onClick ? <button type="button" className="fa-ck-rep-btn" onClick={dPrice.onClick}>{dPrice.actLabel}</button> : null}</>}
+                  </div>
+                ) : null
+              })()}
             </section>
             <div className="mv3-sh"><span className="mv3-ic mag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /></svg></span><div><div className="tt">Historique du prix</div><div className="ss">Chaque changement de prix public est tracé</div></div></div>
             <section className="mv3-card mv3-pad">{mv3PriceHist}</section>
+            {/* Annulation (maquette) : section rouge dédiée = démarche d'annulation (fonction conservée) */}
+            {(() => {
+              const dCancel = ckDemarches.find((d) => d.dem === 'cancel')
+              return dCancel ? (
+                <>
+                  <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#d9584a,#c0392b)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M18 6 6 18M6 6l12 12" /></svg></span><div><div className="tt">Annulation</div><div className="ss">Demande de clôture à la direction (sans document)</div></div></div>
+                  <section className="mv3-card mv3-pad">
+                    <div className="mv3-cancel-row">
+                      {dCancel.locked
+                        ? <span className="mv3-st lock">🔒 Après validation</span>
+                        : <>{dCancel.onClick ? <button type="button" className="mv3-btn-cancel" onClick={dCancel.onClick}>Demander la clôture du mandat</button> : null}{mv3StateChip(dCancel.stateLabel)}</>}
+                    </div>
+                  </section>
+                </>
+              ) : null
+            })()}
           </>
         ) : (
           <>

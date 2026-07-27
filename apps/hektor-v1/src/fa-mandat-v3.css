@@ -199,6 +199,14 @@
 .fa-ck-mandat-v3 .mv3-mfield { background: var(--mv3-card); padding: 10px 13px; } .fa-ck-mandat-v3 .mv3-mfield .k { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--mv3-soft); display: block; } .fa-ck-mandat-v3 .mv3-mfield .v { font-size: 13.5px; font-weight: 600; margin-top: 2px; display: block; } .fa-ck-mandat-v3 .mv3-mfield.hl .v { color: var(--mv3-mag); }
 .fa-ck-mandat-v3 .mv3-modal-av { margin-top: 12px; } .fa-ck-mandat-v3 .mv3-modal-avh { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--mv3-soft); margin-bottom: 7px; }
 
+/* Action secondaire « demander une baisse de prix » (sous l'avenant) — fonction conservée. */
+.fa-ck-mandat-v3 .mv3-secondary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 13px; padding-top: 13px; border-top: 1px dashed var(--mv3-line); }
+.fa-ck-mandat-v3 .mv3-secondary .mv3-sec-tx { flex: 1; min-width: 170px; font-size: 12px; color: var(--mv3-soft); line-height: 1.45; } .fa-ck-mandat-v3 .mv3-secondary .mv3-sec-tx b { color: var(--mv3-ink); }
+/* Section Annulation (maquette) : bouton de clôture rouge. */
+.fa-ck-mandat-v3 .mv3-cancel-row { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; }
+.fa-ck-mandat-v3 .mv3-btn-cancel { cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 700; padding: 9px 15px; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--mv3-red) 55%, transparent); background: var(--mv3-red-soft); color: var(--mv3-red); transition: background .15s ease, transform .15s ease; }
+.fa-ck-mandat-v3 .mv3-btn-cancel:hover { background: color-mix(in srgb, var(--mv3-red) 14%, var(--mv3-card)); transform: translateY(-1px); }
+
 /* ---- Conteneur pour les composants réels embarqués (générer / éditer / signature) ---- */
 .fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
 
