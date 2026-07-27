@@ -6554,6 +6554,10 @@ export async function createGenerateMandatPdfJob(input: {
   documentLabel?: string | null
   visibility?: 'private' | 'shared'
   priority?: number
+  // Avenant uniquement : nouveau prix PROPOSÉ (saisi dans la modale). Purement passif — le worker
+  // le recopie dans metadata_json.avenant_new_price du document, POUR AFFICHAGE. N'altère jamais
+  // le prix réel de l'annonce (qui ne change qu'à la validation de la baisse par la direction).
+  avenantNewPrice?: string | null
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
@@ -6572,6 +6576,7 @@ export async function createGenerateMandatPdfJob(input: {
         html: input.html,
         numero_mandat: input.numeroMandat ?? null,
         render_payload: input.payload ?? null,
+        avenant_new_price: input.avenantNewPrice ?? null,
       },
       priority: input.priority ?? 40,
       requested_by: userId,
