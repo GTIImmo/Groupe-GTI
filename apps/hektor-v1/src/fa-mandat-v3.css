@@ -238,6 +238,13 @@
 .fa-ck-mandat-v3 .mv3-avprice .l { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--mv3-soft); }
 .fa-ck-mandat-v3 .mv3-avprice .v { font-family: var(--mv3-disp); font-size: 18px; font-weight: 600; color: var(--mv3-mag); }
 .fa-ck-mandat-v3 .mv3-avprice .n { font-size: 11px; color: var(--mv3-soft); }
+/* Avenant signé : comparaison ancien prix → nouveau prix (annotation worker, affichage seul). */
+.fa-ck-mandat-v3 .mv3-avprice-2 { align-items: stretch; gap: 12px; padding: 11px 13px; border: 1px solid var(--mv3-line); border-radius: 12px; background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(250,246,240,.35)); }
+.fa-ck-mandat-v3 .mv3-avprice-col { display: flex; flex-direction: column; gap: 3px; }
+.fa-ck-mandat-v3 .mv3-avprice-2 .v.old { color: var(--mv3-soft); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.fa-ck-mandat-v3 .mv3-avprice-2 .v { color: #1f7a4a; }
+.fa-ck-mandat-v3 .mv3-avprice-arrow { align-self: center; font-size: 20px; font-weight: 700; color: var(--mv3-soft); line-height: 1; }
+.fa-ck-mandat-v3 .mv3-avprice-2 .n { flex-basis: 100%; margin-top: 2px; }
 /* Illustration centrée (états lecture seule type Échu). */
 .fa-ck-mandat-v3 .mv3-illus { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0 0 14px; }
 .fa-ck-mandat-v3 .mv3-illus svg { width: 210px; max-width: 62%; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
