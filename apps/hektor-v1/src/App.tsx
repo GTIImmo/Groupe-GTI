@@ -21939,6 +21939,30 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const [statLabel, statCls] = STAT[mv3Mode] ?? STAT.valide
     const mv3Type = String(dossierRec['mandat_type'] ?? dossierRec['mandat_type_source'] ?? '').trim()
     const numero = String(dossier.numero_mandat ?? '').trim()
+    // Check de complétude (données réelles) — mandants (coordonnées) + champs clés du bien.
+    const mandantIncomplet = (c: DetailContact) => !((c.email && String(c.email).trim()) || (c.phone && String(c.phone).trim()))
+    const nbMandants = props.contacts.length
+    const mandantsKo = props.contacts.filter(mandantIncomplet)
+    const bienChecks: Array<[string, boolean]> = [
+      ['Adresse', Boolean(String(props.address ?? '').trim())],
+      ['Prix', Number(dossier.prix ?? 0) > 0],
+    ]
+    const bienKo = bienChecks.filter(([, ok]) => !ok).map(([k]) => k)
+    const nbTotal = nbMandants + bienChecks.length
+    const nbOk = (nbMandants - mandantsKo.length) + (bienChecks.length - bienKo.length)
+    const mv3Check = (
+      <>
+        <div className="mv3-cktop"><span className="l">Presque prêt</span><span className="n">{nbOk}/{nbTotal} prêts · <b>{nbTotal - nbOk}</b> à finaliser</span></div>
+        <div className="mv3-cksec">
+          <div className="mv3-ckhead"><span className="lbl">Mandants ({nbMandants})</span><span className={`mv3-cnt ${mandantsKo.length ? 'ko' : 'ok'}`}>{nbMandants - mandantsKo.length}/{nbMandants}</span></div>
+          {mandantsKo.length ? <div className="mv3-miss">{mandantsKo.map((c, i) => <span className="m" key={`mko-${i}`}>⚠ {(c.name || 'Mandant').split(' ')[0]} · coordonnées</span>)}</div> : <div className="mv3-alldone">✓ Coordonnées complètes</div>}
+        </div>
+        <div className="mv3-cksec">
+          <div className="mv3-ckhead"><span className="lbl">Fiche du bien</span><span className={`mv3-cnt ${bienKo.length ? 'ko' : 'ok'}`}>{bienChecks.length - bienKo.length}/{bienChecks.length}</span></div>
+          {bienKo.length ? <div className="mv3-miss">{bienKo.map((k) => <span className="m" key={`bko-${k}`}>⚠ {k}</span>)}</div> : <div className="mv3-alldone">✓ Champs clés OK</div>}
+        </div>
+      </>
+    )
     return (
       <div className="fa-ck-rub fa-ck-mandat-v3" data-screen-label="Rubrique Mandat V3">
         <section className="mv3-card mv3-life">
@@ -21955,7 +21979,57 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             ))}
           </div>
         </section>
-        <div className="mv3-scaffold">Squelette V3 (Lot 2) · état <b>{mv3Mode}</b> (ckStage : {ckStage}). Le contenu détaillé de chaque état arrive aux lots 3‑5 (composants existants réutilisés).</div>
+        {mv3Mode === 'none' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M11 13h2M12 12v3" /></svg></span><div><div className="tt">Générer le numéro de mandat</div><div className="ss">Vous n'avez pas encore de mandat sur ce bien — commencez ici</div></div><span className="tag amber">À générer</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-warn"><span className="em">⚠️</span><span><b>Action officielle.</b> À ne faire qu'une fois votre mandant confirmé — générer le numéro <b>crée une ligne définitive au registre des mandats</b>.</span></div>
+              <div className="mv3-embed">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="Le numero de mandat n'est pas modifiable depuis une fiche d'index leger." />
+                  : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+              </div>
+            </section>
+          </>
+        ) : mv3Mode === 'editer' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /></svg></span><div><div className="tt">Éditer le mandat</div><div className="ss">Complétez vos fiches, puis rédigez votre mandat</div></div><span className="tag mag">N° {numero}</span></div>
+            <section className="mv3-card mv3-pad">
+              {mv3Check}
+            </section>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-embed">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
+                  : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+              </div>
+            </section>
+          </>
+        ) : mv3Mode === 'edite' ? (
+          <>
+            <div className="mv3-sh"><span className="mv3-ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="m9 15 2 2 4-4" /></svg></span><div><div className="tt">Le mandat — édité</div><div className="ss">Rédigé — faites‑le signer (électronique ou manuscrit)</div></div><span className="tag gold">À envoyer</span></div>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Deux façons de faire signer : la <b>signature électronique</b> (ci‑dessous) ou, exceptionnellement, la <b>signature manuscrite</b> — dans ce cas, joignez le mandat signé dans les Documents : il part dans Hektor et le mandat passe directement à « Signé ».</span></div>
+              <details className="mv3-manual">
+                <summary className="mv3-alt" style={{ marginTop: 11 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span><b>Signer à la main</b><em>imprimez, faites signer, puis joignez le signé</em></span></summary>
+                <div className="mv3-drop">
+                  <span className="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg></span>
+                  <div className="dz-tx"><b>Joindre le mandat signé (PDF)</b><span>À déposer dans la rubrique Documents — signé par tous vos mandants.</span></div>
+                  <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Aller aux Documents</button>
+                </div>
+              </details>
+            </section>
+            <section className="mv3-card mv3-pad">
+              <div className="mv3-embed">
+                {isLightweightDetail
+                  ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
+                  : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+              </div>
+            </section>
+          </>
+        ) : (
+          <div className="mv3-scaffold">État <b>{mv3Mode}</b> (ckStage : {ckStage}) — contenu porté aux lots 4‑5.</div>
+        )}
       </div>
     )
   }

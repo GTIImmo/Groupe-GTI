@@ -54,6 +54,62 @@
 @media (prefers-reduced-motion: no-preference) { .fa-ck-mandat-v3 .mv3-ls.cur .d { animation: mv3ring 1.7s ease-in-out infinite; } }
 @keyframes mv3ring { 0%,100% { box-shadow: 0 0 0 3px var(--mv3-mag-soft); } 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--mv3-mag) 14%, transparent); } }
 
-/* Placeholder (Lot 2 — remplacé par le contenu réel des états aux lots 3-5). */
+/* ---- En-têtes de section ---- */
+.fa-ck-mandat-v3 .mv3-sh { display: flex; align-items: center; gap: 10px; margin: 4px 2px 0; }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; color: #fff; }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic svg { width: 16px; height: 16px; }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic.mag { background: linear-gradient(135deg, var(--mv3-mag), var(--mv3-mag-deep)); box-shadow: 0 5px 12px -5px var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic.gold { background: linear-gradient(135deg, #c8994e, var(--mv3-gold)); box-shadow: 0 5px 12px -5px var(--mv3-gold); }
+.fa-ck-mandat-v3 .mv3-sh .mv3-ic.blue { background: linear-gradient(135deg, #5566c0, var(--mv3-blue)); box-shadow: 0 5px 12px -5px var(--mv3-blue); }
+.fa-ck-mandat-v3 .mv3-sh .tt { font-family: var(--mv3-disp); font-size: 15.5px; font-weight: 600; }
+.fa-ck-mandat-v3 .mv3-sh .ss { font-size: 11.5px; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-sh .tag { margin-left: auto; font-size: 10.5px; font-weight: 800; padding: 4px 9px; border-radius: 99px; }
+.fa-ck-mandat-v3 .mv3-sh .tag.gold { background: var(--mv3-gold-soft); color: var(--mv3-gold); }
+.fa-ck-mandat-v3 .mv3-sh .tag.amber { background: var(--mv3-amber-soft); color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mv3-sh .tag.mag { background: var(--mv3-mag-soft); color: var(--mv3-mag); }
+
+/* ---- Avertissement registre (mis en avant, emoji) ---- */
+.fa-ck-mandat-v3 .mv3-warn { display: flex; align-items: center; gap: 13px; font-size: 13px; color: var(--mv3-ink);
+  background: linear-gradient(135deg, var(--mv3-red-soft), color-mix(in srgb, var(--mv3-red) 12%, var(--mv3-card)));
+  border: 1.5px solid color-mix(in srgb, var(--mv3-red) 42%, transparent); border-radius: 12px; padding: 13px 16px;
+  box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--mv3-red) 70%, transparent); }
+.fa-ck-mandat-v3 .mv3-warn .em { font-size: 22px; line-height: 1; flex: none; }
+.fa-ck-mandat-v3 .mv3-warn b { color: var(--mv3-red); }
+.fa-ck-mandat-v3 .mv3-hint { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--mv3-soft); margin-top: 10px; }
+.fa-ck-mandat-v3 .mv3-hint svg { width: 15px; height: 15px; flex: none; margin-top: 1px; color: var(--mv3-amber); }
+
+/* ---- Check de complétude (compact : on ne montre que ce qui manque) ---- */
+.fa-ck-mandat-v3 .mv3-cktop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.fa-ck-mandat-v3 .mv3-cktop .l { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-cktop .n { font-size: 12px; color: var(--mv3-soft); font-variant-numeric: tabular-nums; }
+.fa-ck-mandat-v3 .mv3-cksec { border: 1px solid var(--mv3-line); border-radius: 11px; background: var(--mv3-paper); padding: 9px 12px; margin-bottom: 8px; }
+.fa-ck-mandat-v3 .mv3-cksec:last-child { margin-bottom: 0; }
+.fa-ck-mandat-v3 .mv3-ckhead { display: flex; align-items: center; gap: 9px; }
+.fa-ck-mandat-v3 .mv3-ckhead .lbl { font-size: 12.5px; font-weight: 700; flex: 1; min-width: 0; }
+.fa-ck-mandat-v3 .mv3-cnt { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 99px; font-variant-numeric: tabular-nums; }
+.fa-ck-mandat-v3 .mv3-cnt.ok { background: var(--mv3-green-soft); color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mv3-cnt.ko { background: var(--mv3-amber-soft); color: var(--mv3-amber); }
+.fa-ck-mandat-v3 .mv3-miss { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.fa-ck-mandat-v3 .mv3-miss .m { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: var(--mv3-amber); background: var(--mv3-amber-soft); border: 1px solid color-mix(in srgb, var(--mv3-amber) 30%, transparent); padding: 2px 9px; border-radius: 8px; }
+.fa-ck-mandat-v3 .mv3-alldone { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--mv3-green); }
+
+/* ---- Deux voies de signature (état Édité) ---- */
+.fa-ck-mandat-v3 .mv3-paths { display: flex; flex-wrap: wrap; gap: 11px; align-items: center; }
+.fa-ck-mandat-v3 .mv3-or { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-alt { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; background: var(--mv3-card); border: 1.5px dashed color-mix(in srgb, var(--mv3-gold) 48%, var(--mv3-line)); border-radius: 12px; padding: 8px 14px; color: var(--mv3-ink); text-align: left; }
+.fa-ck-mandat-v3 .mv3-alt:hover, .fa-ck-mandat-v3 .mv3-alt.on { border-style: solid; border-color: var(--mv3-gold); background: var(--mv3-gold-soft); }
+.fa-ck-mandat-v3 .mv3-alt svg { width: 19px; height: 19px; color: var(--mv3-gold); flex: none; }
+.fa-ck-mandat-v3 .mv3-alt b { font-size: 12.5px; display: block; line-height: 1.15; } .fa-ck-mandat-v3 .mv3-alt em { font-size: 10.5px; font-style: normal; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-drop { display: flex; align-items: center; gap: 13px; border: 2px dashed color-mix(in srgb, var(--mv3-gold) 52%, var(--mv3-line)); border-radius: 14px; background: var(--mv3-gold-soft); padding: 14px 16px; flex-wrap: wrap; margin-top: 12px; }
+.fa-ck-mandat-v3 .mv3-drop .dz-ic { width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg, #cf9c50, var(--mv3-gold)); color: #fff; display: grid; place-items: center; flex: none; } .fa-ck-mandat-v3 .mv3-drop .dz-ic svg { width: 20px; height: 20px; }
+.fa-ck-mandat-v3 .mv3-drop .dz-tx { flex: 1; min-width: 160px; } .fa-ck-mandat-v3 .mv3-drop .dz-tx b { font-size: 13px; display: block; } .fa-ck-mandat-v3 .mv3-drop .dz-tx span { font-size: 11.5px; color: var(--mv3-soft); }
+
+.fa-ck-mandat-v3 .mv3-manual > summary { list-style: none; cursor: pointer; }
+.fa-ck-mandat-v3 .mv3-manual > summary::-webkit-details-marker { display: none; }
+
+/* ---- Conteneur pour les composants réels embarqués (générer / éditer) ---- */
+.fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
+
+/* Placeholder (états non encore portés — lots 4-5). */
 .fa-ck-mandat-v3 .mv3-scaffold { border: 1px dashed var(--mv3-line); background: var(--mv3-mag-soft); border-radius: 14px; padding: 15px 17px; font-size: 13px; color: var(--mv3-soft); }
 .fa-ck-mandat-v3 .mv3-scaffold b { color: var(--mv3-ink); }
