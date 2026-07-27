@@ -22123,9 +22123,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <section className="mv3-card mv3-pad">
             <div className="mv3-gen2" style={{ marginBottom: 13 }}>
               {mv3IllusEl('editer')}
-              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant rédigé.</b> Faites-le signer : <b>signature électronique</b> (ci-dessous) ou <b>manuscrite</b> — joignez alors l'avenant signé dans les Documents (il part dans Hektor et passe direct à « Signé »).</p></div>
+              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant rédigé.</b> Faites-le signer par vos mandants — signature <b>électronique</b> (ci-dessous) ou <b>manuscrite</b>.</p></div>
             </div>
-            <div className="mv3-embed">
+            <details className="mv3-manual">
+              <summary className="mv3-alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span><b>Signer à la main</b><em>imprimez, faites signer, puis joignez l'avenant signé</em></span></summary>
+              <div className="mv3-drop">
+                <span className="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg></span>
+                <div className="dz-tx"><b>Joindre l'avenant signé (PDF)</b><span>À déposer dans la rubrique Documents — signé par tous vos mandants (il passe alors direct à « Signé »).</span></div>
+                <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Aller aux Documents</button>
+              </div>
+            </details>
+            <div className="mv3-embed" style={{ marginTop: 12 }}>
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
                 : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
@@ -22140,12 +22148,21 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
           </section>
         ) : mv3Mode === 'av_signe' ? (
-          <section className="mv3-card mv3-pad">
-            <div className="mv3-gen2" style={{ marginBottom: 13 }}>
-              {mv3IllusEl('valider')}
-              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant signé.</b> Vos mandants ont signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</p></div>
+          <section className="mv3-card mv3-pad mv3-gen2">
+            {mv3IllusEl('valider')}
+            <div className="mv3-gen2-body">
+              <p className="mv3-gen2-cap"><b>Avenant signé.</b> Vos mandants ont signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</p>
+              {demBaisse ? (
+                <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {demBaisse.locked
+                    ? <span className="mv3-st lock">🔒 Verrouillé</span>
+                    : <>
+                        {demBaisse.onClick ? <button type="button" className="mv3-btn" style={{ ['--cta']: '#2fa564', ['--cta-d']: '#1f7a4a' } as CSSProperties} onClick={demBaisse.onClick}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>Demander la validation de l'avenant</button> : null}
+                        {mv3StateChip(demBaisse.stateLabel)}
+                      </>}
+                </div>
+              ) : null}
             </div>
-            {demBaisse ? mv3DmdCard({ tone: 'amber', icon: mv3DmdCheckIcon, title: "Validation de l'avenant", sub: "Le nouveau prix s'applique après accord de la direction", stateLabel: demBaisse.stateLabel, actLabel: demBaisse.actLabel, onClick: demBaisse.onClick, locked: demBaisse.locked }) : null}
           </section>
         ) : (
           <div className={`mv3-dmd ${/refus/i.test(baisseStatut) ? 'rejected' : /corr/i.test(baisseStatut) ? 'correction' : /accept/i.test(baisseStatut) ? 'accepted' : 'amber'}`}>
