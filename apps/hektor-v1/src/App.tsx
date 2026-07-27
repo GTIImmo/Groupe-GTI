@@ -22344,9 +22344,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 </div>
               </div>
               {mv3CheckSections}
-            </section>
-            <section className="mv3-card mv3-pad">
-              <div className="mv3-embed">
+              <div className="mv3-embed" style={{ marginTop: 14 }}>
                 {isLightweightDetail
                   ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
                   : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
