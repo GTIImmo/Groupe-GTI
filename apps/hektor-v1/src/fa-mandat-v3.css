@@ -233,6 +233,11 @@
 .fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 1 175px; min-width: 130px; display: flex; justify-content: center; }
 .fa-ck-mandat-v3 .mv3-gen2-illus svg { width: 100%; max-width: 200px; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
 .fa-ck-mandat-v3 .mv3-gen2-body { flex: 1 1 240px; min-width: 0; }
+/* Ligne « prix actuel » (état avenant signé). */
+.fa-ck-mandat-v3 .mv3-avprice { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 11px 0 2px; }
+.fa-ck-mandat-v3 .mv3-avprice .l { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-avprice .v { font-family: var(--mv3-disp); font-size: 18px; font-weight: 600; color: var(--mv3-mag); }
+.fa-ck-mandat-v3 .mv3-avprice .n { font-size: 11px; color: var(--mv3-soft); }
 /* Illustration centrée (états lecture seule type Échu). */
 .fa-ck-mandat-v3 .mv3-illus { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0 0 14px; }
 .fa-ck-mandat-v3 .mv3-illus svg { width: 210px; max-width: 62%; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }

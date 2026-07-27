@@ -22152,16 +22152,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             {mv3IllusEl('valider')}
             <div className="mv3-gen2-body">
               <p className="mv3-gen2-cap"><b>Avenant signé.</b> Vos mandants ont signé. Demandez la validation à la direction pour <b>appliquer le nouveau prix</b>.</p>
-              {demBaisse ? (
-                <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {demBaisse.locked
-                    ? <span className="mv3-st lock">🔒 Verrouillé</span>
-                    : <>
-                        {demBaisse.onClick ? <button type="button" className="mv3-btn" style={{ ['--cta']: '#2fa564', ['--cta-d']: '#1f7a4a' } as CSSProperties} onClick={demBaisse.onClick}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>Demander la validation de l'avenant</button> : null}
-                        {/^(ajouter|demander)$/i.test(String(demBaisse.stateLabel ?? '').trim()) ? null : mv3StateChip(demBaisse.stateLabel)}
-                      </>}
-                </div>
-              ) : null}
+              <div className="mv3-avprice"><span className="l">Prix actuel</span><span className="v">{formatPrice(Number(dossier.prix ?? 0) || null) || '—'}</span><span className="n">le nouveau prix (défini dans l'avenant) s'applique après validation</span></div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                {demBaisse && demBaisse.locked ? <span className="mv3-st lock">🔒 Verrouillé</span>
+                  : demBaisse && demBaisse.onClick ? <button type="button" className="mv3-btn" style={{ ['--cta']: '#2fa564', ['--cta-d']: '#1f7a4a' } as CSSProperties} onClick={demBaisse.onClick}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>Demander la validation de l'avenant</button> : null}
+                {demBaisse && !demBaisse.locked && !/^(ajouter|demander)$/i.test(String(demBaisse.stateLabel ?? '').trim()) ? mv3StateChip(demBaisse.stateLabel) : null}
+                <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Ouvrir l'avenant signé</button>
+              </div>
             </div>
           </section>
         ) : (
@@ -22180,6 +22177,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="mv3-dmd-foot"><button type="button" className="fa-ck-rep-btn" onClick={() => props.onOpenRequestModal?.(dossier.app_dossier_id, 'nego', 'demande_baisse_prix')}>Répondre / renvoyer</button></div>
           </div>
         )}
+        {/* Historique du prix : montré aussi pendant un avenant (l'avenant change le prix). */}
+        <div className="mv3-sh"><span className="mv3-ic mag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /></svg></span><div><div className="tt">Historique du prix</div><div className="ss">Chaque changement de prix public est tracé</div></div></div>
+        <section className="mv3-card mv3-pad"><div className="mv3-embed"><PriceChangeHistoryCard source={props.detail} title="" emptyLabel="Aucun changement de prix pour ce bien pour l'instant." /></div></section>
       </>
     )
     // Caractéristiques (Validé/Échu) : chiffres clés + tous les champs repliés — MÊMES
