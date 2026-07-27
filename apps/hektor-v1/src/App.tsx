@@ -21970,18 +21970,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       : !pMandatOk ? (mandatSig === 'to_send' ? 'edite' : mandatSig === 'pending' ? 'envoye' : mandatSig === 'signed' ? (validationEnCours ? 'attente' : 'valider') : 'editer')
       : avenantEnCours ? (avenantSig === 'to_send' ? 'edite' : avenantSig === 'pending' ? 'envoye' : 'attente')
       : 'valide'
+    // Cycle du mandat à 5 crans : la DIFFUSION n'est PAS une étape du mandat (acte marketing,
+    // piloté dans la rubrique Publicité) — le cycle du mandat se termine à « Validé ».
     const CYC: Record<string, { fill: string; cur: number; cap: string }> = {
       none: { fill: '4%', cur: 0, cap: 'Générer le numéro → …' },
-      editer: { fill: '16%', cur: 1, cap: 'Numéro attribué — à éditer' },
-      edite: { fill: '32%', cur: 2, cap: 'Édité — à envoyer à la signature' },
-      envoye: { fill: '50%', cur: 3, cap: 'Envoyé — en attente de signature' },
-      valider: { fill: '66%', cur: 4, cap: 'Signé — à préparer / faire valider' },
-      attente: { fill: '74%', cur: 4, cap: 'Demande envoyée — réponse en attente' },
-      valide: { fill: '86%', cur: 5, cap: 'Validé & diffusé' },
+      editer: { fill: '18%', cur: 1, cap: 'Numéro attribué — à éditer' },
+      edite: { fill: '38%', cur: 2, cap: 'Édité — à envoyer à la signature' },
+      envoye: { fill: '58%', cur: 3, cap: 'Envoyé — en attente de signature' },
+      valider: { fill: '78%', cur: 4, cap: 'Signé — à préparer / faire valider' },
+      attente: { fill: '88%', cur: 4, cap: 'Demande envoyée — réponse en attente' },
+      valide: { fill: '100%', cur: 5, cap: 'Validé · actif' },
       echu: { fill: '100%', cur: -1, cap: 'Fin de cycle — historique conservé' },
     }
     const cyc = CYC[mv3Mode] ?? CYC.valide
-    const steps = ['Numéro', 'Édité', 'Envoyé', 'Signé', 'Validé', 'Diffusé']
+    const steps = ['Numéro', 'Édité', 'Envoyé', 'Signé', 'Validé']
     const STAT: Record<string, [string, string]> = {
       none: ['Sans mandat', 'none'], editer: ['À éditer', 'wait'], edite: ['Édité · à envoyer', 'wait'],
       envoye: ['En signature', 'wait'], valider: ['Signé · à valider', 'wait'], attente: ['En validation', 'wait'],
@@ -22277,7 +22279,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           </>
         ) : mv3Mode === 'valide' ? (
           <>
-            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#2fa564,#1f7a4a)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z" /><path d="m9 11 2 2 4-4" /></svg></span><div><div className="tt">Mandat validé &amp; diffusé</div><div className="ss">Le mandat est actif et l'annonce diffusée. Suivez son cycle de vie et pilotez les avenants.</div></div><span className="tag" style={{ background: 'var(--mv3-green-soft)', color: 'var(--mv3-green)' }}>Validé</span></div>
+            <div className="mv3-sh"><span className="mv3-ic" style={{ background: 'linear-gradient(135deg,#2fa564,#1f7a4a)' }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z" /><path d="m9 11 2 2 4-4" /></svg></span><div><div className="tt">Mandat validé</div><div className="ss">Le mandat est actif. Suivez son cycle de vie et pilotez les avenants. (La diffusion se gère dans la rubrique Publicité.)</div></div><span className="tag" style={{ background: 'var(--mv3-green-soft)', color: 'var(--mv3-green)' }}>Validé</span></div>
             <section className="mv3-card mv3-pad mv3-gen2">
               {mv3IllusEl('valide')}
               <div className="mv3-gen2-body">
