@@ -16484,8 +16484,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onClick={(event) => event.stopPropagation()}
             >
               <div className="panel-head request-modal-head">
-                <span className="request-type-chip" aria-hidden="true">{requestModalEffectiveType === 'demande_baisse_prix' ? 'Baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation' : 'Validation'}</span>
                 <div className="request-modal-title">
+                  <span className="request-type-chip" aria-hidden="true">{requestModalEffectiveType === 'demande_baisse_prix' ? 'Baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Annulation' : 'Validation'}</span>
                   <p className="eyebrow">Gestion des demandes</p>
                   <h3>{requestModalRole === 'pauline' ? 'Traitement Pauline' : requestModalEffectiveType === 'demande_baisse_prix' ? 'Demande de baisse de prix' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Demande d annulation de mandat' : 'Demande de validation'}</h3>
                 </div>

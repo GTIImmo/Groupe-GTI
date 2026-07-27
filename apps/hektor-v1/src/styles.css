@@ -2578,6 +2578,18 @@ body {
 .request-modal-v3 .request-history-card { border: 1px solid #e9e1d3; background: #fffdf9; border-radius: 16px; }
 .request-modal-v3 .timeline-card { border: 1px solid #e9e1d3; border-left: 3px solid var(--req-acc); background: #f7f3ec; }
 .request-modal-v3 .modal-actions .ghost-button.button-primary { background: linear-gradient(135deg, var(--req-acc), color-mix(in srgb, var(--req-acc) 72%, #000)); border: 0; color: #fff; box-shadow: 0 8px 20px -10px var(--req-acc); }
+/* Surcharge des !important de layout-overrides.css (qui forcent le magenta #c5005f sur
+   kicker/metric-label/head) : spécificité (0,3,0) + !important pour que l'accent d'état gagne. */
+.request-modal-panel.request-modal-v3 .request-modal-head { background: linear-gradient(120deg, color-mix(in srgb, var(--req-acc) 92%, #000), var(--req-acc)) !important; border-bottom: 2px solid var(--req-acc) !important; }
+.request-modal-panel.request-modal-v3 .request-summary-kicker { color: var(--req-acc) !important; }
+.request-modal-panel.request-modal-v3 .request-summary-metric-label { color: #6b6058 !important; }
+.request-modal-panel.request-modal-v3 .request-summary-heading { color: #241f22 !important; }
+.request-modal-panel.request-modal-v3 .request-summary-metric strong { color: #241f22 !important; }
+.request-modal-panel.request-modal-v3 .modal-actions .ghost-button.button-primary { background: linear-gradient(135deg, var(--req-acc), color-mix(in srgb, var(--req-acc) 72%, #000)) !important; color: #fff !important; }
+.request-modal-panel.request-modal-v3 .timeline-card { border-left: 3px solid var(--req-acc) !important; }
+.request-modal-panel.request-modal-v3 .request-modal-head { display: flex !important; align-items: center; gap: 14px; }
+.request-modal-panel.request-modal-v3 .request-modal-title { flex: 1; min-width: 0; }
+.request-modal-panel.request-modal-v3 .request-type-chip { display: inline-block; margin-bottom: 5px; }
 
 .request-modal-panel .detail-card {
   position: relative;
