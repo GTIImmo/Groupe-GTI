@@ -22137,7 +22137,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <section className="mv3-card mv3-pad">
             <div className="mv3-gen2" style={{ marginBottom: 13 }}>
               {mv3IllusEl('editer')}
-              <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant rédigé.</b> Faites-le signer par vos mandants — signature <b>électronique</b> (ci-dessous) ou <b>manuscrite</b>.</p></div>
+              <div className="mv3-gen2-body">
+                <p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Avenant rédigé.</b> Faites-le signer par vos mandants — signature <b>électronique</b> ou <b>manuscrite</b>.</p>
+                <div className="mv3-embed" style={{ marginTop: 12 }}>
+                  {isLightweightDetail
+                    ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
+                    : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                </div>
+              </div>
             </div>
             <details className="mv3-manual">
               <summary className="mv3-alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span><b>Signer à la main</b><em>imprimez, faites signer, puis joignez l'avenant signé</em></span></summary>
@@ -22147,11 +22154,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Aller aux Documents</button>
               </div>
             </details>
-            <div className="mv3-embed" style={{ marginTop: 12 }}>
-              {isLightweightDetail
-                ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
-                : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
-            </div>
           </section>
         ) : mv3Mode === 'av_envoye' ? (
           <section className="mv3-card mv3-pad">
@@ -22357,9 +22359,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <section className="mv3-card mv3-pad">
               <div className="mv3-gen2" style={{ marginBottom: 13 }}>
                 {mv3IllusEl('edite')}
-                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Édité.</b> Votre mandat est rédigé. Faites-le signer par vos mandants — signature électronique ci-dessous, ou manuscrite.</p></div>
+                <div className="mv3-gen2-body">
+                  <p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Édité.</b> Votre mandat est rédigé. Faites-le signer par vos mandants — signature électronique, ou manuscrite.</p>
+                  <div className="mv3-embed" style={{ marginTop: 12 }}>
+                    {isLightweightDetail
+                      ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
+                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                  </div>
+                </div>
               </div>
-              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Deux façons de faire signer : la <b>signature électronique</b> (ci‑dessous) ou, exceptionnellement, la <b>signature manuscrite</b> — dans ce cas, joignez le mandat signé dans les Documents : il part dans Hektor et le mandat passe directement à « Signé ».</span></div>
+              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Deux façons de faire signer : la <b>signature électronique</b> (bouton ci‑dessus) ou, exceptionnellement, la <b>signature manuscrite</b> — dans ce cas, joignez le mandat signé dans les Documents : il part dans Hektor et le mandat passe directement à « Signé ».</span></div>
               <details className="mv3-manual">
                 <summary className="mv3-alt" style={{ marginTop: 11 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span><b>Signer à la main</b><em>imprimez, faites signer, puis joignez le signé</em></span></summary>
                 <div className="mv3-drop">
@@ -22368,13 +22377,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <button type="button" className="fa-ck-rep-btn" onClick={() => goRub('documents')}>Aller aux Documents</button>
                 </div>
               </details>
-            </section>
-            <section className="mv3-card mv3-pad">
-              <div className="mv3-embed">
-                {isLightweightDetail
-                  ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
-                  : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
-              </div>
             </section>
           </>
         ) : mv3Mode === 'envoye' ? (
@@ -22440,12 +22442,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <section className="mv3-card mv3-pad">
               <div className="mv3-gen2" style={{ marginBottom: 13 }}>
                 {mv3IllusEl('editer')}
-                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Éditer un avenant.</b> Possible car le mandat est <b>validé</b> — l'avenant reprend le mandat, vous ne saisissez que le <b>nouveau prix</b>.</p></div>
-              </div>
-              <div className="mv3-embed">
-                {isLightweightDetail
-                  ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
-                  : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                <div className="mv3-gen2-body">
+                  <p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Éditer un avenant.</b> Possible car le mandat est <b>validé</b> — l'avenant reprend le mandat, vous ne saisissez que le <b>nouveau prix</b>.</p>
+                  <div className="mv3-embed" style={{ marginTop: 12 }}>
+                    {isLightweightDetail
+                      ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
+                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                  </div>
+                </div>
               </div>
               {(() => {
                 const dPrice = ckDemarches.find((d) => d.dem === 'price')
