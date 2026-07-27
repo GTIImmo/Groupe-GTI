@@ -5558,6 +5558,9 @@ async function handleGenerateMandatDocument(job) {
         mime_type: "application/pdf",
         temp_storage_bucket: STORAGE_BUCKET,
         temp_storage_path: tempPath,
+        // Avenant : nouveau prix PROPOSÉ à annoter sur le document (metadata_json.avenant_new_price).
+        // Purement passif — n'altère jamais le prix réel de l'annonce (qui ne bouge qu'à la validation).
+        avenant_new_price: payload.avenant_new_price != null ? String(payload.avenant_new_price) : null,
       },
       status: "pending",
       priority: 40,
@@ -5847,6 +5850,28 @@ async function handleUploadDocumentToHektor(job) {
   if (!found) throw new Error(`Upload Hektor non confirme dans la liste documents: ${filename}`);
   const storedRow = indexed.find((row) => row.hektor_document_id === found.hektor_document_id);
   const stored = storedRow ? await persistProvidedDocumentFile(storedRow, temp.buffer, temp.mimeType, { cloud: shouldKeepCloud(dossier) }) : null;
+
+  // Avenant : annotation passive du nouveau prix PROPOSÉ sur le document (affichage seul).
+  // NE modifie JAMAIS le prix réel de l'annonce (qui ne change qu'à la validation de la baisse).
+  // Merge non-destructif : on relit la metadata courante et on n'ajoute que avenant_new_price.
+  if (payload.avenant_new_price != null && String(payload.avenant_new_price).trim() && storedRow && storedRow.id) {
+    try {
+      const cur = await supabaseRequest(
+        `app_console_document?id=eq.${encodeURIComponent(storedRow.id)}&select=metadata_json`,
+        { method: "GET" }
+      );
+      const curMeta = (Array.isArray(cur) && cur[0] && cur[0].metadata_json) || {};
+      const nextMeta = { ...curMeta, avenant_new_price: String(payload.avenant_new_price).trim() };
+      await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(storedRow.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ metadata_json: nextMeta, updated_at: new Date().toISOString() }),
+      });
+    } catch (metaErr) {
+      // Best-effort : ne bloque pas l'upload du document si l'annotation échoue.
+      console.warn(`[generate_mandat] annotation avenant_new_price échouée: ${metaErr && metaErr.message}`);
+    }
+  }
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id, {
     reason: "upload_document_to_hektor",
     priority: 82,
