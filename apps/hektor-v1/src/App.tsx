@@ -3438,7 +3438,7 @@ function HektorMandatNumberForm(props: {
       {!open ? (
         <button className={`hektor-mandat-number-card ${hasMandat && !props.allowNewMandate ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
           <span aria-hidden="true">{props.allowNewMandate ? '+' : hasMandat ? 'N' : '#'}</span>
-          <strong>{props.allowNewMandate ? 'Ajouter un nouveau mandat' : hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Generer le N° mandat'}</strong>
+          <strong>{props.allowNewMandate ? 'Ajouter un nouveau mandat' : hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Générer le numéro de mandat'}</strong>
           <small>{props.allowNewMandate ? (props.contacts.length ? "Nouveau numéro auto ; l'ancien reste dans l'historique." : 'Ajoutez un mandant avant cette étape.') : hasMandat ? "Numéro déjà présent dans l'app." : props.contacts.length ? 'Hektor attribue automatiquement le prochain numéro.' : 'Ajoutez un mandant avant cette étape.'}</small>
         </button>
       ) : null}
