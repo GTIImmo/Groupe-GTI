@@ -247,7 +247,10 @@
 /* 2 colonnes RESPONSIVE AU CONTENEUR (flex-wrap + largeurs mini) et non à la fenêtre :
    le 2-colonnes tient tant que la colonne de travail fait ~430px, sinon ça passe en 1 colonne
    (l'illustration reste toujours affichée, empilée). Corrige le « pas sur 2 colonnes » en vue étroite/zoom. */
-.fa-ck-mandat-v3 .mv3-gen2 { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; }
+/* Hauteur minimale des blocs illustrés « importants » : donne de la présence à
+   l'illustration (l'illustration seule ne fait que ~96px de haut). Le contenu plus
+   long agrandit le bloc normalement (min-height n'est pas un plafond). */
+.fa-ck-mandat-v3 .mv3-gen2 { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; min-height: 170px; }
 /* Colonne illustration : 38% comme la maquette (.gen2-illus flex:0 0 38%), pas une
    largeur fixe étroite — sinon le corps s'étire et l'illustration paraît minuscule. */
 .fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 0 38%; min-width: 150px; display: flex; justify-content: center; }
