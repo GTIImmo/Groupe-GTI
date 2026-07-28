@@ -3134,6 +3134,33 @@ export type CadastreData = {
   plu?: { zone?: string | null; libelle?: string | null; type?: string | null } | null
 }
 
+// Géocodage DIRECT (adresse -> lat/lon) via Géoplateforme (remplace api-adresse.data.gouv.fr,
+// décommissionnée fin janv. 2026). Le front appelle déjà data.geopf.fr en direct (CORS OK).
+// Utilisé quand on édite l'adresse d'un bien : sinon lat/lon reste sur l'ANCIEN secteur et toute
+// la géo (estimation / carte / cadastre) qui lit latitude_detail/longitude_detail reste fausse.
+export async function geocodeAddress(query: string, postcode?: string | null): Promise<{ lat: number; lon: number; label?: string; score?: number } | null> {
+  const q = (query ?? '').trim()
+  if (!q) return null
+  try {
+    const params = new URLSearchParams({ q, index: 'address', limit: '1' })
+    if (postcode && String(postcode).trim()) params.set('postcode', String(postcode).trim())
+    const r = await fetch(`https://data.geopf.fr/geocodage/search?${params.toString()}`)
+    if (!r.ok) return null
+    const j = await r.json()
+    const f = j?.features?.[0]
+    const coords = f?.geometry?.coordinates
+    const score = Number(f?.properties?.score)
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const lon = Number(coords[0]), lat = Number(coords[1])
+      // Garde-fou : on ignore un résultat trop incertain (adresse introuvable → match hasardeux).
+      if (Number.isFinite(lat) && Number.isFinite(lon) && (!Number.isFinite(score) || score >= 0.35)) {
+        return { lat, lon, label: f?.properties?.label, score: Number.isFinite(score) ? score : undefined }
+      }
+    }
+  } catch { /* best effort — on n'empêche jamais l'enregistrement */ }
+  return null
+}
+
 // URL d'aperçu du plan cadastral (WMS Géoplateforme) : fond Plan IGN v2 + surcouche
 // parcellaire PCI Express, centré sur le bien. Même rendu que le PDF « Plan cadastral ».
 export function cadastreMapThumbUrl(lat: number, lon: number, w = 640, h = 360, halfMeters = 130): string | null {

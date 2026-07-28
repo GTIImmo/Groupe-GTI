@@ -101,6 +101,7 @@ import {
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
   editAnnonceOptimistic,
+  geocodeAddress,
   createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
   createArchiveHektorAnnonceJob,
@@ -3551,6 +3552,33 @@ function firstNonEmpty(...values: unknown[]) {
     if (text) return text
   }
   return ''
+}
+
+function optimisticOverlayOf(detail: DossierDetailPayload): Record<string, unknown> | null {
+  const raw = (detail as { app_optimistic_overlay?: unknown }).app_optimistic_overlay
+  if (!raw) return null
+  if (typeof raw === 'object') return raw as Record<string, unknown>
+  return parseJson<Record<string, unknown>>(raw as string, {})
+}
+
+// Adresse d'affichage tenant compte du CALQUE OPTIMISTE (clés Hektor ADRESSE_COMPL / villepublique /
+// codepublique). Sans ça, l'en-tête / colonne de gauche lisait detail.adresse_* BRUT et affichait
+// l'ANCIENNE adresse tant que le worker n'avait pas resynchronisé (~10 min), alors que la rubrique
+// « Le Bien » (qui lit déjà l'overlay) montrait la nouvelle → incohérence signalée.
+function resolveDisplayAddress(
+  detail: DossierDetailPayload,
+  fallbackVille?: string | null,
+  fallbackCp?: string | null,
+): string {
+  const ov = optimisticOverlayOf(detail)
+  const fromOverlay = (key: string) => {
+    const v = ov?.[key]
+    return v != null && typeof v !== 'object' && String(v).trim() ? String(v).trim() : ''
+  }
+  const rue = fromOverlay('ADRESSE_COMPL') || firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail)
+  const cp = fromOverlay('codepublique') || firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal, fallbackCp)
+  const ville = fromOverlay('villepublique') || firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail, fallbackVille)
+  return [rue, cp, ville].filter(Boolean).join(', ')
 }
 
 function valueFromJsonList(value: string | null | undefined, keys: string[]) {
@@ -15135,9 +15163,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }, [sidebarCollapsed])
 
   const dossierCountLabel = activeFilters.length > 0 ? 'Dossiers apres filtres' : 'Tous les dossiers'
-  const address = [detail.adresse_privee_listing || detail.adresse_detail, detail.code_postal_public_listing || detail.code_postal_prive_detail || detail.code_postal, detail.ville_publique_listing || detail.ville_privee_detail || selectedDossier?.ville]
-    .filter(Boolean)
-    .join(', ')
+  // Adresse via le calque optimiste (sinon la colonne de gauche affiche l'ancienne rue ~10 min,
+  // le temps que le worker resynchronise, alors que la rubrique « Le Bien » montre déjà la nouvelle).
+  const address = resolveDisplayAddress(detail, selectedDossier?.ville, selectedDossier?.code_postal)
   const linkedWorkItems = useMemo(() => workItems.filter((item) => item.app_dossier_id === selectedDossier?.app_dossier_id), [workItems, selectedDossier])
   const selectedDossierRequest = useMemo(
     () => (selectedDossier ? latestDiffusionRequest(diffusionRequests, selectedDossier.app_dossier_id) : null),
@@ -22897,10 +22925,29 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     setSaving(true)
     setSaveMsg(null)
     try {
+      let fields: Record<string, string> = { ...edited }
+      let geoRecalee = false
+      // Bug géoloc : changer l'adresse ne mettait PAS à jour lat/lon → l'estimation, la carte et le
+      // cadastre (qui lisent latitude_detail/longitude_detail) restaient sur l'ANCIEN secteur. On
+      // re-géocode la nouvelle adresse et on pousse latitude/longitude dans le MÊME calque optimiste
+      // (json_map → latitude_detail/longitude_detail, écrits tout de suite ; le worker les pousse à
+      // Hektor). On ne le fait pas si l'utilisateur a saisi lat/lon à la main.
+      const addrChanged = ['ADRESSE_COMPL', 'villepublique', 'codepublique'].some((key) => key in edited)
+      const latlonEditedManually = 'latitude' in edited || 'longitude' in edited
+      if (addrChanged && !latlonEditedManually) {
+        const rue = firstNonEmpty(edited.ADRESSE_COMPL, props.detail.adresse_privee_listing, props.detail.adresse_detail)
+        const cp = firstNonEmpty(edited.codepublique, props.detail.code_postal_public_listing, props.detail.code_postal_prive_detail, props.detail.code_postal, dossier.code_postal)
+        const ville = firstNonEmpty(edited.villepublique, props.detail.ville_publique_listing, props.detail.ville_privee_detail, dossier.ville)
+        const geo = await geocodeAddress([rue, cp, ville].filter(Boolean).join(' '), cp)
+        if (geo) {
+          fields = { ...fields, latitude: String(geo.lat), longitude: String(geo.lon) }
+          geoRecalee = true
+        }
+      }
       // Champs ET pièces dans le MÊME appel : un seul job worker débouché, comme la modale
       // d'origine (deux appels séparés se conflictualisaient via date_maj).
-      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: edited, compositionPieces: ckChangedPieces() })
-      setSaveMsg('Envoyé — vague vers Hektor (~10 min)')
+      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields, compositionPieces: ckChangedPieces() })
+      setSaveMsg(geoRecalee ? 'Envoyé — adresse + géoloc recalées (~10 min)' : 'Envoyé — vague vers Hektor (~10 min)')
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Échec de l'enregistrement")
     } finally {
@@ -27637,11 +27684,7 @@ function GoogleAgendaAnnonceSection(props: {
     label: dossier?.commercial_nom,
     hektorNegotiators: props.hektorNegotiators,
   })
-  const defaultLocation = [
-    safeText(props.detail.adresse_privee_listing) || safeText(props.detail.adresse_detail),
-    safeText(props.detail.code_postal_public_listing) || safeText(props.detail.code_postal_detail) || safeText(dossier?.code_postal),
-    safeText(props.detail.ville_publique_listing) || safeText(props.detail.ville_privee_detail) || safeText(dossier?.ville),
-  ].filter(Boolean).join(' ')
+  const defaultLocation = resolveDisplayAddress(props.detail, dossier?.ville, dossier?.code_postal)
   const [calendarEmail, setCalendarEmail] = useState(defaultCalendarEmail)
   const [eventType, setEventType] = useState<GoogleCalendarEventLink['event_type']>('visite')
   const [summary, setSummary] = useState('')
