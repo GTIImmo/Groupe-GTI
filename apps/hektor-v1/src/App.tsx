@@ -22909,7 +22909,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const ckMoreItems: CkMoreItem[] = []
   if (props.onOpenRapprochement && !isLightweightDetail) ckMoreItems.push({ label: 'Acquéreurs', ico: CK_ICON.rapprochement, onClick: () => props.onOpenRapprochement?.(dossier) })
   if ((props.allowMarkValidation || props.allowMarkDiffusable) && !isLightweightDetail) ckMoreItems.push({ label: 'Pilotage', ico: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/>', onClick: () => setPilotageOpen(true) })
-  if (!isLightweightDetail) ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => setActiveTab('contact') })
+  // Réaffecter = ouvrir la modale d'affectation (qui crée le job worker assign_hektor_negotiator),
+  // PAS naviguer vers l'onglet Contact (bug : le worker dédié n'était jamais déclenché).
+  if (props.onMissingNegotiator && !isLightweightDetail) ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => props.onMissingNegotiator?.(dossier) })
   if (ckMoreItems.length > 0 && ((props.onArchiveAnnonce && !isLightweightDetail) || props.onDeleteAnnonce)) ckMoreItems.push({ sep: true })
   if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
   // Régression corrigée (audit §5 bis #11) : le désarchivage existait dans l'ancienne fiche
