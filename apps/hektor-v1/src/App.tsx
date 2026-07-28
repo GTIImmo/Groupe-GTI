@@ -21603,10 +21603,15 @@ const CK_PORTAL_META: Record<string, { abbr: string; color: string }> = {
   avendrealouer: { abbr: 'AVL', color: '#c2125f' },
 }
 function ckParsePortals(resume: string | null | undefined) {
+  // Dédup par nom : la donnée source (portails_resume) peut contenir le même portail
+  // deux fois (diffusions à commercial NULL ré-insérées à chaque run — cf audit). On
+  // n'affiche jamais deux fois la même passerelle.
+  const seenPortal = new Set<string>()
   return String(resume ?? '')
     .split(/[·|,;]+/)
     .map((s) => s.trim())
     .filter(Boolean)
+    .filter((name) => { const k = name.toLowerCase().replace(/[^a-z0-9]/g, ''); if (seenPortal.has(k)) return false; seenPortal.add(k); return true })
     .map((name) => {
       const key = name.toLowerCase().replace(/[^a-z]/g, '')
       const metaKey = Object.keys(CK_PORTAL_META).find((k) => key.includes(k))
@@ -21764,7 +21769,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     { label: 'Compromis', state: pCompromis ? 'cur' : (pVendu ? 'done' : 'todo'), sub: pCompromis ? 'En cours' : (pVendu ? 'Signé' : '—'), date: detailStr('date_compromis') },
     { label: 'Vente', state: pVendu ? 'done' : 'todo', sub: pVendu ? 'Vendu' : '—', date: detailStr('date_vente') },
   ]
-  const nbPortails = Number(dossier.nb_portails_actifs) || 0
+  // Compte dédoublonné (portails_resume peut contenir des doublons — cf audit). Repli sur
+  // nb_portails_actifs si le résumé est vide, pour ne rien changer aux cas sans portail listé.
+  const nbPortails = ckParsePortals(dossier.portails_resume).length || (Number(dossier.nb_portails_actifs) || 0)
   // ── Sous-états d'annonce — calqué sur STAGES de la maquette v26 ──────────────
   // La maquette encode 18 sous-états avec, pour chacun : un libellé (sw), une
   // couleur de LED, un texte de focus (t/p) et les liens de prochaine action (btns).
@@ -23826,9 +23833,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 <p className="fa-ck-pnote">Coche uniquement les portails à laisser actifs. L'enregistrement pousse l'état vers Hektor (Diffusable + ajout/retrait des passerelles).</p>
                 {(() => {
                   const det = parseJson<Array<{ name: string; state?: string; sub?: string }>>(detailStr('portails_detail_json') || '[]', [])
-                  const portals = det.length
+                  const portalsRaw = det.length
                     ? det.map((p) => { const m = ckParsePortals(p.name)[0]; return { name: p.name, sub: p.sub || 'Portail · annonce en ligne', active: (p.state ?? 'active') === 'active', abbr: m?.abbr ?? 'PT', color: m?.color ?? '#9d0f4e' } })
                     : ckParsePortals(dossier.portails_resume).map((p) => ({ name: p.name, sub: 'Portail · annonce en ligne', active: true, abbr: p.abbr, color: p.color }))
+                  // Dédup par nom (couvre aussi le chemin portails_detail_json) — cf audit passerelles.
+                  const seenPub = new Set<string>()
+                  const portals = portalsRaw.filter((p) => { const k = (p.name ?? '').trim().toLowerCase(); if (seenPub.has(k)) return false; seenPub.add(k); return true })
                   return portals.length > 0 ? portals.map((p) => (
                     <div key={p.name} className={`fa-ck-portal${p.active ? ' act' : ''}`}>
                       <span className="fa-ck-p-logo" style={{ background: p.color }}>{p.abbr}</span>
