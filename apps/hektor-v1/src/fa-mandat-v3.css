@@ -581,3 +581,15 @@
   @keyframes mdcueR { 0%, 78%, 100% { transform: translateX(0); } 86% { transform: translateX(3px); } 93% { transform: translateX(0); } }
   @keyframes mdcueL { 0%, 78%, 100% { transform: translateX(0); } 86% { transform: translateX(-3px); } 93% { transform: translateX(0); } }
 }
+
+/* Pied d'actions TOUJOURS visible (comme l'en-tête sticky) : plus besoin de scroller
+   pour atteindre Précédent / Suivant / Générer. Barre flottante ancrée en bas. */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions {
+  position: sticky; bottom: 0; z-index: 4; margin-top: 18px;
+  padding: 13px 15px; border: 1px solid var(--mv3-line); border-radius: 14px;
+  background: color-mix(in srgb, var(--mv3-card) 94%, transparent);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: 0 14px 34px -18px rgba(60, 40, 30, .55);
+}
+/* Un peu de respiration sous la barre pour qu'elle ne colle pas au bord. */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form { padding-bottom: 6px; }
