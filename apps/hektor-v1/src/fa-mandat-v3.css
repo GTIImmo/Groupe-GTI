@@ -23,8 +23,11 @@
   /* La maquette cape le détail à 1180px (rail 290 → colonne contenu ~890px). Sans ce
      plafond, l'app rendait les blocs sur toute la largeur (~1400px+) : illustration
      minuscule, corps étiré, texte non replié → blocs déséquilibrés et « plus courts ».
-     Ce plafond restaure les proportions/hauteurs de la maquette pour TOUS les états. */
+     Ce plafond restaure les proportions/hauteurs de la maquette pour TOUS les états.
+     Centré dans la zone de contenu du cockpit (espace réparti à gauche/droite). */
   max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .fa-ck-mandat-v3 .mv3-card { background: var(--mv3-card); border: 1px solid var(--mv3-line); border-radius: 16px; box-shadow: 0 3px 12px -7px rgba(60,40,30,.5); }
