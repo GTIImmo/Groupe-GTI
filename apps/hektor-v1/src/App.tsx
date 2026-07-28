@@ -3304,6 +3304,42 @@ function inputDateToFrench(value: string) {
   return `${match[3]}-${match[2]}-${match[1]}`
 }
 
+// Types et sous-types de mandat acceptés par Hektor (wizard mandat/prix — capturés depuis
+// l'écran Hektor). Valeur = libellé EXACT attendu par protexa-valideStep2 (typeMandat/subType) ;
+// confirmé par les valeurs `mandat_type_source` déjà stockées en base. Les sous-types listés
+// concernent « Mandat de vente » (usage réel de l'agence) ; pour les autres types, le sous-type
+// reprend le type tant que leurs listes ne sont pas capturées (fallback sûr).
+const HEKTOR_MANDAT_TYPES = [
+  'Mandat de vente',
+  "Mandat d'acheter",
+  'Mandat de location-bailleur',
+  'Mandat de location-locataire',
+  'Baux-Commerciaux',
+  'Mandat de reprise (Vente)',
+  'Mandat de reprise (Achat)',
+  'Délégation/Substitution de mandat',
+]
+const HEKTOR_MANDAT_SOUS_TYPES: Record<string, string[]> = {
+  'Mandat de vente': [
+    'Mandat de vente',
+    'Mandat de vente exclusif sans demarchage',
+    'Mandat de vente exclusif en cas de demarchage',
+    'Mandat de vente non exclusif sans demarchage',
+    'Mandat de vente non exclusif en cas de demarchage',
+    'Vente par lots',
+    'Vente de terrain',
+    "Vente en etat futur d'achevement (VEFA)",
+    'Cession de Parts Sociales de SARL ou SCI',
+    'Vente de fonds de commerce',
+    'Vente de murs et fonds de commerce',
+    'Mandat de vente semi-exclusif',
+  ],
+}
+function hektorMandatSousTypes(type: string): string[] {
+  const list = HEKTOR_MANDAT_SOUS_TYPES[type]
+  return list && list.length ? list : [type]
+}
+
 function HektorMandatNumberForm(props: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email' | 'numero_mandat'>
   contacts: DetailContact[]
@@ -3418,11 +3454,15 @@ function HektorMandatNumberForm(props: {
           <div className="hektor-inline-grid hektor-mandat-number-grid">
             <label>
               <span>Type</span>
-              <input value={typeMandat} onChange={(event) => setTypeMandat(event.target.value)} required />
+              <select value={typeMandat} onChange={(event) => { const t = event.target.value; setTypeMandat(t); setSubTypeMandat(hektorMandatSousTypes(t)[0]) }} required>
+                {HEKTOR_MANDAT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </label>
             <label>
               <span>Sous-type</span>
-              <input value={subTypeMandat} onChange={(event) => setSubTypeMandat(event.target.value)} required />
+              <select value={subTypeMandat} onChange={(event) => setSubTypeMandat(event.target.value)} required>
+                {hektorMandatSousTypes(typeMandat).map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
             </label>
             <label>
               <span>Date debut</span>
