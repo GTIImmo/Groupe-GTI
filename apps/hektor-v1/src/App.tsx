@@ -4511,6 +4511,10 @@ function MandatDocumentEditor(props: {
   contacts: DetailContact[]
   address: string
   compact?: boolean
+  // Un avenant ne peut modifier qu'un mandat DÉJÀ SIGNÉ. Tant que le mandat initial n'est
+  // pas signé (numéro généré, en cours d'édition/signature), on édite LE MANDAT, pas un avenant.
+  // Passé par le rendu V3 (= mandatSig === 'signed'). Non fourni (legacy) → ancien comportement.
+  mandatSigned?: boolean
 }) {
   const initialDraft = useMemo(
     () => buildMandatDocumentDraft(props.dossier, props.detail, props.contacts, props.address),
@@ -4531,7 +4535,7 @@ function MandatDocumentEditor(props: {
       numero_mandat: props.dossier.numero_mandat,
       mandat_date_fin: props.detail.mandat_date_fin,
       mandat_numero_source: props.detail.mandat_numero_source,
-    }) ? 'avenant' : 'mandat',
+    }) && (props.mandatSigned ?? true) ? 'avenant' : 'mandat',
   )
 
   useEffect(() => {
@@ -4556,7 +4560,7 @@ function MandatDocumentEditor(props: {
     numero_mandat: props.dossier.numero_mandat,
     mandat_date_fin: props.detail.mandat_date_fin,
     mandat_numero_source: props.detail.mandat_numero_source,
-  })
+  }) && (props.mandatSigned ?? true)
   const isAvenant = docMode === 'avenant'
   const documentTitle = isAvenant ? 'Avenant au mandat' : 'Mandat de vente'
   const documentActionLabel = isAvenant ? 'Préparer avenant' : 'Préparer le mandat'
@@ -22292,7 +22296,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 <div className="mv3-embed" style={{ marginTop: 12 }}>
                   {isLightweightDetail
                     ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
-                    : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                    : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} mandatSigned={mandatSig === 'signed'} />}
                 </div>
               </div>
             </div>
@@ -22498,7 +22502,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className="mv3-embed" style={{ marginTop: 12 }}>
                     {isLightweightDetail
                       ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
-                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} mandatSigned={mandatSig === 'signed'} />}
                   </div>
                 </div>
               </div>
@@ -22516,7 +22520,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className="mv3-embed" style={{ marginTop: 12 }}>
                     {isLightweightDetail
                       ? <ReadOnlyDetailNotice label="Le mandat ne peut pas etre edite depuis une fiche d'index leger." />
-                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} mandatSigned={mandatSig === 'signed'} />}
                   </div>
                 </div>
               </div>
@@ -22599,7 +22603,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className="mv3-embed" style={{ marginTop: 12 }}>
                     {isLightweightDetail
                       ? <ReadOnlyDetailNotice label="L'avenant ne peut pas etre edite depuis une fiche d'index leger." />
-                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} />}
+                      : <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} mandatSigned={mandatSig === 'signed'} />}
                   </div>
                 </div>
               </div>
@@ -23662,7 +23666,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." />
                 : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
-              {!isLightweightDetail ? <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} /> : null}
+              {!isLightweightDetail ? <MandatDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} address={props.address} mandatSigned={mandatSig === 'signed'} /> : null}
               {!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}
             </div>
           )) : activeTab === 'rendezvous' ? (
