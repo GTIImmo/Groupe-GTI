@@ -4518,6 +4518,7 @@ function CorrigeableAnnonceField(props: {
   onSaved: (value: string) => void
   unit?: string
   numeric?: boolean
+  wide?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(props.value)
@@ -4540,7 +4541,7 @@ function CorrigeableAnnonceField(props: {
     }
   }
   return (
-    <label className="mdc-field">
+    <label className={`mdc-field${props.wide ? ' is-wide' : ''}`}>
       <span>{props.label}</span>
       {editing ? (
         <span className="mdc-edit">
@@ -4938,9 +4939,9 @@ function MandatDocumentEditor(props: {
                 <label><span>Occupation</span><select value={draft.etatOccupation} onChange={(event) => updateDraft('etatOccupation', event.target.value as MandatDocumentDraft['etatOccupation'])}><option value="">A choisir</option><option value="libre">Libre</option><option value="loue">Loue</option><option value="occupe">Occupe par le mandant</option></select></label>
                 <label className="is-wide"><span>Designation du bien</span><input value={draft.bienTitre} onChange={(event) => updateDraft('bienTitre', event.target.value)} /></label>
                 <label><span>Type de bien</span><input value={draft.bienType} onChange={(event) => updateDraft('bienType', event.target.value)} /></label>
-                <label><span>Pieces</span><input value={draft.nombrePieces} onChange={(event) => updateDraft('nombrePieces', event.target.value)} /></label>
-                <label><span>Surface habitable</span><input value={draft.surfaceHabitable} onChange={(event) => updateDraft('surfaceHabitable', event.target.value)} /></label>
-                <label><span>Surface terrain</span><input value={draft.surfaceTerrain} onChange={(event) => updateDraft('surfaceTerrain', event.target.value)} /></label>
+                <CorrigeableAnnonceField label="Pieces" value={draft.nombrePieces} fieldKey="roomCount" dossier={props.dossier} onSaved={(v) => updateDraft('nombrePieces', v)} numeric />
+                <CorrigeableAnnonceField label="Surface habitable" value={draft.surfaceHabitable} fieldKey="surface" dossier={props.dossier} onSaved={(v) => updateDraft('surfaceHabitable', v)} unit="m²" numeric />
+                <CorrigeableAnnonceField label="Surface terrain" value={draft.surfaceTerrain} fieldKey="landSurface" dossier={props.dossier} onSaved={(v) => updateDraft('surfaceTerrain', v)} unit="m²" numeric />
                 <label className="is-wide"><span>Adresse complete</span><input value={draft.bienAdresse} onChange={(event) => updateDraft('bienAdresse', event.target.value)} /></label>
               </div>
             ) : null}
