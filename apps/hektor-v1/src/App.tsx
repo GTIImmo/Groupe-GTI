@@ -4505,6 +4505,63 @@ function SignaturePromptModal({ intro, items, onConfirm, onClose }: { intro: str
   )
 }
 
+// Champ « corrigeable » du mandat (mode mandat) : la valeur est reprise de la fiche
+// annonce ; le crayon ouvre une édition en place ; « Enregistrer » écrit dans la fiche via
+// la CHAÎNE OPTIMISTE EXISTANTE (editAnnonceOptimistic → RPC calque + job worker débouncé,
+// garde anti-écrasement read-through). Aucun contournement du worker. onSaved met à jour le
+// brouillon local pour que l'aperçu PDF reflète la nouvelle valeur.
+function CorrigeableAnnonceField(props: {
+  label: string
+  value: string
+  fieldKey: string
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id'>
+  onSaved: (value: string) => void
+  unit?: string
+  numeric?: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(props.value)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  useEffect(() => { if (!editing) setVal(props.value) }, [props.value, editing])
+  const save = async () => {
+    const clean = val.trim()
+    setBusy(true)
+    setMsg(null)
+    try {
+      await editAnnonceOptimistic({ dossier: props.dossier, fields: { [props.fieldKey]: clean } })
+      props.onSaved(clean)
+      setEditing(false)
+      setMsg({ ok: true, text: 'Mis à jour dans la fiche · synchro Hektor en cours' })
+    } catch (error) {
+      setMsg({ ok: false, text: error instanceof Error ? error.message : 'Mise à jour impossible' })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <label className="mdc-field">
+      <span>{props.label}</span>
+      {editing ? (
+        <span className="mdc-edit">
+          <input value={val} inputMode={props.numeric ? 'decimal' : undefined} autoFocus onChange={(event) => setVal(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void save() } if (event.key === 'Escape') { setEditing(false); setVal(props.value) } }} />
+          {props.unit ? <span className="mdc-u">{props.unit}</span> : null}
+          <button type="button" className="mdc-save" disabled={busy} onClick={() => void save()}>{busy ? '…' : 'Enregistrer'}</button>
+          <button type="button" className="mdc-cancel" onClick={() => { setEditing(false); setVal(props.value); setMsg(null) }}>Annuler</button>
+        </span>
+      ) : (
+        <span className="mdc-view">
+          <span className="mdc-val">{props.value ? `${props.value}${props.unit ? ` ${props.unit}` : ''}` : '—'}</span>
+          <button type="button" className="mdc-pencil" title="Corriger — met à jour la fiche" aria-label={`Corriger ${props.label}`} onClick={() => { setEditing(true); setMsg(null) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+          </button>
+        </span>
+      )}
+      {msg ? <span className={`mdc-msg ${msg.ok ? 'is-ok' : 'is-ko'}`}>{msg.text}</span> : null}
+    </label>
+  )
+}
+
 function MandatDocumentEditor(props: {
   dossier: Dossier
   detail: DossierDetailPayload
@@ -4889,10 +4946,10 @@ function MandatDocumentEditor(props: {
             ) : null}
             {activeTab === 'prix' ? (
               <div className="mandat-document-panel mandat-document-form-grid">
-                <label><span>Prix de vente</span><input value={draft.prixVente} onChange={(event) => updateDraft('prixVente', event.target.value)} /></label>
-                <label><span>Net vendeur</span><input value={draft.prixNetVendeur} onChange={(event) => updateDraft('prixNetVendeur', event.target.value)} /></label>
-                <label><span>Honoraires TTC</span><input value={draft.honorairesTtc} onChange={(event) => updateDraft('honorairesTtc', event.target.value)} /></label>
-                <label><span>Charge honoraires</span><select value={draft.honorairesCharge} onChange={(event) => updateDraft('honorairesCharge', event.target.value as MandatDocumentDraft['honorairesCharge'])}><option value="">A choisir</option><option value="acquereur">Acquereur</option><option value="mandant">Mandant</option></select></label>
+                <CorrigeableAnnonceField label="Prix de vente FAI" value={draft.prixVente} fieldKey="price" dossier={props.dossier} onSaved={(v) => updateDraft('prixVente', v)} unit="€" numeric />
+                <CorrigeableAnnonceField label="Net vendeur" value={draft.prixNetVendeur} fieldKey="netSellerPrice" dossier={props.dossier} onSaved={(v) => updateDraft('prixNetVendeur', v)} unit="€" numeric />
+                <CorrigeableAnnonceField label="Honoraires TTC" value={draft.honorairesTtc} fieldKey="fees" dossier={props.dossier} onSaved={(v) => updateDraft('honorairesTtc', v)} unit="€" numeric />
+                <label><span>Charge des honoraires</span><select value={draft.honorairesCharge} onChange={(event) => updateDraft('honorairesCharge', event.target.value as MandatDocumentDraft['honorairesCharge'])}><option value="">À choisir…</option><option value="acquereur">Acquéreur</option><option value="mandant">Mandant</option></select></label>
               </div>
             ) : null}
             {activeTab === 'clauses' ? (
