@@ -4579,6 +4579,33 @@ function MandatDocumentEditor(props: {
   ].filter(Boolean)
   const payload = buildMandatDocumentPayload(draft, props.dossier)
 
+  // Assistant « couleurs mariées » : ordre des onglets, teinte + picto par onglet,
+  // navigation Précédent/Suivant. L'aperçu et « Générer » n'apparaissent qu'au dernier
+  // onglet (Contrôle). N'affecte QUE le mode mandat (l'avenant garde sa saisie manuelle).
+  const MANDAT_TABS = ['mandants', 'bien', 'prix', 'clauses', 'signature', 'apercu'] as const
+  const MANDAT_TAB_LABEL: Record<string, string> = { mandants: 'Mandants', bien: 'Bien', prix: 'Prix', clauses: 'Clauses', signature: 'Signature', apercu: 'Contrôle' }
+  const MANDAT_TAB_ACC: Record<string, string> = { mandants: '#b3134f', bien: '#0f6874', prix: '#a5793d', clauses: '#7a2e52', signature: '#3a4a95', apercu: '#1f7a4a' }
+  const MANDAT_TAB_ICON: Record<string, ReactNode> = {
+    mandants: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.6M20.5 20a5 5 0 0 0-3.5-4.7" /></svg>,
+    bien: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 11 12 4l8 7" /><path d="M6 10v10h12V10" /><path d="M10 20v-6h4v6" /></svg>,
+    prix: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M14 8.5c0-1.4-1.3-2.5-3-2.5S8 7.1 8 8.5 9 11 12 11s4 .9 4 2.6-1.5 2.4-4 2.4-4-1-4-2.6" /><path d="M12 4v2M12 16v2" /></svg>,
+    clauses: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 13h6M9 17h4" /></svg>,
+    signature: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 18c3-1 4-6 6-6s2 4 4 4 3-8 6-8" /><path d="M4 21h16" /></svg>,
+    apercu: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></svg>,
+  }
+  const mandatTabIndex = Math.max(0, MANDAT_TABS.indexOf(activeTab as typeof MANDAT_TABS[number]))
+  const isLastMandatTab = activeTab === 'apercu'
+  const goMandatTab = (dir: -1 | 1) => setActiveTab(MANDAT_TABS[Math.max(0, Math.min(MANDAT_TABS.length - 1, mandatTabIndex + dir))])
+  // Aperçu affiché : toujours en avenant (pas d'onglets) ; en mandat, seulement au Contrôle.
+  const showDocPreview = isAvenant || isLastMandatTab
+  const mandatTabHasGap = (tab: string): boolean => {
+    if (tab === 'mandants') return !draft.numeroMandat || !draft.dateSignature || (!draft.mandantsLibelle && draft.mandants.every((m) => !mandatMandantDisplayName(m)))
+    if (tab === 'bien') return !draft.bienAdresse
+    if (tab === 'prix') return !draft.prixVente || !draft.honorairesTtc || !draft.honorairesCharge
+    if (tab === 'signature') return !selectedSignatureRecipients.length || selectedSignatureRecipients.some((r) => !r.email && !r.telephone)
+    return false
+  }
+
   const updateDraft = <K extends keyof MandatDocumentDraft>(key: K, value: MandatDocumentDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }))
     setMessage(null)
@@ -4765,9 +4792,9 @@ function MandatDocumentEditor(props: {
       {editorHead(false)}
       {open && typeof document !== 'undefined' ? createPortal(
         <div className="fa-ck-mandat-v3 mv3-doc-portal">
-          <div className="mandat-document-editor is-open">
+          <div className="mandat-document-editor is-open" style={{ ['--doc-acc']: isAvenant ? '#a5793d' : (MANDAT_TAB_ACC[activeTab] ?? '#b3134f') } as CSSProperties}>
             {editorHead(true)}
-            <div className="mandat-document-editor-body">
+            <div className={`mandat-document-editor-body ${showDocPreview ? 'has-doc-preview' : 'no-doc-preview'}`}>
               <div className="mandat-document-form">
             {hasActiveMandate ? (
               <div className="mandat-doc-type-switch" role="tablist" aria-label="Type de document">
@@ -4808,18 +4835,16 @@ function MandatDocumentEditor(props: {
             ) : (
             <>
             <div className="mandat-document-tabs" role="tablist" aria-label="Sections du mandat">
-              {[
-                ['mandants', 'Mandants'],
-                ['bien', 'Bien'],
-                ['prix', 'Prix'],
-                ['clauses', 'Clauses'],
-                ['signature', 'Signature'],
-                ['apercu', 'Controle'],
-              ].map(([value, label]) => (
-                <button key={value} className={activeTab === value ? 'is-active' : ''} type="button" onClick={() => setActiveTab(value as typeof activeTab)}>
-                  {label}
-                </button>
-              ))}
+              {MANDAT_TABS.map((value) => {
+                const gap = mandatTabHasGap(value)
+                return (
+                  <button key={value} className={`${activeTab === value ? 'is-active' : ''} ${gap ? 'has-gap' : 'is-ok'}`} type="button" onClick={() => setActiveTab(value)} style={{ ['--tab-c']: MANDAT_TAB_ACC[value] } as CSSProperties}>
+                    <span className="mdt-ic" aria-hidden="true">{MANDAT_TAB_ICON[value]}</span>
+                    {MANDAT_TAB_LABEL[value]}
+                    {value !== 'apercu' ? (gap ? <span className="mdt-gap" aria-hidden="true">!</span> : <span className="mdt-ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}><path d="M20 6 9 17l-5-5" /></svg></span>) : null}
+                  </button>
+                )
+              })}
             </div>
             {activeTab === 'mandants' ? (
               <div className="mandat-document-panel">
@@ -4927,17 +4952,51 @@ function MandatDocumentEditor(props: {
             )}
             {missingFields.length ? <p className="mandat-document-warning">A completer : {missingFields.join(', ')}.</p> : null}
             {message ? <p className="mandat-document-message">{message}</p> : null}
-            <div className="mandat-document-actions">
-              <a className={`ghost-button button-primary ${previewUrl ? '' : 'is-disabled'}`} href={previewUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!previewUrl}>
-                <span aria-hidden="true"><DetailIcon type="content" /></span>
-                Apercu imprimable
-              </a>
-              <button className="ghost-button" type="button" onClick={() => void copyPayload()}>
-                Copier JSON
-              </button>
-              <button className="ghost-button" type="button" onClick={() => void generatePdf()} disabled={pdfBusy}>
-                {pdfBusy ? 'Generation…' : 'Generer PDF'}
-              </button>
+            <div className={`mandat-document-actions ${isAvenant ? '' : 'is-wizard'}`}>
+              {isAvenant ? (
+                <>
+                  <a className={`ghost-button button-primary ${previewUrl ? '' : 'is-disabled'}`} href={previewUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!previewUrl}>
+                    <span aria-hidden="true"><DetailIcon type="content" /></span>
+                    Aperçu imprimable
+                  </a>
+                  <button className="ghost-button" type="button" onClick={() => void copyPayload()}>Copier JSON</button>
+                  <button className="ghost-button" type="button" onClick={() => void generatePdf()} disabled={pdfBusy}>
+                    {pdfBusy ? 'Génération…' : 'Générer l’avenant'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {mandatTabIndex > 0 ? (
+                    <button className="md-nav md-nav-prev" type="button" onClick={() => goMandatTab(-1)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 12H7" /><path d="m12 6-6 6 6 6" /></svg>
+                      Précédent
+                    </button>
+                  ) : <span className="md-nav-spacer" />}
+                  <div className="md-steps" aria-hidden="true">
+                    {MANDAT_TABS.map((v, i) => <span key={v} className={`md-step-dot ${i === mandatTabIndex ? 'is-on' : ''}`} />)}
+                    <span className="md-step-lbl">Étape {mandatTabIndex + 1} / {MANDAT_TABS.length} · {MANDAT_TAB_LABEL[activeTab]}</span>
+                  </div>
+                  <span className="md-spacer" />
+                  {isLastMandatTab ? (
+                    <>
+                      <a className={`ghost-button button-primary ${previewUrl ? '' : 'is-disabled'}`} href={previewUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!previewUrl}>
+                        <span aria-hidden="true"><DetailIcon type="content" /></span>
+                        Aperçu imprimable
+                      </a>
+                      <button className="ghost-button md-json" type="button" onClick={() => void copyPayload()}>Copier JSON</button>
+                      <button className="md-generate" type="button" onClick={() => void generatePdf()} disabled={pdfBusy}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h13" /><path d="m12 6 6 6-6 6" /><path d="M20 5v14" /></svg>
+                        {pdfBusy ? 'Génération…' : 'Générer le mandat'}
+                      </button>
+                    </>
+                  ) : (
+                    <button className="md-nav md-nav-next" type="button" onClick={() => goMandatTab(1)}>
+                      Suivant
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h13" /><path d="m12 6 6 6-6 6" /></svg>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
             {signPromptOpen ? (
               <SignaturePromptModal
@@ -4948,14 +5007,16 @@ function MandatDocumentEditor(props: {
               />
             ) : null}
           </div>
-          <aside className="mandat-document-preview" aria-label="Apercu document">
-            <div className="mandat-preview-head">
-              <span>GROUPE GTI</span>
-              <strong>{isAvenant ? 'AVENANT AU MANDAT' : 'MANDAT DE VENTE'}</strong>
-              <small>N {draft.numeroMandat || 'a completer'}</small>
-            </div>
-            {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du document" /> : null}
-          </aside>
+          {showDocPreview ? (
+            <aside className="mandat-document-preview" aria-label="Apercu document">
+              <div className="mandat-preview-head">
+                <span>GROUPE GTI</span>
+                <strong>{isAvenant ? 'AVENANT AU MANDAT' : 'MANDAT DE VENTE'}</strong>
+                <small>N {draft.numeroMandat || 'a completer'}</small>
+              </div>
+              {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du document" /> : null}
+            </aside>
+          ) : null}
         </div>
             </div>
           </div>,

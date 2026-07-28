@@ -524,3 +524,60 @@
   .fa-ck-mandat-v3 .mv3-cta::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: mv3beacon 2.4s ease-out infinite; }
   @keyframes mv3beacon { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mv3-mag) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 11px transparent; } }
 }
+
+/* ============================================================================
+   Modale mandat — assistant « couleurs mariées » : teinte par onglet (--doc-acc),
+   pictos + badges d'onglet, navigation Précédent/Suivant → Générer, aperçu au
+   dernier onglet seulement. Scopé `.mandat-document-editor.is-open`. Additif.
+   ============================================================================ */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open { --doc-acc: var(--mv3-mag); border-top: 3px solid transparent; border-image: linear-gradient(90deg, #b3134f 0%, #7a2e52 26%, #c8994e 52%, #0f6874 76%, #1f7a4a 100%) 1; }
+
+/* Onglets : picto + libellé, actif teinté de SA couleur, badge manque/OK */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button { display: inline-flex; align-items: center; gap: 7px; position: relative; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button .mdt-ic { display: inline-flex; color: var(--tab-c, var(--mv3-soft)); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button .mdt-ic svg { width: 16px; height: 16px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button.is-active { background: color-mix(in srgb, var(--tab-c) 13%, #fff); color: var(--tab-c); box-shadow: inset 0 -2.5px 0 var(--tab-c); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button.is-active .mdt-ic { color: var(--tab-c); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button .mdt-gap { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: var(--mv3-amber); color: #fff; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button .mdt-ok { display: inline-flex; color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-tabs button .mdt-ok svg { width: 13px; height: 13px; }
+
+/* Focus des champs = couleur de l'onglet actif */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form input:focus,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form select:focus,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-form textarea:focus,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-options select:focus { border-color: var(--doc-acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--doc-acc) 16%, transparent); }
+
+/* Aperçu au dernier onglet seulement : sinon le formulaire prend toute la largeur */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-editor-body.no-doc-preview { grid-template-columns: minmax(0, 1fr); }
+
+/* Barre wizard */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-actions.is-wizard { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-spacer { flex: 1; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-spacer { width: 1px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-steps { display: flex; align-items: center; gap: 7px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-step-dot { width: 7px; height: 7px; border-radius: 99px; background: #ddd4cd; transition: width .25s ease, background .25s ease; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-step-dot.is-on { width: 22px; background: var(--doc-acc); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-step-lbl { font-size: 12px; font-weight: 700; color: var(--mv3-soft); margin-left: 8px; white-space: nowrap; }
+
+/* Boutons sur mesure — picto animé (cue), PAS d'effet miroir */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav,
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-generate { display: inline-flex; align-items: center; gap: 9px; height: 44px; padding: 0 20px; border-radius: 12px; font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; transition: transform .14s ease, box-shadow .2s ease, border-color .15s ease, color .15s ease; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav svg, .fa-ck-mandat-v3 .mandat-document-editor.is-open .md-generate svg { width: 18px; height: 18px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-prev { color: var(--mv3-ink); background: #fff; border: 1px solid var(--mv3-line); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-prev:hover { border-color: var(--mv3-gold); color: var(--mv3-gold); transform: translateY(-1px); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-next { color: #fff; border: 0; background: linear-gradient(120deg, var(--mv3-mag) 0%, var(--mv3-mag-deep) 42%, #7f5a26 100%); box-shadow: 0 12px 26px -12px rgba(150, 20, 70, .7), inset 0 1px 0 rgba(255, 255, 255, .28); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-next:hover { transform: translateY(-2px); box-shadow: 0 18px 34px -12px rgba(150, 20, 70, .82), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-next:active { transform: translateY(0) scale(.99); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-generate { padding: 0 22px; color: #fff; border: 0; font-size: 14px; background: linear-gradient(120deg, var(--mv3-mag) 0%, var(--mv3-mag-deep) 40%, #a5793d 100%); box-shadow: 0 12px 26px -12px rgba(150, 20, 70, .75), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-generate:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 34px -12px rgba(150, 20, 70, .85), inset 0 1px 0 rgba(255, 255, 255, .32); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-generate:disabled { opacity: .55; cursor: not-allowed; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .md-json { font-size: 12px; opacity: .78; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-next svg,
+  .fa-ck-mandat-v3 .mandat-document-editor.is-open .md-generate svg { animation: mdcueR 2.6s ease-in-out infinite; }
+  .fa-ck-mandat-v3 .mandat-document-editor.is-open .md-nav-prev svg { animation: mdcueL 2.8s ease-in-out infinite; }
+  @keyframes mdcueR { 0%, 78%, 100% { transform: translateX(0); } 86% { transform: translateX(3px); } 93% { transform: translateX(0); } }
+  @keyframes mdcueL { 0%, 78%, 100% { transform: translateX(0); } 86% { transform: translateX(-3px); } 93% { transform: translateX(0); } }
+}
