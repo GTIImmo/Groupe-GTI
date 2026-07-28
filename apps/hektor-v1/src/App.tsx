@@ -4563,6 +4563,32 @@ function CorrigeableAnnonceField(props: {
   )
 }
 
+// Champ « lié à la data » NON modifiable dans la modale (comme la modale estimation) : la valeur
+// est reprise de la fiche en lecture seule. Si elle est vide, on ne la saisit PAS ici (risque de
+// divergence document<->donnee source) : un indice invite a la completer EN DEHORS (fiche bien ou
+// fiche contact), la ou l'edition est reellement poussee vers Hektor.
+function LockedDataField(props: {
+  label: string
+  value: string
+  unit?: string
+  completeIn?: string
+  wide?: boolean
+}) {
+  const empty = !props.value || !props.value.trim()
+  return (
+    <label className={`mdc-field is-locked${props.wide ? ' is-wide' : ''}`}>
+      <span>{props.label}</span>
+      <span className="mdc-view">
+        <span className="mdc-val">{empty ? '—' : `${props.value}${props.unit ? ` ${props.unit}` : ''}`}</span>
+        <span className="mdc-lock" title="Champ lié à la fiche — non modifiable ici" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><rect x="4" y="10.5" width="16" height="10" rx="2.2" /><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /></svg>
+        </span>
+      </span>
+      {empty && props.completeIn ? <span className="mdc-hint">À compléter dans {props.completeIn}</span> : null}
+    </label>
+  )
+}
+
 function MandatDocumentEditor(props: {
   dossier: Dossier
   detail: DossierDetailPayload
@@ -4669,16 +4695,6 @@ function MandatDocumentEditor(props: {
     setMessage(null)
   }
 
-  const updateMandant = <K extends keyof MandatDocumentMandant>(index: number, key: K, value: MandatDocumentMandant[K]) => {
-    setDraft((current) => {
-      const nextMandants = current.mandants.map((mandant, mandantIndex) => (
-        mandantIndex === index ? { ...mandant, [key]: value } : mandant
-      ))
-      return { ...current, mandants: nextMandants, mandantsLibelle: mandatMandantsLabel(nextMandants, current.mandantsLibelle) }
-    })
-    setMessage(null)
-  }
-
   const updateSignatureRecipient = <K extends keyof MandatSignatureRecipient>(index: number, key: K, value: MandatSignatureRecipient[K]) => {
     setDraft((current) => ({
       ...current,
@@ -4722,25 +4738,6 @@ function MandatDocumentEditor(props: {
       ...current,
       signatureRecipients: current.signatureRecipients.filter((_recipient, recipientIndex) => recipientIndex !== index),
     }))
-    setMessage(null)
-  }
-
-  const addMandant = () => {
-    setDraft((current) => ({
-      ...current,
-      mandants: [
-        ...current.mandants,
-        { id: `mandant-${Date.now()}`, civilite: '', nom: '', prenom: '', qualite: 'Mandant', adresse: '', telephone: '', email: '' },
-      ],
-    }))
-    setMessage(null)
-  }
-
-  const removeMandant = (index: number) => {
-    setDraft((current) => {
-      const nextMandants = current.mandants.filter((_mandant, mandantIndex) => mandantIndex !== index)
-      return { ...current, mandants: nextMandants, mandantsLibelle: mandatMandantsLabel(nextMandants, current.mandantsLibelle) }
-    })
     setMessage(null)
   }
 
@@ -4907,42 +4904,41 @@ function MandatDocumentEditor(props: {
             {activeTab === 'mandants' ? (
               <div className="mandat-document-panel">
                 <div className="mandat-document-form-grid">
-                  <label><span>N mandat</span><input value={draft.numeroMandat} onChange={(event) => updateDraft('numeroMandat', event.target.value)} /></label>
+                  <LockedDataField label="N mandat" value={draft.numeroMandat} />
                   <label><span>Date signature</span><input type="date" value={draft.dateSignature} onChange={(event) => updateDraft('dateSignature', event.target.value)} /></label>
-                  <label className="is-wide"><span>Libelle global</span><textarea value={draft.mandantsLibelle} onChange={(event) => updateDraft('mandantsLibelle', event.target.value)} rows={2} /></label>
+                  <LockedDataField label="Libelle global" value={draft.mandantsLibelle} completeIn="la fiche du contact" wide />
                 </div>
+                <p className="mandat-document-locknote">Les mandants proviennent des contacts liés à la fiche. Pour ajouter, retirer ou corriger un mandant, passez par la fiche du contact.</p>
                 <div className="mandat-document-mandants">
                   {draft.mandants.map((mandant, index) => (
                     <section key={mandant.id || index} className="mandat-document-mandant-card">
                       <div className="mandat-document-mandant-head">
                         <strong>Mandant {index + 1}</strong>
-                        {draft.mandants.length > 1 ? <button className="ghost-button button-subtle" type="button" onClick={() => removeMandant(index)}>Retirer</button> : null}
                       </div>
                       <div className="mandat-document-form-grid">
-                        <label><span>Civilité</span><input value={mandant.civilite} onChange={(event) => updateMandant(index, 'civilite', event.target.value)} /></label>
-                        <label><span>Qualite</span><input value={mandant.qualite} onChange={(event) => updateMandant(index, 'qualite', event.target.value)} /></label>
-                        <label><span>Prénom</span><input value={mandant.prenom} onChange={(event) => updateMandant(index, 'prenom', event.target.value)} /></label>
-                        <label><span>Nom</span><input value={mandant.nom} onChange={(event) => updateMandant(index, 'nom', event.target.value)} /></label>
-                        <label className="is-wide"><span>Adresse</span><input value={mandant.adresse} onChange={(event) => updateMandant(index, 'adresse', event.target.value)} /></label>
-                        <label><span>Téléphone</span><input value={mandant.telephone} onChange={(event) => updateMandant(index, 'telephone', event.target.value)} /></label>
-                        <label><span>Email</span><input value={mandant.email} onChange={(event) => updateMandant(index, 'email', event.target.value)} /></label>
+                        <LockedDataField label="Civilité" value={mandant.civilite} completeIn="la fiche du contact" />
+                        <LockedDataField label="Qualite" value={mandant.qualite} completeIn="la fiche du contact" />
+                        <LockedDataField label="Prénom" value={mandant.prenom} completeIn="la fiche du contact" />
+                        <LockedDataField label="Nom" value={mandant.nom} completeIn="la fiche du contact" />
+                        <LockedDataField label="Adresse" value={mandant.adresse} completeIn="la fiche du contact" wide />
+                        <LockedDataField label="Téléphone" value={mandant.telephone} completeIn="la fiche du contact" />
+                        <LockedDataField label="Email" value={mandant.email} completeIn="la fiche du contact" />
                       </div>
                     </section>
                   ))}
                 </div>
-                <button className="ghost-button" type="button" onClick={addMandant}>Ajouter un mandant</button>
               </div>
             ) : null}
             {activeTab === 'bien' ? (
               <div className="mandat-document-panel mandat-document-form-grid">
-                <label><span>Type mandat</span><input value={draft.typeMandat} onChange={(event) => updateDraft('typeMandat', event.target.value)} /></label>
+                <LockedDataField label="Type mandat" value={draft.typeMandat} completeIn="la fiche du bien" />
                 <label><span>Occupation</span><select value={draft.etatOccupation} onChange={(event) => updateDraft('etatOccupation', event.target.value as MandatDocumentDraft['etatOccupation'])}><option value="">A choisir</option><option value="libre">Libre</option><option value="loue">Loue</option><option value="occupe">Occupe par le mandant</option></select></label>
-                <label className="is-wide"><span>Designation du bien</span><input value={draft.bienTitre} onChange={(event) => updateDraft('bienTitre', event.target.value)} /></label>
-                <label><span>Type de bien</span><input value={draft.bienType} onChange={(event) => updateDraft('bienType', event.target.value)} /></label>
+                <LockedDataField label="Designation du bien" value={draft.bienTitre} completeIn="la fiche du bien" wide />
+                <LockedDataField label="Type de bien" value={draft.bienType} completeIn="la fiche du bien" />
                 <CorrigeableAnnonceField label="Pieces" value={draft.nombrePieces} fieldKey="roomCount" dossier={props.dossier} onSaved={(v) => updateDraft('nombrePieces', v)} numeric />
                 <CorrigeableAnnonceField label="Surface habitable" value={draft.surfaceHabitable} fieldKey="surface" dossier={props.dossier} onSaved={(v) => updateDraft('surfaceHabitable', v)} unit="m²" numeric />
                 <CorrigeableAnnonceField label="Surface terrain" value={draft.surfaceTerrain} fieldKey="landSurface" dossier={props.dossier} onSaved={(v) => updateDraft('surfaceTerrain', v)} unit="m²" numeric />
-                <label className="is-wide"><span>Adresse complete</span><input value={draft.bienAdresse} onChange={(event) => updateDraft('bienAdresse', event.target.value)} /></label>
+                <LockedDataField label="Adresse complete" value={draft.bienAdresse} completeIn="la fiche du bien" wide />
               </div>
             ) : null}
             {activeTab === 'prix' ? (

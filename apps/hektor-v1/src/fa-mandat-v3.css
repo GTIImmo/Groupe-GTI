@@ -615,3 +615,12 @@
 .fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-msg.is-ok { color: var(--mv3-green); }
 .fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-msg.is-ok::before { content: '✓'; }
 .fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-msg.is-ko { color: var(--mv3-red); }
+
+/* Champ « lié à la data » verrouillé : lecture seule grisee + cadenas, non editable dans la modale */
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-field.is-locked .mdc-view { background: color-mix(in srgb, var(--mv3-paper) 70%, #eceef0); border-style: dashed; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-field.is-locked .mdc-val { color: var(--mv3-soft); font-weight: 600; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-lock { flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center; color: color-mix(in srgb, var(--mv3-soft) 80%, transparent); }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-lock svg { width: 14px; height: 14px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-hint { font-size: 11px; font-weight: 700; color: var(--mv3-gold); display: inline-flex; align-items: center; gap: 5px; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mdc-hint::before { content: '↗'; font-weight: 900; }
+.fa-ck-mandat-v3 .mandat-document-editor.is-open .mandat-document-locknote { margin: 2px 0 10px; font-size: 12px; line-height: 1.45; color: var(--mv3-soft); padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--mv3-paper) 60%, #fff); border: 1px dashed var(--mv3-line); }
