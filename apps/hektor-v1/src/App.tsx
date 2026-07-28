@@ -21946,10 +21946,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // qui vit dans ConsoleDocument.metadata_json.signature — un fetch Console que le
   // cockpit ne fait pas encore. Ils retombent proprement sur man_valider / dif_actif.
   const dossierRec = dossier as Record<string, unknown>
-  const mandatDateFin = dossierRec['mandat_date_fin'] == null ? '' : String(dossierRec['mandat_date_fin']).trim()
+  // Garde-fou (bug VA6482) : le champ plat mandat_date_fin peut rester sur l'ANCIEN mandat après
+  // génération d'un nouveau numéro (incohérence pipeline, corrigée aussi dans view_generale.py).
+  // On préfère la date de l'entrée de mandats_json qui matche le NUMÉRO courant → numéro et dates
+  // du MÊME mandat. Repli sur le champ plat si aucune correspondance.
+  const currentMandatFromJson = (() => {
+    const num = String(dossier.numero_mandat ?? '').trim()
+    if (!num) return null
+    return parseJson<Array<{ numero?: string; debut?: string; fin?: string }>>(props.detail?.mandats_json ?? '', [])
+      .find((m) => String(m?.numero ?? '').trim() === num) ?? null
+  })()
+  const mandatDateFin = firstNonEmpty(currentMandatFromJson?.fin, dossierRec['mandat_date_fin'] == null ? '' : String(dossierRec['mandat_date_fin']).trim())
   const mandatEchu = pMandatNum && Boolean(mandatDateFin) && !isMandateEndDateStillValid(mandatDateFin)
   // Chronologie du mandat, calculée avec la MÊME règle que le détail mandat du registre.
-  const mandatDateDebut = dossierRec['mandat_date_debut'] == null ? '' : String(dossierRec['mandat_date_debut']).trim()
+  const mandatDateDebut = firstNonEmpty(currentMandatFromJson?.debut, dossierRec['mandat_date_debut'] == null ? '' : String(dossierRec['mandat_date_debut']).trim())
   const ckMandatTiming = computeMandatTiming(mandatDateDebut, mandatDateFin)
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'

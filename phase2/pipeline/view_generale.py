@@ -277,16 +277,22 @@ SELECT
     -- rapatriement global séparé (list_mandats) qui peut cesser de tourner sans rien signaler —
     -- c'est arrivé le 30/03/2026, et le LEFT JOIN échouait alors EN SILENCE, laissant les dates
     -- à NULL sur 147 dossiers. Le détail, lui, arrive avec chaque annonce : il est toujours là.
-    -- Ajouté en DERNIER recours dans le COALESCE : quand une date est déjà résolue, rien ne
-    -- change. Aucune régression possible par construction.
+    --
+    -- ORDRE (corrigé 2026-07-28) : `m` D'ABORD pour debut/fin, car `mandat_numero_source = m.numero`
+    -- → les dates doivent venir du MÊME mandat que le numéro. Bug constaté (VA6482) : après
+    -- génération d'un NOUVEAU mandat, `src.mandat_date_*` (bloc « mandat principal » de la fiche
+    -- Hektor) reste sur l'ANCIEN mandat (échu) alors que le numéro passe au nouveau via `m` →
+    -- numéro neuf + date_fin échue → l'annonce reste bloquée en « échu ». En prenant `m` en tête,
+    -- date et numéro sont cohérents. `src` reste 2e (repli si le join `m` échoue), détail 3e.
+    -- Pas de nouveau NULL : un mandat valide a toujours ses dates dans `m` (ou dans `src`).
     COALESCE(
-        NULLIF(TRIM(src.mandat_date_debut), ''),
         m.date_debut,
+        NULLIF(TRIM(src.mandat_date_debut), ''),
         __SQL_MANDAT_DETAIL_FALLBACK__('$.debut')
     ) AS mandat_date_debut,
     COALESCE(
-        NULLIF(TRIM(src.mandat_date_fin), ''),
         m.date_fin,
+        NULLIF(TRIM(src.mandat_date_fin), ''),
         __SQL_MANDAT_DETAIL_FALLBACK__('$.fin')
     ) AS mandat_date_fin,
     COALESCE(
