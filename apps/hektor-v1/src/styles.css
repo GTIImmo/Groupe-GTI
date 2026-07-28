@@ -32000,3 +32000,133 @@ body {
   .diffusion-modal-v2 .dv2-cta:hover:not(:disabled) .dv2-cta-ic { animation: dv2nudge .6s ease; }
   @keyframes dv2nudge { 50% { transform: translateX(3px); } }
 }
+
+/* ============================================================================
+   CONSOLE PASSERELLES v3 — refonte ergonomique « deux volets ».
+   Volet scène (sombre, grande illustration diffusion animée + métriques clés) +
+   volet travail (clair, cartes-portails à interrupteur + exécution + CTA).
+   Scope `.diffusion-modal-v3`. Décor + layout seulement — handlers inchangés.
+   ============================================================================ */
+.diffusion-modal-panel.diffusion-modal-v3 {
+  width: min(1080px, calc(100vw - 28px)); max-height: min(90vh, 752px); padding: 0; border: 0;
+  border-radius: 24px; overflow: hidden; position: relative; background: #fff;
+  box-shadow: 0 44px 104px -34px rgba(10,4,8,.62), 0 2px 0 rgba(255,255,255,.5) inset;
+}
+.diffusion-modal-v3 .dv3-grid { display: grid; grid-template-columns: .94fr 1.06fr; max-height: inherit; }
+.diffusion-modal-v3 .dv3-stage, .diffusion-modal-v3 .dv3-work { min-width: 0; min-height: 0; }
+
+/* Volet scène (sombre). */
+.diffusion-modal-v3 .dv3-stage {
+  position: relative; display: flex; flex-direction: column; gap: 13px; padding: 28px 26px 22px; overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(120% 78% at 28% 6%, rgba(255,47,134,.32), transparent 58%),
+    linear-gradient(165deg, #3c0f28 0%, #241a20 58%, #171216 100%);
+}
+.diffusion-modal-v3 .dv3-eyebrow { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; color: #ffb3d4; }
+.diffusion-modal-v3 .dv3-eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff5fa2; box-shadow: 0 0 0 4px rgba(255,95,162,.2); }
+.diffusion-modal-v3 .dv3-title { margin: 3px 0 0; font-family: 'Fraunces','Spectral',Georgia,serif; font-weight: 600; font-size: 30px; line-height: 1.02; letter-spacing: -.015em; color: #fff; }
+.diffusion-modal-v3 .dv3-subline { margin: 0; font-size: 12.5px; color: rgba(255,255,255,.6); }
+.diffusion-modal-v3 .dv3-statuspill { margin-top: 1px; }
+.diffusion-modal-v3 .dv3-illus { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-height: 168px; margin: 2px -6px; }
+.diffusion-modal-v3 .dv3-illus svg { width: 100%; max-width: 338px; height: auto; }
+
+/* Métriques (tuiles verre sur fond sombre). */
+.diffusion-modal-v3 .dv3-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.diffusion-modal-v3 .dv3-metric { position: relative; padding: 12px 12px 12px 46px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); }
+.diffusion-modal-v3 .dv3-metric-ic { position: absolute; left: 11px; top: 11px; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: rgba(255,95,162,.2); color: #ff9dc6; }
+.diffusion-modal-v3 .dv3-metric-ic svg { width: 16px; height: 16px; }
+.diffusion-modal-v3 .dv3-metric-k { display: block; font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 800; color: rgba(255,255,255,.55); }
+.diffusion-modal-v3 .dv3-metric-v { display: block; margin-top: 1px; font-size: 15px; font-weight: 800; color: #fff; }
+.diffusion-modal-v3 .dv3-metric.is-ok .dv3-metric-ic { background: rgba(87,208,139,.22); color: #8fe3b0; }
+.diffusion-modal-v3 .dv3-metric.is-ok .dv3-metric-v { color: #8fe3b0; }
+.diffusion-modal-v3 .dv3-metric-hero { grid-column: 1 / -1; padding-left: 60px; }
+.diffusion-modal-v3 .dv3-metric-hero .dv3-metric-ic { top: 12px; width: 36px; height: 36px; background: linear-gradient(150deg, #ff4f9c, #b3134f); color: #fff; }
+.diffusion-modal-v3 .dv3-metric-hero .dv3-metric-ic svg { width: 20px; height: 20px; }
+.diffusion-modal-v3 .dv3-metric-hero .dv3-metric-v { font-family: 'Fraunces','Spectral',Georgia,serif; font-size: 30px; line-height: 1; color: #ffd9ea; }
+.diffusion-modal-v3 .dv3-stage-foot { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; font-size: 11.5px; color: rgba(255,255,255,.5); }
+.diffusion-modal-v3 .dv3-stage-foot strong { color: rgba(255,255,255,.8); font-weight: 700; }
+.diffusion-modal-v3 .dv3-foot-ic { position: static; width: 22px; height: 22px; border-radius: 7px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.72); }
+.diffusion-modal-v3 .dv3-foot-ic svg { width: 13px; height: 13px; }
+
+/* Volet travail (clair). */
+.diffusion-modal-v3 .dv3-work { display: flex; flex-direction: column; min-height: 0; background: #fff; }
+.diffusion-modal-v3 .dv3-work-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 24px 14px; border-bottom: 1px solid #f0eaed; }
+.diffusion-modal-v3 .dv3-work-title { display: block; font-family: 'Fraunces','Spectral',Georgia,serif; font-weight: 600; font-size: 19px; color: #241f22; }
+.diffusion-modal-v3 .dv3-work-note { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: #7a6a72; max-width: 46ch; }
+.diffusion-modal-v3 .dv3-count-chip { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: #c5005f; background: #fbe7f1; border-radius: 999px; padding: 5px 11px; font-variant-numeric: tabular-nums; }
+.diffusion-modal-v3 .dv3-portal-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 24px; display: flex; flex-direction: column; gap: 9px; }
+.diffusion-modal-v3 .dv3-empty { padding: 22px 16px; border: 1px dashed #e3d5dc; border-radius: 14px; background: #fbf8fa; color: #7a6a72; font-size: 12.5px; line-height: 1.55; text-align: center; }
+
+/* Carte portail. */
+.diffusion-modal-v3 .dv3-portal { display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; align-items: center; gap: 13px; padding: 12px 14px; border-radius: 14px; border: 1px solid #ecdfe6; background: #fff; cursor: pointer; transition: transform .15s ease, box-shadow .2s ease, border-color .15s ease, background .15s ease; }
+.diffusion-modal-v3 .dv3-portal:hover { transform: translateY(-1px); border-color: #e7bbd1; box-shadow: 0 12px 26px -18px rgba(197,0,95,.5); }
+.diffusion-modal-v3 .dv3-portal.is-off { background: #fbfafb; }
+.diffusion-modal-v3 .dv3-portal.is-dirty { border-color: #e0a726; box-shadow: 0 0 0 3px rgba(214,143,34,.14); }
+.diffusion-modal-v3 .dv3-portal-av { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 900; letter-spacing: .02em; color: #fff; text-transform: uppercase; background: linear-gradient(150deg, var(--pv,#c5005f), color-mix(in srgb, var(--pv,#c5005f) 66%, #000)); box-shadow: 0 6px 15px -8px var(--pv,#c5005f); }
+.diffusion-modal-v3 .dv3-portal.is-off .dv3-portal-av { filter: grayscale(.5) opacity(.7); }
+.diffusion-modal-v3 .dv3-portal-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.diffusion-modal-v3 .dv3-portal-meta strong { font-size: 14px; font-weight: 800; color: #241f22; }
+.diffusion-modal-v3 .dv3-portal-meta small { font-size: 11.5px; color: #8a7580; }
+.diffusion-modal-v3 .dv3-portal-dirty { margin-top: 3px; align-self: flex-start; font-size: 10.5px; font-weight: 700; color: #a5730a; background: #fdf3df; border-radius: 7px; padding: 3px 8px; }
+.diffusion-modal-v3 .dv3-portal-state { font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #8a7580; }
+.diffusion-modal-v3 .dv3-portal.is-on .dv3-portal-state { color: #1f7a4a; }
+.diffusion-modal-v3 .dv3-switch { appearance: none; -webkit-appearance: none; margin: 0; border: 0; flex: 0 0 auto; cursor: pointer; width: 46px; height: 26px; border-radius: 999px; background: #dbd3d8; position: relative; transition: background .2s ease; }
+.diffusion-modal-v3 .dv3-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.28); transition: transform .2s ease; }
+.diffusion-modal-v3 .dv3-switch:checked { background: linear-gradient(135deg, #c5005f, #9d0f4e); }
+.diffusion-modal-v3 .dv3-switch:checked::after { transform: translateX(20px); }
+.diffusion-modal-v3 .dv3-switch:focus-visible { outline: 3px solid rgba(197,0,95,.3); outline-offset: 2px; }
+
+/* Retour d'exécution + actions. */
+.diffusion-modal-v3 .dv3-feedback { display: flex; flex-direction: column; gap: 3px; margin: 0 24px; padding: 11px 14px; border-radius: 12px; font-size: 12px; }
+.diffusion-modal-v3 .dv3-feedback strong { font-size: 12.5px; }
+.diffusion-modal-v3 .dv3-feedback.is-idle { background: #f7f4f6; color: #7a6a72; border: 1px solid #eee6ea; }
+.diffusion-modal-v3 .dv3-feedback.is-done { background: #eaf7f0; color: #1f7a4a; border: 1px solid #c9ecd8; }
+.diffusion-modal-v3 .dv3-feedback.is-error { background: #fdecec; color: #b0271f; border: 1px solid #f5cfcf; }
+.diffusion-modal-v3 .dv3-feedback-figs { font-variant-numeric: tabular-nums; opacity: .85; }
+.diffusion-modal-v3 .dv3-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 12px; padding: 16px 24px; border-top: 1px solid #f0eaed; background: #fbfafb; }
+.diffusion-modal-v3 .dv3-btn-ghost { min-height: 42px; padding: 0 16px; border: 1px solid #e2d7dd; border-radius: 11px; background: #fff; color: #5b5157; font-weight: 700; cursor: pointer; transition: border-color .15s ease, color .15s ease; }
+.diffusion-modal-v3 .dv3-btn-ghost:hover { border-color: #c9b8c1; color: #241f22; }
+.diffusion-modal-v3 .dv3-cta { position: relative; overflow: hidden; min-height: 44px; padding: 0 22px; border: 0; border-radius: 12px; color: #fff; font-weight: 800; font-size: 13.5px; display: inline-flex; align-items: center; gap: 9px; cursor: pointer; background: linear-gradient(135deg, #c5005f, #9d0f4e); box-shadow: 0 12px 26px -12px rgba(197,0,95,.85), inset 0 1px 0 rgba(255,255,255,.28); transition: transform .15s ease, box-shadow .2s ease; }
+.diffusion-modal-v3 .dv3-cta:disabled { opacity: .55; box-shadow: none; cursor: not-allowed; }
+.diffusion-modal-v3 .dv3-cta-ic { display: inline-flex; position: relative; z-index: 1; }
+.diffusion-modal-v3 .dv3-cta-ic svg { width: 18px; height: 18px; }
+.diffusion-modal-v3 .dv3-cta > span:last-child { position: relative; z-index: 1; }
+
+/* Bouton fermer (coin, sur la scène). */
+.diffusion-modal-v3 .dv3-close { position: absolute; top: 14px; right: 14px; z-index: 6; width: 36px; height: 36px; border-radius: 11px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.14); color: #fff; display: grid; place-items: center; cursor: pointer; transition: background .15s ease; }
+.diffusion-modal-v3 .dv3-close:hover { background: rgba(255,255,255,.26); }
+.diffusion-modal-v3 .dv3-close svg { width: 17px; height: 17px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .diffusion-modal-v3 .dv3-ring { transform-box: fill-box; transform-origin: center; opacity: 0; animation: dv3ping 3s ease-out infinite; }
+  .diffusion-modal-v3 .dv3-ring-2 { animation-delay: 1s; }
+  .diffusion-modal-v3 .dv3-ring-3 { animation-delay: 2s; }
+  @keyframes dv3ping { 0% { transform: scale(.55); opacity: 0; } 16% { opacity: .8; } 100% { transform: scale(3.1); opacity: 0; } }
+  .diffusion-modal-v3 .dv3-fl { transform-box: fill-box; transform-origin: center; animation: dv3twinkle 3.4s ease-in-out infinite; }
+  @keyframes dv3twinkle { 0%, 100% { transform: scale(.7); opacity: .4; } 50% { transform: scale(1.15); opacity: 1; } }
+  .diffusion-modal-v3 .dv3-ping { transform-box: fill-box; transform-origin: center; animation: dv3pulse 2.4s ease-in-out infinite; }
+  @keyframes dv3pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.28); } }
+  .diffusion-modal-v3 .dv3-cta::after { content: ''; position: absolute; top: 0; left: 0; width: 45%; height: 100%; z-index: 0; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-160%) skewX(-16deg); animation: dv3shine 3.6s ease-in-out infinite; }
+  @keyframes dv3shine { 0% { transform: translateX(-160%) skewX(-16deg); } 45%, 100% { transform: translateX(360%) skewX(-16deg); } }
+  .diffusion-modal-v3 .dv3-cta:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 34px -12px rgba(197,0,95,.9); }
+  .diffusion-modal-v3 .dv3-cta:active:not(:disabled) { transform: translateY(0) scale(.99); }
+  .diffusion-modal-v3 .dv3-portal { animation: dv3rise .4s cubic-bezier(.22,.61,.36,1) backwards; }
+  .diffusion-modal-v3 .dv3-portal:nth-child(1) { animation-delay: .03s; }
+  .diffusion-modal-v3 .dv3-portal:nth-child(2) { animation-delay: .07s; }
+  .diffusion-modal-v3 .dv3-portal:nth-child(3) { animation-delay: .11s; }
+  .diffusion-modal-v3 .dv3-portal:nth-child(4) { animation-delay: .15s; }
+  .diffusion-modal-v3 .dv3-portal:nth-child(5) { animation-delay: .19s; }
+  .diffusion-modal-v3 .dv3-portal:nth-child(6) { animation-delay: .23s; }
+  @keyframes dv3rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+}
+
+@media (max-width: 880px) {
+  .diffusion-modal-panel.diffusion-modal-v3 { max-height: 92vh; overflow: auto; }
+  .diffusion-modal-v3 .dv3-grid { grid-template-columns: 1fr; max-height: none; }
+  .diffusion-modal-v3 .dv3-stage { padding: 22px 20px 18px; }
+  .diffusion-modal-v3 .dv3-illus { min-height: 150px; }
+  .diffusion-modal-v3 .dv3-illus svg { max-width: 280px; }
+  .diffusion-modal-v3 .dv3-portal-scroll { overflow: visible; }
+}

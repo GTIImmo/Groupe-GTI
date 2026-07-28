@@ -5774,6 +5774,31 @@ const DIFFUSION_ICONS: Record<string, string> = {
   save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.2v5l3.2 2"/></svg>`,
 }
 const DIFFUSION_CTA_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/><path d="M20 5v14"/></svg>`
+// Grande illustration de la scène « diffusion » : maison-balise centrale qui émet des
+// ondes radar (rings animés) vers des portails en orbite, faisceaux dorés + étincelles.
+// Décorative (aria-hidden). Animations pilotées par CSS (.dv3-ring/.dv3-fl/.dv3-ping).
+const DIFFUSION_STAGE = `<svg viewBox="0 0 340 300" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs>
+<radialGradient id="dg-glow" cx="50%" cy="47%" r="55%"><stop offset="0" stop-color="#ff2f86" stop-opacity=".5"/><stop offset="55%" stop-color="#c5005f" stop-opacity=".12"/><stop offset="100%" stop-color="#c5005f" stop-opacity="0"/></radialGradient>
+<linearGradient id="dg-house" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4f9c"/><stop offset="1" stop-color="#b3134f"/></linearGradient>
+<linearGradient id="dg-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eccb78"/><stop offset="1" stop-color="#a5793d"/></linearGradient>
+</defs>
+<circle cx="170" cy="140" r="152" fill="url(#dg-glow)"/>
+<g stroke="#ffffff" stroke-opacity=".15" fill="none"><ellipse cx="170" cy="140" rx="150" ry="94" stroke-dasharray="2 7"/><ellipse cx="170" cy="140" rx="112" ry="68" stroke-dasharray="2 7"/></g>
+<g stroke="url(#dg-gold)" stroke-opacity=".32" stroke-width="1.4" stroke-dasharray="1 6"><line x1="170" y1="140" x2="61" y2="92"/><line x1="170" y1="140" x2="285" y2="104"/><line x1="170" y1="140" x2="298" y2="184"/><line x1="170" y1="140" x2="53" y2="189"/><line x1="170" y1="140" x2="172" y2="235"/></g>
+<g fill="none" stroke="#ff5fa2" stroke-width="2"><circle class="dv3-ring dv3-ring-1" cx="170" cy="140" r="42"/><circle class="dv3-ring dv3-ring-2" cx="170" cy="140" r="42"/><circle class="dv3-ring dv3-ring-3" cx="170" cy="140" r="42"/></g>
+<g class="dv3-sat"><rect x="47" y="79" width="28" height="26" rx="7" fill="#3a1830" stroke="#ff5fa2" stroke-opacity=".55"/><rect x="52" y="85" width="18" height="3" rx="1.5" fill="#ff8bc0"/><rect x="52" y="91" width="13" height="3" rx="1.5" fill="#ffffff" fill-opacity=".38"/><rect x="52" y="97" width="9" height="3" rx="1.5" fill="#ffffff" fill-opacity=".22"/></g>
+<g class="dv3-sat"><rect x="271" y="91" width="28" height="26" rx="7" fill="#0d3a41" stroke="#5fd6e0" stroke-opacity=".55"/><rect x="276" y="97" width="18" height="3" rx="1.5" fill="#79e0e8"/><rect x="276" y="103" width="13" height="3" rx="1.5" fill="#ffffff" fill-opacity=".38"/><rect x="276" y="109" width="9" height="3" rx="1.5" fill="#ffffff" fill-opacity=".22"/></g>
+<g class="dv3-sat"><rect x="284" y="171" width="28" height="26" rx="7" fill="#3a2c12" stroke="url(#dg-gold)" stroke-opacity=".7"/><rect x="289" y="177" width="18" height="3" rx="1.5" fill="#eccb78"/><rect x="289" y="183" width="13" height="3" rx="1.5" fill="#ffffff" fill-opacity=".38"/><rect x="289" y="189" width="9" height="3" rx="1.5" fill="#ffffff" fill-opacity=".22"/></g>
+<g class="dv3-sat" opacity=".55"><rect x="39" y="176" width="28" height="26" rx="7" fill="#26262b" stroke="#ffffff" stroke-opacity=".3"/><rect x="44" y="182" width="18" height="3" rx="1.5" fill="#ffffff" fill-opacity=".55"/><rect x="44" y="188" width="13" height="3" rx="1.5" fill="#ffffff" fill-opacity=".3"/><rect x="44" y="194" width="9" height="3" rx="1.5" fill="#ffffff" fill-opacity=".2"/></g>
+<g class="dv3-sat"><rect x="158" y="222" width="28" height="26" rx="7" fill="#123522" stroke="#57d08b" stroke-opacity=".6"/><rect x="163" y="228" width="18" height="3" rx="1.5" fill="#6fe0a0"/><rect x="163" y="234" width="13" height="3" rx="1.5" fill="#ffffff" fill-opacity=".38"/><rect x="163" y="240" width="9" height="3" rx="1.5" fill="#ffffff" fill-opacity=".22"/></g>
+<circle cx="170" cy="140" r="41" fill="#2a1420" stroke="#ff5fa2" stroke-opacity=".45" stroke-width="1.5"/>
+<path d="M151 151v-14.5l19-13.5 19 13.5V151a3 3 0 0 1-3 3h-32a3 3 0 0 1-3-3z" fill="url(#dg-house)"/>
+<rect x="165" y="146" width="10" height="8" rx="1.4" fill="#2a1420"/>
+<path d="M170 118v-14" stroke="url(#dg-gold)" stroke-width="2.4" stroke-linecap="round"/>
+<circle class="dv3-ping" cx="170" cy="100" r="4.6" fill="url(#dg-gold)"/>
+<g fill="url(#dg-gold)"><path class="dv3-fl" style="animation-delay:0s" d="M300 60l1.8 4.4 4.4 1.8-4.4 1.8-1.8 4.4-1.8-4.4-4.4-1.8 4.4-1.8z"/><path class="dv3-fl" style="animation-delay:1.1s" d="M42 128l1.5 3.7 3.7 1.5-3.7 1.5-1.5 3.7-1.5-3.7-3.7-1.5 3.7-1.5z"/><path class="dv3-fl" style="animation-delay:.6s" d="M250 232l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z"/></g>
+</svg>`
 // Identité visuelle d'un portail : initiales + couleur déterministe (charte app).
 const DIFFUSION_PORTAL_TINTS = ['#c5005f', '#0f6874', '#a5793d', '#3a4a95', '#1f7a4a', '#b06a05', '#7a3aa0', '#c26a17']
 function diffusionPortalBadge(name: string) {
@@ -16961,124 +16986,112 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : null}
         {diffusionModalOpen && diffusionModalMandat ? (
           <div className="modal-overlay" onClick={closeDiffusionModal}>
-            <section className="modal-panel modal-panel-wide diffusion-modal-panel diffusion-modal-v2" onClick={(event) => event.stopPropagation()}>
-              <div className="panel-head diffusion-modal-head">
-                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_HERO }} />
-                <div className="diffusion-modal-title">
-                  <p className="eyebrow">Diffusion</p>
-                  <h3>Console passerelles</h3>
-                </div>
-                <button className="ghost-button diffusion-close-button" type="button" onClick={closeDiffusionModal}>Fermer</button>
-              </div>
-              <p className="diffusion-subline">
-                {diffusionModalMandat.numero_dossier ?? '-'} · {diffusionModalMandat.numero_mandat ?? '-'} · {commercialDisplay(diffusionModalMandat)}
-              </p>
-              <div className="diffusion-head-strip">
-                <StatusPill value={diffusionModalMandat.statut_annonce} />
-              </div>
-              <section className="diffusion-console">
-                <article className="detail-card diffusion-status-panel">
-                  <span className="detail-label">Etat diffusion</span>
-                  <strong className="diffusion-card-title">Vue de controle Hektor</strong>
-                  <p className="diffusion-card-copy">Lis ici l'etat global du bien avant application, puis verifie le retour du lot juste apres.</p>
-                  <div className="diffusion-state-grid diffusion-state-grid-compact">
-                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-status">
-                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.hektor }} />
-                      <span>Statut Hektor</span>
-                      <strong>{diffusionModalMandat.statut_annonce ?? '-'}</strong>
+            <section className="modal-panel diffusion-modal-panel diffusion-modal-v3" onClick={(event) => event.stopPropagation()}>
+              <button className="dv3-close" type="button" aria-label="Fermer la console" onClick={closeDiffusionModal}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              </button>
+              <div className="dv3-grid">
+                <aside className="dv3-stage">
+                  <div className="dv3-stage-head">
+                    <p className="dv3-eyebrow"><span className="dv3-eyebrow-dot" aria-hidden="true" />Diffusion multi‑portails</p>
+                    <h3 className="dv3-title">Console passerelles</h3>
+                    <p className="dv3-subline">{diffusionModalMandat.numero_dossier ?? '-'} · {diffusionModalMandat.numero_mandat ?? '-'} · {commercialDisplay(diffusionModalMandat)}</p>
+                    <div className="dv3-statuspill"><StatusPill value={diffusionModalMandat.statut_annonce} /></div>
+                  </div>
+                  <div className="dv3-illus" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_STAGE }} />
+                  <div className="dv3-metrics">
+                    <article className="dv3-metric">
+                      <span className="dv3-metric-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.hektor }} />
+                      <span className="dv3-metric-k">Statut Hektor</span>
+                      <strong className="dv3-metric-v">{diffusionModalMandat.statut_annonce ?? '-'}</strong>
                     </article>
-                    <article className={`diffusion-state-item diffusion-state-diffusable ${diffusionModalMandat.diffusable ? 'is-ok' : ''}`}>
-                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.diffusable }} />
-                      <span>Diffusable</span>
-                      <strong>{diffusableLabel(diffusionModalMandat.diffusable)}</strong>
+                    <article className={`dv3-metric ${diffusionModalMandat.diffusable ? 'is-ok' : ''}`}>
+                      <span className="dv3-metric-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.diffusable }} />
+                      <span className="dv3-metric-k">Diffusable</span>
+                      <strong className="dv3-metric-v">{diffusableLabel(diffusionModalMandat.diffusable)}</strong>
                     </article>
-                    <article className="diffusion-state-item diffusion-state-portals">
-                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.portals }} />
-                      <span>Passerelles actives</span>
-                      <strong>{String(diffusionEnabledCount)}</strong>
-                    </article>
-                    <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-save">
-                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.save }} />
-                      <span>Dernier enregistrement</span>
-                      <strong>{diffusionTargetsSavedAt ? formatDate(diffusionTargetsSavedAt) : '-'}</strong>
+                    <article className="dv3-metric dv3-metric-hero">
+                      <span className="dv3-metric-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.portals }} />
+                      <span className="dv3-metric-k">Passerelles actives</span>
+                      <strong className="dv3-metric-v">{String(diffusionEnabledCount)}</strong>
                     </article>
                   </div>
-                  {diffusionHasUnsavedChanges ? (
-                    <div className="detail-sync-alert is-pending">Des modifications sont en attente d'enregistrement.</div>
-                  ) : null}
-                  {diffusionApplyResult ? (
-                    <div className="diffusion-result-note">
-                      <strong>{diffusionApplyResult.dry_run ? 'Simulation Hektor' : 'Application Hektor'}</strong>
-                      <span>Ajouts : {diffusionApplyResult.to_add_count} · Retraits : {diffusionApplyResult.to_remove_count}</span>
-                      <span>Succes : {diffusionApplyResult.applied.length} · Erreurs : {diffusionApplyResult.failed.length}</span>
+                  <p className="dv3-stage-foot">
+                    <span className="dv3-metric-ic dv3-foot-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.save }} />
+                    Dernier enregistrement · <strong>{diffusionTargetsSavedAt ? formatDate(diffusionTargetsSavedAt) : '—'}</strong>
+                  </p>
+                </aside>
+                <div className="dv3-work">
+                  <div className="dv3-work-head">
+                    <div>
+                      <strong className="dv3-work-title">Sélection des portails</strong>
+                      <span className="dv3-work-note">Active uniquement les portails à diffuser. La console enverra les ajouts et retraits correspondants sur Hektor.</span>
                     </div>
-                  ) : null}
-                </article>
-                <article className="detail-card diffusion-portals-panel">
-                  <span className="detail-label">Passerelles</span>
-                  <strong className="diffusion-card-title">Selection des portails</strong>
-                  <span className="panel-note">Coche uniquement les portails a laisser actifs. La console enverra les ajouts et retraits correspondants sur Hektor.</span>
-                  {diffusionTargetsLoading ? <p className="empty-state">Chargement des cibles en cours...</p> : null}
-                  {diffusionPortalRows.length > 0 ? (
-                    <div className="diffusion-portal-list">
-                      {diffusionPortalRows.map((portal) => {
-                        const targetEnabled = diffusionDraftTargets[portal.portalKey] ?? portal.observedEnabled
-                        const isDirty = targetEnabled !== portal.observedEnabled
-                        const badge = diffusionPortalBadge(portal.portalKey)
-                        return (
-                          <label key={portal.portalKey} className={`diffusion-portal-row ${isDirty ? 'is-dirty' : ''} ${targetEnabled ? 'is-on' : 'is-off'}`}>
-                            <span className="dv2-portal-av" aria-hidden="true" style={{ ['--pv']: badge.color } as CSSProperties}>{badge.abbr}</span>
-                            <div className="diffusion-portal-meta">
-                              <strong>{portal.portalKey}</strong>
-                              <small>{portal.details[0] ?? '-'}</small>
-                              {isDirty ? <div className="detail-sync-alert is-waiting">En attente de mise a jour Hektor... La modification a bien ete envoyee.</div> : null}
-                            </div>
-                            <div className="diffusion-portal-toggle">
-                              <span>{targetEnabled ? 'Activée' : 'Inactive'}</span>
+                    {diffusionPortalRows.length > 0 ? (
+                      <span className="dv3-count-chip">{diffusionEnabledCount}/{diffusionPortalRows.length}</span>
+                    ) : null}
+                  </div>
+                  <div className="dv3-portal-scroll">
+                    {diffusionTargetsLoading ? <p className="dv3-empty">Chargement des cibles en cours…</p> : null}
+                    {diffusionPortalRows.length > 0 ? (
+                      <div className="dv3-portal-list">
+                        {diffusionPortalRows.map((portal) => {
+                          const targetEnabled = diffusionDraftTargets[portal.portalKey] ?? portal.observedEnabled
+                          const isDirty = targetEnabled !== portal.observedEnabled
+                          const badge = diffusionPortalBadge(portal.portalKey)
+                          return (
+                            <label key={portal.portalKey} className={`dv3-portal ${isDirty ? 'is-dirty' : ''} ${targetEnabled ? 'is-on' : 'is-off'}`}>
+                              <span className="dv3-portal-av" aria-hidden="true" style={{ ['--pv']: badge.color } as CSSProperties}>{badge.abbr}</span>
+                              <div className="dv3-portal-meta">
+                                <strong>{portal.portalKey}</strong>
+                                <small>{portal.details[0] ?? '—'}</small>
+                                {isDirty ? <span className="dv3-portal-dirty">Envoyé à Hektor · en attente de confirmation</span> : null}
+                              </div>
+                              <span className="dv3-portal-state">{targetEnabled ? 'Activée' : 'Inactive'}</span>
                               <input
                                 type="checkbox"
+                                className="dv3-switch"
                                 checked={targetEnabled}
                                 onChange={(event) => setDiffusionDraftTargets((current) => ({ ...current, [portal.portalKey]: event.target.checked }))}
                               />
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <p className="empty-state">
-                      {isValidationApproved(diffusionModalMandat.validation_diffusion_state)
-                        ? "Aucune passerelle n'est configuree pour ce mandat. Le mapping agence n'a pas ete trouve."
-                        : "Aucune passerelle configuree pour ce mandat. L'app peut tenter Diffuse puis les portails meme si Hektor indique validation = non."}
-                    </p>
-                  )}
-                </article>
-                <article className="detail-card diffusion-feedback-panel">
-                  <span className="detail-label">Retour d'application</span>
-                  <strong className="diffusion-card-title">Execution du lot</strong>
-                  {diffusionApplyResult ? (
-                    <>
-                      <strong>{diffusionApplyResult.dry_run ? 'Simulation executee' : 'Application executee'}</strong>
-                      <span>{diffusionApplyResult.waiting_on_hektor ? (diffusionApplyResult.waiting_message ?? 'En attente de mise a jour Hektor.') : 'La console a tente diffusable puis applique les passerelles sur Hektor.'}</span>
-                      <span>Ajouts vises : {diffusionApplyResult.to_add_count} - Retraits vises : {diffusionApplyResult.to_remove_count}</span>
-                      <span>Actions reussies : {diffusionApplyResult.applied.length} - Actions en attente : {diffusionApplyResult.pending?.length ?? 0} - Actions en erreur : {diffusionApplyResult.failed.length}</span>
-                    </>
-                  ) : (
-                    <span>Aucune execution Hektor sur ce lot depuis l'ouverture de la console.</span>
-                  )}
-                </article>
-              </section>
-              <div className="modal-actions">
-                <button className="ghost-button button-subtle" type="button" onClick={closeDiffusionModal}>Fermer</button>
-                <button
-                  className="ghost-button button-accent dv2-cta"
-                  type="button"
-                  onClick={handleCommitDiffusionTargets}
-                  disabled={diffusionApplyPending || diffusionTargetsSaving || diffusionTargetsLoading || !profile}
-                >
-                  <span className="dv2-cta-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_CTA_ICON }} />
-                  <span>{diffusionApplyPending || diffusionTargetsSaving ? 'Activation...' : 'Activer la diffusion et appliquer'}</span>
-                </button>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    ) : !diffusionTargetsLoading ? (
+                      <div className="dv3-empty">
+                        {isValidationApproved(diffusionModalMandat.validation_diffusion_state)
+                          ? "Aucune passerelle n'est configurée pour ce mandat. Le mapping agence n'a pas été trouvé."
+                          : "Aucune passerelle configurée pour ce mandat. L'app peut tenter Diffuse puis les portails même si Hektor indique validation = non."}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className={`dv3-feedback ${diffusionApplyResult ? (diffusionApplyResult.failed.length ? 'is-error' : 'is-done') : 'is-idle'}`}>
+                    {diffusionApplyResult ? (
+                      <>
+                        <strong>{diffusionApplyResult.dry_run ? 'Simulation exécutée' : 'Application exécutée'}</strong>
+                        <span>{diffusionApplyResult.waiting_on_hektor ? (diffusionApplyResult.waiting_message ?? 'En attente de mise à jour Hektor.') : 'La console a tenté diffusable puis appliqué les passerelles sur Hektor.'}</span>
+                        <span className="dv3-feedback-figs">Ajouts {diffusionApplyResult.to_add_count} · Retraits {diffusionApplyResult.to_remove_count} · Réussies {diffusionApplyResult.applied.length} · En attente {diffusionApplyResult.pending?.length ?? 0} · Erreurs {diffusionApplyResult.failed.length}</span>
+                      </>
+                    ) : diffusionHasUnsavedChanges ? (
+                      <span>Des modifications sont en attente — clique sur « Activer la diffusion » pour les envoyer à Hektor.</span>
+                    ) : (
+                      <span>Aucune exécution Hektor sur ce lot depuis l'ouverture de la console.</span>
+                    )}
+                  </div>
+                  <div className="dv3-actions">
+                    <button className="dv3-btn-ghost" type="button" onClick={closeDiffusionModal}>Fermer</button>
+                    <button
+                      className="dv3-cta"
+                      type="button"
+                      onClick={handleCommitDiffusionTargets}
+                      disabled={diffusionApplyPending || diffusionTargetsSaving || diffusionTargetsLoading || !profile}
+                    >
+                      <span className="dv3-cta-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_CTA_ICON }} />
+                      <span>{diffusionApplyPending || diffusionTargetsSaving ? 'Activation…' : 'Activer la diffusion et appliquer'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
           </div>
