@@ -248,8 +248,10 @@
    le 2-colonnes tient tant que la colonne de travail fait ~430px, sinon ça passe en 1 colonne
    (l'illustration reste toujours affichée, empilée). Corrige le « pas sur 2 colonnes » en vue étroite/zoom. */
 .fa-ck-mandat-v3 .mv3-gen2 { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; }
-.fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 1 175px; min-width: 130px; display: flex; justify-content: center; }
-.fa-ck-mandat-v3 .mv3-gen2-illus svg { width: 100%; max-width: 200px; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
+/* Colonne illustration : 38% comme la maquette (.gen2-illus flex:0 0 38%), pas une
+   largeur fixe étroite — sinon le corps s'étire et l'illustration paraît minuscule. */
+.fa-ck-mandat-v3 .mv3-gen2-illus { flex: 0 0 38%; min-width: 150px; display: flex; justify-content: center; }
+.fa-ck-mandat-v3 .mv3-gen2-illus svg { width: 100%; max-width: 220px; height: auto; filter: drop-shadow(0 10px 18px rgba(60, 40, 30, .14)); }
 .fa-ck-mandat-v3 .mv3-gen2-body { flex: 1 1 240px; min-width: 0; }
 /* Ligne « prix actuel » (état avenant signé). */
 .fa-ck-mandat-v3 .mv3-avprice { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 11px 0 2px; }
