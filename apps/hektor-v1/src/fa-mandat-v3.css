@@ -219,6 +219,16 @@
 /* ---- Conteneur pour les composants réels embarqués (générer / éditer / signature) ---- */
 .fa-ck-mandat-v3 .mv3-embed { margin-top: 4px; }
 
+/* Ligne de prérequis (maquette) : mandant(s) lié(s) · négociateur présent. */
+.fa-ck-mandat-v3 .mv3-okline { display: flex; flex-wrap: wrap; gap: 7px 15px; margin-top: 11px; }
+.fa-ck-mandat-v3 .mv3-okmini { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--mv3-green); }
+.fa-ck-mandat-v3 .mv3-okmini svg { width: 15px; height: 15px; }
+.fa-ck-mandat-v3 .mv3-okmini.ko { color: var(--mv3-amber); }
+/* Phrase de bas de bloc (maquette) : « → Dès que… éditer votre mandat ». */
+.fa-ck-mandat-v3 .mv3-foot { display: flex; align-items: center; gap: 6px; margin: 11px 0 0; font-size: 11px; color: var(--mv3-soft); }
+.fa-ck-mandat-v3 .mv3-foot svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.fa-ck-mandat-v3 .mv3-foot b { color: var(--mv3-ink); margin: 0 3px; }
+
 /* ============================================================================
    Lot 8 — Fidélité maquette : illustrations SVG + layout 2 colonnes + CTA dégradés.
    Décor AUTOUR des vrais composants (qui restent inchangés). Les transforms ici

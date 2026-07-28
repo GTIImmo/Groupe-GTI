@@ -22221,6 +22221,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     }
     // Illustration SVG (Lot 8) : injectée verbatim depuis MV3_ILLUS (décor, aucune donnée).
     const mv3IllusEl = (kind: string) => <div className="mv3-gen2-illus" dangerouslySetInnerHTML={{ __html: MV3_ILLUS[kind] ?? '' }} />
+    // Ligne de prérequis (maquette) : mandant(s) lié(s) + négociateur — données réelles.
+    const mv3MandantCount = props.contacts.length
+    const mv3NegoOk = hasHektorNegotiator(dossier)
+    const mv3OkChk = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M20 6 9 17l-5-5" /></svg>
+    const mv3KoChk = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="9" /><path d="M12 8v4.5M12 16h.01" /></svg>
+    const mv3Prereqs = (
+      <div className="mv3-okline">
+        <span className={`mv3-okmini ${mv3MandantCount ? '' : 'ko'}`}>{mv3MandantCount ? mv3OkChk : mv3KoChk}{mv3MandantCount ? `${mv3MandantCount} mandant${mv3MandantCount > 1 ? 's' : ''} lié${mv3MandantCount > 1 ? 's' : ''}` : 'Aucun mandant lié'}</span>
+        <span className={`mv3-okmini ${mv3NegoOk ? '' : 'ko'}`}>{mv3NegoOk ? mv3OkChk : mv3KoChk}{mv3NegoOk ? 'Négociateur présent' : 'Négociateur à assigner'}</span>
+      </div>
+    )
     const mv3IllusCenter = (kind: string, cap: React.ReactNode) => (
       <div className="mv3-illus"><div style={{ display: 'flex', justifyContent: 'center', width: '100%' }} dangerouslySetInnerHTML={{ __html: MV3_ILLUS[kind] ?? '' }} /><p className="mv3-illus-cap">{cap}</p></div>
     )
@@ -22465,11 +22476,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="mv3-gen2-body">
                 <p className="mv3-gen2-cap"><b>Étape 1.</b> Réservez le <b>numéro officiel</b> de votre mandat — c'est votre point de départ.</p>
                 <div className="mv3-warn"><span className="em">⚠️</span><span><b>Action officielle.</b> À ne faire qu'une fois votre mandant confirmé — générer le numéro <b>crée une ligne définitive au registre des mandats</b>.</span></div>
+                {mv3Prereqs}
                 <div className="mv3-embed">
                   {isLightweightDetail
                     ? <ReadOnlyDetailNotice label="Le numero de mandat n'est pas modifiable depuis une fiche d'index leger." />
                     : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
                 </div>
+                <p className="mv3-foot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M5 12h14M13 5l7 7-7 7" /></svg>Dès que votre numéro sera attribué, vous pourrez <b>éditer votre mandat</b>.</p>
               </div>
             </section>
           </>
