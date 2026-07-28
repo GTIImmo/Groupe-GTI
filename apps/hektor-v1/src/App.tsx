@@ -5764,6 +5764,27 @@ function requestModalIllusView(effectiveType: string, status: string | null | un
   return { typeKey, stateKey, illusKey, acc }
 }
 
+// ── Console passerelles (modale diffusion) : pictos + identité portail ─────────
+// Hero « diffusion » (ondes radar animées en CSS) + pictos ligne des 4 tuiles d'état.
+const DIFFUSION_HERO = `<svg viewBox="0 0 44 44" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path class="dv2-wave dv2-wave-1" d="M14.6 15.2a10.4 10.4 0 0 1 14.8 0"/><path class="dv2-wave dv2-wave-2" d="M10.8 11.4a15.8 15.8 0 0 1 22.4 0"/></g><circle cx="22" cy="29.5" r="4.6" fill="#fff"/></svg>`
+const DIFFUSION_ICONS: Record<string, string> = {
+  hektor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.4 12 4l9 7.4"/><path d="M5 9.8V20h14V9.8"/><path d="M9.5 20v-6h5v6"/></svg>`,
+  diffusable: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.2-2.7 8-7 10-4.3-2-7-5.8-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>`,
+  portals: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.3"/><path d="M8.6 8.6a4.8 4.8 0 0 0 0 6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8"/><path d="M6.1 6.1a8.3 8.3 0 0 0 0 11.8M17.9 6.1a8.3 8.3 0 0 1 0 11.8"/></svg>`,
+  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.2v5l3.2 2"/></svg>`,
+}
+const DIFFUSION_CTA_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/><path d="M20 5v14"/></svg>`
+// Identité visuelle d'un portail : initiales + couleur déterministe (charte app).
+const DIFFUSION_PORTAL_TINTS = ['#c5005f', '#0f6874', '#a5793d', '#3a4a95', '#1f7a4a', '#b06a05', '#7a3aa0', '#c26a17']
+function diffusionPortalBadge(name: string) {
+  const clean = (name ?? '').trim()
+  const letters = clean.replace(/[^a-zA-Z0-9]/g, '')
+  const abbr = (letters.slice(0, 2) || 'PT').toUpperCase()
+  let h = 0
+  for (let i = 0; i < clean.length; i += 1) h = (h * 31 + clean.charCodeAt(i)) >>> 0
+  return { abbr, color: DIFFUSION_PORTAL_TINTS[h % DIFFUSION_PORTAL_TINTS.length] }
+}
+
 function refusalReasonLabel(value: string | null | undefined) {
   const normalized = (value ?? '').trim()
   if (!normalized) return ''
@@ -16940,9 +16961,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : null}
         {diffusionModalOpen && diffusionModalMandat ? (
           <div className="modal-overlay" onClick={closeDiffusionModal}>
-            <section className="modal-panel modal-panel-wide diffusion-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <section className="modal-panel modal-panel-wide diffusion-modal-panel diffusion-modal-v2" onClick={(event) => event.stopPropagation()}>
               <div className="panel-head diffusion-modal-head">
-                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
+                <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_HERO }} />
                 <div className="diffusion-modal-title">
                   <p className="eyebrow">Diffusion</p>
                   <h3>Console passerelles</h3>
@@ -16962,18 +16983,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <p className="diffusion-card-copy">Lis ici l'etat global du bien avant application, puis verifie le retour du lot juste apres.</p>
                   <div className="diffusion-state-grid diffusion-state-grid-compact">
                     <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-status">
+                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.hektor }} />
                       <span>Statut Hektor</span>
                       <strong>{diffusionModalMandat.statut_annonce ?? '-'}</strong>
                     </article>
-                    <article className="diffusion-state-item diffusion-state-diffusable">
+                    <article className={`diffusion-state-item diffusion-state-diffusable ${diffusionModalMandat.diffusable ? 'is-ok' : ''}`}>
+                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.diffusable }} />
                       <span>Diffusable</span>
                       <strong>{diffusableLabel(diffusionModalMandat.diffusable)}</strong>
                     </article>
                     <article className="diffusion-state-item diffusion-state-portals">
+                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.portals }} />
                       <span>Passerelles actives</span>
                       <strong>{String(diffusionEnabledCount)}</strong>
                     </article>
                     <article className="diffusion-state-item diffusion-state-item-wide diffusion-state-save">
+                      <span className="dv2-tile-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_ICONS.save }} />
                       <span>Dernier enregistrement</span>
                       <strong>{diffusionTargetsSavedAt ? formatDate(diffusionTargetsSavedAt) : '-'}</strong>
                     </article>
@@ -16999,15 +17024,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {diffusionPortalRows.map((portal) => {
                         const targetEnabled = diffusionDraftTargets[portal.portalKey] ?? portal.observedEnabled
                         const isDirty = targetEnabled !== portal.observedEnabled
+                        const badge = diffusionPortalBadge(portal.portalKey)
                         return (
-                          <label key={portal.portalKey} className={`diffusion-portal-row ${isDirty ? 'is-dirty' : ''}`}>
+                          <label key={portal.portalKey} className={`diffusion-portal-row ${isDirty ? 'is-dirty' : ''} ${targetEnabled ? 'is-on' : 'is-off'}`}>
+                            <span className="dv2-portal-av" aria-hidden="true" style={{ ['--pv']: badge.color } as CSSProperties}>{badge.abbr}</span>
                             <div className="diffusion-portal-meta">
                               <strong>{portal.portalKey}</strong>
                               <small>{portal.details[0] ?? '-'}</small>
                               {isDirty ? <div className="detail-sync-alert is-waiting">En attente de mise a jour Hektor... La modification a bien ete envoyee.</div> : null}
                             </div>
                             <div className="diffusion-portal-toggle">
-                              <span>{targetEnabled ? 'Activee' : 'Inactive'}</span>
+                              <span>{targetEnabled ? 'Activée' : 'Inactive'}</span>
                               <input
                                 type="checkbox"
                                 checked={targetEnabled}
@@ -17044,12 +17071,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="modal-actions">
                 <button className="ghost-button button-subtle" type="button" onClick={closeDiffusionModal}>Fermer</button>
                 <button
-                  className="ghost-button button-accent"
+                  className="ghost-button button-accent dv2-cta"
                   type="button"
                   onClick={handleCommitDiffusionTargets}
                   disabled={diffusionApplyPending || diffusionTargetsSaving || diffusionTargetsLoading || !profile}
                 >
-                  {diffusionApplyPending || diffusionTargetsSaving ? 'Activation...' : 'Activer la diffusion et appliquer'}
+                  <span className="dv2-cta-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: DIFFUSION_CTA_ICON }} />
+                  <span>{diffusionApplyPending || diffusionTargetsSaving ? 'Activation...' : 'Activer la diffusion et appliquer'}</span>
                 </button>
               </div>
             </section>
