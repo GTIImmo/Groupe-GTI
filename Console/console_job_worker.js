@@ -2209,14 +2209,33 @@ async function geocodeAddressBAN(query) {
   }
 }
 
-async function updateHektorLocaliteByFeature(annonceId, feature) {
+// ⚠️ `id` = l'id de la LOCALITÉ privée (attribut <hektor id-localite> du form secteur), PAS l'id de
+// l'annonce. La mutation met CET enregistrement localité à jour EN PLACE (rue + commune + coords) → c'est
+// ça qui change l'adresse privée affichée (prouvé sur 62774 : id-localite=909764 -> Clermont-Ferrand).
+// Passer l'id annonce = no-op silencieux (l'ancien bug). Récupérer l'id via fetchHektorSecteurLocaliteId.
+async function updateHektorLocaliteByFeature(localiteId, feature) {
   const payload = await hektorGraphQLOperation({
     operationName: "updateLocaliteByFeature",
     query: HEKTOR_UPDATE_LOCALITE_MUTATION,
-    variables: { id: String(annonceId), feature },
+    variables: { id: String(localiteId), feature },
     endpoint: "/ws/GraphQL_GraphQL",
   });
   return payload && payload.data ? payload.data.updateLocaliteByFeature : null;
+}
+
+// L'id de la localité privée d'une annonce vit dans le HTML du formulaire secteur, porté par l'élément
+// custom `<hektor id-localite="909764" id-annonce="62774">` (point de montage du widget adresse BAN).
+async function fetchHektorSecteurLocaliteId(annonceId) {
+  const id = encodeURIComponent(String(annonceId));
+  try {
+    const html = await hektorFetch(`${XMLRPC_URL}?mode=ihmChargeGroupe_Secteur&idAnnonce=${id}&group=secteur&consultMode=editer&ajax=ajax`, {
+      headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}` },
+    });
+    const m = html.text.match(/id-localite=["']([0-9]+)["']/i);
+    return m ? m[1] : null;
+  } catch (_) {
+    return null; // best-effort : sans id-localite, on saute le compose (les autres champs partent quand même)
+  }
 }
 
 async function fetchLatestHektorProperties(page = 1, archived = false) {
@@ -8116,10 +8135,14 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   const secteur = {};
   if (cleanFields.postal_code != null) secteur.postal_code = fieldSpec(cleanFields.postal_code, ["codepublique"]);
   if (cleanFields.city != null) secteur.city = fieldSpec(cleanFields.city, ["villepublique"]);
-  // Rue PRIVÉE (réelle) -> champ Hektor `adresse` (pilote la géoloc). Complément -> `ADRESSE_COMPL`.
-  // C'était la confusion historique : la rue partait dans le complément.
-  if (cleanFields.address != null) secteur.address = fieldSpec(cleanFields.address, ["adresse"]);
-  if (cleanFields.address_complement != null) secteur.address_complement = fieldSpec(cleanFields.address_complement, ["ADRESSE_COMPL"]);
+  // ADRESSE_COMPL = COMPLÉMENT d'adresse UNIQUEMENT (ex. « Bâtiment B, 3e étage ») — JAMAIS la rue.
+  // Preuve (SQLite localite_json.privee.adresse de 62774 = "22 Rue Jean Jaurès 22 rue jean jaures") :
+  // Hektor COMPOSE l'adresse privée affichée = <rue de la localité privée (idville/BAN)> + <ADRESSE_COMPL>.
+  // Écrire la rue dans ADRESSE_COMPL la DOUBLONNE avec la rue de la localité. La rue privée pilote donc la
+  // LOCALITÉ (idville), via le compose BAN plus bas — pas ce champ.
+  if (cleanFields.address_complement != null && String(cleanFields.address_complement).trim()) {
+    secteur.address_complement = fieldSpec(String(cleanFields.address_complement).trim(), ["ADRESSE_COMPL"]);
+  }
   if (cleanFields.building != null) secteur.building = fieldSpec(cleanFields.building, ["immeuble"]);
   if (cleanFields.transport != null) secteur.transport = fieldSpec(cleanFields.transport, ["TRANSPORT"]);
   if (cleanFields.proximity != null) secteur.proximity = fieldSpec(cleanFields.proximity, ["PROXIMITE"]);
@@ -8131,14 +8154,46 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
     if (locality && locality.idCode) secteur.id_codepublique = fieldSpec(locality.idCode, ["idCodepublique"]);
     if (locality && locality.idVille) secteur.id_villepublique = fieldSpec(locality.idVille, ["idVillepublique"]);
   }
-  // Localité PRIVÉE (commune réelle) -> idLocalitePrivee : c'est elle qui géolocalise le bien côté
-  // Hektor (carte + parcelle). On résout la commune privée en id Hektor et, si l'app n'a pas déjà
-  // géocodé, on prend les coords de la localité comme repli (mieux que rien).
-  if (cleanFields.private_postal != null || cleanFields.private_city != null) {
-    const priv = await resolveHektorPublicLocality(cleanFields.private_postal, cleanFields.private_city);
-    if (priv && priv.idVille) secteur.id_localite_privee = fieldSpec(priv.idVille, ["idLocalitePrivee"]);
-    if (priv && priv.latitude && cleanFields.latitude == null && secteur.latitude == null) secteur.latitude = fieldSpec(priv.latitude, ["latitude"]);
-    if (priv && priv.longitude && cleanFields.longitude == null && secteur.longitude == null) secteur.longitude = fieldSpec(priv.longitude, ["longitude"]);
+  // Géoloc/secteur privé : la carte + la parcelle Hektor suivent la localité PRIVÉE (`idville`), posée
+  // par la BAN — PAS une résolution de commune publique. Recette capturée (2026-07-29) : géocoder
+  // l'adresse privée via Géoplateforme → mutation updateLocaliteByFeature (compose) qui renvoie
+  // ComposedLocalite.id = idville + lat/lng → on grave idville/latitude/longitude dans le MEF secteur.
+  // Best-effort : on n'appelle le compose que si l'adresse change, et jamais on ne bloque le reste.
+  const addressChanged = cleanFields.address != null || cleanFields.private_city != null || cleanFields.private_postal != null;
+  if (addressChanged) {
+    try {
+      const privAddrParts = [
+        cleanFields.address != null ? String(cleanFields.address) : null,
+        cleanFields.private_postal != null ? String(cleanFields.private_postal) : (cleanFields.postal_code != null ? String(cleanFields.postal_code) : null),
+        cleanFields.private_city != null ? String(cleanFields.private_city) : (cleanFields.city != null ? String(cleanFields.city) : null),
+      ].filter((part) => part && part.trim());
+      const privAddr = privAddrParts.join(" ").trim();
+      const feature = privAddr ? await geocodeAddressBAN(privAddr) : null;
+      if (feature) {
+        // Récupérer l'id de la LOCALITÉ privée (pas l'annonce) puis la mettre à jour EN PLACE via la BAN :
+        // c'est ce qui change réellement la rue + commune + coords privées affichées. Le compose seul suffit
+        // pour l'adresse privée (le MEF plus bas ne fait que ADRESSE_COMPL + localité publique).
+        const idLocalite = await fetchHektorSecteurLocaliteId(annonceId);
+        if (idLocalite) {
+          const composed = await updateHektorLocaliteByFeature(idLocalite, feature);
+          await logJob(job.id, "hektor_annonce_update", "running", "Localite privee mise a jour (BAN)", {
+            hektor_annonce_id: String(annonceId),
+            id_localite: String(idLocalite),
+            composed_city: composed && composed.city ? composed.city : null,
+            composed_address: composed && composed.address ? composed.address : null,
+          });
+        } else {
+          await logJob(job.id, "hektor_annonce_update", "running", "id-localite introuvable, compose adresse privee saute", {
+            hektor_annonce_id: String(annonceId),
+          });
+        }
+      }
+    } catch (error) {
+      await logJob(job.id, "hektor_annonce_update", "running", "Compose localite privee (BAN) ignoree apres erreur", {
+        hektor_annonce_id: String(annonceId),
+        error: error && error.message ? error.message : String(error),
+      });
+    }
   }
   await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe_Secteur", secteur, options);
 
