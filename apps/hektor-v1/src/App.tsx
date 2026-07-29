@@ -3587,9 +3587,10 @@ function resolveDisplayAddress(
     const v = ov?.[key]
     return v != null && typeof v !== 'object' && String(v).trim() ? String(v).trim() : ''
   }
-  const rue = fromOverlay('ADRESSE_COMPL') || firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail)
-  const cp = fromOverlay('codepublique') || firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal, fallbackCp)
-  const ville = fromOverlay('villepublique') || firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail, fallbackVille)
+  // Adresse PRIVÉE (réelle) en priorité (nouvelles clés) puis publique puis brut.
+  const rue = fromOverlay('adresse') || fromOverlay('ADRESSE_COMPL') || firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail)
+  const cp = fromOverlay('codeprive') || fromOverlay('codepublique') || firstNonEmpty(detail.code_postal_prive_detail, detail.code_postal_public_listing, detail.code_postal, fallbackCp)
+  const ville = fromOverlay('villeprivee') || fromOverlay('villepublique') || firstNonEmpty(detail.ville_privee_detail, detail.ville_publique_listing, fallbackVille)
   return [rue, cp, ville].filter(Boolean).join(', ')
 }
 
@@ -18676,7 +18677,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onHektorActionJobCreated={rememberHektorActionJob}
           />
         ) : screen === 'annonces' && detailOpen ? (
-          <AnnonceScreen selectedDossier={selectedDossier} detail={detail} address={address} images={images} texts={texts} notes={notes} contacts={contacts} mandats={mandatDetails} linkedWorkItems={linkedWorkItems} requestHistory={buildRequestHistory(selectedDossierRequest, selectedDossierRequestEvents)} requestMessages={selectedDossierRequestEvents
+          <AnnonceScreen selectedDossier={selectedDossier} detail={detail} address={address} onAfterOptimisticSave={() => { if (selectedDossierId) loadDossierDetail(selectedDossierId).then((d) => { if (d) setSelectedDossier(d) }).catch(() => { /* best effort */ }) }} images={images} texts={texts} notes={notes} contacts={contacts} mandats={mandatDetails} linkedWorkItems={linkedWorkItems} requestHistory={buildRequestHistory(selectedDossierRequest, selectedDossierRequestEvents)} requestMessages={selectedDossierRequestEvents
             .filter((event) => parseJson<{ message?: string | null }>(event.payload_json, {}).message)
             .slice()
             .sort((a, b) => new Date(b.event_at).getTime() - new Date(a.event_at).getTime())
@@ -18864,6 +18865,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 selectedDossier={selectedDossier}
                 detail={detail}
                 address={address}
+                onAfterOptimisticSave={() => { if (selectedDossierId) loadDossierDetail(selectedDossierId).then((d) => { if (d) setSelectedDossier(d) }).catch(() => { /* best effort */ }) }}
                 images={images}
                 texts={texts}
                 notes={notes}
@@ -23012,6 +23014,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       // d'origine (deux appels séparés se conflictualisaient via date_maj).
       await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields, compositionPieces: ckChangedPieces() })
       setSaveMsg(geoRecalee ? 'Envoyé — adresse + géoloc recalées (~10 min)' : 'Envoyé — vague vers Hektor (~10 min)')
+      // Le calque optimiste est committé : on demande au parent de recharger le détail pour que la
+      // colonne de gauche (et tout le reste) reflète la modif immédiatement, sans refresh manuel.
+      props.onAfterOptimisticSave?.()
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Échec de l'enregistrement")
     } finally {
@@ -24375,6 +24380,9 @@ function DossierDetailLayoutBase(props: {
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
   address: string
+  // Appelé après un enregistrement en place (édition « Le Bien ») : le parent recharge le détail
+  // (calque optimiste committé) pour que la colonne de gauche reflète la modif sans refresh manuel.
+  onAfterOptimisticSave?: () => void
   onOpenRapprochement?: (dossier: Dossier) => void
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
@@ -28711,6 +28719,7 @@ function AnnonceScreen(props: {
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
   address: string
+  onAfterOptimisticSave?: () => void
   images: Array<{ url: string; legend: string }>
   texts: Array<{ id: string; title: string; html: string }>
   notes: Array<{ id: string; title: string; date: string; content: string }>
