@@ -1335,7 +1335,11 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
     fields: [
       wf('codepublique', 'Code postal public'),
       wf('villepublique', 'Ville publique'),
-      wf('ADRESSE_COMPL', 'Adresse / complement'),
+      // Adresse PRIVÉE (réelle) : rue + commune + CP privés — pilotent la géoloc.
+      wf('adresse', 'Adresse privée (rue)'),
+      wf('villeprivee', 'Commune privée'),
+      wf('codeprive', 'Code postal privé'),
+      wf('ADRESSE_COMPL', "Complément d'adresse"),
       wf('immeuble', 'Immeuble'),
       wf('TRANSPORT', 'Transport'),
       wf('PROXIMITE', 'Proximite'),
@@ -2529,7 +2533,13 @@ function wizardDetailValue(
     NB_CHAMBRES: detail.nb_chambres,
     codepublique: firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_detail, detail.code_postal),
     villepublique: firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail),
-    ADRESSE_COMPL: firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail),
+    // Adresse PRIVÉE (réelle) : rue + commune + CP. C'est elle qui géolocalise le bien.
+    // La rue était à tort lue dans ADRESSE_COMPL (le complément) → séparé ici.
+    adresse: firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail),
+    villeprivee: firstNonEmpty(detail.ville_privee_detail),
+    codeprive: firstNonEmpty(detail.code_postal_prive_detail, detail.code_postal),
+    // ADRESSE_COMPL redevient le vrai complément (lu en brut, pas la rue) → non listé ici,
+    // il tombe sur rawWizardDetailField(detail, 'ADRESSE_COMPL').
     latitude: detail.latitude_detail,
     longitude: detail.longitude_detail,
     NO_DOSSIER: firstNonEmpty(dossier.numero_dossier, rawDetailProp(detail, 'mandat_mandatdispo', 'NO_DOSSIER')),
@@ -21557,7 +21567,7 @@ const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string
   // « Le Bien » (bloc « L'annonce »), Hektor n'ayant qu'une seule zone de texte : les
   // laisser aussi ici les afficherait deux fois. La section ne garde que ce qui lui est propre.
   { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
-  { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Code postal', 'codepublique'], ['Ville', 'villepublique'], ['Adresse / complément', 'ADRESSE_COMPL'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
+  { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Adresse privée (rue)', 'adresse'], ['Commune privée', 'villeprivee'], ['Code postal privé', 'codeprive'], ['Ville publique', 'villepublique'], ['Code postal public', 'codepublique'], ["Complément d'adresse", 'ADRESSE_COMPL'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
 ]
 // Champs en LECTURE SEULE dans l'édition en place : non écrits par le chemin optimiste.
 // Vérifié dans le worker (console_job_worker.js) : la quasi-totalité des champs de la fiche
@@ -21898,11 +21908,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // `edited` (clés Hektor ADRESSE_COMPL/villepublique/codepublique) → l'adresse s'affiche instantanément
   // à la saisie/enregistrement, puis retombe sur props.address dès que le détail est rechargé.
   const liveAddress = useMemo(() => {
-    const hasAddrEdit = ['ADRESSE_COMPL', 'villepublique', 'codepublique'].some((key) => key in edited)
+    const hasAddrEdit = ['adresse', 'villeprivee', 'codeprive', 'villepublique', 'codepublique'].some((key) => key in edited)
     if (!hasAddrEdit) return props.address
-    const rue = firstNonEmpty(edited['ADRESSE_COMPL'], props.detail.adresse_privee_listing, props.detail.adresse_detail)
-    const cp = firstNonEmpty(edited['codepublique'], props.detail.code_postal_public_listing, props.detail.code_postal_prive_detail, props.detail.code_postal, props.selectedDossier?.code_postal)
-    const ville = firstNonEmpty(edited['villepublique'], props.detail.ville_publique_listing, props.detail.ville_privee_detail, props.selectedDossier?.ville)
+    const rue = firstNonEmpty(edited['adresse'], props.detail.adresse_privee_listing, props.detail.adresse_detail)
+    const cp = firstNonEmpty(edited['codeprive'], edited['codepublique'], props.detail.code_postal_prive_detail, props.detail.code_postal_public_listing, props.detail.code_postal, props.selectedDossier?.code_postal)
+    const ville = firstNonEmpty(edited['villeprivee'], edited['villepublique'], props.detail.ville_privee_detail, props.detail.ville_publique_listing, props.selectedDossier?.ville)
     return [rue, cp, ville].filter(Boolean).join(', ') || props.address
   }, [edited, props.address, props.detail, props.selectedDossier?.code_postal, props.selectedDossier?.ville])
   // Coords pour la carte interactive du secteur (géoloc côté app). Lat/lon <= detail (json_map).
@@ -22984,12 +22994,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       // re-géocode la nouvelle adresse et on pousse latitude/longitude dans le MÊME calque optimiste
       // (json_map → latitude_detail/longitude_detail, écrits tout de suite ; le worker les pousse à
       // Hektor). On ne le fait pas si l'utilisateur a saisi lat/lon à la main.
-      const addrChanged = ['ADRESSE_COMPL', 'villepublique', 'codepublique'].some((key) => key in edited)
+      // La géoloc suit l'adresse PRIVÉE (réelle), pas le public (qui peut être flouté). On géocode
+      // dès qu'un champ privé change (rue / commune / CP privés).
+      const addrChanged = ['adresse', 'villeprivee', 'codeprive'].some((key) => key in edited)
       const latlonEditedManually = 'latitude' in edited || 'longitude' in edited
       if (addrChanged && !latlonEditedManually) {
-        const rue = firstNonEmpty(edited.ADRESSE_COMPL, props.detail.adresse_privee_listing, props.detail.adresse_detail)
-        const cp = firstNonEmpty(edited.codepublique, props.detail.code_postal_public_listing, props.detail.code_postal_prive_detail, props.detail.code_postal, dossier.code_postal)
-        const ville = firstNonEmpty(edited.villepublique, props.detail.ville_publique_listing, props.detail.ville_privee_detail, dossier.ville)
+        const rue = firstNonEmpty(edited.adresse, props.detail.adresse_privee_listing, props.detail.adresse_detail)
+        const cp = firstNonEmpty(edited.codeprive, props.detail.code_postal_prive_detail, props.detail.code_postal, dossier.code_postal)
+        const ville = firstNonEmpty(edited.villeprivee, props.detail.ville_privee_detail, dossier.ville)
         const geo = await geocodeAddress([rue, cp, ville].filter(Boolean).join(' '), cp)
         if (geo) {
           fields = { ...fields, latitude: String(geo.lat), longitude: String(geo.lon) }

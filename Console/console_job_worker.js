@@ -7916,9 +7916,15 @@ async function applyHektorCompositionPieces(job, annonceId, payload) {
 const HEKTOR_CLEANFIELD_TEXT_KEYS = [
   ["title", ["title", "titre"]],
   ["description", ["description", "corps"]],
-  ["address", ["address", "adresse", "ADRESSE_COMPL"]],
+  // Rue PRIVÉE (réelle) = champ Hektor `adresse` (pilote la géoloc). NE mélange PLUS ADRESSE_COMPL
+  // (qui est le complément) — c'était la confusion : la rue partait dans le complément.
+  ["address", ["address", "adresse"]],
+  ["address_complement", ["address_complement", "adresse_complement", "ADRESSE_COMPL"]],
   ["postal_code", ["postal_code", "postalCode", "code_postal", "codepublique"]],
   ["city", ["city", "ville", "villepublique"]],
+  // Localité PRIVÉE (commune réelle) → résolue en idLocalitePrivee côté push secteur.
+  ["private_city", ["private_city", "villeprivee", "ville_privee"]],
+  ["private_postal", ["private_postal", "codeprive", "code_prive", "codeprivee"]],
   ["building", ["building", "immeuble"]],
   ["transport", ["transport", "TRANSPORT"]],
   ["proximity", ["proximity", "proximite", "PROXIMITE"]],
@@ -8110,7 +8116,10 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   const secteur = {};
   if (cleanFields.postal_code != null) secteur.postal_code = fieldSpec(cleanFields.postal_code, ["codepublique"]);
   if (cleanFields.city != null) secteur.city = fieldSpec(cleanFields.city, ["villepublique"]);
-  if (cleanFields.address != null) secteur.address = fieldSpec(cleanFields.address, ["ADRESSE_COMPL"]);
+  // Rue PRIVÉE (réelle) -> champ Hektor `adresse` (pilote la géoloc). Complément -> `ADRESSE_COMPL`.
+  // C'était la confusion historique : la rue partait dans le complément.
+  if (cleanFields.address != null) secteur.address = fieldSpec(cleanFields.address, ["adresse"]);
+  if (cleanFields.address_complement != null) secteur.address_complement = fieldSpec(cleanFields.address_complement, ["ADRESSE_COMPL"]);
   if (cleanFields.building != null) secteur.building = fieldSpec(cleanFields.building, ["immeuble"]);
   if (cleanFields.transport != null) secteur.transport = fieldSpec(cleanFields.transport, ["TRANSPORT"]);
   if (cleanFields.proximity != null) secteur.proximity = fieldSpec(cleanFields.proximity, ["PROXIMITE"]);
@@ -8121,36 +8130,17 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
     const locality = await resolveHektorPublicLocality(cleanFields.postal_code, cleanFields.city);
     if (locality && locality.idCode) secteur.id_codepublique = fieldSpec(locality.idCode, ["idCodepublique"]);
     if (locality && locality.idVille) secteur.id_villepublique = fieldSpec(locality.idVille, ["idVillepublique"]);
-    if (locality && locality.latitude && cleanFields.latitude == null) secteur.latitude = fieldSpec(locality.latitude, ["latitude"]);
-    if (locality && locality.longitude && cleanFields.longitude == null) secteur.longitude = fieldSpec(locality.longitude, ["longitude"]);
+  }
+  // Localité PRIVÉE (commune réelle) -> idLocalitePrivee : c'est elle qui géolocalise le bien côté
+  // Hektor (carte + parcelle). On résout la commune privée en id Hektor et, si l'app n'a pas déjà
+  // géocodé, on prend les coords de la localité comme repli (mieux que rien).
+  if (cleanFields.private_postal != null || cleanFields.private_city != null) {
+    const priv = await resolveHektorPublicLocality(cleanFields.private_postal, cleanFields.private_city);
+    if (priv && priv.idVille) secteur.id_localite_privee = fieldSpec(priv.idVille, ["idLocalitePrivee"]);
+    if (priv && priv.latitude && cleanFields.latitude == null && secteur.latitude == null) secteur.latitude = fieldSpec(priv.latitude, ["latitude"]);
+    if (priv && priv.longitude && cleanFields.longitude == null && secteur.longitude == null) secteur.longitude = fieldSpec(priv.longitude, ["longitude"]);
   }
   await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe_Secteur", secteur, options);
-
-  // Géoloc réelle (carte + coordonnées lues par l'app) : elle suit l'ADRESSE PRIVEE via la mutation
-  // updateLocaliteByFeature — le push secteur ci-dessus ne pose PAS lat/lon. Sinon estimation/carte/
-  // cadastre restent sur l'ancien secteur. On géocode l'adresse (Géoplateforme/BAN) et on pose la localité.
-  if (cleanFields.address != null || cleanFields.city != null || cleanFields.postal_code != null) {
-    try {
-      const addrParts = [cleanFields.address, cleanFields.postal_code, cleanFields.city].filter(Boolean);
-      const feature = addrParts.length ? await geocodeAddressBAN(addrParts.join(" ")) : null;
-      if (feature) {
-        const loc = await updateHektorLocaliteByFeature(annonceId, feature);
-        results.push({ group: "localite", status: "updated", fields: ["latitude", "longitude", "city"], lat: loc && loc.lat, lng: loc && loc.lng });
-        await logJob(job.id, "hektor_annonce_update", "done", "Localite (secteur/carte) mise a jour via updateLocaliteByFeature", {
-          hektor_annonce_id: String(annonceId), lat: loc && loc.lat, lng: loc && loc.lng, city: loc && loc.city, postcode: loc && loc.postcode,
-        });
-      } else {
-        results.push({ group: "localite", status: "skipped", reason: "geocode_no_result" });
-      }
-    } catch (error) {
-      if (!options.continueOnGroupError) throw error;
-      const message = error && error.message ? error.message : String(error);
-      await logJob(job.id, "hektor_annonce_update", "error", "Mise a jour localite (updateLocaliteByFeature) echouee", {
-        hektor_annonce_id: String(annonceId), error: message,
-      });
-      results.push({ group: "localite", status: "error", error: message });
-    }
-  }
 
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
