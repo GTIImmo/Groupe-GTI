@@ -21984,7 +21984,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const ckHasCoords = Number.isFinite(ckMapLat) && Number.isFinite(ckMapLon) && ckMapLat !== 0 && ckMapLon !== 0
   // Parcelle cadastrale « retenue » pour l'ESTIMATION, corrigeable au clic sur la carte (app-only : on
   // écrit sources.cadastre de app_dossier_estimation via saveDossierEstimationSource, AUCUN appel Hektor).
-  const [ckParcelle, setCkParcelle] = useState<{ section: string; numero: string; contenance: number } | null>(null)
+  const [ckParcelle, setCkParcelle] = useState<{ section: string; numero: string; contenance: number; commune: string; idu: string } | null>(null)
   const [ckParcelleMsg, setCkParcelleMsg] = useState<string | null>(null)
   useEffect(() => {
     const appId = props.selectedDossier?.app_dossier_id
@@ -21994,12 +21994,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     loadDossierEstimation(appId).then((est) => {
       if (cancelled) return
       const p0 = (est?.sources?.cadastre?.data as CadastreData | undefined)?.parcelles?.[0]
-      if (p0) setCkParcelle({ section: p0.section ?? '', numero: p0.numero ?? '', contenance: Number(p0.contenance) || 0 })
+      if (p0) setCkParcelle({ section: p0.section ?? '', numero: p0.numero ?? '', contenance: Number(p0.contenance) || 0, commune: p0.commune ?? '', idu: p0.idu ?? '' })
     }).catch(() => { /* best effort */ })
     return () => { cancelled = true }
   }, [props.selectedDossier?.app_dossier_id])
   async function handleCkParcelPick(p: PickedParcelle) {
-    setCkParcelle({ section: p.section, numero: p.numero, contenance: p.contenance })
+    setCkParcelle({ section: p.section, numero: p.numero, contenance: p.contenance, commune: p.commune, idu: p.idu })
     const appId = props.selectedDossier?.app_dossier_id
     if (appId == null) { setCkParcelleMsg('Dossier sans identifiant app — impossible d’enregistrer.'); return }
     setCkParcelleMsg('Enregistrement de la parcelle…')
@@ -23570,7 +23570,34 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       {sec.fields.map(([label, k, unit]) => (
                         <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail || CK_NON_PUSHABLE_INLINE.has(k)} onSave={onFieldSave} />
                       ))}
+                      {/* Éléments de la parcelle cadastrale RETENUE (lecture) — récupérés au clic sur la carte
+                          ci-dessous ; source unique = app_dossier_estimation.sources.cadastre (partagée avec l'estimation). */}
+                      {sec.key === 'localisation' && ckParcelle ? (
+                        <>
+                          <CkInlineField label="Parcelle · section" name="_parc_section" value={ckParcelle.section} edited={false} readOnly onSave={onFieldSave} />
+                          <CkInlineField label="Parcelle · numéro" name="_parc_numero" value={ckParcelle.numero} edited={false} readOnly onSave={onFieldSave} />
+                          <CkInlineField label="Parcelle · surface" name="_parc_surface" unit="m²" value={ckParcelle.contenance ? String(ckParcelle.contenance) : ''} edited={false} readOnly onSave={onFieldSave} />
+                          <CkInlineField label="Parcelle · commune" name="_parc_commune" value={ckParcelle.commune} edited={false} readOnly onSave={onFieldSave} />
+                        </>
+                      ) : null}
                     </div>
+                    {/* Carte interactive du secteur DANS le bloc Localisation (leaflet + IGN + parcellaire). Cliquer
+                        une parcelle la retient pour toute l'app (Le Bien + Estimation), app-only. */}
+                    {sec.key === 'localisation' ? (
+                      ckHasCoords ? (
+                        <div className="fa-ck-pub-card" style={{ marginTop: 10 }}>
+                          <SecteurMap lat={ckMapLat} lon={ckMapLon} label={liveAddress} onParcelPick={handleCkParcelPick} />
+                          <div className="fa-ck-lb-mapcap"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span>{liveAddress}</span></div>
+                          <div className="fa-ck-lb-parcelle">
+                            <span className="fa-ck-lb-parcelle-lbl">Parcelle cadastrale</span>
+                            <span className="fa-ck-lb-parcelle-val">{ckParcelle ? `${ckParcelle.section} ${ckParcelle.numero}${ckParcelle.contenance ? ` · ${ckParcelle.contenance} m²` : ''}` : 'Cliquez une parcelle sur la carte pour la retenir'}</span>
+                            {ckParcelleMsg ? <span className="fa-ck-lb-parcelle-msg">{ckParcelleMsg}</span> : null}
+                          </div>
+                        </div>
+                      ) : props.address ? (
+                        <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress} · localisation non géocodée</span></div></div>
+                      ) : null
+                    ) : null}
                   </div>
                 )
               })}
@@ -23614,21 +23641,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </>
                 ) : null
               })()}
-              {/* Carte interactive du secteur (leaflet + IGN + parcellaire cadastral). Si pas de coords
-                  géocodées, on garde un placeholder discret avec l'adresse. */}
-              {ckHasCoords ? (
-                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}>
-                  <SecteurMap lat={ckMapLat} lon={ckMapLon} label={liveAddress} onParcelPick={handleCkParcelPick} />
-                  <div className="fa-ck-lb-mapcap"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span>{liveAddress}</span></div>
-                  <div className="fa-ck-lb-parcelle">
-                    <span className="fa-ck-lb-parcelle-lbl">Parcelle cadastrale (estimation)</span>
-                    <span className="fa-ck-lb-parcelle-val">{ckParcelle ? `${ckParcelle.section} ${ckParcelle.numero}${ckParcelle.contenance ? ` · ${ckParcelle.contenance} m²` : ''}` : 'Cliquez une parcelle sur la carte pour la retenir'}</span>
-                    {ckParcelleMsg ? <span className="fa-ck-lb-parcelle-msg">{ckParcelleMsg}</span> : null}
-                  </div>
-                </div>
-              ) : props.address ? (
-                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress} · localisation non géocodée</span></div></div>
-              ) : null}
               {/* Notes internes (façon v21) */}
               {props.notes.length > 0 ? (
                 <>
