@@ -752,6 +752,10 @@
 .fa-ck-lb-mapcap { display: flex; align-items: center; gap: 8px; margin-top: 9px; font-size: 13px; font-weight: 700; color: #374437; }
 .fa-ck-lb-mapcap .fa-ck-lb-pin { position: static; width: 18px; height: 18px; color: var(--fa-brand); flex: 0 0 auto; }
 .fa-ck-lb-mapcap .fa-ck-lb-pin svg { width: 18px; height: 18px; }
+.fa-ck-lb-parcelle { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d7e0d1; font-size: 12.5px; }
+.fa-ck-lb-parcelle-lbl { font-weight: 700; color: #6b776b; text-transform: uppercase; letter-spacing: .04em; font-size: 11px; }
+.fa-ck-lb-parcelle-val { font-weight: 700; color: #374437; }
+.fa-ck-lb-parcelle-msg { color: var(--fa-brand); font-weight: 600; }
 .fa-ck-lb-note { display: flex; gap: 12px; padding: 13px 0; border-top: 1px solid var(--fa-line-soft); }
 .fa-ck-lb-note:first-child { border-top: 0; padding-top: 2px; }
 .fa-ck-lb-note-av { width: 34px; height: 34px; border-radius: 10px; background: #f7eed9; color: #b07d1c; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }

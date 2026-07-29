@@ -3601,10 +3601,47 @@ function resolveDisplayAddress(
 // (data.geopf.fr, mêmes services que l'aperçu estimation). Remplace le faux visuel .fa-ck-lb-map.
 // Lit lat/lon (géocodé côté app). CircleMarker (pas L.marker) pour éviter le souci d'assets d'icône
 // leaflet avec le bundler Vite.
-function SecteurMap({ lat, lon, label }: { lat: number; lon: number; label?: string }) {
+export type PickedParcelle = { idu: string; section: string; numero: string; contenance: number; commune: string; code_insee: string }
+
+// Parcelle cadastrale sous un point : WMS GetFeatureInfo IGN (couche CADASTRALPARCELS). Renvoie le
+// feature GeoJSON (properties idu/section/numero/contenance/nom_com/code_insee + geometry en EPSG:3857).
+// Params obligatoires stricts côté Géoplateforme : STYLES='', FORMAT, INFO_FORMAT, CRS.
+async function fetchParcelleFeatureAt(map: L.Map, latlng: L.LatLng): Promise<{ properties: Record<string, unknown>; geometry: { type: string; coordinates: unknown } } | null> {
+  const size = map.getSize()
+  const sw = L.Projection.SphericalMercator.project(map.getBounds().getSouthWest())
+  const ne = L.Projection.SphericalMercator.project(map.getBounds().getNorthEast())
+  const pt = map.latLngToContainerPoint(latlng)
+  const params = new URLSearchParams({
+    SERVICE: 'WMS', VERSION: '1.3.0', REQUEST: 'GetFeatureInfo',
+    LAYERS: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS', QUERY_LAYERS: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
+    STYLES: '', CRS: 'EPSG:3857', BBOX: [sw.x, sw.y, ne.x, ne.y].join(','),
+    WIDTH: String(size.x), HEIGHT: String(size.y), I: String(Math.round(pt.x)), J: String(Math.round(pt.y)),
+    FORMAT: 'image/png', INFO_FORMAT: 'application/json', FEATURE_COUNT: '1',
+  })
+  const r = await fetch('https://data.geopf.fr/wms-r/wms?' + params.toString())
+  if (!r.ok) return null
+  const j = await r.json().catch(() => null)
+  return j && Array.isArray(j.features) && j.features[0] ? j.features[0] : null
+}
+
+// Géométrie GeoJSON (coords EPSG:3857 mètres) -> L.Polygon (dé-projection Mercator -> lat/lon pour leaflet).
+function mercatorGeometryToPolygon(geometry: { type: string; coordinates: unknown }): L.Polygon | null {
+  const ring = (coords: number[][]) => coords.map(([x, y]) => L.Projection.SphericalMercator.unproject(L.point(x, y)))
+  const style = { color: '#c5005f', weight: 2, fillColor: '#c5005f', fillOpacity: 0.22 }
+  try {
+    if (geometry.type === 'Polygon') return L.polygon((geometry.coordinates as number[][][]).map(ring), style)
+    if (geometry.type === 'MultiPolygon') return L.polygon((geometry.coordinates as number[][][][]).map((poly) => poly.map(ring)), style)
+  } catch { /* géométrie inattendue : pas de surlignage */ }
+  return null
+}
+
+function SecteurMap({ lat, lon, label, onParcelPick }: { lat: number; lon: number; label?: string; onParcelPick?: (p: PickedParcelle) => void }) {
   const elRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.CircleMarker | null>(null)
+  const highlightRef = useRef<L.Polygon | null>(null)
+  const pickRef = useRef(onParcelPick)
+  pickRef.current = onParcelPick
   const valid = (a: number, b: number) => Number.isFinite(a) && Number.isFinite(b) && a !== 0 && b !== 0
   useEffect(() => {
     if (!elRef.current || mapRef.current) return
@@ -3614,8 +3651,26 @@ function SecteurMap({ lat, lon, label }: { lat: number; lon: number; label?: str
     L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', { maxZoom: 19, minZoom: 4 }).addTo(map)
     L.tileLayer.wms('https://data.geopf.fr/wms-r/wms', { layers: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS', format: 'image/png', transparent: true, opacity: 0.6, version: '1.3.0' }).addTo(map)
     if (ok) markerRef.current = L.circleMarker([lat, lon], { radius: 9, color: '#fff', weight: 3, fillColor: '#c5005f', fillOpacity: 1 }).addTo(map)
+    // Sélection de parcelle au clic (si activée) : on identifie la parcelle sous le point (GetFeatureInfo),
+    // on la surligne, et on remonte au parent qui l'enregistre côté ESTIMATION (app-only, aucun Hektor).
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const pick = pickRef.current
+      if (!pick) return
+      void (async () => {
+        try {
+          const f = await fetchParcelleFeatureAt(map, e.latlng)
+          if (!f || !f.geometry) return
+          if (highlightRef.current) { map.removeLayer(highlightRef.current); highlightRef.current = null }
+          const poly = mercatorGeometryToPolygon(f.geometry)
+          if (poly) { poly.addTo(map); highlightRef.current = poly }
+          const p = f.properties
+          pick({ idu: String(p.idu ?? ''), section: String(p.section ?? ''), numero: String(p.numero ?? ''), contenance: Number(p.contenance) || 0, commune: String(p.nom_com ?? ''), code_insee: String(p.code_insee ?? '') })
+        } catch { /* clic hors parcelle / réseau : on ignore */ }
+      })()
+    })
+    if (pickRef.current) map.getContainer().style.cursor = 'crosshair'
     window.setTimeout(() => { try { map.invalidateSize() } catch { /* noop */ } }, 60)
-    return () => { map.remove(); mapRef.current = null; markerRef.current = null }
+    return () => { map.remove(); mapRef.current = null; markerRef.current = null; highlightRef.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
@@ -21927,6 +21982,42 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const ckMapLat = Number((props.detail as { latitude_detail?: number | string }).latitude_detail)
   const ckMapLon = Number((props.detail as { longitude_detail?: number | string }).longitude_detail)
   const ckHasCoords = Number.isFinite(ckMapLat) && Number.isFinite(ckMapLon) && ckMapLat !== 0 && ckMapLon !== 0
+  // Parcelle cadastrale « retenue » pour l'ESTIMATION, corrigeable au clic sur la carte (app-only : on
+  // écrit sources.cadastre de app_dossier_estimation via saveDossierEstimationSource, AUCUN appel Hektor).
+  const [ckParcelle, setCkParcelle] = useState<{ section: string; numero: string; contenance: number } | null>(null)
+  const [ckParcelleMsg, setCkParcelleMsg] = useState<string | null>(null)
+  useEffect(() => {
+    const appId = props.selectedDossier?.app_dossier_id
+    setCkParcelle(null); setCkParcelleMsg(null)
+    if (appId == null) return
+    let cancelled = false
+    loadDossierEstimation(appId).then((est) => {
+      if (cancelled) return
+      const p0 = (est?.sources?.cadastre?.data as CadastreData | undefined)?.parcelles?.[0]
+      if (p0) setCkParcelle({ section: p0.section ?? '', numero: p0.numero ?? '', contenance: Number(p0.contenance) || 0 })
+    }).catch(() => { /* best effort */ })
+    return () => { cancelled = true }
+  }, [props.selectedDossier?.app_dossier_id])
+  async function handleCkParcelPick(p: PickedParcelle) {
+    setCkParcelle({ section: p.section, numero: p.numero, contenance: p.contenance })
+    const appId = props.selectedDossier?.app_dossier_id
+    if (appId == null) { setCkParcelleMsg('Dossier sans identifiant app — impossible d’enregistrer.'); return }
+    setCkParcelleMsg('Enregistrement de la parcelle…')
+    try {
+      const est = await loadDossierEstimation(appId)
+      const existingPlu = (est?.sources?.cadastre?.data as CadastreData | undefined)?.plu ?? null
+      const data: CadastreData = {
+        ok: true,
+        parcelles: [{ reference: `${p.section} ${p.numero}`.trim(), section: p.section, numero: p.numero, contenance: p.contenance || null, commune: p.commune, code_insee: p.code_insee, idu: p.idu }],
+        contenance_totale: p.contenance || null,
+        plu: existingPlu,
+      }
+      await saveDossierEstimationSource(appId, props.selectedDossier?.hektor_annonce_id ?? null, 'cadastre', true, data)
+      setCkParcelleMsg(`Parcelle ${p.section} ${p.numero}${p.contenance ? ` · ${p.contenance} m²` : ''} retenue pour l’estimation.`)
+    } catch {
+      setCkParcelleMsg('Enregistrement de la parcelle impossible.')
+    }
+  }
   const [moreOpen, setMoreOpen] = useState(false)
   const [pilotageOpen, setPilotageOpen] = useState(false)
   // ── Palier 2 (plan §8.4) : crans de SIGNATURE du document ────────────────────
@@ -23527,8 +23618,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   géocodées, on garde un placeholder discret avec l'adresse. */}
               {ckHasCoords ? (
                 <div className="fa-ck-pub-card" style={{ marginTop: 10 }}>
-                  <SecteurMap lat={ckMapLat} lon={ckMapLon} label={liveAddress} />
+                  <SecteurMap lat={ckMapLat} lon={ckMapLon} label={liveAddress} onParcelPick={handleCkParcelPick} />
                   <div className="fa-ck-lb-mapcap"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span>{liveAddress}</span></div>
+                  <div className="fa-ck-lb-parcelle">
+                    <span className="fa-ck-lb-parcelle-lbl">Parcelle cadastrale (estimation)</span>
+                    <span className="fa-ck-lb-parcelle-val">{ckParcelle ? `${ckParcelle.section} ${ckParcelle.numero}${ckParcelle.contenance ? ` · ${ckParcelle.contenance} m²` : ''}` : 'Cliquez une parcelle sur la carte pour la retenir'}</span>
+                    {ckParcelleMsg ? <span className="fa-ck-lb-parcelle-msg">{ckParcelleMsg}</span> : null}
+                  </div>
                 </div>
               ) : props.address ? (
                 <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress} · localisation non géocodée</span></div></div>
