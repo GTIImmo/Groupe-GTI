@@ -1006,6 +1006,30 @@
 .fa-ck-lb-secwrap { display: contents; }
 .fa-ck-lb-cnt { margin-left: auto; font-size: 11px; font-weight: 800; border-radius: 99px; padding: 4px 11px; }
 .fa-ck-lb-feats { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-bottom: 4px; }
+
+/* ── Accordéon « Le Bien » : 12 sections = cartes repliables (repliées par défaut) ─────────────
+   Scopé sur .fa-ck-lb-acc pour NE PAS toucher les autres blocs qui partagent .fa-ck-lb-secwrap. */
+.fa-ck-lb-acc { display: block; background: #fff; border: 1px solid #ece8df; border-radius: 14px; margin: 10px 0; overflow: hidden; transition: border-color .2s, box-shadow .2s, transform .2s; }
+.fa-ck-lb-acc:hover { border-color: #ddd6c8; box-shadow: 0 8px 20px -14px rgba(40,30,20,.28); }
+.fa-ck-lb-acc.open { box-shadow: 0 12px 28px -16px rgba(40,30,20,.32); }
+.fa-ck-lb-acc .fa-ck-pub-sec { margin: 0; }
+.fa-ck-lb-sectrig { display: flex; align-items: center; gap: 11px; width: 100%; margin: 0; padding: 12px 14px; background: transparent; border: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; transition: background .18s; }
+.fa-ck-lb-sectrig:hover { background: #faf7f1; }
+.fa-ck-lb-acc.open .fa-ck-lb-sectrig { background: var(--sbg); }
+.fa-ck-lb-sectrig:focus-visible { outline: 2px solid var(--sc); outline-offset: -2px; }
+.fa-ck-lb-sectxt { min-width: 0; }
+.fa-ck-lb-sectrig .fa-ck-pub-ic { transition: transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .25s; }
+.fa-ck-lb-sectrig:hover .fa-ck-pub-ic { transform: rotate(-7deg) scale(1.1); box-shadow: 0 7px 15px -6px rgba(40,30,20,.32); }
+.fa-ck-lb-acc.open .fa-ck-lb-sectrig .fa-ck-pub-ic { animation: fa-ck-icopop .55s cubic-bezier(.34,1.56,.64,1); }
+@keyframes fa-ck-icopop { 0% { transform: scale(.7) rotate(-10deg) } 55% { transform: scale(1.18) rotate(4deg) } 100% { transform: scale(1) } }
+.fa-ck-lb-chev { margin-left: 2px; color: #a49d8d; flex: none; display: flex; transition: transform .34s cubic-bezier(.34,1.4,.5,1), color .2s; }
+.fa-ck-lb-chev svg { width: 18px; height: 18px; }
+.fa-ck-lb-acc.open .fa-ck-lb-chev { transform: rotate(180deg); color: var(--sc); }
+.fa-ck-lb-secbody { padding: 0 14px 14px; animation: fa-ck-secopen .34s cubic-bezier(.2,.7,.3,1); }
+@keyframes fa-ck-secopen { from { opacity: 0; transform: translateY(-9px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) {
+  .fa-ck-lb-sectrig .fa-ck-pub-ic, .fa-ck-lb-chev, .fa-ck-lb-secbody, .fa-ck-lb-acc { transition: none; animation: none; }
+}
 .fa-ck-lb-feat { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--fa-line); border-radius: 14px; background: #fff; transition: .16s; }
 .fa-ck-lb-feat:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(24, 18, 14, .28); }
 .fa-ck-lb-feat .fl { font-size: 13px; font-weight: 700; color: var(--fa-ink); line-height: 1.2; }

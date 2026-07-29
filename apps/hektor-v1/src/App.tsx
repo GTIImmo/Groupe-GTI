@@ -22022,6 +22022,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // écrit sources.cadastre de app_dossier_estimation via saveDossierEstimationSource, AUCUN appel Hektor).
   const [ckParcelle, setCkParcelle] = useState<{ section: string; numero: string; contenance: number; commune: string; idu: string } | null>(null)
   const [ckParcelleMsg, setCkParcelleMsg] = useState<string | null>(null)
+  // Accordéon « Le Bien » : les 12 sections sont REPLIÉES par défaut ; on stocke les clés dépliées.
+  const [ckOpenSecs, setCkOpenSecs] = useState<Set<string>>(new Set())
+  const toggleCkSec = (k: string) => setCkOpenSecs((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
   useEffect(() => {
     const appId = props.selectedDossier?.app_dossier_id
     setCkParcelle(null); setCkParcelleMsg(null)
@@ -23599,9 +23602,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 const fval = (k: string) => String(edited[k] ?? wizFieldValue(k) ?? '')
                 const total = sec.fields.length
                 const filled = sec.fields.filter(([, k]) => fval(k).trim() && fval(k).trim() !== '0').length
+                const ckSecOpen = ckOpenSecs.has(sec.key)
                 return (
-                  <div key={sec.key} className="fa-ck-lb-secwrap">
-                    <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic" style={{ background: sec.bg, color: sec.c }} aria-hidden="true"><CkIcon path={sec.ico} /></span><div><div className="fa-ck-pub-t">{sec.label}</div><div className="fa-ck-pub-s">{sec.sub}</div></div><span className="fa-ck-lb-cnt" style={{ color: sec.c, background: sec.bg }}>{filled}/{total}</span></div>
+                  <div key={sec.key} className={`fa-ck-lb-secwrap fa-ck-lb-acc${ckSecOpen ? ' open' : ''}`} style={{ ['--sc']: sec.c, ['--sbg']: sec.bg } as CSSProperties}>
+                    <button type="button" className="fa-ck-pub-sec fa-ck-lb-sectrig" aria-expanded={ckSecOpen} onClick={() => toggleCkSec(sec.key)}>
+                      <span className="fa-ck-pub-ic" style={{ background: sec.bg, color: sec.c }} aria-hidden="true"><CkIcon path={sec.ico} /></span>
+                      <div className="fa-ck-lb-sectxt"><div className="fa-ck-pub-t">{sec.label}</div><div className="fa-ck-pub-s">{sec.sub}</div></div>
+                      <span className="fa-ck-lb-cnt" style={{ color: sec.c, background: sec.bg }}>{filled}/{total}</span>
+                      <span className="fa-ck-lb-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M6 9l6 6 6-6" /></svg></span>
+                    </button>
+                    {ckSecOpen ? (
+                    <div className="fa-ck-lb-secbody">
                     <div className="fa-ck-lb-feats" style={{ ['--c']: sec.c } as CSSProperties}>
                       {sec.fields.map(([label, k, unit]) => (
                         <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail || CK_NON_PUSHABLE_INLINE.has(k)} onSave={onFieldSave} />
@@ -23633,6 +23644,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       ) : props.address ? (
                         <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress} · localisation non géocodée</span></div></div>
                       ) : null
+                    ) : null}
+                    </div>
                     ) : null}
                   </div>
                 )
