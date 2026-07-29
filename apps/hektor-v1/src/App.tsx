@@ -1,6 +1,8 @@
 import { ChangeEvent, type CSSProperties, FormEvent, Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Session } from '@supabase/supabase-js'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import {
   type AppFilters,
   type CommercialRequestStats,
@@ -3579,6 +3581,37 @@ function resolveDisplayAddress(
   const cp = fromOverlay('codepublique') || firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal, fallbackCp)
   const ville = fromOverlay('villepublique') || firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail, fallbackVille)
   return [rue, cp, ville].filter(Boolean).join(', ')
+}
+
+// Carte interactive du secteur (leaflet) : fond IGN Plan v2 + surcouche parcellaire cadastral
+// (data.geopf.fr, mêmes services que l'aperçu estimation). Remplace le faux visuel .fa-ck-lb-map.
+// Lit lat/lon (géocodé côté app). CircleMarker (pas L.marker) pour éviter le souci d'assets d'icône
+// leaflet avec le bundler Vite.
+function SecteurMap({ lat, lon, label }: { lat: number; lon: number; label?: string }) {
+  const elRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const markerRef = useRef<L.CircleMarker | null>(null)
+  const valid = (a: number, b: number) => Number.isFinite(a) && Number.isFinite(b) && a !== 0 && b !== 0
+  useEffect(() => {
+    if (!elRef.current || mapRef.current) return
+    const ok = valid(lat, lon)
+    const map = L.map(elRef.current, { center: ok ? [lat, lon] : [46.6, 2.4], zoom: ok ? 18 : 5, scrollWheelZoom: true, attributionControl: false })
+    mapRef.current = map
+    L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', { maxZoom: 19, minZoom: 4 }).addTo(map)
+    L.tileLayer.wms('https://data.geopf.fr/wms-r/wms', { layers: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS', format: 'image/png', transparent: true, opacity: 0.6, version: '1.3.0' }).addTo(map)
+    if (ok) markerRef.current = L.circleMarker([lat, lon], { radius: 9, color: '#fff', weight: 3, fillColor: '#c5005f', fillOpacity: 1 }).addTo(map)
+    window.setTimeout(() => { try { map.invalidateSize() } catch { /* noop */ } }, 60)
+    return () => { map.remove(); mapRef.current = null; markerRef.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !valid(lat, lon)) return
+    map.setView([lat, lon], Math.max(map.getZoom(), 17))
+    if (markerRef.current) markerRef.current.setLatLng([lat, lon])
+    else markerRef.current = L.circleMarker([lat, lon], { radius: 9, color: '#fff', weight: 3, fillColor: '#c5005f', fillOpacity: 1 }).addTo(map)
+  }, [lat, lon])
+  return <div ref={elRef} className="fa-ck-lb-imap" style={{ height: 280, borderRadius: 12, overflow: 'hidden' }} role="img" aria-label={label ? `Carte du bien : ${label}` : 'Carte du bien'} />
 }
 
 function valueFromJsonList(value: string | null | undefined, keys: string[]) {
@@ -21533,7 +21566,10 @@ const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string
 // contrôleur dédié applyHektorChauffage). Seul `diffusable` est bloqué front
 // (hektorUnsupportedDirectUpdateWizardFields) et se pilote via le toggle Publicité / la modale
 // Pilotage — donc affiché mais non éditable en saisie libre.
-const CK_NON_PUSHABLE_INLINE = new Set<string>(['diffusable'])
+// Latitude/Longitude ne sont PAS éditables à la main : elles sont recalculées par géocodage de
+// l'adresse (worker + app-side). Les laisser saisissables induisait en erreur (valeurs périmées,
+// écrasées au save). L'adresse (« Adresse / complément ») est LE champ à modifier.
+const CK_NON_PUSHABLE_INLINE = new Set<string>(['diffusable', 'latitude', 'longitude'])
 // Métadonnées des champs wizard (type/options) indexées par nom, pour l'édition en place.
 const CK_WIZARD_FIELD_BY_NAME: Record<string, DraftAnnonceWizardField> = Object.fromEntries(
   draftAnnonceWizardGroups.flatMap((g) => g.fields).map((f) => [f.name, f]),
@@ -21869,6 +21905,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const ville = firstNonEmpty(edited['villepublique'], props.detail.ville_publique_listing, props.detail.ville_privee_detail, props.selectedDossier?.ville)
     return [rue, cp, ville].filter(Boolean).join(', ') || props.address
   }, [edited, props.address, props.detail, props.selectedDossier?.code_postal, props.selectedDossier?.ville])
+  // Coords pour la carte interactive du secteur (géoloc côté app). Lat/lon <= detail (json_map).
+  const ckMapLat = Number((props.detail as { latitude_detail?: number | string }).latitude_detail)
+  const ckMapLon = Number((props.detail as { longitude_detail?: number | string }).longitude_detail)
+  const ckHasCoords = Number.isFinite(ckMapLat) && Number.isFinite(ckMapLon) && ckMapLat !== 0 && ckMapLon !== 0
   const [moreOpen, setMoreOpen] = useState(false)
   const [pilotageOpen, setPilotageOpen] = useState(false)
   // ── Palier 2 (plan §8.4) : crans de SIGNATURE du document ────────────────────
@@ -23460,9 +23500,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </>
                 ) : null
               })()}
-              {/* Carte de localisation (façon v21) — le header/champs sont dans la section « Localisation & secteur » */}
-              {props.address ? (
-                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress}</span></div></div>
+              {/* Carte interactive du secteur (leaflet + IGN + parcellaire cadastral). Si pas de coords
+                  géocodées, on garde un placeholder discret avec l'adresse. */}
+              {ckHasCoords ? (
+                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}>
+                  <SecteurMap lat={ckMapLat} lon={ckMapLon} label={liveAddress} />
+                  <div className="fa-ck-lb-mapcap"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span>{liveAddress}</span></div>
+                </div>
+              ) : props.address ? (
+                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress} · localisation non géocodée</span></div></div>
               ) : null}
               {/* Notes internes (façon v21) */}
               {props.notes.length > 0 ? (
