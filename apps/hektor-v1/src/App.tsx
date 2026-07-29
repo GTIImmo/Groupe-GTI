@@ -21572,7 +21572,10 @@ const CK_LB_SECTIONS: Array<{ key: string; label: string; sub: string; c: string
   // « Le Bien » (bloc « L'annonce »), Hektor n'ayant qu'une seule zone de texte : les
   // laisser aussi ici les afficherait deux fois. La section ne garde que ce qui lui est propre.
   { key: 'diffusion', label: 'Diffusion', sub: 'Portails & annonce', c: '#9d0f4e', bg: '#f9e7ef', ico: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>', fields: [['Diffusable', 'diffusable'], ['Numéro dossier', 'NO_DOSSIER'], ['Date création', 'dateenr']] },
-  { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Adresse privée (rue)', 'adresse'], ['Commune privée', 'villeprivee'], ['Code postal privé', 'codeprive'], ['Ville publique', 'villepublique'], ['Code postal public', 'codepublique'], ["Complément d'adresse", 'ADRESSE_COMPL'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
+  // Pas de champ « Complément d'adresse » séparé : Hektor renvoie l'adresse privée en UNE ligne
+  // (rue + complément composés, ex. « 10 Place Bellecour BAT B »). Afficher une case complément à part
+  // la laissait toujours vide (le complément est déjà dans « Adresse privée (rue) ») → suppression.
+  { key: 'localisation', label: 'Localisation & secteur', sub: 'Adresse & environnement', c: '#3a5a8a', bg: '#e7edf7', ico: '<path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.6"/>', fields: [['Adresse privée (rue)', 'adresse'], ['Commune privée', 'villeprivee'], ['Code postal privé', 'codeprive'], ['Ville publique', 'villepublique'], ['Code postal public', 'codepublique'], ['Transport', 'TRANSPORT'], ['Proximité', 'PROXIMITE'], ['Environnement', 'ENVIRONNEMENT'], ['Latitude', 'latitude'], ['Longitude', 'longitude']] },
 ]
 // Champs en LECTURE SEULE dans l'édition en place : non écrits par le chemin optimiste.
 // Vérifié dans le worker (console_job_worker.js) : la quasi-totalité des champs de la fiche
