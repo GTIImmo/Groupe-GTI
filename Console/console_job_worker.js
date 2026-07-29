@@ -2137,10 +2137,10 @@ async function hektorFetch(url, options = {}) {
   }
 }
 
-async function hektorGraphQLOperation({ operationName, query, variables = {} }) {
+async function hektorGraphQLOperation({ operationName, query, variables = {}, endpoint = "/ws/GraphQL_Web" }) {
   if (!operationName || !query) throw new Error("Operation GraphQL Hektor incomplete");
   const authorization = hektorGraphQLAuthorizationHeader();
-  const result = await hektorFetch(`${HEKTOR_BASE_URL.replace(/\/+$/, "")}/ws/GraphQL_Web`, {
+  const result = await hektorFetch(`${HEKTOR_BASE_URL.replace(/\/+$/, "")}${endpoint}`, {
     method: "POST",
     body: JSON.stringify({
       operationName,
@@ -2165,6 +2165,58 @@ async function hektorGraphQL(variables) {
     query: PROPERTY_LISTING_QUERY,
     variables,
   });
+}
+
+// Dans Hektor, la géoloc/secteur d'une annonce (carte + localite_json.publique lat/lon lu par l'app)
+// suit l'ADRESSE PRIVEE, posée via la mutation updateLocaliteByFeature(id, feature GeoJSON de la BAN).
+// L'ancien push secteur (ihmChargeGroupe_Secteur) ne pose PAS lat/lon. On géocode donc l'adresse via
+// Géoplateforme (site national des adresses, comme le fait l'UI Hektor) et on appelle la mutation.
+const HEKTOR_UPDATE_LOCALITE_MUTATION = `mutation updateLocaliteByFeature($id: ID!, $feature: GeoJsonFeature!) {
+  updateLocaliteByFeature(id: $id, feature: $feature) {
+    id
+    idCity
+    idCode
+    address
+    city
+    postcode
+    lat
+    lng
+    __typename
+  }
+}`;
+
+async function geocodeAddressBAN(query) {
+  const q = String(query || "").trim();
+  if (!q) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const url = `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q)}&limit=1&index=address`;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const feature = json && Array.isArray(json.features) ? json.features[0] : null;
+    if (!feature || !feature.geometry) return null;
+    const p = feature.properties || (feature.properties = {});
+    if (!p.banId && p.id) p.banId = p.id; // Hektor attend properties.banId
+    const score = Number(p.score);
+    if (Number.isFinite(score) && score < 0.35) return null; // garde-fou : match trop incertain
+    return feature;
+  } catch (_) {
+    return null; // best-effort : ne jamais bloquer la sauvegarde des autres champs
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function updateHektorLocaliteByFeature(annonceId, feature) {
+  const payload = await hektorGraphQLOperation({
+    operationName: "updateLocaliteByFeature",
+    query: HEKTOR_UPDATE_LOCALITE_MUTATION,
+    variables: { id: String(annonceId), feature },
+    endpoint: "/ws/GraphQL_GraphQL",
+  });
+  return payload && payload.data ? payload.data.updateLocaliteByFeature : null;
 }
 
 async function fetchLatestHektorProperties(page = 1, archived = false) {
@@ -8073,6 +8125,32 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
     if (locality && locality.longitude && cleanFields.longitude == null) secteur.longitude = fieldSpec(locality.longitude, ["longitude"]);
   }
   await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe_Secteur", secteur, options);
+
+  // Géoloc réelle (carte + coordonnées lues par l'app) : elle suit l'ADRESSE PRIVEE via la mutation
+  // updateLocaliteByFeature — le push secteur ci-dessus ne pose PAS lat/lon. Sinon estimation/carte/
+  // cadastre restent sur l'ancien secteur. On géocode l'adresse (Géoplateforme/BAN) et on pose la localité.
+  if (cleanFields.address != null || cleanFields.city != null || cleanFields.postal_code != null) {
+    try {
+      const addrParts = [cleanFields.address, cleanFields.postal_code, cleanFields.city].filter(Boolean);
+      const feature = addrParts.length ? await geocodeAddressBAN(addrParts.join(" ")) : null;
+      if (feature) {
+        const loc = await updateHektorLocaliteByFeature(annonceId, feature);
+        results.push({ group: "localite", status: "updated", fields: ["latitude", "longitude", "city"], lat: loc && loc.lat, lng: loc && loc.lng });
+        await logJob(job.id, "hektor_annonce_update", "done", "Localite (secteur/carte) mise a jour via updateLocaliteByFeature", {
+          hektor_annonce_id: String(annonceId), lat: loc && loc.lat, lng: loc && loc.lng, city: loc && loc.city, postcode: loc && loc.postcode,
+        });
+      } else {
+        results.push({ group: "localite", status: "skipped", reason: "geocode_no_result" });
+      }
+    } catch (error) {
+      if (!options.continueOnGroupError) throw error;
+      const message = error && error.message ? error.message : String(error);
+      await logJob(job.id, "hektor_annonce_update", "error", "Mise a jour localite (updateLocaliteByFeature) echouee", {
+        hektor_annonce_id: String(annonceId), error: message,
+      });
+      results.push({ group: "localite", status: "error", error: message });
+    }
+  }
 
   const agInterieur = {};
   if (cleanFields.room_count != null) agInterieur.room_count = fieldSpec(cleanFields.room_count, ["nbpieces"]);
