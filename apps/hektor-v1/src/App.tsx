@@ -5344,6 +5344,23 @@ function EstimationDocumentEditor(props: {
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
   useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null); setCadastrePicker(null) }, [initialDraft, props.modal])
+  // Modale ouverte : précharge la parcelle « retenue » (Store B partagé : app_dossier_estimation.sources.cadastre,
+  // choisie au clic sur la carte dans Le Bien/Localisation) pour qu'elle PERDURE dans l'avis de valeur — au lieu de
+  // repartir sur la parcelle auto au point. Best-effort.
+  useEffect(() => {
+    if (!props.modal) return
+    let cancelled = false
+    loadDossierEstimation(dossier.app_dossier_id).then((est) => {
+      if (cancelled) return
+      const b = est?.sources?.cadastre?.data as CadastreData | undefined
+      if (b && b.parcelles?.length) {
+        setCadastre(b)
+        const p0 = b.parcelles[0]
+        setCadastreMsg(`Parcelle retenue · ${p0.reference ?? `${p0.section ?? ''} ${p0.numero ?? ''}`.trim()}${b.contenance_totale ? ' · ' + b.contenance_totale.toLocaleString('fr-FR') + ' m²' : ''}`)
+      }
+    }).catch(() => { /* best effort */ })
+    return () => { cancelled = true }
+  }, [props.modal, dossier.app_dossier_id])
   useEffect(() => {
     let cancelled = false
     const id = dossier.app_dossier_id
@@ -5462,9 +5479,13 @@ function EstimationDocumentEditor(props: {
     const lat = Number(c0?.centroid_lat) || Number(props.detail.latitude_detail)
     const lon = Number(c0?.centroid_lon) || Number(props.detail.longitude_detail)
     const contenance = chosen.reduce((s, p) => s + (Number(p.contenance) || 0), 0) || null
-    setCadastre((prev) => ({ ok: true, lat, lon, parcelles: chosen, contenance_totale: contenance, plu: prev?.plu ?? null }))
+    const nextCad: CadastreData = { ok: true, lat, lon, parcelles: chosen, contenance_totale: contenance, plu: cadastre?.plu ?? null }
+    setCadastre(nextCad)
     const ref = chosen.map((p) => p.reference).filter(Boolean).join(', ')
     setCadastreMsg(`${chosen.length} parcelle${chosen.length > 1 ? 's' : ''}${ref ? ' · ' + ref : ''}${contenance ? ' · ' + contenance.toLocaleString('fr-FR') + ' m²' : ''}`)
+    // Perdure : la parcelle choisie dans la modale devient la parcelle « retenue » (Store B, app-only)
+    // -> visible dans Le Bien / Localisation + le module cadastre de l'estimation, et inversement.
+    void saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'cadastre', true, nextCad).catch(() => { /* best effort */ })
   }
 
   const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
@@ -9130,11 +9151,20 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated, autoGenerate
   const [picker, setPicker] = useState<{ candidates: CadastreParcelle[]; initialKeys: string[] } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lon: number } | null>(null)
 
-  // Re-affiche les éléments déjà enregistrés (sans re-fetch) à l'ouverture de la fiche.
+  // Re-affiche les éléments déjà enregistrés à l'ouverture de la fiche. SOURCE UNIQUE = la parcelle
+  // « retenue » de l'estimation (app_dossier_estimation.sources.cadastre, partagée avec « Le Bien » /
+  // Localisation où on la choisit au clic sur la carte). Repli sur l'ancien store app_dossier_cadastre
+  // (Plan cadastral) tant qu'aucun choix estimation n'existe.
   useEffect(() => {
     let cancelled = false
     setCad(null); setMessage(null); setPicker(null); setMapCenter(null)
-    loadDossierCadastre(dossier.app_dossier_id).then((row) => { if (!cancelled && row) setCad(row) }).catch(() => { /* best effort */ })
+    const fallbackA = () => loadDossierCadastre(dossier.app_dossier_id).then((row) => { if (!cancelled && row) setCad(row) }).catch(() => { /* best effort */ })
+    loadDossierEstimation(dossier.app_dossier_id).then((est) => {
+      if (cancelled) return
+      const b = est?.sources?.cadastre?.data as CadastreData | undefined
+      if (b && (b.parcelles?.length || b.plu)) { setCad(b); return }
+      void fallbackA()
+    }).catch(() => { void fallbackA() })
     return () => { cancelled = true }
   }, [dossier.app_dossier_id])
 
@@ -9166,7 +9196,13 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated, autoGenerate
         lat, lon, parcelles: chosen, mapLat, mapLon,
       })
       onJobCreated?.(job)
-      if (chosen) { setCad((prev) => ({ ok: true, parcelles: chosen, contenance_totale: contenance, plu: prev?.plu ?? null })); setMapCenter({ lat: mapLat, lon: mapLon }) }
+      if (chosen) {
+        const nextCad: CadastreData = { ok: true, parcelles: chosen, contenance_totale: contenance, plu: cad?.plu ?? null }
+        setCad(nextCad); setMapCenter({ lat: mapLat, lon: mapLon })
+        // Unifie : la parcelle choisie devient la parcelle « retenue » de l'estimation (Store B, app-only)
+        // -> visible dans « Le Bien » / Localisation et inversement.
+        try { await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'cadastre', true, nextCad) } catch { /* best effort */ }
+      }
       setMessage('Plan cadastral en génération — il apparaîtra dans le bloc Documents (onglet Contenu) et dans Hektor.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Génération des éléments cadastraux impossible.')
