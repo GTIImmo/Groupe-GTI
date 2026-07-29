@@ -2209,6 +2209,33 @@ async function geocodeAddressBAN(query) {
   }
 }
 
+// Normalise un nom de commune via la BAN (index=municipality) : "SAINT ETIENNE" -> "Saint-Étienne".
+// Sert au repli de resolveHektorPublicLocality car l'autocomplete Hektor `ac_villes` ne matche pas les
+// noms en MAJUSCULES/sans accent (il renvoie un stub). Retourne { city, postcode } bien formés ou null.
+async function banNormalizeCity(postalCode, city) {
+  // Code postal EN TÊTE puis nom : "42000 SAINT ETIENNE" -> feature.properties.city = "Saint-Étienne".
+  // On utilise index=address (l'index municipality ne répond pas sur ces requêtes).
+  const q = [postalCode, city].filter((part) => part && String(part).trim()).join(" ").trim();
+  if (!q) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const url = `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q)}&limit=1&index=address`;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const feature = json && Array.isArray(json.features) ? json.features[0] : null;
+    const p = feature && feature.properties ? feature.properties : null;
+    if (!p) return null;
+    const postcode = Array.isArray(p.postcode) ? p.postcode[0] : p.postcode;
+    return { city: p.city || p.name || null, postcode: postcode || null };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ⚠️ `id` = l'id de la LOCALITÉ privée (attribut <hektor id-localite> du form secteur), PAS l'id de
 // l'annonce. La mutation met CET enregistrement localité à jour EN PLACE (rue + commune + coords) → c'est
 // ça qui change l'adresse privée affichée (prouvé sur 62774 : id-localite=909764 -> Clermont-Ferrand).
@@ -6450,19 +6477,17 @@ async function resolveHektorPublicLocality(postalCode, city) {
   const cleanCity = cleanString(city);
   if (!cleanPostal && !cleanCity) return null;
 
-  const body = new URLSearchParams({
-    scope: cleanCity ? "ville" : "code",
-    ville: cleanCity || cleanPostal,
-    wellformed: "true",
-    idpays: "1",
-    country: "France",
-    uCountry: "true",
-  });
-  if (cleanPostal) body.set("scopeCode", cleanPostal);
-  if (cleanCity) body.set("scopeVille", cleanCity);
-
-  let candidate = null;
-  try {
+  const queryAcVilles = async (postal, cityName) => {
+    const body = new URLSearchParams({
+      scope: cityName ? "ville" : "code",
+      ville: cityName || postal,
+      wellformed: "true",
+      idpays: "1",
+      country: "France",
+      uCountry: "true",
+    });
+    if (postal) body.set("scopeCode", postal);
+    if (cityName) body.set("scopeVille", cityName);
     const response = await hektorFetch(`${ADMIN_URL}?call=ac_villes`, {
       method: "POST",
       body,
@@ -6472,7 +6497,23 @@ async function resolveHektorPublicLocality(postalCode, city) {
       },
       timeoutMs: 20000,
     });
-    candidate = parseHektorLocalityCandidate(response.text, cleanPostal, cleanCity);
+    return parseHektorLocalityCandidate(response.text, postal, cityName);
+  };
+
+  let candidate = null;
+  try {
+    candidate = await queryAcVilles(cleanPostal, cleanCity);
+    // Repli : ac_villes renvoie un stub pour les noms en MAJUSCULES/sans accent (ex. "SAINT ETIENNE"),
+    // donc pas d'idVille -> la commune publique ne change pas. On normalise via la BAN (-> "Saint-Étienne")
+    // et on réessaie. Best-effort : si la BAN ne répond pas, on garde le résultat de la 1re tentative.
+    if ((!candidate || !candidate.idVille) && cleanCity) {
+      const norm = await banNormalizeCity(cleanPostal, cleanCity);
+      const normCity = norm && norm.city ? cleanString(norm.city) : null;
+      if (normCity && normCity.toLowerCase() !== cleanCity.toLowerCase()) {
+        const retry = await queryAcVilles(cleanPostal || (norm && norm.postcode ? cleanString(norm.postcode) : ""), normCity);
+        if (retry && retry.idVille) candidate = retry;
+      }
+    }
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
     if (/Hektor 403|Session Hektor/i.test(message)) throw error;
