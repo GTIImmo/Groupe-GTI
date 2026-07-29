@@ -21857,6 +21857,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   // Quand le détail se recharge (read-through / job worker), le calque tient la valeur → on purge le diff local.
   useEffect(() => { setEdited({}); setSaveMsg(null) }, [props.detail])
+  // Adresse « live » pour la colonne de gauche : le parent ne re-fetch PAS le détail après un save en
+  // place, donc props.address restait figé jusqu'à un refresh manuel. On superpose le diff local
+  // `edited` (clés Hektor ADRESSE_COMPL/villepublique/codepublique) → l'adresse s'affiche instantanément
+  // à la saisie/enregistrement, puis retombe sur props.address dès que le détail est rechargé.
+  const liveAddress = useMemo(() => {
+    const hasAddrEdit = ['ADRESSE_COMPL', 'villepublique', 'codepublique'].some((key) => key in edited)
+    if (!hasAddrEdit) return props.address
+    const rue = firstNonEmpty(edited['ADRESSE_COMPL'], props.detail.adresse_privee_listing, props.detail.adresse_detail)
+    const cp = firstNonEmpty(edited['codepublique'], props.detail.code_postal_public_listing, props.detail.code_postal_prive_detail, props.detail.code_postal, props.selectedDossier?.code_postal)
+    const ville = firstNonEmpty(edited['villepublique'], props.detail.ville_publique_listing, props.detail.ville_privee_detail, props.selectedDossier?.ville)
+    return [rue, cp, ville].filter(Boolean).join(', ') || props.address
+  }, [edited, props.address, props.detail, props.selectedDossier?.code_postal, props.selectedDossier?.ville])
   const [moreOpen, setMoreOpen] = useState(false)
   const [pilotageOpen, setPilotageOpen] = useState(false)
   // ── Palier 2 (plan §8.4) : crans de SIGNATURE du document ────────────────────
@@ -23056,7 +23068,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-hero-title">{heroTitle}</div>
             <div className="fa-ck-hero-addr">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10Z" /><circle cx="12" cy="11" r="2.2" /></svg>
-              <span>{props.address}</span>
+              <span>{liveAddress}</span>
             </div>
             <div className="fa-ck-hero-price">
               <div className="fa-ck-hero-pl">Prix</div>
@@ -23450,7 +23462,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               })()}
               {/* Carte de localisation (façon v21) — le header/champs sont dans la section « Localisation & secteur » */}
               {props.address ? (
-                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{props.address}</span></div></div>
+                <div className="fa-ck-pub-card" style={{ marginTop: 10 }}><div className="fa-ck-lb-map"><span className="fa-ck-lb-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z" /><circle cx="12" cy="10" r="2.6" fill="#fff" /></svg></span><span className="fa-ck-lb-maddr">{liveAddress}</span></div></div>
               ) : null}
               {/* Notes internes (façon v21) */}
               {props.notes.length > 0 ? (
