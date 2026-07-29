@@ -120,8 +120,12 @@ detail_enrich AS (
         det.copropriete_json,
         det.raw_json AS detail_raw_json,
         json_extract(det.localite_json, '$.publique.code') AS code_postal_detail,
-        json_extract(det.localite_json, '$.publique.latitude') AS latitude_detail,
-        json_extract(det.localite_json, '$.publique.longitude') AS longitude_detail,
+        json_extract(det.localite_json, '$.publique.ville') AS ville_publique_detail,
+        -- Coords = adresse PRIVEE (localisation reelle : carte, estimation, parcelle). On retombe sur la
+        -- publique seulement si la privee est absente. Avant : on lisait la publique -> coords fausses
+        -- des que commune publique != privee.
+        COALESCE(json_extract(det.localite_json, '$.privee.latitude'), json_extract(det.localite_json, '$.publique.latitude')) AS latitude_detail,
+        COALESCE(json_extract(det.localite_json, '$.privee.longitude'), json_extract(det.localite_json, '$.publique.longitude')) AS longitude_detail,
         json_extract(det.localite_json, '$.privee.adresse') AS adresse_detail,
         json_extract(det.localite_json, '$.privee.ville') AS ville_privee_detail,
         json_extract(det.localite_json, '$.privee.code') AS code_postal_prive_detail,
@@ -370,6 +374,7 @@ SELECT
     det.copropriete_json,
     det.detail_raw_json,
     det.code_postal_detail,
+    det.ville_publique_detail,
     det.latitude_detail,
     det.longitude_detail,
     det.adresse_detail,

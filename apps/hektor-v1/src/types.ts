@@ -118,6 +118,7 @@ export type DossierDetailPayload = {
   app_optimistic_overlay?: Record<string, unknown> | string | null
   annonce_list_raw_json?: string | null
   code_postal_detail?: string | null
+  ville_publique_detail?: string | null
   latitude_detail?: number | string | null
   longitude_detail?: number | string | null
   adresse_detail?: string | null

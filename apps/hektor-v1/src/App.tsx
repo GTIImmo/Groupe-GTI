@@ -2532,7 +2532,10 @@ function wizardDetailValue(
     nbpieces: detail.nb_pieces,
     NB_CHAMBRES: detail.nb_chambres,
     codepublique: firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_detail, detail.code_postal),
-    villepublique: firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail),
+    // Ville publique : préférer la valeur du DÉTAIL (localite_json.publique.ville) avant de retomber sur
+    // la commune privée. Sans `ville_publique_detail`, quand la commune publique ≠ privée l'app affichait
+    // la privée (bug "Ville publique = Lyon" alors que Hektor = Saint-Étienne). Symétrique de codepublique.
+    villepublique: firstNonEmpty(detail.ville_publique_listing, detail.ville_publique_detail, detail.ville_privee_detail),
     // Adresse PRIVÉE (réelle) : rue + commune + CP. C'est elle qui géolocalise le bien.
     // La rue était à tort lue dans ADRESSE_COMPL (le complément) → séparé ici.
     adresse: firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail),
@@ -2603,7 +2606,7 @@ function buildHektorAdvancedDraft(dossier: Pick<Dossier, 'titre_bien' | 'prix' |
     description: '',
     address: firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail),
     postalCode: firstNonEmpty(detail.code_postal_public_listing, detail.code_postal_prive_detail, detail.code_postal_detail, detail.code_postal),
-    city: firstNonEmpty(detail.ville_publique_listing, detail.ville_privee_detail),
+    city: firstNonEmpty(detail.ville_publique_listing, detail.ville_publique_detail, detail.ville_privee_detail),
     building: rawDetailFirstProp(detail, 'secteur', ['immeuble', 'IMMEUBLE']),
     transport: rawDetailFirstProp(detail, 'secteur', ['TRANSPORT', 'transport']),
     proximity: rawDetailFirstProp(detail, 'secteur', ['PROXIMITE', 'proximite']),
