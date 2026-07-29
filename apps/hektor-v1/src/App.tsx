@@ -1849,7 +1849,7 @@ const draftAnnonceAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKi
 
 const draftAnnonceWizardCommonFieldsByStep: Record<number, readonly string[]> = {
   1: ['prix', 'PRIXNETVENDEUR', 'NO_DOSSIER', 'dateenr'],
-  3: ['codepublique', 'villepublique', 'ADRESSE_COMPL', 'TRANSPORT', 'PROXIMITE', 'ENVIRONNEMENT', 'latitude', 'longitude'],
+  3: ['adresse', 'villeprivee', 'codeprive', 'codepublique', 'villepublique', 'ADRESSE_COMPL', 'TRANSPORT', 'PROXIMITE', 'ENVIRONNEMENT', 'latitude', 'longitude'],
   6: [
     'PRIXNETVENDEUR',
     'prix',
