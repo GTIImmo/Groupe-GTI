@@ -22100,6 +22100,18 @@ const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string
   { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes · disponibilités', ico: CK_ICON.rendezvous, color: '#6d4bb5', bg: '#ece4f8' },
 ]
 
+// Lot B / C2 : forme du blob `affaires_detail_json` (détail d'affaire PAR cycle, produit par C1).
+type CkAffaireParty = { id?: string | null; civilite?: string | null; nom?: string | null; prenom?: string | null; coordonnees?: unknown }
+type CkAffaireDetail = {
+  offre?: { state?: string | null; montant?: string | null; date?: string | null; acquereur?: CkAffaireParty | null } | null
+  compromis?: { state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
+  vente?: { date?: string | null; prix?: string | null; honoraires?: string | null; commission?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null; notaire?: CkAffaireParty | null } | null
+}
+function ckPartyName(p?: CkAffaireParty | null): string {
+  if (!p) return ''
+  return [p.civilite, p.prenom, p.nom].map((x) => (x ?? '').trim()).filter(Boolean).join(' ').trim()
+}
+
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
 // DossierDetailLayoutBase reste 100 % intacte. Rendu uniquement si le flag est ON.
 function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
@@ -22378,6 +22390,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     if (aff.offre_id) return `Offre${aff.offre_state ? ` · ${aff.offre_state}` : ''}`
     return 'Aucune affaire enregistrée sur ce cycle'
   }
+  // C2 : un cycle PASSÉ est sélectionné (≠ courant, ≠ Tous) → on lit son détail d'affaire (blob C1).
+  const ckIsPastCycle = ckSelectedNumero !== 'ALL' && ckSelectedNumero !== ckCurrentNumero
+  const ckCycleDetail: CkAffaireDetail | null = (() => {
+    if (!ckIsPastCycle) return null
+    const raw = ckCycleAff[ckSelectedNumero]?.affaires_detail_json
+    return raw ? parseJson<CkAffaireDetail | null>(raw, null) : null
+  })()
+  // Parties du cycle passé (fiche via id contact) : mandant + acquéreur, prio vente > compromis > offre.
+  const ckCycleMandant = ckCycleDetail?.vente?.mandant ?? ckCycleDetail?.compromis?.mandant ?? null
+  const ckCycleAcquereur = ckCycleDetail?.vente?.acquereur ?? ckCycleDetail?.compromis?.acquereur ?? ckCycleDetail?.offre?.acquereur ?? null
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
@@ -24373,13 +24395,26 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'affaires' ? (
             <div className="fa-ck-rub">
-              {ckSelectedNumero !== 'ALL' && ckSelectedNumero !== ckCurrentNumero && ckCycleAff[ckSelectedNumero] ? (
-                <div className="fa-ck-cycaff">
-                  <span className="fa-ck-cycaff-l">Cycle · Mandat n° {ckSelectedNumero}</span>
-                  <span className="fa-ck-cycaff-v">{ckCycleAffaireLabel(ckCycleAff[ckSelectedNumero])}</span>
-                  <span className="fa-ck-cycaff-note">Le détail financier ci-dessous concerne le mandat courant.</span>
+              {ckIsPastCycle ? (
+                <div className="fa-ck-cycdetail">
+                  <div className="fa-ck-cycaff">
+                    <span className="fa-ck-cycaff-l">Cycle · Mandat n° {ckSelectedNumero}</span>
+                    <span className="fa-ck-cycaff-v">{ckCycleAff[ckSelectedNumero] ? ckCycleAffaireLabel(ckCycleAff[ckSelectedNumero]) : 'Aucune affaire'}</span>
+                  </div>
+                  {ckCycleDetail?.vente ? (
+                    <div className="fa-ck-cycrow"><b>Vente</b>{ckCycleDetail.vente.date ? ` · ${formatDate(ckCycleDetail.vente.date)}` : ''}{ckCycleDetail.vente.prix ? ` · ${formatPrice(Number(ckCycleDetail.vente.prix) || null)}` : ''}{ckCycleDetail.vente.honoraires ? ` · honoraires ${formatPrice(Number(ckCycleDetail.vente.honoraires) || null)}` : ''}{ckPartyName(ckCycleDetail.vente.acquereur) ? ` · acquéreur ${ckPartyName(ckCycleDetail.vente.acquereur)}` : ''}</div>
+                  ) : null}
+                  {ckCycleDetail?.compromis ? (
+                    <div className="fa-ck-cycrow"><b>Compromis</b>{ckCycleDetail.compromis.state ? ` · ${ckCycleDetail.compromis.state}` : ''}{ckCycleDetail.compromis.date_acte ? ` · acte ${formatDate(ckCycleDetail.compromis.date_acte)}` : ''}{ckCycleDetail.compromis.prix_net ? ` · net ${formatPrice(Number(ckCycleDetail.compromis.prix_net) || null)}` : ''}</div>
+                  ) : null}
+                  {ckCycleDetail?.offre ? (
+                    <div className="fa-ck-cycrow"><b>Offre</b>{ckCycleDetail.offre.state ? ` · ${ckCycleDetail.offre.state}` : ''}{ckCycleDetail.offre.montant ? ` · ${formatPrice(Number(ckCycleDetail.offre.montant) || null)}` : ''}{ckPartyName(ckCycleDetail.offre.acquereur) ? ` · acquéreur ${ckPartyName(ckCycleDetail.offre.acquereur)}` : ''}</div>
+                  ) : null}
+                  {!ckCycleDetail ? (
+                    <p className="fa-ck-empty" style={{ padding: '10px 8px' }}>Détail d'affaire de ce cycle disponible après la prochaine synchronisation.</p>
+                  ) : null}
                 </div>
-              ) : null}
+              ) : (<>
               {(() => {
                 // Priorité au mock riche (démo) ; sinon on DÉRIVE des vrais champs de transaction
                 // (offre/compromis/vente) → l'Affaires marche en prod, plus de fallback vide.
@@ -24428,6 +24463,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   Composant autonome (il charge ses lignes), mêmes props que la Base. */}
               <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Propositions acquéreurs</div>
               <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
+              </>)}
             </div>
           ) : activeTab === 'contact' ? (
             <div className="fa-ck-rub fa-ck-contact">
@@ -24437,6 +24473,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <span style={{ fontSize: 11.5, color: 'rgba(34,35,35,.5)', marginLeft: 8 }}>Contacts actuels — non historisés par cycle</span>
                 ) : null}
               </div>
+              {ckIsPastCycle && (ckCycleMandant || ckCycleAcquereur) ? (
+                <div className="fa-ck-cycparties">
+                  <div className="fa-ck-cycparties-h">Parties du Mandat n° {ckSelectedNumero}</div>
+                  {ckCycleMandant ? (
+                    <div className="fa-ck-cycparty">
+                      <span className="r">Mandant</span>
+                      <span className="n">{ckPartyName(ckCycleMandant) || '—'}</span>
+                      {ckCycleMandant.id ? <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckCycleMandant.id))}>Voir la fiche</button> : null}
+                    </div>
+                  ) : null}
+                  {ckCycleAcquereur ? (
+                    <div className="fa-ck-cycparty">
+                      <span className="r">Acquéreur</span>
+                      <span className="n">{ckPartyName(ckCycleAcquereur) || '—'}</span>
+                      {ckCycleAcquereur.id ? <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckCycleAcquereur.id))}>Voir la fiche</button> : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Les contacts ne sont pas modifiables depuis une fiche d'index leger." />
