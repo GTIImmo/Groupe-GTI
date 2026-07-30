@@ -23558,18 +23558,28 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {(() => {
                 const expo = (() => { const f = CK_WIZARD_FIELD_BY_NAME['EXPOSITION']; const raw = wizFieldValue('EXPOSITION'); return raw && f?.options ? (f.options.find((o) => o.value === raw)?.label ?? raw) : raw })()
                 const lbStats = [
-                  { l: 'Surface', v: wizFieldValue('surfappart'), u: 'm²' },
-                  { l: 'Terrain', v: wizFieldValue('surfterrain'), u: 'm²' },
-                  { l: 'Pièces', v: wizFieldValue('nbpieces'), u: '' },
-                  { l: 'Chambres', v: wizFieldValue('NB_CHAMBRES'), u: '' },
-                  { l: "Salles d'eau", v: wizFieldValue('NB_SE'), u: '' },
-                  { l: 'Exposition', v: expo, u: '' },
+                  { l: 'Surface', v: wizFieldValue('surfappart'), u: 'm²', ico: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+                  { l: 'Terrain', v: wizFieldValue('surfterrain'), u: 'm²', ico: 'M12 3 3 20h18zM12 3v17' },
+                  { l: 'Pièces', v: wizFieldValue('nbpieces'), u: '', ico: 'M3 21V9l9-6 9 6v12M3 21h18M9 21v-6h6v6' },
+                  { l: 'Chambres', v: wizFieldValue('NB_CHAMBRES'), u: '', ico: 'M2 11V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4M2 11h20v7M4 18v2M20 18v2M6 11V9h5v2' },
+                  { l: "Salles d'eau", v: wizFieldValue('NB_SE'), u: '', ico: 'M12 2s6 6.5 6 10.5a6 6 0 0 1-12 0C6 8.5 12 2 12 2z' },
+                  { l: 'Exposition', v: expo, u: '', ico: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2' },
                 ].filter((s) => s.v && s.v.trim() && s.v.trim() !== '0')
                 return lbStats.length > 0 ? (
-                  <div className="fa-ck-lb-stats">
-                    {lbStats.map((s) => (
-                      <div key={s.l} className="fa-ck-lb-stat"><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
-                    ))}
+                  <div className="fa-ck-lb-summary">
+                    <svg className="fa-ck-lb-summary-illus" viewBox="0 0 240 160" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+                      <path d="M18 92 120 18 222 92" />
+                      <path d="M40 150V80M200 80v70M40 150h160" />
+                      <path d="M96 150v-42h48v42M108 66h24v22h-24z" />
+                    </svg>
+                    <div className="fa-ck-lb-summary-grid">
+                      {lbStats.map((s) => (
+                        <div key={s.l} className="fa-ck-lb-sumstat">
+                          <span className="fa-ck-lb-sumico" aria-hidden="true"><CkIcon path={s.ico} /></span>
+                          <div className="fa-ck-lb-sumtx"><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : null
               })()}
@@ -23577,20 +23587,35 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   et `corps` = le texte principal). Remontés ici depuis « Diffusion » pour
                   tenir le titre et le descriptif au début de « Le Bien ». Le rendu du
                   descriptif édité est optimiste (texte échappé + <br>) jusqu'au read-through. */}
-              <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span><div><div className="fa-ck-pub-t">L'annonce</div><div className="fa-ck-pub-s">Titre & descriptif diffusés</div></div></div>
-              <div className="fa-ck-pub-card fa-ck-lb-annonce">
-                <CkInlineField label="Titre de l'annonce" name="titre" value={String(edited['titre'] ?? wizFieldValue('titre') ?? '')} edited={'titre' in edited} readOnly={isLightweightDetail} onSave={onFieldSave} />
-                <CkDescField
-                  html={'corps' in edited ? escapeHtml(String(edited['corps'] ?? '')).replace(/\n/g, '<br>') : (props.texts[0]?.html ?? '')}
-                  rawValue={String(edited['corps'] ?? wizFieldValue('corps') ?? '')}
-                  edited={'corps' in edited}
-                  readOnly={isLightweightDetail}
-                  onSave={onFieldSave}
-                />
-              </div>
-              {/* Sections DOMAINE du v21, éditables EN PLACE (chaque champ = vrai champ wizard Hektor).
-                  Liste groupée (un seul conteneur, filets entre les titres) → titres collés quand replié. */}
+              {/* Sections DOMAINE du v21 en LISTE GROUPÉE (un seul conteneur, filets entre les titres).
+                  « L'annonce » (titre + descriptif) = 1er item accordéon, replié comme les autres. */}
               <div className="fa-ck-lb-accgroup">
+              {(() => {
+                const open = ckOpenSecs.has('annonce')
+                return (
+                  <div className={`fa-ck-lb-acc${open ? ' open' : ''}`} style={{ ['--sc']: 'var(--fa-brand)', ['--sbg']: 'var(--fa-brand-soft, #f9e7ef)' } as CSSProperties}>
+                    <button type="button" className="fa-ck-pub-sec fa-ck-lb-sectrig" aria-expanded={open} onClick={() => toggleCkSec('annonce')}>
+                      <span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span>
+                      <div className="fa-ck-lb-sectxt"><div className="fa-ck-pub-t">L'annonce</div><div className="fa-ck-pub-s">Titre &amp; descriptif diffusés</div></div>
+                      <span className="fa-ck-lb-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M6 9l6 6 6-6" /></svg></span>
+                    </button>
+                    {open ? (
+                      <div className="fa-ck-lb-secbody">
+                        <div className="fa-ck-lb-annonce">
+                          <CkInlineField label="Titre de l'annonce" name="titre" value={String(edited['titre'] ?? wizFieldValue('titre') ?? '')} edited={'titre' in edited} readOnly={isLightweightDetail} onSave={onFieldSave} />
+                          <CkDescField
+                            html={'corps' in edited ? escapeHtml(String(edited['corps'] ?? '')).replace(/\n/g, '<br>') : (props.texts[0]?.html ?? '')}
+                            rawValue={String(edited['corps'] ?? wizFieldValue('corps') ?? '')}
+                            edited={'corps' in edited}
+                            readOnly={isLightweightDetail}
+                            onSave={onFieldSave}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })()}
               {CK_LB_SECTIONS.filter((sec) => {
                 if (!sec.condField) return true
                 const v = String(edited[sec.condField] ?? wizFieldValue(sec.condField) ?? '').trim()
