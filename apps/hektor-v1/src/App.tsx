@@ -23516,9 +23516,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {/* Bandeau conflit/partiel Hektor (retour du worker). Édition = en place, champ par champ. */}
               {!isLightweightDetail ? <AnnonceEditStatusBanner dossier={dossier} /> : null}
               {!isLightweightDetail ? <p className="fa-ck-lb-edithint">Clique un champ pour le modifier en place, puis <b>Enregistrer</b> (une vague vers Hektor).</p> : null}
-              {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
+              {/* Bloc HÉRO : photos (gauche) + colonne droite (3 boutons médias, puis résumé). */}
+              <div className={`fa-ck-lb-hero${props.images.length > 0 ? '' : ' nomedia'}`}>
               {props.images.length > 0 ? (
-                <div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
+                <div className="fa-ck-lb-hero-media"><div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
                   {props.images.slice(0, 5).map((img, i) => {
                     const isLastMore = i === 4 && props.images.length > 5
                     return (
@@ -23534,11 +23535,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       </button>
                     )
                   })}
-                </div>
+                </div></div>
               ) : null}
-              {/* Raccourcis médias (façon v21) : les 3 ouvrent la rubrique « Médias & pièces »
-                  sur le bon onglet. Le comptage des documents vient de ckDocs — MÊME source que
-                  les pictos du hero (auparavant les deux comptaient différemment). */}
+              <div className="fa-ck-lb-hero-side">
+              {/* Raccourcis médias : les 3 ouvrent « Médias & pièces » sur le bon onglet (compte via ckDocs). */}
               <div className="fa-ck-mshorts">
                 <button type="button" className="fa-ck-msc p" onClick={() => goMedia('photos')}>
                   <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.lebien} /></span>
@@ -23583,6 +23583,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 ) : null
               })()}
+              </div>
+              </div>
               {/* L'annonce : titre + descriptif, éditables en place (champs Hektor `titre`
                   et `corps` = le texte principal). Remontés ici depuis « Diffusion » pour
                   tenir le titre et le descriptif au début de « Le Bien ». Le rendu du

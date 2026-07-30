@@ -708,18 +708,27 @@
 .fa-ck-lb-stat .sl { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); text-transform: uppercase; letter-spacing: .03em; }
 .fa-ck-lb-stat .sv { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; font-weight: 600; color: var(--fa-ink); margin-top: 2px; }
 
-/* Résumé du bien v2 : carte éditoriale (dégradé chaud) + illustration maison en filigrane + une
-   stat = icône animée au survol + libellé + valeur en Fraunces. */
-.fa-ck-lb-summary { position: relative; overflow: hidden; background: linear-gradient(125deg, #fbf8f2 0%, #f6efe4 100%); border: 1px solid var(--fa-line); border-radius: 16px; padding: 16px 18px; }
-.fa-ck-lb-summary-illus { position: absolute; right: -14px; bottom: -22px; width: 176px; height: auto; color: var(--fa-brand); opacity: .08; pointer-events: none; }
-.fa-ck-lb-summary-grid { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 15px 12px; }
-.fa-ck-lb-sumstat { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.fa-ck-lb-sumico { width: 36px; height: 36px; border-radius: 11px; background: #fff; border: 1px solid var(--fa-line); display: flex; align-items: center; justify-content: center; flex: none; color: var(--fa-brand); box-shadow: 0 5px 12px -7px rgba(24,18,14,.3); transition: transform .3s cubic-bezier(.34,1.56,.64,1), border-color .2s; }
-.fa-ck-lb-sumico svg { width: 18px; height: 18px; }
-.fa-ck-lb-sumstat:hover .fa-ck-lb-sumico { transform: rotate(-9deg) scale(1.11); border-color: var(--fa-brand); }
+/* Bloc HÉRO : un seul cadre premium — photos (gauche) + colonne droite (3 boutons médias, puis résumé). */
+.fa-ck-lb-hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(238px, 1fr); gap: 13px; align-items: start; background: #fff; border: 1px solid var(--fa-line); border-radius: 18px; padding: 13px; box-shadow: 0 18px 46px -30px rgba(40, 30, 20, .42); }
+.fa-ck-lb-hero.nomedia { grid-template-columns: 1fr; }
+.fa-ck-lb-hero-media { min-width: 0; }
+.fa-ck-lb-hero-media .fa-ck-lb-gallery, .fa-ck-lb-hero-media .fa-ck-lb-gallery.n2 { grid-auto-rows: 128px; }
+.fa-ck-lb-hero-side { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
+.fa-ck-lb-hero-side .fa-ck-mshorts { flex-direction: column; gap: 8px; margin-top: 0; }
+.fa-ck-lb-hero-side .fa-ck-msc { flex: none; width: 100%; }
+@media (max-width: 760px) { .fa-ck-lb-hero { grid-template-columns: 1fr; } .fa-ck-lb-hero-side .fa-ck-mshorts { flex-direction: row; } }
+
+/* Résumé : BEAU + LISIBLE, pas cliquable. Icônes PLATES décoratives (fond teinté doux, aucun carré
+   blanc en relief, aucune animation) → ne ressemble plus à des boutons. */
+.fa-ck-lb-summary { background: #faf7f1; border: 1px solid var(--fa-line); border-radius: 14px; padding: 11px 13px; }
+.fa-ck-lb-summary-illus { display: none; }
+.fa-ck-lb-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 12px; }
+.fa-ck-lb-sumstat { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.fa-ck-lb-sumico { width: 27px; height: 27px; border-radius: 8px; background: var(--fa-brand-soft, #f9e7ef); display: flex; align-items: center; justify-content: center; flex: none; color: var(--fa-brand); }
+.fa-ck-lb-sumico svg { width: 15px; height: 15px; }
 .fa-ck-lb-sumtx { min-width: 0; }
-.fa-ck-lb-sumstat .sl { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); text-transform: uppercase; letter-spacing: .03em; }
-.fa-ck-lb-sumstat .sv { font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600; color: var(--fa-ink); line-height: 1.1; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-ck-lb-sumstat .sl { font-size: 9.5px; font-weight: 700; color: var(--fa-muted); text-transform: uppercase; letter-spacing: .03em; }
+.fa-ck-lb-sumstat .sv { font-family: 'Fraunces', 'Spectral', serif; font-size: 16px; font-weight: 600; color: var(--fa-ink); line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fa-ck-lb-manage-h { font-family: 'Fraunces', 'Spectral', serif; font-size: 15px; font-weight: 600; color: var(--fa-ink); margin-bottom: 10px; }
 
 /* Publicité v36 : cases passerelles + grille retour d'application */
