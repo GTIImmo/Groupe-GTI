@@ -1038,6 +1038,31 @@
 @media (prefers-reduced-motion: reduce) {
   .fa-ck-lb-sectrig .fa-ck-pub-ic, .fa-ck-lb-chev, .fa-ck-lb-secbody, .fa-ck-lb-acc { transition: none; animation: none; }
 }
+
+/* ── Bloc « Composition des pièces » dans le cockpit — re-skin cohérent (carte + accent violet
+   composition + zone « Ajouter une pièce » mise en avant). Scopé sous .fa-ck-lb-pieces pour NE PAS
+   toucher le wizard de création qui partage .hektor-composition-*. ─────────────────────────── */
+.fa-ck-lb-pieces { display: block; background: #fff; border: 1px solid #ece8df; border-radius: 13px; margin: 7px 0; padding: 14px; }
+.fa-ck-lb-pieces:hover { border-color: #e0d3f4; box-shadow: 0 10px 24px -18px rgba(40, 30, 20, .3); }
+.fa-ck-lb-pieces .hektor-composition-editor { gap: 13px !important; }
+.fa-ck-lb-pieces .hektor-composition-title { display: flex !important; flex-direction: column; gap: 1px; }
+.fa-ck-lb-pieces .hektor-composition-title span { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #7a4bb0; }
+.fa-ck-lb-pieces .hektor-composition-title strong { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; font-weight: 600; color: var(--fa-ink); }
+.fa-ck-lb-pieces .hektor-composition-subtitle { color: var(--fa-muted) !important; font-weight: 600 !important; font-size: 12.5px !important; }
+.fa-ck-lb-pieces .hektor-composition-draft { border: 1px solid #e6dbf6 !important; background: linear-gradient(180deg, #f7f2fd, #f3ecfb) !important; border-radius: 13px !important; padding: 13px !important; }
+.fa-ck-lb-pieces .hektor-composition-draft-head strong { font-family: 'Fraunces', 'Spectral', serif !important; font-weight: 600 !important; color: #4a2e78 !important; }
+.fa-ck-lb-pieces .hektor-composition-draft-head span { color: #7a4bb0 !important; background: #ece2fb !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; }
+.fa-ck-lb-pieces .hektor-composition-grid .filter-field span { font-size: 11px !important; font-weight: 700 !important; color: var(--fa-muted) !important; text-transform: uppercase !important; letter-spacing: .03em !important; }
+.fa-ck-lb-pieces .hektor-composition-grid input, .fa-ck-lb-pieces .hektor-composition-grid select, .fa-ck-lb-pieces .hektor-composition-grid textarea { border-radius: 10px !important; border: 1px solid var(--fa-line) !important; background: #fff !important; transition: border-color .15s, box-shadow .15s !important; }
+.fa-ck-lb-pieces .hektor-composition-grid input:focus, .fa-ck-lb-pieces .hektor-composition-grid select:focus, .fa-ck-lb-pieces .hektor-composition-grid textarea:focus { border-color: #7a4bb0 !important; box-shadow: 0 0 0 3px rgba(122, 75, 176, .15) !important; outline: 0 !important; }
+.fa-ck-lb-pieces .hektor-composition-actions .button-primary { background: #7a4bb0 !important; border: 0 !important; color: #fff !important; border-radius: 10px !important; padding: 10px 18px !important; font-weight: 800 !important; box-shadow: 0 9px 20px -9px rgba(122, 75, 176, .65) !important; transition: transform .16s cubic-bezier(.34, 1.4, .5, 1), box-shadow .2s, filter .15s !important; }
+.fa-ck-lb-pieces .hektor-composition-actions .button-primary:hover:not(:disabled) { transform: translateY(-2px) !important; filter: brightness(1.06) !important; }
+.fa-ck-lb-pieces .hektor-composition-actions .button-primary:disabled { opacity: .45 !important; box-shadow: none !important; }
+.fa-ck-lb-pieces .hektor-composition-card { border: 1px solid var(--fa-line) !important; background: #fff !important; border-radius: 13px !important; transition: border-color .18s, box-shadow .18s, transform .18s !important; }
+.fa-ck-lb-pieces .hektor-composition-card:hover { border-color: #e0d3f4 !important; box-shadow: 0 12px 24px -16px rgba(40, 30, 20, .35) !important; transform: translateY(-1px) !important; }
+.fa-ck-lb-pieces .hektor-composition-card-head > span { background: #ece2fb !important; color: #7a4bb0 !important; border-radius: 9px !important; }
+.fa-ck-lb-pieces .hektor-composition-card-head strong { font-family: 'Fraunces', 'Spectral', serif !important; font-weight: 600 !important; color: var(--fa-ink) !important; }
+.fa-ck-lb-pieces .hektor-composition-empty { border: 1px dashed #e0d3f4 !important; background: #faf8fd !important; border-radius: 12px !important; color: var(--fa-muted) !important; }
 .fa-ck-lb-feat { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--fa-line); border-radius: 14px; background: #fff; transition: .16s; }
 .fa-ck-lb-feat:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(24, 18, 14, .28); }
 .fa-ck-lb-feat .fl { font-size: 13px; font-weight: 700; color: var(--fa-ink); line-height: 1.2; }
