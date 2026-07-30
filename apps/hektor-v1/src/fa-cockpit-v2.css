@@ -1071,8 +1071,8 @@
 .fa-ck-lb-pieces .hektor-composition-card-head > span { background: #ece2fb !important; color: #7a4bb0 !important; border-radius: 9px !important; }
 .fa-ck-lb-pieces .hektor-composition-card-head strong { font-family: 'Fraunces', 'Spectral', serif !important; font-weight: 600 !important; color: var(--fa-ink) !important; }
 .fa-ck-lb-pieces .hektor-composition-empty { border: 1px dashed #e0d3f4 !important; background: #faf8fd !important; border-radius: 12px !important; color: var(--fa-muted) !important; }
-.fa-ck-lb-feat { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--fa-line); border-radius: 14px; background: #fff; transition: .16s; }
-.fa-ck-lb-feat:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(24, 18, 14, .28); }
+.fa-ck-lb-feat { display: flex; align-items: center; gap: 12px; padding: 10px 13px; border: 1px solid var(--fa-line); border-radius: 12px; background: #fff; transition: border-color .16s, box-shadow .16s, background .16s; }
+.fa-ck-lb-feat:hover { transform: none; border-color: #e2dcce; box-shadow: 0 3px 10px -7px rgba(24, 18, 14, .22); background: #fefdfb; }
 .fa-ck-lb-feat .fl { font-size: 13px; font-weight: 700; color: var(--fa-ink); line-height: 1.2; }
 .fa-ck-lb-feat .fv { font-size: 13px; color: var(--fa-ink-soft, #544b45); font-weight: 700; margin-left: auto; text-align: right; }
 .fa-ck-lb-feat.off { border-style: dashed; background: #fdfbf8; }
@@ -1103,7 +1103,7 @@
 
 /* Édition EN PLACE (façon .ed-el v21) : éditeur inline + champ modifié + barre Enregistrer */
 .fa-ck-lb-edithint { font-size: 12px; color: var(--fa-muted); margin: 0 2px; } .fa-ck-lb-edithint b { color: var(--fa-brand-ink); }
-.fa-ck-inline-ed { font: inherit; font-size: 13px; font-weight: 700; color: var(--fa-ink); border: 1px solid var(--fa-brand); border-radius: 8px; padding: 5px 8px; background: #fff; min-width: 90px; max-width: 100%; margin-left: auto; outline: 2px solid color-mix(in srgb, var(--fa-brand) 18%, transparent); outline-offset: 1px; }
+.fa-ck-inline-ed { font: inherit; font-size: 13px; font-weight: 700; color: var(--fa-ink); border: 1px solid var(--fa-brand); border-radius: 10px; padding: 6px 10px; background: #fff; min-width: 90px; max-width: 100%; margin-left: auto; outline: 2px solid color-mix(in srgb, var(--fa-brand) 18%, transparent); outline-offset: 1px; }
 .fa-ck-lb-feat.is-edited { border-color: var(--fa-gold, #a8814a); background: #fdf6ec; }
 .fa-ck-lb-feat.is-edited .fv { color: var(--fa-gold, #a8814a); font-style: normal; }
 .fa-ck-savebar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px; padding: 11px 15px 11px 13px; border-radius: 14px; background: radial-gradient(120% 200% at 0 100%, #2c2521, #171310); box-shadow: 0 24px 50px -18px rgba(18, 12, 9, .6); color: #fff; max-width: calc(100vw - 40px); animation: fa-ck-savebar-in .22s cubic-bezier(.22, 1, .36, 1); }
