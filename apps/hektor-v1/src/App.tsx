@@ -22111,6 +22111,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // (pas de masque automatique ni de mémorisation qui la garderait repliée).
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
+  // Lot B3 : cycle de mandat sélectionné pour re-scoper l'activité/visites.
+  // null = cycle courant (défaut) ; 'ALL' = tous les cycles ; sinon un numero_mandat.
+  const [ckCycleSel, setCkCycleSel] = useState<string | null>(null)
   const [histoFilter, setHistoFilter] = useState<string>('tout')
   // Édition EN PLACE (façon v21) : diff local `edited` → un seul editAnnonceOptimistic (calque + worker).
   const [edited, setEdited] = useState<Record<string, string>>({})
@@ -22233,7 +22236,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const id = dossier?.app_dossier_id
     if (!id) { setCkActi([]); return }
     let cancelled = false
-    void loadCockpitActivite(id, 30)
+    void loadCockpitActivite(id, 200)
       .then((rows) => { if (!cancelled) setCkActi(rows) })
       .catch(() => { if (!cancelled) setCkActi([]) })
     return () => { cancelled = true }
@@ -22309,6 +22312,46 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Chronologie du mandat, calculée avec la MÊME règle que le détail mandat du registre.
   const mandatDateDebut = firstNonEmpty(currentMandatFromJson?.debut, dossierRec['mandat_date_debut'] == null ? '' : String(dossierRec['mandat_date_debut']).trim())
   const ckMandatTiming = computeMandatTiming(mandatDateDebut, mandatDateFin)
+  // Lot B3 : liste des cycles de mandat (depuis mandats_json) + fenêtre temporelle de chacun,
+  // pour re-scoper activité/visites par cycle. Fenêtre = [début, min(clôture, fin, début du cycle
+  // suivant)] ; le cycle courant reste ouvert (fin = +∞).
+  const ckCycles = (() => {
+    const raw = parseJson<Array<{ numero?: string; debut?: string; fin?: string; cloture?: string }>>(props.detail?.mandats_json ?? '', [])
+    const seen = new Set<string>()
+    const uniq = raw
+      .map((m) => ({
+        numero: String(m?.numero ?? '').trim(),
+        debut: String(m?.debut ?? '').trim(),
+        fin: String(m?.fin ?? '').trim(),
+        cloture: String(m?.cloture ?? '').trim(),
+      }))
+      .filter((m) => Boolean(m.numero) && !seen.has(m.numero) && Boolean(seen.add(m.numero)))
+    uniq.sort((a, b) => (a.debut || '').localeCompare(b.debut || ''))
+    return uniq.map((m, i) => {
+      const startMs = m.debut ? Date.parse(m.debut) : Number.NEGATIVE_INFINITY
+      const ends = [m.cloture, m.fin, uniq[i + 1]?.debut]
+        .map((d) => (d ? Date.parse(d) : NaN))
+        .filter((n) => !Number.isNaN(n))
+      const endMs = ends.length ? Math.min(...ends) : Number.POSITIVE_INFINITY
+      return { ...m, startMs, endMs, isCurrent: m.numero === String(dossier.numero_mandat ?? '').trim() }
+    })
+  })()
+  const ckCurrentNumero = String(dossier.numero_mandat ?? '').trim()
+  const ckSelectedNumero = ckCycleSel ?? ckCurrentNumero
+  const ckSelWindow = ckSelectedNumero === 'ALL' ? null : (ckCycles.find((c) => c.numero === ckSelectedNumero) ?? null)
+  const eventInSelectedCycle = (at?: string | null) => {
+    if (!ckSelWindow) return true
+    if (!at) return false
+    const t = Date.parse(at)
+    if (Number.isNaN(t)) return true
+    return t >= ckSelWindow.startMs && (ckSelWindow.endMs === Number.POSITIVE_INFINITY || t < ckSelWindow.endMs)
+  }
+  // Pastille d'issue d'un cycle (sans la vente, non dispo au cockpit avant B3.2) : Clos → Échu → Actif.
+  const ckCycleBadge = (c: { cloture: string; fin: string }): { label: string; tone: 'actif' | 'clos' | 'echu' } => {
+    if (c.cloture) return { label: 'Clos', tone: 'clos' }
+    if (c.fin && Date.parse(c.fin) < Date.now()) return { label: 'Échu', tone: 'echu' }
+    return { label: 'Actif', tone: 'actif' }
+  }
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
@@ -22496,7 +22539,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       onClick: fire(itCancel),
     },
   ]
-  const appts = parseAppointmentRequests(props.detail)
+  // Lot B3 : visites re-scopées sur le cycle sélectionné (par date de RDV, repli création).
+  const appts = parseAppointmentRequests(props.detail).filter((a) => {
+    const d = a as { requested_start_at?: string | null; requested_at?: string | null; created_at?: string | null }
+    return eventInSelectedCycle(d.requested_start_at ?? d.requested_at ?? d.created_at ?? null)
+  })
   // Rail construit EXACTEMENT comme le v26 : featList = Le Bien + [feat de phase] + Rendez-vous + Contact,
   // chaque item « en avant » portant une pastille de statut (foot) ; puis « Autres rubriques » repliées.
   const ckPhase = (pVendu || pClos) ? 'ven' : (pOffre || pCompromis) ? 'tra' : (pMandatNum && pMandatOk) ? 'dif' : pMandatNum ? 'man' : 'est'
@@ -23574,6 +23621,26 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     <button type="button" className={actiFilter === 'mandant' ? 'is-on' : ''} onClick={() => setActiFilter('mandant')}>Mandant</button>
                   </div>
                 </div>
+                {ckCycles.length > 1 ? (
+                  <div className="fa-ck-cyclesel" role="group" aria-label="Cycle de mandat">
+                    <button type="button" className={`fa-ck-cychip${ckCycleSel === 'ALL' ? ' is-on' : ''}`} onClick={() => setCkCycleSel('ALL')}>
+                      <span className="fa-ck-cychip-n">Tous</span>
+                    </button>
+                    {ckCycles.map((c) => {
+                      const badge = ckCycleBadge(c)
+                      const on = ckSelectedNumero !== 'ALL' && ckSelectedNumero === c.numero
+                      return (
+                        <button key={c.numero} type="button" className={`fa-ck-cychip${on ? ' is-on' : ''}`} onClick={() => setCkCycleSel(c.numero)}>
+                          <span className="fa-ck-cychip-n">Mandat n° {c.numero}</span>
+                          {c.debut || c.fin || c.cloture ? (
+                            <span className="fa-ck-cychip-d">{formatDate(c.debut) || '—'} → {c.isCurrent ? 'en cours' : (formatDate(c.cloture || c.fin) || '—')}</span>
+                          ) : null}
+                          <span className={`fa-ck-cychip-b tone-${badge.tone}`}>{badge.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
                 <div className="fa-ck-acti-card">
                   {(() => {
                     const evts = parseJson<Array<{ icon: string; aud: string; nb: string; nc: string; time: string; html: string; new?: boolean; over?: boolean; act?: string; rub?: string }>>(detailStr('activite_json') || '[]', [])
@@ -23605,7 +23672,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     }
                     // Fil RÉEL (RPC app_cockpit_activite) : événements du dossier, agrégés.
                     // Rendu ÉCHAPPÉ (lead/rest sont du texte, jamais du HTML) → pas d'injection.
-                    const feed = ckActi.filter((e) => actiFilter === 'tout' || e.aud === actiFilter)
+                    const feed = ckActi
+                      .filter((e) => actiFilter === 'tout' || e.aud === actiFilter)
+                      .filter((e) => eventInSelectedCycle(e.at))
                     return (
                       <div className="fa-ck-afeed">
                         {feed.length > 0 ? feed.map((e, i) => {
