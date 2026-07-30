@@ -8045,6 +8045,9 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   sequestration?: string
   closeReason?: string
   closeState?: string
+  closeEtat?: string
+  closeRaison?: string
+  closeMandatOnSale?: boolean
   closePrice?: string
   priority?: number
 }): Promise<ConsoleJob> {
@@ -8071,6 +8074,9 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     sequestration: input.sequestration?.trim() || null,
     close_reason: input.closeReason?.trim() || null,
     close_state: input.closeState?.trim() || null,
+    close_etat: input.closeEtat?.trim() || null,
+    close_raison: input.closeRaison?.trim() || null,
+    close_mandat_on_sale: input.closeMandatOnSale ? true : null,
     close_price: input.closePrice?.trim() || null,
   }
   const { data, error } = await supabase

@@ -7928,6 +7928,28 @@ function hektorStatusTargetLabel(value: HektorAnnonceStatusTarget | string | nul
   return hektorStatusTargetOptions.find((option) => option.value === value)?.label ?? 'Statut'
 }
 
+// Motifs de clôture = mécanique Hektor réelle (form PopinClos) : etat = choiceBags,
+// raison = sous-motif. Cf capture live / worker submitHektorMandatClosure.
+type HektorClosureEtat = 'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'
+const hektorClosureEtatOptions: Array<{ value: HektorClosureEtat; label: string; raisons: Array<{ value: string; label: string }> }> = [
+  { value: 'choiceNonRenouv', label: 'Mandat non renouvelé', raisons: [
+    { value: 'concurence', label: 'Confié à la concurrence' },
+    { value: 'vendre_seule', label: 'Le propriétaire vend seul' },
+    { value: 'noReason', label: 'Sans motif précis' },
+  ] },
+  { value: 'choiceVendu', label: 'Le bien est vendu', raisons: [
+    { value: 'agence', label: "Vendu par l'agence" },
+    { value: 'confrere', label: 'Vendu par un confrère' },
+    { value: 'proprietaire', label: 'Vendu par le propriétaire' },
+  ] },
+  { value: 'choiceAutre', label: 'Autre motif', raisons: [
+    { value: 'autre', label: 'Autre (préciser ci-dessous)' },
+  ] },
+]
+function hektorClosureRaisonsFor(etat: HektorClosureEtat) {
+  return hektorClosureEtatOptions.find((o) => o.value === etat)?.raisons ?? []
+}
+
 function statusChangeNeedsTransaction(value: HektorAnnonceStatusTarget) {
   return value === 'offer' || value === 'compromise' || value === 'sold'
 }
@@ -11434,6 +11456,9 @@ export default function App() {
   const [statusChangeNetSellerPrice, setStatusChangeNetSellerPrice] = useState('')
   const [statusChangeSequestration, setStatusChangeSequestration] = useState('')
   const [statusChangeCloseReason, setStatusChangeCloseReason] = useState('')
+  // Motif structuré de clôture (mécanique Hektor réelle) : etat = choiceBags, raison = sous-motif.
+  const [statusChangeCloseEtat, setStatusChangeCloseEtat] = useState<'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'>('choiceAutre')
+  const [statusChangeCloseRaison, setStatusChangeCloseRaison] = useState('autre')
   const [statusChangePending, setStatusChangePending] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [hektorAgencies, setHektorAgencies] = useState<HektorAgencyOption[]>([])
@@ -14207,6 +14232,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeNetSellerPrice('')
     setStatusChangeSequestration('')
     setStatusChangeCloseReason('')
+    setStatusChangeCloseEtat('choiceAutre')
+    setStatusChangeCloseRaison('autre')
     setNoticeMessage(null)
     setErrorMessage(null)
   }
@@ -14295,8 +14322,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage('Indique le prix de vente avant envoi.')
       return
     }
-    if (statusChangeStatus === 'closed' && !statusChangeCloseReason.trim()) {
-      setErrorMessage('Indique le motif de cloture avant envoi.')
+    if (statusChangeStatus === 'closed' && statusChangeCloseEtat === 'choiceAutre' && !statusChangeCloseReason.trim()) {
+      setErrorMessage('Precise le motif de cloture avant envoi.')
       return
     }
     setStatusChangePending(true)
@@ -14330,7 +14357,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         netSellerPrice: statusChangeNetSellerPrice,
         sequestration: statusChangeSequestration,
         closeReason: statusChangeCloseReason,
-        closeState: 'autre',
+        closeEtat: statusChangeCloseEtat,
+        closeRaison: statusChangeCloseRaison,
+        closeMandatOnSale: statusChangeStatus === 'sold',
         closePrice: statusChangeSalePrice || statusChangeAmount,
         priority: 7,
       })
@@ -16847,12 +16876,35 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <section className="status-change-section">
                     <div>
                       <p className="eyebrow">Cloture mandat</p>
-                      <strong>Motif transmis a Hektor</strong>
+                      <strong>Motif transmis à Hektor · mandat {statusChangeTarget.numero_mandat ?? '-'}</strong>
+                    </div>
+                    <div className="status-choice-grid">
+                      {hektorClosureEtatOptions.map((etat) => (
+                        <button
+                          key={etat.value}
+                          type="button"
+                          className={`status-choice-card ${statusChangeCloseEtat === etat.value ? 'is-selected' : ''}`}
+                          onClick={() => { setStatusChangeCloseEtat(etat.value); setStatusChangeCloseRaison(etat.raisons[0]?.value ?? '') }}
+                        >
+                          <strong>{etat.label}</strong>
+                        </button>
+                      ))}
                     </div>
                     <label className="filter-field">
-                      <span>Motif de cloture</span>
-                      <textarea className="inline-textarea" value={statusChangeCloseReason} onChange={(event) => setStatusChangeCloseReason(event.target.value)} placeholder="Ex : mandat clos a la demande du proprietaire" required />
+                      <span>Raison</span>
+                      <select value={statusChangeCloseRaison} onChange={(event) => setStatusChangeCloseRaison(event.target.value)}>
+                        {hektorClosureRaisonsFor(statusChangeCloseEtat).map((raison) => (
+                          <option key={raison.value} value={raison.value}>{raison.label}</option>
+                        ))}
+                      </select>
                     </label>
+                    {statusChangeCloseEtat === 'choiceAutre' ? (
+                      <label className="filter-field">
+                        <span>Précisez le motif</span>
+                        <textarea className="inline-textarea" value={statusChangeCloseReason} onChange={(event) => setStatusChangeCloseReason(event.target.value)} placeholder="Ex : mandat clos à la demande du propriétaire" required />
+                      </label>
+                    ) : null}
+                    <p className="status-change-note">La clôture d'un mandat est <strong>définitive</strong> côté Hektor : l'annonce passe en « Clos » (diffusion coupée). Elle reste consultable et réactivable via « Actif ».</p>
                   </section>
                 ) : (
                   <p className="status-change-note">Le statut Actif est envoyé directement à Hektor puis la fiche est resynchronisée.</p>
